@@ -1,0 +1,1045 @@
+module policy {
+    yang-version 1;
+
+    namespace "urn:opendaylight:groupbasedpolicy:policy";
+    prefix "gbp-policy";
+
+    import gbp-common {prefix gbp-common;}
+    import ietf-inet-types {prefix inet;}
+    import ietf-yang-types {
+        prefix yang;
+        revision-date 2010-09-24;
+    } 
+
+    include policy-contract;
+
+    description 
+        "This module defines the group-based policy configuration 
+         model.";
+
+    revision "2014-04-21" {
+        description
+            "Initial revision.";
+    }
+
+    // ***************
+    // Label groupings
+    // ***************
+
+    grouping label {
+        description
+            "Labels are used for matching contracts to endpoint groups 
+             through selectors and targets, as well as determining how
+             those contracts will be applied.  See more detailed
+             documentation for qualities, conditions, requirements,
+             and capabilities.";
+
+        leaf description {
+            description "A human-readable description for the label";
+            type gbp-common:description;
+        }
+        leaf inclusion-rule {
+            description "Specify how inheritance will work for this label";
+            default include;
+
+            type enumeration {
+                enum include {
+                    description 
+                        "This label will be included normally in the 
+                         matching.";
+                }
+                enum exclude {
+                    description 
+
+                        "This label will be excluded from the 
+                         matching.  This allows removing labels that
+                         would have otherwise been included because of
+                         inheritence rules.";
+                }
+            }
+        }
+    }
+
+    grouping quality-base {
+        description "Base type for qualities and matcher qualities.";
+        leaf name {
+            description "A user-visible name for the quality";
+            type gbp-common:quality-name;
+            mandatory true;
+        }
+        uses label;
+    }
+    
+    grouping has-qualities {
+        description "An object with a list of qualities";
+        list quality {
+            description 
+                "A quality is a label which selects which selects the 
+                 contracts that are in scope.  Another name for
+                 'quality' could be 'attribute' or 'characteristic.'
+                 Qualities can be scoped to either a specific contract
+                 or to a target within that contract.
+
+                 Contracts are matched to provider and consumer
+                 endpoint groups based on the selectors in those
+                 endpoint groups that match the quality.
+
+                 Qualities for a contract are inherited from the
+                 enclosing contract.
+
+                 Qualities for a target with a given name are
+                 inherited both from the enclosing parent contract and
+                 from any targets with the same name within the
+                 enclosing parent contract.";
+
+            key name;
+            uses quality-base;
+        }
+    }
+
+    grouping has-matcher-qualities {
+        description "An object with a list of matcher qualities";
+        list matcher-quality {
+            description 
+                "A matcher quality is a quality with a namespace field 
+                 used in quality matchers.  The name of the matcher
+                 quality matches against qualities in contract
+                 targets.";
+
+            key name;
+            uses quality-base;
+
+            leaf target-namespace {
+                description 
+                    "The namespace of the target to match.  This allows
+                     us to specify that we want to match only
+                     qualities scoped to a particular target name.
+                     This parameter is optional; if not specified,
+                     match against any target namespace.";
+                
+                type gbp-common:target-name;
+            }
+        }
+    }
+
+    grouping requirement-base {
+        description "Base type for requirements and matcher requirements.";
+        leaf name {
+            description "A user-visible name for the requirement";
+            type gbp-common:requirement-name;
+            mandatory true;
+        }
+        uses label;
+    }
+
+    grouping has-requirements {
+        list requirement {
+            description 
+                "A requirement is a label that, along with capabilities, 
+                 selects how contracts are applied by selecting the
+                 applicable subjects within that contract.
+                 Requirements represent the fact that an endpoint
+                 group requires that some specific functionality be
+                 provided to it in order to function.
+
+                 Requirements scoped to an endpoint group (as well as
+                 any parent endpoint groups) are inherited by all of
+                 that group's contract selectors.  Contract selectors
+                 also inherit requirements from any contract selectors
+                 in the parent groups that have with matching names.
+
+                 Note that requirements play no role in choosing which
+                 contracts apply; they only affect how the contracts
+                 that are chosen will be interpreted.";
+        
+            key name;
+            uses requirement-base;
+        }
+    }
+
+    grouping has-matcher-requirements {
+        description "An object with a list of matcher requirements";
+        list matcher-requirement {
+            description 
+                "A matcher requirement is a requirement with a namespace
+                 field used in requirement matchers.  The name of the
+                 matcher requirement matches against requirements in
+                 endpoint groups.";
+
+            key name;
+            uses requirement-base;
+
+            leaf selector-namespace {
+                description 
+                    "The namespace of the selector to match.  This allows
+                     us to specify that we want to match only
+                     requirements scoped to a particular selector name.
+                     This parameter is optional; if not specified,
+                     match against any selector namespace.";
+                
+                type gbp-common:target-name;
+            }
+        }
+    }
+
+    grouping capability-base {
+        description "Base type for capabilities and matcher capabilities.";
+        leaf name {
+            description "A user-visible name for the capability";
+            type gbp-common:capability-name;
+            mandatory true;
+        }
+        uses label;
+    }
+
+    grouping has-capabilities {
+        list capability {
+            description 
+                "A capability is a label that, along with requirements, 
+                 selects how contracts are applied by selecting the
+                 applicable subjects within that contract.
+                 Capabilities are specific pieces of functionality
+                 that can be exposed to other endpoint groups that may
+                 meet functional requirements of those endpoint
+                 groups.
+
+                 Capabilities scoped to an endpoint group (as well as
+                 any parent endpoint groups) are inherited by all of
+                 that group's contract selectors.  Contract selectors
+                 also inherit capabilities from any contract selectors
+                 in the parent groups that have matching names.
+
+                 Note that capabilities play no role in choosing which
+                 contracts apply; they only affect how the contracts
+                 that are chosen will be interpreted.";
+
+            key "name";
+            uses capability-base;
+        }
+    }
+
+    grouping has-matcher-capabilities {
+        description "An object with a list of matcher capabilities";
+        list matcher-capability {
+            description 
+                "A matcher capability is a capability with a namespace
+                 field used in capability matchers.  The name of the
+                 matcher capability matches against capabilities in
+                 endpoint groups.";
+
+            key name;
+            uses capability-base;
+
+            leaf selector-namespace {
+                description 
+                    "The namespace of the selector to match.  This allows
+                     us to specify that we want to match only
+                     capabilities scoped to a particular selector name.
+                     This parameter is optional; if not specified,
+                     match against any selector namespace.";
+                
+                type gbp-common:target-name;
+            }
+        }
+    }
+
+    grouping has-conditions {
+        list condition {
+            description 
+                "A condition is a state label for endpoints that can 
+                 change over time.  As conditions change for certain
+                 endpoints, this can affect which subjects are in
+                 scope as determined by how the clauses in the
+                 contract match against the requirements and
+                 capabilities for the endpoint group, and the
+                 conditions for the endpoints.";
+
+            key "name";
+            leaf name {
+                description "A user-visible name for the condition";
+                type gbp-common:condition-name;
+                mandatory true;
+            }
+            uses label;
+        }
+    }
+
+    grouping matcher {
+        description 
+            "A matcher allows matching against labels.  This is used 
+             to both to match contracts to endpoint groups by matching
+             on qualities, and then to match against subjects in the
+             contract by matching on requirements, capabilities, and
+             conditions.";
+
+        leaf match-type {
+            description 
+                "Specify how many of the labels must match";
+            default all;
+            type enumeration {
+                enum all {
+                    description 
+                        "All specified qualities must match.";
+                }
+                enum any {
+                    description 
+                        "At least one of the specified qualities 
+                         must match.";
+                }
+                enum none {
+                    description 
+                        "None of the specified qualities 
+                         can match.";
+                }
+            }
+        }
+    }
+
+    // ************************
+    // Endpoint group groupings
+    // ************************
+
+    grouping relator {
+        description 
+            "Relators allow contracts and endpoint groups to be related
+             to each other through a matching process.  See target,
+             selection-relator, target-selector, and named-selector
+             for more information.";
+    }
+
+    grouping selection-relator {
+        description 
+            "Selection relators allow endpoint groups to select 
+             contracts based on their name or on their qualities.";
+        uses relator;
+    }
+
+    grouping consumer-selection-relator {
+        description
+            "A selection relator for matching contracts to meet
+             endpoint group requirements.  See consumer-named-selector
+             and consumer-target-selector for more details.";
+
+        uses has-requirements;
+    }
+
+    grouping provider-selection-relator {
+        description
+            "A selection relator for matching contracts to meet
+             endpoint group requirements.  See provider-named-selector
+             and provider-named-selector for more details.";
+
+        uses has-capabilities;
+    }
+
+    grouping named-selector {
+        description
+            "A named selector selects a contract based on the name of
+             the contract.  Once the contract is selected, the
+             requirements and capabilities are used to select specific
+             subjects within that contract.  Named selectors are the
+             simplest way to select a contract.  If you need a more
+             advanced selector, see the target selector.
+
+             There are two kinds of named selector: consumer named
+             selectors and provider named selectors.  Consumer named
+             selectors select contracts to meet requirements for the
+             endpoint group, and provider named selectors select
+             contracts to provide capabilities for the endpoint group.";
+
+        uses selection-relator;
+
+        leaf name {
+            description "A name for the named selector.";
+            type gbp-common:named-selector-name;
+        }
+
+        leaf-list contract {
+            description "Specific contracts to select.";
+            type leafref {
+                path "/tenants/tenant/contract/id";
+            }
+        }
+    }
+
+    grouping target-selector {
+        description 
+            "Target selectors select contracts for the endpoint group.
+             First, the quality matchers are used to select the
+             contracts.  Then, the requirements and capabilities are
+             used to select specific subjects within that contract.
+             Target selectors are an advanced method for selecting
+             contracts; for a simpler method, see the named selector.
+
+             There are two kinds of target selectors: consumer target
+             selectors and provider target selectors.  Consumer target
+             selectors select contracts to meet requirements for the
+             endpoint group, and provider target selectors select
+             contracts to provide capabilities to other endpoint
+             groups.";
+
+        uses selection-relator;
+
+        leaf name {
+            description "A name for the target selector";
+            type gbp-common:target-selector-name;
+        }
+
+        list quality-matcher {
+            description 
+                "A quality matcher is used in a target selector to
+                 match against the qualities in a contract target.
+                 You can specify a list of qualities to match against.
+                 You can choose whether all qualities listed must
+                 match or if a match can be made with any of the
+                 qualities.";
+
+            key "id";
+            leaf id {
+                description "A unique ID for the quality matcher";
+                type gbp-common:quality-matcher-id;
+                mandatory true;
+            }
+
+            uses matcher;
+            uses has-matcher-qualities;
+        }
+    }
+
+    // ******************
+    // Contract groupings
+    // ******************
+
+    grouping has-direction {
+        description "An object that has a directionality.";
+        leaf direction {
+            default bidirectional;
+            type enumeration {
+                enum in {
+                    description 
+                    "Applies to traffic into provider endpoint group";
+                }
+                enum out {
+                    description 
+                    "Applies to traffic out of provider endpoint group";
+                }
+                enum bidirectional {
+                    description 
+                    "Applies to traffic in both directions";
+                }
+            }
+        }
+    }
+
+    grouping has-parameter-values {
+        list parameter-value {
+            key "name";
+            leaf name {
+                type gbp-common:parameter-name;
+            }
+            union value {
+                type string;
+                type int64;
+            }
+        }
+    }
+
+    grouping has-order {
+        leaf order {
+            description 
+                "Specify the ordering of an ordered list 
+                             of elements.";
+            type int32 {
+                range "0..max";
+            }
+        }
+    }
+
+    grouping has-classifier-refs {
+        description "Objects containing lists of classifier refs";
+        list classifier-ref {
+            description 
+                "A reference to classifier that is used to match traffic 
+                 traveling between the endpoint groups that form the
+                 contract.  Classifiers will generally have some set
+                 of parameters that must be filled in here for the
+                 specific use case.
+
+                 Classifiers can be found on clauses, subjects, and
+                 rules.  Rules inherit their classifiers from both
+                 their enclosing subject and clause.  Classifiers have
+                 meaning only when inherited by a rule.";
+
+            leaf id {
+                description "The ID of the classifier";
+                type leafref {
+                    path "/subject-features/classifier/id";
+                }
+            }
+
+            leaf connection-tracking {
+                description 
+                    "Set up connection tracking for this classifier, 
+                     which allows the traffic in the reverse direction
+                     as connections are established.  This enables 
+                     rules that allow connections be be initiated only 
+                     from one side, but once initiated the two sides 
+                     can communicate for that connection.";
+
+                default normal;
+                type enumeration {
+                    enum normal {
+                        description 
+                            "Match only traffic matching the classifier 
+                             strictly";
+                    }
+                    enum reflexive {
+                        description 
+                            "Additionally match reverse traffic for 
+                             connections";
+                    }
+                }
+            }
+
+            uses has-direction;
+            uses has-parameter-values;
+        }
+    }
+
+    grouping has-action-refs {
+        description "Objects containing lists of action refs";
+        list action-ref {
+            description 
+                "A reference to an action defined in the subject 
+                 features.  Actions will generally have some set of
+                 parameters that must be filled in here for the
+                 specific use case.
+
+                 Actions can be found on clauses, subjects, and rules.
+                 Rules inherit their actions from both their enclosing
+                 subject and clause.  Actions have meaning only when
+                 inherited by a rule.";
+
+            leaf id {
+                description "The ID of the action";
+                type leafref {
+                    path "/subject-features/action/id";
+                }
+            }
+            uses has-direction;
+            uses has-parameter-values;
+            uses has-order;
+        }
+    }
+
+    grouping has-subjects {
+        description "Objects containing lists of subjects";
+        list subject {
+            description
+                "Subjects define rules to allow traffic to flow between 
+                 endpoints in different endpoint groups.  No
+                 communication is allowed unless a subject allows that
+                 communication.
+
+                 After a contract has been selected, clauses in that
+                 contract match against the requirements,
+                 capabilities, and conditions that apply to the
+                 endpoints or endpoint groups that are participating
+                 in the contract.  Clauses that match contain subjects
+                 which then become active.  Subjects can be present in
+                 the contract, or in the clause.  Subjects defined in
+                 the contract will apply to all clauses.
+
+                 An active subject can then apply its rules.  Rules
+                 match against the traffic using classifiers, and then
+                 apply actions to the traffic for matching rules.
+                 Only the first matching rule will apply.
+
+                 Rules are applied in order according to their order
+                 parameter.  Rules defined in a subject with a more
+                 specific scope are applied before any rules defined
+                 subjects in an enclosing scope.
+
+                 XXX TODO - what order do we apply rules for subjects
+                 with the same scope?";
+
+            leaf name {
+                description "A name for the subject";
+                type gbp-common:subject-name;
+            }
+                
+            uses has-classifier-refs;
+            uses has-action-refs;
+
+            list rule {
+                description 
+                    "A rule is applied to traffic between endpoints 
+                     in different endpoint groups.  Rules match
+                     against the traffic using classifiers, and then
+                     apply actions to the traffic for matching rules.
+                     Only the first matching rule will apply.";
+
+                key "name";
+                leaf name {
+                    type gbp-common:rule-name;
+                }
+
+                uses has-classifier-refs;
+                uses has-action-refs;
+                uses has-order;
+            }
+        }
+    }
+
+    // XXX - perhaps we can express this instead by having 
+    // modules extend/augment classifiers and actions?
+    grouping has-parameters {
+        description "A parameterized object";
+
+        leaf description {
+            description "A user-readable description";
+            type gbp-common:description;
+        }
+
+        list parameters {
+            description 
+                "A parameter for the classifier that can be 
+                 passed in.";
+            key "name";
+            leaf name {
+                description "A user-visible name for the parameter";
+                type gbp-common:parameter-name;
+            }
+            leaf description {
+                description 
+                    "A user-visible description of the meaning of 
+                     the parameter.";
+                type gbp-common:description;
+            }
+            leaf type {
+                description "The type of the parameter";
+                default string;
+                type enumeration {
+                    enum string {
+                        description "A string-valued parameter";
+                    }
+                    enum int {
+                        description "An integer-valued parameter";
+                    }
+                }
+            }
+            leaf required {
+                description "Specify whether the parameter is
+                                     required for correct operation.";
+                default optional;
+                type enumeration {
+                    enum required {
+                        description "The parameter is required";
+                    }
+                    enum optional {
+                        description "The parameter is optional";
+                    }
+                }
+            }
+        }
+    }
+
+    container subject-features {
+        description
+            "Contains configuration for the set of actions and
+             classifiers that can be defined for a subject.  This will
+             be specific to the capabilities of the underlying
+             renderer.";
+
+        list classifier {
+            description
+                "A classifier is used to match traffic traveling between 
+                 the endpoint groups that form the contract.
+                 Classifiers can define parameters that will need to
+                 be filled in when a particular rule references it.";
+
+            key "id";
+            uses has-parameters;
+
+            leaf id {
+                description "A unique ID for the classifier";
+                type gbp-common:classifier-id;
+            }
+
+            leaf name {
+                description "A user-visible name for the classifier";
+                type gbp-common:classifier-name;
+            }
+        }
+
+        list action {
+            description
+                "A action to be applied to traffic across endpoint 
+                 groups.";
+
+            key "id";
+            uses has-parameters;
+
+            leaf id {
+                description "A unique ID for the action";
+                type gbp-common:action-id;
+            }
+
+            leaf name {
+                description "A user-visible name for the action";
+                type gbp-common:action-name;
+            }
+        }
+    }
+
+    // *******
+    // Tenants
+    // *******
+
+    container tenants {
+        description "The list of all known tenants";
+
+        list tenant {
+            description "";
+
+            key "id";
+            leaf id {
+                description "A unique ID for the tenant";
+                mandatory true;
+                type gbp-common:tenant-id;
+            }
+            leaf name {
+                description "A user-visible name for the tenant";
+                type gbp-common:name;
+            }
+            leaf description {
+                description "A user-readable description for the tenant";
+                type gbp-common:description;
+            }
+            leaf-list parent {
+                description "Parent tenant from which we inherit"; 
+                
+                type leafref {
+                    path "/tenants/tenant/id";
+                }
+            } 
+
+            // ***************
+            // Endpoint groups
+            // ***************
+
+            list endpoint-group {
+                description
+                    "Endpoint groups are sets of endpoints that share a 
+                     common set of policies.  Endpoint groups are
+                     matched to contracts using selectors, contracts
+                     determine which endpoints can communicate and in
+                     what way.
+                     
+                     Endpoint groups have both requirements and
+                     capabilities, which represent specific pieces of
+                     functionality that are exposed at the boundary of
+                     those groups.  Requirements represent some
+                     specific functionality that is needed for the
+                     endpoints in the endpoint group to function.
+                     Correspondingly, capabilities are pieces of
+                     functionality that the endpoints in the endpoint
+                     group can provide to other endpoints.
+                     
+                     Contracts can be selected through either a named
+                     selector, which matches specific contracts by
+                     name, or by a target selector which will match
+                     contracts by matching its list of qualities to
+                     the list of qualities for a target on the
+                     contract.  The contract selectors choose which
+                     contracts are in scope.  Note that requirements
+                     and capabilities are not used when choosing which
+                     contracts are in scope; these are used to
+                     determine how a contract will be interpreted.
+                     
+                     There are two broad category of selectors:
+                     provider selectors and consumer selectors.  The
+                     provider selectors allow selecting contracts that
+                     allow the endpoint group to expose its
+                     capabilities.  The consumer selectors allow
+                     selecting contracts which allow the endpoint
+                     group to meet its requirements.";
+
+                key "id";
+            
+                leaf id {
+                    mandatory true;
+                    type gbp-common:endpoint-group-id;
+                }
+
+                leaf description {
+                    description 
+                        "A human-readable description for the endpoint
+                         group.";
+                    type gbp-common:description;
+                }
+                uses has-requirements;
+                uses has-capabilities;
+
+                list consumer-named-selector {
+                    description
+                        "Consumer named selectors are named selectors 
+                         that select contracts to meet the
+                         requirements of the endpoint group.
+                         
+                         The consumer named selector selects a
+                         contract based on the name of the contract.
+                         Once the contract is selected, the
+                         requirements are used to select specific
+                         subjects within that contract.";
+
+                    key "name";
+                    uses named-selector;
+                    uses consumer-selection-relator;
+                }
+
+                list provider-named-selector {
+                    description 
+                        "Provider named selectors are named selectors 
+                         that select contracts to provide capabilties
+                         to other endpoint group.
+                         
+                         The provider named selector selects a
+                         contract based on the name of the contract.
+                         Once the contract is selected, the capabilies
+                         are used to select specific subjects within
+                         that contract.";
+
+                    key "name";
+                    uses named-selector;
+                    uses provider-selection-relator;
+                }
+
+                list consumer-target-selector {
+                    description 
+                        "Consumer target selectors are target selectors 
+                         that select contracts to meet the requirements 
+                         of the endpoint group.
+                         
+                         The consumer target selector selects a
+                         contract using the quality matchers to match
+                         against the qualities specified on the
+                         contract targets.  Once the contract is
+                         selected, the requirements are used to select
+                         specific subjects within that contract.";
+
+                    key "name";
+                    uses target-selector;
+                    uses consumer-selection-relator;
+                }
+
+                list provider-target-selector {
+                    description
+                        "Provider target selectors are target selectors 
+                         that select contracts to provide capabilties
+                         to other endpoint group.
+                         
+                         The provider target selector selects a
+                         contract using the quality matchers to match
+                         against the qualities specified on the
+                         contract targets.  Once the contract is
+                         selected, the capabilities are used to select
+                         specific subjects within that contract.";
+
+                    key "name";
+                    uses target-selector;
+                    uses provider-selection-relator;
+                }
+
+                leaf parent {
+                    description 
+                        "Parent endpoint group from which we inherit"; 
+
+                    type leafref {
+                        path "/tenants/tenant/endpoint-group/id";
+                    }
+                }
+            }
+
+            // *********
+            // Contracts
+            // *********
+
+            list contract {
+                description
+                    "Contracts contain a set of subjects that describe
+                     the communication allowed between endpoints in
+                     endpoint groups.  Contracts are matched to endpoint
+                     groups by selectors.";
+                
+                key "id";
+                leaf id {
+                    description "A unique ID for the contract";
+                    type gbp-common:contract-id;
+                    mandatory true;
+                }
+                
+                leaf description {
+                    description 
+                        "A human-readable description for the contract.";
+                    type gbp-common:description;
+                }
+                                
+                // *******
+                // Relator
+                // *******
+                
+                uses has-qualities;
+                
+                list target {
+                    description 
+                        "Targets on a contract allow grouping sets of qualities
+                         together, as well as providing a namespace for
+                         the qualities that are matched.";
+                
+                    key "name";
+                    leaf name {
+                        description 
+                            "The name for this target.  This can also be used 
+                             by quality matchers as a namespace for qualities.";
+                        type gbp-common:target-name;
+                        mandatory true;
+                    }
+                
+                    uses relator;
+                    uses has-qualities;
+                }
+                
+                // ********************
+                // Clauses and subjects
+                // ********************
+                
+                uses has-subjects;
+                
+                list clause {
+                    description 
+                        "Clauses are used to determine which subjects are 
+                         active once a contract is selected using the
+                         contract selectors.
+                
+                         Clauses are activated by matching against
+                         requirements on the consumer endpoint group,
+                         capabilities on the provider endpoint group, and
+                         conditions on the individual endpoints in the
+                         endpoint group.";
+                
+                    key "name";
+                    leaf name {
+                        type gbp-common:clause-name;
+                    }
+                
+                    // ********
+                    // Matchers
+                    // ********
+                
+                    container consumer-matchers {
+                        description 
+                            "Matchers that apply to the consumer endpoint group.";
+                        list requirement-matcher {
+                            description 
+                                "Match against requirements in the consumer 
+                                 endpoint group.";
+                
+                            key "id";
+                            leaf id {
+                                description 
+                                    "A unique ID for the requirement matcher";
+                                type gbp-common:requirement-matcher-id;
+                                mandatory true;
+                            }
+                
+                            uses matcher;
+                            uses has-matcher-requirements;
+                        }
+                
+                        list consumer-condition-matcher {
+                            description 
+                                "Match against conditions on endpoints in the 
+                                 consumer endpoint group.";
+                
+                            key "id";
+                            leaf id {
+                                description 
+                                    "A unique ID for the condition matcher";
+                                type gbp-common:condition-matcher-id;
+                                mandatory true;
+                            }
+                
+                            uses matcher;
+                            uses has-conditions;
+                        }
+                    }
+                
+                    container provider-matchers {
+                        description 
+                            "Matchers that apply to the provider endpoint group";
+                
+                        list capability-matcher {
+                            description 
+                                "Match against capabilities in the provider  
+                                 endpoint group.";
+                
+                            key "id";
+                            leaf id {
+                                description 
+                                    "A unique ID for the capability matcher";
+                                type gbp-common:capability-matcher-id;
+                                mandatory true;
+                            }
+                
+                            uses matcher;
+                            uses has-matcher-capabilities;
+                        }
+                
+                        list provider-condition-matcher {
+                            description 
+                                "Match against conditions on endpoints in the 
+                                 provider endpoint group.";
+                
+                            key "id";
+                            leaf id {
+                                description 
+                                    "A unique ID for the condition matcher";
+                                type gbp-common:condition-matcher-id;
+                                mandatory true;
+                            }
+                
+                            uses matcher;
+                            uses has-conditions;
+                        }
+                    }
+                
+                    // ****************************
+                    // Classifiers/actions/subjects
+                    // ****************************
+                
+                    uses has-classifier-refs;
+                    uses has-action-refs;
+                    uses has-subjects;
+                }
+                
+                // ***********
+                // Inheritance
+                // ***********
+                
+                leaf-list parent {
+                    description "Parent contract from which we inherit"; 
+                
+                    type leafref {
+                        path "/tenants/tenant/contract/id";
+                    }
+                } 
+            }
+        }
+    }
+
+    // XXX - TODO - Contracts spanning multiple tenants
+    // XXX - TODO - model forwarding model
+    // XXX - TODO - model scoring
+    // XXX - TODO - model circumstances
+}

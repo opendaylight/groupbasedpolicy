@@ -1,0 +1,142 @@
+module endpoint {
+    yang-version 1;
+
+    namespace "urn:opendaylight:groupbasedpolicy:endpoint";
+    prefix "gbp-endpoint";
+
+    import gbp-common {prefix gbp-common;}
+    import ietf-inet-types {prefix inet;}
+    import ietf-yang-types {
+        prefix yang;
+        revision-date 2010-09-24;
+    } 
+
+    revision "2014-04-21" {
+        description
+            "Initial revision.";
+    }
+
+    // A base type for an end point
+    grouping endpoint-fields {
+        description "An endpoint and its associated metadata";
+        leaf tenant {
+            type gbp-common:tenant-id;
+            mandatory true;
+            description "The tenant with which this endpoint is associated";
+        }
+        leaf l2-namespace {
+            type gbp-common:l2-namespace-id;
+            mandatory true;
+            description 
+                "The namespace for the layer 2 address for this endpoint";
+        }
+        leaf mac-address {
+            type yang:mac-address;
+            mandatory true;
+            description 
+                "The MAC address for the endpoint";
+        }
+        list l3-address {
+            description
+                "All the layer 3 addresses associated with this endpoint";
+            key "l3-namespace ip-address";
+            leaf l3-namespace {
+                type gbp-common:l3-namespace-id;
+                mandatory true;
+                description 
+                    "The namespace for this layer 3 address";
+            }
+            leaf ip-address {
+                type inet:ip-address;
+                mandatory true;
+                description 
+                    "The actual IP address for the endpoint";
+            }
+            leaf ip-prefix {
+                type inet:ip-prefix;
+                description 
+                    "The subnet for this address";
+            }
+        }
+        leaf-list endpoint-group {
+            type gbp-common:endpoint-group-id;
+            description 
+                "The groups associated with this endpoint";
+        }
+        leaf-list condition {
+            type gbp-common:condition-name;
+            description 
+                "The conditions associated with this endpoint";
+        }
+        leaf timestamp {
+            type int64;
+            description
+                "The last timestamp associated with this endpoint record.  
+                 This will be used for aging data in the registry.";
+        }
+    }
+
+    container endpoints {
+        description 
+            "Endpoints indexed by layer 2 addreses.  When modifying data here,
+             you must also modify data in the endpoints-l3 container as well.";
+        list endpoint {
+            key "l2-namespace mac-address";
+            uses endpoint-fields;
+        }
+    }
+
+    container endpoints-l3 {
+        description 
+            "Endpoints indexed by layer 3 addreses.  When modifying data here,
+             you must also modify data in the endpoints container as well.";
+        list endpoint-l3 {
+            key "l3-namespace ip-address";
+
+            leaf l3-namespace {
+                type gbp-common:l3-namespace-id;
+                mandatory true;
+                description 
+                    "The namespace for this layer 3 address";
+            }
+            leaf ip-address {
+                type inet:ip-address;
+                mandatory true;
+                description 
+                    "The actual IP address for the endpoint";
+            }
+
+            uses endpoint-fields;
+        }
+    }
+
+    rpc register-endpoint {
+        description
+            "Register a new endpoint into the registry.  If there
+             is already an existing endpoint with the same keys, they 
+             will be overwritten with the new information.";
+
+        input {
+            uses endpoint-fields;
+        }
+    }
+
+    rpc unregister-endpoint {
+        description "Unregister an endpoint from the registry.";
+
+        input {
+            leaf l2-namespace {
+                type gbp-common:l2-namespace-id;
+                mandatory true;
+                description 
+                    "The namespace for the layer 2 address for this endpoint";
+            }
+            leaf mac-address {
+                type yang:mac-address;
+                mandatory true;
+                description 
+                    "The MAC address for the endpoint";
+            }
+        }
+    }
+}

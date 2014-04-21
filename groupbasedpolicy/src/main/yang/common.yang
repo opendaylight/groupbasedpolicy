@@ -1,0 +1,230 @@
+module gbp-common {
+    yang-version 1;
+
+    namespace "urn:opendaylight:groupbasedpolicy:common";
+    prefix "gbp-common";
+
+    import ietf-yang-types {
+        prefix yang;
+        revision-date 2010-09-24;
+    }   
+
+    description 
+        "Common types and definitions for group-based policy models";
+
+    revision "2014-04-21" {
+        description "Initial revision";
+    }
+
+    // **********
+    // Base types
+    // **********
+
+    typedef description {
+        description "A human-readable description for a object.";
+        type string {
+            length "1..4096";
+        }
+    }
+
+    typedef name {
+        description 
+            "A generic string name type. 
+             Must start with a letter";
+        type string {
+            pattern '[a-zA-Z]([a-zA-Z0-9\-_])*';
+            length "1..256";
+        }
+    }
+
+    // This is copied from ietf-yang-types@2013-07-15.  Should be removed
+    // when/if that's updated in yangtools
+    typedef uuid {
+      type string {
+        pattern
+          '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
+      }
+      description
+        "A Universally Unique IDentifier in the string representation
+      defined in RFC 4122.  The canonical representation uses
+      lowercase characters.
+
+      The following is an example of a UUID in string representation:
+      f81d4fae-7dec-11d0-a765-00a0c91e6bf6
+      ";
+      reference
+        "RFC 4122: A Universally Unique IDentifier (UUID) URN
+        	  Namespace";
+
+    }
+
+    typedef unique-id {
+        type uuid;
+        description "A globally unique identifier";
+    }
+
+    // *************
+    // Relator names
+    // *************
+
+    typedef relator-name {
+        type name;
+        description "A name for a relator.";
+    }
+
+    typedef target-name {
+        type relator-name;
+        description "A name for a target.";
+    }
+
+    typedef named-selector-name {
+        type relator-name;
+        description "A name for a named selector.";
+    }
+
+    typedef target-selector-name {
+        type relator-name;
+        description "A name for a target selector.";
+    }
+
+    // *****************
+    // Unique object IDs
+    // *****************
+
+    typedef l2-namespace-id {
+        type unique-id;
+        description "An unique ID for a layer 2 namespace";
+    }
+
+    typedef l3-namespace-id {
+        type unique-id;
+        description "A unique ID for a layer 3 namespace";
+    }
+
+    typedef tenant-id {
+        type unique-id;
+        description "A unique ID for a tenant";
+    }
+
+    typedef endpoint-group-id {
+        type unique-id;
+        description "A unique ID for an endpoint group";
+    }
+
+    typedef contract-id {
+        type unique-id;
+        description "A unique ID for a contract";
+    }
+
+    typedef matcher-id {
+        type unique-id;
+        description "A unique ID for a matcher";
+    }
+
+    typedef quality-matcher-id {
+        type matcher-id;
+        description "A unique ID for a quality matcher";
+    }
+
+    typedef requirement-matcher-id {
+        type matcher-id;
+        description "A unique ID for a  matcher";
+    }
+
+    typedef condition-matcher-id {
+        type matcher-id;
+        description "A unique ID for a condition matcher";
+    }
+
+    typedef capability-matcher-id {
+        type matcher-id;
+        description "A unique ID for a capability matcher";
+    }
+
+    // *************
+    // Label names
+    // *************
+
+    typedef label-name {
+	type name;
+	description "A name for a label";
+    }
+
+    typedef capability-name {
+	type label-name;
+	description "A name for a capability";
+    }
+
+    typedef requirement-name {
+	type label-name;
+	description "A name for a requirement";
+    }
+
+    typedef quality-name {
+        type label-name;
+        description "A name for a quality.";
+    }
+
+    typedef condition-name {
+        type label-name;
+        description "A name for a condition.";
+    }
+
+    // ****************************
+    // Subject/clause-related names
+    // ****************************
+
+    typedef clause-name {
+        type name;
+        description "A name for a clause.";
+    }
+
+    typedef subject-name {
+        type name;
+        description "A name for a subject.";
+    }
+
+    typedef rule-name {
+        type name;
+        description "A name for a rule.";
+    }
+
+    // ********************
+    // Parameterized values
+    // ********************
+
+    typedef parameterized-id {
+        type unique-id;
+        description "A unique ID for a parameterized object";
+    }
+
+    typedef classifier-id {
+        type parameterized-id;
+        description "A unique ID for a classifier.";
+    }
+
+    typedef action-id {
+        type parameterized-id;
+        description "A unique ID for an action.";
+    }
+
+    typedef parameterized-name {
+        type name;
+        description "A name for a parameterized object";
+    }
+
+    typedef classifier-name {
+        type parameterized-name;
+        description "A name for a classifier.";
+    }
+
+    typedef action-name {
+        type parameterized-name;
+        description "A name for an action.";
+    }
+
+    typedef parameter-name {
+        type name;
+        description "A name for a parameter.";
+    }
+}

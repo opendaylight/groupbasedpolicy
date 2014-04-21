@@ -1,0 +1,21 @@
+module endpoint-provider {
+     yang-version 1;
+     namespace "urn:opendaylight:params:xml:ns:yang:controller:config:endpoint-provider";
+     prefix "endpoint-provider";
+
+     import config { prefix config; revision-date 2013-04-05; }
+
+     description
+         "This module contains the base YANG definitions for 
+          endpoint-provider services.";
+
+     revision "2014-04-21" {
+         description
+             "Initial revision.";
+     }
+
+     identity toaster-provider {
+        base "config:service-type";
+        config:java-class "org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointData";
+    }
+ }

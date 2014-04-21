@@ -1,0 +1,51 @@
+module endpoint-provider-impl {
+    yang-version 1;
+    namespace "urn:opendaylight:params:xml:ns:yang:controller:config:endpoint-provider:impl";
+
+    prefix "endpoint-provider-impl";
+
+    import config { prefix config; revision-date 2013-04-05; }
+    import opendaylight-md-sal-binding { prefix mdsal; revision-date 2013-10-28; }
+
+    description
+        "This module contains the base YANG definitions for 
+         endpoint-provider impl implementation.";
+
+    revision "2014-04-21" {
+        description
+            "Initial revision.";
+    }
+
+    // This is the definition of a service implementation
+    identity endpoint-provider-impl {
+        base config:module-type;
+        config:java-name-prefix EndpointProvider;
+    }
+
+    //augments the configuration,  
+    augment "/config:modules/config:module/config:configuration" {
+        case endpoint-provider-impl {
+            when "/config:modules/config:module/config:type = 'endpoint-provider-impl'";
+    
+            //wires in the data-broker service 
+            container data-broker {
+                uses config:service-ref {
+                    refine type {
+                        mandatory false;
+                        config:required-identity mdsal:binding-data-broker;
+                    }
+                }
+            }
+    
+            //Wires dependent services into this class - in this case the RPC registry service
+            container rpc-registry {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity mdsal:binding-rpc-registry;
+                    }
+                }
+            }
+        }
+    }
+}
