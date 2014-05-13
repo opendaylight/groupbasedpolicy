@@ -14,7 +14,7 @@ module endpoint-provider {
              "Initial revision.";
      }
 
-     identity toaster-provider {
+     identity endpoint-provider {
         base "config:service-type";
         config:java-class "org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointData";
     }

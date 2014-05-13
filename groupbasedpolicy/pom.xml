@@ -98,6 +98,7 @@
               <sources>
                 <source>target/generated-sources/sal</source>
                 <source>target/generated-sources/config</source>
+                <source>target/generated-resources/</source>
               </sources>
             </configuration>
           </execution>

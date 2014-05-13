@@ -4,11 +4,6 @@ module gbp-common {
     namespace "urn:opendaylight:groupbasedpolicy:common";
     prefix "gbp-common";
 
-    import ietf-yang-types {
-        prefix yang;
-        revision-date 2010-09-24;
-    }   
-
     description 
         "Common types and definitions for group-based policy models";
 
@@ -32,30 +27,27 @@ module gbp-common {
             "A generic string name type. 
              Must start with a letter";
         type string {
-            pattern '[a-zA-Z]([a-zA-Z0-9\-_])*';
+            pattern '[a-zA-Z]([a-zA-Z0-9\-_.])*';
             length "1..256";
         }
     }
 
-    // This is copied from ietf-yang-types@2013-07-15.  Should be removed
-    // when/if that's updated in yangtools
+    // UUID type from ietf-yang-types@2013-07-15
     typedef uuid {
-      type string {
-        pattern
-          '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
-      }
-      description
-        "A Universally Unique IDentifier in the string representation
-      defined in RFC 4122.  The canonical representation uses
-      lowercase characters.
+        type string {
+            pattern '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-'
+                + '[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
+        }
+        description
+            "A Universally Unique IDentifier in the string representation 
+             defined in RFC 4122.  The canonical representation uses
+             lowercase characters.
 
-      The following is an example of a UUID in string representation:
-      f81d4fae-7dec-11d0-a765-00a0c91e6bf6
-      ";
-      reference
-        "RFC 4122: A Universally Unique IDentifier (UUID) URN
-        	  Namespace";
-
+             The following is an example of a UUID in string
+             representation: f81d4fae-7dec-11d0-a765-00a0c91e6bf6";
+        reference
+            "RFC 4122: A Universally Unique IDentifier (UUID) URN
+             Namespace";
     }
 
     typedef unique-id {
@@ -77,13 +69,18 @@ module gbp-common {
         description "A name for a target.";
     }
 
-    typedef named-selector-name {
+    typedef selector-name {
         type relator-name;
+        description "A name for a selector.";
+    }
+
+    typedef named-selector-name {
+        type selector-name;
         description "A name for a named selector.";
     }
 
     typedef target-selector-name {
-        type relator-name;
+        type selector-name;
         description "A name for a target selector.";
     }
 
@@ -189,37 +186,37 @@ module gbp-common {
         description "A name for a rule.";
     }
 
-    // ********************
-    // Parameterized values
-    // ********************
+    // ****************
+    // Subject features
+    // ****************
 
-    typedef parameterized-id {
+    typedef subject-feature-id {
         type unique-id;
         description "A unique ID for a parameterized object";
     }
 
-    typedef classifier-id {
-        type parameterized-id;
+    typedef classifier-definition-id {
+        type subject-feature-id;
         description "A unique ID for a classifier.";
     }
 
-    typedef action-id {
-        type parameterized-id;
+    typedef action-definition-id {
+        type subject-feature-id;
         description "A unique ID for an action.";
     }
 
-    typedef parameterized-name {
+    typedef subject-feature-name {
         type name;
         description "A name for a parameterized object";
     }
 
     typedef classifier-name {
-        type parameterized-name;
+        type subject-feature-name;
         description "A name for a classifier.";
     }
 
     typedef action-name {
-        type parameterized-name;
+        type subject-feature-name;
         description "A name for an action.";
     }
 

@@ -37,7 +37,8 @@ module endpoint-provider-impl {
                 }
             }
     
-            //Wires dependent services into this class - in this case the RPC registry service
+            //Wires dependent services into this class - in this case
+            //the RPC registry service
             container rpc-registry {
                 uses config:service-ref {
                     refine type {

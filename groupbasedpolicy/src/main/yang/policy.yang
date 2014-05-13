@@ -5,13 +5,6 @@ module policy {
     prefix "gbp-policy";
 
     import gbp-common {prefix gbp-common;}
-    import ietf-inet-types {prefix inet;}
-    import ietf-yang-types {
-        prefix yang;
-        revision-date 2010-09-24;
-    } 
-
-    include policy-contract;
 
     description 
         "This module defines the group-based policy configuration 
@@ -50,12 +43,32 @@ module policy {
                 }
                 enum exclude {
                     description 
-
                         "This label will be excluded from the 
                          matching.  This allows removing labels that
                          would have otherwise been included because of
                          inheritence rules.";
                 }
+            }
+        }
+    }
+
+    typedef name-inheritance {
+        description 
+            "Determines how names are inherited by matchers.  Names are 
+             used by matchers to narrow the scope of labels against
+             which they match to only particular targets or selectors.";
+
+        type enumeration {
+            enum inherit {
+                description 
+                    "Inherit the name parameter from the parent
+                     matcher.  If there is no parent matcher, then
+                     acts as if 'specified' were selected.";
+            }
+            enum specified {
+                description 
+                    "Match against only the specied target or selector
+                     name, as appropriate for the context.";
             }
         }
     }
@@ -97,31 +110,6 @@ module policy {
         }
     }
 
-    grouping has-matcher-qualities {
-        description "An object with a list of matcher qualities";
-        list matcher-quality {
-            description 
-                "A matcher quality is a quality with a namespace field 
-                 used in quality matchers.  The name of the matcher
-                 quality matches against qualities in contract
-                 targets.";
-
-            key name;
-            uses quality-base;
-
-            leaf target-namespace {
-                description 
-                    "The namespace of the target to match.  This allows
-                     us to specify that we want to match only
-                     qualities scoped to a particular target name.
-                     This parameter is optional; if not specified,
-                     match against any target namespace.";
-                
-                type gbp-common:target-name;
-            }
-        }
-    }
-
     grouping requirement-base {
         description "Base type for requirements and matcher requirements.";
         leaf name {
@@ -154,31 +142,6 @@ module policy {
         
             key name;
             uses requirement-base;
-        }
-    }
-
-    grouping has-matcher-requirements {
-        description "An object with a list of matcher requirements";
-        list matcher-requirement {
-            description 
-                "A matcher requirement is a requirement with a namespace
-                 field used in requirement matchers.  The name of the
-                 matcher requirement matches against requirements in
-                 endpoint groups.";
-
-            key name;
-            uses requirement-base;
-
-            leaf selector-namespace {
-                description 
-                    "The namespace of the selector to match.  This allows
-                     us to specify that we want to match only
-                     requirements scoped to a particular selector name.
-                     This parameter is optional; if not specified,
-                     match against any selector namespace.";
-                
-                type gbp-common:target-name;
-            }
         }
     }
 
@@ -218,31 +181,6 @@ module policy {
         }
     }
 
-    grouping has-matcher-capabilities {
-        description "An object with a list of matcher capabilities";
-        list matcher-capability {
-            description 
-                "A matcher capability is a capability with a namespace
-                 field used in capability matchers.  The name of the
-                 matcher capability matches against capabilities in
-                 endpoint groups.";
-
-            key name;
-            uses capability-base;
-
-            leaf selector-namespace {
-                description 
-                    "The namespace of the selector to match.  This allows
-                     us to specify that we want to match only
-                     capabilities scoped to a particular selector name.
-                     This parameter is optional; if not specified,
-                     match against any selector namespace.";
-                
-                type gbp-common:target-name;
-            }
-        }
-    }
-
     grouping has-conditions {
         list condition {
             description 
@@ -274,22 +212,20 @@ module policy {
 
         leaf match-type {
             description 
-                "Specify how many of the labels must match";
-            default all;
+                "Specify how many of the labels must match.  If not 
+                 specified, defaults to 'all'.";
             type enumeration {
                 enum all {
                     description 
-                        "All specified qualities must match.";
+                        "All specified labels must match.";
                 }
                 enum any {
                     description 
-                        "At least one of the specified qualities 
-                         must match.";
+                        "At least one of the specified labels must match.";
                 }
                 enum none {
                     description 
-                        "None of the specified qualities 
-                         can match.";
+                        "None of the specified labels can match.";
                 }
             }
         }
@@ -352,6 +288,7 @@ module policy {
         leaf name {
             description "A name for the named selector.";
             type gbp-common:named-selector-name;
+            mandatory true;
         }
 
         leaf-list contract {
@@ -383,6 +320,7 @@ module policy {
         leaf name {
             description "A name for the target selector";
             type gbp-common:target-selector-name;
+            mandatory true;
         }
 
         list quality-matcher {
@@ -402,7 +340,38 @@ module policy {
             }
 
             uses matcher;
-            uses has-matcher-qualities;
+
+            list matcher-quality {
+                description
+                    "A matcher quality is a quality with a target name
+                     field used in quality matchers.  The name of the
+                     matcher quality matches against qualities in
+                     contract targets.";
+
+                key name;
+                uses quality-base;
+
+                leaf name-inheritance {
+                    description
+                        "Determine how the target name should be inherited
+                         from any parent matchers.";
+
+                    type name-inheritance;
+                    default inherit;
+                }
+
+                leaf target-name {
+                    description
+                        "The name of the target to match.  This allows
+                         us to specify that we want to match only
+                         qualities scoped to a particular target name.
+
+                         This parameter is optional; if not specified,
+                         match against any selector name.";
+
+                    type gbp-common:target-name;
+                }
+            }
         }
     }
 
@@ -411,31 +380,35 @@ module policy {
     // ******************
 
     grouping has-direction {
-        description "An object that has a directionality.";
+        description "Object that have a directionality.";
         leaf direction {
             default bidirectional;
             type enumeration {
                 enum in {
                     description 
-                    "Applies to traffic into provider endpoint group";
+                        "Applies to traffic into provider endpoint group";
                 }
                 enum out {
                     description 
-                    "Applies to traffic out of provider endpoint group";
+                        "Applies to traffic out of provider endpoint group";
                 }
                 enum bidirectional {
                     description 
-                    "Applies to traffic in both directions";
+                        "Applies to traffic in both directions";
                 }
             }
         }
     }
 
-    grouping has-parameter-values {
+    grouping subject-feature-instance {
+        description
+            "Specific instances of subject features with 
+             parameters filled in.";
         list parameter-value {
             key "name";
             leaf name {
                 type gbp-common:parameter-name;
+                mandatory true;
             }
             union value {
                 type string;
@@ -445,10 +418,11 @@ module policy {
     }
 
     grouping has-order {
+        description "Objects containing an order parameter";
         leaf order {
             description 
                 "Specify the ordering of an ordered list 
-                             of elements.";
+                 of elements.";
             type int32 {
                 range "0..max";
             }
@@ -456,25 +430,20 @@ module policy {
     }
 
     grouping has-classifier-refs {
-        description "Objects containing lists of classifier refs";
+        description "Objects containing lists of classifier references";
+
         list classifier-ref {
             description 
-                "A reference to classifier that is used to match traffic 
-                 traveling between the endpoint groups that form the
-                 contract.  Classifiers will generally have some set
-                 of parameters that must be filled in here for the
-                 specific use case.
+                "A reference to classifier instance that is used to match 
+                 traffic traveling between the endpoint groups that
+                 form the contract.";
 
-                 Classifiers can be found on clauses, subjects, and
-                 rules.  Rules inherit their classifiers from both
-                 their enclosing subject and clause.  Classifiers have
-                 meaning only when inherited by a rule.";
-
-            leaf id {
-                description "The ID of the classifier";
+            leaf name {
+                description "The name of the classifier instance";
                 type leafref {
-                    path "/subject-features/classifier/id";
+                    path "/tenants/tenant/subject-feature-instances/classifier-instance/name";
                 }
+                mandatory true;
             }
 
             leaf connection-tracking {
@@ -482,7 +451,7 @@ module policy {
                     "Set up connection tracking for this classifier, 
                      which allows the traffic in the reverse direction
                      as connections are established.  This enables 
-                     rules that allow connections be be initiated only 
+                     rules that allow connections to be initiated only 
                      from one side, but once initiated the two sides 
                      can communicate for that connection.";
 
@@ -502,99 +471,32 @@ module policy {
             }
 
             uses has-direction;
-            uses has-parameter-values;
         }
     }
 
     grouping has-action-refs {
-        description "Objects containing lists of action refs";
+        description "Objects containing lists of action references";
+
         list action-ref {
             description 
                 "A reference to an action defined in the subject 
-                 features.  Actions will generally have some set of
-                 parameters that must be filled in here for the
-                 specific use case.
+                 feature instances for the tenant.";
 
-                 Actions can be found on clauses, subjects, and rules.
-                 Rules inherit their actions from both their enclosing
-                 subject and clause.  Actions have meaning only when
-                 inherited by a rule.";
-
-            leaf id {
-                description "The ID of the action";
+            leaf name {
+                description "The name of the action instance";
                 type leafref {
-                    path "/subject-features/action/id";
+                    path "/tenants/tenant/subject-feature-instances/action-instance/name";
                 }
+                mandatory true;
             }
             uses has-direction;
-            uses has-parameter-values;
             uses has-order;
         }
     }
 
-    grouping has-subjects {
-        description "Objects containing lists of subjects";
-        list subject {
-            description
-                "Subjects define rules to allow traffic to flow between 
-                 endpoints in different endpoint groups.  No
-                 communication is allowed unless a subject allows that
-                 communication.
-
-                 After a contract has been selected, clauses in that
-                 contract match against the requirements,
-                 capabilities, and conditions that apply to the
-                 endpoints or endpoint groups that are participating
-                 in the contract.  Clauses that match contain subjects
-                 which then become active.  Subjects can be present in
-                 the contract, or in the clause.  Subjects defined in
-                 the contract will apply to all clauses.
-
-                 An active subject can then apply its rules.  Rules
-                 match against the traffic using classifiers, and then
-                 apply actions to the traffic for matching rules.
-                 Only the first matching rule will apply.
-
-                 Rules are applied in order according to their order
-                 parameter.  Rules defined in a subject with a more
-                 specific scope are applied before any rules defined
-                 subjects in an enclosing scope.
-
-                 XXX TODO - what order do we apply rules for subjects
-                 with the same scope?";
-
-            leaf name {
-                description "A name for the subject";
-                type gbp-common:subject-name;
-            }
-                
-            uses has-classifier-refs;
-            uses has-action-refs;
-
-            list rule {
-                description 
-                    "A rule is applied to traffic between endpoints 
-                     in different endpoint groups.  Rules match
-                     against the traffic using classifiers, and then
-                     apply actions to the traffic for matching rules.
-                     Only the first matching rule will apply.";
-
-                key "name";
-                leaf name {
-                    type gbp-common:rule-name;
-                }
-
-                uses has-classifier-refs;
-                uses has-action-refs;
-                uses has-order;
-            }
-        }
-    }
-
-    // XXX - perhaps we can express this instead by having 
-    // modules extend/augment classifiers and actions?
-    grouping has-parameters {
-        description "A parameterized object";
+    grouping subject-feature-definition {
+        description
+            "Base type for subject feature definitions.";
 
         leaf description {
             description "A user-readable description";
@@ -603,12 +505,13 @@ module policy {
 
         list parameters {
             description 
-                "A parameter for the classifier that can be 
+                "A parameter for the feature that can be 
                  passed in.";
             key "name";
             leaf name {
                 description "A user-visible name for the parameter";
                 type gbp-common:parameter-name;
+                mandatory true;
             }
             leaf description {
                 description 
@@ -630,7 +533,7 @@ module policy {
             }
             leaf required {
                 description "Specify whether the parameter is
-                                     required for correct operation.";
+                             required for correct operation.";
                 default optional;
                 type enumeration {
                     enum required {
@@ -642,52 +545,112 @@ module policy {
                 }
             }
         }
+
+        leaf fallback-behavior {
+            description 
+                "Set the behavior when the underlying infrastructure
+                 is unable to support a particular feature.";
+            type enumeration {
+                enum strict {
+                    description 
+                        "A fatal exception MUST be raised which will
+                         render the enclosing subject inactive.";
+                }
+                enum allow-fallback {
+                    description 
+                        "The infrastructure MAY fall back to using 
+                         a parent definition of this feature, and
+                         instread raise a nonfatal exception.";
+                }
+            }
+        }
     }
 
-    container subject-features {
+    // ********************
+    // Global Configuration
+    // ********************
+
+    container subject-feature-definitions {
         description
             "Contains configuration for the set of actions and
-             classifiers that can be defined for a subject.  This will
+             classifiers that can be defined for a subject.  This is
              be specific to the capabilities of the underlying
-             renderer.";
+             infrastructure, so the policy model does not define the
+             specific semantics.
 
-        list classifier {
+             The definitions here provide a generic parameterized base
+             that can be extended by more specific definitions.
+             Extensions must apply all the semantics from their parent
+             object as well as any additional semantics.  If the
+             underlying infrastructure is unable to support a
+             particular feature, it MUST trigger an exception that
+             will render the enclosing subject inactive until the
+             exception is resolved.  If the fallback-behavior
+             parameter is set to 'allow-fallback', the infrastructure
+             MAY instead apply the parent subject feature and instead
+             raise a nonfatal exception.";
+
+        config true;
+
+        list classifier-definition {
             description
                 "A classifier is used to match traffic traveling between 
                  the endpoint groups that form the contract.
-                 Classifiers can define parameters that will need to
-                 be filled in when a particular rule references it.";
+                 Classifiers defintions can define parameters that
+                 will need to be filled in when a particular rule
+                 references it.";
 
             key "id";
-            uses has-parameters;
+            uses subject-feature-definition;
 
             leaf id {
-                description "A unique ID for the classifier";
-                type gbp-common:classifier-id;
+                description "A unique ID for the classifier definition";
+                type gbp-common:classifier-definition-id;
+                mandatory true;
             }
 
             leaf name {
-                description "A user-visible name for the classifier";
+                description 
+                    "A user-visible name for the classifier definition";
                 type gbp-common:classifier-name;
+            }
+
+            leaf parent {
+                description 
+                    "Parent classifier definition from which we inherit"; 
+                type leafref {
+                    path "/subject-feature-definitions/classifier-definition/id";
+                }
             }
         }
 
-        list action {
+        list action-definition {
             description
                 "A action to be applied to traffic across endpoint 
-                 groups.";
+                 groups.  Actions definitions can define parameters
+                 that will need to be filled in when a particular rule
+                 references it.";
 
             key "id";
-            uses has-parameters;
+            uses subject-feature-definition;
 
             leaf id {
                 description "A unique ID for the action";
-                type gbp-common:action-id;
+                type gbp-common:action-definition-id;
+                mandatory true;
             }
 
             leaf name {
                 description "A user-visible name for the action";
                 type gbp-common:action-name;
+            }
+
+            leaf parent {
+                description 
+                    "Parent action definition from which we inherit"; 
+                type leafref {
+                    path "/subject-feature-definitions/action-definition/id";
+                }
             }
         }
     }
@@ -699,8 +662,13 @@ module policy {
     container tenants {
         description "The list of all known tenants";
 
+        config true;
+
         list tenant {
-            description "";
+            description 
+                "A tenant is a domain of administration which is 
+                 logically separate from other tenants.  Most policy
+                 is defined in the context of a particular tenant";
 
             key "id";
             leaf id {
@@ -716,13 +684,6 @@ module policy {
                 description "A user-readable description for the tenant";
                 type gbp-common:description;
             }
-            leaf-list parent {
-                description "Parent tenant from which we inherit"; 
-                
-                type leafref {
-                    path "/tenants/tenant/id";
-                }
-            } 
 
             // ***************
             // Endpoint groups
@@ -771,7 +732,12 @@ module policy {
                     mandatory true;
                     type gbp-common:endpoint-group-id;
                 }
-
+                
+                leaf name {
+                    description 
+                        "A user-visible name for the endpoint group";
+                    type gbp-common:name;
+                }
                 leaf description {
                     description 
                         "A human-readable description for the endpoint
@@ -861,6 +827,52 @@ module policy {
                 }
             }
 
+            // *************************
+            // Subject feature instances
+            // *************************
+
+            container subject-feature-instances {
+                description 
+                    "Contains instances of subject features.  Subject 
+                     feature instances reference a subject feature
+                     definition but fill in the required parameters so
+                     that they can be easily references elsewhere.";
+
+                list classifier-instance {
+                    description "XXX";
+
+                    key "name";
+                    leaf name {
+                        description "A name for the classifier instance";
+                        type gbp-common:classifier-name;
+                        mandatory true;
+                    }
+                    leaf classifier-definition-id {
+                        type leafref {
+                            path "/subject-feature-definitions/classifier-definition/id";
+                        }
+                    }
+                    uses subject-feature-instance;
+                }
+
+                list action-instance {
+                    description "XXX";
+
+                    key "name";
+                    leaf name {
+                        description "A name for the action instance";
+                        type gbp-common:action-name;
+                        mandatory true;
+                    }
+                    leaf action-definition-id {
+                        type leafref {
+                            path "/subject-feature-definitions/action-definition/id";
+                        }
+                    }
+                    uses subject-feature-instance;
+                }
+            }
+
             // *********
             // Contracts
             // *********
@@ -914,8 +926,65 @@ module policy {
                 // Clauses and subjects
                 // ********************
                 
-                uses has-subjects;
-                
+                list subject {
+                    description
+                        "Subjects define rules to allow traffic to flow 
+                         between endpoints in different endpoint
+                         groups.  No communication is allowed unless a
+                         subject allows that communication.
+
+                         After a contract has been selected, clauses
+                         in that contract match against the
+                         requirements, capabilities, and conditions
+                         that apply to the endpoints or endpoint
+                         groups that are participating in the
+                         contract.  Clauses that match each point to a
+                         subject which then becomes active.
+                         
+                         An active subject can then apply its rules to
+                         the traffic between the endpoints.";
+
+                    leaf name {
+                        description "A name for the subject";
+                        type gbp-common:subject-name;
+                        mandatory true;
+                    }
+
+                    list rule {
+                        description 
+                            "A rule is applied to traffic between 
+                             endpoints in different endpoint groups.
+                             Rules match against the traffic using
+                             classifiers, and then apply actions to
+                             the traffic for matching rules.
+
+                             Rules are applied in order according to
+                             their order parameter.  Only the first
+                             matching rule will apply.  When multiple
+                             subjects are active, the order on each
+                             subject will determine which subjects are
+                             applied first, and all their rules will
+                             take effect before the rules of any
+                             subjects with a higher order value.  When
+                             subjects have the same order value, then
+                             they will apply in lexicographic order by
+                             subject name.";
+
+                        key "name";
+                        leaf name {
+                            description "A name for the rule";
+                            type gbp-common:rule-name;
+                            mandatory true;
+                        }
+
+                        uses has-classifier-refs;
+                        uses has-action-refs;
+                        uses has-order;
+                    }
+
+                    uses has-order;
+                }
+
                 list clause {
                     description 
                         "Clauses are used to determine which subjects are 
@@ -931,6 +1000,7 @@ module policy {
                     key "name";
                     leaf name {
                         type gbp-common:clause-name;
+                        mandatory true;
                     }
                 
                     // ********
@@ -939,7 +1009,8 @@ module policy {
                 
                     container consumer-matchers {
                         description 
-                            "Matchers that apply to the consumer endpoint group.";
+                            "Matchers that apply to the consumer endpoint 
+                             group.";
                         list requirement-matcher {
                             description 
                                 "Match against requirements in the consumer 
@@ -954,7 +1025,41 @@ module policy {
                             }
                 
                             uses matcher;
-                            uses has-matcher-requirements;
+                            list matcher-requirement {
+                                description 
+                                    "A matcher requirement is a 
+                                     requirement with a selector name
+                                     field used in requirement
+                                     matchers.  The name of the
+                                     matcher requirement matches
+                                     against requirements in endpoint
+                                     groups.";
+
+                                key name;
+                                uses requirement-base;
+
+                                leaf name-inheritance {
+                                    description 
+                                        "Determine how the selector 
+                                         name should be inherited from
+                                         any parent matchers.";
+                                    type name-inheritance;
+                                    default inherit;
+                                }
+                                leaf selector-name {
+                                    description 
+                                        "The name of the selector to  
+                                         match.  This allows us to
+                                         specify that we want to match
+                                         only requirements scoped to a
+                                         particular selector name.
+                                         This parameter is optional;
+                                         if not specified, match
+                                         against any selector name.";
+                
+                                    type gbp-common:selector-name;
+                                }
+                            }
                         }
                 
                         list consumer-condition-matcher {
@@ -972,12 +1077,21 @@ module policy {
                 
                             uses matcher;
                             uses has-conditions;
+                            leaf parent {
+                                description 
+                                    "Parent condition matcher from which
+                                     we inherit.";
+                                type leafref {
+                                    path "/tenants/tenant/contract/clause/consumer-matchers/consumer-condition-matcher/id";
+                                }
+                            }
                         }
                     }
                 
                     container provider-matchers {
                         description 
-                            "Matchers that apply to the provider endpoint group";
+                            "Matchers that apply to the provider endpoint 
+                             group";
                 
                         list capability-matcher {
                             description 
@@ -993,7 +1107,41 @@ module policy {
                             }
                 
                             uses matcher;
-                            uses has-matcher-capabilities;
+
+                            list matcher-capability {
+                                description 
+                                    "A matcher capability is a 
+                                     capability with a selector
+                                     name field used in capability
+                                     mat  chers.  The name of the
+                                     matcher capability matches
+                                     against capabilities in
+                                     endpoint groups.";
+
+                                key name;
+                                uses capability-base;
+                                leaf name-inheritance {
+                                    description 
+                                        "Determine how the selector 
+                                         name should be inherited from
+                                         any parent matchers.";
+                                    type name-inheritance;
+                                    default inherit;
+                                }
+                                leaf selector-name {
+                                    description 
+                                        "The name of the selector to
+                                         match.  This allows us to
+                                         specify that we want to match
+                                         only capabilities scoped to a
+                                         particular selector name.
+                                         This parameter is optional;
+                                         if not specified, match
+                                         against any selector name.";
+                
+                                    type gbp-common:selector-name;
+                                }
+                            }
                         }
                 
                         list provider-condition-matcher {
@@ -1011,23 +1159,38 @@ module policy {
                 
                             uses matcher;
                             uses has-conditions;
+
+                            leaf parent {
+                                description 
+                                    "Parent condition matcher from which
+                                     we inherit.";
+                                type leafref {
+                                    path "/tenants/tenant/contract/clause/provider-matchers/provider-condition-matcher/id";
+                                }
+                            }
                         }
                     }
                 
-                    // ****************************
-                    // Classifiers/actions/subjects
-                    // ****************************
-                
-                    uses has-classifier-refs;
-                    uses has-action-refs;
-                    uses has-subjects;
+                    // ******************
+                    // Subject References
+                    // ******************
+
+                    leaf-list subject-refs {
+                        description
+                            "The subjects that will be activated if this 
+                             clause matches.";
+
+                        type leafref {
+                            path "/tenants/tenant/contract/subject/name";
+                        }
+                    }
                 }
-                
+
                 // ***********
                 // Inheritance
                 // ***********
                 
-                leaf-list parent {
+                leaf parent {
                     description "Parent contract from which we inherit"; 
                 
                     type leafref {
@@ -1035,11 +1198,41 @@ module policy {
                     }
                 } 
             }
+                
+            list contract-refs {
+                description 
+                    "Contract references allow forming contracts
+                     between endpoint groups in different tenants.
+                     Once the contract reference is created, it is
+                     then possible to match against the contract using
+                     selectors as though it were a local tenant.
+
+                     Endpoint groups in the local tenant can serve
+                     only as consumers of the contract.  Once the
+                     contract is matched, consumer matchers will apply
+                     to requirements and conditions in the local
+                     tenant, and provider matchers will apply against
+                     capabilities and conditions in the referenced
+                     tenant.";
+                
+                leaf tenant-id {
+                    description
+                        "The tenant ID of the tenant containing the 
+                         contract.";
+                    type leafref {
+                        path "/tenants/tenant/contract/id";
+                    }
+                }
+                leaf contract-id {
+                    description "The contract ID of the contract.";
+
+                    type leafref {
+                        path "/tenants/tenant/contract/id";
+                    }
+                }
+            }
         }
     }
 
-    // XXX - TODO - Contracts spanning multiple tenants
     // XXX - TODO - model forwarding model
-    // XXX - TODO - model scoring
-    // XXX - TODO - model circumstances
 }

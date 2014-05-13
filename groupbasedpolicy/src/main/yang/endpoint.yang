@@ -110,6 +110,9 @@ module endpoint {
         }
     }
 
+    // XXX - TODO - allow registering conditions on endpoint groups
+    // and not just on endpoints themselves.
+
     rpc register-endpoint {
         description
             "Register a new endpoint into the registry.  If there
