@@ -531,7 +531,7 @@ module policy {
                     }
                 }
             }
-            leaf required {
+            leaf is-required {
                 description "Specify whether the parameter is
                              required for correct operation.";
                 default optional;
@@ -596,7 +596,7 @@ module policy {
             description
                 "A classifier is used to match traffic traveling between 
                  the endpoint groups that form the contract.
-                 Classifiers defintions can define parameters that
+                 Classifier defintions can define parameters that
                  will need to be filled in when a particular rule
                  references it.";
 
@@ -627,7 +627,7 @@ module policy {
         list action-definition {
             description
                 "A action to be applied to traffic across endpoint 
-                 groups.  Actions definitions can define parameters
+                 groups.  Action definitions can define parameters
                  that will need to be filled in when a particular rule
                  references it.";
 

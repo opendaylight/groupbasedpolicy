@@ -14,16 +14,21 @@ import org.opendaylight.controller.sal.common.util.RpcErrors;
 import org.opendaylight.controller.sal.common.util.Rpcs;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointsL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.SetEndpointGroupConditionsInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnregisterEndpointInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnsetEndpointGroupConditionsInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.ConditionMapping;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.ConditionMappingKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.l3.EndpointL3;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.l3.EndpointL3Builder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.l3.EndpointL3Key;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Builder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.has.endpoint.group.conditions.EndpointGroupCondition;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.has.endpoint.group.conditions.EndpointGroupConditionKey;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcError;
@@ -56,8 +61,11 @@ public class EndpointRegistry implements AutoCloseable, EndpointService {
 
         rpcRegistration =
                 rpcRegistry.addRpcImplementation(EndpointService.class, this);
-
-        LOG.info("Created endpoint registry");
+        
+        // XXX TODO - age out endpoint data and remove 
+        // endpoint group/condition mappings with no conditions
+        
+        LOG.debug("Created endpoint registry");
     }
 
     @Override
@@ -94,7 +102,8 @@ public class EndpointRegistry implements AutoCloseable, EndpointService {
                 new EndpointKey(ep.getL2Namespace(), ep.getMacAddress());
         InstanceIdentifier<Endpoint> iid = 
                 InstanceIdentifier.builder(Endpoints.class)
-                    .child(Endpoint.class, key).build();
+                    .child(Endpoint.class, key)
+                    .build();
         DataModificationTransaction t = dataProvider.beginTransaction();
         t.putOperationalData(iid, ep);
         Collection<RpcError> errors = new ArrayList<>();
@@ -111,8 +120,9 @@ public class EndpointRegistry implements AutoCloseable, EndpointService {
                     .setL3Namespace(l3addr.getL3Namespace())
                     .build();
                 InstanceIdentifier<EndpointL3> iid_l3 = 
-                        InstanceIdentifier.builder(EndpointsL3.class)
-                            .child(EndpointL3.class, key3).build();
+                        InstanceIdentifier.builder(Endpoints.class)
+                            .child(EndpointL3.class, key3)
+                            .build();
                 t.putOperationalData(iid_l3, ep3);
                 
                 docommit(t, iid_l3.toString(), "register", errors);
@@ -145,8 +155,9 @@ public class EndpointRegistry implements AutoCloseable, EndpointService {
                             new EndpointL3Key(l3addr.getIpAddress(), 
                                               l3addr.getL3Namespace());
                     InstanceIdentifier<EndpointL3> iid_l3 = 
-                            InstanceIdentifier.builder(EndpointsL3.class)
-                                .child(EndpointL3.class, key3).build();
+                            InstanceIdentifier.builder(Endpoints.class)
+                                .child(EndpointL3.class, key3)
+                                .build();
                     DataModificationTransaction t =
                             dataProvider.beginTransaction();
                     t.removeOperationalData(iid_l3);
@@ -161,6 +172,60 @@ public class EndpointRegistry implements AutoCloseable, EndpointService {
         }
 
         // note that deleting an object that doesn't exist is fine.
+        RpcResult<Void> result = Rpcs.<Void>getRpcResult(errors.isEmpty(), 
+                                                         errors);
+        return Futures.immediateFuture(result);
+    }
+
+    @Override
+    public Future<RpcResult<Void>> 
+        setEndpointGroupConditions(SetEndpointGroupConditionsInput input) {
+
+        ConditionMappingKey key = 
+                new ConditionMappingKey(input.getEndpointGroup());
+        
+        Collection<RpcError> errors = new ArrayList<>();
+        for (EndpointGroupCondition condition: input.getEndpointGroupCondition()) {
+            EndpointGroupConditionKey ckey = 
+                    new EndpointGroupConditionKey(condition.getCondition());
+            InstanceIdentifier<EndpointGroupCondition> iid = 
+                    InstanceIdentifier.builder(Endpoints.class)
+                        .child(ConditionMapping.class, key)
+                        .child(EndpointGroupCondition.class, ckey)
+                        .build();
+            DataModificationTransaction t =
+                    dataProvider.beginTransaction();
+            t.putOperationalData(iid, condition);
+            docommit(t, iid.toString(), "set", errors);
+        }
+        
+        RpcResult<Void> result = Rpcs.<Void>getRpcResult(errors.isEmpty(), 
+                                                         errors);
+        return Futures.immediateFuture(result);
+    }
+
+    @Override
+    public Future<RpcResult<Void>> 
+        unsetEndpointGroupConditions(UnsetEndpointGroupConditionsInput input) {
+
+        ConditionMappingKey key = 
+                new ConditionMappingKey(input.getEndpointGroup());
+        
+        Collection<RpcError> errors = new ArrayList<>();
+        for (EndpointGroupCondition condition: input.getEndpointGroupCondition()) {
+            EndpointGroupConditionKey ckey = 
+                    new EndpointGroupConditionKey(condition.getCondition());
+            InstanceIdentifier<EndpointGroupCondition> iid = 
+                    InstanceIdentifier.builder(Endpoints.class)
+                        .child(ConditionMapping.class, key)
+                        .child(EndpointGroupCondition.class, ckey)
+                        .build();
+            DataModificationTransaction t =
+                    dataProvider.beginTransaction();
+            t.removeOperationalData(iid);
+            docommit(t, iid.toString(), "set", errors);
+        }
+        
         RpcResult<Void> result = Rpcs.<Void>getRpcResult(errors.isEmpty(), 
                                                          errors);
         return Futures.immediateFuture(result);

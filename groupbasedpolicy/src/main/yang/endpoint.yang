@@ -22,7 +22,8 @@ module endpoint {
         leaf tenant {
             type gbp-common:tenant-id;
             mandatory true;
-            description "The tenant with which this endpoint is associated";
+            description 
+                "The tenant with which this endpoint is associated";
         }
         leaf l2-namespace {
             type gbp-common:l2-namespace-id;
@@ -76,21 +77,47 @@ module endpoint {
         }
     }
 
-    container endpoints {
+    grouping has-endpoint-group-conditions {
         description 
-            "Endpoints indexed by layer 2 addreses.  When modifying data here,
-             you must also modify data in the endpoints-l3 container as well.";
-        list endpoint {
-            key "l2-namespace mac-address";
-            uses endpoint-fields;
+            "Base type for object with endpoint group to condition 
+             mappings.";
+
+        leaf endpoint-group {
+            description "The endpoint group conditions to assign";
+            type gbp-common:endpoint-group-id;
+        }
+        list endpoint-group-condition {
+            description 
+                "The conditions associated with this endpoint 
+                 group";
+            key "condition";
+            leaf condition {
+                description "A condition name to associate.";
+                type gbp-common:condition-name;
+            }
         }
     }
 
-    container endpoints-l3 {
+    container endpoints {
         description 
-            "Endpoints indexed by layer 3 addreses.  When modifying data here,
-             you must also modify data in the endpoints container as well.";
+            "Repository for operational state data about endpoints needed for
+             policy resolution.";
+
+        list endpoint {
+            description 
+                "Endpoints indexed by layer 2 addreses.  When modifying
+                 data here, you must also modify data in the
+                 endpoints-l3 list as well.";
+            key "l2-namespace mac-address";
+            uses endpoint-fields;
+        }
+
         list endpoint-l3 {
+            description 
+                "Endpoints indexed by layer 3 addreses.  When modifying 
+                 data here, you must also modify data in the endpoints
+                 list as well.";
+
             key "l3-namespace ip-address";
 
             leaf l3-namespace {
@@ -108,10 +135,17 @@ module endpoint {
 
             uses endpoint-fields;
         }
-    }
 
-    // XXX - TODO - allow registering conditions on endpoint groups
-    // and not just on endpoints themselves.
+        list condition-mapping {
+            description 
+                "A list mapping conditions to entire endpoint groups.
+                 This offers a quickly way to set a condition on many
+                 endpoints at once.";
+
+            key "endpoint-group";
+            uses has-endpoint-group-conditions;
+        }
+    }
 
     rpc register-endpoint {
         description
@@ -140,6 +174,27 @@ module endpoint {
                 description 
                     "The MAC address for the endpoint";
             }
+        }
+    }
+
+    rpc set-endpoint-group-conditions {
+        description
+            "Set a list of conditions for a particular endpoint group.  
+             These conditions will apply to all endpoints in the
+             endpoint group.  These conditions will be added to the 
+             existing list of conditions.";
+
+        input {
+            uses has-endpoint-group-conditions;
+        }
+    }
+
+    rpc unset-endpoint-group-conditions {
+        description
+            "Remove a list of conditions from an endpoint group.";
+
+        input {
+            uses has-endpoint-group-conditions;
         }
     }
 }
