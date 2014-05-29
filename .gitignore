@@ -10,6 +10,7 @@ products
 repository
 workspace
 *~
+#*
 target
 .classpath
 .project

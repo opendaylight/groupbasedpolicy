@@ -52,27 +52,6 @@ module policy {
         }
     }
 
-    typedef name-inheritance {
-        description 
-            "Determines how names are inherited by matchers.  Names are 
-             used by matchers to narrow the scope of labels against
-             which they match to only particular targets or selectors.";
-
-        type enumeration {
-            enum inherit {
-                description 
-                    "Inherit the name parameter from the parent
-                     matcher.  If there is no parent matcher, then
-                     acts as if 'specified' were selected.";
-            }
-            enum specified {
-                description 
-                    "Match against only the specied target or selector
-                     name, as appropriate for the context.";
-            }
-        }
-    }
-
     grouping quality-base {
         description "Base type for qualities and matcher qualities.";
         leaf name {
@@ -231,6 +210,24 @@ module policy {
         }
     }
 
+    grouping has-condition-matchers {
+        description "Objects with condition matchers";
+        list condition-matcher {
+            description "Match against conditions on endpoints.";
+                
+            key "name";
+            leaf name {
+                description 
+                    "A name for the condition matcher";
+                type gbp-common:condition-matcher-name;
+                mandatory true;
+            }
+                
+            uses matcher;
+            uses has-conditions;
+        }
+    }
+
     // ************************
     // Endpoint group groupings
     // ************************
@@ -248,6 +245,12 @@ module policy {
             "Selection relators allow endpoint groups to select 
              contracts based on their name or on their qualities.";
         uses relator;
+
+        leaf name {
+            description "A name for the selector";
+            type gbp-common:selector-name;
+            mandatory true;
+        }
     }
 
     grouping consumer-selection-relator {
@@ -255,7 +258,7 @@ module policy {
             "A selection relator for matching contracts to meet
              endpoint group requirements.  See consumer-named-selector
              and consumer-target-selector for more details.";
-
+        uses selection-relator;
         uses has-requirements;
     }
 
@@ -264,7 +267,7 @@ module policy {
             "A selection relator for matching contracts to meet
              endpoint group requirements.  See provider-named-selector
              and provider-named-selector for more details.";
-
+        uses selection-relator;
         uses has-capabilities;
     }
 
@@ -283,11 +286,9 @@ module policy {
              endpoint group, and provider named selectors select
              contracts to provide capabilities for the endpoint group.";
 
-        uses selection-relator;
-
         leaf name {
             description "A name for the named selector.";
-            type gbp-common:named-selector-name;
+            type gbp-common:selector-name;
             mandatory true;
         }
 
@@ -315,14 +316,6 @@ module policy {
              contracts to provide capabilities to other endpoint
              groups.";
 
-        uses selection-relator;
-
-        leaf name {
-            description "A name for the target selector";
-            type gbp-common:target-selector-name;
-            mandatory true;
-        }
-
         list quality-matcher {
             description 
                 "A quality matcher is used in a target selector to
@@ -332,10 +325,10 @@ module policy {
                  match or if a match can be made with any of the
                  qualities.";
 
-            key "id";
-            leaf id {
-                description "A unique ID for the quality matcher";
-                type gbp-common:quality-matcher-id;
+            key "name";
+            leaf name {
+                description "A unique name for the quality matcher";
+                type gbp-common:quality-matcher-name;
                 mandatory true;
             }
 
@@ -351,23 +344,15 @@ module policy {
                 key name;
                 uses quality-base;
 
-                leaf name-inheritance {
-                    description
-                        "Determine how the target name should be inherited
-                         from any parent matchers.";
-
-                    type name-inheritance;
-                    default inherit;
-                }
-
-                leaf target-name {
+                leaf target-namespace {
                     description
                         "The name of the target to match.  This allows
                          us to specify that we want to match only
                          qualities scoped to a particular target name.
 
                          This parameter is optional; if not specified,
-                         match against any selector name.";
+                         use an inherited target name if it exists, or
+                         match against any target name.";
 
                     type gbp-common:target-name;
                 }
@@ -944,6 +929,7 @@ module policy {
                          An active subject can then apply its rules to
                          the traffic between the endpoints.";
 
+                    key "name";
                     leaf name {
                         description "A name for the subject";
                         type gbp-common:subject-name;
@@ -1016,11 +1002,11 @@ module policy {
                                 "Match against requirements in the consumer 
                                  endpoint group.";
                 
-                            key "id";
-                            leaf id {
+                            key "name";
+                            leaf name {
                                 description 
-                                    "A unique ID for the requirement matcher";
-                                type gbp-common:requirement-matcher-id;
+                                    "A name for the requirement matcher";
+                                type gbp-common:requirement-matcher-name;
                                 mandatory true;
                             }
                 
@@ -1038,54 +1024,25 @@ module policy {
                                 key name;
                                 uses requirement-base;
 
-                                leaf name-inheritance {
-                                    description 
-                                        "Determine how the selector 
-                                         name should be inherited from
-                                         any parent matchers.";
-                                    type name-inheritance;
-                                    default inherit;
-                                }
-                                leaf selector-name {
+                                leaf selector-namespace {
                                     description 
                                         "The name of the selector to  
                                          match.  This allows us to
                                          specify that we want to match
                                          only requirements scoped to a
                                          particular selector name.
+
                                          This parameter is optional;
-                                         if not specified, match
+                                         if not specified, use an
+                                         inherited selector namespace
+                                         if it exists, or match
                                          against any selector name.";
                 
                                     type gbp-common:selector-name;
                                 }
                             }
                         }
-                
-                        list consumer-condition-matcher {
-                            description 
-                                "Match against conditions on endpoints in the 
-                                 consumer endpoint group.";
-                
-                            key "id";
-                            leaf id {
-                                description 
-                                    "A unique ID for the condition matcher";
-                                type gbp-common:condition-matcher-id;
-                                mandatory true;
-                            }
-                
-                            uses matcher;
-                            uses has-conditions;
-                            leaf parent {
-                                description 
-                                    "Parent condition matcher from which
-                                     we inherit.";
-                                type leafref {
-                                    path "/tenants/tenant/contract/clause/consumer-matchers/consumer-condition-matcher/id";
-                                }
-                            }
-                        }
+                        uses has-condition-matchers;
                     }
                 
                     container provider-matchers {
@@ -1098,11 +1055,11 @@ module policy {
                                 "Match against capabilities in the provider  
                                  endpoint group.";
                 
-                            key "id";
-                            leaf id {
+                            key "name";
+                            leaf name {
                                 description 
-                                    "A unique ID for the capability matcher";
-                                type gbp-common:capability-matcher-id;
+                                    "A name for the capability matcher";
+                                type gbp-common:capability-matcher-name;
                                 mandatory true;
                             }
                 
@@ -1120,55 +1077,26 @@ module policy {
 
                                 key name;
                                 uses capability-base;
-                                leaf name-inheritance {
-                                    description 
-                                        "Determine how the selector 
-                                         name should be inherited from
-                                         any parent matchers.";
-                                    type name-inheritance;
-                                    default inherit;
-                                }
-                                leaf selector-name {
+
+                                leaf selector-namespace {
                                     description 
                                         "The name of the selector to
                                          match.  This allows us to
                                          specify that we want to match
                                          only capabilities scoped to a
                                          particular selector name.
+
                                          This parameter is optional;
-                                         if not specified, match
+                                         if not specified, use an
+                                         inherited selector namespace
+                                         if it exists, or match
                                          against any selector name.";
                 
                                     type gbp-common:selector-name;
                                 }
                             }
                         }
-                
-                        list provider-condition-matcher {
-                            description 
-                                "Match against conditions on endpoints in the 
-                                 provider endpoint group.";
-                
-                            key "id";
-                            leaf id {
-                                description 
-                                    "A unique ID for the condition matcher";
-                                type gbp-common:condition-matcher-id;
-                                mandatory true;
-                            }
-                
-                            uses matcher;
-                            uses has-conditions;
-
-                            leaf parent {
-                                description 
-                                    "Parent condition matcher from which
-                                     we inherit.";
-                                type leafref {
-                                    path "/tenants/tenant/contract/clause/provider-matchers/provider-condition-matcher/id";
-                                }
-                            }
-                        }
+                        uses has-condition-matchers;
                     }
                 
                     // ******************
@@ -1199,7 +1127,7 @@ module policy {
                 } 
             }
                 
-            list contract-refs {
+            list contract-ref {
                 description 
                     "Contract references allow forming contracts
                      between endpoint groups in different tenants.

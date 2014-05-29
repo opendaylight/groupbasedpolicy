@@ -74,16 +74,6 @@ module gbp-common {
         description "A name for a selector.";
     }
 
-    typedef named-selector-name {
-        type selector-name;
-        description "A name for a named selector.";
-    }
-
-    typedef target-selector-name {
-        type selector-name;
-        description "A name for a target selector.";
-    }
-
     // *****************
     // Unique object IDs
     // *****************
@@ -113,29 +103,33 @@ module gbp-common {
         description "A unique ID for a contract";
     }
 
-    typedef matcher-id {
-        type unique-id;
-        description "A unique ID for a matcher";
+    // *************
+    // Matcher names
+    // *************
+
+    typedef matcher-name {
+        type name;
+        description "A name for a matcher";
     }
 
-    typedef quality-matcher-id {
-        type matcher-id;
-        description "A unique ID for a quality matcher";
+    typedef quality-matcher-name {
+        type matcher-name;
+        description "A name for a quality matcher";
     }
 
-    typedef requirement-matcher-id {
-        type matcher-id;
-        description "A unique ID for a  matcher";
+    typedef requirement-matcher-name {
+        type matcher-name;
+        description "A name for a requirement matcher";
     }
 
-    typedef condition-matcher-id {
-        type matcher-id;
-        description "A unique ID for a condition matcher";
+    typedef condition-matcher-name {
+        type matcher-name;
+        description "A name for a condition matcher";
     }
 
-    typedef capability-matcher-id {
-        type matcher-id;
-        description "A unique ID for a capability matcher";
+    typedef capability-matcher-name {
+        type matcher-name;
+        description "A name for a capability matcher";
     }
 
     // *************

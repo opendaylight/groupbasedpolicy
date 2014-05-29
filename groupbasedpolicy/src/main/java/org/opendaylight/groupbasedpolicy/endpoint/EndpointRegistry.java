@@ -1,3 +1,11 @@
+/*
+ * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
 package org.opendaylight.groupbasedpolicy.endpoint;
 
 import java.util.ArrayList;
@@ -97,7 +105,11 @@ public class EndpointRegistry implements AutoCloseable, EndpointService {
     @Override
     public Future<RpcResult<Void>>
         registerEndpoint(RegisterEndpointInput input) {
-        Endpoint ep = new EndpointBuilder(input).build();
+        long timestamp = System.currentTimeMillis();
+        Endpoint ep = new EndpointBuilder(input)
+            .setTimestamp(timestamp)
+            .build();
+    
         EndpointKey key = 
                 new EndpointKey(ep.getL2Namespace(), ep.getMacAddress());
         InstanceIdentifier<Endpoint> iid = 
@@ -118,6 +130,7 @@ public class EndpointRegistry implements AutoCloseable, EndpointService {
                 EndpointL3 ep3 = new EndpointL3Builder(input)
                     .setIpAddress(key3.getIpAddress())
                     .setL3Namespace(l3addr.getL3Namespace())
+                    .setTimestamp(timestamp)
                     .build();
                 InstanceIdentifier<EndpointL3> iid_l3 = 
                         InstanceIdentifier.builder(Endpoints.class)
