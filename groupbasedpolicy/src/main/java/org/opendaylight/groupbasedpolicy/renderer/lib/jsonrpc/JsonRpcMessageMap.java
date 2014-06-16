@@ -17,7 +17,7 @@ public class JsonRpcMessageMap {
     private Map<String, JsonRpcMessage> messageMap;
     
     public JsonRpcMessageMap() {
-    	messageMap = Maps.newHashMap();
+        messageMap = Maps.newHashMap();
     }
     
     public JsonRpcMessage get(String messageName) {
@@ -25,6 +25,6 @@ public class JsonRpcMessageMap {
     }
 
     public void add(JsonRpcMessage message) {
-    	messageMap.put(message.getName(), message);
+        messageMap.put(message.getName(), message);
     }
 }

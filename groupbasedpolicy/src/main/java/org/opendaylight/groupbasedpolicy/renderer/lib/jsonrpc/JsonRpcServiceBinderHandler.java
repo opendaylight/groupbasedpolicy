@@ -33,7 +33,7 @@ public class JsonRpcServiceBinderHandler extends ChannelInboundHandlerAdapter {
 
     // Setter to facilitate unit testing
     public void setEndpoint(JsonRpcEndpoint endpoint) {
-    	this.endpoint = endpoint;
+        this.endpoint = endpoint;
     }
 
     @Override
@@ -43,10 +43,10 @@ public class JsonRpcServiceBinderHandler extends ChannelInboundHandlerAdapter {
             JsonNode jsonNode = (JsonNode) msg;
 
             if (jsonNode.has("result")) {
-            	endpoint.processResult(jsonNode);
+                endpoint.processResult(jsonNode);
             } else if (jsonNode.hasNonNull("method")) {
                 if (jsonNode.has("id") && !Strings.isNullOrEmpty(jsonNode.get("id").asText())) {
-                	endpoint.processRequest(jsonNode);
+                    endpoint.processRequest(jsonNode);
                 }
             }
 

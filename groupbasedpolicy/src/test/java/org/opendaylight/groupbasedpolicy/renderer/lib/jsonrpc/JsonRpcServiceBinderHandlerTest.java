@@ -36,11 +36,11 @@ public class JsonRpcServiceBinderHandlerTest {
 
     // Used for testing incoming JSONRPC request messages
     static final String testRequest = 
-    		"{ \"id\":\"2da9e3d7-0bbe-4099-b343-12783777452f\"," +
+            "{ \"id\":\"2da9e3d7-0bbe-4099-b343-12783777452f\"," +
             "\"method\":  \"test_foo\",\"params\":null}";
     // Used for testing incoming JSONRPC response messages
     static final String testResponse = 
-    		"{ \"id\":\"2da9e3d7-0bbe-4099-b343-12783777452f\"," +
+            "{ \"id\":\"2da9e3d7-0bbe-4099-b343-12783777452f\"," +
             "\"result\":\"foobar\",\"error\":null}";
     
     private JsonRpcEndpoint mockEndpoint;
@@ -50,7 +50,7 @@ public class JsonRpcServiceBinderHandlerTest {
     
     @Before
     public void setUp() throws Exception {
-    	
+        
         mockEndpoint = mock(JsonRpcEndpoint.class);
         decoder = new JsonRpcDecoder(1000);
         binderHandler = new JsonRpcServiceBinderHandler(mockEndpoint);

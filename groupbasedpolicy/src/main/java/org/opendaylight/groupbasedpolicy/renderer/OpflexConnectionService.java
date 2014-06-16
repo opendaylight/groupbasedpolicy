@@ -63,7 +63,7 @@ public class OpflexConnectionService {
 
     public void setDataProvider(DataBrokerService salDataProvider) {
         // TODO: use this for OpFlex configuration data changes
-    	this.dataProvider = salDataProvider;
+        this.dataProvider = salDataProvider;
         
         // TODO: Get configuration for various servers,
         //       to be sent in OpFlex Identity message

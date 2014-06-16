@@ -65,9 +65,9 @@ public class JsonRpcEndpoint {
 
     // This implementation will change -- modified port for testing only
     public SettableFuture<Object> invoke(JsonRpcMessage message) throws Throwable {
-    	if (messageMap.get(message.getName()) == null) {
-    			return null;
-    	}
+        if (messageMap.get(message.getName()) == null) {
+                return null;
+        }
         JsonRpc10Request request = new JsonRpc10Request(UUID.randomUUID().toString());
         request.setMethod(message.getName());
         request.setParams(message);

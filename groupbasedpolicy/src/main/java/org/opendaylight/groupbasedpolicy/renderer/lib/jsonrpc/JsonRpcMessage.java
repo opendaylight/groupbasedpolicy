@@ -11,7 +11,7 @@ package org.opendaylight.groupbasedpolicy.renderer.lib.jsonrpc;
 
 public abstract class JsonRpcMessage {
 
-	public abstract String getName();
-	public abstract void setName(String name);
-	public abstract void invoke();
+    public abstract String getName();
+    public abstract void setName(String name);
+    public abstract void invoke();
 }

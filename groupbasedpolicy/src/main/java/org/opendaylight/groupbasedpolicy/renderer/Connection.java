@@ -58,7 +58,7 @@ public class Connection {
     }
 
     public JsonRpcEndpoint getEndpoint() {
-    	return this.endpoint;
+        return this.endpoint;
     }
 
 

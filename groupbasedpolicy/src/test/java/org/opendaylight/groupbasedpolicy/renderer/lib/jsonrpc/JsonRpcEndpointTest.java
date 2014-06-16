@@ -38,19 +38,19 @@ public class JsonRpcEndpointTest {
     static final String simpleMessage = "{\"otherstuff\": \"foobar\"}";
     // Used for testing valid incoming JSONRPC request messages
     static final String testRequest = 
-    		"{ \"id\":\"2da9e3d7-0bbe-4099-b343-12783777452f\"," +
+            "{ \"id\":\"2da9e3d7-0bbe-4099-b343-12783777452f\"," +
             "\"method\":" + "\"" + TEST_JSON_CLASS_NAME + "\",\"params\":null}";
     // Used for testing invalid incoming JSONRPC request messages
     static final String testBadRequest = 
-    		"{ \"id\":\"2da9e3d7-0bbe-4099-b343-12783777452f\"," +
+            "{ \"id\":\"2da9e3d7-0bbe-4099-b343-12783777452f\"," +
             "\"method\":\"foobar\",\"params\":[]}";
     // Used for testing valid incoming JSONRPC echo request messages
     static final String testEchoRequest = 
-    		"{ \"id\":\"2da9e3d7-0bbe-4099-b343-12783777452f\"," +
+            "{ \"id\":\"2da9e3d7-0bbe-4099-b343-12783777452f\"," +
             "\"method\":\"echo\",\"params\":[]}";
     // Used for testing invalid incoming JSONRPC response messages
     static final String unknownResponse = 
-    		"{ \"id\":\"2da9e3d7-0bbe-4099-b343-12783777452f\"," +
+            "{ \"id\":\"2da9e3d7-0bbe-4099-b343-12783777452f\"," +
             "\"result\":\"foobar\",\"error\":null}";
 
 
@@ -62,28 +62,28 @@ public class JsonRpcEndpointTest {
 
     @JsonDeserialize
     static final class OpflexTest extends JsonRpcMessage {
-    	private String otherstuff;
+        private String otherstuff;
         @JsonIgnore
-    	private String name;
+        private String name;
 
-    	public OpflexTest() {
-    	}
+        public OpflexTest() {
+        }
 
-    	public void setOtherstuff ( String otherstuff ) {
-    		this.otherstuff = otherstuff;
-    	}
-    	public String getOtherstuff() {
-    		return this.otherstuff;
-    	}
+        public void setOtherstuff ( String otherstuff ) {
+            this.otherstuff = otherstuff;
+        }
+        public String getOtherstuff() {
+            return this.otherstuff;
+        }
 
         @Override
         public String getName() {
-        	return this.name;
+            return this.name;
         }
 
         @Override 
         public void setName(String name) {
-        	this.name = name;
+            this.name = name;
         }
 
         @Override
@@ -102,17 +102,17 @@ public class JsonRpcEndpointTest {
          */
         messageMap = new JsonRpcMessageMap();
         JsonRpcEndpointTest.OpflexTest rpcMethod = 
-        		new JsonRpcEndpointTest.OpflexTest();
+                new JsonRpcEndpointTest.OpflexTest();
         rpcMethod.setName(TEST_JSON_CLASS_NAME);
         messageMap.add(rpcMethod);
 
         decoder = new JsonRpcDecoder(1000);
         JsonRpcServiceBinderHandler binderHandler = 
-        		new JsonRpcServiceBinderHandler(null);
+                new JsonRpcServiceBinderHandler(null);
         channel = new EmbeddedChannel(decoder, binderHandler);
         
-    	endpoint = new JsonRpcEndpoint(objectMapper, channel, messageMap);
-    	binderHandler.setEndpoint(endpoint);
+        endpoint = new JsonRpcEndpoint(objectMapper, channel, messageMap);
+        binderHandler.setEndpoint(endpoint);
     }
 
 
@@ -120,7 +120,7 @@ public class JsonRpcEndpointTest {
     public void testOutbound() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
         JsonRpcEndpointTest.OpflexTest testRpc = objectMapper.
-        		readValue(simpleMessage, JsonRpcEndpointTest.OpflexTest.class);
+                readValue(simpleMessage, JsonRpcEndpointTest.OpflexTest.class);
         testRpc.setName(TEST_JSON_CLASS_NAME);
         try {
             endpoint.invoke(testRpc);
@@ -131,7 +131,7 @@ public class JsonRpcEndpointTest {
             assertTrue(result.toString().contains("params"));
             channel.finish();
         } catch ( Throwable e ) {
-        	fail();
+            fail();
         }
     }
 
@@ -163,7 +163,7 @@ public class JsonRpcEndpointTest {
     public void testInboundResponseMatch() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
         JsonRpcEndpointTest.OpflexTest testRpc = objectMapper.
-        		readValue(simpleMessage, JsonRpcEndpointTest.OpflexTest.class);
+                readValue(simpleMessage, JsonRpcEndpointTest.OpflexTest.class);
         testRpc.setName(TEST_JSON_CLASS_NAME);
         
         try {
@@ -172,13 +172,13 @@ public class JsonRpcEndpointTest {
             JsonNode node = objectMapper.readValue(result, JsonNode.class);
             String idValue = node.path("id").textValue();
             String foo = "{ \"id\":\"" + idValue + 
-            		"\",\"result\":\"foobar\",\"error\":null}";
+                    "\",\"result\":\"foobar\",\"error\":null}";
             testTriggerFlag = false;
             channel.writeInbound(copiedBuffer(foo, CharsetUtil.UTF_8));
             assertTrue(testTriggerFlag);
             channel.finish();
          } catch ( Throwable e ) {
-        	fail();
+            fail();
         }            
     }
 
