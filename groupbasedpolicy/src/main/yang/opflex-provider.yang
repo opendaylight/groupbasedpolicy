@@ -1,0 +1,41 @@
+module opflex-provider-impl {
+     yang-version 1;
+     namespace "urn:opendaylight:params:xml:ns:yang:controller:config:opflex-provider:impl";
+     prefix "opflex-provider-impl";
+
+     import config { prefix config; revision-date 2013-04-05; }
+     import opendaylight-md-sal-binding { prefix mdsal; revision-date 2013-10-28; }
+
+
+     description
+         "This module contains the base YANG definitions for 
+          opflex-provider impl implementation.";
+
+     revision "2014-06-11" {
+         description
+             "Initial revision.";
+     }
+
+     identity opflex-provider-impl {
+        base "config:module-type";
+
+        config:java-name-prefix OpflexProvider;
+     }
+
+     // Augments the 'configuration' choice node under modules/module.  
+     augment "/config:modules/config:module/config:configuration" {
+         case opflex-provider-impl {
+             when "/config:modules/config:module/config:type = 'opflex-provider-impl'";
+
+             //wires in the data-broker service 
+             container data-broker {
+                 uses config:service-ref {
+                     refine type {
+                         mandatory false;
+                         config:required-identity mdsal:binding-data-broker;
+                     }
+                 }
+             }         
+        }
+     }
+}

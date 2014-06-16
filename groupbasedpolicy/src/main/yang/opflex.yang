@@ -1,0 +1,129 @@
+module opflex {
+    yang-version 1;
+
+    namespace "urn:opendaylight:groupbasedpolicy:opflex";
+    prefix "opflex";
+
+    import ietf-inet-types { prefix "inet"; revision-date 2010-09-24; }
+
+    import gbp-common {prefix gbp-common;}
+
+    description
+        "This module defines the group-based policy OpFlex renderer model.";
+
+    revision "2014-05-28" {
+        description
+            "Initial revision.";
+    }
+    
+    typedef serialization {
+        description
+            "The serialization to use for OpFlex messages.";
+
+        type enumeration {
+            enum json {
+                description
+                    "JSON 1.0 serialization.";
+            }
+            enum xml {
+                description
+                    "XML serialization.";
+            }
+            enum binary {
+                description
+                    "OpFlex binary serialization.";
+            }
+        }
+    }
+
+    // ******************
+    // Configuration Data
+    // ******************
+    container discovery-definitions {
+        description
+            "The nodes that any OpFlex agent needs to communicate
+             with in an OpFlex policy fabric.";
+
+        config true;
+        list policy-repository {
+            description
+                "A repository that the OpFlex agent can use for resolving
+                 policies.";
+
+            key "id";
+
+            leaf id {
+                description 
+                   "The id for the policy repository.";
+                type inet:host;
+                mandatory true;
+            }
+            leaf port {
+                description 
+                   "The port number to use for the connection";
+                type inet:port-number;
+                mandatory true;
+            }
+            leaf serialization-type {
+                description 
+                   "The serialization to use for this connection.";
+                type serialization;
+                mandatory true;
+            }
+        }
+
+        list endpoint-registry {
+            description
+                "A repository that the OpFlex agent can use for registration
+                 and lookup of endpoints.";
+
+            key "id";
+
+            leaf id {
+                description 
+                   "The id for the endpoint registry.";
+                type inet:host;
+                mandatory true;
+            }
+            leaf port {
+                description 
+                   "The port number to use for the connection";
+                type inet:port-number;
+                mandatory true;
+            }
+            leaf serialization-type {
+                description 
+                   "The serialization to use for this connection.";
+                type serialization;
+                mandatory true;
+            }
+        }
+
+        list observer {
+            description
+                "A repository that the OpFlex agent can send State Report
+                 messages to.";
+
+            key "id";
+
+            leaf id {
+                description 
+                   "The id for the Observer.";
+                type inet:host;
+                mandatory true;
+            }
+            leaf port {
+                description 
+                   "The port number to use for the connection";
+                type inet:port-number;
+                mandatory true;
+            }
+            leaf serialization-type {
+                description 
+                   "The serialization to use for this connection.";
+                type serialization;
+                mandatory true;
+            }
+        }
+    }
+}
