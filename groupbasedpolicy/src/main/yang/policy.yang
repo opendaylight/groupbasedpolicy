@@ -5,6 +5,7 @@ module policy {
     prefix "gbp-policy";
 
     import gbp-common {prefix gbp-common;}
+    import ietf-inet-types {prefix inet;}
 
     description 
         "This module defines the group-based policy configuration 
@@ -226,6 +227,41 @@ module policy {
             uses matcher;
             uses has-conditions;
         }
+    }
+
+    // ************************
+    // Network domains grouping
+    // ************************
+
+    grouping network-domain {
+        description
+            "A base type for network domains.  Network domains 
+             represent some logical grouping or namespace of
+             network addresses.";
+        leaf name {
+            description 
+                "A human-readable name for the network domain.";
+            type gbp-common:name;
+        }
+        leaf description {
+            description 
+                "A human-readable description for the context.";
+            type gbp-common:description;
+        }
+    }
+
+    grouping forwarding-context {
+        description "A base type for forwarding contexts.";
+        uses network-domain;
+    }
+
+    grouping l2-context {
+        description 
+            "A base type for layer 2 contexts.  Layer 2 contexts
+             represent a namespace or logical grouping of layer 2
+             addresses.";
+
+        uses forwarding-context;
     }
 
     // ************************
@@ -671,6 +707,92 @@ module policy {
             }
 
             // ***************
+            // Network domains
+            // ***************
+
+            list l3-context {
+                description
+                    "A layer 3 context represents a namespace for layer 3
+                     addresses.  It represents a domain inside which endpoints
+                     can communicate with requiring any address translation.";
+
+                key "id";
+                uses forwarding-context;
+
+                leaf id {
+                    description 
+                        "A unique ID for the layer 3 context";
+                    type gbp-common:l3-context-id;
+                }
+            }
+            
+            list l2-bridge-domain {
+                description 
+                    "A layer 2 bridge domain represents a domain in which 
+                     layer 2 communication is possible when allowed by policy.";
+                key "id";
+                uses l2-context;
+
+                leaf id {
+                    description "A unique ID for the bridge domain";
+                    type gbp-common:l2-bridge-domain-id;
+                }
+
+                leaf parent {
+                    description 
+                        "The layer 3 context that contains this bridge domain";
+                    type leafref {
+                        path "/tenants/tenant/l3-context/id";
+                    }
+                }
+            }
+
+            list l2-flood-domain {
+                description 
+                    "A layer 2 flood domain represents a domain in which 
+                     layer 2 broadcast and multicast is allowed.";
+                key "id";
+                uses l2-context;
+
+                leaf id {
+                    description "A unique ID for the flood domain";
+                    type  gbp-common:l2-flood-domain-id;
+                }
+
+                leaf parent {
+                    description 
+                        "The bridge domain that contains this flood domain";
+                    type leafref {
+                        path "/tenants/tenant/l2-bridge-domain/id";
+                    }
+                }
+            }
+
+            list subnet {
+                description
+                    "An IP subnet associated with a layer 2 or layer 3 
+                     context.";
+                key "id";
+                uses network-domain;
+                
+                leaf id {
+                    description "A unique ID for the subnet";
+                    type gbp-common:subnet-id;
+                }
+
+                leaf parent {
+                    description 
+                        "The forwarding context that contains this subnet";
+                    type gbp-common:context-id;
+                }
+
+                leaf ip-prefix {
+                    description "The IP prefix that defines the subnet";
+                    type inet:ip-prefix;
+                }
+            }
+
+            // ***************
             // Endpoint groups
             // ***************
 
@@ -800,6 +922,14 @@ module policy {
                     key "name";
                     uses target-selector;
                     uses provider-selection-relator;
+                }
+
+                leaf network-domain {
+                    description 
+                        "The network domain associated with this endpoint
+                         group.  The network domain controls which endpoints 
+                         are addressible by the endpoints in the group.";
+                    type gbp-common:network-domain-id;
                 }
 
                 leaf parent {
@@ -1161,6 +1291,4 @@ module policy {
             }
         }
     }
-
-    // XXX - TODO - model forwarding model
 }

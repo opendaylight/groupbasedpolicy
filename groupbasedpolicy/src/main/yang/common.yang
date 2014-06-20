@@ -78,14 +78,39 @@ module gbp-common {
     // Unique object IDs
     // *****************
 
-    typedef l2-namespace-id {
+    typedef network-domain-id {
         type unique-id;
-        description "An unique ID for a layer 2 namespace";
+        description "A unique ID for a network domain";
+    }
+    
+    typedef subnet-id {
+        type network-domain-id;
+        description "A unique ID for a subnet";
     }
 
-    typedef l3-namespace-id {
-        type unique-id;
-        description "A unique ID for a layer 3 namespace";
+    typedef context-id {
+        type network-domain-id;
+        description "A unique ID for a forwarding context";
+    }
+
+    typedef l2-context-id {
+        type context-id;
+        description "A unique ID for a layer 2 context";
+    }
+
+    typedef l2-bridge-domain-id {
+        type l2-context-id;
+        description "A unique ID for a bridge domain";
+    }
+
+    typedef l2-flood-domain-id {
+        type l2-context-id;
+        description "A unique ID for a flood domain";
+    }
+
+    typedef l3-context-id {
+        type context-id;
+        description "A unique ID for a layer 3 context";
     }
 
     typedef tenant-id {

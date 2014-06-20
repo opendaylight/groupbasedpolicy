@@ -16,6 +16,38 @@ module endpoint {
             "Initial revision.";
     }
 
+    grouping l2-key {
+        description 
+            "The fields that identify an endpoint by a layer 2 address";
+        leaf l2-context {
+            type gbp-common:l2-context-id;
+            description 
+                "The context for the layer 2 address for this endpoint";
+        }
+        leaf mac-address {
+            type yang:mac-address;
+            description 
+                "The MAC address for the endpoint";
+        }
+    }
+
+    grouping l3-key {
+        description 
+            "The fields that identify an endpoint by a layer 3 address";
+        leaf l3-context {
+            type gbp-common:l3-context-id;
+            mandatory true;
+            description 
+                "The context for this layer 3 address";
+        }
+        leaf ip-address {
+            type inet:ip-address;
+            mandatory true;
+            description 
+                "The actual IP address for the endpoint";
+        }
+    }
+
     // A base type for an end point
     grouping endpoint-fields {
         description "An endpoint and its associated metadata";
@@ -25,34 +57,14 @@ module endpoint {
             description 
                 "The tenant with which this endpoint is associated";
         }
-        leaf l2-namespace {
-            type gbp-common:l2-namespace-id;
-            mandatory true;
-            description 
-                "The namespace for the layer 2 address for this endpoint";
-        }
-        leaf mac-address {
-            type yang:mac-address;
-            mandatory true;
-            description 
-                "The MAC address for the endpoint";
-        }
+
+        uses l2-key;
+
         list l3-address {
             description
                 "All the layer 3 addresses associated with this endpoint";
-            key "l3-namespace ip-address";
-            leaf l3-namespace {
-                type gbp-common:l3-namespace-id;
-                mandatory true;
-                description 
-                    "The namespace for this layer 3 address";
-            }
-            leaf ip-address {
-                type inet:ip-address;
-                mandatory true;
-                description 
-                    "The actual IP address for the endpoint";
-            }
+            key "l3-context ip-address";
+            uses l3-key;
             leaf ip-prefix {
                 type inet:ip-prefix;
                 description 
@@ -108,7 +120,7 @@ module endpoint {
                 "Endpoints indexed by layer 2 addreses.  When modifying
                  data here, you must also modify data in the
                  endpoints-l3 list as well.";
-            key "l2-namespace mac-address";
+            key "l2-context mac-address";
             uses endpoint-fields;
         }
 
@@ -118,13 +130,13 @@ module endpoint {
                  data here, you must also modify data in the endpoints
                  list as well.";
 
-            key "l3-namespace ip-address";
+            key "l3-context ip-address";
 
-            leaf l3-namespace {
-                type gbp-common:l3-namespace-id;
+            leaf l3-context {
+                type gbp-common:l3-context-id;
                 mandatory true;
                 description 
-                    "The namespace for this layer 3 address";
+                    "The context for this layer 3 address";
             }
             leaf ip-address {
                 type inet:ip-address;
@@ -159,20 +171,16 @@ module endpoint {
     }
 
     rpc unregister-endpoint {
-        description "Unregister an endpoint from the registry.";
+        description "Unregister an endpoint or endpoints from the registry.";
 
         input {
-            leaf l2-namespace {
-                type gbp-common:l2-namespace-id;
-                mandatory true;
-                description 
-                    "The namespace for the layer 2 address for this endpoint";
+            list l2 {
+                key "l2-context mac-address";
+                uses l2-key;
             }
-            leaf mac-address {
-                type yang:mac-address;
-                mandatory true;
-                description 
-                    "The MAC address for the endpoint";
+            list l3 {
+                key "l3-context ip-address";
+                uses l3-key;
             }
         }
     }
