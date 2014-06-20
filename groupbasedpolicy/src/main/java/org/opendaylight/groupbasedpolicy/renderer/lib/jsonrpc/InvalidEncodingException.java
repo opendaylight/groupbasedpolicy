@@ -11,6 +11,7 @@ package org.opendaylight.groupbasedpolicy.renderer.lib.jsonrpc;
 
 public class InvalidEncodingException extends RuntimeException {
 
+    private static final long serialVersionUID = -2241512201890075052L;
     private final String actual;
 
     public InvalidEncodingException(String actual, String message) {

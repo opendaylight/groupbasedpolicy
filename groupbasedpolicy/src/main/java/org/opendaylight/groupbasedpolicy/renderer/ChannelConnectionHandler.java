@@ -9,8 +9,6 @@
  */
 package org.opendaylight.groupbasedpolicy.renderer;
 
-import org.opendaylight.groupbasedpolicy.renderer.lib.jsonrpc.JsonRpcEndpoint;
-
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 

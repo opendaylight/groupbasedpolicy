@@ -11,15 +11,7 @@
 package org.opendaylight.groupbasedpolicy.renderer.lib.jsonrpc;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
-
 import io.netty.channel.embedded.EmbeddedChannel;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.JsonNode;
 
 

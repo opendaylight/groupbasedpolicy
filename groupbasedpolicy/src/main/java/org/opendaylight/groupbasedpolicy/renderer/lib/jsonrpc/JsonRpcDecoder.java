@@ -138,21 +138,6 @@ public class JsonRpcDecoder extends ByteToMessageDecoder {
         }
     }
 
-
-    private void print(ByteBuf buf, String message) {
-        print(buf, buf.readerIndex(), buf.readableBytes(), message == null ? "buff" : message);
-    }
-
-    private void print(ByteBuf buf, int startPos, int chars, String message) {
-        if (null == message) message = "";
-        if (startPos > buf.writerIndex()) {
-            logger.trace("startPos out of bounds");
-        }
-        byte[] b = new byte[startPos + chars <= buf.writerIndex() ? chars : buf.writerIndex() - startPos];
-        buf.getBytes(startPos, b);
-        logger.trace("{} ={}", message, new String(b));
-    }
-
     // copied from Netty decoder
     private void fail(ChannelHandlerContext ctx, long frameLength) {
         if (frameLength > 0) {
