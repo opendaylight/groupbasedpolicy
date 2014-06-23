@@ -25,6 +25,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.LabelName;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.QualityMatcherName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.QualityName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.RequirementMatcherName;
@@ -129,6 +130,10 @@ public class InheritanceUtils {
             .setContract(ImmutableList.copyOf(resolvedContracts.values()))
             .setContractRef(unresolvedTenant.getContractRef())
             .setSubjectFeatureInstances(unresolvedTenant.getSubjectFeatureInstances())
+            .setL3Context(unresolvedTenant.getL3Context())
+            .setL2BridgeDomain(unresolvedTenant.getL2BridgeDomain())
+            .setL2FloodDomain(unresolvedTenant.getL2FloodDomain())
+            .setSubnet(unresolvedTenant.getSubnet())
             .build();
     }
 
@@ -163,6 +168,7 @@ public class InheritanceUtils {
                 new HashMap<>();
         HashMap<SelectorName, ProviderNamedSelector> resolvedPns = 
                 new HashMap<>();
+        NetworkDomainId domain = unresolvedEg.getNetworkDomain();
 
         if (unresolvedEg.getConsumerTargetSelector() != null) {
             for (ConsumerTargetSelector s : unresolvedEg.getConsumerTargetSelector()) {
@@ -184,6 +190,7 @@ public class InheritanceUtils {
                 resolvePns(unresolvedTenant, unresolvedEg, s, resolvedPns);
             }
         }
+        
 
         if (parent != null) {
             if (parent.getConsumerTargetSelector() != null) {
@@ -210,6 +217,9 @@ public class InheritanceUtils {
                         resolvedPns.put(pns.getName(), pns);
                 }
             }
+            if (domain == null) {
+                domain = parent.getNetworkDomain();
+            }
         }
 
         // Note: do not set parent, or any of the values that only exist
@@ -221,6 +231,7 @@ public class InheritanceUtils {
             .setConsumerNamedSelector(ImmutableList.copyOf(resolvedCns.values()))
             .setProviderTargetSelector(ImmutableList.copyOf(resolvedPts.values()))
             .setProviderNamedSelector(ImmutableList.copyOf(resolvedPns.values()))
+            .setNetworkDomain(domain)
             .build();
         resolvedEgs.put(resolvedEg.getId(), resolvedEg);
     }

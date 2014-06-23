@@ -37,7 +37,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.has.endpoint.group.conditions.EndpointGroupCondition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.has.endpoint.group.conditions.EndpointGroupConditionKey;
-import org.opendaylight.yangtools.yang.binding.DataObject;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L2;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L3;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcError;
 import org.opendaylight.yangtools.yang.common.RpcError.ErrorSeverity;
@@ -111,7 +112,7 @@ public class EndpointRegistry implements AutoCloseable, EndpointService {
             .build();
     
         EndpointKey key = 
-                new EndpointKey(ep.getL2Namespace(), ep.getMacAddress());
+                new EndpointKey(ep.getL2Context(), ep.getMacAddress());
         InstanceIdentifier<Endpoint> iid = 
                 InstanceIdentifier.builder(Endpoints.class)
                     .child(Endpoint.class, key)
@@ -126,10 +127,10 @@ public class EndpointRegistry implements AutoCloseable, EndpointService {
             for (L3Address l3addr : input.getL3Address()) {
                 t = dataProvider.beginTransaction();
                 EndpointL3Key key3 = new EndpointL3Key(l3addr.getIpAddress(), 
-                                                       l3addr.getL3Namespace());
+                                                       l3addr.getL3Context());
                 EndpointL3 ep3 = new EndpointL3Builder(input)
                     .setIpAddress(key3.getIpAddress())
-                    .setL3Namespace(l3addr.getL3Namespace())
+                    .setL3Context(l3addr.getL3Context())
                     .setTimestamp(timestamp)
                     .build();
                 InstanceIdentifier<EndpointL3> iid_l3 = 
@@ -150,38 +151,35 @@ public class EndpointRegistry implements AutoCloseable, EndpointService {
     @Override
     public Future<RpcResult<Void>>
         unregisterEndpoint(UnregisterEndpointInput input) {
-        EndpointKey key = 
-                new EndpointKey(input.getL2Namespace(), input.getMacAddress());
-        InstanceIdentifier<Endpoint> iid = 
-                InstanceIdentifier.builder(Endpoints.class)
-                    .child(Endpoint.class, key).build();
-        DataObject dao = dataProvider.readOperationalData(iid);
-
         Collection<RpcError> errors = new ArrayList<>();
-        
-        if (dao != null && dao instanceof Endpoint) {
-            Endpoint ep = (Endpoint)dao;
-            
-            if (ep.getL3Address() != null) {
-                for (L3Address l3addr : ep.getL3Address()) {
-                    EndpointL3Key key3 = 
-                            new EndpointL3Key(l3addr.getIpAddress(), 
-                                              l3addr.getL3Namespace());
-                    InstanceIdentifier<EndpointL3> iid_l3 = 
-                            InstanceIdentifier.builder(Endpoints.class)
-                                .child(EndpointL3.class, key3)
-                                .build();
-                    DataModificationTransaction t =
-                            dataProvider.beginTransaction();
-                    t.removeOperationalData(iid_l3);
-                    docommit(t, iid_l3.toString(), "unregister", errors);
-                }
-            }
-            
+
+        for (L2 l2a : input.getL2()) {
+            EndpointKey key = 
+                    new EndpointKey(l2a.getL2Context(), 
+                                    l2a.getMacAddress());
+            InstanceIdentifier<Endpoint> iid = 
+                    InstanceIdentifier.builder(Endpoints.class)
+                    .child(Endpoint.class, key).build();
             DataModificationTransaction t =
                     dataProvider.beginTransaction();
             t.removeOperationalData(iid);
             docommit(t, iid.toString(), "unregister", errors);
+        }
+
+        if (input.getL3() != null) {
+            for (L3 l3addr : input.getL3()) {
+                EndpointL3Key key3 = 
+                        new EndpointL3Key(l3addr.getIpAddress(), 
+                                          l3addr.getL3Context());
+                InstanceIdentifier<EndpointL3> iid_l3 = 
+                        InstanceIdentifier.builder(Endpoints.class)
+                        .child(EndpointL3.class, key3)
+                        .build();
+                DataModificationTransaction t =
+                        dataProvider.beginTransaction();
+                t.removeOperationalData(iid_l3);
+                docommit(t, iid_l3.toString(), "unregister", errors);
+            }
         }
 
         // note that deleting an object that doesn't exist is fine.
