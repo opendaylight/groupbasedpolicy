@@ -7,7 +7,7 @@
  *
  * Authors : Ashwin Raveendran, Madhu Venugopal, Thomas Bachman
  */
-package org.opendaylight.groupbasedpolicy.renderer.lib.jsonrpc;
+package org.opendaylight.groupbasedpolicy.jsonrpc;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Strings;

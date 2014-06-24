@@ -8,18 +8,23 @@
  *  Authors : Thomas Bachman
  */
 
-package org.opendaylight.groupbasedpolicy.renderer.lib.jsonrpc;
+package org.opendaylight.groupbasedpolicy.jsonrpc;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import io.netty.channel.embedded.EmbeddedChannel;
+
 import com.fasterxml.jackson.databind.JsonNode;
 
-
 import io.netty.util.CharsetUtil;
+
 import org.junit.Before;
 import org.junit.Test;
+
 import static org.mockito.Mockito.*;
 
+import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcDecoder;
+import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcEndpoint;
+import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcServiceBinderHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

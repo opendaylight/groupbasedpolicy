@@ -7,7 +7,7 @@
  *
  * Authors : Thomas Bachman
  */
-package org.opendaylight.groupbasedpolicy.renderer.lib.jsonrpc;
+package org.opendaylight.groupbasedpolicy.jsonrpc;
 
 public abstract class JsonRpcMessage {
 

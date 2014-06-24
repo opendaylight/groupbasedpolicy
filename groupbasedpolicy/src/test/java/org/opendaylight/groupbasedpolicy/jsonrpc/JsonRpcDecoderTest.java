@@ -8,20 +8,25 @@
  *  Authors : Dave Tucker
  */
 
-package org.opendaylight.groupbasedpolicy.renderer.lib.jsonrpc;
+package org.opendaylight.groupbasedpolicy.jsonrpc;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
+
 import static org.junit.Assert.assertEquals;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
+
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
+
 import java.net.URL;
+
 import org.junit.Before;
 import org.junit.Test;
+import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcDecoder;
 
 public class JsonRpcDecoderTest {
     static int testJson_BYTES = 179;

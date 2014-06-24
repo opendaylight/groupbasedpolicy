@@ -1,0 +1,37 @@
+module ofoverlay {
+    yang-version 1;
+
+    namespace "urn:opendaylight:groupbasedpolicy:ofoverlay";
+    prefix "ofoverlay";
+
+    import ietf-inet-types { prefix "inet"; revision-date 2010-09-24; }
+
+    import gbp-common {prefix gbp-common;}
+
+    description
+        "This module defines the group-based policy ofoverlay renderer model.";
+
+    revision "2014-05-28" {
+        description
+            "Initial revision.";
+    }
+
+    // ******************
+    // Configuration Data
+    // ******************
+    container ofoverlay {
+        description
+            "Configuration for the OpenFlow overlay renderer";
+
+        config true;
+
+		leaf encapsulation-format {
+			description "The encapsulation format to use for tunnels";
+			type enumeration {
+				enum vxlan {
+					description "Use VXLAN encapsulation";
+				}
+			}
+		}
+	}
+}

@@ -7,7 +7,7 @@
  *
  * Authors : Madhu Venugopal, Brent Salisbury, Thomas Bachman
  */
-package org.opendaylight.groupbasedpolicy.renderer;
+package org.opendaylight.groupbasedpolicy.renderer.opflex;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;

@@ -7,11 +7,11 @@
  *
  * Authors : Madhu Venugopal, Brent Salisbury, Thomas Bachman
  */
-package org.opendaylight.groupbasedpolicy.renderer;
+package org.opendaylight.groupbasedpolicy.renderer.opflex;
 
 import io.netty.channel.Channel;
 
-import org.opendaylight.groupbasedpolicy.renderer.lib.jsonrpc.JsonRpcEndpoint;
+import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcEndpoint;
 
 public class Connection {
     private String identifier;

@@ -1,6 +1,6 @@
 package org.opendaylight.controller.config.yang.config.opflex_provider.impl;
 
-import org.opendaylight.groupbasedpolicy.renderer.OpflexConnectionService;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.OpflexConnectionService;
 
 public class OpflexProviderModule extends org.opendaylight.controller.config.yang.config.opflex_provider.impl.AbstractOpflexProviderModule {
     public OpflexProviderModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {

@@ -8,25 +8,31 @@
  *  Authors : Thomas Bachman
  */
 
-package org.opendaylight.groupbasedpolicy.renderer.lib.jsonrpc;
+package org.opendaylight.groupbasedpolicy.jsonrpc;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
+
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import io.netty.channel.embedded.EmbeddedChannel;
+
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.JsonNode;
 
-
 import io.netty.util.CharsetUtil;
+
 import org.junit.Before;
 import org.junit.Test;
-
+import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcDecoder;
+import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcEndpoint;
+import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcMessage;
+import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcMessageMap;
+import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcServiceBinderHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -8,7 +8,7 @@
  *
  * Authors : Madhu Venugopal, Brent Salisbury, Evan Zeller, Thomas Bachman
  */
-package org.opendaylight.groupbasedpolicy.renderer;
+package org.opendaylight.groupbasedpolicy.renderer.opflex;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.AdaptiveRecvByteBufAllocator;
@@ -32,12 +32,11 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 
 import org.opendaylight.controller.sal.binding.api.data.DataBrokerService;
-import org.opendaylight.groupbasedpolicy.renderer.ChannelConnectionHandler;
-import org.opendaylight.groupbasedpolicy.renderer.lib.jsonrpc.JsonRpcDecoder;
-import org.opendaylight.groupbasedpolicy.renderer.lib.jsonrpc.JsonRpcMessageMap;
-import org.opendaylight.groupbasedpolicy.renderer.lib.jsonrpc.JsonRpcEndpoint;
-import org.opendaylight.groupbasedpolicy.renderer.lib.jsonrpc.JsonRpcServiceBinderHandler;
-
+import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcDecoder;
+import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcEndpoint;
+import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcMessageMap;
+import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcServiceBinderHandler;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.ChannelConnectionHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
