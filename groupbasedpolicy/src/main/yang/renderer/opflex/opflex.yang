@@ -44,7 +44,6 @@ module opflex {
             "The nodes that any OpFlex agent needs to communicate
              with in an OpFlex policy fabric.";
 
-        config true;
         list policy-repository {
             description
                 "A repository that the OpFlex agent can use for resolving
@@ -54,21 +53,21 @@ module opflex {
 
             leaf id {
                 description 
-                    "The id for the policy repository.";
-                type inet:host;
-                mandatory true;
+                   "The id for the policy repository.";
+                type string;
+                config true;
             }
             leaf port {
                 description 
-                    "The port number to use for the connection";
-                type inet:port-number;
-                mandatory true;
+                   "The port number to use for the connection";
+                type int32;
+                config true;
             }
             leaf serialization-type {
                 description 
                     "The serialization to use for this connection.";
                 type serialization;
-                mandatory true;
+                config true;
             }
         }
 
@@ -81,21 +80,21 @@ module opflex {
 
             leaf id {
                 description 
-                    "The id for the endpoint registry.";
-                type inet:host;
-                mandatory true;
+                   "The id for the endpoint registry.";
+                type string;
+                config true;
             }
             leaf port {
                 description 
-                    "The port number to use for the connection";
-                type inet:port-number;
-                mandatory true;
+                   "The port number to use for the connection";
+                type int32;
+                config true;
             }
             leaf serialization-type {
                 description 
                     "The serialization to use for this connection.";
                 type serialization;
-                mandatory true;
+                config true;
             }
         }
 
@@ -108,21 +107,21 @@ module opflex {
 
             leaf id {
                 description 
-                    "The id for the Observer.";
-                type inet:host;
-                mandatory true;
+                   "The id for the Observer.";
+                type string;
+                config true;
             }
             leaf port {
                 description 
-                    "The port number to use for the connection";
-                type inet:port-number;
-                mandatory true;
+                   "The port number to use for the connection";
+                type int32;
+                config true;
             }
             leaf serialization-type {
                 description 
                     "The serialization to use for this connection.";
                 type serialization;
-                mandatory true;
+                config true;
             }
         }
     }

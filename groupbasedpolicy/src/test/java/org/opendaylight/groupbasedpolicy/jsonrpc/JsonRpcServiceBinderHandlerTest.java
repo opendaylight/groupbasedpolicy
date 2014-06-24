@@ -11,43 +11,39 @@
 package org.opendaylight.groupbasedpolicy.jsonrpc;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
+import static org.mockito.Matchers.anyObject;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import io.netty.channel.embedded.EmbeddedChannel;
-
-import com.fasterxml.jackson.databind.JsonNode;
-
 import io.netty.util.CharsetUtil;
 
 import org.junit.Before;
 import org.junit.Test;
-
-import static org.mockito.Mockito.*;
-
-import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcDecoder;
-import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcEndpoint;
-import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcServiceBinderHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.databind.JsonNode;
 
 public class JsonRpcServiceBinderHandlerTest {
     protected static final Logger logger = LoggerFactory.getLogger(JsonRpcEndpoint.class);
 
     // Used for testing incoming JSONRPC request messages
-    static final String testRequest = 
+    static final String testRequest =
             "{ \"id\":\"2da9e3d7-0bbe-4099-b343-12783777452f\"," +
             "\"method\":  \"test_foo\",\"params\":null}";
     // Used for testing incoming JSONRPC response messages
-    static final String testResponse = 
+    static final String testResponse =
             "{ \"id\":\"2da9e3d7-0bbe-4099-b343-12783777452f\"," +
             "\"result\":\"foobar\",\"error\":null}";
-    
+
     private JsonRpcEndpoint mockEndpoint;
     private JsonRpcServiceBinderHandler binderHandler;
     private JsonRpcDecoder decoder;
     private EmbeddedChannel channel;
-    
+
     @Before
     public void setUp() throws Exception {
-        
+
         mockEndpoint = mock(JsonRpcEndpoint.class);
         decoder = new JsonRpcDecoder(1000);
         binderHandler = new JsonRpcServiceBinderHandler(mockEndpoint);
@@ -62,7 +58,7 @@ public class JsonRpcServiceBinderHandlerTest {
         verify(mockEndpoint).processRequest((JsonNode)anyObject());
     }
 
-    //@Test
+    @Test
     public void testResponse() throws Exception {
         channel.writeInbound(copiedBuffer(testResponse, CharsetUtil.UTF_8));
         channel.finish();
@@ -70,4 +66,4 @@ public class JsonRpcServiceBinderHandlerTest {
 
     }
 
-} 
+}

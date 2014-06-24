@@ -11,7 +11,10 @@
 package org.opendaylight.groupbasedpolicy.jsonrpc;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -24,16 +27,30 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.SettableFuture;
 
-public class JsonRpcEndpoint {
+/**
+ *
+ * This represents a JSONRPC connection between a {@link RpcServer}
+ * and some client. The clients may connect and disconnect, so one
+ * possible role that the JSONRPC endpoint can serve is to keep a long-lived
+ * notion of a client, while maintaining connectivity as it comes and goes.
+ *
+ * TODO: The current implementation uses Jackson Full data binding serialization,
+ * using JSON that has already been parsed using Jackson's Tree Model.
+ * This will be changed to streaming-mode serialization later.
+ *
+ * @author tbachman
+ *
+ */
+public class JsonRpcEndpoint implements ChannelFutureListener {
 
     protected static final Logger logger = LoggerFactory.getLogger(JsonRpcEndpoint.class);
 
-    public class CallContext {
-        String method;
-        JsonRpc10Request request;
-        SettableFuture<Object> future;
+    private class CallContext {
+        private String method;
+        private RpcMessage request;
+        private SettableFuture<Object> future;
 
-        public CallContext(JsonRpc10Request request, String method, SettableFuture<Object> future) {
+        public CallContext(RpcMessage request, String method, SettableFuture<Object> future) {
             this.method = method;
             this.request = request;
             this.future = future;
@@ -43,7 +60,7 @@ public class JsonRpcEndpoint {
             return method;
         }
 
-        public JsonRpc10Request getRequest() {
+        public RpcMessage getRequest() {
             return request;
         }
 
@@ -52,84 +69,150 @@ public class JsonRpcEndpoint {
         }
     }
 
-    ObjectMapper objectMapper;
-    Channel nettyChannel;
-    Map<String, CallContext> methodContext = Maps.newHashMap();
-    JsonRpcMessageMap messageMap;
-    
-    public JsonRpcEndpoint(ObjectMapper objectMapper, Channel channel, JsonRpcMessageMap messageMap) {
+    private String identifier;
+    private ObjectMapper objectMapper;
+    private Channel nettyChannel;
+    private Map<String, CallContext> methodContext = Maps.newHashMap();
+    private RpcMessageMap messageMap;
+    private RpcBroker broker;
+    private ConnectionService connectionService;
+
+    public String getIdentifier() {
+        return identifier;
+    }
+
+    public void setIdentifier(String identifier) {
+        this.identifier = identifier;
+    }
+
+    public ConnectionService getConnectionService() {
+        return connectionService;
+    }
+    public void setConnectionService(ConnectionService connectionService) {
+        this.connectionService = connectionService;
+    }
+
+    public Channel getChannel() {
+        return nettyChannel;
+    }
+
+    public boolean supportsMessages(List<RpcMessage> messages) {
+        return messageMap.containsMessages(messages);
+    }
+
+    public JsonRpcEndpoint(String identifier, ConnectionService connectionService,
+            ObjectMapper objectMapper, Channel channel,
+            RpcMessageMap messageMap, RpcBroker broker) {
+        this.identifier = identifier;
+        this.connectionService = connectionService;
         this.objectMapper = objectMapper;
         this.nettyChannel = channel;
         this.messageMap = messageMap;
+        this.broker = broker;
     }
 
-    // This implementation will change -- modified port for testing only
-    public SettableFuture<Object> invoke(JsonRpcMessage message) throws Throwable {
+    /**
+     *
+     * Send a concrete {@link RpcMessage} to the RPC endpoint.
+     *
+     * @param message The concrete {@link RpcMessage} to send
+     * @return SettableFuture<Object> The caller can use the returned
+     * object to wait for the response (currently no timeout)
+     * @throws Throwable The concrete message couldn't be serialized and sent
+     */
+    public SettableFuture<Object> sendRequest(RpcMessage message) throws Throwable {
         if (messageMap.get(message.getName()) == null) {
                 return null;
         }
-        JsonRpc10Request request = new JsonRpc10Request(UUID.randomUUID().toString());
-        request.setMethod(message.getName());
-        request.setParams(message);
+        message.setId(UUID.randomUUID().toString());
 
-        String s = objectMapper.writeValueAsString(request);
-        logger.trace("{}", s);
+        String s = objectMapper.writeValueAsString(message);
+        logger.trace("invoke: {}", s);
 
         SettableFuture<Object> sf = SettableFuture.create();
-        methodContext.put(request.getId(), new CallContext(request, message.getName(), sf));
+        methodContext.put(message.getId(), new CallContext(message, message.getName(), sf));
 
         nettyChannel.writeAndFlush(s);
 
         return sf;
     }
 
-    // This implementation will change -- modified port for testing only
+    /**
+     *
+     * Send a response to a previous {@link RpcMessage}request
+     *
+     * @param message The concrete {@link RpcMessage}
+     * @throws Throwable The concrete message couldn't be serialized and sent
+     */
+    public void  sendResponse (RpcMessage message) throws Throwable {
+
+        String s = objectMapper.writeValueAsString(message);
+        logger.warn("sendResponse: {}", s);
+
+        nettyChannel.writeAndFlush(s);
+    }
+
+    /**
+     *
+     * Handle an {@link RpcMessage} response from the peer.
+     *
+     * @param response A fully parsed Jackson Tree-Mode JsonNode
+     * @throws NoSuchMethodException Internal error
+     */
     public void processResult(JsonNode response) throws NoSuchMethodException {
 
         logger.trace("Response : {}", response.toString());
         CallContext returnCtxt = methodContext.get(response.get("id").asText());
         if (returnCtxt == null) return;
-        JsonRpcMessage message = messageMap.get(returnCtxt.getMethod());
+        RpcMessage message = messageMap.get(returnCtxt.getMethod());
         if (message != null) {
             try {
-                JsonRpcMessage handler = objectMapper.treeToValue(response, message.getClass());
-                handler.invoke();
+                RpcMessage handler = objectMapper.treeToValue(response, message.getClass());
 
                 JsonNode error = response.get("error");
                 if (error != null && !error.isNull()) {
                     logger.error("Error : {}", error.toString());
                 }
 
-                returnCtxt.getFuture().set(handler);            
+                returnCtxt.getFuture().set(handler);
             } catch (JsonProcessingException  e) {
                 logger.error("Unable to handle " + returnCtxt.getMethod(), e);
             }
         } else {
-            throw new RuntimeException("donno how to deal with this");
+            throw new RuntimeException("The response to " + returnCtxt.getMethod() +
+                    "sent is unsupported");
         }
     }
 
-    // This implementation will change -- modified port for testing only
+    /**
+     *
+     * Handle incoming {@link RpcMessage} requests. The supported messages
+     * are defined by the endpoint's message map.
+     *
+     * @param requestJson A Jackson JsonNode that has had full Tree-Mode parsing
+     */
     public void processRequest(JsonNode requestJson) {
-        JsonRpc10Request request = new JsonRpc10Request(requestJson.get("id").asText());
-        request.setMethod(requestJson.get("method").asText());
-        logger.trace("Request : {} {}", requestJson.get("method"), requestJson.get("params"));
-
-        JsonRpcMessage callback = messageMap.get(request.getMethod());
+        RpcMessage message;
+        RpcMessage callback = messageMap.get(requestJson.get("method").asText());
         if (callback != null) {
             try {
-                JsonRpcMessage message = objectMapper.treeToValue(requestJson, callback.getClass());
-                message.invoke();
+                logger.trace("Request : {} {}", requestJson.get("method"), requestJson.get("params"));
+
+                message = objectMapper.treeToValue(requestJson, callback.getClass());
+                message.setId(requestJson.get("id").asText());
+                //message.setMethod(requestJson.get("method").asText());
+
+                broker.publish(this, message);
             } catch (JsonProcessingException  e) {
-                logger.error("Unable to invoke callback " + request.getMethod(), e);
+                logger.error("Unable to invoke callback " + callback.getName(), e);
             }
             return;
         }
 
         // Echo dont need any special processing. hence handling it internally.
 
-        if (request.getMethod().equals("echo")) {
-            JsonRpc10Response response = new JsonRpc10Response(request.getId());
+        if (requestJson.get("method").asText().equals("echo")) {
+            JsonRpc10Response response = new JsonRpc10Response(requestJson.get("id").asText());
             response.setError(null);
             String s = null;
             try {
@@ -144,7 +227,8 @@ public class JsonRpcEndpoint {
         logger.error("No handler for Request : {}",requestJson.toString());
     }
 
-    public Map<String, CallContext> getMethodContext() {
-        return methodContext;
+    @Override
+    public void operationComplete(ChannelFuture arg0) throws Exception {
+        connectionService.channelClosed(this);
     }
 }
