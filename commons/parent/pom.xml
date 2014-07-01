@@ -18,6 +18,9 @@
     <java.version.target>1.7</java.version.target>
     <nexusproxy>http://nexus.opendaylight.org/content</nexusproxy>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <controller.distribution.version>0.1.2-SNAPSHOT</controller.distribution.version>
+    <openflowplugin.distribution.version>0.0.3-SNAPSHOT</openflowplugin.distribution.version>
+    <openflowjava.distribution.version>0.5-SNAPSHOT</openflowjava.distribution.version>
   </properties>
 
   <build>

@@ -6,10 +6,9 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.resolver.internal;
+package org.opendaylight.groupbasedpolicy.resolver;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -17,21 +16,19 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.concurrent.Immutable;
 
-import org.opendaylight.controller.md.sal.common.api.data.DataChangeEvent;
-import org.opendaylight.controller.sal.binding.api.data.DataBrokerService;
-import org.opendaylight.controller.sal.binding.api.data.DataChangeListener;
-import org.opendaylight.controller.sal.binding.api.data.DataModificationTransaction;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyListener;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyResolverService;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyScope;
-import org.opendaylight.groupbasedpolicy.resolver.internal.PolicyCache.ConditionSet;
-import org.opendaylight.groupbasedpolicy.resolver.internal.PolicyCache.EgKey;
-import org.opendaylight.groupbasedpolicy.resolver.internal.PolicyCache.Policy;
-import org.opendaylight.groupbasedpolicy.resolver.internal.PolicyCache.RuleGroup;
+import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
+import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
+import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
+import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.resolver.PolicyCache.ConditionSet;
+import org.opendaylight.groupbasedpolicy.resolver.PolicyCache.Policy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
@@ -59,71 +56,169 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 
 /**
- * Implementation for {@link PolicyResolverService}
+ * The policy resolver is a utility for renderers to help in resolving
+ * group-based policy into a form that is easier to apply to the actual network.
+ * 
+ * <p>For any pair of endpoint groups, there is a set of rules that could apply 
+ * to the endpoints on that group based on the policy configuration.  The exact
+ * list of rules that apply to a given pair of endpoints depends on the 
+ * conditions that are active on the endpoints.
+ * 
+ * In a more formal sense: Let there be endpoint groups G_n, and for each G_n a 
+ * set of conditions C_n that can apply to endpoints in G_n.  Further, let S be 
+ * the set of lists of rules defined in the policy.  Our policy can be 
+ * represented as a function F: (G_n, 2^C_n, G_m, 2^C_m) -> S, where 2^C_n 
+ * represents the power set of C_n. In other words, we want to map all the 
+ * possible tuples of pairs of endpoints along with their active conditions 
+ * onto the right list of rules to apply.
+ * 
+ * <p>We need to be able to query against this policy model, enumerate the 
+ * relevant classes of traffic and endpoints, and notify renderers when there
+ * are changes to policy as it applies to active sets of endpoints and 
+ * endpoint groups.
+ * 
+ * <p>The policy resolver will maintain the necessary state for all tenants
+ * in its control domain, which is the set of tenants for which 
+ * policy listeners have been registered.
+ * 
  * @author readams
  */
-public class PolicyResolver implements PolicyResolverService {
-    private final DataBrokerService dataProvider;
+public class PolicyResolver implements AutoCloseable {
+    private static final Logger LOG = LoggerFactory.getLogger(PolicyResolver.class);
 
+    private final DataBroker dataProvider;
+    private final ScheduledExecutorService executor;
+    
     /**
      *  Keep track of the current relevant policy scopes.
      */
-    private CopyOnWriteArrayList<PolicyScopeImpl> scopes;
+    private CopyOnWriteArrayList<PolicyScope> policyListenerScopes;
     
     private ConcurrentMap<TenantId, TenantContext> resolvedTenants;
     
     private PolicyCache policyCache = new PolicyCache();
     
-    public PolicyResolver(DataBrokerService dataProvider) {
+    public PolicyResolver(DataBroker dataProvider,
+                          ScheduledExecutorService executor) {
         super();
         this.dataProvider = dataProvider;
-        scopes = new CopyOnWriteArrayList<>();
+        this.executor = executor;
+        policyListenerScopes = new CopyOnWriteArrayList<>();
         resolvedTenants = new ConcurrentHashMap<>();
+        
+        LOG.debug("Initialized renderer common policy resolver");
     }
 
-    // *********************
-    // PolicyResolverService
-    // *********************
+    // *************
+    // AutoCloseable
+    // *************
 
     @Override
-    public List<Rule> getPolicy(EndpointGroupId ep1Group,
-                                Collection<Condition> ep1Conds,
-                                EndpointGroupId ep2Group,
-                                Collection<Condition> ep2Conds) {
-        return null;
+    public void close() throws Exception {
+        for (TenantContext ctx : resolvedTenants.values()) {
+            if (ctx.registration != null)
+                ctx.registration.close();
+        }
     }
 
-    @Override
+    // *************************
+    // PolicyResolver public API
+    // *************************
+
+    /**
+     * Get the policy that currently applies to a pair of endpoints. 
+     * with the specified groups and conditions.  The first endpoint acts as
+     * the consumer and the second endpoint acts as the provider, so to get 
+     * all policy related to this pair of endpoints you must call this
+     * function twice: once for each possible order of endpoints.
+     * 
+     * @param ep1Tenant the tenant ID for the first endpoint 
+     * @param ep1Group the endpoint group for the first endpoint 
+     * @param ep1Conds The conditions that apply to the first endpoint
+     * @param ep2Tenant the tenant ID for the second endpoint
+     * @param ep2Group the endpoint group for the second endpoint 
+     * @param ep2Conds The conditions that apply to the second endpoint.
+     * @return a list of {@link RuleGroup} that apply to the endpoints.
+     * Cannot be null, but may be an empty list of rulegroups
+     */
+    public List<RuleGroup> getPolicy(TenantId ep1Tenant,
+                                     EndpointGroupId ep1Group, 
+                                     ConditionSet ep1Conds,
+                                     TenantId ep2Tenant,
+                                     EndpointGroupId ep2Group, 
+                                     ConditionSet ep2Conds) {
+        return policyCache.getPolicy(ep1Tenant, ep1Group, ep1Conds, 
+                                     ep2Tenant, ep2Group, ep2Conds);
+    }
+
+    /**
+     * Register a listener to receive update events.
+     * @param listener the {@link PolicyListener} object to receive the update
+     * events
+     */
     public PolicyScope registerListener(PolicyListener listener) {
-        PolicyScopeImpl ps = new PolicyScopeImpl(this, listener);
-        scopes.add(ps);
+        PolicyScope ps = new PolicyScope(listener);
+        policyListenerScopes.add(ps);
         
         return ps;
     }
     
-    @Override
+    /**
+     * Remove the listener registered for the given {@link PolicyScope}.
+     * @param scope the scope to remove
+     * @see PolicyResolver#registerListener(PolicyListener)
+     */
     public void removeListener(PolicyScope scope) {
-        scopes.remove(scope);        
+        policyListenerScopes.remove(scope);        
     }
 
-    // *****************
-    // Protected methods
-    // *****************
+    // **************
+    // Implementation
+    // **************
     
-    private void updateTenant(TenantId tenantId) {
+    /**
+     * Notify the policy listeners about a set of updated consumers
+     */
+    private void notifyListeners(Set<EgKey> updatedConsumers) {
+        for (final PolicyScope scope : policyListenerScopes) {
+            Set<EgKey> filtered = 
+                    Sets.filter(updatedConsumers, new Predicate<EgKey>() {
+                        @Override
+                        public boolean apply(EgKey input) {
+                            return scope.contains(input.getTenantId(), 
+                                                  input.getEgId());
+                        }
+                    });
+            if (!filtered.isEmpty()) {
+                scope.getListener().policyUpdated(filtered);
+            }
+        }
+    }
+    
+    private void updateTenant(final TenantId tenantId) {
         TenantContext context = resolvedTenants.get(tenantId);
         if (context == null) {
             ListenerRegistration<DataChangeListener> registration = 
-                    dataProvider.registerDataChangeListener(TenantUtils.tenantIid(tenantId), 
-                                                            new PolicyChangeListener(tenantId));
+                    dataProvider.registerDataChangeListener(LogicalDatastoreType.CONFIGURATION,
+                                                            TenantUtils.tenantIid(tenantId), 
+                                                            new PolicyChangeListener(tenantId),
+                                                            DataChangeScope.SUBTREE);
 
             context = new TenantContext(tenantId, registration);
             TenantContext oldContext = 
@@ -135,22 +230,46 @@ public class PolicyResolver implements PolicyResolverService {
                 context = oldContext;
             }
         }
-        // Resolve the new tenant and update atomically
-        boolean cont = true;
-        Tenant t = null;
-        while (cont) {
-            Tenant ot = context.tenant.get();
-            DataModificationTransaction transaction = 
-                    dataProvider.beginTransaction();
-            t = InheritanceUtils.resolveTenant(tenantId, transaction);
-            cont = !context.tenant.compareAndSet(ot, t);
-        }
         
-        // Update the policy cache and notify listeners
-        Table<EgKey, EgKey, Policy> policy = resolvePolicy(t);        
-        policyCache.updatePolicy(policy);
-    }
+        
 
+        // Resolve the new tenant and update atomically
+        final AtomicReference<Tenant> tenantRef = context.tenant;
+        final Tenant ot = tenantRef.get();
+        ReadOnlyTransaction transaction = 
+                dataProvider.newReadOnlyTransaction();
+        InstanceIdentifier<Tenant> tiid = TenantUtils.tenantIid(tenantId);
+        ListenableFuture<Optional<DataObject>> unresolved;
+
+        unresolved = transaction.read(LogicalDatastoreType.CONFIGURATION, tiid);
+        
+        Futures.addCallback(unresolved, new FutureCallback<Optional<DataObject>>() {
+            @Override
+            public void onSuccess(Optional<DataObject> result) {
+                if (!result.isPresent()) return;
+
+                Tenant t = InheritanceUtils.resolveTenant((Tenant)result.get());
+                if (!tenantRef.compareAndSet(ot, t)) {
+                    // concurrent update of tenant policy.  Retry
+                    updateTenant(tenantId);
+                } else {
+                    // Update the policy cache and notify listeners
+                    Table<EgKey, EgKey, Policy> policy = resolvePolicy(t);        
+                    Set<EgKey> updatedConsumers = 
+                            policyCache.updatePolicy(policy, policyListenerScopes);
+
+                    notifyListeners(updatedConsumers);
+                }
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                LOG.error("Count not get tenant {}", tenantId, t);
+            }
+        }, executor);
+    }
+    
+    
     /**
      * Resolve the policy in three phases:
      * (1) select contracts that in scope based on contract selectors. 
@@ -529,7 +648,7 @@ public class PolicyResolver implements PolicyResolverService {
     }
 
     private static class TenantContext {
-        TenantId tenantId;
+        //TenantId tenantId;
         ListenerRegistration<DataChangeListener> registration;
 
         AtomicReference<Tenant> tenant = new AtomicReference<Tenant>();
@@ -537,7 +656,7 @@ public class PolicyResolver implements PolicyResolverService {
         public TenantContext(TenantId tenantId,
                              ListenerRegistration<DataChangeListener> registration) {
             super();
-            this.tenantId = tenantId;
+            //this.tenantId = tenantId;
             this.registration = registration;
         }
     }
@@ -632,10 +751,10 @@ public class PolicyResolver implements PolicyResolverService {
         }
 
         @Override
-        public void onDataChanged(DataChangeEvent<InstanceIdentifier<?>, 
-                                                  DataObject> change) {
-            updateTenant(tenantId);
+        public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> arg0) {
+            updateTenant(tenantId);            
         }
         
     }
+
 }

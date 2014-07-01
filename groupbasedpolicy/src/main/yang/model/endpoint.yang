@@ -71,10 +71,10 @@ module endpoint {
                     "The subnet for this address";
             }
         }
-        leaf-list endpoint-group {
+        leaf endpoint-group {
             type gbp-common:endpoint-group-id;
             description 
-                "The groups associated with this endpoint";
+                "The group associated with this endpoint";
         }
         leaf-list condition {
             type gbp-common:condition-name;

@@ -6,8 +6,9 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.resolver.internal;
+package org.opendaylight.groupbasedpolicy.resolver;
 
+import java.io.Serializable;
 import java.util.Comparator;
 
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClauseName;
@@ -44,8 +45,10 @@ public class TenantUtils {
      * A comparator that assigns the natural ordering for rules, null-aware
      * @author readams
      */
-    public static class RuleComparator implements Comparator<Rule> {
-    
+    public static class RuleComparator 
+            implements Comparator<Rule>, Serializable {
+        private static final long serialVersionUID = -994507116060864552L;
+
         @Override
         public int compare(Rule o1, Rule o2) {
             return ComparisonChain.start()

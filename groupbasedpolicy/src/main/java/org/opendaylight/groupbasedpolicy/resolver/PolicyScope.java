@@ -8,31 +8,86 @@
 
 package org.opendaylight.groupbasedpolicy.resolver;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 
 /**
  * The policy scope object represents a scope for policy-related information.
  * A renderer that addresses a particular scope can express this as a 
- * {@link PolicyScopeImpl} with an associates {@link PolicyListener} that can
+ * {@link PolicyScope} with an associates {@link PolicyListener} that can
  * receive relevant updates.
  * @see PolicyResolver 
  * @author readams
  */
-public interface PolicyScope {
+public class PolicyScope {
+
+    /**
+     * The listener for this policy scope
+     */
+    private final PolicyListener listener;
+
+    /**
+     * The set of policy scope elements that we want to listen to.
+     */
+    private Set<EgKey> scopeElements;
+    
+    public PolicyScope(PolicyListener listener) {
+        super();
+        this.listener = listener;
+        Map<EgKey,Boolean> smap = new ConcurrentHashMap<>();
+        scopeElements = Collections.newSetFromMap(smap);
+    }
+
+    // ***********
+    // PolicyScope
+    // ***********
 
     /**
      * Add the endpoint group from the given tenant to the scope of updates
      * @param tenant the tenant for the endpoint group
-     * @param endpointGroup the endpoint group to add
+     * @param endpointGroup the endpoint group to add.  This is the consumer
+     * of the contract
      */
-    public void addToScope(TenantId tenant,
-                           EndpointGroupId endpointGroup);
+    public void addToScope(TenantId tenant, EndpointGroupId endpointGroup) {
+        scopeElements.add(new EgKey(tenant, endpointGroup));
+    }
 
     /**
      * Add all endpoint groups in the given tenant to the scope of updates
      * @param tenant the tenant to add.
      */
-    public void addToScope(TenantId tenant);
+    public void addToScope(TenantId tenant) {
+        scopeElements.add(new EgKey(tenant, null));        
+    }
 
+    /**
+     * Check whether the policy scope applies to the given tenant and endpoint
+     * group
+     * @param tenant the tenant to look up
+     * @param endpointGroup the endpoint group to look up.  May be null, 
+     * in which case will only check if the policy scope applies to the entire
+     * tenant
+     * @return <code>true</code> if the policy scope applies to the given
+     * tenant and endpoint group.
+     */
+    public boolean contains(TenantId tenant, EndpointGroupId endpointGroup) {
+        EgKey pse = new EgKey(tenant, endpointGroup);
+        if (scopeElements.contains(pse)) return true;
+        pse = new EgKey(tenant, null);
+        return scopeElements.contains(pse);
+                
+    }
+
+    /**
+     * Get the policy listener for this scope
+     * @return the policy listener
+     */
+    public PolicyListener getListener() {
+        return listener;
+    }
 }

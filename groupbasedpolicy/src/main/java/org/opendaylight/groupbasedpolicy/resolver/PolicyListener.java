@@ -8,6 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.resolver;
 
+import java.util.Set;
+
 /**
  * An interface for an object that can listen for events related to group-based
  * policy resolution.
@@ -15,5 +17,12 @@ package org.opendaylight.groupbasedpolicy.resolver;
  */
 public interface PolicyListener {
 
+    /**
+     * Indicates that the policy related to the set of consumer endpoint groups
+     * has changed
+     * @param updatedConsumers the set of consumer endpoint groups involved
+     * in a contract whose policy has changed
+     */
+    public void policyUpdated(Set<EgKey> updatedConsumers);
     
 }

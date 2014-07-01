@@ -6,7 +6,11 @@ module ofoverlay {
 
     import ietf-inet-types { prefix "inet"; revision-date 2010-09-24; }
 
+    import yang-ext {prefix ext; revision-date "2013-07-09";}
+    import opendaylight-inventory {prefix inv;revision-date "2013-08-19";}
+
     import gbp-common {prefix gbp-common;}
+    import endpoint {prefix endpoint;}
 
     description
         "This module defines the group-based policy ofoverlay renderer model.";
@@ -19,19 +23,47 @@ module ofoverlay {
     // ******************
     // Configuration Data
     // ******************
-    container ofoverlay {
+    container of-overlay-config {
         description
             "Configuration for the OpenFlow overlay renderer";
 
         config true;
 
-		leaf encapsulation-format {
-			description "The encapsulation format to use for tunnels";
-			type enumeration {
-				enum vxlan {
-					description "Use VXLAN encapsulation";
-				}
-			}
-		}
-	}
+        leaf encapsulation-format {
+            description "The encapsulation format to use for tunnels";
+            type enumeration {
+                enum vxlan {
+                    description "Use VXLAN encapsulation";
+                }
+            }
+        }
+
+        leaf learning-mode {
+            description 
+                "Selects how and whether we learn endpoints";
+            type enumeration {
+                enum orchestrated {
+                    description 
+                        "An external orchestration system will provide 
+                         information about all endpoints, and no
+                         direct learning will occur.";
+                }
+            }
+        }
+    }
+
+    augment "/endpoint:endpoints/endpoint:endpoint" {
+        ext:augment-identifier "of-overlay-context";
+
+        leaf node-id {
+            description "The OpenFlow switch for the endpoint";
+            type inv:node-id;
+        }
+
+        leaf port-number {
+            description 
+                "The port number of the OpenFlow port for the endpoint";
+            type uint32;
+        }
+    }
 }

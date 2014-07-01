@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.resolver.internal;
+package org.opendaylight.groupbasedpolicy.resolver;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -15,8 +15,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
-import org.opendaylight.controller.sal.binding.api.data.DataModificationTransaction;
-import org.opendaylight.groupbasedpolicy.resolver.internal.MatcherUtils.GetLabelName;
+import org.opendaylight.groupbasedpolicy.resolver.MatcherUtils.GetLabelName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.CapabilityMatcherName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.CapabilityName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClauseName;
@@ -33,7 +32,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SelectorName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TargetName;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.Label;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.capabilities.Capability;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.condition.matchers.ConditionMatcher;
@@ -76,8 +74,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderNamedSelectorBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderTargetSelector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderTargetSelectorBuilder;
-import org.opendaylight.yangtools.yang.binding.DataObject;
-import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.collect.ImmutableList;
 
@@ -93,19 +89,10 @@ public class InheritanceUtils {
      * items fully normalized.  This means that no items will have parent/child 
      * relationships and can be interpreted simply without regard to inheritance
      * rules 
-     * @param tenantId the {@link TenantId} of the {@link Tenant}
-     * @param transaction a {@link DataModificationTransaction} to use for 
-     * reading the data from the policy store
+     * @param unresolvedTenant the {@link Tenant} unresolved tenant to resolve
      * @return the fully-resolved {@link Tenant}
      */
-    public static Tenant resolveTenant(TenantId tenantId,
-                                       DataModificationTransaction transaction) {
-        InstanceIdentifier<Tenant> tenantIid = TenantUtils.tenantIid(tenantId);
-        DataObject tObject = transaction.readConfigurationData(tenantIid);
-        if (tObject == null || !(tObject instanceof Tenant))
-            return null;
-        
-        Tenant unresolvedTenant = (Tenant)tObject;
+    public static Tenant resolveTenant(Tenant unresolvedTenant) {
         HashMap<EndpointGroupId, EndpointGroup> resolvedEgs = new HashMap<>();
         HashMap<ContractId, Contract> resolvedContracts = new HashMap<>();
         

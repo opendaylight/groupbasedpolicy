@@ -12,19 +12,19 @@
         <data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
             <modules xmlns="urn:opendaylight:params:xml:ns:yang:controller:config">
                 <module>
-                    <type xmlns:endpoint="urn:opendaylight:params:xml:ns:yang:controller:config:endpoint-provider:impl">
-                        endpoint:endpoint-provider-impl
+                    <type xmlns:ofoverlay="urn:opendaylight:params:xml:ns:yang:controller:config:ofoverlay-provider:impl">
+                        ofoverlay:ofoverlay-provider-impl
                     </type>
-                    <name>endpoint-provider-impl</name>
+                    <name>ofoverlay-provider-impl</name>
 
                     <rpc-registry>
                         <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-rpc-registry</type>
                         <name>binding-rpc-broker</name>
                     </rpc-registry>
 
-                    <data-broker>
-                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-data-broker</type>
-                        <name>binding-data-broker</name>
+		    <data-broker>
+                      <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
+                      <name>binding-data-broker</name>
                     </data-broker>
                 </module>
 	    </modules>
@@ -33,7 +33,7 @@
     </configuration>
 
     <required-capabilities>
-        <capability>urn:opendaylight:params:xml:ns:yang:controller:config:endpoint-provider:impl?module=endpoint-provider-impl&amp;revision=2014-04-21</capability>
+        <capability>urn:opendaylight:params:xml:ns:yang:controller:config:ofoverlay-provider:impl?module=ofoverlay-provider-impl&amp;revision=2014-06-11</capability>
     </required-capabilities>
 
 </snapshot>

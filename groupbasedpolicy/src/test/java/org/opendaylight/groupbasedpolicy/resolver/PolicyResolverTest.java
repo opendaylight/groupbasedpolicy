@@ -6,19 +6,17 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.resolver.internal;
+package org.opendaylight.groupbasedpolicy.resolver;
 
 import java.util.HashSet;
 import java.util.List;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.opendaylight.groupbasedpolicy.resolver.internal.PolicyResolver;
-import org.opendaylight.groupbasedpolicy.resolver.internal.PolicyCache.ConditionSet;
-import org.opendaylight.groupbasedpolicy.resolver.internal.PolicyCache.EgKey;
-import org.opendaylight.groupbasedpolicy.resolver.internal.PolicyCache.Policy;
-import org.opendaylight.groupbasedpolicy.resolver.internal.PolicyCache.RuleGroup;
-import org.opendaylight.groupbasedpolicy.resolver.internal.PolicyResolver.ContractMatch;
+import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
+import org.opendaylight.groupbasedpolicy.resolver.PolicyCache.ConditionSet;
+import org.opendaylight.groupbasedpolicy.resolver.PolicyCache.Policy;
+import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver.ContractMatch;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.CapabilityMatcherName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.CapabilityName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClauseName;
@@ -332,7 +330,7 @@ public class PolicyResolverTest {
     
     @Before
     public void setup() throws Exception {
-        resolver = new PolicyResolver(null);
+        resolver = new PolicyResolver(null, null);
     }
     
     public void verifyMatches(List<ContractId> contrids,

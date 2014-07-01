@@ -23,15 +23,15 @@ module opflex {
         type enumeration {
             enum json {
                 description
-                    "JSON 1.0 serialization.";
+                "JSON 1.0 serialization.";
             }
             enum xml {
                 description
-                    "XML serialization.";
+                "XML serialization.";
             }
             enum binary {
                 description
-                    "OpFlex binary serialization.";
+                "OpFlex binary serialization.";
             }
         }
     }
@@ -54,19 +54,19 @@ module opflex {
 
             leaf id {
                 description 
-                   "The id for the policy repository.";
+                    "The id for the policy repository.";
                 type inet:host;
                 mandatory true;
             }
             leaf port {
                 description 
-                   "The port number to use for the connection";
+                    "The port number to use for the connection";
                 type inet:port-number;
                 mandatory true;
             }
             leaf serialization-type {
                 description 
-                   "The serialization to use for this connection.";
+                    "The serialization to use for this connection.";
                 type serialization;
                 mandatory true;
             }
@@ -81,19 +81,19 @@ module opflex {
 
             leaf id {
                 description 
-                   "The id for the endpoint registry.";
+                    "The id for the endpoint registry.";
                 type inet:host;
                 mandatory true;
             }
             leaf port {
                 description 
-                   "The port number to use for the connection";
+                    "The port number to use for the connection";
                 type inet:port-number;
                 mandatory true;
             }
             leaf serialization-type {
                 description 
-                   "The serialization to use for this connection.";
+                    "The serialization to use for this connection.";
                 type serialization;
                 mandatory true;
             }
@@ -108,19 +108,19 @@ module opflex {
 
             leaf id {
                 description 
-                   "The id for the Observer.";
+                    "The id for the Observer.";
                 type inet:host;
                 mandatory true;
             }
             leaf port {
                 description 
-                   "The port number to use for the connection";
+                    "The port number to use for the connection";
                 type inet:port-number;
                 mandatory true;
             }
             leaf serialization-type {
                 description 
-                   "The serialization to use for this connection.";
+                    "The serialization to use for this connection.";
                 type serialization;
                 mandatory true;
             }

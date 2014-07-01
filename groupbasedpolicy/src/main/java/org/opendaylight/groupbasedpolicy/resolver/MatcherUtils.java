@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.resolver.internal;
+package org.opendaylight.groupbasedpolicy.resolver;
 
 import java.util.ArrayList;
 import java.util.Collection;

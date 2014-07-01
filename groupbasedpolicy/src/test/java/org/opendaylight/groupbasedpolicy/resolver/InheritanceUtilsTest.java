@@ -6,14 +6,12 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.resolver.internal;
+package org.opendaylight.groupbasedpolicy.resolver;
 
 import java.util.HashSet;
 import java.util.List;
 
-import org.junit.Before;
 import org.junit.Test;
-import org.opendaylight.controller.sal.binding.api.data.DataModificationTransaction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.CapabilityMatcherName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.CapabilityName;
@@ -86,14 +84,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderNamedSelectorBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderTargetSelector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderTargetSelectorBuilder;
-import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import static org.junit.Assert.*;
-
-import static org.mockito.Mockito.*;
 
 public class InheritanceUtilsTest {
     // ******
@@ -514,24 +509,9 @@ public class InheritanceUtilsTest {
         .setEndpointGroup(ImmutableList.of(egloop1, egloop2, egselfloop, egorphan))
         .build();
     
-    InstanceIdentifier<Tenant> tenantiid1 = TenantUtils.tenantIid(tenantId1);
-    InstanceIdentifier<Tenant> tenantiid2 = 
-            TenantUtils.tenantIid(malformed.getId());
-
     // ****************
     // Other test state
     // ****************
-
-    DataModificationTransaction transaction;
-    
-    @Before
-    public void setup() throws Exception {
-        transaction = mock(DataModificationTransaction.class);
-        when(transaction.readConfigurationData(tenantiid1))
-            .thenReturn(tenant1);
-        when(transaction.readConfigurationData(tenantiid2))
-            .thenReturn(malformed);
-    }
 
     public boolean containsQuality(List<? extends QualityBase> qualities, 
                                    QualityBase quality) {
@@ -544,7 +524,7 @@ public class InheritanceUtilsTest {
 
     @Test
     public void testTargetSimple() throws Exception {
-        Tenant tenant = InheritanceUtils.resolveTenant(tenantId1, transaction);
+        Tenant tenant = InheritanceUtils.resolveTenant(tenant1);
         Contract c1 = TenantUtils.findContract(tenant, contractId1);
 
         // target with a quality directly in the target and one in 
@@ -575,7 +555,7 @@ public class InheritanceUtilsTest {
 
     @Test
     public void testTargetInheritance() throws Exception {
-        Tenant tenant = InheritanceUtils.resolveTenant(tenantId1, transaction);
+        Tenant tenant = InheritanceUtils.resolveTenant(tenant1);
         Contract c2 = TenantUtils.findContract(tenant, contractId2);
 
         // hits the q2PlusTarget which should include everything in q2Target
@@ -640,7 +620,7 @@ public class InheritanceUtilsTest {
     
     @Test
     public void testConsumerTargetSelectorSimple() throws Exception {
-        Tenant tenant = InheritanceUtils.resolveTenant(tenantId1, transaction);
+        Tenant tenant = InheritanceUtils.resolveTenant(tenant1);
         EndpointGroup egResult1 = TenantUtils.findEndpointGroup(tenant, egId1);
         
         // should get r1 from eg1 and r2 from target selector
@@ -686,7 +666,7 @@ public class InheritanceUtilsTest {
 
     @Test
     public void testConsumerTargetSelectorInheritance() throws Exception {
-        Tenant tenant = InheritanceUtils.resolveTenant(tenantId1, transaction);
+        Tenant tenant = InheritanceUtils.resolveTenant(tenant1);
         EndpointGroup egResult2 = TenantUtils.findEndpointGroup(tenant, egId2);
 
         ConsumerTargetSelector result = 
@@ -765,7 +745,7 @@ public class InheritanceUtilsTest {
     
     @Test
     public void testConsumerNamedSelectorSimple() throws Exception {
-        Tenant tenant = InheritanceUtils.resolveTenant(tenantId1, transaction);
+        Tenant tenant = InheritanceUtils.resolveTenant(tenant1);
         EndpointGroup egResult1 = TenantUtils.findEndpointGroup(tenant, egId1);
         
         // should get r1 from eg1 and r2 from selector
@@ -787,7 +767,7 @@ public class InheritanceUtilsTest {
 
     @Test
     public void testConsumerNamedSelectorInheritance() throws Exception {
-        Tenant tenant = InheritanceUtils.resolveTenant(tenantId1, transaction);
+        Tenant tenant = InheritanceUtils.resolveTenant(tenant1);
         EndpointGroup egResult2 = TenantUtils.findEndpointGroup(tenant, egId2);
 
         // should get r1 from eg1 and r2 from eg1 selector, 
@@ -812,7 +792,7 @@ public class InheritanceUtilsTest {
 
     @Test
     public void testProviderTargetSelectorSimple() throws Exception {
-        Tenant tenant = InheritanceUtils.resolveTenant(tenantId1, transaction);
+        Tenant tenant = InheritanceUtils.resolveTenant(tenant1);
         EndpointGroup egResult1 = TenantUtils.findEndpointGroup(tenant, egId1);
         
         // should get c1 from eg1 and c2 from target selector
@@ -858,7 +838,7 @@ public class InheritanceUtilsTest {
 
     @Test
     public void testProviderTargetSelectorInheritance() throws Exception {
-        Tenant tenant = InheritanceUtils.resolveTenant(tenantId1, transaction);
+        Tenant tenant = InheritanceUtils.resolveTenant(tenant1);
         EndpointGroup egResult2 = TenantUtils.findEndpointGroup(tenant, egId2);
 
         ProviderTargetSelector result = 
@@ -937,7 +917,7 @@ public class InheritanceUtilsTest {
 
     @Test
     public void testProviderNamedSelectorSimple() throws Exception {
-        Tenant tenant = InheritanceUtils.resolveTenant(tenantId1, transaction);
+        Tenant tenant = InheritanceUtils.resolveTenant(tenant1);
         EndpointGroup egResult1 = TenantUtils.findEndpointGroup(tenant, egId1);
         
         // should get c1 from eg1 and c2 from selector
@@ -959,7 +939,7 @@ public class InheritanceUtilsTest {
 
     @Test
     public void testProviderNamedSelectorInheritance() throws Exception {
-        Tenant tenant = InheritanceUtils.resolveTenant(tenantId1, transaction);
+        Tenant tenant = InheritanceUtils.resolveTenant(tenant1);
         EndpointGroup egResult2 = TenantUtils.findEndpointGroup(tenant, egId2);
 
         // should get c1 from eg1 and c2 from eg1 selector, 
@@ -984,7 +964,7 @@ public class InheritanceUtilsTest {
 
     @Test
     public void testClauseSimple() throws Exception {
-        Tenant tenant = InheritanceUtils.resolveTenant(tenantId1, transaction);
+        Tenant tenant = InheritanceUtils.resolveTenant(tenant1);
         Contract cresult1 = TenantUtils.findContract(tenant, contractId1);
         
         Clause result = TenantUtils.findClause(cresult1, clauseName1);
@@ -1024,7 +1004,7 @@ public class InheritanceUtilsTest {
 
     @Test
     public void testClauseInheritance() throws Exception {
-        Tenant tenant = InheritanceUtils.resolveTenant(tenantId1, transaction);
+        Tenant tenant = InheritanceUtils.resolveTenant(tenant1);
         Contract cresult2 = TenantUtils.findContract(tenant, contractId2);
         
         Clause result = TenantUtils.findClause(cresult2, clauseName1);
@@ -1065,7 +1045,7 @@ public class InheritanceUtilsTest {
 
     @Test
     public void testSubjectSimple() throws Exception {
-        Tenant tenant = InheritanceUtils.resolveTenant(tenantId1, transaction);
+        Tenant tenant = InheritanceUtils.resolveTenant(tenant1);
 
         Contract result = TenantUtils.findContract(tenant, contractId1);
         List<Subject> subjects = result.getSubject();
@@ -1080,7 +1060,7 @@ public class InheritanceUtilsTest {
 
     @Test
     public void testSubjectInheritance() throws Exception {
-        Tenant tenant = InheritanceUtils.resolveTenant(tenantId1, transaction);
+        Tenant tenant = InheritanceUtils.resolveTenant(tenant1);
 
         Contract result = TenantUtils.findContract(tenant, contractId2);
         List<Subject> subjects = result.getSubject();
@@ -1106,7 +1086,7 @@ public class InheritanceUtilsTest {
     @Test
     public void testMalformedPolicy() throws Exception {
         Tenant tenant = 
-                InheritanceUtils.resolveTenant(malformed.getId(), transaction);
+                InheritanceUtils.resolveTenant(malformed);
         Contract c = TenantUtils.findContract(tenant, cloop2Id);
         assertEquals(1, c.getClause().size());
         Clause clause = c.getClause().get(0);

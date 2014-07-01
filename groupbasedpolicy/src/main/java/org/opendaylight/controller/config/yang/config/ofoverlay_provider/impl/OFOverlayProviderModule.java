@@ -18,7 +18,8 @@ public class OFOverlayProviderModule extends org.opendaylight.controller.config.
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        return new OFOverlayRenderer();
+        return new OFOverlayRenderer(getDataBrokerDependency(),
+                                     getRpcRegistryDependency());
     }
 
 }
