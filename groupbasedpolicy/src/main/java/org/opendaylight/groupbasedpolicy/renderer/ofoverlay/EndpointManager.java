@@ -26,6 +26,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
@@ -113,7 +115,11 @@ public class EndpointManager
     
     @Override
     protected EndpointBuilder buildEndpoint(RegisterEndpointInput input) {
-        return super.buildEndpoint(input);
+        OfOverlayContextInput ictx = 
+                input.getAugmentation(OfOverlayContextInput.class);
+        return super.buildEndpoint(input)
+                .addAugmentation(OfOverlayContext.class, 
+                                 new OfOverlayContextBuilder(ictx).build());
     }
 
     @Override

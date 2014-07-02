@@ -114,6 +114,7 @@ module endpoint {
         description 
             "Repository for operational state data about endpoints needed for
              policy resolution.";
+        config false;
 
         list endpoint {
             description 
@@ -131,19 +132,7 @@ module endpoint {
                  list as well.";
 
             key "l3-context ip-address";
-
-            leaf l3-context {
-                type gbp-common:l3-context-id;
-                mandatory true;
-                description 
-                    "The context for this layer 3 address";
-            }
-            leaf ip-address {
-                type inet:ip-address;
-                mandatory true;
-                description 
-                    "The actual IP address for the endpoint";
-            }
+            uses l3-key;
 
             uses endpoint-fields;
         }

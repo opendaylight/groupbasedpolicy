@@ -52,18 +52,48 @@ module ofoverlay {
         }
     }
 
-    augment "/endpoint:endpoints/endpoint:endpoint" {
-        ext:augment-identifier "of-overlay-context";
+    grouping endpoint-location {
+        description 
+            "The location for this endpoint in the overlay network";
+
+        leaf location-type {
+            default internal;
+
+            type enumeration {
+                enum internal {
+                    description 
+                    "The endpoint is located on a port that is part of 
+                             the overlay network.  You must include the node ID
+                             and port number for this endpoint.";
+                }
+                enum external {
+                    description "This endpoint is not inside the overlay.";
+                }
+            }
+        }
 
         leaf node-id {
-            description "The OpenFlow switch for the endpoint";
+            description 
+                "The OpenFlow switch for the endpoint. Must be included 
+                     for all internal endpoints.";
             type inv:node-id;
         }
 
         leaf port-number {
             description 
-                "The port number of the OpenFlow port for the endpoint";
+                "The port number of the OpenFlow port for the endpoint.  
+                     Must be included for all internal endpoints";
             type uint32;
         }
+    }
+
+    augment "/endpoint:endpoints/endpoint:endpoint" {
+        ext:augment-identifier "of-overlay-context";
+        uses endpoint-location;
+    }
+
+    augment "/endpoint:register-endpoint/endpoint:input" {
+        ext:augment-identifier "of-overlay-context-input";
+        uses endpoint-location;
     }
 }

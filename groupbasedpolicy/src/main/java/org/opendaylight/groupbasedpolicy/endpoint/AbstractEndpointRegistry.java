@@ -49,7 +49,7 @@ import com.google.common.util.concurrent.ListenableFuture;
  * updating information about endpoints.
  * @author readamsO
  */
-public class AbstractEndpointRegistry 
+public abstract class AbstractEndpointRegistry 
         implements AutoCloseable, EndpointService {
     
     protected final DataBroker dataProvider;
