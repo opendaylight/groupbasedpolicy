@@ -99,6 +99,8 @@ public class JsonRpcDecoder extends ByteToMessageDecoder {
                     if (buf.getByte(i - 1) != '\\') inS = !inS;
                     break;
                 }
+                default:
+                    break;
             }
 
             if (leftCurlies != 0 && leftCurlies == rightCurlies && !inS) {

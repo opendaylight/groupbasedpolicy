@@ -45,7 +45,7 @@ public class JsonRpcEndpoint implements ChannelFutureListener {
 
     protected static final Logger logger = LoggerFactory.getLogger(JsonRpcEndpoint.class);
 
-    private class CallContext {
+    private static class CallContext {
         private String method;
         private RpcMessage request;
         private SettableFuture<Object> future;

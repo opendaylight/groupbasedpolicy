@@ -13,6 +13,7 @@ package org.opendaylight.groupbasedpolicy.renderer.opflex;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -79,7 +80,7 @@ public class OpflexConnectionService
         }
     }
 
-    private class OpflexConnection {
+    private static class OpflexConnection {
         String identity;
         List<Role> roles;
         JsonRpcEndpoint endpoint;
@@ -113,7 +114,7 @@ public class OpflexConnectionService
 
     }
 
-    public class OpflexRpcServer {
+    public static class OpflexRpcServer {
         private String identity;
         private List<Role> roles;
         private RpcServer server;
@@ -175,8 +176,8 @@ public class OpflexConnectionService
     static final String OPFLEX_LISTENIP = "opflex.listenIp";
     private static final String defaultOpflexIp = "0.0.0.0";
 
-    private static Integer opflexListenPort = defaultOpflexPort;
-    private static String opflexListenIp = defaultOpflexIp;
+    private Integer opflexListenPort = defaultOpflexPort;
+    private String opflexListenIp = defaultOpflexIp;
 
     ConcurrentMap<String, OpflexConnection> opflexAgents = null;
     ConcurrentMap<String, OpflexRpcServer> opflexServers = null;
@@ -614,7 +615,7 @@ public class OpflexConnectionService
          */
         for (OpflexRpcServer server : servers) {
             /* Skip our server -- reported in my_role */
-            if ( server.getId() == srv.getId())
+            if ( Objects.equals(server.getId(), srv.getId()))
                 continue;
             List<Role> roles = server.getRoles();
             if (roles != null) {
