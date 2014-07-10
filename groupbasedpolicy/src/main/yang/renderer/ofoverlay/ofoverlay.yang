@@ -1,3 +1,11 @@
+/*
+ * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
 module ofoverlay {
     yang-version 1;
 
@@ -79,11 +87,10 @@ module ofoverlay {
             type inv:node-id;
         }
 
-        leaf port-number {
+        leaf node-connector-id {
             description 
-                "The port number of the OpenFlow port for the endpoint.  
-                     Must be included for all internal endpoints";
-            type uint32;
+                "The node connector for the endpoint's OpenFlow port";
+            type inv:node-connector-id;
         }
     }
 

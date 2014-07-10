@@ -1,11 +1,21 @@
+/*
+ * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledExecutorService;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -16,15 +26,14 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.AbstractEndpointRegistry;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Builder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig.LearningMode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextInput;
@@ -69,6 +78,8 @@ public class EndpointManager
     private final ConcurrentHashMap<EgKey, Set<EpKey>> endpointsByGroup = 
             new ConcurrentHashMap<>();
     
+    private List<EndpointListener> listeners = new CopyOnWriteArrayList<>();
+
     public EndpointManager(DataBroker dataProvider,
                            RpcProviderRegistry rpcRegistry,
                            ScheduledExecutorService executor,
@@ -89,13 +100,22 @@ public class EndpointManager
     // ***************
 
     /**
+     * Add a {@link EndpointListener} to get notifications of switch events
+     * @param listener the {@link EndpointListener} to add
+     */
+    public void registerListener(EndpointListener listener) {
+        listeners.add(listener);
+    }
+    
+    /**
      * Get a collection of endpoints attached to a particular switch
      * @param nodeId the nodeId of the switch to get endpoints for
      * @return a collection of {@link Endpoint} objects.
      */
-    Collection<Endpoint> getEndpointForNode(NodeId nodeId) {
-        return Collections2.transform(endpointsByNode.get(nodeId), 
-                                      indexTranform);
+    public Collection<Endpoint> getEndpointsForNode(NodeId nodeId) {
+        Collection<EpKey> ebn = endpointsByNode.get(nodeId);
+        if (ebn == null) return Collections.emptyList();
+        return Collections2.transform(ebn, indexTransform);
     }
 
     /**
@@ -103,12 +123,31 @@ public class EndpointManager
      * @param nodeId the nodeId of the switch to get endpoints for
      * @return a collection of {@link Endpoint} objects.
      */
-    Collection<Endpoint> getEndpointForGroup(TenantId tenantId, 
-                                             EndpointGroupId egId) {
+    public Collection<Endpoint> getEndpointsForGroup(TenantId tenantId, 
+                                                     EndpointGroupId egId) {
         EgKey eg = new EgKey(tenantId, egId);
-        return Collections2.transform(endpointsByGroup.get(eg), indexTranform);
+        Collection<EpKey> ebg = endpointsByGroup.get(eg);
+        if (ebg == null) return Collections.emptyList();
+        return Collections2.transform(ebg, indexTransform);
     }
 
+    /**
+     * Get the endpoint object for the given key
+     * @param epKey the key
+     * @return the {@link Endpoint} corresponding to the key
+     */
+    public Endpoint getEndpoint(EpKey epKey) {
+        return endpoints.get(epKey);
+    }
+    
+    /**
+     * Set the learning mode to the specified value
+     * @param learningMode the learning mode to set
+     */
+    public void setLearningMode(LearningMode learningMode) {
+        // No-op for now
+    }
+    
     // ************************
     // AbstractEndpointRegistry
     // ************************
@@ -166,7 +205,25 @@ public class EndpointManager
     // Implementation
     // **************
 
-    private Function<EpKey, Endpoint> indexTranform = 
+    private void notifyEndpointUpdated(EpKey epKey) {
+        for (EndpointListener l : listeners) {
+            l.endpointUpdated(epKey);
+        }
+    }
+
+    private void notifyNodeEndpointUpdated(NodeId nodeId, EpKey epKey) {
+        for (EndpointListener l : listeners) {
+            l.nodeEndpointUpdated(nodeId, epKey);
+        }
+    }
+
+    private void notifyGroupEndpointUpdated(EgKey egKey, EpKey epKey) {
+        for (EndpointListener l : listeners) {
+            l.groupEndpointUpdated(egKey, epKey);
+        }
+    }
+
+    private Function<EpKey, Endpoint> indexTransform = 
             new Function<EpKey, Endpoint>() {
         @Override
         public Endpoint apply(EpKey input) {
@@ -174,8 +231,16 @@ public class EndpointManager
         }
     };
     
+    private boolean validEp(Endpoint endpoint) {
+        return (endpoint != null && endpoint.getTenant() != null && 
+                endpoint.getEndpointGroup() != null &&
+                endpoint.getL2Context() != null &&
+                endpoint.getMacAddress() != null);
+    }
+    
     private NodeId getLocation(Endpoint endpoint) {
-        if (endpoint == null) return null;
+        if (!validEp(endpoint)) 
+            return null;
         OfOverlayContext context = 
                 endpoint.getAugmentation(OfOverlayContext.class);
         if (context != null)
@@ -185,32 +250,23 @@ public class EndpointManager
     }
     
     private EpKey getEpKey(Endpoint endpoint) {
+        if (!validEp(endpoint)) 
+            return null;
         return new EpKey(endpoint.getL2Context(), endpoint.getMacAddress());
     }
     
     private EgKey getEgKey(Endpoint endpoint) {
-        if (endpoint == null) return null;
+        if (!validEp(endpoint)) 
+            return null;
         return new EgKey(endpoint.getTenant(), endpoint.getEndpointGroup());
     }
     
-    private <K1, K2> Set<K2> getNestedSet(K1 key, 
-                                          ConcurrentHashMap<K1, Set<K2>> set) {
-        Set<K2> inner = set.get(key);
-        if (inner == null) {
-            inner = Collections.newSetFromMap(new ConcurrentHashMap<K2, Boolean>());
-            Set<K2> old = set.putIfAbsent(key, inner);
-            if (old != null)
-                inner = old;
-        }
-        return inner;
-    }
-    
     private Set<EpKey> getEpNSet(NodeId location) {
-        return getNestedSet(location, endpointsByNode);
+        return SetUtils.getNestedSet(location, endpointsByNode);
     }
 
     private Set<EpKey> getEpGSet(EgKey eg) {
-        return getNestedSet(eg, endpointsByGroup);
+        return SetUtils.getNestedSet(eg, endpointsByGroup);
     }
     
     /**
@@ -224,73 +280,57 @@ public class EndpointManager
 
         EgKey oldKey = getEgKey(oldEp);
         EgKey newKey = getEgKey(newEp);
+
+        EpKey epKey = getEpKey(oldEp);
+        if (epKey == null) epKey = getEpKey(newEp);
+        if (epKey == null) return;
+
+        boolean notifyOldLoc = false;
+        boolean notifyNewLoc = false;
+        boolean notifyOldEg = false;
+        boolean notifyNewEg = false;
         
+        if (newEp != null)
+            endpoints.put(epKey, newEp);
+
         if (oldLoc != null && 
             (newLoc == null || !oldLoc.equals(newLoc))) {
-            EpKey oldEpKey = getEpKey(oldEp);
             Set<EpKey> eps = getEpNSet(oldLoc);
-            eps.remove(oldEpKey);
+            eps.remove(epKey);
+            notifyOldLoc = true;
+        }
+        if (oldKey != null &&
+            (newKey == null || !oldKey.equals(newKey))) {
             Set<EpKey> gns = getEpGSet(oldKey);
-            gns.remove(oldEpKey);
-            if (newEp == null)
-                endpoints.remove(oldEpKey);
+            gns.remove(epKey);
+            notifyOldEg = true;
         }
+
         if (newLoc != null) {
-            EpKey newEpKey = getEpKey(newEp);
-            endpoints.put(newEpKey, newEp);
             Set<EpKey> eps = getEpNSet(newLoc);
-            eps.add(newEpKey);
+            eps.add(epKey);
+            LOG.info("Endpoint {} added to node {}", epKey, newLoc);
+            notifyNewLoc = true;
+        }
+        if (newKey != null) {
             Set<EpKey> gns = getEpGSet(newKey);
-            gns.add(newEpKey);
+            gns.add(epKey);
+            LOG.info("Endpoint {} added to group {}", epKey, newKey);
+            notifyNewEg = true;
         }
-    }
-    
-    /**
-     * A key for a single endpoint
-     */
-    private static class EpKey {
 
-        private final L2ContextId l2Context;
-        private final MacAddress macAddress;
+        if (newEp == null)
+            endpoints.remove(epKey);
         
-        public EpKey(L2ContextId l2Context, MacAddress macAddress) {
-            super();
-            this.l2Context = l2Context;
-            this.macAddress = macAddress;
-        }
+        notifyEndpointUpdated(epKey);
 
-        @Override
-        public int hashCode() {
-            final int prime = 31;
-            int result = 1;
-            result = prime * result +
-                     ((l2Context == null) ? 0 : l2Context.hashCode());
-            result = prime * result +
-                     ((macAddress == null) ? 0 : macAddress.hashCode());
-            return result;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj)
-                return true;
-            if (obj == null)
-                return false;
-            if (getClass() != obj.getClass())
-                return false;
-            EpKey other = (EpKey) obj;
-            if (l2Context == null) {
-                if (other.l2Context != null)
-                    return false;
-            } else if (!l2Context.equals(other.l2Context))
-                return false;
-            if (macAddress == null) {
-                if (other.macAddress != null)
-                    return false;
-            } else if (!macAddress.equals(other.macAddress))
-                return false;
-            return true;
-        }
-        
+        if (notifyOldLoc)
+            notifyNodeEndpointUpdated(oldLoc,epKey);
+        if (notifyNewLoc)
+            notifyNodeEndpointUpdated(newLoc,epKey);
+        if (notifyOldEg)
+            notifyGroupEndpointUpdated(oldKey, epKey);
+        if (notifyNewEg)
+            notifyGroupEndpointUpdated(newKey, epKey);
     }
 }

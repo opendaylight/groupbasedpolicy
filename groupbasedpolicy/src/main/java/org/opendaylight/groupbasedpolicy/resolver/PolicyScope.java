@@ -27,6 +27,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 public class PolicyScope {
 
     /**
+     * The parent policy resolver
+     */
+    private final PolicyResolver resolver;
+    
+    /**
      * The listener for this policy scope
      */
     private final PolicyListener listener;
@@ -36,8 +41,10 @@ public class PolicyScope {
      */
     private Set<EgKey> scopeElements;
     
-    public PolicyScope(PolicyListener listener) {
+    public PolicyScope(PolicyResolver resolver,
+                       PolicyListener listener) {
         super();
+        this.resolver = resolver;
         this.listener = listener;
         Map<EgKey,Boolean> smap = new ConcurrentHashMap<>();
         scopeElements = Collections.newSetFromMap(smap);
@@ -48,13 +55,17 @@ public class PolicyScope {
     // ***********
 
     /**
-     * Add the endpoint group from the given tenant to the scope of updates
+     * Add the endpoint group from the given tenant and endpoint group to the
+     * scope of updates
      * @param tenant the tenant for the endpoint group
      * @param endpointGroup the endpoint group to add.  This is the consumer
      * of the contract
      */
     public void addToScope(TenantId tenant, EndpointGroupId endpointGroup) {
-        scopeElements.add(new EgKey(tenant, endpointGroup));
+        synchronized (this) {
+            scopeElements.add(new EgKey(tenant, endpointGroup));
+            resolver.subscribeTenant(tenant);
+        }
     }
 
     /**
@@ -62,7 +73,40 @@ public class PolicyScope {
      * @param tenant the tenant to add.
      */
     public void addToScope(TenantId tenant) {
-        scopeElements.add(new EgKey(tenant, null));        
+        addToScope(tenant, null);
+    }
+
+    /**
+     * Remove an endpoint group from the given tenant and endpoint group from 
+     * the scope of updates
+     * @param tenant the tenant for the endpoint group
+     * @param endpointGroup the endpoint group to remove.  This is the consumer
+     * of the contract
+     */
+    public void removeFromScope(TenantId tenant, 
+                                EndpointGroupId endpointGroup) {
+        synchronized (this) {
+            boolean canUnsubscribe = false;
+            scopeElements.remove(new EgKey(tenant, endpointGroup));
+            for (EgKey element : scopeElements) {
+                if (element.getTenantId().equals(tenant)) {
+                    canUnsubscribe = false;
+                    break;
+                }
+            }
+            if (canUnsubscribe) {
+                resolver.unsubscribeTenant(tenant);
+            }
+        }
+    }
+
+    /**
+     * Remove an endpoint group from the given tenant from 
+     * the scope of updates
+     * @param tenant the tenant for the endpoint group
+     */
+    public void removeFromScope(TenantId tenant) {
+        removeFromScope(tenant, null);
     }
 
     /**

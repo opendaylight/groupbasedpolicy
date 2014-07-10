@@ -98,18 +98,12 @@ public class PolicyResolverTest {
     Requirement r1 = new RequirementBuilder()
         .setName(new RequirementName("r1"))
         .build();
-    Requirement r2 = new RequirementBuilder()
-        .setName(new RequirementName("r2"))
-        .build();
     Requirement r3 = new RequirementBuilder()
         .setName(new RequirementName("r3"))
         .build();
 
     Capability cap1 = new CapabilityBuilder()
         .setName(new CapabilityName("cap1"))
-        .build();
-    Capability cap2 = new CapabilityBuilder()
-        .setName(new CapabilityName("cap2"))
         .build();
     Capability cap3 = new CapabilityBuilder()
         .setName(new CapabilityName("cap3"))
@@ -166,17 +160,9 @@ public class PolicyResolverTest {
         .setName(new RequirementMatcherName("rm1"))
         .setMatcherRequirement(ImmutableList.of(new MatcherRequirementBuilder(r1).build()))
         .build();
-    RequirementMatcher rm3 = new RequirementMatcherBuilder()
-        .setName(new RequirementMatcherName("rm1"))
-        .setMatcherRequirement(ImmutableList.of(new MatcherRequirementBuilder(r3).build()))
-        .build();
     CapabilityMatcher capm1 = new CapabilityMatcherBuilder()
         .setName(new CapabilityMatcherName("cap1"))
         .setMatcherCapability(ImmutableList.of(new MatcherCapabilityBuilder(cap1).build()))
-        .build();
-    CapabilityMatcher capm3 = new CapabilityMatcherBuilder()
-        .setName(new CapabilityMatcherName("cap3"))
-        .setMatcherCapability(ImmutableList.of(new MatcherCapabilityBuilder(cap3).build()))
         .build();
     ConditionMatcher condm1 = new ConditionMatcherBuilder()
         .setName(new ConditionMatcherName("condm1"))
@@ -204,16 +190,6 @@ public class PolicyResolverTest {
             .setCapabilityMatcher(ImmutableList.of(capm1))
             .build())
         .setSubjectRefs(ImmutableList.of(s1.getName()))
-        .build();
-    Clause clause2 = new ClauseBuilder()
-        .setName(new ClauseName("clause2"))
-        .setConsumerMatchers(new ConsumerMatchersBuilder()
-            .setRequirementMatcher(ImmutableList.of(rm3))
-            .build())
-        .setProviderMatchers(new ProviderMatchersBuilder()
-            .setCapabilityMatcher(ImmutableList.of(capm3))
-            .build())
-        .setSubjectRefs(ImmutableList.of(s2.getName()))
         .build();
     Clause clause3 = new ClauseBuilder()
         .setName(new ClauseName("clause3"))

@@ -50,6 +50,11 @@ see https://git.opendaylight.org/gerrit/#/c/390/
       <artifactId>openflow-protocol-spi</artifactId>
       <version>${openflowjava.distribution.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.opendaylight.openflowjava</groupId>
+      <artifactId>util</artifactId>
+      <version>${openflowjava.distribution.version}</version>
+    </dependency>
 
     <!-- groupbasedpolicy -->
     <dependency>

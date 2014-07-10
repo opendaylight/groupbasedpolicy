@@ -20,6 +20,7 @@ import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.controller.sal.common.util.Rpcs;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.SetEndpointGroupConditionsInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnregisterEndpointInput;
@@ -39,8 +40,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L3;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Function;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 
@@ -51,7 +55,9 @@ import com.google.common.util.concurrent.ListenableFuture;
  */
 public abstract class AbstractEndpointRegistry 
         implements AutoCloseable, EndpointService {
-    
+    private static final Logger LOG = 
+            LoggerFactory.getLogger(AbstractEndpointRegistry.class);
+
     protected final DataBroker dataProvider;
     protected final ScheduledExecutorService executor;
     
@@ -67,9 +73,30 @@ public abstract class AbstractEndpointRegistry
         rpcRegistration =
                 rpcRegistry.addRpcImplementation(EndpointService.class, this);
         
+        // XXX - This is a hack to avoid a bug in the data broker
+        // API where you have to write all the parents before you can write
+        // a child
+        InstanceIdentifier<Endpoints> iid = 
+                InstanceIdentifier.builder(Endpoints.class).build();
+        WriteTransaction t = this.dataProvider.newWriteOnlyTransaction();
+        t.put(LogicalDatastoreType.OPERATIONAL, 
+              iid, new EndpointsBuilder().build());
+        ListenableFuture<RpcResult<TransactionStatus>> f = t.commit();
+        Futures.addCallback(f, new FutureCallback<RpcResult<TransactionStatus>>() {
+
+            @Override
+            public void onSuccess(RpcResult<TransactionStatus> result) {
+                
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                LOG.error("Could not write endpoint base container", t);
+            }
+        });
+
         // XXX TODO - age out endpoint data and remove 
         // endpoint group/condition mappings with no conditions
-        
     }
 
     @Override

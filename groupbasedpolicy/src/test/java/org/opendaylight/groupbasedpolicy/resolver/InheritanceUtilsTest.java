@@ -57,7 +57,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.TenantBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ContractBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ContractKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroupBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Clause;
@@ -291,7 +290,6 @@ public class InheritanceUtilsTest {
 
     ContractId contractId2 = 
             new ContractId("3f56ae44-d1e4-4617-95af-c809dfc50149");
-    ContractKey contractKey2 = new ContractKey(contractId2);
     Contract contract2 = new ContractBuilder()
         .setId(contractId2)
         .setParent(contractId1)
@@ -339,7 +337,6 @@ public class InheritanceUtilsTest {
         .setRequirement(ImmutableList.of(r3))
         .build();
     
-    SelectorName pnsName1 = new SelectorName("cns1");
     ProviderNamedSelector pns1 = new ProviderNamedSelectorBuilder()
         .setName(cnsName1)
         .setContract(ImmutableList.of(contractId1))

@@ -173,7 +173,7 @@ public class PolicyResolver implements AutoCloseable {
      * events
      */
     public PolicyScope registerListener(PolicyListener listener) {
-        PolicyScope ps = new PolicyScope(listener);
+        PolicyScope ps = new PolicyScope(this, listener);
         policyListenerScopes.add(ps);
         
         return ps;
@@ -211,6 +211,29 @@ public class PolicyResolver implements AutoCloseable {
         }
     }
     
+    /**
+     * Subscribe the resolver to updates related to a particular tenant
+     * Make sure that this can't be called concurrently with subscribe
+     * @param tenantId the tenant ID to subscribe to
+     */
+    protected void subscribeTenant(TenantId tenantId) {
+        if (!resolvedTenants.containsKey(tenantId))
+            updateTenant(tenantId);
+    }
+
+    /**
+     * Unsubscribe the resolver from updates related to a particular tenant
+     * Make sure that this can't be called concurrently with subscribe
+     * @param tenantId the tenant ID to subscribe to
+     */
+    protected void unsubscribeTenant(TenantId tenantId) {
+        TenantContext context = resolvedTenants.get(tenantId);
+        if (context != null) {
+            resolvedTenants.remove(tenantId);
+            context.registration.close();
+        }
+    }
+
     private void updateTenant(final TenantId tenantId) {
         TenantContext context = resolvedTenants.get(tenantId);
         if (context == null) {
@@ -230,8 +253,6 @@ public class PolicyResolver implements AutoCloseable {
                 context = oldContext;
             }
         }
-        
-        
 
         // Resolve the new tenant and update atomically
         final AtomicReference<Tenant> tenantRef = context.tenant;

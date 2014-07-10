@@ -9,11 +9,10 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
@@ -21,6 +20,7 @@ import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataCh
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNode;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig.EncapsulationFormat;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node;
@@ -34,6 +34,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 
 /**
@@ -46,21 +48,27 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
             LoggerFactory.getLogger(SwitchManager.class);
 
     private final DataBroker dataProvider;
+
     private final static InstanceIdentifier<Nodes> nodesIid =
             InstanceIdentifier.builder(Nodes.class).build();
+    private final static InstanceIdentifier<Node> nodeIid =
+            InstanceIdentifier.builder(Nodes.class)
+                .child(Node.class).build();
     private ListenerRegistration<DataChangeListener> nodesReg;
 
     private ConcurrentHashMap<NodeId, SwitchState> switches = 
             new ConcurrentHashMap<>();
     private List<SwitchListener> listeners = new CopyOnWriteArrayList<>();
 
-    public SwitchManager(DataBroker dataProvider) {
+    public SwitchManager(DataBroker dataProvider,
+                         ScheduledExecutorService executor) {
         super();
         this.dataProvider = dataProvider;
-        nodesReg = 
-                dataProvider.registerDataChangeListener(LogicalDatastoreType.OPERATIONAL, 
-                                                        nodesIid, this, 
-                                                        DataChangeScope.ONE);
+        nodesReg = dataProvider
+                .registerDataChangeListener(LogicalDatastoreType.OPERATIONAL, 
+                                            nodeIid, this, 
+                                            DataChangeScope.ONE);
+        readSwitches();
         LOG.debug("Initialized OFOverlay switch manager");
     }
 
@@ -92,13 +100,32 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
     }
 
     /**
+     * Check whether the specified switch is in the ready state
+     * @param nodeId the node
+     * @return <code>true</code> if the switch is in the ready state
+     */
+    public boolean isSwitchReady(NodeId nodeId) {
+        SwitchState state = switches.get(nodeId);
+        if (state == null) return false;
+        return SwitchStatus.READY.equals(state.status);
+    }
+    
+    /**
      * Add a {@link SwitchListener} to get notifications of switch events
      * @param listener the {@link SwitchListener} to add
      */
     public void registerListener(SwitchListener listener) {
         listeners.add(listener);
     }
-    
+
+    /**
+     * Set the encapsulation format the specified value
+     * @param format The new format
+     */
+    public void setEncapsulationFormat(EncapsulationFormat format) {
+        // No-op for now
+    }
+
     // *************
     // AutoCloseable
     // *************
@@ -108,18 +135,74 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
         nodesReg.close();
     }
 
-    // *************
+    // ******************
     // DataChangeListener
-    // *************
+    // ******************
 
     @Override
-    public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
-        readSwitches();
+    public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, 
+                                                   DataObject> change) {
+        for (InstanceIdentifier<?> iid : change.getRemovedPaths()) {
+            LOG.info("{} removed", iid);
+
+            DataObject old = change.getOriginalData().get(iid);
+            if (old != null && old instanceof Node) {
+                removeSwitch(((Node)old).getId());
+            }
+        }
+
+        for (DataObject dao : change.getCreatedData().values()) {
+            updateSwitch(dao);
+        }
+        for (DataObject dao : change.getUpdatedData().values()) {
+            updateSwitch(dao);
+        }
     }
     
     // **************
     // Implementation
     // **************
+    
+    private void updateSwitch(DataObject dao) {
+        if (!(dao instanceof Node)) return;
+        // Switches are registered as Nodes in the inventory; OpenFlow switches
+        // are of type FlowCapableNode
+        Node node = (Node)dao;
+        FlowCapableNode fcn = node.getAugmentation(FlowCapableNode.class);
+        if (fcn == null) return;
+
+        LOG.info("{} update", node.getId());
+        
+        SwitchState state = switches.get(node.getId()); 
+        if (state == null) {
+            state = new SwitchState(node);
+            SwitchState old = 
+                    switches.putIfAbsent(node.getId(), state);
+            if (old == null) {
+                switchConnected(node.getId());
+            }
+        }
+    }
+    
+    // XXX there's a race condition here if a switch exists at startup and is 
+    // removed very quickly.
+    private final FutureCallback<Optional<DataObject>> readSwitchesCallback =
+            new FutureCallback<Optional<DataObject>>() {
+        @Override
+        public void onSuccess(Optional<DataObject> result) {
+            if (result.isPresent() && result.get() instanceof Nodes) {
+                Nodes nodes = (Nodes)result.get();
+                for (Node node : nodes.getNode()) {
+                    updateSwitch(node);
+                }
+            }
+        }
+
+        @Override
+        public void onFailure(Throwable t) {
+            LOG.error("Count not read switch information", t);
+        }
+    };
     
     /**
      * Read the set of switches from the ODL inventory and update our internal
@@ -133,43 +216,20 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
         ListenableFuture<Optional<DataObject>> future = 
                 dataProvider.newReadOnlyTransaction()
                     .read(LogicalDatastoreType.OPERATIONAL,nodesIid);
-        DataObject dao;
-        try {
-            dao = future.get().get();
-        } catch (InterruptedException | ExecutionException e) {
-            LOG.error("Count not read switch information", e);
-            return;
-        }
-        
-        // Switches are registered as Nodes in the inventory; OpenFlow switches
-        // are of type FlowCapableNode
-        if (dao instanceof Nodes) {
-            HashSet<NodeId> activeSwitches = new HashSet<>(); 
-            Nodes nodes = (Nodes)dao;
-            for (Node node : nodes.getNode()) {
-                FlowCapableNode fcn = node.getAugmentation(FlowCapableNode.class);
-                if (fcn != null && fcn.getDescription() != null) {
-                    activeSwitches.add(node.getId());
-                    SwitchState state = switches.get(node.getId()); 
-                    if (state == null) {
-                        state = new SwitchState(node);
-                        SwitchState old = 
-                                switches.putIfAbsent(node.getId(), state);
-                        if (old != null) {
-                            state = old;
-                        } else {
-                            // XXX for now just go straight to READY
-                            switchReady(node.getId());
-                            LOG.info("New switch {} connected", node.getId());
-                        }
-                    }
-                }
-            }
-            for (NodeId nodeId : switches.keySet()) {
-                if (!activeSwitches.contains(nodeId)) {
-                    removeSwitch(nodeId);
-                }
-            }
+        Futures.addCallback(future, readSwitchesCallback);
+    }
+    
+    /**
+     * Set the ready state of the node to PREPARING and begin the initialization
+     * process
+     */
+    private void switchConnected(NodeId nodeId) {
+        SwitchState state = switches.get(nodeId);
+        if (state != null) {
+            // XXX - TODO - For now we just go straight to ready state.
+            // need to configure tunnels and tables as needed
+            switchReady(nodeId);
+            LOG.info("New switch {} connected", nodeId);
         }
     }
     
@@ -191,8 +251,11 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
      * notify listeners
      */
     private void removeSwitch(NodeId nodeId) {
-        LOG.info("Switch {} removed", nodeId);
         switches.remove(nodeId);
+        for (SwitchListener listener : listeners) {
+            listener.switchRemoved(nodeId);
+        }
+        LOG.info("Switch {} removed", nodeId);
     }
     
     private enum SwitchStatus {
