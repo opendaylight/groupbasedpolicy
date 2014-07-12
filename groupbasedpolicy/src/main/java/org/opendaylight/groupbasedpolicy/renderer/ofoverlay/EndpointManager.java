@@ -86,11 +86,14 @@ public class EndpointManager
                            SwitchManager switchManager) {
         super(dataProvider, rpcRegistry, executor);
         
-        listenerReg = 
-                dataProvider.registerDataChangeListener(LogicalDatastoreType.OPERATIONAL, 
-                                                        endpointsIid, 
-                                                        this, 
-                                                        DataChangeScope.ONE);
+        if (dataProvider != null) {
+            listenerReg = dataProvider
+                    .registerDataChangeListener(LogicalDatastoreType.OPERATIONAL, 
+                                                endpointsIid, 
+                                                this, 
+                                                DataChangeScope.ONE);
+        } else
+            listenerReg = null;
 
         LOG.debug("Initialized OFOverlay endpoint manager");
     }
@@ -272,7 +275,7 @@ public class EndpointManager
     /**
      * Update the endpoint indexes.  Set newEp to null to remove.
      */
-    private void updateEndpoint(Endpoint oldEp, Endpoint newEp) {
+    protected void updateEndpoint(Endpoint oldEp, Endpoint newEp) {
         // XXX TODO only keep track of endpoints that are attached 
         // to switches that are actually connected to us
         NodeId oldLoc = getLocation(oldEp);

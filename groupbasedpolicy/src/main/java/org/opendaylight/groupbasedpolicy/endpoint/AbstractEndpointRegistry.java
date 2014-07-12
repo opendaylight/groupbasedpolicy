@@ -70,30 +70,35 @@ public abstract class AbstractEndpointRegistry
         this.dataProvider = dataProvider;
         this.executor = executor;
 
-        rpcRegistration =
-                rpcRegistry.addRpcImplementation(EndpointService.class, this);
+        if (rpcRegistry != null) {
+            rpcRegistration =
+                    rpcRegistry.addRpcImplementation(EndpointService.class, this);
+        } else
+            rpcRegistration = null;
         
-        // XXX - This is a hack to avoid a bug in the data broker
-        // API where you have to write all the parents before you can write
-        // a child
-        InstanceIdentifier<Endpoints> iid = 
-                InstanceIdentifier.builder(Endpoints.class).build();
-        WriteTransaction t = this.dataProvider.newWriteOnlyTransaction();
-        t.put(LogicalDatastoreType.OPERATIONAL, 
-              iid, new EndpointsBuilder().build());
-        ListenableFuture<RpcResult<TransactionStatus>> f = t.commit();
-        Futures.addCallback(f, new FutureCallback<RpcResult<TransactionStatus>>() {
+        if (dataProvider != null) {
+            // XXX - This is a hack to avoid a bug in the data broker
+            // API where you have to write all the parents before you can write
+            // a child
+            InstanceIdentifier<Endpoints> iid = 
+                    InstanceIdentifier.builder(Endpoints.class).build();
+            WriteTransaction t = this.dataProvider.newWriteOnlyTransaction();
+            t.put(LogicalDatastoreType.OPERATIONAL, 
+                  iid, new EndpointsBuilder().build());
+            ListenableFuture<RpcResult<TransactionStatus>> f = t.commit();
+            Futures.addCallback(f, new FutureCallback<RpcResult<TransactionStatus>>() {
 
-            @Override
-            public void onSuccess(RpcResult<TransactionStatus> result) {
-                
-            }
+                @Override
+                public void onSuccess(RpcResult<TransactionStatus> result) {
 
-            @Override
-            public void onFailure(Throwable t) {
-                LOG.error("Could not write endpoint base container", t);
-            }
-        });
+                }
+
+                @Override
+                public void onFailure(Throwable t) {
+                    LOG.error("Could not write endpoint base container", t);
+                }
+            });
+        }
 
         // XXX TODO - age out endpoint data and remove 
         // endpoint group/condition mappings with no conditions

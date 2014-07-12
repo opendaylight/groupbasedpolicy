@@ -1,36 +1,36 @@
+/*
+ * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
-import java.util.HashMap;
+import java.util.Map;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.TransactionStatus;
-import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Prefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.TableBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer3Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.ArpMatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv4MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv6MatchBuilder;
-import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * Manage the table that enforces port security
@@ -41,130 +41,102 @@ public class PortSecurity extends FlowTable {
             LoggerFactory.getLogger(PortSecurity.class);
     
     public static final short TABLE_ID = 0;
-    private static final Long ARP = Long.valueOf(0x0806);
-    private static final Long IPv4 = Long.valueOf(0x0800);
-    private static final Long IPv6 = Long.valueOf(0x86DD);
+    protected static final Long ARP = Long.valueOf(0x0806);
+    protected static final Long IPv4 = Long.valueOf(0x0800);
+    protected static final Long IPv6 = Long.valueOf(0x86DD);
     
     public PortSecurity(FlowTableCtx ctx) {
         super(ctx);
     }
-    
+
     @Override
-    public Table getEmptyTable() {
-        return new TableBuilder()
-            .setId(Short.valueOf((short)TABLE_ID))
-            .build();
+    public short getTableId() {
+        return TABLE_ID;
     }
-    
+
     @Override
-    public void update(NodeId nodeId, Dirty dirty) throws Exception {
-        ReadWriteTransaction t = ctx.dataBroker.newReadWriteTransaction();
-        InstanceIdentifier<Table> tiid = 
-                FlowUtils.createTablePath(nodeId, TABLE_ID);
-        Optional<DataObject> r = 
-                t.read(LogicalDatastoreType.CONFIGURATION, tiid).get();
-
-        HashMap<String, FlowCtx> flowMap = new HashMap<>();
-
-        if (r.isPresent()) {
-            Table curTable = (Table)r.get();
-
-            if (curTable.getFlow() != null) {
-                for (Flow f : curTable.getFlow()) {
-                    flowMap.put(f.getId().getValue(), new FlowCtx(f));
-                }
-            }
-        }
-        
+    public void sync(ReadWriteTransaction t,
+                     InstanceIdentifier<Table> tiid,
+                     Map<String, FlowCtx> flowMap,
+                     NodeId nodeId, Dirty dirty) {
+        // Default drop all
         dropFlow(t, tiid, flowMap, 1, null);
+        
+        // Drop IP traffic that doesn't match a source IP rule
         dropFlow(t, tiid, flowMap, 110, ARP);
         dropFlow(t, tiid, flowMap, 111, IPv4);
-        dropFlow(t, tiid, flowMap, 113, IPv6);
+        dropFlow(t, tiid, flowMap, 112, IPv6);
+        
+        // XXX - TODO Allow traffic from tunnel ports and external ports
 
         for (Endpoint e : ctx.endpointManager.getEndpointsForNode(nodeId)) {
             OfOverlayContext ofc = e.getAugmentation(OfOverlayContext.class);
-            if (ofc != null && ofc.getNodeConnectorId() != null) {
+            if (ofc != null && ofc.getNodeConnectorId() != null &&
+                (ofc.getLocationType() == null ||
+                 LocationType.Internal.equals(ofc.getLocationType()))) {
+                // Allow layer 3 traffic (ARP and IP) with the correct source
+                // IP, MAC, and source port
                 l3flow(t, tiid, flowMap, e, ofc, 120, false);
                 l3flow(t, tiid, flowMap, e, ofc, 121, true);
+                
+                // Allow layer 2 traffic with the correct source MAC and 
+                // source port (note lower priority than drop IP rules) 
                 l2flow(t, tiid, flowMap, e, ofc, 100);
             }
         }
-        
-        for (FlowCtx fx : flowMap.values()) {
-            if (!fx.visited) {
-                t.delete(LogicalDatastoreType.CONFIGURATION,
-                         FlowUtils.createFlowPath(tiid, fx.f.getKey()));
-            }
-        }
-        
-        ListenableFuture<RpcResult<TransactionStatus>> result = t.commit();
-        Futures.addCallback(result, updateCallback);
-    }
-    
-    private static FlowBuilder base() {
-        return new FlowBuilder()
-            .setTableId(TABLE_ID)
-            .setBarrier(false)
-            .setHardTimeout(0)
-            .setIdleTimeout(0)
-            .setInstructions(FlowUtils.gotoTable((short)(TABLE_ID + 1)));
     }
     
     private void dropFlow(ReadWriteTransaction t,
                           InstanceIdentifier<Table> tiid,
-                          HashMap<String, FlowCtx> flowMap,
+                          Map<String, FlowCtx> flowMap,
                           Integer priority, Long etherType) {
         FlowId flowid = new FlowId(new StringBuilder()
             .append("drop|")
             .append(etherType)
             .toString());
         if (visit(flowMap, flowid.getValue())) {
-            Flow flow = base()
+            FlowBuilder flowb = base()
                 .setId(flowid)
                 .setPriority(priority)
-                .setMatch(new MatchBuilder()
-                        .setEthernetMatch(FlowUtils.ethernetMatch(null, null, 
-                                                                  etherType))
-                        .build())
-                 .setInstructions(FlowUtils.dropInstructions())
-                .build();
-            LOG.trace("{} {}", flow.getId(), flow);
-            t.put(LogicalDatastoreType.CONFIGURATION, 
-                  FlowUtils.createFlowPath(tiid, flowid), 
-                  flow);
+                .setInstructions(FlowUtils.dropInstructions());
+            if (etherType != null)
+                flowb.setMatch(new MatchBuilder()
+                    .setEthernetMatch(FlowUtils.ethernetMatch(null, null, 
+                                                              etherType))
+                        .build());
+            writeFlow(t, tiid, flowb.build());
         }
     }
     
     private void l2flow(ReadWriteTransaction t,
                         InstanceIdentifier<Table> tiid,
-                        HashMap<String, FlowCtx> flowMap,
+                        Map<String, FlowCtx> flowMap,
                         Endpoint e, OfOverlayContext ofc,
                         Integer priority) {
         FlowId flowid = new FlowId(new StringBuilder()
+            .append(ofc.getNodeConnectorId())
+            .append("|")
             .append(e.getMacAddress().getValue())
             .toString());
         if (visit(flowMap, flowid.getValue())) {
             FlowBuilder flowb = base()
                 .setPriority(priority)
-                    .setId(flowid)
-                    .setMatch(new MatchBuilder()
-                        .setEthernetMatch(FlowUtils.ethernetMatch(e.getMacAddress(), 
-                                                                  null, null))
-                        .setInPort(ofc.getNodeConnectorId())
-                        .build());
+                .setId(flowid)
+                .setMatch(new MatchBuilder()
+                    .setEthernetMatch(FlowUtils.ethernetMatch(e.getMacAddress(), 
+                                                              null, null))
+                    .setInPort(ofc.getNodeConnectorId())
+                    .build())
+                .setInstructions(FlowUtils.gotoTable((short)(TABLE_ID + 1)));
 
-            Flow flow = flowb.build();
-            LOG.trace("{} {}", flow.getId(), flow);
-            t.put(LogicalDatastoreType.CONFIGURATION, 
-                  FlowUtils.createFlowPath(tiid, flowid), 
-                  flow);
+            writeFlow(t, tiid, flowb.build());
         }
     }
     
 
     private void l3flow(ReadWriteTransaction t,
                         InstanceIdentifier<Table> tiid,
-                        HashMap<String, FlowCtx> flowMap,
+                        Map<String, FlowCtx> flowMap,
                         Endpoint e, OfOverlayContext ofc,
                         Integer priority,
                         boolean arp) {
@@ -198,6 +170,8 @@ public class PortSecurity extends FlowTable {
                 continue;
             }
             FlowId flowid = new FlowId(new StringBuilder()
+                .append(ofc.getNodeConnectorId())
+                .append("|")
                 .append(e.getMacAddress().getValue())
                 .append("|")
                 .append(ikey)
@@ -215,33 +189,11 @@ public class PortSecurity extends FlowTable {
                         .setLayer3Match(m)
                         .setInPort(ofc.getNodeConnectorId())
                         .build())
+                    .setInstructions(FlowUtils.gotoTable((short)(TABLE_ID + 1)))
                     .build();
-                LOG.trace("{} {}", flow.getId(), flow);
 
-                t.put(LogicalDatastoreType.CONFIGURATION, 
-                      FlowUtils.createFlowPath(tiid, flowid), 
-                      flow);
+                writeFlow(t, tiid, flow);
             }
-        }
-    }
-    
-    private static boolean visit(HashMap<String, FlowCtx> flowMap, 
-                                 String flowId) {
-        FlowCtx c = flowMap.get(flowId);
-        if (c != null) {
-            c.visited = true;
-            return false;
-        }
-        return true;
-    }
-    
-    private static class FlowCtx {
-        Flow f;
-        boolean visited = false;
-
-        public FlowCtx(Flow f) {
-            super();
-            this.f = f;
         }
     }
 }

@@ -59,7 +59,32 @@ module ofoverlay {
             }
         }
     }
+    /*
+    container of-overlay-operational {
+        description 
+            "Operational parameters for the OpenFlow overlay renderer";
 
+        config false;
+
+        list data-plane-ordinal {
+            description 
+                "Map elements of the policy to the id used on the network";
+            key "tenant id";
+            leaf tenant {
+                description "The tenant for the policy element";
+                type gbp-common:tenant-id;
+            }
+            leaf id {
+                description "The ID of the item";
+                type gbp-common:unique-id;
+            }
+            leaf ordinal {
+                description "The 32-bit ordinal for the item";
+                type uint32;
+            }
+        }
+    }
+    */
     grouping endpoint-location {
         description 
             "The location for this endpoint in the overlay network";
@@ -71,8 +96,8 @@ module ofoverlay {
                 enum internal {
                     description 
                     "The endpoint is located on a port that is part of 
-                             the overlay network.  You must include the node ID
-                             and port number for this endpoint.";
+                     the overlay network.  You must include the node
+                     ID and port number for this endpoint.";
                 }
                 enum external {
                     description "This endpoint is not inside the overlay.";
@@ -83,13 +108,19 @@ module ofoverlay {
         leaf node-id {
             description 
                 "The OpenFlow switch for the endpoint. Must be included 
-                     for all internal endpoints.";
+                 for all internal endpoints.  The format is
+                 openflow:[dpid] where the dpid is the value of the
+                 switch DPID cast to a long.";
             type inv:node-id;
         }
 
         leaf node-connector-id {
             description 
-                "The node connector for the endpoint's OpenFlow port";
+                "The node connector for the endpoint's OpenFlow port. The 
+                 format is openflow:[dpid]:[port] where the dpid is
+                 the value of the switch DPID cast to a long, and port
+                 is the openflow port number of the interface where
+                 the endpoint is connected.";
             type inv:node-connector-id;
         }
     }

@@ -110,7 +110,7 @@ public class PolicyResolver implements AutoCloseable {
      */
     private CopyOnWriteArrayList<PolicyScope> policyListenerScopes;
     
-    private ConcurrentMap<TenantId, TenantContext> resolvedTenants;
+    protected ConcurrentMap<TenantId, TenantContext> resolvedTenants;
     
     private PolicyCache policyCache = new PolicyCache();
     
@@ -121,7 +121,6 @@ public class PolicyResolver implements AutoCloseable {
         this.executor = executor;
         policyListenerScopes = new CopyOnWriteArrayList<>();
         resolvedTenants = new ConcurrentHashMap<>();
-        
         LOG.debug("Initialized renderer common policy resolver");
     }
 
@@ -167,6 +166,17 @@ public class PolicyResolver implements AutoCloseable {
                                      ep2Tenant, ep2Group, ep2Conds);
     }
 
+    /**
+     * Get the normalized tenant for the given ID
+     * @param tenant the tenant ID
+     * @return the {@link Tenant}
+     */
+    public IndexedTenant getTenant(TenantId tenant) {
+        TenantContext tc = resolvedTenants.get(tenant);
+        if (tc == null) return null;
+        return tc.tenant.get();
+    }
+    
     /**
      * Register a listener to receive update events.
      * @param listener the {@link PolicyListener} object to receive the update
@@ -235,15 +245,20 @@ public class PolicyResolver implements AutoCloseable {
     }
 
     private void updateTenant(final TenantId tenantId) {
+        if (dataProvider == null) return;
+
         TenantContext context = resolvedTenants.get(tenantId);
         if (context == null) {
-            ListenerRegistration<DataChangeListener> registration = 
-                    dataProvider.registerDataChangeListener(LogicalDatastoreType.CONFIGURATION,
-                                                            TenantUtils.tenantIid(tenantId), 
-                                                            new PolicyChangeListener(tenantId),
-                                                            DataChangeScope.SUBTREE);
+            ListenerRegistration<DataChangeListener> registration = null;
+            if (dataProvider != null) {
+                 registration = dataProvider
+                         .registerDataChangeListener(LogicalDatastoreType.CONFIGURATION,
+                                                     TenantUtils.tenantIid(tenantId), 
+                                                     new PolicyChangeListener(tenantId),
+                                                     DataChangeScope.SUBTREE);
+            }
 
-            context = new TenantContext(tenantId, registration);
+            context = new TenantContext(registration);
             TenantContext oldContext = 
                     resolvedTenants.putIfAbsent(tenantId, context);
             if (oldContext != null) {
@@ -255,8 +270,8 @@ public class PolicyResolver implements AutoCloseable {
         }
 
         // Resolve the new tenant and update atomically
-        final AtomicReference<Tenant> tenantRef = context.tenant;
-        final Tenant ot = tenantRef.get();
+        final AtomicReference<IndexedTenant> tenantRef = context.tenant;
+        final IndexedTenant ot = tenantRef.get();
         ReadOnlyTransaction transaction = 
                 dataProvider.newReadOnlyTransaction();
         InstanceIdentifier<Tenant> tiid = TenantUtils.tenantIid(tenantId);
@@ -270,7 +285,8 @@ public class PolicyResolver implements AutoCloseable {
                 if (!result.isPresent()) return;
 
                 Tenant t = InheritanceUtils.resolveTenant((Tenant)result.get());
-                if (!tenantRef.compareAndSet(ot, t)) {
+                IndexedTenant it = new IndexedTenant(t);
+                if (!tenantRef.compareAndSet(ot, it)) {
                     // concurrent update of tenant policy.  Retry
                     updateTenant(tenantId);
                 } else {
@@ -668,16 +684,13 @@ public class PolicyResolver implements AutoCloseable {
         return matches;
     }
 
-    private static class TenantContext {
-        //TenantId tenantId;
+    protected static class TenantContext {
         ListenerRegistration<DataChangeListener> registration;
 
-        AtomicReference<Tenant> tenant = new AtomicReference<Tenant>();
+        AtomicReference<IndexedTenant> tenant = new AtomicReference<>();
         
-        public TenantContext(TenantId tenantId,
-                             ListenerRegistration<DataChangeListener> registration) {
+        public TenantContext(ListenerRegistration<DataChangeListener> registration) {
             super();
-            //this.tenantId = tenantId;
             this.registration = registration;
         }
     }

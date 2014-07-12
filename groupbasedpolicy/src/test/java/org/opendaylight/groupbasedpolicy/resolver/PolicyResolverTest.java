@@ -448,11 +448,6 @@ public class PolicyResolverTest {
         assertEquals(1, rg.rules.size());
         assertEquals(rule2.getName(), rg.rules.get(0).getName());
     }
-    
-    @Test
-    public void testUpdates() throws Exception {
-        // test subscriptions and update notifications
-    }
 
     private static class ContractMatchKey {
         TenantId tenant;

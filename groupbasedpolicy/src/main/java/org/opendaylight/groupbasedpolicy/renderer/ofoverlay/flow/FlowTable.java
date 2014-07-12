@@ -8,24 +8,34 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.TransactionStatus;
+import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.EndpointManager;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.SwitchManager;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.service.rev130819.SalFlowService;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.statistics.rev130819.OpendaylightFlowStatisticsService;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
+import org.opendaylight.yangtools.yang.binding.DataObject;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Optional;
 import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * Manage the state of a flow table by reacting to any events and updating
@@ -44,6 +54,7 @@ public abstract class FlowTable {
         protected final DataBroker dataBroker;
         protected final RpcProviderRegistry rpcRegistry;
         
+        protected final PolicyManager policyManager;
         protected final SwitchManager switchManager;
         protected final EndpointManager endpointManager;
         
@@ -53,6 +64,7 @@ public abstract class FlowTable {
 
         public FlowTableCtx(DataBroker dataBroker,
                             RpcProviderRegistry rpcRegistry,
+                            PolicyManager policyManager,
                             PolicyResolver policyResolver,
                             SwitchManager switchManager,
                             EndpointManager endpointManager,
@@ -60,6 +72,7 @@ public abstract class FlowTable {
             super();
             this.dataBroker = dataBroker;
             this.rpcRegistry = rpcRegistry;
+            this.policyManager = policyManager;
             this.switchManager = switchManager;
             this.endpointManager = endpointManager;
             this.policyResolver = policyResolver;
@@ -69,15 +82,10 @@ public abstract class FlowTable {
     }
     
     protected final FlowTableCtx ctx;
-    protected final SalFlowService flowService;
-    protected final OpendaylightFlowStatisticsService statsService;
 
     public FlowTable(FlowTableCtx ctx) {
         super();
         this.ctx = ctx;
-        this.flowService = ctx.rpcRegistry.getRpcService(SalFlowService.class);
-        this.statsService = 
-                ctx.rpcRegistry.getRpcService(OpendaylightFlowStatisticsService.class);
     }
 
     // *********
@@ -90,17 +98,66 @@ public abstract class FlowTable {
      * @param dirty the dirty set
      * @throws Exception 
      */
-    public abstract void update(NodeId nodeId, Dirty dirty) throws Exception;
+    public void update(NodeId nodeId, Dirty dirty) throws Exception {
+        ReadWriteTransaction t = ctx.dataBroker.newReadWriteTransaction();
+        InstanceIdentifier<Table> tiid = 
+                FlowUtils.createTablePath(nodeId, getTableId());
+        Optional<DataObject> r = 
+                t.read(LogicalDatastoreType.CONFIGURATION, tiid).get();
+
+        HashMap<String, FlowCtx> flowMap = new HashMap<>();
+
+        if (r.isPresent()) {
+            Table curTable = (Table)r.get();
+
+            if (curTable.getFlow() != null) {
+                for (Flow f : curTable.getFlow()) {
+                    flowMap.put(f.getId().getValue(), new FlowCtx(f));
+                }
+            }
+        }
+
+        sync(t, tiid, flowMap, nodeId, dirty);
+
+        for (FlowCtx fx : flowMap.values()) {
+            if (!fx.visited) {
+                t.delete(LogicalDatastoreType.CONFIGURATION,
+                         FlowUtils.createFlowPath(tiid, fx.f.getKey()));
+            }
+        }
+        
+        ListenableFuture<RpcResult<TransactionStatus>> result = t.commit();
+        Futures.addCallback(result, updateCallback);
+    }
 
     /**
-     * Construct an empty flow table 
-     * @return the {@link Table}
+     * Sync flow state using the flow map
+     * @throws Exception 
      */
-    public abstract Table getEmptyTable();
+    public abstract void sync(ReadWriteTransaction t,
+                              InstanceIdentifier<Table> tiid,
+                              Map<String, FlowCtx> flowMap,
+                              NodeId nodeId, Dirty dirty) throws Exception;
+    
+    /**
+     * Get the table ID being manipulated
+     */
+    public abstract short getTableId();
     
     // ***************
     // Utility methods
     // ***************
+
+    /**
+     * Get a base flow builder with some common features already set
+     */
+    protected FlowBuilder base() {
+        return new FlowBuilder()
+            .setTableId(getTableId())
+            .setBarrier(false)
+            .setHardTimeout(0)
+            .setIdleTimeout(0);
+    }    
     
     /**
      * Generic callback for handling result of flow manipulation
@@ -122,7 +179,48 @@ public abstract class FlowTable {
             LOG.error("Failed to add flow entry", t);            
         }
     }
-
     protected static final FlowCallback<TransactionStatus> updateCallback =
             new FlowCallback<>();
+
+    /**
+     * "Visit" a flow ID by checking if it already exists and if so marking
+     * the {@link FlowCtx} visited bit.
+     * @param flowMap the map containing the existing flows for this table
+     * @param flowId the ID for the flow
+     * @return <code>true</code> if the flow needs to be added
+     */
+    protected static boolean visit(Map<String, FlowCtx> flowMap, 
+                                   String flowId) {
+        FlowCtx c = flowMap.get(flowId);
+        if (c != null) {
+            c.visited = true;
+            return false;
+        }
+        return true;
+    }
+    
+    /**
+     * Write the given flow to the transaction
+     */
+    protected static void writeFlow(ReadWriteTransaction t,
+                                    InstanceIdentifier<Table> tiid,
+                                    Flow flow) {
+        LOG.trace("{} {}", flow.getId(), flow);
+        t.put(LogicalDatastoreType.CONFIGURATION, 
+              FlowUtils.createFlowPath(tiid, flow.getId()), 
+              flow);
+    }
+    
+    /**
+     * Context object for keeping track of flow state
+     */
+    protected static class FlowCtx {
+        Flow f;
+        boolean visited = false;
+
+        public FlowCtx(Flow f) {
+            super();
+            this.f = f;
+        }
+    }
 }

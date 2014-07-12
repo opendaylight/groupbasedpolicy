@@ -171,7 +171,7 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
         FlowCapableNode fcn = node.getAugmentation(FlowCapableNode.class);
         if (fcn == null) return;
 
-        LOG.info("{} update", node.getId());
+        LOG.debug("{} update", node.getId());
         
         SwitchState state = switches.get(node.getId()); 
         if (state == null) {

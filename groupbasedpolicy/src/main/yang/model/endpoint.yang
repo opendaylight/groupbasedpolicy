@@ -28,9 +28,9 @@ module endpoint {
         description 
             "The fields that identify an endpoint by a layer 2 address";
         leaf l2-context {
-            type gbp-common:l2-context-id;
+            type gbp-common:l2-bridge-domain-id;
             description 
-                "The context for the layer 2 address for this endpoint";
+                "The bridge domain for the layer 2 address for this endpoint";
         }
         leaf mac-address {
             type yang:mac-address;

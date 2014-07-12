@@ -19,6 +19,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -30,7 +31,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable.FlowTableCtx;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PortSecurity;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.SourceEPGTable;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.SourceMapper;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyListener;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
@@ -38,6 +39,9 @@ import org.opendaylight.groupbasedpolicy.resolver.PolicyScope;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNodeBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.TableBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.UniqueId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig.LearningMode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.NodeBuilder;
@@ -83,6 +87,21 @@ public class PolicyManager
      * event in milliseconds.
      */
     private final static int FLOW_UPDATE_DELAY = 250;
+
+    /**
+     * Counter used to allocate ordinal values for forwarding contexts
+     * and VNIDs
+     */
+    private final AtomicInteger policyOrdinal = new AtomicInteger(1);
+    
+    /**
+     * Keep track of currently-allocated ordinals
+     * XXX should ultimately involve some sort of distributed agreement
+     * or a leader to allocate them.  For now we'll just use a counter and
+     * this local map
+     */
+    private final ConcurrentMap<TenantId, ConcurrentMap<String, Integer>> ordinals = 
+            new ConcurrentHashMap<>();
     
     public PolicyManager(DataBroker dataBroker,
                          PolicyResolver policyResolver,
@@ -96,13 +115,14 @@ public class PolicyManager
         this.executor = executor;
 
         FlowTableCtx ctx = new FlowTableCtx(dataBroker, rpcRegistry, 
-                                            policyResolver, switchManager, 
+                                            this, policyResolver, switchManager, 
                                             endpointManager, executor);
         flowPipeline = ImmutableList.of(new PortSecurity(ctx),
-                                        new SourceEPGTable(ctx));
+                                        new SourceMapper(ctx));
         
         policyScope = policyResolver.registerListener(this);
-        switchManager.registerListener(this);
+        if (switchManager != null)
+            switchManager.registerListener(this);
         endpointManager.registerListener(this);
         
         dirty = new AtomicReference<>(new Dirty());
@@ -129,7 +149,9 @@ public class PolicyManager
                                                           new Function<FlowTable, Table>() {
                                     @Override
                                     public Table apply(FlowTable input) {
-                                        return input.getEmptyTable();
+                                        return new TableBuilder()
+                                            .setId(Short.valueOf(input.getTableId()))
+                                            .build();
                                     }
                                 })) .build());
         t.put(LogicalDatastoreType.CONFIGURATION, 
@@ -207,13 +229,78 @@ public class PolicyManager
         // No-op for now
     }
     
+    /**
+     * Get a 32-bit context ordinal suitable for use in the OF data plane
+     * for the given policy item.  Note that this function may block
+     * @param tenantId the tenant ID of the element
+     * @param id the unique ID for the element
+     * @return the 32-bit ordinal value
+     */
+    public int getContextOrdinal(final TenantId tenantId, 
+                                 final UniqueId id) throws Exception {
+        if (tenantId == null || id == null) return 0;
+        ConcurrentMap<String, Integer> m = ordinals.get(tenantId);
+        if (m == null) {
+            m = new ConcurrentHashMap<>();
+            ConcurrentMap<String, Integer> old = 
+                    ordinals.putIfAbsent(tenantId, m);
+            if (old != null) m = old;
+        }
+        Integer ord = m.get(id.getValue());
+        if (ord == null) {
+            ord = policyOrdinal.getAndIncrement();
+            Integer old = m.putIfAbsent(id.getValue(), ord);
+            if (old != null) ord = old;
+        }
+
+        return ord.intValue();
+//        while (true) {
+//            final ReadWriteTransaction t = dataBroker.newReadWriteTransaction();
+//            InstanceIdentifier<DataPlaneOrdinal> iid =
+//                    InstanceIdentifier.builder(OfOverlayOperational.class)
+//                    .child(DataPlaneOrdinal.class, 
+//                           new DataPlaneOrdinalKey(id, tenantId))
+//                    .build();
+//            ListenableFuture<Optional<DataObject>> r = 
+//                    t.read(LogicalDatastoreType.OPERATIONAL, iid);
+//            Optional<DataObject> res = r.get();
+//            if (res.isPresent()) {
+//                DataPlaneOrdinal o = (DataPlaneOrdinal)res.get();
+//                return o.getOrdinal().intValue();
+//            }
+//            final int ordinal = policyOrdinal.getAndIncrement();
+//            OfOverlayOperational oo = new OfOverlayOperationalBuilder()
+//                .setDataPlaneOrdinal(ImmutableList.of(new DataPlaneOrdinalBuilder()
+//                    .setId(id)
+//                    .setTenant(tenantId)
+//                    .setOrdinal(Long.valueOf(ordinal))
+//                    .build()))
+//                .build();
+//            t.merge(LogicalDatastoreType.OPERATIONAL, 
+//                    InstanceIdentifier.builder(OfOverlayOperational.class)
+//                    .build(), 
+//                    oo);
+//            ListenableFuture<RpcResult<TransactionStatus>> commitr = t.commit();
+//            try {
+//                commitr.get();
+//                return ordinal;
+//            } catch (ExecutionException e) {
+//                if (e.getCause() instanceof OptimisticLockFailedException)
+//                    continue;
+//                throw e;
+//            }
+//        }
+    }
+    
     // **************
     // Implementation
     // **************
-    
+
     private void scheduleUpdate() {
-        LOG.info("Scheduling flow update task");
-        flowUpdateTask.reschedule(FLOW_UPDATE_DELAY, TimeUnit.MILLISECONDS);
+        if (switchManager != null) {
+            LOG.trace("Scheduling flow update task");
+            flowUpdateTask.reschedule(FLOW_UPDATE_DELAY, TimeUnit.MILLISECONDS);
+        }
     }
     
     /**
@@ -252,7 +339,7 @@ public class PolicyManager
     private class FlowUpdateTask implements Runnable {
         @Override
         public void run() {
-            LOG.info("Beginning flow update task");
+            LOG.debug("Beginning flow update task");
 
             Dirty d = dirty.getAndSet(new Dirty());
             CompletionService<Void> ecs
@@ -270,7 +357,7 @@ public class PolicyManager
                     LOG.error("Failed to update flow tables", e);
                 }
             }
-            LOG.info("Flow update completed");
+            LOG.debug("Flow update completed");
         }
     }
     
