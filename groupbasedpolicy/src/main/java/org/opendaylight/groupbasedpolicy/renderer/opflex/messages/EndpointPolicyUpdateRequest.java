@@ -7,7 +7,7 @@
  *
  * Authors : Thomas Bachman
  */
-package org.opendaylight.groupbasedpolicy.renderer.opflex;
+package org.opendaylight.groupbasedpolicy.renderer.opflex.messages;
 
 import java.util.List;
 
@@ -19,9 +19,9 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 @JsonSerialize
 @JsonDeserialize
-public class EndpointDeclarationRequest extends RpcMessage {
+public class EndpointPolicyUpdateRequest extends RpcMessage {
 
-    public static final String DECLARATION_MESSAGE = "endpoint_declaration";
+    public static final String EP_UPDATE_MESSAGE = "endpoint_update_policy";
 
     static public class Params {
         private String subject;
@@ -31,7 +31,7 @@ public class EndpointDeclarationRequest extends RpcMessage {
         private List<String> identifier;
         private List<String> data;
         private String status;
-        private int prr;
+        private int ttl;
         public String getSubject() {
             return subject;
         }
@@ -74,11 +74,11 @@ public class EndpointDeclarationRequest extends RpcMessage {
         public void setStatus(String status) {
             this.status = status;
         }
-        public int getPrr() {
-            return prr;
+        public int getTtl() {
+            return ttl;
         }
-        public void setPrr(int prr) {
-            this.prr = prr;
+        public void setTtl(int ttl) {
+            this.ttl = ttl;
         }
     }
     private String id;
@@ -126,11 +126,11 @@ public class EndpointDeclarationRequest extends RpcMessage {
         this.name = name;
     }
 
-    public EndpointDeclarationRequest(String name) {
+    public EndpointPolicyUpdateRequest(String name) {
         this.name = name;
     }
 
-    public EndpointDeclarationRequest() {
-        this.name = DECLARATION_MESSAGE;
+    public EndpointPolicyUpdateRequest() {
+        this.name = EP_UPDATE_MESSAGE;
     }
 }

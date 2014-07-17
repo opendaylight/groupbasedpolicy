@@ -26,7 +26,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.ta
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
-import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
@@ -44,7 +43,7 @@ import com.google.common.util.concurrent.ListenableFuture;
  * @author readams
  */
 public abstract class FlowTable {
-    protected static final Logger LOG = 
+    protected static final Logger LOG =
             LoggerFactory.getLogger(FlowTable.class);
 
     /**
@@ -53,13 +52,13 @@ public abstract class FlowTable {
     public static class FlowTableCtx {
         protected final DataBroker dataBroker;
         protected final RpcProviderRegistry rpcRegistry;
-        
+
         protected final PolicyManager policyManager;
         protected final SwitchManager switchManager;
         protected final EndpointManager endpointManager;
-        
+
         protected final PolicyResolver policyResolver;
-        
+
         protected final ScheduledExecutorService executor;
 
         public FlowTableCtx(DataBroker dataBroker,
@@ -78,9 +77,9 @@ public abstract class FlowTable {
             this.policyResolver = policyResolver;
             this.executor = executor;
         }
-        
+
     }
-    
+
     protected final FlowTableCtx ctx;
 
     public FlowTable(FlowTableCtx ctx) {
@@ -91,18 +90,18 @@ public abstract class FlowTable {
     // *********
     // FlowTable
     // *********
-    
+
     /**
-     * Update the relevant flow table for the node 
+     * Update the relevant flow table for the node
      * @param nodeId the node to update
      * @param dirty the dirty set
-     * @throws Exception 
+     * @throws Exception
      */
     public void update(NodeId nodeId, Dirty dirty) throws Exception {
         ReadWriteTransaction t = ctx.dataBroker.newReadWriteTransaction();
-        InstanceIdentifier<Table> tiid = 
+        InstanceIdentifier<Table> tiid =
                 FlowUtils.createTablePath(nodeId, getTableId());
-        Optional<DataObject> r = 
+        Optional<Table> r =
                 t.read(LogicalDatastoreType.CONFIGURATION, tiid).get();
 
         HashMap<String, FlowCtx> flowMap = new HashMap<>();
@@ -125,25 +124,25 @@ public abstract class FlowTable {
                          FlowUtils.createFlowPath(tiid, fx.f.getKey()));
             }
         }
-        
+
         ListenableFuture<RpcResult<TransactionStatus>> result = t.commit();
         Futures.addCallback(result, updateCallback);
     }
 
     /**
      * Sync flow state using the flow map
-     * @throws Exception 
+     * @throws Exception
      */
     public abstract void sync(ReadWriteTransaction t,
                               InstanceIdentifier<Table> tiid,
                               Map<String, FlowCtx> flowMap,
                               NodeId nodeId, Dirty dirty) throws Exception;
-    
+
     /**
      * Get the table ID being manipulated
      */
     public abstract short getTableId();
-    
+
     // ***************
     // Utility methods
     // ***************
@@ -157,8 +156,8 @@ public abstract class FlowTable {
             .setBarrier(false)
             .setHardTimeout(0)
             .setIdleTimeout(0);
-    }    
-    
+    }
+
     /**
      * Generic callback for handling result of flow manipulation
      * @author readams
@@ -176,7 +175,7 @@ public abstract class FlowTable {
 
         @Override
         public void onFailure(Throwable t) {
-            LOG.error("Failed to add flow entry", t);            
+            LOG.error("Failed to add flow entry", t);
         }
     }
     protected static final FlowCallback<TransactionStatus> updateCallback =
@@ -189,7 +188,7 @@ public abstract class FlowTable {
      * @param flowId the ID for the flow
      * @return <code>true</code> if the flow needs to be added
      */
-    protected static boolean visit(Map<String, FlowCtx> flowMap, 
+    protected static boolean visit(Map<String, FlowCtx> flowMap,
                                    String flowId) {
         FlowCtx c = flowMap.get(flowId);
         if (c != null) {
@@ -198,7 +197,7 @@ public abstract class FlowTable {
         }
         return true;
     }
-    
+
     /**
      * Write the given flow to the transaction
      */
@@ -206,11 +205,11 @@ public abstract class FlowTable {
                                     InstanceIdentifier<Table> tiid,
                                     Flow flow) {
         LOG.trace("{} {}", flow.getId(), flow);
-        t.put(LogicalDatastoreType.CONFIGURATION, 
-              FlowUtils.createFlowPath(tiid, flow.getId()), 
+        t.put(LogicalDatastoreType.CONFIGURATION,
+              FlowUtils.createFlowPath(tiid, flow.getId()),
               flow);
     }
-    
+
     /**
      * Context object for keeping track of flow state
      */

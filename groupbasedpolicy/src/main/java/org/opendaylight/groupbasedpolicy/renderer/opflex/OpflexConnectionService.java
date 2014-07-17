@@ -14,15 +14,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
-import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
+import org.opendaylight.controller.md.sal.common.api.TransactionStatus;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.jsonrpc.ConnectionService;
@@ -30,19 +31,28 @@ import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcEndpoint;
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcBroker;
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcMessage;
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcServer;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.DiscoveryDefinitions;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.discovery.definitions.EndpointRegistry;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.discovery.definitions.Observer;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.discovery.definitions.PolicyRepository;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.IdentityRequest;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.IdentityResponse;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.Domains;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.DomainsBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.Domain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.DomainKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.domain.DiscoveryDefinitions;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.domain.discovery.definitions.EndpointRegistry;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.domain.discovery.definitions.Observer;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.domain.discovery.definitions.PolicyRepository;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 
-/*
+/**
  * Manages the different OpFlex entity connections. It does this
  * on behalf of each logical OpFlex entity:
  *    o  Policy Repositories
@@ -54,9 +64,9 @@ import com.google.common.util.concurrent.ListenableFuture;
  * Servers and connections are maintained in dedicated client and
  * server maps.
  *
- * TODO: calls to add messages to policy repository, EP registry , and observer
- * TODO: incorporate OpFlex domain
- * TODO: break into smaller pieces?
+ * @author tbachman
+ *
+ * TODO: Still too big - need to separate
  */
 public class OpflexConnectionService
     implements ConnectionService, RpcBroker,
@@ -64,112 +74,9 @@ public class OpflexConnectionService
     protected static final Logger logger =
             LoggerFactory.getLogger(OpflexConnectionService.class);
 
-    public enum Role {
-        POLICY_REPOSITORY("policy_repository"),
-        ENDPOINT_REGISTRY("endpoint_registry"),
-        OBSERVER("observer"),
-        POLICY_ELEMENT("policy_element");
 
-        private String role;
-        Role(String role) {
-            this.role = role;
-        }
-        @Override
-        public String toString() {
-            return this.role;
-        }
-    }
-
-    private static class OpflexConnection {
-        String identity;
-        List<Role> roles;
-        JsonRpcEndpoint endpoint;
-
-        public OpflexConnection() {
-        }
-
-        public String getIdentity() {
-            return identity;
-        }
-
-        public void setIdentity(String identity) {
-            this.identity = identity;
-        }
-
-        public List<Role> getRoles() {
-            return roles;
-        }
-
-        public void setRoles(List<Role> roles) {
-            this.roles = roles;
-        }
-
-        public JsonRpcEndpoint getEndpoint() {
-            return endpoint;
-        }
-
-        public void setEndpoint(JsonRpcEndpoint endpoint) {
-            this.endpoint = endpoint;
-        }
-
-    }
-
-    public static class OpflexRpcServer {
-        private String identity;
-        private List<Role> roles;
-        private RpcServer server;
-
-        public OpflexRpcServer() {
-            roles = new ArrayList<Role>();
-        }
-
-        public OpflexRpcServer(String identity) {
-            this.identity = identity;
-        }
-
-        public OpflexRpcServer(String identity, List<Role> roles) {
-            this.identity = identity;
-            this.roles = roles;
-        }
-
-        public String getId() {
-            return this.identity;
-        }
-
-        public void setRpcServer(RpcServer server) {
-            this.server = server;
-        }
-
-        public RpcServer getRpcServer() {
-            return this.server;
-        }
-
-        public void addRole(Role role) {
-            if (!this.roles.contains(role))
-                this.roles.add(role);
-        }
-
-        public List<Role> getRoles() {
-            return this.roles;
-        }
-
-        public boolean sameServer(OpflexRpcServer srv) {
-            if (this == srv)
-                return true;
-            if (srv == null)
-                return false;
-            if (!this.identity.equals(srv.identity))
-                return false;
-            if (this.roles == null && srv.roles == null)
-                return true;
-            if (this.roles == null || srv.roles == null)
-                return false;
-            if (this.roles.size() == srv.roles.size() && this.roles.containsAll(srv.roles))
-                return true;
-            return false;
-        }
-    }
-
+    static final String OPFLEX_DOMAIN = "default";
+    static final String INVALID_DOMAIN = "Domain mismatch";
     // Properties that can be set in config.ini
     static final String OPFLEX_LISTENPORT = "opflex.listenPort";
     private static final Integer defaultOpflexPort = 6670;
@@ -179,17 +86,26 @@ public class OpflexConnectionService
     private Integer opflexListenPort = defaultOpflexPort;
     private String opflexListenIp = defaultOpflexIp;
 
-    ConcurrentMap<String, OpflexConnection> opflexAgents = null;
-    ConcurrentMap<String, OpflexRpcServer> opflexServers = null;
+    private final ScheduledExecutorService executor;
+
+    List<Domain> domainList = null;
+    ConcurrentMap<String, OpflexDomain> opflexDomains = null;
     ConcurrentMap<String, List<RpcCallback>> brokerMap = null;
-    List<RpcMessage> policyRepositoryMessages;
-    List<RpcMessage> endpointRegistryMessages;
-    List<RpcMessage> observerMessages;
+
     private DataBroker dataProvider;
 
-    public static final InstanceIdentifier<DiscoveryDefinitions>  DISCOVERY_DEFINITIONS_IID =
-            InstanceIdentifier.builder(DiscoveryDefinitions.class).build();
+    public static final InstanceIdentifier<Domains> DOMAINS_IID =
+            InstanceIdentifier.builder(Domains.class).build();
 
+    public InstanceIdentifier<Domain> domainIid(DomainKey domainKey) {
+        return InstanceIdentifier.builder(Domains.class).child(Domain.class, domainKey)
+                .build();
+    }
+
+    public OpflexConnectionService() {
+        int numCPU = Runtime.getRuntime().availableProcessors();
+        executor = Executors.newScheduledThreadPool(numCPU * 2);
+    }
 
     /**
      *
@@ -201,27 +117,10 @@ public class OpflexConnectionService
     public void setDataProvider(DataBroker salDataProvider) {
         dataProvider = salDataProvider;
 
-        startOpflexManager();
+        start();
     }
 
-    private DiscoveryDefinitions getDiscoveryDefinitions() {
-
-        ReadTransaction t = dataProvider.newReadOnlyTransaction();
-        ListenableFuture<Optional<DataObject>> f = t.read(LogicalDatastoreType.CONFIGURATION, DISCOVERY_DEFINITIONS_IID);
-        try {
-            Optional<DataObject> dao = f.get();
-            if (dao.get() != null && dao.get() instanceof DiscoveryDefinitions) {
-                return (DiscoveryDefinitions)dao.get();
-            }
-        }
-        catch ( Exception e ) {
-            logger.warn("Not sure what happens here");
-        }
-        return null;
-
-    }
-
-    private List<OpflexRpcServer> setDefaultIdentities() {
+    private List<OpflexRpcServer> setDefaultIdentities(OpflexDomain domain) {
 
         /*
          * Create a single server, filling all roles
@@ -232,39 +131,82 @@ public class OpflexConnectionService
         roles.add(Role.POLICY_REPOSITORY);
         roles.add(Role.ENDPOINT_REGISTRY);
         roles.add(Role.OBSERVER);
-        OpflexRpcServer srv = new OpflexRpcServer(identity, roles);
+
+        OpflexDomain od = new OpflexDomain();
+        od.setDomain(OPFLEX_DOMAIN);
+        OpflexRpcServer srv = new OpflexRpcServer(od, identity, roles);
+        srv.setConnectionService(this);
+        srv.setRpcBroker(this);
         srvList.add(srv);
         return srvList;
 
     }
 
-    private List<OpflexRpcServer> createServerList() {
-        DiscoveryDefinitions identities = getDiscoveryDefinitions();
+    private List<OpflexRpcServer> createServerList(OpflexDomain d, Domain domain) {
+
+        DiscoveryDefinitions identities = domain.getDiscoveryDefinitions();
         if (identities != null) {
             Map<String, OpflexRpcServer> servers =
                     new ConcurrentHashMap<String, OpflexRpcServer>();
             List<String> addList = getPolicyRepositories(identities.getPolicyRepository());
-            addServerList(servers, addList, Role.POLICY_REPOSITORY);
+            addServerList(d, servers, addList, Role.POLICY_REPOSITORY);
             addList = getEndpointRegistries(identities.getEndpointRegistry());
-            addServerList(servers, addList, Role.ENDPOINT_REGISTRY);
+            addServerList(d, servers, addList, Role.ENDPOINT_REGISTRY);
             addList = getObservers(identities.getObserver());
-            addServerList(servers, addList, Role.OBSERVER);
+            addServerList(d, servers, addList, Role.OBSERVER);
             return(new ArrayList<OpflexRpcServer>(servers.values()));
         }
-        else {
-            return setDefaultIdentities();
-        }
+        return null;
+    }
+
+    private void initializeConfig() {
+        // XXX - This is a hack to avoid a bug in the data broker
+        // API where you have to write all the parents before you can write
+        // a child
+        WriteTransaction t = dataProvider.newWriteOnlyTransaction();
+        t.put(LogicalDatastoreType.CONFIGURATION, DOMAINS_IID, new DomainsBuilder().build());
+        ListenableFuture<RpcResult<TransactionStatus>> f = t.commit();
+        Futures.addCallback(f, new FutureCallback<RpcResult<TransactionStatus>>() {
+
+            @Override
+            public void onSuccess(RpcResult<TransactionStatus> result) {
+
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                logger.error("Could not write domain base container", t);
+            }
+        });
     }
 
     private void initializeServers() {
 
+        OpflexDomain od;
+
+        //initializeConfig();
+        readConfig();
         /*
          * Get the configured identities, if any. If lists are empty,
          * set up a single instance of each, using the localhost
-         * interface
+         * interface, all inside a default domain
          */
-        List<OpflexRpcServer> serverList = createServerList();
-        addServers(serverList);
+        if (domainList != null && domainList.size() > 0) {
+            for (Domain d : domainList) {
+                od = opflexDomains.get(d.getId());
+                if (od == null) continue;
+                List<OpflexRpcServer> serverList = createServerList(od, d);
+                od.addServers(serverList);
+            }
+        }
+        else {
+            // TODO: should also write into config store?
+            logger.warn("Setting default identities");
+            od = new OpflexDomain();
+            od.setDomain(OPFLEX_DOMAIN);
+            od.addServers(setDefaultIdentities(od));
+            opflexDomains.put(od.getDomain(), od);
+        }
     }
 
 
@@ -295,7 +237,7 @@ public class OpflexConnectionService
         return identityList;
     }
 
-    private void addServerList( Map<String, OpflexRpcServer> servers,
+    private void addServerList( OpflexDomain d, Map<String, OpflexRpcServer> servers,
             List<String> idList, Role role ) {
         if (idList == null || idList.size() <= 0)
             return;
@@ -309,109 +251,77 @@ public class OpflexConnectionService
             }
 
             roles.add(role);
-            srv = new OpflexRpcServer(id, roles);
+            srv = new OpflexRpcServer(d, id, roles);
+            srv.setConnectionService(this);
+            srv.setRpcBroker(this);
             servers.put(id, srv);
         }
 
     }
 
-    private void launchRpcServer(OpflexRpcServer srv) {
-        RpcServer rpcSrv = new RpcServer(srv.getId().split(":")[0],
-                Integer.parseInt(srv.getId().split(":")[1]));
-        rpcSrv.setConnectionService(this);
-        rpcSrv.setRpcBroker(this);
 
-        /*
-         * Make sure the server is configured for the proper messages
-         */
-        List<Role> roles = srv.getRoles();
-        for ( Role role : roles ) {
-            switch (role) {
-                case POLICY_REPOSITORY:
-                {
-                    rpcSrv.addMessageList(this.policyRepositoryMessages);
-                }
-                break;
-                case ENDPOINT_REGISTRY:
-                {
-                    rpcSrv.addMessageList(this.endpointRegistryMessages);
-                }
-                break;
-                case OBSERVER:
-                {
-                    rpcSrv.addMessageList(this.observerMessages);
-                }
-                break;
-                default:
-                {
-                    logger.warn("Invalid Role {}", role );
-                }
-                break;
-            }
+
+    /**
+     * We store the {@link OpflexDomain} in the {@link JsonRpcEndpoint}'s
+     * context field when the {@link RpcServer} creates the new connection.
+     *
+     * @param endpoint The endpoint to look up
+     * @return The OpflexDomain that owns this endpoint
+     *
+     * TODO: should throw an exception of there is no
+     * OpflexDomain that contains this endpoint
+     */
+    public OpflexDomain getOpflexDomain(JsonRpcEndpoint endpoint) {
+        if (endpoint.getContext() instanceof OpflexRpcServer) {
+            OpflexRpcServer srv = (OpflexRpcServer)endpoint.getContext();
+            return srv.getDomain();
         }
+        logger.warn("endpoint {} does not have a domain", endpoint.getIdentifier());
+        return null;
+    }
 
-        srv.setRpcServer(rpcSrv);
-        opflexServers.put(srv.getId(), srv);
+    /**
+     * Find the {@link OpflexAgent} that owns this
+     * {@link JsonRpcEndpoint}.
+     *
+     * @param endpoint The endpoint to look up
+     * @return The OpflexConnection that owns this endpoint
+     *
+     * TODO: should throw an exception of there is no
+     * OpflexConnection that contains this endpoint
+     */
+    public OpflexAgent getOpflexConnection(JsonRpcEndpoint endpoint) {
 
-        new Thread() {
-            private RpcServer server;
-
-            public Thread initializeServerParams(RpcServer server) {
-                this.server = server;
-                return this;
-            }
-            @Override
-            public void run() {
-                try {
-                    server.start();
-                } catch (Exception e) {
-                    logger.warn("Exception starting new server {}", e);
-                }
-            }
-        }.initializeServerParams(rpcSrv).start();
+        OpflexDomain od = getOpflexDomain(endpoint);
+        if (od != null) {
+            return od.getOpflexAgent(endpoint.getIdentifier());
+        }
+        logger.warn("Couldn't find OpflexConnection for {}", endpoint.getIdentifier());
+        return null;
 
     }
 
-    private void addServers(List<OpflexRpcServer> idMap) {
-        /*
-         * Check to see if there's already a server
-         * with this identity, and if so, close it
-         * and replace it with this one.
-         */
-        for ( OpflexRpcServer srv: idMap ) {
-            OpflexRpcServer server = opflexServers.get(srv.getId());
-            if (server != null) {
-                if ( !server.sameServer(srv)) {
-                    OpflexRpcServer oldServer = opflexServers.remove(srv.getId());
-                    oldServer.getRpcServer().getChannel().disconnect();
-                    launchRpcServer(srv);
-                }
-            }
-            else {
-                launchRpcServer(srv);
-            }
+    /**
+     * Get the OpflexRpcServer that spawned this endpoint.
+     *
+     * @param endpoint The endpoint to look up
+     * @return The OpflexRpcServer that owns this endpoint, or
+     * null if the server no longer exists
+     *
+     * TODO: exception if the endpoint is owned by anything
+     */
+    public OpflexRpcServer getOpflexServer(JsonRpcEndpoint endpoint) {
+        if (endpoint.getContext() instanceof OpflexRpcServer) {
+            return (OpflexRpcServer)endpoint.getContext();
         }
+        logger.warn("Couldn't find OpflexConnection for endpoint {}",
+                endpoint.getIdentifier());
+        return null;
     }
 
-    private void dropServers(List<String> oldServers) {
-        OpflexRpcServer server;
 
-        /*
-         * Check to see if there's already a server
-         * with this identity, and if so, close it
-         * and replace it with this one.
-         */
-        for (String identity: oldServers) {
-            if (opflexServers.containsKey(identity)) {
-                server = opflexServers.remove(identity);
-                server.getRpcServer().getChannel().disconnect();
-            }
-        }
-    }
-
-    public void startOpflexManager() {
-        opflexAgents = new ConcurrentHashMap<String, OpflexConnection>();
-        opflexServers = new ConcurrentHashMap<String, OpflexRpcServer>();
+    public void start() {
+        opflexDomains = new ConcurrentHashMap<String, OpflexDomain>();
         brokerMap = new ConcurrentHashMap<String, List<RpcCallback>>();
 
         /*
@@ -434,22 +344,8 @@ public class OpflexConnectionService
          * Set up the messages supported by each OpFlex policy
          * component
          */
-        policyRepositoryMessages = new ArrayList<RpcMessage>();
-        endpointRegistryMessages = new ArrayList<RpcMessage>();
-        observerMessages = new ArrayList<RpcMessage>();
-
-        IdentityRequest idRequest = new IdentityRequest();
-        policyRepositoryMessages.add(idRequest);
-        endpointRegistryMessages.add(idRequest);
-        observerMessages.add(idRequest);
-
         /* this class implements identity handlers */
-        subscribe(idRequest, this);
-
-        IdentityResponse idResponse = new IdentityResponse();
-        policyRepositoryMessages.add(idResponse);
-        endpointRegistryMessages.add(idResponse);
-        observerMessages.add(idResponse);
+        subscribe(new IdentityRequest(), this);
 
         initializeServers();
     }
@@ -459,84 +355,139 @@ public class OpflexConnectionService
      * connections and servers.
      */
     public void stopping() {
-        for (OpflexConnection connection : opflexAgents.values()) {
-            connection.getEndpoint().getChannel().disconnect();
-        }
-        for (OpflexRpcServer server : opflexServers.values() ) {
-            if (server.getRpcServer().getChannel() != null) {
-                server.getRpcServer().getChannel().disconnect();
-            }
+        for (OpflexDomain d : opflexDomains.values()) {
+            d.cleanup();
         }
     }
 
-    /**
-     * Remove the OpFlex connection/agent from the map
-     *
-     * @param identifier The identity of the connection that was closed
-     */
-    public void removeConnection(String identifier) {
-        opflexAgents.remove(identifier);
+
+    private void deleteDomain(String domain) {
+
+        OpflexDomain od = opflexDomains.remove(domain);
+        if (od != null) {
+            od.cleanup();
+        }
     }
 
     /**
-     * Add a server with the given identity
-     *
-     * @param identity The IP address/socket pair for the server
-     * @param server The instantiated server
-     */
-    public void addServer(String identity, OpflexRpcServer server) {
-        opflexServers.put(identity, server);
-    }
-
-    /**
-     * Implemented from the AutoCloseable interface.
+     * Close the connection service. Implemented from the
+     * AutoCloseable interface.
      */
      @Override
      public void close() throws ExecutionException, InterruptedException {
 
+         executor.shutdownNow();
+
          if (dataProvider != null) {
              WriteTransaction t = dataProvider.newWriteOnlyTransaction();
-             t.delete(LogicalDatastoreType.CONFIGURATION, DISCOVERY_DEFINITIONS_IID);
+             t.delete(LogicalDatastoreType.CONFIGURATION, DOMAINS_IID);
              t.commit().get();
          }
      }
 
-    @Override
-    public void onDataChanged( final AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject>change) {
+     private void readConfig() {
+         ListenableFuture<Optional<Domains>> dao =
+                 dataProvider.newReadOnlyTransaction()
+                     .read(LogicalDatastoreType.CONFIGURATION, DOMAINS_IID);
+         Futures.addCallback(dao, new FutureCallback<Optional<Domains>>() {
+             @Override
+             public void onSuccess(final Optional<Domains> result) {
+                 if (!result.isPresent()) {
+                     logger.warn("No result!!!");
+                     return;
+                 }
+                 getNewConfig(result);
+             }
 
-        List<String> addList = new ArrayList<String>();
-        List <String> dropList = new ArrayList<String>();
+             @Override
+             public void onFailure(Throwable t) {
+                 logger.error("Failed to read configuration", t);
+             }
+         }, executor);
+     }
 
-        /* Get the new list of configured servers */
-        List<OpflexRpcServer> serverList = createServerList();
+     private void getNewConfig(final Optional<Domains> result) {
 
-        /*
-         * Create a list of new servers by skipping any servers in the
-         * list that are already configured (i.e. same IP/socket and set
-         * of roles) -- no need to take them down
-         */
-        for ( OpflexRpcServer srv : serverList ) {
-            OpflexRpcServer s = opflexServers.get(srv.getId());
-            if (s != null && s.getRoles().containsAll(srv.getRoles())) {
-                continue;
-            }
-            addList.add(srv.getId());
-        }
+         List<String> currentDomains = new ArrayList<String>(opflexDomains.keySet());
+         List<String> newDomains = new ArrayList<String>();
+         List<String> addList = new ArrayList<String>();
+         List <String> dropList = new ArrayList<String>();
+         List <String> updateList = new ArrayList<String>();
 
-        /*
-         * We need to find out if there are any servers that
-         * we have to drop. This is the set of servers that
-         * are already running but don't appear in the configured
-         * list. This just requires a check against the IP/port
-         * (i.e. no need to check role).
-         */
-        Set <String> dropSet = opflexServers.keySet();
-        dropSet.removeAll(addList);
-        dropList.addAll(dropSet);
+         if (result.get() instanceof Domains) {
 
-        /* remove deleted servers first */
-        dropServers(dropList);
-        addServers(serverList);
+             /*
+              * Get the new list of domains from the
+              * configuration store, and convert to a
+              * list of the actual domain names for list
+              * manipulation
+              */
+             Domains domains = (Domains)result.get();
+
+             domainList = domains.getDomain();
+             for (Domain domainObj : domainList) {
+                 newDomains.add(domainObj.getId());
+             }
+
+             logger.warn("Current domains {}", currentDomains);
+             /*
+              * Find out what's changed at the domain level.
+              * Classify as additions, deletions, and updates
+              */
+             addList = new ArrayList<String>(newDomains);
+             dropList = new ArrayList<String>(currentDomains);
+             updateList = new ArrayList<String>(newDomains);
+             addList.removeAll(currentDomains);
+             dropList.removeAll(newDomains);
+             updateList.removeAll(addList);
+
+             /*
+              * Drop domains that were removed, along with all
+              * of their servers and connections
+              */
+             for (String d : dropList) {
+                 deleteDomain(d);
+             }
+
+             /*
+              * These are entirely new domains -- get the
+              * information for each new domain and configure
+              */
+             for (String d : addList) {
+                 OpflexDomain od = new OpflexDomain();
+                 od.setDomain(d);
+                 opflexDomains.put(od.getDomain(), od );
+
+                 /* Spawn the servers for this domain */
+                 for (Domain dl : domainList) {
+                     if (dl.getId().equals(d)) {
+                         od.addServers(createServerList(od, dl));
+                         break;
+                     }
+                 }
+             }
+
+             /*
+              * These are domains with updates
+              */
+             for (String d : updateList) {
+                 OpflexDomain od = opflexDomains.get(d);
+                 for (Domain domainObj : domainList) {
+                     if (domainObj.getId().equals(d)) {
+                         logger.warn("updateServers");
+                         od.updateServers(createServerList(od, domainObj));
+                         break;
+                     }
+                 }
+             }
+         }
+     }
+
+     @Override
+    public void onDataChanged( final AsyncDataChangeEvent<InstanceIdentifier<?>,
+            DataObject>change) {
+
+        readConfig();
     }
 
     @Override
@@ -574,6 +525,14 @@ public class OpflexConnectionService
     @Override
     public void callback(JsonRpcEndpoint endpoint, RpcMessage message) {
 
+        if (!(message instanceof IdentityRequest)) {
+            logger.warn("message is not identity request {}", message);
+            return;
+        }
+        OpflexRpcServer srv = getOpflexServer(endpoint);
+        if (srv == null) return;
+
+        IdentityRequest request = (IdentityRequest)message;
         IdentityResponse.Result result = new IdentityResponse.Result();
 
         List<IdentityResponse.Peer> peers =
@@ -582,30 +541,14 @@ public class OpflexConnectionService
         IdentityResponse response = new IdentityResponse();
 
         /*
-         * We find our role by matching the parent Channel (couldn't
-         * come up with an easier way to do this, as we're trying to
-         * match against the configured identity -- decided against
-         * using the channel's connection b/c things like wildcard
-         * addresses make this comparison tricky). There's also a
-         * minute possibility that the parent socket has been deleted
-         * (e.g. due to reconfiguration) in which case, the peers list
-         * will provide the updated information.
+         *  We inherit our role from the server that spawned
+         *  the connection.
          */
-        OpflexRpcServer srv = null;
         List<String> myRoles = new ArrayList<String>();
-        List<OpflexRpcServer> servers =
-                new ArrayList<OpflexRpcServer>(opflexServers.values());
-        for (OpflexRpcServer server : servers) {
-            if (server.getRpcServer().getChannel() == endpoint.getChannel().parent()) {
-                /* this is our server */
-                List<Role> roles = server.getRoles();
-                if (roles != null) {
-                    for ( Role r : roles ) {
-                        myRoles.add(r.toString());
-                    }
-                }
-                srv = server;
-                break;
+        List<Role> roles = srv.getRoles();
+        if (roles != null) {
+            for ( Role r : roles ) {
+                myRoles.add(r.toString());
             }
         }
         result.setMy_role(myRoles);
@@ -613,23 +556,37 @@ public class OpflexConnectionService
         /*
          * The peers field contains the identifiers other than my_role
          */
-        for (OpflexRpcServer server : servers) {
-            /* Skip our server -- reported in my_role */
-            if ( Objects.equals(server.getId(), srv.getId()))
-                continue;
-            List<Role> roles = server.getRoles();
-            if (roles != null) {
-                for ( Role r : roles ) {
-                    IdentityResponse.Peer peer = new IdentityResponse.Peer();
-                    peer.setConnectivity_info(server.getId());
-                    peer.setRole(r.toString());
-                    peers.add(peer);
+        OpflexDomain od = getOpflexDomain(endpoint);
+        if (request.getParams() == null || request.getParams().size() <= 0) {
+            return;
+        }
+
+        if (!request.getDomain().equals(od.getDomain())) {
+            IdentityResponse.Error error = new IdentityResponse.Error();
+            error.setMessage(INVALID_DOMAIN);
+            response.setError(error);
+            /* send domain mismatch */
+        }
+        else {
+            for (OpflexRpcServer server : od.getOpflexServerList()) {
+                /* Skip our server -- reported in my_role */
+                if ( Objects.equals(server.getId(), srv.getId()))
+                    continue;
+                roles = server.getRoles();
+                if (roles != null) {
+                    for ( Role r : roles ) {
+                        IdentityResponse.Peer peer = new IdentityResponse.Peer();
+                        peer.setConnectivity_info(server.getId());
+                        peer.setRole(r.toString());
+                        peers.add(peer);
+                    }
                 }
             }
+            result.setPeers(peers);
+            result.setName(srv.getId());
+            result.setDomain(od.getDomain());
+            response.setResult(result);
         }
-        result.setPeers(peers);
-        response.setResult(result);
-
         response.setId(message.getId());
 
         /*
@@ -645,29 +602,64 @@ public class OpflexConnectionService
 
     @Override
     public void addConnection(JsonRpcEndpoint endpoint) {
-        List<Role> roles = new ArrayList<Role>();
-        OpflexConnection agent = new OpflexConnection();
-        agent.setEndpoint(endpoint);
-        agent.setIdentity(endpoint.getIdentifier());
 
-        if (endpoint.supportsMessages(policyRepositoryMessages)) {
-            roles.add(Role.POLICY_REPOSITORY);
+        /*
+         * When the connection is added, we don't have a context
+         * other than the JsonRpcEndpoint. We use the context
+         * field to store the server object that created this
+         * connection, and can look up things like the domain,
+         * etc. to create the containing connection object.
+         */
+        if (!(endpoint.getContext() instanceof OpflexRpcServer)) {
+            logger.error("Connection for endpoint {} invalid",
+                    endpoint.getIdentifier());
+            // TODO: close connection?
+            return;
         }
-        if (endpoint.supportsMessages(endpointRegistryMessages)) {
-            roles.add(Role.ENDPOINT_REGISTRY);
-        }
-        if (endpoint.supportsMessages(observerMessages)) {
-            roles.add(Role.OBSERVER);
-        }
-        agent.setRoles(roles);
+
+        OpflexRpcServer server = (OpflexRpcServer)endpoint.getContext();
+        OpflexDomain domain = server.getDomain();
+
+
+        /*
+         * This is the notification when a new endpoint
+         * has been created. Since the endpoint is new,
+         * we don't have a OpflexConnection for it yet. We
+         * create the OpflexConnection, then get the
+         * OpflexRpcServer to set some of the fields
+         * we need (domain, server).
+         */
+        OpflexAgent oc = new OpflexAgent();
+        oc.setEndpoint(endpoint);
+        oc.setIdentity(endpoint.getIdentifier());
+        oc.setDomain(domain.getDomain());
+        oc.setOpflexServer(server);
+        oc.setRoles(server.getRoles());
+
+        /*
+         * The OpFlex domain is determined by the server socket
+         * that the agent connected to. Look up the OpFlex RPC
+         * server using the server socket.
+         *
+         * It's possible that the server was closed or changed
+         * between the connection establishment and now (race
+         * condition). Treat that as a failure, closing the
+         * connection.
+         */
         logger.warn("Adding agent {}", endpoint.getIdentifier());
-        opflexAgents.put(endpoint.getIdentifier(), agent);
+        domain.addOpflexAgent(oc);
     }
 
     @Override
-    public void channelClosed(JsonRpcEndpoint peer) throws Exception {
-        logger.info("Connection to Node : {} closed", peer.getIdentifier());
-        opflexAgents.remove(peer.getIdentifier());
+    public void channelClosed(JsonRpcEndpoint endpoint) throws Exception {
+        logger.info("Connection to Node : {} closed", endpoint.getIdentifier());
+        OpflexAgent agent = getOpflexConnection(endpoint);
+        if (agent != null) {
+            OpflexDomain od = opflexDomains.get(agent.getDomain());
+            if (od != null) {
+                od.removeOpflexAgent(agent);
+            }
+        }
     }
 
 }

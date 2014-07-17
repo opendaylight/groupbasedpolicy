@@ -7,7 +7,7 @@
  *
  * Authors : Thomas Bachman
  */
-package org.opendaylight.groupbasedpolicy.renderer.opflex;
+package org.opendaylight.groupbasedpolicy.renderer.opflex.messages;
 
 import java.util.List;
 
@@ -19,11 +19,11 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 @JsonSerialize
 @JsonDeserialize
-public class EndpointRequestResponse extends RpcMessage {
+public class EndpointDeclarationRequest extends RpcMessage {
 
-    public static final String REQUEST_MESSAGE_RESPONSE = "endpoint_request_response";
+    public static final String DECLARATION_MESSAGE = "endpoint_declaration";
 
-    static public class Endpoint {
+    static public class Params {
         private String subject;
         private String context;
         private String policy_name;
@@ -81,38 +81,12 @@ public class EndpointRequestResponse extends RpcMessage {
             this.prr = prr;
         }
     }
-
-    static public class Result {
-        List<Endpoint> endpoint;
-
-        public List<Endpoint> getEndpoint() {
-            return endpoint;
-        }
-
-        public void setEndpoint(List<Endpoint> endpoint) {
-            this.endpoint = endpoint;
-        }
-    }
-
-    static public class Error {
-        private String message;
-
-        public String getMessage() {
-            return message;
-        }
-
-        public void setMessage(String message) {
-            this.message = message;
-        }
-    }
     private String id;
-    private Result result;
-    private Error error;
+    private String method;
+    private List<Params> params;
 
     @JsonIgnore
     private String name;
-    @JsonIgnore
-    private String method;
 
     @Override
     public String getId() {
@@ -124,29 +98,22 @@ public class EndpointRequestResponse extends RpcMessage {
         this.id = id;
     }
 
-    public Error getError() {
-        return error;
-    }
-
-    public void setError(Error error) {
-        this.error = error;
-    }
-
     @Override
     public String getMethod() {
-        return null;
+        return method;
     }
 
     @Override
     public void setMethod(String method) {
+        this.method = method;
     }
 
-    public Result getResult() {
-        return this.result;
+    public List<Params> getParams() {
+        return this.params;
     }
 
-    public void setResult(Result result) {
-        this.result = result;
+    public void setParams(List<Params> params) {
+        this.params = params;
     }
 
     @Override
@@ -159,11 +126,11 @@ public class EndpointRequestResponse extends RpcMessage {
         this.name = name;
     }
 
-    public EndpointRequestResponse(String name) {
+    public EndpointDeclarationRequest(String name) {
         this.name = name;
     }
 
-    public EndpointRequestResponse() {
-        this.name = REQUEST_MESSAGE_RESPONSE;
+    public EndpointDeclarationRequest() {
+        this.name = DECLARATION_MESSAGE;
     }
 }

@@ -51,6 +51,7 @@ public class RpcServer {
     String identity;
     int listenPort;
     Channel channel;
+    Object context;
     RpcMessageMap messageMap;
     ConnectionService connectionService;
     RpcBroker broker;
@@ -63,6 +64,14 @@ public class RpcServer {
         messageMap = new RpcMessageMap();
         this.listenPort = port;
         this.identity = identity;
+    }
+
+    public Object getContext() {
+        return context;
+    }
+
+    public void setContext(Object context) {
+        this.context = context;
     }
 
     public void addMessage(RpcMessage message) {
@@ -98,6 +107,7 @@ public class RpcServer {
 
         JsonRpcEndpoint endpoint = new JsonRpcEndpoint(identifier, connectionService,
                 objectMapper, channel, messageMap, broker);
+        endpoint.setContext(context);
         JsonRpcServiceBinderHandler binderHandler =
                 new JsonRpcServiceBinderHandler(endpoint);
         channel.pipeline().addLast(binderHandler);

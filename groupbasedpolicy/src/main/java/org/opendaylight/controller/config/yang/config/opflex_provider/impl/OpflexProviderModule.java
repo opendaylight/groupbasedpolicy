@@ -30,7 +30,7 @@ public class OpflexProviderModule extends org.opendaylight.controller.config.yan
         final ListenerRegistration<DataChangeListener> dataChangeListenerRegistration =
                 dataBrokerService
                 .registerDataChangeListener(LogicalDatastoreType.CONFIGURATION,
-                        OpflexConnectionService.DISCOVERY_DEFINITIONS_IID,
+                        OpflexConnectionService.DOMAINS_IID,
                         connectionService, DataChangeScope.SUBTREE );
 
         final class AutoCloseableConnectionService implements AutoCloseable {

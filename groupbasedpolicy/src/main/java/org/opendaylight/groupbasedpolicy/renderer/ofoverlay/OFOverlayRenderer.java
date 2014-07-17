@@ -36,7 +36,7 @@ import com.google.common.util.concurrent.ListenableFuture;
  * @author readams
  */
 public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
-    private static final Logger LOG = 
+    private static final Logger LOG =
             LoggerFactory.getLogger(OFOverlayRenderer.class);
 
     private final DataBroker dataBroker;
@@ -44,12 +44,12 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     private final SwitchManager switchManager;
     private final EndpointManager endpointManager;
     private final PolicyManager policyManager;
-    
+
     private final ScheduledExecutorService executor;
 
-    private static final InstanceIdentifier<OfOverlayConfig> configIid = 
+    private static final InstanceIdentifier<OfOverlayConfig> configIid =
             InstanceIdentifier.builder(OfOverlayConfig.class).build();
-    
+
     private OfOverlayConfig config;
     ListenerRegistration<DataChangeListener> configReg;
 
@@ -60,23 +60,23 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
 
         int numCPU = Runtime.getRuntime().availableProcessors();
         executor = Executors.newScheduledThreadPool(numCPU * 2);
-        
+
         policyResolver = new PolicyResolver(dataProvider, executor);
         switchManager = new SwitchManager(dataProvider, executor);
-        endpointManager = new EndpointManager(dataProvider, rpcRegistry, 
+        endpointManager = new EndpointManager(dataProvider, rpcRegistry,
                                               executor, switchManager);
-        
+
         policyManager = new PolicyManager(dataProvider,
-                                          policyResolver, 
+                                          policyResolver,
                                           switchManager,
                                           endpointManager,
                                           rpcRegistry,
                                           executor);
-        
-        configReg = 
-                dataProvider.registerDataChangeListener(LogicalDatastoreType.CONFIGURATION, 
-                                                        configIid, 
-                                                        this, 
+
+        configReg =
+                dataProvider.registerDataChangeListener(LogicalDatastoreType.CONFIGURATION,
+                                                        configIid,
+                                                        this,
                                                         DataChangeScope.SUBTREE);
         readConfig();
         LOG.info("Initialized OFOverlay renderer");
@@ -95,13 +95,13 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
         if (switchManager != null) switchManager.close();
         if (endpointManager != null) endpointManager.close();
     }
-    
+
     // ******************
     // DataChangeListener
     // ******************
-    
+
     @Override
-    public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, 
+    public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>,
                                                    DataObject> change) {
         readConfig();
     }
@@ -109,14 +109,14 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     // **************
     // Implementation
     // **************
-    
+
     private void readConfig() {
-        ListenableFuture<Optional<DataObject>> dao = 
+        ListenableFuture<Optional<OfOverlayConfig>> dao =
                 dataBroker.newReadOnlyTransaction()
                     .read(LogicalDatastoreType.CONFIGURATION, configIid);
-        Futures.addCallback(dao, new FutureCallback<Optional<DataObject>>() {
+        Futures.addCallback(dao, new FutureCallback<Optional<OfOverlayConfig>>() {
             @Override
-            public void onSuccess(final Optional<DataObject> result) {
+            public void onSuccess(final Optional<OfOverlayConfig> result) {
                 if (!result.isPresent()) return;
                 if (result.get() instanceof OfOverlayConfig) {
                     config = (OfOverlayConfig)result.get();
@@ -130,7 +130,7 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
             }
         }, executor);
     }
-    
+
     private void applyConfig() {
         switchManager.setEncapsulationFormat(config.getEncapsulationFormat());
         endpointManager.setLearningMode(config.getLearningMode());

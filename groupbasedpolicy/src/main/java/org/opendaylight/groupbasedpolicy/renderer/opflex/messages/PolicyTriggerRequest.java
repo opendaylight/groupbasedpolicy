@@ -7,7 +7,7 @@
  *
  * Authors : Thomas Bachman
  */
-package org.opendaylight.groupbasedpolicy.renderer.opflex;
+package org.opendaylight.groupbasedpolicy.renderer.opflex.messages;
 
 import java.util.List;
 
@@ -19,19 +19,20 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 @JsonSerialize
 @JsonDeserialize
-public class EndpointRequestRequest extends RpcMessage {
+public class PolicyTriggerRequest extends RpcMessage {
 
-    public static final String EP_REQUEST_MESSAGE = "endpoint_request";
+    public static final String TRIGGER_MESSAGE = "trigger_policy";
 
     static public class Params {
-        private String subject;
+        private String policy_type;
         private String context;
-        private List<String> identifier;
-        public String getSubject() {
-            return subject;
+        private String policy_name;
+        private int prr;
+        public String getPolicy_type() {
+            return policy_type;
         }
-        public void setSubject(String subject) {
-            this.subject = subject;
+        public void setPolicy_type(String policy_type) {
+            this.policy_type = policy_type;
         }
         public String getContext() {
             return context;
@@ -39,11 +40,17 @@ public class EndpointRequestRequest extends RpcMessage {
         public void setContext(String context) {
             this.context = context;
         }
-        public List<String> getIdentifier() {
-            return identifier;
+        public String getPolicy_name() {
+            return policy_name;
         }
-        public void setIdentifier(List<String> identifier) {
-            this.identifier = identifier;
+        public void setPolicy_name(String policy_name) {
+            this.policy_name = policy_name;
+        }
+        public int getPrr() {
+            return prr;
+        }
+        public void setPrr(int prr) {
+            this.prr = prr;
         }
     }
     private String id;
@@ -91,11 +98,11 @@ public class EndpointRequestRequest extends RpcMessage {
         this.name = name;
     }
 
-    public EndpointRequestRequest(String name) {
+    public PolicyTriggerRequest(String name) {
         this.name = name;
     }
 
-    public EndpointRequestRequest() {
-        this.name = EP_REQUEST_MESSAGE;
+    public PolicyTriggerRequest() {
+        this.name = TRIGGER_MESSAGE;
     }
 }

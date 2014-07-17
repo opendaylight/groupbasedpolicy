@@ -7,9 +7,8 @@
  *
  * Authors : Thomas Bachman
  */
-package org.opendaylight.groupbasedpolicy.renderer.opflex;
+package org.opendaylight.groupbasedpolicy.renderer.opflex.messages;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcMessage;
@@ -20,43 +19,32 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 @JsonSerialize
 @JsonDeserialize
-public class IdentityRequest extends RpcMessage {
+public class EndpointRequestRequest extends RpcMessage {
 
-    public static final String IDENTITY_MESSAGE = "send_identity";
+    public static final String EP_REQUEST_MESSAGE = "endpoint_request";
 
     static public class Params {
-        private String name;
-        private String domain;
-        private List<String> my_role;
-        public String getName() {
-            return this.name;
+        private String subject;
+        private String context;
+        private List<String> identifier;
+        public String getSubject() {
+            return subject;
         }
-
-        public void setName(String name) {
-            this.name = name;
+        public void setSubject(String subject) {
+            this.subject = subject;
         }
-
-        public Params() {
-            my_role = new ArrayList<String>();
+        public String getContext() {
+            return context;
         }
-
-        public String getDomain() {
-            return domain;
+        public void setContext(String context) {
+            this.context = context;
         }
-
-        public void setDomain(String domain) {
-            this.domain = domain;
+        public List<String> getIdentifier() {
+            return identifier;
         }
-
-        public List<String> getMy_role() {
-            return my_role;
+        public void setIdentifier(List<String> identifier) {
+            this.identifier = identifier;
         }
-
-        public void setMy_role(List<String> my_role) {
-            this.my_role = my_role;
-        }
-
-
     }
     private String id;
     private String method;
@@ -103,11 +91,11 @@ public class IdentityRequest extends RpcMessage {
         this.name = name;
     }
 
-    public IdentityRequest(String name) {
+    public EndpointRequestRequest(String name) {
         this.name = name;
     }
 
-    public IdentityRequest() {
-        this.name = IDENTITY_MESSAGE;
+    public EndpointRequestRequest() {
+        this.name = EP_REQUEST_MESSAGE;
     }
 }

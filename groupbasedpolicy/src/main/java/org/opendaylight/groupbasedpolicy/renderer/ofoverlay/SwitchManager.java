@@ -39,12 +39,12 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 
 /**
- * Manage connected switches and ensure their configuration is set up 
+ * Manage connected switches and ensure their configuration is set up
  * correctly
  * @author readams
  */
 public class SwitchManager implements AutoCloseable, DataChangeListener {
-    private static final Logger LOG = 
+    private static final Logger LOG =
             LoggerFactory.getLogger(SwitchManager.class);
 
     private final DataBroker dataProvider;
@@ -56,7 +56,7 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
                 .child(Node.class).build();
     private ListenerRegistration<DataChangeListener> nodesReg;
 
-    private ConcurrentHashMap<NodeId, SwitchState> switches = 
+    private ConcurrentHashMap<NodeId, SwitchState> switches =
             new ConcurrentHashMap<>();
     private List<SwitchListener> listeners = new CopyOnWriteArrayList<>();
 
@@ -65,8 +65,8 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
         super();
         this.dataProvider = dataProvider;
         nodesReg = dataProvider
-                .registerDataChangeListener(LogicalDatastoreType.OPERATIONAL, 
-                                            nodeIid, this, 
+                .registerDataChangeListener(LogicalDatastoreType.OPERATIONAL,
+                                            nodeIid, this,
                                             DataChangeScope.ONE);
         readSwitches();
         LOG.debug("Initialized OFOverlay switch manager");
@@ -75,22 +75,22 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
     // *************
     // SwitchManager
     // *************
-    
+
     /**
      * Get the collection of switches that are in the "ready" state.  Note
      * that the collection may be concurrently modified
      * @return A {@link Collection} containing the switches that are ready.
      */
     public Collection<NodeId> getReadySwitches() {
-        Collection<SwitchState> ready = 
-                Collections2.filter(switches.values(), 
+        Collection<SwitchState> ready =
+                Collections2.filter(switches.values(),
                             new Predicate<SwitchState>() {
                     @Override
                     public boolean apply(SwitchState input) {
-                        return SwitchStatus.READY.equals(input.status); 
+                        return SwitchStatus.READY.equals(input.status);
                     }
                 });
-        return Collections2.transform(ready, 
+        return Collections2.transform(ready,
                                       new Function<SwitchState, NodeId>() {
             @Override
             public NodeId apply(SwitchState input) {
@@ -109,7 +109,7 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
         if (state == null) return false;
         return SwitchStatus.READY.equals(state.status);
     }
-    
+
     /**
      * Add a {@link SwitchListener} to get notifications of switch events
      * @param listener the {@link SwitchListener} to add
@@ -140,7 +140,7 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
     // ******************
 
     @Override
-    public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, 
+    public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>,
                                                    DataObject> change) {
         for (InstanceIdentifier<?> iid : change.getRemovedPaths()) {
             LOG.info("{} removed", iid);
@@ -158,11 +158,11 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
             updateSwitch(dao);
         }
     }
-    
+
     // **************
     // Implementation
     // **************
-    
+
     private void updateSwitch(DataObject dao) {
         if (!(dao instanceof Node)) return;
         // Switches are registered as Nodes in the inventory; OpenFlow switches
@@ -172,24 +172,24 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
         if (fcn == null) return;
 
         LOG.debug("{} update", node.getId());
-        
-        SwitchState state = switches.get(node.getId()); 
+
+        SwitchState state = switches.get(node.getId());
         if (state == null) {
             state = new SwitchState(node);
-            SwitchState old = 
+            SwitchState old =
                     switches.putIfAbsent(node.getId(), state);
             if (old == null) {
                 switchConnected(node.getId());
             }
         }
     }
-    
-    // XXX there's a race condition here if a switch exists at startup and is 
+
+    // XXX there's a race condition here if a switch exists at startup and is
     // removed very quickly.
-    private final FutureCallback<Optional<DataObject>> readSwitchesCallback =
-            new FutureCallback<Optional<DataObject>>() {
+    private final FutureCallback<Optional<Nodes>> readSwitchesCallback =
+            new FutureCallback<Optional<Nodes>>() {
         @Override
-        public void onSuccess(Optional<DataObject> result) {
+        public void onSuccess(Optional<Nodes> result) {
             if (result.isPresent() && result.get() instanceof Nodes) {
                 Nodes nodes = (Nodes)result.get();
                 for (Node node : nodes.getNode()) {
@@ -203,22 +203,22 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
             LOG.error("Count not read switch information", t);
         }
     };
-    
+
     /**
      * Read the set of switches from the ODL inventory and update our internal
      * map.
-     * 
-     * <p>This is safe only if there can only be one notification at a time, 
-     * as there are race conditions in the face of concurrent data change 
+     *
+     * <p>This is safe only if there can only be one notification at a time,
+     * as there are race conditions in the face of concurrent data change
      * notifications
      */
     private void readSwitches() {
-        ListenableFuture<Optional<DataObject>> future = 
+        ListenableFuture<Optional<Nodes>> future =
                 dataProvider.newReadOnlyTransaction()
                     .read(LogicalDatastoreType.OPERATIONAL,nodesIid);
         Futures.addCallback(future, readSwitchesCallback);
     }
-    
+
     /**
      * Set the ready state of the node to PREPARING and begin the initialization
      * process
@@ -232,7 +232,7 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
             LOG.info("New switch {} connected", nodeId);
         }
     }
-    
+
     /**
      * Set the ready state of the node to READY and notify listeners
      */
@@ -257,7 +257,7 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
         }
         LOG.info("Switch {} removed", nodeId);
     }
-    
+
     private enum SwitchStatus {
         /**
          * The switch is connected but not yet configured
@@ -268,7 +268,7 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
          */
         READY
     }
-    
+
     /**
      * Internal representation of the state of a connected switch
      */
@@ -279,7 +279,7 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
             super();
             this.switchNode = switchNode;
         }
-        
+
     }
 
 }

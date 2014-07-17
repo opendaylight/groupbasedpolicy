@@ -7,7 +7,7 @@
  *
  * Authors : Thomas Bachman
  */
-package org.opendaylight.groupbasedpolicy.renderer.opflex;
+package org.opendaylight.groupbasedpolicy.renderer.opflex.messages;
 
 import java.util.List;
 
@@ -19,16 +19,18 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 @JsonSerialize
 @JsonDeserialize
-public class PolicyResolutionRequest extends RpcMessage {
+public class StateReportRequest extends RpcMessage {
 
-    public static final String RESOLVE_MESSAGE = "resolve_policy";
+    public static final String STATE_MESSAGE = "report_state";
 
     static public class Params {
         private String subject;
         private String context;
-        private String policy_name;
-        private String on_behalf_of;    // TODO: Make URI type
-        private String data;
+        private String object;   // TODO: change to MOs
+        private List<String> fault;
+        private List<String> event;
+        private List<String> statistics;
+        private List<String> health;
         public String getSubject() {
             return subject;
         }
@@ -41,23 +43,35 @@ public class PolicyResolutionRequest extends RpcMessage {
         public void setContext(String context) {
             this.context = context;
         }
-        public String getPolicy_name() {
-            return policy_name;
+        public String getObject() {
+            return object;
         }
-        public void setPolicy_name(String policy_name) {
-            this.policy_name = policy_name;
+        public void setObject(String object) {
+            this.object = object;
         }
-        public String getOn_behalf_of() {
-            return on_behalf_of;
+        public List<String> getFault() {
+            return fault;
         }
-        public void setOn_behalf_of(String on_behalf_of) {
-            this.on_behalf_of = on_behalf_of;
+        public void setFault(List<String> fault) {
+            this.fault = fault;
         }
-        public String getData() {
-            return data;
+        public List<String> getEvent() {
+            return event;
         }
-        public void setData(String data) {
-            this.data = data;
+        public void setEvent(List<String> event) {
+            this.event = event;
+        }
+        public List<String> getStatistics() {
+            return statistics;
+        }
+        public void setStatistics(List<String> statistics) {
+            this.statistics = statistics;
+        }
+        public List<String> getHealth() {
+            return health;
+        }
+        public void setHealth(List<String> health) {
+            this.health = health;
         }
     }
     private String id;
@@ -105,11 +119,11 @@ public class PolicyResolutionRequest extends RpcMessage {
         this.name = name;
     }
 
-    public PolicyResolutionRequest(String name) {
+    public StateReportRequest(String name) {
         this.name = name;
     }
 
-    public PolicyResolutionRequest() {
-        this.name = RESOLVE_MESSAGE;
+    public StateReportRequest() {
+        this.name = STATE_MESSAGE;
     }
 }

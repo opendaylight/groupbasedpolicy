@@ -14,7 +14,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -70,6 +69,7 @@ public class JsonRpcEndpoint implements ChannelFutureListener {
     }
 
     private String identifier;
+    private Object context;
     private ObjectMapper objectMapper;
     private Channel nettyChannel;
     private Map<String, CallContext> methodContext = Maps.newHashMap();
@@ -85,6 +85,14 @@ public class JsonRpcEndpoint implements ChannelFutureListener {
         this.identifier = identifier;
     }
 
+    public Object getContext() {
+        return context;
+    }
+
+    public void setContext(Object context) {
+        this.context = context;
+    }
+
     public ConnectionService getConnectionService() {
         return connectionService;
     }
@@ -94,10 +102,6 @@ public class JsonRpcEndpoint implements ChannelFutureListener {
 
     public Channel getChannel() {
         return nettyChannel;
-    }
-
-    public boolean supportsMessages(List<RpcMessage> messages) {
-        return messageMap.containsMessages(messages);
     }
 
     public JsonRpcEndpoint(String identifier, ConnectionService connectionService,

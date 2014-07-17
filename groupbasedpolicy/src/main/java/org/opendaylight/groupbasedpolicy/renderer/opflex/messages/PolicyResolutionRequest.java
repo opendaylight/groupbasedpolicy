@@ -7,7 +7,7 @@
  *
  * Authors : Thomas Bachman
  */
-package org.opendaylight.groupbasedpolicy.renderer.opflex;
+package org.opendaylight.groupbasedpolicy.renderer.opflex.messages;
 
 import java.util.List;
 
@@ -19,31 +19,45 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 @JsonSerialize
 @JsonDeserialize
-public class PolicyUpdateRequest extends RpcMessage {
+public class PolicyResolutionRequest extends RpcMessage {
 
-    public static final String UPDATE_MESSAGE = "update_policy";
+    public static final String RESOLVE_MESSAGE = "resolve_policy";
 
     static public class Params {
+        private String subject;
         private String context;
-        private List<String> subtree;
-        private int prr;
+        private String policy_name;
+        private String on_behalf_of;    // TODO: Make URI type
+        private String data;
+        public String getSubject() {
+            return subject;
+        }
+        public void setSubject(String subject) {
+            this.subject = subject;
+        }
         public String getContext() {
             return context;
         }
         public void setContext(String context) {
             this.context = context;
         }
-        public List<String> getSubtree() {
-            return subtree;
+        public String getPolicy_name() {
+            return policy_name;
         }
-        public void setSubtree(List<String> subtree) {
-            this.subtree = subtree;
+        public void setPolicy_name(String policy_name) {
+            this.policy_name = policy_name;
         }
-        public int getPrr() {
-            return prr;
+        public String getOn_behalf_of() {
+            return on_behalf_of;
         }
-        public void setPrr(int prr) {
-            this.prr = prr;
+        public void setOn_behalf_of(String on_behalf_of) {
+            this.on_behalf_of = on_behalf_of;
+        }
+        public String getData() {
+            return data;
+        }
+        public void setData(String data) {
+            this.data = data;
         }
     }
     private String id;
@@ -91,11 +105,11 @@ public class PolicyUpdateRequest extends RpcMessage {
         this.name = name;
     }
 
-    public PolicyUpdateRequest(String name) {
+    public PolicyResolutionRequest(String name) {
         this.name = name;
     }
 
-    public PolicyUpdateRequest() {
-        this.name = UPDATE_MESSAGE;
+    public PolicyResolutionRequest() {
+        this.name = RESOLVE_MESSAGE;
     }
 }

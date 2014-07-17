@@ -44,92 +44,113 @@ module opflex {
         }
     }
 
-    // ******************
-    // Configuration Data
-    // ******************
-    container discovery-definitions {
+    container domains {
         description
-            "The nodes that any OpFlex agent needs to communicate
-             with in an OpFlex policy fabric.";
+            "The list of all OpFlex domains.";
 
-        list policy-repository {
+        config true;
+
+        list domain {
             description
-                "A repository that the OpFlex agent can use for resolving
-                 policies.";
+                "An administrative domain for OpFlex entities.";
 
             key "id";
 
             leaf id {
                 description 
-                   "The id for the policy repository.";
+                    "The id for the domain.";
                 type string;
                 config true;
             }
-            leaf port {
-                description 
-                   "The port number to use for the connection";
-                type int32;
-                config true;
-            }
-            leaf serialization-type {
-                description 
-                    "The serialization to use for this connection.";
-                type serialization;
-                config true;
-            }
-        }
 
-        list endpoint-registry {
-            description
-                "A repository that the OpFlex agent can use for registration
-                 and lookup of endpoints.";
+            // ******************
+            // Configuration Data
+            // ******************
+            container discovery-definitions {
+                description
+                    "The nodes that any OpFlex agent needs to communicate
+                     with in an OpFlex policy fabric.";
 
-            key "id";
+                list policy-repository {
+                    description
+                        "A repository that the OpFlex agent can use for resolving
+                         policies.";
 
-            leaf id {
-                description 
-                   "The id for the endpoint registry.";
-                type string;
-                config true;
-            }
-            leaf port {
-                description 
-                   "The port number to use for the connection";
-                type int32;
-                config true;
-            }
-            leaf serialization-type {
-                description 
-                    "The serialization to use for this connection.";
-                type serialization;
-                config true;
-            }
-        }
+                    key "id";
 
-        list observer {
-            description
-                "A repository that the OpFlex agent can send State Report
-                 messages to.";
+                    leaf id {
+                        description 
+                           "The id for the policy repository.";
+                        type string;
+                        config true;
+                    }
+                    leaf port {
+                        description 
+                           "The port number to use for the connection";
+                        type int32;
+                        config true;
+                    }
+                    leaf serialization-type {
+                        description 
+                            "The serialization to use for this connection.";
+                        type serialization;
+                        config true;
+                    }
+                }
 
-            key "id";
+                list endpoint-registry {
+                    description
+                        "A repository that the OpFlex agent can use for registration
+                         and lookup of endpoints.";
 
-            leaf id {
-                description 
-                   "The id for the Observer.";
-                type string;
-                config true;
-            }
-            leaf port {
-                description 
-                   "The port number to use for the connection";
-                type int32;
-                config true;
-            }
-            leaf serialization-type {
-                description 
-                    "The serialization to use for this connection.";
-                type serialization;
-                config true;
+                    key "id";
+
+                    leaf id {
+                        description 
+                           "The id for the endpoint registry.";
+                        type string;
+                        config true;
+                    }
+                    leaf port {
+                        description 
+                           "The port number to use for the connection";
+                        type int32;
+                        config true;
+                    }
+                    leaf serialization-type {
+                        description 
+                            "The serialization to use for this connection.";
+                        type serialization;
+                        config true;
+                    }
+                }
+
+                list observer {
+                    description
+                        "A repository that the OpFlex agent can send State Report
+                         messages to.";
+
+                    key "id";
+
+                    leaf id {
+                        description 
+                           "The id for the Observer.";
+                        type string;
+                        config true;
+                    }
+                    leaf port {
+                        description 
+                           "The port number to use for the connection";
+                        type int32;
+                        config true;
+                    }
+                    leaf serialization-type {
+                        description 
+                            "The serialization to use for this connection.";
+                        type serialization;
+                        config true;
+                    }
+                }
             }
         }
     }

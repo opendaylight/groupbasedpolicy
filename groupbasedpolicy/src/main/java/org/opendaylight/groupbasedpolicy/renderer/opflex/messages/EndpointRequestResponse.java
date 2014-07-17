@@ -7,7 +7,7 @@
  *
  * Authors : Thomas Bachman
  */
-package org.opendaylight.groupbasedpolicy.renderer.opflex;
+package org.opendaylight.groupbasedpolicy.renderer.opflex.messages;
 
 import java.util.List;
 
@@ -19,11 +19,11 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 @JsonSerialize
 @JsonDeserialize
-public class EndpointPolicyUpdateRequest extends RpcMessage {
+public class EndpointRequestResponse extends RpcMessage {
 
-    public static final String EP_UPDATE_MESSAGE = "endpoint_update_policy";
+    public static final String REQUEST_MESSAGE_RESPONSE = "endpoint_request_response";
 
-    static public class Params {
+    static public class Endpoint {
         private String subject;
         private String context;
         private String policy_name;
@@ -31,7 +31,7 @@ public class EndpointPolicyUpdateRequest extends RpcMessage {
         private List<String> identifier;
         private List<String> data;
         private String status;
-        private int ttl;
+        private int prr;
         public String getSubject() {
             return subject;
         }
@@ -74,19 +74,45 @@ public class EndpointPolicyUpdateRequest extends RpcMessage {
         public void setStatus(String status) {
             this.status = status;
         }
-        public int getTtl() {
-            return ttl;
+        public int getPrr() {
+            return prr;
         }
-        public void setTtl(int ttl) {
-            this.ttl = ttl;
+        public void setPrr(int prr) {
+            this.prr = prr;
+        }
+    }
+
+    static public class Result {
+        List<Endpoint> endpoint;
+
+        public List<Endpoint> getEndpoint() {
+            return endpoint;
+        }
+
+        public void setEndpoint(List<Endpoint> endpoint) {
+            this.endpoint = endpoint;
+        }
+    }
+
+    static public class Error {
+        private String message;
+
+        public String getMessage() {
+            return message;
+        }
+
+        public void setMessage(String message) {
+            this.message = message;
         }
     }
     private String id;
-    private String method;
-    private List<Params> params;
+    private Result result;
+    private Error error;
 
     @JsonIgnore
     private String name;
+    @JsonIgnore
+    private String method;
 
     @Override
     public String getId() {
@@ -98,22 +124,29 @@ public class EndpointPolicyUpdateRequest extends RpcMessage {
         this.id = id;
     }
 
+    public Error getError() {
+        return error;
+    }
+
+    public void setError(Error error) {
+        this.error = error;
+    }
+
     @Override
     public String getMethod() {
-        return method;
+        return null;
     }
 
     @Override
     public void setMethod(String method) {
-        this.method = method;
     }
 
-    public List<Params> getParams() {
-        return this.params;
+    public Result getResult() {
+        return this.result;
     }
 
-    public void setParams(List<Params> params) {
-        this.params = params;
+    public void setResult(Result result) {
+        this.result = result;
     }
 
     @Override
@@ -126,11 +159,11 @@ public class EndpointPolicyUpdateRequest extends RpcMessage {
         this.name = name;
     }
 
-    public EndpointPolicyUpdateRequest(String name) {
+    public EndpointRequestResponse(String name) {
         this.name = name;
     }
 
-    public EndpointPolicyUpdateRequest() {
-        this.name = EP_UPDATE_MESSAGE;
+    public EndpointRequestResponse() {
+        this.name = REQUEST_MESSAGE_RESPONSE;
     }
 }

@@ -7,7 +7,7 @@
  *
  * Authors : Thomas Bachman
  */
-package org.opendaylight.groupbasedpolicy.renderer.opflex;
+package org.opendaylight.groupbasedpolicy.renderer.opflex.messages;
 
 import java.util.List;
 
@@ -19,59 +19,31 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 @JsonSerialize
 @JsonDeserialize
-public class StateReportRequest extends RpcMessage {
+public class PolicyUpdateRequest extends RpcMessage {
 
-    public static final String STATE_MESSAGE = "report_state";
+    public static final String UPDATE_MESSAGE = "update_policy";
 
     static public class Params {
-        private String subject;
         private String context;
-        private String object;   // TODO: change to MOs
-        private List<String> fault;
-        private List<String> event;
-        private List<String> statistics;
-        private List<String> health;
-        public String getSubject() {
-            return subject;
-        }
-        public void setSubject(String subject) {
-            this.subject = subject;
-        }
+        private List<String> subtree;
+        private int prr;
         public String getContext() {
             return context;
         }
         public void setContext(String context) {
             this.context = context;
         }
-        public String getObject() {
-            return object;
+        public List<String> getSubtree() {
+            return subtree;
         }
-        public void setObject(String object) {
-            this.object = object;
+        public void setSubtree(List<String> subtree) {
+            this.subtree = subtree;
         }
-        public List<String> getFault() {
-            return fault;
+        public int getPrr() {
+            return prr;
         }
-        public void setFault(List<String> fault) {
-            this.fault = fault;
-        }
-        public List<String> getEvent() {
-            return event;
-        }
-        public void setEvent(List<String> event) {
-            this.event = event;
-        }
-        public List<String> getStatistics() {
-            return statistics;
-        }
-        public void setStatistics(List<String> statistics) {
-            this.statistics = statistics;
-        }
-        public List<String> getHealth() {
-            return health;
-        }
-        public void setHealth(List<String> health) {
-            this.health = health;
+        public void setPrr(int prr) {
+            this.prr = prr;
         }
     }
     private String id;
@@ -119,11 +91,11 @@ public class StateReportRequest extends RpcMessage {
         this.name = name;
     }
 
-    public StateReportRequest(String name) {
+    public PolicyUpdateRequest(String name) {
         this.name = name;
     }
 
-    public StateReportRequest() {
-        this.name = STATE_MESSAGE;
+    public PolicyUpdateRequest() {
+        this.name = UPDATE_MESSAGE;
     }
 }

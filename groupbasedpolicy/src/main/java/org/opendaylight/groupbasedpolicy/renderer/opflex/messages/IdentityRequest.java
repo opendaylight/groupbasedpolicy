@@ -7,8 +7,9 @@
  *
  * Authors : Thomas Bachman
  */
-package org.opendaylight.groupbasedpolicy.renderer.opflex;
+package org.opendaylight.groupbasedpolicy.renderer.opflex.messages;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcMessage;
@@ -19,39 +20,43 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 @JsonSerialize
 @JsonDeserialize
-public class PolicyTriggerRequest extends RpcMessage {
+public class IdentityRequest extends RpcMessage {
 
-    public static final String TRIGGER_MESSAGE = "trigger_policy";
+    public static final String IDENTITY_MESSAGE = "send_identity";
 
     static public class Params {
-        private String policy_type;
-        private String context;
-        private String policy_name;
-        private int prr;
-        public String getPolicy_type() {
-            return policy_type;
+        private String name;
+        private String domain;
+        private List<String> my_role;
+        public String getName() {
+            return this.name;
         }
-        public void setPolicy_type(String policy_type) {
-            this.policy_type = policy_type;
+
+        public void setName(String name) {
+            this.name = name;
         }
-        public String getContext() {
-            return context;
+
+        public Params() {
+            my_role = new ArrayList<String>();
         }
-        public void setContext(String context) {
-            this.context = context;
+
+        public String getDomain() {
+            return domain;
         }
-        public String getPolicy_name() {
-            return policy_name;
+
+        public void setDomain(String domain) {
+            this.domain = domain;
         }
-        public void setPolicy_name(String policy_name) {
-            this.policy_name = policy_name;
+
+        public List<String> getMy_role() {
+            return my_role;
         }
-        public int getPrr() {
-            return prr;
+
+        public void setMy_role(List<String> my_role) {
+            this.my_role = my_role;
         }
-        public void setPrr(int prr) {
-            this.prr = prr;
-        }
+
+
     }
     private String id;
     private String method;
@@ -98,11 +103,18 @@ public class PolicyTriggerRequest extends RpcMessage {
         this.name = name;
     }
 
-    public PolicyTriggerRequest(String name) {
+    public IdentityRequest(String name) {
         this.name = name;
     }
 
-    public PolicyTriggerRequest() {
-        this.name = TRIGGER_MESSAGE;
+    public IdentityRequest() {
+        this.name = IDENTITY_MESSAGE;
+    }
+
+    public String getDomain() {
+        if (this.params != null && this.params.get(0) != null) {
+            return this.params.get(0).getDomain();
+        }
+        return null;
     }
 }

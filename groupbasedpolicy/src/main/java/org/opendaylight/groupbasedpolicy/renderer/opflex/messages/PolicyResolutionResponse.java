@@ -7,7 +7,9 @@
  *
  * Authors : Thomas Bachman
  */
-package org.opendaylight.groupbasedpolicy.renderer.opflex;
+package org.opendaylight.groupbasedpolicy.renderer.opflex.messages;
+
+import java.util.List;
 
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcMessage;
 
@@ -17,11 +19,25 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 @JsonSerialize
 @JsonDeserialize
-public class EndpointPolicyUpdateResponse extends RpcMessage {
+public class PolicyResolutionResponse extends RpcMessage {
 
-    public static final String POLICY_UPDATE_MESSAGE_RESPONSE = "endpoint_update_policy_response";
+    public static final String POLICY_MESSAGE_RESPONSE = "resolve_policy_response";
 
     static public class Result {
+        private List<String> policy;   // TODO: replace with MOs
+        private int prr;
+        public List<String> getPolicy() {
+            return policy;
+        }
+        public void setPolicy(List<String> policy) {
+            this.policy = policy;
+        }
+        public int getPrr() {
+            return prr;
+        }
+        public void setPrr(int prr) {
+            this.prr = prr;
+        }
     }
     static public class Error {
         private String message;
@@ -78,12 +94,12 @@ public class EndpointPolicyUpdateResponse extends RpcMessage {
         this.result = result;
     }
 
-    public EndpointPolicyUpdateResponse(String name) {
+    public PolicyResolutionResponse(String name) {
         this.name = name;
     }
 
-    public EndpointPolicyUpdateResponse() {
-        this.name = POLICY_UPDATE_MESSAGE_RESPONSE;
+    public PolicyResolutionResponse() {
+        this.name = POLICY_MESSAGE_RESPONSE;
     }
 
     @Override

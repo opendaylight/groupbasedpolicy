@@ -10,7 +10,7 @@
 package org.opendaylight.groupbasedpolicy.jsonrpc;
 
 
-/*
+/**
  * An interface to provide notifications when connections are
  * established or closed. The connection notifications
  * use{@link RpcEncpoint} objects; as connections come and go,

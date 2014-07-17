@@ -7,7 +7,7 @@
  *
  * Authors : Thomas Bachman
  */
-package org.opendaylight.groupbasedpolicy.renderer.opflex;
+package org.opendaylight.groupbasedpolicy.renderer.opflex.messages;
 
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcMessage;
 
@@ -17,9 +17,9 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 @JsonSerialize
 @JsonDeserialize
-public class PolicyUpdateResponse extends RpcMessage {
+public class EndpointDeclarationResponse extends RpcMessage {
 
-    public static final String UPDATE_MESSAGE_RESPONSE = "update_policy_response";
+    public static final String ENDPOINT_MESSAGE_RESPONSE = "endpoint_declaration_response";
 
     static public class Result {
     }
@@ -78,12 +78,12 @@ public class PolicyUpdateResponse extends RpcMessage {
         this.result = result;
     }
 
-    public PolicyUpdateResponse(String name) {
+    public EndpointDeclarationResponse(String name) {
         this.name = name;
     }
 
-    public PolicyUpdateResponse() {
-        this.name = UPDATE_MESSAGE_RESPONSE;
+    public EndpointDeclarationResponse() {
+        this.name = ENDPOINT_MESSAGE_RESPONSE;
     }
 
     @Override
