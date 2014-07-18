@@ -14,6 +14,7 @@ import java.util.Map;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockEndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockPolicyManager;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockSwitchManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable.FlowCtx;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable.FlowTableCtx;
 import org.opendaylight.groupbasedpolicy.resolver.MockPolicyResolver;
@@ -47,9 +48,11 @@ import static org.mockito.Mockito.*;
 public class FlowTableTest {
     FlowTableCtx ctx;
     FlowTable table;
+    
     MockEndpointManager endpointManager;
     MockPolicyResolver policyResolver;
     MockPolicyManager policyManager;
+    MockSwitchManager switchManager;
     
     NodeId nodeId = new NodeId("openflow:1");
     InstanceIdentifier<Table> tiid;
@@ -65,11 +68,13 @@ public class FlowTableTest {
         endpointManager = new MockEndpointManager();
         policyResolver = new MockPolicyResolver();
         policyManager = new MockPolicyManager(policyResolver, endpointManager);
+        switchManager = new MockSwitchManager();
+        
         ctx = new FlowTableCtx(null, 
                                null, 
                                policyManager, 
                                policyResolver, 
-                               null, 
+                               switchManager, 
                                endpointManager, 
                                null);
     }

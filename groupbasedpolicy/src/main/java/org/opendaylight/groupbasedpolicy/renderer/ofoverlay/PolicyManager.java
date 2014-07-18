@@ -27,6 +27,7 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.TransactionStatus;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.DestinationMapper;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable.FlowTableCtx;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils;
@@ -118,8 +119,9 @@ public class PolicyManager
                                             this, policyResolver, switchManager, 
                                             endpointManager, executor);
         flowPipeline = ImmutableList.of(new PortSecurity(ctx),
-                                        new SourceMapper(ctx));
-        
+                                        new SourceMapper(ctx),
+                                        new DestinationMapper(ctx));
+
         policyScope = policyResolver.registerListener(this);
         if (switchManager != null)
             switchManager.registerListener(this);
@@ -178,6 +180,12 @@ public class PolicyManager
     @Override
     public void switchRemoved(NodeId sw) {
         // XXX TODO purge switch flows
+        dirty.get().addNode(sw);
+        scheduleUpdate();
+    }
+    
+    @Override
+    public void switchUpdated(NodeId sw) {
         dirty.get().addNode(sw);
         scheduleUpdate();
     }

@@ -165,7 +165,26 @@ public class PolicyResolver implements AutoCloseable {
         return policyCache.getPolicy(ep1Tenant, ep1Group, ep1Conds,
                                      ep2Tenant, ep2Group, ep2Conds);
     }
-
+    /**
+     * Get the set of providers that have contracts with the consumer
+     * @param tenant the tenant ID for the endpoint group
+     * @param eg the endpoint group ID
+     */
+    public Set<EgKey> getProvidersForConsumer(TenantId tenant,
+                                              EndpointGroupId eg) {
+        return policyCache.getProvidersForConsumer(tenant, eg);
+    }
+    
+    /**
+     * Get the set of providers that apply 
+     * @param tenant the tenant ID for the endpoint group
+     * @param eg the endpoint group ID
+     */
+    public Set<EgKey> getConsumersForProvider(TenantId tenant,
+                                              EndpointGroupId eg) {
+        return policyCache.getConsumersForProvider(tenant, eg);
+    }
+    
     /**
      * Get the normalized tenant for the given ID
      * @param tenant the tenant ID
@@ -250,13 +269,11 @@ public class PolicyResolver implements AutoCloseable {
         TenantContext context = resolvedTenants.get(tenantId);
         if (context == null) {
             ListenerRegistration<DataChangeListener> registration = null;
-            if (dataProvider != null) {
-                 registration = dataProvider
-                         .registerDataChangeListener(LogicalDatastoreType.CONFIGURATION,
-                                                     TenantUtils.tenantIid(tenantId),
-                                                     new PolicyChangeListener(tenantId),
-                                                     DataChangeScope.SUBTREE);
-            }
+            registration = dataProvider
+                    .registerDataChangeListener(LogicalDatastoreType.CONFIGURATION,
+                                                TenantUtils.tenantIid(tenantId),
+                                                new PolicyChangeListener(tenantId),
+                                                DataChangeScope.SUBTREE);
 
             context = new TenantContext(registration);
             TenantContext oldContext =

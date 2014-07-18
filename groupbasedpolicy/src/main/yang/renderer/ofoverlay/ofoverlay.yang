@@ -134,4 +134,34 @@ module ofoverlay {
         ext:augment-identifier "of-overlay-context-input";
         uses endpoint-location;
     }
+
+    augment "/inv:nodes/inv:node" {
+        ext:augment-identifier "of-overlay-node-config";
+
+        leaf tunnel-ip {
+            description 
+                "The IP address used for tunnel termination on this switch";
+            type inet:ip-address;
+        }
+        container ovsdb-config {
+            leaf ip {
+                description 
+                    "The IP address used to connect to OVSDB on this switch";
+                type inet:ip-address;
+            }
+            leaf port {
+                description 
+                    "The port number used to connect to OVSDB on this switch";
+                type inet:port-number;
+                default 6640;
+            }
+        }
+        leaf-list external-interfaces {
+            description 
+                "The names of the OpenFlow interfaces that are external and 
+                 lead to the underlay network.  Can be specified as a 
+                 regular expression.";
+            type string;
+        }
+    }
 }

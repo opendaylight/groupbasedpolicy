@@ -117,7 +117,7 @@ public class SourceMapper extends FlowTable {
                     .setInPort(ofc.getNodeConnectorId())
                     .build())
                 // XXX TODO set sepg, bd, fd, vrf into registers
-                .setInstructions(FlowUtils.gotoTable((short)(TABLE_ID + 1)));
+                .setInstructions(FlowUtils.gotoTableInstructions((short)(TABLE_ID + 1)));
             writeFlow(t, tiid, flowb.build());
         }
     }

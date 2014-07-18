@@ -9,6 +9,7 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
 import java.util.Map;
+import java.util.Set;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
@@ -23,6 +24,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer3Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.ArpMatchBuilder;
@@ -59,6 +61,16 @@ public class PortSecurity extends FlowTable {
                      InstanceIdentifier<Table> tiid,
                      Map<String, FlowCtx> flowMap,
                      NodeId nodeId, Dirty dirty) {
+        // Allow traffic from tunnel and external ports
+        NodeConnectorId tunnelIf = ctx.switchManager.getTunnelPort(nodeId);
+        if (tunnelIf != null)
+            allowFromPort(t, tiid, flowMap, tunnelIf);
+        Set<NodeConnectorId> external = 
+                ctx.switchManager.getExternalPorts(nodeId);
+        for (NodeConnectorId extIf: external) {
+            allowFromPort(t, tiid, flowMap, extIf);
+        }
+
         // Default drop all
         dropFlow(t, tiid, flowMap, 1, null);
         
@@ -66,8 +78,6 @@ public class PortSecurity extends FlowTable {
         dropFlow(t, tiid, flowMap, 110, ARP);
         dropFlow(t, tiid, flowMap, 111, IPv4);
         dropFlow(t, tiid, flowMap, 112, IPv6);
-        
-        // XXX - TODO Allow traffic from tunnel ports and external ports
 
         for (Endpoint e : ctx.endpointManager.getEndpointsForNode(nodeId)) {
             OfOverlayContext ofc = e.getAugmentation(OfOverlayContext.class);
@@ -83,6 +93,26 @@ public class PortSecurity extends FlowTable {
                 // source port (note lower priority than drop IP rules) 
                 l2flow(t, tiid, flowMap, e, ofc, 100);
             }
+        }
+    }
+    
+    private void allowFromPort(ReadWriteTransaction t,
+                               InstanceIdentifier<Table> tiid,
+                               Map<String, FlowCtx> flowMap,
+                               NodeConnectorId port) {
+        FlowId flowid = new FlowId(new StringBuilder()
+            .append("allow|")
+            .append(port.getValue())
+            .toString());
+        if (visit(flowMap, flowid.getValue())) {
+            FlowBuilder flowb = base()
+                .setId(flowid)
+                .setPriority(Integer.valueOf(200))
+                .setMatch(new MatchBuilder()
+                    .setInPort(port)
+                    .build())
+                .setInstructions(FlowUtils.gotoTableInstructions((short)(getTableId()+1)));
+            writeFlow(t, tiid, flowb.build());
         }
     }
     
@@ -127,7 +157,7 @@ public class PortSecurity extends FlowTable {
                                                               null, null))
                     .setInPort(ofc.getNodeConnectorId())
                     .build())
-                .setInstructions(FlowUtils.gotoTable((short)(TABLE_ID + 1)));
+                .setInstructions(FlowUtils.gotoTableInstructions((short)(TABLE_ID + 1)));
 
             writeFlow(t, tiid, flowb.build());
         }
@@ -189,7 +219,7 @@ public class PortSecurity extends FlowTable {
                         .setLayer3Match(m)
                         .setInPort(ofc.getNodeConnectorId())
                         .build())
-                    .setInstructions(FlowUtils.gotoTable((short)(TABLE_ID + 1)))
+                    .setInstructions(FlowUtils.gotoTableInstructions((short)(TABLE_ID + 1)))
                     .build();
 
                 writeFlow(t, tiid, flow);

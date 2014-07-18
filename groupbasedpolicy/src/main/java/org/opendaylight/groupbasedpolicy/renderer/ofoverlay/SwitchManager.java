@@ -9,7 +9,10 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledExecutorService;
@@ -19,10 +22,15 @@ import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNode;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNodeConnector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig.EncapsulationFormat;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfig;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.node.NodeConnector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
@@ -43,8 +51,8 @@ import com.google.common.util.concurrent.ListenableFuture;
  * correctly
  * @author readams
  */
-public class SwitchManager implements AutoCloseable, DataChangeListener {
-    private static final Logger LOG =
+public class SwitchManager implements AutoCloseable {
+    private static final Logger LOG = 
             LoggerFactory.getLogger(SwitchManager.class);
 
     private final DataBroker dataProvider;
@@ -55,19 +63,26 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
             InstanceIdentifier.builder(Nodes.class)
                 .child(Node.class).build();
     private ListenerRegistration<DataChangeListener> nodesReg;
+    private ListenerRegistration<DataChangeListener> nodesConfigReg;
 
-    private ConcurrentHashMap<NodeId, SwitchState> switches =
+    protected ConcurrentHashMap<NodeId, SwitchState> switches = 
             new ConcurrentHashMap<>();
-    private List<SwitchListener> listeners = new CopyOnWriteArrayList<>();
+    protected List<SwitchListener> listeners = new CopyOnWriteArrayList<>();
 
     public SwitchManager(DataBroker dataProvider,
                          ScheduledExecutorService executor) {
         super();
         this.dataProvider = dataProvider;
-        nodesReg = dataProvider
-                .registerDataChangeListener(LogicalDatastoreType.OPERATIONAL,
-                                            nodeIid, this,
-                                            DataChangeScope.ONE);
+        if (dataProvider != null) {
+            nodesReg = dataProvider
+                .registerDataChangeListener(LogicalDatastoreType.OPERATIONAL, 
+                                            nodeIid, new NodesListener(), 
+                                            DataChangeScope.SUBTREE);
+            nodesConfigReg = dataProvider
+                    .registerDataChangeListener(LogicalDatastoreType.CONFIGURATION, 
+                                                nodeIid, new NodesConfigListener(), 
+                                                DataChangeScope.SUBTREE);
+        }
         readSwitches();
         LOG.debug("Initialized OFOverlay switch manager");
     }
@@ -94,7 +109,7 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
                                       new Function<SwitchState, NodeId>() {
             @Override
             public NodeId apply(SwitchState input) {
-                return input.switchNode.getId();
+                return input.nodeId;
             }
         });
     }
@@ -108,6 +123,24 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
         SwitchState state = switches.get(nodeId);
         if (state == null) return false;
         return SwitchStatus.READY.equals(state.status);
+    }
+    
+    public Set<NodeConnectorId> getExternalPorts(NodeId nodeId) {
+        SwitchState state = switches.get(nodeId);
+        if (state == null) return Collections.emptySet();
+        return state.externalPorts;
+    }
+    
+    public NodeConnectorId getTunnelPort(NodeId nodeId) {
+        SwitchState state = switches.get(nodeId);
+        if (state == null) return null;
+        return state.tunnelPort;
+    }
+    
+    public IpAddress getTunnelIP(NodeId nodeId) {
+        SwitchState state = switches.get(nodeId);
+        if (state == null || state.nodeConfig == null) return null;
+        return state.nodeConfig.getTunnelIp();
     }
 
     /**
@@ -133,29 +166,40 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
     @Override
     public void close() throws Exception {
         nodesReg.close();
+        nodesConfigReg.close();
     }
 
     // ******************
     // DataChangeListener
     // ******************
 
-    @Override
-    public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>,
-                                                   DataObject> change) {
-        for (InstanceIdentifier<?> iid : change.getRemovedPaths()) {
-            LOG.info("{} removed", iid);
+    private class NodesListener implements DataChangeListener {
 
-            DataObject old = change.getOriginalData().get(iid);
-            if (old != null && old instanceof Node) {
-                removeSwitch(((Node)old).getId());
+        @Override
+        public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, 
+                                                       DataObject> change) {
+            for (InstanceIdentifier<?> iid : change.getRemovedPaths()) {
+                DataObject old = change.getOriginalData().get(iid);
+                if (old != null && old instanceof Node) {
+                    removeSwitch(((Node)old).getId());
+                }
+            }
+
+            for (DataObject dao : change.getCreatedData().values()) {
+                updateSwitch(dao);
+            }
+            for (DataObject dao : change.getUpdatedData().values()) {
+                updateSwitch(dao);
             }
         }
+    }
+    
+    private class NodesConfigListener implements DataChangeListener {
 
-        for (DataObject dao : change.getCreatedData().values()) {
-            updateSwitch(dao);
-        }
-        for (DataObject dao : change.getUpdatedData().values()) {
-            updateSwitch(dao);
+        @Override
+        public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, 
+                                                       DataObject> change) {
+            readSwitches();
         }
     }
 
@@ -163,6 +207,18 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
     // Implementation
     // **************
 
+    private SwitchState getSwitchState(NodeId id) {
+        SwitchState state = switches.get(id); 
+        if (state == null) {
+            state = new SwitchState(id);
+            SwitchState old = 
+                    switches.putIfAbsent(id, state);
+            if (old != null)
+                state = null;
+        }
+        return state;
+    }
+    
     private void updateSwitch(DataObject dao) {
         if (!(dao instanceof Node)) return;
         // Switches are registered as Nodes in the inventory; OpenFlow switches
@@ -173,14 +229,25 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
 
         LOG.debug("{} update", node.getId());
 
-        SwitchState state = switches.get(node.getId());
-        if (state == null) {
-            state = new SwitchState(node);
-            SwitchState old =
-                    switches.putIfAbsent(node.getId(), state);
-            if (old == null) {
-                switchConnected(node.getId());
-            }
+        SwitchState state = getSwitchState(node.getId());
+
+        state.setNode(node);
+        
+        if (SwitchStatus.DISCONNECTED.equals(state.status))
+            switchConnected(node.getId());
+        else if (SwitchStatus.READY.equals(state.status))
+            notifySwitchUpdated(node.getId());
+    }
+    
+    private void updateSwitchConfig(NodeId nodeId, OfOverlayNodeConfig config) {
+        SwitchState state = getSwitchState(nodeId);
+        state.setConfig(config);
+            notifySwitchUpdated(nodeId);
+    }
+
+    private void notifySwitchUpdated(NodeId nodeId) {
+        for (SwitchListener listener : listeners) {
+            listener.switchUpdated(nodeId);
         }
     }
 
@@ -204,6 +271,27 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
         }
     };
 
+    private final FutureCallback<Optional<Nodes>> readSwitchConfCallback =
+            new FutureCallback<Optional<Nodes>>() {
+        @Override
+        public void onSuccess(Optional<Nodes> result) {
+            if (result.isPresent()) {
+                Nodes nodes = (Nodes)result.get();
+                for (Node node : nodes.getNode()) {
+                    OfOverlayNodeConfig config = 
+                            node.getAugmentation(OfOverlayNodeConfig.class);
+                    if (config != null)
+                        updateSwitchConfig(node.getId(), config);
+                }
+            }
+        }
+
+        @Override
+        public void onFailure(Throwable t) {
+            LOG.error("Count not read switch information", t);
+        }
+    };
+
     /**
      * Read the set of switches from the ODL inventory and update our internal
      * map.
@@ -213,10 +301,16 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
      * notifications
      */
     private void readSwitches() {
-        ListenableFuture<Optional<Nodes>> future =
-                dataProvider.newReadOnlyTransaction()
-                    .read(LogicalDatastoreType.OPERATIONAL,nodesIid);
-        Futures.addCallback(future, readSwitchesCallback);
+        if (dataProvider != null) {
+            ListenableFuture<Optional<Nodes>> future = 
+                    dataProvider.newReadOnlyTransaction()
+                    .read(LogicalDatastoreType.CONFIGURATION, nodesIid);
+            Futures.addCallback(future, readSwitchConfCallback);
+            
+            future = dataProvider.newReadOnlyTransaction()
+                    .read(LogicalDatastoreType.OPERATIONAL, nodesIid);
+            Futures.addCallback(future, readSwitchesCallback);
+        }
     }
 
     /**
@@ -258,7 +352,11 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
         LOG.info("Switch {} removed", nodeId);
     }
 
-    private enum SwitchStatus {
+    protected enum SwitchStatus {
+        /**
+         * The switch is not currently connected
+         */
+        DISCONNECTED,
         /**
          * The switch is connected but not yet configured
          */
@@ -272,14 +370,68 @@ public class SwitchManager implements AutoCloseable, DataChangeListener {
     /**
      * Internal representation of the state of a connected switch
      */
-    private static class SwitchState {
+    protected static class SwitchState {
+        NodeId nodeId;
+
         Node switchNode;
-        SwitchStatus status = SwitchStatus.PREPARING;
-        public SwitchState(Node switchNode) {
+        OfOverlayNodeConfig nodeConfig;
+        
+        NodeConnectorId tunnelPort;
+        Set<NodeConnectorId> externalPorts = Collections.emptySet();
+
+        SwitchStatus status = SwitchStatus.DISCONNECTED;
+        
+        public SwitchState(NodeId switchNode) {
             super();
-            this.switchNode = switchNode;
+            nodeId = switchNode;
         }
 
+        /**
+         * Constructor used for tests
+         */
+        public SwitchState(NodeId node,
+                           NodeConnectorId tunnelPort,
+                           Set<NodeConnectorId> externalPorts) {
+            this.nodeId = node;
+            this.tunnelPort = tunnelPort;
+            this.externalPorts = externalPorts;
+        }
+        
+        private void update() {
+            if (switchNode == null) return;
+            FlowCapableNode fcn = 
+                    switchNode.getAugmentation(FlowCapableNode.class);
+            if (fcn == null) return;
+            
+            List<NodeConnector> ports = switchNode.getNodeConnector();
+            HashSet<NodeConnectorId> externalPorts = new HashSet<>();
+            for (NodeConnector nc : ports) {
+                FlowCapableNodeConnector fcnc = 
+                        nc.getAugmentation(FlowCapableNodeConnector.class);
+                if (fcnc == null || fcnc.getName() == null) continue;
+
+                if (fcnc.getName().matches(".*_(vxlan|tun)\\d+")) {
+                    tunnelPort = nc.getId();
+                }
+                if (nodeConfig != null) {
+                    for (String pattern : nodeConfig.getExternalInterfaces()) {
+                        if (fcnc.getName().matches(pattern))
+                            externalPorts.add(nc.getId());
+                    }
+                }
+            }
+            this.externalPorts = Collections.unmodifiableSet(externalPorts);
+        }
+        
+        public void setNode(Node switchNode) {
+            this.switchNode = switchNode;
+            update();
+        }
+    
+        public void setConfig(OfOverlayNodeConfig config) {
+            nodeConfig = config;
+            update();
+        }
     }
 
 }

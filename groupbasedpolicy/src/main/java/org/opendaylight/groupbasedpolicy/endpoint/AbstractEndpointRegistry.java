@@ -17,7 +17,6 @@ import org.opendaylight.controller.md.sal.common.api.TransactionStatus;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
-import org.opendaylight.controller.sal.common.util.Rpcs;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointsBuilder;
@@ -40,6 +39,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L3;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcResult;
+import org.opendaylight.yangtools.yang.common.RpcResultBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -253,8 +253,11 @@ public abstract class AbstractEndpointRegistry
             new Function<RpcResult<TransactionStatus>,RpcResult<Void>>() {
         @Override
         public RpcResult<Void> apply(RpcResult<TransactionStatus> input) {
-            return Rpcs.<Void>getRpcResult(input.isSuccessful(), 
-                                           input.getErrors());
+            if (input.isSuccessful())
+                return RpcResultBuilder.<Void>success().build();
+            else 
+                return RpcResultBuilder.<Void>failed()
+                        .withRpcErrors(input.getErrors()).build();
         }
     };
 }

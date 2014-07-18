@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -27,6 +28,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3AddressBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.ArpMatch;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv4Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv6Match;
@@ -35,6 +38,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import static org.junit.Assert.*;
 
@@ -67,7 +71,7 @@ public class PortSecurityTest extends FlowTableTest {
             Long etherType = null;
             if (f.getMatch() != null) {
                 etherType = f.getMatch().getEthernetMatch()
-                        .getEthernetType().getType().getValue().longValue();
+                        .getEthernetType().getType().getValue();
             }
             if (f.getMatch() == null ||
                 PortSecurity.ARP.equals(etherType) ||
@@ -84,6 +88,38 @@ public class PortSecurityTest extends FlowTableTest {
                                any(InstanceIdentifier.class), 
                                any(Flow.class));
     }
+
+    @Test
+    public void testNonLocalAllow() throws Exception {
+        switchManager
+            .addSwitch(new NodeId("openflow:1"), 
+                       new NodeConnectorId("openflow:1:1"), 
+                       ImmutableSet.of(new NodeConnectorId("openflow:1:2")));
+
+        ReadWriteTransaction t = dosync(null);
+        ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
+        verify(t, atLeastOnce()).put(eq(LogicalDatastoreType.CONFIGURATION), 
+                      any(InstanceIdentifier.class), ac.capture());
+        
+        int count = 0;
+        HashMap<String, FlowCtx> flowMap = new HashMap<>();
+        Set<String> ncs = ImmutableSet.of("openflow:1:1", "openflow:1:2");
+        for (Flow f : ac.getAllValues()) {
+            flowMap.put(f.getId().getValue(), new FlowCtx(f));
+            if (f.getMatch() != null && f.getMatch().getInPort() != null &&
+                ncs.contains(f.getMatch().getInPort().getValue())) {
+                assertEquals(f.getInstructions(), 
+                             FlowUtils.gotoTableInstructions((short)(table.getTableId()+1)));
+                count += 1;
+            }
+        }
+        assertEquals(2, count);
+
+        t = dosync(flowMap);
+        verify(t, never()).put(any(LogicalDatastoreType.class), 
+                               any(InstanceIdentifier.class), 
+                               any(Flow.class));
+    }
     
     @Test
     public void testL2() throws Exception {
@@ -93,8 +129,8 @@ public class PortSecurityTest extends FlowTableTest {
             .build();
        
         endpointManager.addEndpoint(ep);
-        ReadWriteTransaction t = dosync(null);
         
+        ReadWriteTransaction t = dosync(null);
         ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
         verify(t, atLeastOnce()).put(eq(LogicalDatastoreType.CONFIGURATION), 
                       any(InstanceIdentifier.class), ac.capture());
@@ -112,7 +148,7 @@ public class PortSecurityTest extends FlowTableTest {
                 Objects.equals(ep.getAugmentation(OfOverlayContext.class).getNodeConnectorId(), 
                                f.getMatch().getInPort())) {
                 count += 1;
-                assertEquals(FlowUtils.gotoTable((short)(table.getTableId()+1)),
+                assertEquals(FlowUtils.gotoTableInstructions((short)(table.getTableId()+1)),
                              f.getInstructions());
             }
         }
@@ -135,8 +171,8 @@ public class PortSecurityTest extends FlowTableTest {
             .build();
         
         endpointManager.addEndpoint(ep);
-        ReadWriteTransaction t = dosync(null);
         
+        ReadWriteTransaction t = dosync(null);
         ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
         verify(t, atLeastOnce()).put(eq(LogicalDatastoreType.CONFIGURATION), 
                       any(InstanceIdentifier.class), ac.capture());
@@ -161,7 +197,7 @@ public class PortSecurityTest extends FlowTableTest {
                   Objects.equals(ep.getL3Address().get(1).getIpAddress().getIpv6Address().getValue(),
                                  ((Ipv6Match)f.getMatch().getLayer3Match()).getIpv6Source().getValue())))) {
                 count += 1;
-                assertEquals(FlowUtils.gotoTable((short)(table.getTableId()+1)),
+                assertEquals(FlowUtils.gotoTableInstructions((short)(table.getTableId()+1)),
                              f.getInstructions());
             }
         }

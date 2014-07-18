@@ -9,8 +9,11 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.DropActionCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.OutputActionCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.drop.action._case.DropActionBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.output.action._case.OutputActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
@@ -20,11 +23,13 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.ta
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Instructions;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.InstructionsBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.Instruction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.GoToTableCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.WriteActionsCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.go.to.table._case.GoToTableBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.write.actions._case.WriteActionsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.InstructionBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node;
@@ -129,35 +134,62 @@ public final class FlowUtils {
         return createFlowPath(table, new FlowKey(flowId));
     }
 
-    public static Instructions gotoTable(short tableId) {
+    public static Instructions gotoTableInstructions(short tableId) {
         return new InstructionsBuilder()
         .setInstruction(ImmutableList.of(new InstructionBuilder()
             .setOrder(Integer.valueOf(0))
-            .setInstruction(new GoToTableCaseBuilder()
-                .setGoToTable(new GoToTableBuilder()
-                    .setTableId(tableId)
+            .setInstruction(gotoTable(tableId))
+            .build()))
+        .build();
+    }
+    
+    public static Instruction gotoTable(short tableId) {
+        return new GoToTableCaseBuilder()
+            .setGoToTable(new GoToTableBuilder()
+                .setTableId(tableId)
+                .build())
+            .build();
+    }
+    
+    public static Instruction outputActionIns(NodeConnectorId id) {
+        return new WriteActionsCaseBuilder()
+            .setWriteActions(new WriteActionsBuilder()
+                .setAction(ImmutableList.of(new ActionBuilder()
+                    .setOrder(Integer.valueOf(0))
+                    .setAction(outputAction(id))
+                    .build()))
+                .build())
+            .build();
+    }
+        
+    public static Instructions dropInstructions() {
+        return new InstructionsBuilder()
+        .setInstruction(ImmutableList.of(new InstructionBuilder()
+            .setOrder(Integer.valueOf(0))
+            .setInstruction(new WriteActionsCaseBuilder()
+                .setWriteActions(new WriteActionsBuilder()
+                    .setAction(ImmutableList.of(new ActionBuilder()
+                        .setOrder(Integer.valueOf(0))
+                        .setAction(dropAction())
+                        .build()))
                     .build())
                 .build())
             .build()))
         .build();
     }
     
-    public static Instructions dropInstructions() {
-        return new InstructionsBuilder()
-            .setInstruction(ImmutableList.of(new InstructionBuilder()
-                .setOrder(Integer.valueOf(0))
-                .setInstruction(new WriteActionsCaseBuilder()
-                    .setWriteActions(new WriteActionsBuilder()
-                        .setAction(ImmutableList.of(new ActionBuilder()
-                            .setOrder(Integer.valueOf(0))
-                            .setAction(new DropActionCaseBuilder()
-                                .setDropAction(new DropActionBuilder()
-                                    .build())
-                                .build())
-                            .build()))
-                        .build())
-                    .build())
-                .build()))
+    public static Action dropAction() {
+        return new DropActionCaseBuilder()
+            .setDropAction(new DropActionBuilder()
+                .build())
+            .build();
+    }
+    
+    public static Action outputAction(NodeConnectorId id) {
+        return new OutputActionCaseBuilder()
+            .setOutputAction(new OutputActionBuilder()
+                .setOutputNodeConnector(id)
+                .build())
             .build();
     }
     

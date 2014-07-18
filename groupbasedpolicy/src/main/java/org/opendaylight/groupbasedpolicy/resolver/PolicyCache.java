@@ -51,7 +51,7 @@ class PolicyCache {
                                         ConditionSet ep1Conds,
                                         TenantId ep2Tenant,
                                         EndpointGroupId ep2Group, 
-                                        ConditionSet ep2Conds) {
+                                        ConditionSet ep2Conds) {        
         EgKey k1 = new EgKey(ep1Tenant, ep1Group);
         EgKey k2 = new EgKey(ep2Tenant, ep2Group);
         Policy p = policy.get().get(k1, k2);
@@ -59,6 +59,28 @@ class PolicyCache {
         List<RuleGroup> result = p.ruleMap.get(ep1Conds, ep2Conds);
         if (result == null) return Collections.emptyList();
         return result;
+    }
+    
+    /**
+     * Get the set of providers that have contracts with the consumer
+     * @param tenant the tenant ID for the endpoint group
+     * @param eg the endpoint group ID
+     */
+    protected Set<EgKey> getProvidersForConsumer(TenantId tenant,
+                                                 EndpointGroupId eg) {
+        EgKey k = new EgKey(tenant, eg);
+        return Collections.unmodifiableSet(policy.get().row(k).keySet());
+    }
+    
+    /**
+     * Get the set of providers that apply 
+     * @param tenant the tenant ID for the endpoint group
+     * @param eg the endpoint group ID
+     */
+    protected Set<EgKey> getConsumersForProvider(TenantId tenant,
+                                                 EndpointGroupId eg) {
+        EgKey k = new EgKey(tenant, eg);
+        return Collections.unmodifiableSet(policy.get().column(k).keySet());
     }
     
     /**
