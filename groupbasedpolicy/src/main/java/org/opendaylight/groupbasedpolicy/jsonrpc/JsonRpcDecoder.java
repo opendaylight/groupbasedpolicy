@@ -134,9 +134,8 @@ public class JsonRpcDecoder extends ByteToMessageDecoder {
             int ch = b.getByte(b.readerIndex()) & 0xFF;
             if (!(ch == ' ' || ch == '\r' || ch == '\n' || ch == '\t')) {
                 return;
-            } else {
-                b.readByte(); //move the read index
             }
+            b.readByte(); //move the read index
         }
     }
 

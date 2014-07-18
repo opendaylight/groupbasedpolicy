@@ -25,7 +25,7 @@ public class PolicyUpdateRequest extends RpcMessage {
 
     static public class Params {
         private String context;
-        private List<String> subtree;
+        private List<ManagedObject> subtree;
         private int prr;
         public String getContext() {
             return context;
@@ -33,10 +33,10 @@ public class PolicyUpdateRequest extends RpcMessage {
         public void setContext(String context) {
             this.context = context;
         }
-        public List<String> getSubtree() {
+        public List<ManagedObject> getSubtree() {
             return subtree;
         }
-        public void setSubtree(List<String> subtree) {
+        public void setSubtree(List<ManagedObject> subtree) {
             this.subtree = subtree;
         }
         public int getPrr() {

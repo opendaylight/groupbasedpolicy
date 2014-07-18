@@ -94,6 +94,9 @@ public class OpflexMessageTest {
     public static final String SUBJECT = "webContract";
     public static final String CONTEXT = "353786fd-7327-41dd-b7de-5d672e303730";
     public static final String POLICY_NAME = "webFarmEpg";
+    public static final String PROP_NAME = "subject";
+    public static final String PROP_DATA = "http";
+    public static final String MO_NAME = "webFarmContract";
     public static final String URI = "ef130684-ac17-4118-ad36-8dea0babc7b2";
     public static final String DATA = "condition:notAuthorized";
     public static final String PRR = "100";
@@ -109,11 +112,33 @@ public class OpflexMessageTest {
             "      \"data\":  \"" + DATA + "\"" +
             "   }] }";
 
+    private static final String emptyMo = 
+            "{         \"name\": \"" + MO_NAME + "\"," +
+            "          \"properties\": [ {\"name\": \"" + PROP_NAME + "\", " +
+            "                             \"data\": \"" + PROP_DATA + "\" }]," +
+            "          \"children\": []," +
+            "          \"statistics\": []," +
+            "          \"from_relations\": []," +
+            "          \"to_relations\": []," +
+            "          \"faults\": []," +
+            "          \"health\": [] }";
+            
+    private static final String managedObject = 
+            "{ \"name\": \"" + MO_NAME + "\", " +
+            "  \"properties\": [ { \"name\": \"" + PROP_NAME + "\", " +
+            "                      \"data\": \"" + PROP_DATA + "\" }]," +                    
+            "  \"children\":   [ " + emptyMo + " ], " +
+            "  \"statistics\":   [ " + emptyMo + " ], " +
+            "  \"from_relations\":   [ " + emptyMo + " ], " +
+            "  \"to_relations\":   [ " + emptyMo + " ], " +
+            "  \"faults\":   [ " + emptyMo + " ], " +
+            "  \"health\":   [ " + emptyMo + " ]}";
+            
     private static final String opflexPolicyResponse =
             "{ \"id\":     \"" + ID_UUID + "\"," +
             "  \"error\":  {}," +
             "  \"result\": {" +
-            "      \"policy\": [ \"" + POLICY_NAME + "\"]," +
+            "      \"policy\": [ " + managedObject + "], " +
             "      \"prr\":  \"" + PRR + "\"" +
             "   }}";
 
@@ -122,7 +147,7 @@ public class OpflexMessageTest {
             "  \"method\": \"" + POLICY_REQUEST + "\"," +
             "  \"params\": [ {" +
             "      \"context\":  \"" + CONTEXT + "\"," +
-            "      \"subtree\":  [\"" + POLICY_NAME + "\"]," +
+            "      \"subtree\":  [" + managedObject + "]," +
             "      \"prr\":  \"" + PRR + "\"" +
             "   }] }";
 
@@ -222,22 +247,17 @@ public class OpflexMessageTest {
             "  \"result\": {} }";
 
     private static final String STATE_REQUEST = "report_state";
-    private static final String OBJECT = "ep101";
-    private static final String FAULT = "ep102";
-    private static final String EVENT = "infected";
-    private static final String STATISTICS = "rxPackets: 20";
-    private static final String HEALTH = ".98";
     private static final String opflexStateRequest =
             "{ \"id\":     \"" + ID_UUID + "\"," +
             "  \"method\": \"" + STATE_REQUEST + "\"," +
             "  \"params\": [ {" +
             "      \"subject\":    \"" + SUBJECT + "\"," +
             "      \"context\":  \"" + CONTEXT + "\"," +
-            "      \"object\":  \"" + OBJECT + "\"," +
-            "      \"fault\":  [\"" + FAULT + "\"]," +
-            "      \"event\":  [\"" + EVENT + "\"]," +
-            "      \"statistics\":  [\"" + STATISTICS + "\"]," +
-            "      \"health\":  [\"" + HEALTH + "\"]" +
+            "      \"object\":  " + managedObject + "," +
+            "      \"fault\":  [" + managedObject + "]," +
+            "      \"event\":  [" + managedObject + "]," +
+            "      \"statistics\":  [" + managedObject + "]," +
+            "      \"health\":  [" + managedObject + "]" +
             "   }] }";
 
 
@@ -324,7 +344,21 @@ public class OpflexMessageTest {
         PolicyResolutionResponse opflexResponse = (PolicyResolutionResponse)rpcMsg;
         assertTrue(opflexResponse.getId().equals(ID_UUID));
         assertTrue(opflexResponse.getResult()
-                .getPolicy().get(0).equals(POLICY_NAME));
+                .getPolicy().get(0).getProperties().get(0).getName().equals(PROP_NAME));
+        assertTrue(opflexResponse.getResult()
+                .getPolicy().get(0).getProperties().get(0).getData().equals(PROP_DATA));
+        assertTrue(opflexResponse.getResult()
+                .getPolicy().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getResult()
+                .getPolicy().get(0).getFaults().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getResult()
+                .getPolicy().get(0).getFrom_relations().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getResult()
+                .getPolicy().get(0).getHealth().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getResult()
+                .getPolicy().get(0).getStatistics().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getResult()
+                .getPolicy().get(0).getTo_relations().get(0).getName().equals(MO_NAME));
         assertTrue(opflexResponse.getResult()
                 .getPrr() == Integer.parseInt(PRR));
     }
@@ -337,8 +371,22 @@ public class OpflexMessageTest {
         assertTrue(rpcMsg instanceof PolicyUpdateRequest);
         PolicyUpdateRequest opflexResponse = (PolicyUpdateRequest)rpcMsg;
         assertTrue(opflexResponse.getId().equals(ID_UUID));
-        assertTrue(opflexResponse.getParams()
-                .get(0).getSubtree().get(0).equals(POLICY_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getSubtree().get(0).getProperties().get(0).getName().equals(PROP_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getSubtree().get(0).getProperties().get(0).getData().equals(PROP_DATA));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getSubtree().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getSubtree().get(0).getFaults().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getSubtree().get(0).getFrom_relations().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getSubtree().get(0).getHealth().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getSubtree().get(0).getStatistics().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getSubtree().get(0).getTo_relations().get(0).getName().equals(MO_NAME));
         assertTrue(opflexResponse.getParams()
                 .get(0).getPrr() == Integer.parseInt(PRR));
     }
@@ -351,7 +399,7 @@ public class OpflexMessageTest {
         assertTrue(rpcMsg instanceof PolicyUpdateResponse);
         PolicyUpdateResponse opflexResponse = (PolicyUpdateResponse)rpcMsg;
         assertTrue(opflexResponse.getId().equals(ID_UUID));
-        logger.warn("Result is {}", opflexResponse.getResult().toString());
+        
     }
 
     @Test
@@ -518,22 +566,107 @@ public class OpflexMessageTest {
         assertTrue(opflexResponse.getParams()
                 .get(0).getContext().equals(CONTEXT));
         assertTrue(opflexResponse.getParams()
-                .get(0).getObject().equals(OBJECT));
+                .get(0).getObject().getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getObject().getProperties().get(0).getName().equals(PROP_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getObject().getProperties().get(0).getData().equals(PROP_DATA));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getObject().getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getObject().getFaults().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getObject().getFrom_relations().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getObject().getHealth().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getObject().getStatistics().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getObject().getTo_relations().get(0).getName().equals(MO_NAME));           
+        
         assertTrue(opflexResponse.getParams()
-                .get(0).getFault().get(0).equals(FAULT));
+                .get(0).getFault().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getFault().get(0).getProperties().get(0).getName().equals(PROP_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getFault().get(0).getProperties().get(0).getData().equals(PROP_DATA));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getFault().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getFault().get(0).getFaults().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getFault().get(0).getFrom_relations().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getFault().get(0).getHealth().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getFault().get(0).getStatistics().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getFault().get(0).getTo_relations().get(0).getName().equals(MO_NAME));   
+
         assertTrue(opflexResponse.getParams()
-                .get(0).getEvent().get(0).equals(EVENT));
+                .get(0).getEvent().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getEvent().get(0).getProperties().get(0).getName().equals(PROP_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getEvent().get(0).getProperties().get(0).getData().equals(PROP_DATA));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getEvent().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getEvent().get(0).getFaults().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getEvent().get(0).getFrom_relations().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getEvent().get(0).getHealth().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getEvent().get(0).getStatistics().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getEvent().get(0).getTo_relations().get(0).getName().equals(MO_NAME));          
+        
+        
         assertTrue(opflexResponse.getParams()
-                .get(0).getStatistics().get(0).equals(STATISTICS));
+                .get(0).getStatistics().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getStatistics().get(0).getProperties().get(0).getName().equals(PROP_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getStatistics().get(0).getProperties().get(0).getData().equals(PROP_DATA));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getStatistics().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getStatistics().get(0).getFaults().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getStatistics().get(0).getFrom_relations().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getStatistics().get(0).getHealth().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getStatistics().get(0).getStatistics().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getStatistics().get(0).getTo_relations().get(0).getName().equals(MO_NAME));           
+        
         assertTrue(opflexResponse.getParams()
-                .get(0).getHealth().get(0).equals(HEALTH));
+                .get(0).getHealth().get(0).getName().equals(MO_NAME));        
+        assertTrue(opflexResponse.getParams().get(0)
+                .getHealth().get(0).getProperties().get(0).getName().equals(PROP_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getHealth().get(0).getProperties().get(0).getData().equals(PROP_DATA));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getHealth().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getHealth().get(0).getFaults().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getHealth().get(0).getFrom_relations().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getHealth().get(0).getHealth().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getHealth().get(0).getStatistics().get(0).getName().equals(MO_NAME));
+        assertTrue(opflexResponse.getParams().get(0)
+                .getHealth().get(0).getTo_relations().get(0).getName().equals(MO_NAME));   
     }
 
     @Test
     public void testStateResponse() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
         RpcMessage rpcMsg = objectMapper.
-                readValue(opflexEpPolicyUpdateResponse, StateReportResponse.class);
+                readValue(opflexStateResponse, StateReportResponse.class);
         assertTrue(rpcMsg instanceof StateReportResponse);
         StateReportResponse opflexResponse = (StateReportResponse)rpcMsg;
         assertTrue(opflexResponse.getId().equals(ID_UUID));
