@@ -108,11 +108,11 @@ public class PolicyResolver implements AutoCloseable {
     /**
      *  Keep track of the current relevant policy scopes.
      */
-    private CopyOnWriteArrayList<PolicyScope> policyListenerScopes;
+    protected CopyOnWriteArrayList<PolicyScope> policyListenerScopes;
 
     protected ConcurrentMap<TenantId, TenantContext> resolvedTenants;
 
-    private PolicyCache policyCache = new PolicyCache();
+    protected PolicyCache policyCache = new PolicyCache();
 
     public PolicyResolver(DataBroker dataProvider,
                           ScheduledExecutorService executor) {

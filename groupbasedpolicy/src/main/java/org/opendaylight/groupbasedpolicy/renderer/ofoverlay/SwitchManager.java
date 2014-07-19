@@ -391,10 +391,12 @@ public class SwitchManager implements AutoCloseable {
          */
         public SwitchState(NodeId node,
                            NodeConnectorId tunnelPort,
-                           Set<NodeConnectorId> externalPorts) {
+                           Set<NodeConnectorId> externalPorts,
+                           OfOverlayNodeConfig nodeConfig) {
             this.nodeId = node;
             this.tunnelPort = tunnelPort;
             this.externalPorts = externalPorts;
+            this.nodeConfig = nodeConfig;
         }
         
         private void update() {

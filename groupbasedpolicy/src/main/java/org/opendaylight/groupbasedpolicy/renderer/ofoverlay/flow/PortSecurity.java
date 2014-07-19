@@ -43,9 +43,6 @@ public class PortSecurity extends FlowTable {
             LoggerFactory.getLogger(PortSecurity.class);
     
     public static final short TABLE_ID = 0;
-    protected static final Long ARP = Long.valueOf(0x0806);
-    protected static final Long IPv4 = Long.valueOf(0x0800);
-    protected static final Long IPv6 = Long.valueOf(0x86DD);
     
     public PortSecurity(FlowTableCtx ctx) {
         super(ctx);
@@ -75,9 +72,9 @@ public class PortSecurity extends FlowTable {
         dropFlow(t, tiid, flowMap, 1, null);
         
         // Drop IP traffic that doesn't match a source IP rule
-        dropFlow(t, tiid, flowMap, 110, ARP);
-        dropFlow(t, tiid, flowMap, 111, IPv4);
-        dropFlow(t, tiid, flowMap, 112, IPv6);
+        dropFlow(t, tiid, flowMap, 110, FlowUtils.ARP);
+        dropFlow(t, tiid, flowMap, 111, FlowUtils.IPv4);
+        dropFlow(t, tiid, flowMap, 112, FlowUtils.IPv6);
 
         for (Endpoint e : ctx.endpointManager.getEndpointsForNode(nodeId)) {
             OfOverlayContext ofc = e.getAugmentation(OfOverlayContext.class);
@@ -182,12 +179,12 @@ public class PortSecurity extends FlowTable {
                     m = new ArpMatchBuilder()
                         .setArpSourceTransportAddress(new Ipv4Prefix(ikey))
                         .build();
-                    etherType = ARP;
+                    etherType = FlowUtils.ARP;
                 } else {
                     m = new Ipv4MatchBuilder()
                         .setIpv4Source(new Ipv4Prefix(ikey))
                         .build();
-                    etherType = IPv4;
+                    etherType = FlowUtils.IPv4;
                 }
             } else if (l3.getIpAddress().getIpv6Address() != null) {
                 if (arp) continue;
@@ -195,7 +192,7 @@ public class PortSecurity extends FlowTable {
                 m = new Ipv6MatchBuilder()
                     .setIpv6Source(new Ipv6Prefix(ikey))
                     .build();
-                etherType = IPv6;
+                etherType = FlowUtils.IPv6;
             } else {
                 continue;
             }

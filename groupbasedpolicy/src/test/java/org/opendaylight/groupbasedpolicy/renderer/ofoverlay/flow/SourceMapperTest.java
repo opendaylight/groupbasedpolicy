@@ -41,7 +41,7 @@ public class SourceMapperTest extends FlowTableTest {
     
     @Test
     public void testNoPolicy() throws Exception {
-        endpointManager.addEndpoint(baseEP().build());
+        endpointManager.addEndpoint(localEP().build());
         ReadWriteTransaction t = dosync(null);
         verify(t, never()).put(any(LogicalDatastoreType.class), 
                                any(InstanceIdentifier.class), 
@@ -50,7 +50,7 @@ public class SourceMapperTest extends FlowTableTest {
     
     @Test
     public void testMap() throws Exception {
-        Endpoint ep = baseEP().build();
+        Endpoint ep = localEP().build();
         endpointManager.addEndpoint(ep);
         policyResolver.addTenant(baseTenant().build());
         
@@ -64,7 +64,8 @@ public class SourceMapperTest extends FlowTableTest {
         for (Flow f : ac.getAllValues()) {
             flowMap.put(f.getId().getValue(), new FlowCtx(f));
             if (Objects.equals(ep.getMacAddress(),
-                               f.getMatch().getEthernetMatch().getEthernetSource().getAddress())) {
+                               f.getMatch().getEthernetMatch()
+                                   .getEthernetSource().getAddress())) {
                 // XXX TODO verify register setting in the instructions
                 LOG.info("{}", f);
                 count += 1;

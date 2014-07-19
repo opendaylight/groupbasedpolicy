@@ -68,6 +68,7 @@ class PolicyCache {
      */
     protected Set<EgKey> getProvidersForConsumer(TenantId tenant,
                                                  EndpointGroupId eg) {
+        if (policy.get() == null) return Collections.emptySet();
         EgKey k = new EgKey(tenant, eg);
         return Collections.unmodifiableSet(policy.get().row(k).keySet());
     }
@@ -79,6 +80,7 @@ class PolicyCache {
      */
     protected Set<EgKey> getConsumersForProvider(TenantId tenant,
                                                  EndpointGroupId eg) {
+        if (policy.get() == null) return Collections.emptySet();
         EgKey k = new EgKey(tenant, eg);
         return Collections.unmodifiableSet(policy.get().column(k).keySet());
     }
@@ -97,14 +99,18 @@ class PolicyCache {
         
         for (Cell<EgKey, EgKey, Policy> cell : newPolicy.cellSet()) {
             Policy newp = cell.getValue();
-            Policy oldp = oldPolicy.get(cell.getRowKey(), cell.getColumnKey());
+            Policy oldp = null;
+            if (oldPolicy != null)
+                oldp = oldPolicy.get(cell.getRowKey(), cell.getColumnKey());
             if (oldp == null || !newp.equals(oldp)) {
                 notifySet.add(cell.getRowKey());
             }
         }
-        for (Cell<EgKey, EgKey, Policy> cell : oldPolicy.cellSet()) {
-            if (!newPolicy.contains(cell.getRowKey(), cell.getColumnKey())) {
-                notifySet.add(cell.getRowKey());
+        if (oldPolicy != null) {
+            for (Cell<EgKey, EgKey, Policy> cell : oldPolicy.cellSet()) {
+                if (!newPolicy.contains(cell.getRowKey(), cell.getColumnKey())) {
+                    notifySet.add(cell.getRowKey());
+                }
             }
         }
         return notifySet;

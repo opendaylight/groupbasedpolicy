@@ -534,7 +534,7 @@ module policy {
             type gbp-common:description;
         }
 
-        list parameters {
+        list parameter {
             description 
                 "A parameter for the feature that can be 
                  passed in.";
@@ -621,7 +621,7 @@ module policy {
              MAY instead apply the parent subject feature and instead
              raise a nonfatal exception.";
 
-        config true;
+        config false;
 
         list classifier-definition {
             description

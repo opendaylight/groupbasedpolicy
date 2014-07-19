@@ -8,7 +8,10 @@
 
 package org.opendaylight.groupbasedpolicy.resolver;
 
+import org.opendaylight.groupbasedpolicy.resolver.PolicyCache.Policy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
+
+import com.google.common.collect.Table;
 
 
 /**
@@ -27,5 +30,7 @@ public class MockPolicyResolver extends PolicyResolver {
         IndexedTenant it = new IndexedTenant(t);
         context.tenant.set(it);
         resolvedTenants.put(unresolvedTenant.getId(), context);
+        Table<EgKey, EgKey, Policy> policy = resolvePolicy(t);
+        policyCache.updatePolicy(policy, policyListenerScopes);
     }
 }

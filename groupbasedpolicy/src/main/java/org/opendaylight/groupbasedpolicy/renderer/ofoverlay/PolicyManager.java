@@ -31,6 +31,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.DestinationMapp
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable.FlowTableCtx;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PortSecurity;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.SourceMapper;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
@@ -44,8 +45,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.ta
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.UniqueId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig.LearningMode;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.SubjectFeatureDefinitions;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.NodeBuilder;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -115,12 +118,23 @@ public class PolicyManager
         this.switchManager = switchManager;
         this.executor = executor;
 
+        if (dataBroker != null) {
+            WriteTransaction t = dataBroker.newWriteOnlyTransaction();
+            t.put(LogicalDatastoreType.OPERATIONAL, 
+                  InstanceIdentifier
+                      .builder(SubjectFeatureDefinitions.class)
+                      .build(),
+                  SubjectFeatures.OF_OVERLAY_FEATURES);
+            t.commit();
+        }
+
         FlowTableCtx ctx = new FlowTableCtx(dataBroker, rpcRegistry, 
                                             this, policyResolver, switchManager, 
                                             endpointManager, executor);
         flowPipeline = ImmutableList.of(new PortSecurity(ctx),
                                         new SourceMapper(ctx),
-                                        new DestinationMapper(ctx));
+                                        new DestinationMapper(ctx),
+                                        new PolicyEnforcer(ctx));
 
         policyScope = policyResolver.registerListener(this);
         if (switchManager != null)

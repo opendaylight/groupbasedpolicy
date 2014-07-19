@@ -74,9 +74,9 @@ public class PortSecurityTest extends FlowTableTest {
                         .getEthernetType().getType().getValue();
             }
             if (f.getMatch() == null ||
-                PortSecurity.ARP.equals(etherType) ||
-                PortSecurity.IPv4.equals(etherType) ||
-                PortSecurity.IPv6.equals(etherType)) {
+                FlowUtils.ARP.equals(etherType) ||
+                FlowUtils.IPv4.equals(etherType) ||
+                FlowUtils.IPv6.equals(etherType)) {
                 count += 1;
                 assertEquals(FlowUtils.dropInstructions(),
                              f.getInstructions());
@@ -94,7 +94,8 @@ public class PortSecurityTest extends FlowTableTest {
         switchManager
             .addSwitch(new NodeId("openflow:1"), 
                        new NodeConnectorId("openflow:1:1"), 
-                       ImmutableSet.of(new NodeConnectorId("openflow:1:2")));
+                       ImmutableSet.of(new NodeConnectorId("openflow:1:2")),
+                       null);
 
         ReadWriteTransaction t = dosync(null);
         ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
@@ -124,7 +125,7 @@ public class PortSecurityTest extends FlowTableTest {
     @Test
     public void testL2() throws Exception {
         List<L3Address> l3 = Collections.emptyList();
-        Endpoint ep = baseEP()
+        Endpoint ep = localEP()
             .setL3Address(l3)
             .build();
        
@@ -161,7 +162,7 @@ public class PortSecurityTest extends FlowTableTest {
     
     @Test
     public void testL3() throws Exception {
-        Endpoint ep = baseEP()
+        Endpoint ep = localEP()
             .setL3Address(ImmutableList.of(new L3AddressBuilder()
                 .setIpAddress(new IpAddress(new Ipv4Address("10.10.10.10")))
                 .build(),

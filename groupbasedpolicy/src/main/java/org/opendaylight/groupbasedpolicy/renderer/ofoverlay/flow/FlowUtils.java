@@ -8,12 +8,20 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
+import java.util.ArrayList;
+
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.DecNwTtlCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.DropActionCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.OutputActionCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.SetDlDstActionCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.SetDlSrcActionCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.dec.nw.ttl._case.DecNwTtlBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.drop.action._case.DropActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.output.action._case.OutputActionBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.set.dl.dst.action._case.SetDlDstActionBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.set.dl.src.action._case.SetDlSrcActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
@@ -48,7 +56,19 @@ import com.google.common.collect.ImmutableList;
  * Utilities for constructing OpenFlow flows
  */
 public final class FlowUtils {
-
+    /**
+     * ARP ethertype
+     */
+    protected static final Long ARP = Long.valueOf(0x0806);
+    /**
+     * IPv4 ethertype
+     */
+    protected static final Long IPv4 = Long.valueOf(0x0800);
+    /**
+     * IPv6 ethertype
+     */
+    protected static final Long IPv6 = Long.valueOf(0x86DD);
+    
     /**
      * Creates an Instance Identifier (path) for node with specified id
      *
@@ -59,34 +79,6 @@ public final class FlowUtils {
         createNodePath(final NodeId nodeId) {
         return InstanceIdentifier.builder(Nodes.class)
                 .child(Node.class, new NodeKey(nodeId))
-                .build();
-    }
-
-    /**
-     * Shorten's node child path to node path.
-     *
-     * @param nodeChild child of node, from which we want node path.
-     * @return
-     */
-    public static final InstanceIdentifier<Node> 
-        getNodePath(final InstanceIdentifier<?> nodeChild) {
-        return nodeChild.firstIdentifierOf(Node.class);
-    }
-
-
-    /**
-     * Creates a table path by appending table specific location to node path
-     *
-     * @param nodePath
-     * @param tableKey
-     * @return
-     */
-    public static final InstanceIdentifier<Table> 
-        createTablePath(final InstanceIdentifier<Node> nodePath, 
-                        final TableKey tableKey) {
-        return nodePath.builder()
-                .augmentation(FlowCapableNode.class)
-                .child(Table.class, tableKey)
                 .build();
     }
 
@@ -138,12 +130,12 @@ public final class FlowUtils {
         return new InstructionsBuilder()
         .setInstruction(ImmutableList.of(new InstructionBuilder()
             .setOrder(Integer.valueOf(0))
-            .setInstruction(gotoTable(tableId))
+            .setInstruction(gotoTableIns(tableId))
             .build()))
         .build();
     }
     
-    public static Instruction gotoTable(short tableId) {
+    public static Instruction gotoTableIns(short tableId) {
         return new GoToTableCaseBuilder()
             .setGoToTable(new GoToTableBuilder()
                 .setTableId(tableId)
@@ -152,12 +144,22 @@ public final class FlowUtils {
     }
     
     public static Instruction outputActionIns(NodeConnectorId id) {
+        return writeActionIns(outputAction(id));
+    }
+    
+    public static Instruction writeActionIns(Action... actions) {
+        ArrayList<org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.Action> alist
+            = new ArrayList<>();
+        int count = 0;
+        for (Action action : actions) {
+            alist.add(new ActionBuilder()
+                .setOrder(Integer.valueOf(count++))
+                .setAction(action)
+                .build());
+        }
         return new WriteActionsCaseBuilder()
             .setWriteActions(new WriteActionsBuilder()
-                .setAction(ImmutableList.of(new ActionBuilder()
-                    .setOrder(Integer.valueOf(0))
-                    .setAction(outputAction(id))
-                    .build()))
+                .setAction(alist)
                 .build())
             .build();
     }
@@ -192,7 +194,30 @@ public final class FlowUtils {
                 .build())
             .build();
     }
-    
+
+    public static Action setDlSrc(MacAddress mac) {
+        return new SetDlSrcActionCaseBuilder()
+            .setSetDlSrcAction(new SetDlSrcActionBuilder()
+                .setAddress(mac)
+                .build())
+            .build();
+    }
+
+    public static Action setDlDst(MacAddress mac) {
+        return new SetDlDstActionCaseBuilder()
+            .setSetDlDstAction(new SetDlDstActionBuilder()
+                .setAddress(mac)
+                .build())
+            .build();
+    }
+
+    public static Action decNwTtl() {
+        return new DecNwTtlCaseBuilder()
+            .setDecNwTtl(new DecNwTtlBuilder()
+                .build())
+            .build();
+    }
+
     public static EthernetMatch ethernetMatch(MacAddress srcMac, 
                                               MacAddress dstMac,
                                               Long etherType) {

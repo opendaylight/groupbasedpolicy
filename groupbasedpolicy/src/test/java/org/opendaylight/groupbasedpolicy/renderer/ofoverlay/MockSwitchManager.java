@@ -10,6 +10,7 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 
 import java.util.Set;
 
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfig;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 
@@ -24,8 +25,10 @@ public class MockSwitchManager extends SwitchManager {
 
     public void addSwitch(NodeId node, 
                           NodeConnectorId tunnelPort,
-                          Set<NodeConnectorId> externalPorts) {
-        SwitchState state = new SwitchState(node, tunnelPort, externalPorts);
+                          Set<NodeConnectorId> externalPorts,
+                          OfOverlayNodeConfig nodeConfig) {
+        SwitchState state = new SwitchState(node, tunnelPort, 
+                                            externalPorts, nodeConfig);
         state.status = SwitchStatus.READY;
         switches.put(node, state);
         for (SwitchListener listener : listeners) {
