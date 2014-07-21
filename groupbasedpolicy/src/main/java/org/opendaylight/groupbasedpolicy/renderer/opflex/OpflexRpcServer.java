@@ -37,11 +37,11 @@ public class OpflexRpcServer {
     private String address;
     private int port;
 
-    private void parseAndSetIdentity(String identity) {
-        if (identity.split(":").length == 2) {
-            this.identity = identity;
-            this.address = identity.split(":")[0];
-            this.port =  Integer.parseInt(identity.split(":")[1]);
+    private void parseAndSetIdentity(String id) {
+        if (id.split(":").length == 2) {
+            this.identity = id;
+            this.address = id.split(":")[0];
+            this.port =  Integer.parseInt(id.split(":")[1]);
         }
     }
 
@@ -105,8 +105,8 @@ public class OpflexRpcServer {
         new Thread() {
             private RpcServer server;
 
-            public Thread initializeServerParams(RpcServer server) {
-                this.server = server;
+            public Thread initializeServerParams(RpcServer srv) {
+                this.server = srv;
                 return this;
             }
             @Override

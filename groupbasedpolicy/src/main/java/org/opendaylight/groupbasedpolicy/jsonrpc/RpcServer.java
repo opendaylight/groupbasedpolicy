@@ -98,7 +98,7 @@ public class RpcServer {
         return this.channel;
     }
 
-    private void handleNewConnection(String identifier, Channel channel)
+    void handleNewConnection(String identifier, Channel newChannel)
             throws InterruptedException, ExecutionException {
 
         ObjectMapper objectMapper = new ObjectMapper();
@@ -106,15 +106,15 @@ public class RpcServer {
                 DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
         JsonRpcEndpoint endpoint = new JsonRpcEndpoint(identifier, connectionService,
-                objectMapper, channel, messageMap, broker);
+                objectMapper, newChannel, messageMap, broker);
         endpoint.setContext(context);
         JsonRpcServiceBinderHandler binderHandler =
                 new JsonRpcServiceBinderHandler(endpoint);
-        channel.pipeline().addLast(binderHandler);
+        newChannel.pipeline().addLast(binderHandler);
 
         connectionService.addConnection(endpoint);
 
-        ChannelFuture closeFuture = channel.closeFuture();
+        ChannelFuture closeFuture = newChannel.closeFuture();
         closeFuture.addListener(endpoint);
     }
 
@@ -129,21 +129,21 @@ public class RpcServer {
                     .handler(new LoggingHandler(LogLevel.INFO))
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
-                        public void initChannel(SocketChannel channel)
+                        public void initChannel(SocketChannel ch)
                                 throws Exception {
                             logger.debug("New Passive channel created : "
-                                    + channel.toString());
-                            InetAddress address = channel.remoteAddress()
+                                    + ch.toString());
+                            InetAddress address = ch.remoteAddress()
                                     .getAddress();
-                            int port = channel.remoteAddress().getPort();
+                            int port = ch.remoteAddress().getPort();
                             String identifier = address.getHostAddress() + ":"
                                     + port;
-                            channel.pipeline().addLast(
+                            ch.pipeline().addLast(
                                     new LoggingHandler(LogLevel.INFO),
                                     new JsonRpcDecoder(100000),
                                     new StringEncoder(CharsetUtil.UTF_8));
 
-                            handleNewConnection(identifier, channel);
+                            handleNewConnection(identifier, ch);
                             logger.warn("Connected Node : " + identifier);
                         }
                     });

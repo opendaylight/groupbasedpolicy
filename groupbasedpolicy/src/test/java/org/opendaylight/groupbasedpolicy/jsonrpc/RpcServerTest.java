@@ -20,8 +20,7 @@ public class RpcServerTest implements ConnectionService, RpcBroker {
 
     private static final String TEST_IP = "127.0.0.1";
     private static final int TEST_PORT = 53670;
-    private static boolean newConnection = false;
-    private static boolean serverClosed = false;
+
 
     @Override
     public void addConnection(JsonRpcEndpoint endpoint) {

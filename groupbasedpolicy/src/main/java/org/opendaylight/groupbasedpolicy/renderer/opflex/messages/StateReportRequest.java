@@ -26,11 +26,11 @@ public class StateReportRequest extends RpcMessage {
     static public class Params {
         private String subject;
         private String context;
-        private String object;   // TODO: change to MOs
-        private List<String> fault;
-        private List<String> event;
-        private List<String> statistics;
-        private List<String> health;
+        private ManagedObject object;
+        private List<ManagedObject> fault;
+        private List<ManagedObject> event;
+        private List<ManagedObject> statistics;
+        private List<ManagedObject> health;
         public String getSubject() {
             return subject;
         }
@@ -43,34 +43,34 @@ public class StateReportRequest extends RpcMessage {
         public void setContext(String context) {
             this.context = context;
         }
-        public String getObject() {
+        public ManagedObject getObject() {
             return object;
         }
-        public void setObject(String object) {
+        public void setObject(ManagedObject object) {
             this.object = object;
         }
-        public List<String> getFault() {
+        public List<ManagedObject> getFault() {
             return fault;
         }
-        public void setFault(List<String> fault) {
+        public void setFault(List<ManagedObject> fault) {
             this.fault = fault;
         }
-        public List<String> getEvent() {
+        public List<ManagedObject> getEvent() {
             return event;
         }
-        public void setEvent(List<String> event) {
+        public void setEvent(List<ManagedObject> event) {
             this.event = event;
         }
-        public List<String> getStatistics() {
+        public List<ManagedObject> getStatistics() {
             return statistics;
         }
-        public void setStatistics(List<String> statistics) {
+        public void setStatistics(List<ManagedObject> statistics) {
             this.statistics = statistics;
         }
-        public List<String> getHealth() {
+        public List<ManagedObject> getHealth() {
             return health;
         }
-        public void setHealth(List<String> health) {
+        public void setHealth(List<ManagedObject> health) {
             this.health = health;
         }
     }

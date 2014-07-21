@@ -72,9 +72,9 @@ public class JsonRpcEndpointTest implements RpcBroker, RpcBroker.RpcCallback {
     }
 
     @Override
-    public void publish(JsonRpcEndpoint endpoint, RpcMessage message) {
+    public void publish(JsonRpcEndpoint ep, RpcMessage message) {
         testTriggerFlag = true;
-        callback(endpoint, message);
+        callback(ep, message);
     }
 
     @JsonDeserialize
@@ -167,14 +167,13 @@ public class JsonRpcEndpointTest implements RpcBroker, RpcBroker.RpcCallback {
     }
 
     @Override
-    public void callback(JsonRpcEndpoint endpoint, RpcMessage message) {
+    public void callback(JsonRpcEndpoint ep, RpcMessage message) {
 
         if (message != null && message instanceof JsonRpcEndpointTest.OpflexTest) {
             JsonRpcEndpointTest.OpflexTest msg = (JsonRpcEndpointTest.OpflexTest)message;
             if ( msg.getParams() == null) {
                 return;
             }
-            List<String> roles = msg.params.get(0).getMy_role();
         }
     }
 

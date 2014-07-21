@@ -18,10 +18,13 @@ import static org.mockito.Mockito.when;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 
+import java.io.IOException;
+import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.Before;
+import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -64,7 +67,6 @@ public class OpflexConnectionServiceTest {
 
     static private final String TEST_EP_UUID = "85d53c32-47af-4eaf-82fd-ced653ff74da";
     static public final String TEST_IP = "127.0.0.1";
-    static public final String TEST_PORT = "57563";
 
     static private final String ID_UUID = "2da9e3d7-0bbe-4099-b343-12783777452f";
     static private final String SEND_IDENTITY = "send_identity";
@@ -108,14 +110,39 @@ public class OpflexConnectionServiceTest {
     private Optional<Domains> mockDao;
     @Mock
     private Domains mockDomains;
-    @Mock
-    private Domain mockDomain;
+    @Mock Domain mockDomain;
     @Mock
     private OpflexDomain mockOpflexDomain;
     @Mock
     private OpflexRpcServer mockOpflexServer;
     @Mock
     private OpflexAgent mockAgent;
+    
+    private ServerSocket create(int[] ports) throws IOException {
+        for (int port : ports) {
+            try {
+                return new ServerSocket(port);
+            } catch (IOException ex) {
+                continue; // try next port
+            }
+        }
+
+        // if the program gets here, no port in the range was found
+        throw new IOException("no free port found");
+    }
+    
+    private int getAvailableServerPort() {
+        try {
+            int freePort;
+            ServerSocket s = create(new int[] 
+                    { 6670, 6671, 6672, 6673, 6674, 6675, 6676, 6677, 6678 });
+            freePort = s.getLocalPort();
+            s.close();
+            return freePort;
+        } catch (IOException ex) {
+            return 0;
+        }
+    }
 
     @Before
     public void setUp() throws Exception {
@@ -132,7 +159,10 @@ public class OpflexConnectionServiceTest {
         when(mockOption.get()).thenReturn(mockDao);
         when(mockDao.get()).thenReturn(mockDomains);
         when(mockDomains.getDomain())
-        .thenReturn(new ArrayList<Domain>() {{ add(mockDomain); }});
+        .thenReturn(new ArrayList<Domain>() {          
+            private static final long serialVersionUID = 6302503537798173568L;
+            { add(mockDomain); }});
+        
         when(mockDomain.getDiscoveryDefinitions()).thenReturn(dummyDefinitions);
 
         /*
@@ -143,13 +173,15 @@ public class OpflexConnectionServiceTest {
         prBuilder = new PolicyRepositoryBuilder();
         oBuilder = new ObserverBuilder();
 
-
-        // TODO: needs deterministic way of finding available socket
-        System.setProperty(OpflexConnectionService.OPFLEX_LISTENPORT, TEST_PORT);
+        int testPort = getAvailableServerPort();
+        if ( testPort == 0) {
+            assertTrue(1==0);
+        }
+        System.setProperty(OpflexConnectionService.OPFLEX_LISTENPORT, Integer.toString(testPort));
         System.setProperty(OpflexConnectionService.OPFLEX_LISTENIP, TEST_IP);
     }
 
-    //@Test
+    @Test
     public void testNoDefinitions() throws Exception {
 
         opflexService = new OpflexConnectionService();
@@ -157,17 +189,18 @@ public class OpflexConnectionServiceTest {
         verify(mockDataBroker).newReadOnlyTransaction();
     }
 
-    //@Test
+    @Test
     public void testInitialSet() throws Exception {
         registries = new ArrayList<EndpointRegistry>();
         repositories = new ArrayList<PolicyRepository>();
         observers = new ArrayList<Observer>();
+        int serverPort = getAvailableServerPort();
         EndpointRegistry epr = eprBuilder.setId(TEST_IP)
-                .setPort(Integer.valueOf(TEST_PORT)).build();
+                .setPort(serverPort).build();
         PolicyRepository pr = prBuilder.setId(TEST_IP)
-                .setPort(Integer.valueOf(TEST_PORT)).build();
+                .setPort(serverPort).build();
         Observer o = oBuilder.setId(TEST_IP)
-                .setPort(Integer.valueOf(TEST_PORT)).build();
+                .setPort(serverPort).build();
         registries.add(epr);
         repositories.add(pr);
         observers.add(o);
@@ -180,7 +213,7 @@ public class OpflexConnectionServiceTest {
 
     }
 
-    //@Test
+    @Test
     public void testAddConnection() throws Exception {
         when(mockEp.getIdentifier()).thenReturn(TEST_EP_UUID);
         when(mockEp.getContext()).thenReturn(mockOpflexServer);
@@ -194,7 +227,7 @@ public class OpflexConnectionServiceTest {
         verify(mockOpflexDomain, Mockito.times(1)).addOpflexAgent((OpflexAgent)anyObject());
     }
 
-    //@Test
+    @Test
     public void testChannelClosed() throws Exception {
         when(mockEp.getIdentifier()).thenReturn(TEST_EP_UUID);
         when(mockEp.getContext()).thenReturn(mockOpflexServer);
@@ -218,7 +251,7 @@ public class OpflexConnectionServiceTest {
         verify(mockAgent).getIdentity();
     }
 
-    //@Test
+    @Test
     public void testPublishSubscribeCallback() throws Exception {
 
         List<Role> testRoles = new ArrayList<Role>();

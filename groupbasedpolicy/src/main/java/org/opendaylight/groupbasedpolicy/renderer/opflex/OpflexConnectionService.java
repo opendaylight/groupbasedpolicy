@@ -23,7 +23,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.TransactionStatus;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.jsonrpc.ConnectionService;
@@ -34,16 +33,13 @@ import org.opendaylight.groupbasedpolicy.jsonrpc.RpcServer;
 import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.IdentityRequest;
 import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.IdentityResponse;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.Domains;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.DomainsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.Domain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.DomainKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.domain.DiscoveryDefinitions;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.domain.discovery.definitions.EndpointRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.domain.discovery.definitions.Observer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.domain.discovery.definitions.PolicyRepository;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,11 +93,6 @@ public class OpflexConnectionService
     public static final InstanceIdentifier<Domains> DOMAINS_IID =
             InstanceIdentifier.builder(Domains.class).build();
 
-    public InstanceIdentifier<Domain> domainIid(DomainKey domainKey) {
-        return InstanceIdentifier.builder(Domains.class).child(Domain.class, domainKey)
-                .build();
-    }
-
     public OpflexConnectionService() {
         int numCPU = Runtime.getRuntime().availableProcessors();
         executor = Executors.newScheduledThreadPool(numCPU * 2);
@@ -120,7 +111,7 @@ public class OpflexConnectionService
         start();
     }
 
-    private List<OpflexRpcServer> setDefaultIdentities(OpflexDomain domain) {
+    private List<OpflexRpcServer> setDefaultIdentities(OpflexDomain od) {
 
         /*
          * Create a single server, filling all roles
@@ -132,8 +123,6 @@ public class OpflexConnectionService
         roles.add(Role.ENDPOINT_REGISTRY);
         roles.add(Role.OBSERVER);
 
-        OpflexDomain od = new OpflexDomain();
-        od.setDomain(OPFLEX_DOMAIN);
         OpflexRpcServer srv = new OpflexRpcServer(od, identity, roles);
         srv.setConnectionService(this);
         srv.setRpcBroker(this);
@@ -159,32 +148,10 @@ public class OpflexConnectionService
         return null;
     }
 
-    private void initializeConfig() {
-        // XXX - This is a hack to avoid a bug in the data broker
-        // API where you have to write all the parents before you can write
-        // a child
-        WriteTransaction t = dataProvider.newWriteOnlyTransaction();
-        t.put(LogicalDatastoreType.CONFIGURATION, DOMAINS_IID, new DomainsBuilder().build());
-        ListenableFuture<RpcResult<TransactionStatus>> f = t.commit();
-        Futures.addCallback(f, new FutureCallback<RpcResult<TransactionStatus>>() {
-
-            @Override
-            public void onSuccess(RpcResult<TransactionStatus> result) {
-
-            }
-
-            @Override
-            public void onFailure(Throwable t) {
-                logger.error("Could not write domain base container", t);
-            }
-        });
-    }
-
     private void initializeServers() {
 
         OpflexDomain od;
 
-        //initializeConfig();
         readConfig();
         /*
          * Get the configured identities, if any. If lists are empty,
@@ -201,7 +168,7 @@ public class OpflexConnectionService
         }
         else {
             // TODO: should also write into config store?
-            logger.warn("Setting default identities");
+            logger.info("Setting default identities");
             od = new OpflexDomain();
             od.setDomain(OPFLEX_DOMAIN);
             od.addServers(setDefaultIdentities(od));
@@ -320,6 +287,9 @@ public class OpflexConnectionService
     }
 
 
+    /**
+     * Start the {@link OpflexConnectionService}
+     */
     public void start() {
         opflexDomains = new ConcurrentHashMap<String, OpflexDomain>();
         brokerMap = new ConcurrentHashMap<String, List<RpcCallback>>();
@@ -362,13 +332,109 @@ public class OpflexConnectionService
 
 
     private void deleteDomain(String domain) {
-
         OpflexDomain od = opflexDomains.remove(domain);
         if (od != null) {
             od.cleanup();
         }
     }
 
+     private void readConfig() {
+         ListenableFuture<Optional<Domains>> dao =
+                 dataProvider.newReadOnlyTransaction()
+                     .read(LogicalDatastoreType.CONFIGURATION, DOMAINS_IID);
+         Futures.addCallback(dao, new FutureCallback<Optional<Domains>>() {
+             @Override
+             public void onSuccess(final Optional<Domains> result) {
+                 if (!result.isPresent()) {
+                     return;
+                 }
+                 getNewConfig(result);
+             }
+
+             @Override
+             public void onFailure(Throwable t) {
+                 logger.error("Failed to read configuration", t);
+             }
+         }, executor);
+     }
+
+     void getNewConfig(final Optional<Domains> result) {
+
+         List<String> currentDomains = new ArrayList<String>(opflexDomains.keySet());
+         List<String> newDomains = new ArrayList<String>();
+
+
+         /*
+          * Get the new list of domains from the
+          * configuration store, and convert to a
+          * list of the actual domain names for list
+          * manipulation
+          */
+         Domains domains = result.get();
+
+         domainList = domains.getDomain();
+         for (Domain domainObj : domainList) {
+             newDomains.add(domainObj.getId());
+         }
+
+         /*
+          * Find out what's changed at the domain level.
+          * Classify as additions, deletions, and updates
+          */
+         List<String> addList = new ArrayList<String>(newDomains);
+         List <String> dropList = new ArrayList<String>(currentDomains);
+         List <String> updateList = new ArrayList<String>(newDomains);
+         addList.removeAll(currentDomains);
+         dropList.removeAll(newDomains);
+         updateList.removeAll(addList);
+
+         /*
+          * Drop domains that were removed, along with all
+          * of their servers and connections
+          */
+         for (String d : dropList) {
+             deleteDomain(d);
+         }
+
+         /*
+          * These are entirely new domains -- get the
+          * information for each new domain and configure
+          */
+         for (String d : addList) {
+             OpflexDomain od = new OpflexDomain();
+             od.setDomain(d);
+             opflexDomains.put(od.getDomain(), od );
+
+             /* Spawn the servers for this domain */
+             for (Domain dl : domainList) {
+                 if (dl.getId().equals(d)) {
+                     od.addServers(createServerList(od, dl));
+                     break;
+                 }
+             }
+         }
+
+         /*
+          * These are domains with updates
+          */
+         for (String d : updateList) {
+             OpflexDomain od = opflexDomains.get(d);
+             for (Domain domainObj : domainList) {
+                 if (domainObj.getId().equals(d)) {
+                     od.updateServers(createServerList(od, domainObj));
+                     break;
+                 }
+             }
+         }
+     }
+
+    @Override
+    public void onDataChanged( final AsyncDataChangeEvent<InstanceIdentifier<?>,
+            DataObject>change) {
+
+        readConfig();
+    }
+    
     /**
      * Close the connection service. Implemented from the
      * AutoCloseable interface.
@@ -385,110 +451,6 @@ public class OpflexConnectionService
          }
      }
 
-     private void readConfig() {
-         ListenableFuture<Optional<Domains>> dao =
-                 dataProvider.newReadOnlyTransaction()
-                     .read(LogicalDatastoreType.CONFIGURATION, DOMAINS_IID);
-         Futures.addCallback(dao, new FutureCallback<Optional<Domains>>() {
-             @Override
-             public void onSuccess(final Optional<Domains> result) {
-                 if (!result.isPresent()) {
-                     logger.warn("No result!!!");
-                     return;
-                 }
-                 getNewConfig(result);
-             }
-
-             @Override
-             public void onFailure(Throwable t) {
-                 logger.error("Failed to read configuration", t);
-             }
-         }, executor);
-     }
-
-     private void getNewConfig(final Optional<Domains> result) {
-
-         List<String> currentDomains = new ArrayList<String>(opflexDomains.keySet());
-         List<String> newDomains = new ArrayList<String>();
-         List<String> addList = new ArrayList<String>();
-         List <String> dropList = new ArrayList<String>();
-         List <String> updateList = new ArrayList<String>();
-
-         if (result.get() instanceof Domains) {
-
-             /*
-              * Get the new list of domains from the
-              * configuration store, and convert to a
-              * list of the actual domain names for list
-              * manipulation
-              */
-             Domains domains = (Domains)result.get();
-
-             domainList = domains.getDomain();
-             for (Domain domainObj : domainList) {
-                 newDomains.add(domainObj.getId());
-             }
-
-             logger.warn("Current domains {}", currentDomains);
-             /*
-              * Find out what's changed at the domain level.
-              * Classify as additions, deletions, and updates
-              */
-             addList = new ArrayList<String>(newDomains);
-             dropList = new ArrayList<String>(currentDomains);
-             updateList = new ArrayList<String>(newDomains);
-             addList.removeAll(currentDomains);
-             dropList.removeAll(newDomains);
-             updateList.removeAll(addList);
-
-             /*
-              * Drop domains that were removed, along with all
-              * of their servers and connections
-              */
-             for (String d : dropList) {
-                 deleteDomain(d);
-             }
-
-             /*
-              * These are entirely new domains -- get the
-              * information for each new domain and configure
-              */
-             for (String d : addList) {
-                 OpflexDomain od = new OpflexDomain();
-                 od.setDomain(d);
-                 opflexDomains.put(od.getDomain(), od );
-
-                 /* Spawn the servers for this domain */
-                 for (Domain dl : domainList) {
-                     if (dl.getId().equals(d)) {
-                         od.addServers(createServerList(od, dl));
-                         break;
-                     }
-                 }
-             }
-
-             /*
-              * These are domains with updates
-              */
-             for (String d : updateList) {
-                 OpflexDomain od = opflexDomains.get(d);
-                 for (Domain domainObj : domainList) {
-                     if (domainObj.getId().equals(d)) {
-                         logger.warn("updateServers");
-                         od.updateServers(createServerList(od, domainObj));
-                         break;
-                     }
-                 }
-             }
-         }
-     }
-
-     @Override
-    public void onDataChanged( final AsyncDataChangeEvent<InstanceIdentifier<?>,
-            DataObject>change) {
-
-        readConfig();
-    }
 
     @Override
     public void subscribe(RpcMessage message, RpcCallback callback) {
@@ -522,6 +484,11 @@ public class OpflexConnectionService
         }
     }
 
+    /**
+     * This notification handles the OpFlex Identity request messages.
+     * 
+     * TODO: implement Identity Response messages
+     */
     @Override
     public void callback(JsonRpcEndpoint endpoint, RpcMessage message) {
 
@@ -600,13 +567,21 @@ public class OpflexConnectionService
         }
     }
 
+    /**
+     * This is the notification when a new endpoint
+     * has been created. Since the endpoint is new,
+     * we don't have a OpflexConnection for it yet. We
+     * create the OpflexConnection, then retrieve the
+     * OpflexRpcServer that created this connections
+     * to inherit some of the fields we need (domain, server).
+     */
     @Override
     public void addConnection(JsonRpcEndpoint endpoint) {
 
         /*
-         * When the connection is added, we don't have a context
-         * other than the JsonRpcEndpoint. We use the context
-         * field to store the server object that created this
+         * When the connection is added, we only have the 
+         * JsonRpcEndpoint. We use the JsonRpcEndpoint's 
+         * context field to store the server object that created this
          * connection, and can look up things like the domain,
          * etc. to create the containing connection object.
          */
@@ -620,24 +595,8 @@ public class OpflexConnectionService
         OpflexRpcServer server = (OpflexRpcServer)endpoint.getContext();
         OpflexDomain domain = server.getDomain();
 
-
         /*
-         * This is the notification when a new endpoint
-         * has been created. Since the endpoint is new,
-         * we don't have a OpflexConnection for it yet. We
-         * create the OpflexConnection, then get the
-         * OpflexRpcServer to set some of the fields
-         * we need (domain, server).
-         */
-        OpflexAgent oc = new OpflexAgent();
-        oc.setEndpoint(endpoint);
-        oc.setIdentity(endpoint.getIdentifier());
-        oc.setDomain(domain.getDomain());
-        oc.setOpflexServer(server);
-        oc.setRoles(server.getRoles());
-
-        /*
-         * The OpFlex domain is determined by the server socket
+         * The OpFlex domain is the same as the server 
          * that the agent connected to. Look up the OpFlex RPC
          * server using the server socket.
          *
@@ -646,10 +605,25 @@ public class OpflexConnectionService
          * condition). Treat that as a failure, closing the
          * connection.
          */
-        logger.warn("Adding agent {}", endpoint.getIdentifier());
+        OpflexAgent oc = new OpflexAgent();
+        oc.setEndpoint(endpoint);
+        oc.setIdentity(endpoint.getIdentifier());
+        oc.setDomain(domain.getDomain());
+        oc.setOpflexServer(server);
+        oc.setRoles(server.getRoles());
+
+        logger.info("Adding agent {}", endpoint.getIdentifier());
         domain.addOpflexAgent(oc);
     }
 
+    /**
+     * This is the notification we receive when a connection 
+     * is closed. Retrieve the domain from the {@link JsonRpcEndpoint}'s
+     * context field to get the {@link OpflexRpcServer}, which contains
+     * the OpFlex domain for this connection, then use the identity from 
+     * the {@link JsonRpcEndpoint} and domain to remove the {@link OpflexAgent} 
+     * from the domain
+     */
     @Override
     public void channelClosed(JsonRpcEndpoint endpoint) throws Exception {
         logger.info("Connection to Node : {} closed", endpoint.getIdentifier());

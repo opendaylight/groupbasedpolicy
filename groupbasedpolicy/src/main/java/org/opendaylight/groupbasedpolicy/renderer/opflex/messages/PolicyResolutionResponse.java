@@ -24,12 +24,12 @@ public class PolicyResolutionResponse extends RpcMessage {
     public static final String POLICY_MESSAGE_RESPONSE = "resolve_policy_response";
 
     static public class Result {
-        private List<String> policy;   // TODO: replace with MOs
+        private List<ManagedObject> policy;
         private int prr;
-        public List<String> getPolicy() {
+        public List<ManagedObject> getPolicy() {
             return policy;
         }
-        public void setPolicy(List<String> policy) {
+        public void setPolicy(List<ManagedObject> policy) {
             this.policy = policy;
         }
         public int getPrr() {
