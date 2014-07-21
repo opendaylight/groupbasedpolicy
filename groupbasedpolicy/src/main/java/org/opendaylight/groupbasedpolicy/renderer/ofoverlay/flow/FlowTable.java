@@ -14,7 +14,6 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.TransactionStatus;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.EndpointManager;
@@ -27,7 +26,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.ta
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -125,7 +123,7 @@ public abstract class FlowTable {
             }
         }
 
-        ListenableFuture<RpcResult<TransactionStatus>> result = t.commit();
+        ListenableFuture<Void> result = t.submit();
         Futures.addCallback(result, updateCallback);
     }
 
@@ -164,13 +162,9 @@ public abstract class FlowTable {
      *
      * @param <T> the expected output type
      */
-    protected static class FlowCallback<T> implements FutureCallback<RpcResult<T>> {
-
+    protected static class FlowCallback<T> implements FutureCallback<T> {
         @Override
-        public void onSuccess(RpcResult<T> result) {
-            if (!result.isSuccessful()) {
-                LOG.error("Failed to update flow entry", result.getErrors());
-            }
+        public void onSuccess(T result) {
         }
 
         @Override
@@ -178,7 +172,7 @@ public abstract class FlowTable {
             LOG.error("Failed to add flow entry", t);
         }
     }
-    protected static final FlowCallback<TransactionStatus> updateCallback =
+    protected static final FlowCallback<Void> updateCallback =
             new FlowCallback<>();
 
     /**

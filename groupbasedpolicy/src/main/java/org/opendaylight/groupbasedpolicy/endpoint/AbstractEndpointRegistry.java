@@ -13,8 +13,8 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.TransactionStatus;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService;
@@ -44,6 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Function;
+import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -85,17 +86,17 @@ public abstract class AbstractEndpointRegistry
             WriteTransaction t = this.dataProvider.newWriteOnlyTransaction();
             t.put(LogicalDatastoreType.OPERATIONAL, 
                   iid, new EndpointsBuilder().build());
-            ListenableFuture<RpcResult<TransactionStatus>> f = t.commit();
-            Futures.addCallback(f, new FutureCallback<RpcResult<TransactionStatus>>() {
-
-                @Override
-                public void onSuccess(RpcResult<TransactionStatus> result) {
-
-                }
-
+            CheckedFuture<Void, TransactionCommitFailedException> f = t.submit();
+            Futures.addCallback(f, new FutureCallback<Void>() {
                 @Override
                 public void onFailure(Throwable t) {
                     LOG.error("Could not write endpoint base container", t);
+                }
+
+                @Override
+                public void onSuccess(Void result) {
+                    // TODO Auto-generated method stub
+                    
                 }
             });
         }
@@ -166,7 +167,7 @@ public abstract class AbstractEndpointRegistry
                 t.put(LogicalDatastoreType.OPERATIONAL, iid_l3, ep3);
             }
         }
-        ListenableFuture<RpcResult<TransactionStatus>> r = t.commit();
+        ListenableFuture<Void> r = t.submit();
         return Futures.transform(r, futureTrans, executor);
     }
 
@@ -198,7 +199,7 @@ public abstract class AbstractEndpointRegistry
             }
         }
 
-        ListenableFuture<RpcResult<TransactionStatus>> r = t.commit();
+        ListenableFuture<Void> r = t.submit();
         return Futures.transform(r, futureTrans, executor);
     }
 
@@ -221,7 +222,7 @@ public abstract class AbstractEndpointRegistry
             t.put(LogicalDatastoreType.OPERATIONAL, iid, condition);
         }
 
-        ListenableFuture<RpcResult<TransactionStatus>> r = t.commit();
+        ListenableFuture<Void> r = t.submit();
         return Futures.transform(r, futureTrans, executor);
     }
 
@@ -245,19 +246,15 @@ public abstract class AbstractEndpointRegistry
             t.delete(LogicalDatastoreType.OPERATIONAL, iid);
         }
 
-        ListenableFuture<RpcResult<TransactionStatus>> r = t.commit();
+        ListenableFuture<Void> r = t.submit();
         return Futures.transform(r, futureTrans, executor);
     }
 
-    Function<RpcResult<TransactionStatus>, RpcResult<Void>> futureTrans =
-            new Function<RpcResult<TransactionStatus>,RpcResult<Void>>() {
+    Function<Void, RpcResult<Void>> futureTrans =
+            new Function<Void,RpcResult<Void>>() {
         @Override
-        public RpcResult<Void> apply(RpcResult<TransactionStatus> input) {
-            if (input.isSuccessful())
-                return RpcResultBuilder.<Void>success().build();
-            else 
-                return RpcResultBuilder.<Void>failed()
-                        .withRpcErrors(input.getErrors()).build();
+        public RpcResult<Void> apply(Void input) {
+            return RpcResultBuilder.<Void>success().build();
         }
     };
 }

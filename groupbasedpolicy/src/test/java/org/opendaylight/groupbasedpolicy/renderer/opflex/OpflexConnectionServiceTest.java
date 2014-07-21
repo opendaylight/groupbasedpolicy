@@ -10,11 +10,6 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.opflex;
 
-import static io.netty.buffer.Unpooled.copiedBuffer;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 
@@ -31,8 +26,8 @@ import org.mockito.MockitoAnnotations;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.TransactionStatus;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcDecoder;
 import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcEndpoint;
 import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcServiceBinderHandler;
@@ -48,14 +43,22 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.domain.discovery.definitions.ObserverBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.domain.discovery.definitions.PolicyRepository;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.domain.discovery.definitions.PolicyRepositoryBuilder;
-import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
+import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.ListenableFuture;
+
+import static io.netty.buffer.Unpooled.*;
+
+import static org.junit.Assert.*;
+
+import static org.mockito.Matchers.*;
+
+import static org.mockito.Mockito.*;
 
 /**
  *
@@ -105,7 +108,7 @@ public class OpflexConnectionServiceTest {
     @Mock
     private ListenableFuture<Optional<Domains>> mockOption;
     @Mock
-    ListenableFuture<RpcResult<TransactionStatus>> mockStatus;
+    CheckedFuture<Void, TransactionCommitFailedException> mockStatus;
     @Mock
     private Optional<Domains> mockDao;
     @Mock
@@ -153,7 +156,7 @@ public class OpflexConnectionServiceTest {
          */
         when(mockDataBroker.newReadOnlyTransaction()).thenReturn(mockRead);
         when(mockDataBroker.newWriteOnlyTransaction()).thenReturn(mockWrite);
-        when(mockWrite.commit()).thenReturn(mockStatus);
+        when(mockWrite.submit()).thenReturn(mockStatus);
         when(mockRead.read(LogicalDatastoreType.CONFIGURATION,
                 OpflexConnectionService.DOMAINS_IID)).thenReturn(mockOption);
         when(mockOption.get()).thenReturn(mockDao);

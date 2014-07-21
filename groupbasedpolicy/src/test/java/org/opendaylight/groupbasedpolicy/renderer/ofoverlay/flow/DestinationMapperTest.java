@@ -16,6 +16,7 @@ import java.util.Objects;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Matchers;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable.FlowCtx;
@@ -68,17 +69,18 @@ public class DestinationMapperTest extends FlowTableTest {
     public void testNoEps() throws Exception {
         ReadWriteTransaction t = dosync(null);
         verify(t, never()).put(any(LogicalDatastoreType.class), 
-                               any(InstanceIdentifier.class), 
+                               Matchers.<InstanceIdentifier<Flow>>any(), 
                                any(Flow.class));
     }
 
     private void verifyDMap(Endpoint remoteEp, 
-                          Endpoint localEp) throws Exception {
+                            Endpoint localEp) throws Exception {
 
         ReadWriteTransaction t = dosync(null);
         ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
         verify(t, atLeastOnce()).put(eq(LogicalDatastoreType.CONFIGURATION), 
-                      any(InstanceIdentifier.class), ac.capture());
+                                     Matchers.<InstanceIdentifier<Flow>>any(),
+                                     ac.capture());
 
         int count = 0;
         HashMap<String, FlowCtx> flowMap = new HashMap<>();
@@ -133,10 +135,16 @@ public class DestinationMapperTest extends FlowTableTest {
                             ((WriteActionsCase)ins.getInstruction()).getWriteActions().getAction();
                     assertEquals(FlowUtils.setDlSrc(DestinationMapper.ROUTER_MAC),
                                  actions.get(0).getAction());
+                    assertEquals(Integer.valueOf(0), actions.get(0).getOrder());
                     assertEquals(FlowUtils.setDlDst(localEp.getMacAddress()),
                                  actions.get(1).getAction());
+                    assertEquals(Integer.valueOf(1), actions.get(1).getOrder());
                     assertEquals(FlowUtils.decNwTtl(),
                                  actions.get(2).getAction());
+                    assertEquals(Integer.valueOf(2), actions.get(2).getOrder());
+                    assertEquals(FlowUtils.outputAction(nodeConnectorId),
+                                 actions.get(3).getAction());
+                    assertEquals(Integer.valueOf(3), actions.get(3).getOrder());
                     count += 1;
                 } else if (f.getMatch().getLayer3Match() instanceof Ipv6Match) {
                     // should be remote port with rewrite dlsrc plus
@@ -147,8 +155,13 @@ public class DestinationMapperTest extends FlowTableTest {
                             ((WriteActionsCase)ins.getInstruction()).getWriteActions().getAction();
                     assertEquals(FlowUtils.setDlSrc(DestinationMapper.ROUTER_MAC),
                                  actions.get(0).getAction());
+                    assertEquals(Integer.valueOf(0), actions.get(0).getOrder());
                     assertEquals(FlowUtils.decNwTtl(),
                                  actions.get(1).getAction());
+                    assertEquals(Integer.valueOf(1), actions.get(1).getOrder());
+                    assertEquals(FlowUtils.outputAction(tunnelId),
+                                 actions.get(2).getAction());
+                    assertEquals(Integer.valueOf(2), actions.get(2).getOrder());
                     count += 1;
                 }
             }
@@ -157,7 +170,7 @@ public class DestinationMapperTest extends FlowTableTest {
 
         t = dosync(flowMap);
         verify(t, never()).put(any(LogicalDatastoreType.class), 
-                               any(InstanceIdentifier.class), 
+                               Matchers.<InstanceIdentifier<Flow>>any(), 
                                any(Flow.class));
     }
     

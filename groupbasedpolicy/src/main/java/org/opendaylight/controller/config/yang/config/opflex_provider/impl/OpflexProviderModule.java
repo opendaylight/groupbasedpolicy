@@ -21,7 +21,6 @@ public class OpflexProviderModule extends org.opendaylight.controller.config.yan
         // add custom validation form module attributes here.
     }
 
-    @SuppressWarnings("resource")
     @Override
     public java.lang.AutoCloseable createInstance() {
         final OpflexConnectionService connectionService = new OpflexConnectionService();

@@ -447,7 +447,7 @@ public class OpflexConnectionService
          if (dataProvider != null) {
              WriteTransaction t = dataProvider.newWriteOnlyTransaction();
              t.delete(LogicalDatastoreType.CONFIGURATION, DOMAINS_IID);
-             t.commit().get();
+             t.submit().get();
          }
      }
 

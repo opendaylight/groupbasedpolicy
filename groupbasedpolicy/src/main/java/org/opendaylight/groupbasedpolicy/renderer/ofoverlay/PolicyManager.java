@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.TransactionStatus;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.DestinationMapper;
@@ -49,7 +48,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.NodeBuilder;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -125,7 +123,7 @@ public class PolicyManager
                       .builder(SubjectFeatureDefinitions.class)
                       .build(),
                   SubjectFeatures.OF_OVERLAY_FEATURES);
-            t.commit();
+            t.submit();
         }
 
         FlowTableCtx ctx = new FlowTableCtx(dataBroker, rpcRegistry, 
@@ -173,12 +171,11 @@ public class PolicyManager
         t.put(LogicalDatastoreType.CONFIGURATION, 
               FlowUtils.createNodePath(nodeId),
               nb.build());
-        ListenableFuture<RpcResult<TransactionStatus>> result = t.commit();
+        ListenableFuture<Void> result = t.submit();
         Futures.addCallback(result, 
-                            new FutureCallback<RpcResult<TransactionStatus>>() {
-
+                            new FutureCallback<Void>() {
             @Override
-            public void onSuccess(RpcResult<TransactionStatus> result) {
+            public void onSuccess(Void result) {
                 dirty.get().addNode(nodeId);
                 scheduleUpdate();
             }

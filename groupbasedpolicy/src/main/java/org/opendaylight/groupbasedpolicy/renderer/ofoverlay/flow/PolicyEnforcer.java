@@ -22,7 +22,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
  * @author readams
  */
 public class PolicyEnforcer extends FlowTable {
-    public static final short TABLE_ID = 2;
+    public static final short TABLE_ID = 3;
 
     public PolicyEnforcer(FlowTableCtx ctx) {
         super(ctx);

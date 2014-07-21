@@ -117,16 +117,16 @@ public class DestinationMapper extends FlowTable {
             OfOverlayContext ofc = e.getAugmentation(OfOverlayContext.class);
             if (ofc == null || ofc.getNodeId() == null) continue;
             
-            syncEPL2(t, tiid, flowMap, nodeId, e, ofc, key);
+            syncEP(t, tiid, flowMap, nodeId, e, ofc, key);
         }
     }
 
-    private void syncEPL2(ReadWriteTransaction t,
-                          InstanceIdentifier<Table> tiid,
-                          Map<String, FlowCtx> flowMap, 
-                          NodeId nodeId, 
-                          Endpoint e, OfOverlayContext ofc,
-                          EgKey key) 
+    private void syncEP(ReadWriteTransaction t,
+                        InstanceIdentifier<Table> tiid,
+                        Map<String, FlowCtx> flowMap, 
+                        NodeId nodeId, 
+                        Endpoint e, OfOverlayContext ofc,
+                        EgKey key) 
                                  throws Exception {
 
         ArrayList<Instruction> instructions = new ArrayList<>();
@@ -148,16 +148,20 @@ public class DestinationMapper extends FlowTable {
                 // this is a local endpoint
                 nextHop = ofc.getNodeConnectorId().getValue();
 
+                Action output = FlowUtils.outputAction(ofc.getNodeConnectorId());
+
                 instructions.add(new InstructionBuilder()
-                    .setOrder(order++)
-                    .setInstruction(FlowUtils.outputActionIns(ofc.getNodeConnectorId()))
+                    .setOrder(order)
+                    .setInstruction(FlowUtils.writeActionIns(output))
                     .build());
                 l3instructions.add(new InstructionBuilder()
                     .setOrder(order)
                     .setInstruction(FlowUtils.writeActionIns(setDlSrc,
                                                              setDlDst,
-                                                             decTtl))
+                                                             decTtl,
+                                                             output))
                     .build());
+                order +=1;
             } else {
                 // this endpoint is on a different switch; send to the 
                 // appropriate tunnel
@@ -182,17 +186,22 @@ public class DestinationMapper extends FlowTable {
                     LOG.error("Tunnel IP for {} invalid", ofc.getNodeId());
                     return;
                 }
+
+                Action output = FlowUtils.outputAction(tunPort);
                 
                 // XXX - TODO Add action: set tunnel_id from sEPG register
                 instructions.add(new InstructionBuilder()
-                    .setOrder(order++)
-                    .setInstruction(FlowUtils.outputActionIns(tunPort))
+                    .setOrder(order)
+                    .setInstruction(FlowUtils.writeActionIns(output))
                     .build());
                 l3instructions.add(new InstructionBuilder()
                     .setOrder(order)
-                    .setInstruction(FlowUtils.writeActionIns(setDlSrc, decTtl))
+                    .setInstruction(FlowUtils.writeActionIns(setDlSrc, 
+                                                             decTtl,
+                                                             output))
                     .build());
 
+                order +=1;
             }
         }
         Instruction gotoTable = new InstructionBuilder()
@@ -203,9 +212,9 @@ public class DestinationMapper extends FlowTable {
         l3instructions.add(gotoTable);
 
         FlowId flowid = new FlowId(new StringBuilder()
-            .append(e.getL2Context())
+            .append(e.getL2Context().getValue())
             .append("|l2|")
-            .append(e.getMacAddress())
+            .append(e.getMacAddress().getValue())
             .append("|")
             .append(nextHop)
             .toString());
@@ -222,7 +231,7 @@ public class DestinationMapper extends FlowTable {
                 .setInstructions(new InstructionsBuilder()
                     .setInstruction(instructions)
                     .build());
-            
+
             writeFlow(t, tiid, flowb.build());
         }
         if (e.getL3Address() == null) return;
@@ -248,9 +257,9 @@ public class DestinationMapper extends FlowTable {
                 continue;
 
             flowid = new FlowId(new StringBuilder()
-                .append(l3a.getL3Context())
+                .append(l3a.getL3Context().getValue())
                 .append("|l3|")
-                .append(l3a.getIpAddress())
+                .append(ikey)
                 .append("|")
                 .append(nextHop)
                 .toString());
@@ -269,7 +278,7 @@ public class DestinationMapper extends FlowTable {
                     .setInstructions(new InstructionsBuilder()
                         .setInstruction(l3instructions)
                         .build());
-                
+
                 writeFlow(t, tiid, flowb.build());
             }
         }

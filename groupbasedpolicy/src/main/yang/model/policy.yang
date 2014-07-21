@@ -330,12 +330,6 @@ module policy {
              endpoint group, and provider named selectors select
              contracts to provide capabilities for the endpoint group.";
 
-        leaf name {
-            description "A name for the named selector.";
-            type gbp-common:selector-name;
-            mandatory true;
-        }
-
         leaf-list contract {
             description "Specific contracts to select.";
             type leafref {
