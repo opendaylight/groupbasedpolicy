@@ -132,5 +132,6 @@ public class EndpointDeclarationRequest extends RpcMessage {
 
     public EndpointDeclarationRequest() {
         this.name = DECLARATION_MESSAGE;
+        this.method = DECLARATION_MESSAGE;
     }
 }

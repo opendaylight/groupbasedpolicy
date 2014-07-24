@@ -527,8 +527,9 @@ public class OpflexConnectionService
         if (request.getParams() == null || request.getParams().size() <= 0) {
             return;
         }
-
-        if (!request.getDomain().equals(od.getDomain())) {
+        if (request.getParams() == null ||
+            request.getParams().get(0) == null ||
+            !request.getParams().get(0).getDomain().equals(od.getDomain())) {
             IdentityResponse.Error error = new IdentityResponse.Error();
             error.setMessage(INVALID_DOMAIN);
             response.setError(error);
@@ -614,6 +615,31 @@ public class OpflexConnectionService
 
         logger.info("Adding agent {}", endpoint.getIdentifier());
         domain.addOpflexAgent(oc);
+        
+        /*
+         * Send an Identity Request
+         */
+        IdentityRequest ourId = new IdentityRequest();
+        IdentityRequest.Params params = new IdentityRequest.Params();
+        List<IdentityRequest.Params> paramList = new ArrayList<IdentityRequest.Params>();
+        List<String> myRoles = new ArrayList<String>();
+        List<Role> roles = server.getRoles();
+        if (roles != null) {
+            for ( Role r : roles ) {
+                myRoles.add(r.toString());
+            }
+        }
+        params.setMy_role(myRoles);
+        params.setDomain(server.getDomain().getDomain());
+        params.setName(server.getId());
+        paramList.add(params);
+        ourId.setParams(paramList);
+
+        try {
+            endpoint.sendRequest(ourId);
+        }
+        catch (Throwable t) {
+        }        
     }
 
     /**

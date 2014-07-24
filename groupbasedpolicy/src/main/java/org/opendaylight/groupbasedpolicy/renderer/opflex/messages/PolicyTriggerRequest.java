@@ -104,5 +104,6 @@ public class PolicyTriggerRequest extends RpcMessage {
 
     public PolicyTriggerRequest() {
         this.name = TRIGGER_MESSAGE;
+        this.method = TRIGGER_MESSAGE;
     }
 }

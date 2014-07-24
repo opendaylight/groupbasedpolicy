@@ -125,5 +125,6 @@ public class StateReportRequest extends RpcMessage {
 
     public StateReportRequest() {
         this.name = STATE_MESSAGE;
+        this.method = STATE_MESSAGE;
     }
 }

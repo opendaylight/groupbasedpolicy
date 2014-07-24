@@ -97,5 +97,6 @@ public class PolicyUpdateRequest extends RpcMessage {
 
     public PolicyUpdateRequest() {
         this.name = UPDATE_MESSAGE;
+        this.method = UPDATE_MESSAGE;
     }
 }

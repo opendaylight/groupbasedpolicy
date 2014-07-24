@@ -111,5 +111,6 @@ public class PolicyResolutionRequest extends RpcMessage {
 
     public PolicyResolutionRequest() {
         this.name = RESOLVE_MESSAGE;
+        this.method = RESOLVE_MESSAGE;
     }
 }

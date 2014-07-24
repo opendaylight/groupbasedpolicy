@@ -65,7 +65,7 @@ public class JsonRpcEndpointTest implements RpcBroker, RpcBroker.RpcCallback {
     private EmbeddedChannel channel;
     private JsonRpcEndpoint endpoint;
     private RpcMessageMap messageMap;
-    private static boolean testTriggerFlag;
+    private boolean testTriggerFlag;
 
     @Override
     public void subscribe(RpcMessage message, RpcCallback callback) {

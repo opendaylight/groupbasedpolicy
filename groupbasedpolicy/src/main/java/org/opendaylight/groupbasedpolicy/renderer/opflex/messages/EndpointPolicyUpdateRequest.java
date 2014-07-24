@@ -132,5 +132,6 @@ public class EndpointPolicyUpdateRequest extends RpcMessage {
 
     public EndpointPolicyUpdateRequest() {
         this.name = EP_UPDATE_MESSAGE;
+        this.method = EP_UPDATE_MESSAGE;
     }
 }

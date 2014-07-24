@@ -10,6 +10,11 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.opflex;
 
+import static io.netty.buffer.Unpooled.copiedBuffer;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.anyObject;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 
@@ -51,14 +56,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.ListenableFuture;
-
-import static io.netty.buffer.Unpooled.*;
-
-import static org.junit.Assert.*;
-
-import static org.mockito.Matchers.*;
-
-import static org.mockito.Mockito.*;
 
 /**
  *
@@ -289,9 +286,10 @@ public class OpflexConnectionServiceTest {
         opflexService.addConnection(ep);
         channel.writeInbound(copiedBuffer(opflexIdentityRequest, CharsetUtil.UTF_8));
         Object result = channel.readOutbound();
+        result = channel.readOutbound();
         assertTrue(result != null);
         IdentityResponse resp = objectMapper.readValue(result.toString(), IdentityResponse.class);
-        assertTrue(result != null);
+        assertTrue(resp != null);
         assertTrue(resp.getResult().getMy_role()
                 .contains(Role.ENDPOINT_REGISTRY.toString()));
         assertTrue(resp.getResult().getMy_role()

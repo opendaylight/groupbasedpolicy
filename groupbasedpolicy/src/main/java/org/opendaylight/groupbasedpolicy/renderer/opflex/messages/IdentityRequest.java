@@ -109,12 +109,6 @@ public class IdentityRequest extends RpcMessage {
 
     public IdentityRequest() {
         this.name = IDENTITY_MESSAGE;
-    }
-
-    public String getDomain() {
-        if (this.params != null && this.params.get(0) != null) {
-            return this.params.get(0).getDomain();
-        }
-        return null;
+        this.method = IDENTITY_MESSAGE;
     }
 }
