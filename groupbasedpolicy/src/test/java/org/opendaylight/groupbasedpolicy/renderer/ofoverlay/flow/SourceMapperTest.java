@@ -44,9 +44,9 @@ public class SourceMapperTest extends FlowTableTest {
     public void testNoPolicy() throws Exception {
         endpointManager.addEndpoint(localEP().build());
         ReadWriteTransaction t = dosync(null);
-        verify(t, never()).put(any(LogicalDatastoreType.class), 
-                               Matchers.<InstanceIdentifier<Flow>>any(), 
-                               any(Flow.class));
+        verify(t, times(1)).put(any(LogicalDatastoreType.class), 
+                                Matchers.<InstanceIdentifier<Flow>>any(), 
+                                any(Flow.class));
     }
     
     @Test
@@ -57,7 +57,7 @@ public class SourceMapperTest extends FlowTableTest {
         
         ReadWriteTransaction t = dosync(null);
         ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
-        verify(t, times(1)).put(eq(LogicalDatastoreType.CONFIGURATION), 
+        verify(t, times(2)).put(eq(LogicalDatastoreType.CONFIGURATION), 
                                 Matchers.<InstanceIdentifier<Flow>>any(),
                                 ac.capture());
 
@@ -65,7 +65,11 @@ public class SourceMapperTest extends FlowTableTest {
         HashMap<String, FlowCtx> flowMap = new HashMap<>();
         for (Flow f : ac.getAllValues()) {
             flowMap.put(f.getId().getValue(), new FlowCtx(f));
-            if (Objects.equals(ep.getMacAddress(),
+            if (f.getMatch() == null) {
+                assertEquals(FlowUtils.dropInstructions(),
+                             f.getInstructions());
+                count += 1;
+            } else if (Objects.equals(ep.getMacAddress(),
                                f.getMatch().getEthernetMatch()
                                    .getEthernetSource().getAddress())) {
                 // XXX TODO verify register setting in the instructions
@@ -73,7 +77,7 @@ public class SourceMapperTest extends FlowTableTest {
                 count += 1;
             }
         }
-        assertEquals(1, count);
+        assertEquals(2, count);
 
         t = dosync(flowMap);
         verify(t, never()).put(any(LogicalDatastoreType.class), 

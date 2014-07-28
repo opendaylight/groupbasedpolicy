@@ -15,9 +15,10 @@ import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockEndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockPolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockSwitchManager;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.SubjectFeatures;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable.FlowCtx;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable.FlowTableCtx;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.L4Classifier;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
 import org.opendaylight.groupbasedpolicy.resolver.MockPolicyResolver;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
@@ -39,6 +40,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRefBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRefBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValueBuilder;
@@ -111,6 +113,10 @@ public class FlowTableTest {
     }
 
     protected TenantBuilder baseTenant() {
+        return baseTenant(null);
+    }
+
+    protected TenantBuilder baseTenant(Direction direction) {
         return new TenantBuilder()
             .setId(tid)
             .setEndpointGroup(ImmutableList.of(new EndpointGroupBuilder()
@@ -153,11 +159,15 @@ public class FlowTableTest {
             .setSubjectFeatureInstances(new SubjectFeatureInstancesBuilder()
                 .setClassifierInstance(ImmutableList.of(new ClassifierInstanceBuilder()
                      .setName(new ClassifierName("tcp_80"))
-                     .setClassifierDefinitionId(SubjectFeatures.TCP_PORT.getId())
+                     .setClassifierDefinitionId(L4Classifier.ID)
                      .setParameterValue(ImmutableList.of(new ParameterValueBuilder()
-                          .setName(new ParameterName("port"))
-                          .setIntValue(Long.valueOf(80))
-                          .build()))
+                              .setName(new ParameterName("destport"))
+                              .setIntValue(Long.valueOf(80))
+                              .build(),
+                          new ParameterValueBuilder()
+                             .setName(new ParameterName("type"))
+                             .setStringValue("TCP")
+                             .build()))
                      .build()))
                 .setActionInstance(ImmutableList.of(new ActionInstanceBuilder()
                     .setName(new ActionName("allow"))
@@ -174,6 +184,7 @@ public class FlowTableTest {
                              .build()))
                          .setClassifierRef(ImmutableList.of(new ClassifierRefBuilder()
                              .setName(new ClassifierName("tcp_80"))
+                             .setDirection(direction)
                              .build()))
                          .build()))
                     .build()))
@@ -215,7 +226,8 @@ public class FlowTableTest {
         ReadWriteTransaction t = mock(ReadWriteTransaction.class);
         if (flowMap == null)
             flowMap = Collections.emptyMap();
-        table.sync(t, tiid, flowMap, nodeId, null);
+        table.sync(t, tiid, flowMap, nodeId, policyResolver.getCurrentPolicy(), 
+                   null);
         return t;
     }
 

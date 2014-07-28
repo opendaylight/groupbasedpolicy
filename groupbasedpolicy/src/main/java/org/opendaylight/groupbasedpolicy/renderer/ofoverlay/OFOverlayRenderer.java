@@ -61,10 +61,10 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
         int numCPU = Runtime.getRuntime().availableProcessors();
         executor = Executors.newScheduledThreadPool(numCPU * 2);
 
-        policyResolver = new PolicyResolver(dataProvider, executor);
         switchManager = new SwitchManager(dataProvider, executor);
         endpointManager = new EndpointManager(dataProvider, rpcRegistry,
                                               executor, switchManager);
+        policyResolver = new PolicyResolver(dataProvider, executor);
 
         policyManager = new PolicyManager(dataProvider,
                                           policyResolver,

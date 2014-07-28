@@ -20,10 +20,13 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.EndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.SwitchManager;
+import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
@@ -53,7 +56,7 @@ public abstract class FlowTable {
 
         protected final PolicyManager policyManager;
         protected final SwitchManager switchManager;
-        protected final EndpointManager endpointManager;
+        protected final EndpointManager epManager;
 
         protected final PolicyResolver policyResolver;
 
@@ -71,7 +74,7 @@ public abstract class FlowTable {
             this.rpcRegistry = rpcRegistry;
             this.policyManager = policyManager;
             this.switchManager = switchManager;
-            this.endpointManager = endpointManager;
+            this.epManager = endpointManager;
             this.policyResolver = policyResolver;
             this.executor = executor;
         }
@@ -95,13 +98,17 @@ public abstract class FlowTable {
      * @param dirty the dirty set
      * @throws Exception
      */
-    public void update(NodeId nodeId, Dirty dirty) throws Exception {
+    public void update(NodeId nodeId, PolicyInfo policyInfo,
+                       Dirty dirty) throws Exception {
         ReadWriteTransaction t = ctx.dataBroker.newReadWriteTransaction();
         InstanceIdentifier<Table> tiid =
                 FlowUtils.createTablePath(nodeId, getTableId());
         Optional<Table> r =
                 t.read(LogicalDatastoreType.CONFIGURATION, tiid).get();
 
+        // Unfortunately, we need to construct a unique string ID for each
+        // flow which is redundant with all the information in the flow itself
+        // We'll build this map so at least we don't have to be O(n^2)
         HashMap<String, FlowCtx> flowMap = new HashMap<>();
 
         if (r.isPresent()) {
@@ -114,7 +121,7 @@ public abstract class FlowTable {
             }
         }
 
-        sync(t, tiid, flowMap, nodeId, dirty);
+        sync(t, tiid, flowMap, nodeId, policyInfo, dirty);
 
         for (FlowCtx fx : flowMap.values()) {
             if (!fx.visited) {
@@ -134,7 +141,8 @@ public abstract class FlowTable {
     public abstract void sync(ReadWriteTransaction t,
                               InstanceIdentifier<Table> tiid,
                               Map<String, FlowCtx> flowMap,
-                              NodeId nodeId, Dirty dirty) throws Exception;
+                              NodeId nodeId, PolicyInfo policyInfo, 
+                              Dirty dirty) throws Exception;
 
     /**
      * Get the table ID being manipulated
@@ -202,6 +210,32 @@ public abstract class FlowTable {
         t.put(LogicalDatastoreType.CONFIGURATION,
               FlowUtils.createFlowPath(tiid, flow.getId()),
               flow);
+    }
+
+    /**
+     * Write a drop flow for the given ethertype at the given priority.
+     * If the ethertype is null, then drop all traffic
+     */
+    protected void dropFlow(ReadWriteTransaction t,
+                            InstanceIdentifier<Table> tiid,
+                            Map<String, FlowCtx> flowMap,
+                            Integer priority, Long etherType) {
+        FlowId flowid = new FlowId(new StringBuilder()
+            .append("drop|")
+            .append(etherType)
+            .toString());
+        if (visit(flowMap, flowid.getValue())) {
+            FlowBuilder flowb = base()
+                .setId(flowid)
+                .setPriority(priority)
+                .setInstructions(FlowUtils.dropInstructions());
+            if (etherType != null)
+                flowb.setMatch(new MatchBuilder()
+                    .setEthernetMatch(FlowUtils.ethernetMatch(null, null, 
+                                                              etherType))
+                        .build());
+            writeFlow(t, tiid, flowb.build());
+        }
     }
 
     /**

@@ -5,12 +5,15 @@ import javax.annotation.concurrent.Immutable;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 
+import com.google.common.collect.ComparisonChain;
+import com.google.common.collect.Ordering;
+
 /**
  * A tuple referencing an endpoint group and its enclosing tenant
  * @author readams
  */
 @Immutable
-public class EgKey {
+public class EgKey implements Comparable<EgKey> {
     private final TenantId tenantId;
     private final EndpointGroupId egId;
     @Override
@@ -48,6 +51,25 @@ public class EgKey {
         this.tenantId = tenantId;
         this.egId = egId;
     }
+
+    @Override
+    public int compareTo(EgKey o) {
+        String tid = null;
+        if (tenantId != null) tid = tenantId.getValue();
+        String otid = null;
+        if (o.tenantId != null) otid = o.tenantId.getValue();
+        String egid = null;
+        if (egId != null) tid = egId.getValue();
+        String oegid = null;
+        if (o.egId != null) oegid = o.egId.getValue();
+        return ComparisonChain.start()
+            .compare(tid, otid, 
+                     Ordering.natural().nullsLast())
+            .compare(egid, oegid, 
+                     Ordering.natural().nullsLast())
+            .result();
+    }
+
     @Override
     public String toString() {
         return "EgKey [tenantId=" + tenantId + ", egId=" + egId + "]";

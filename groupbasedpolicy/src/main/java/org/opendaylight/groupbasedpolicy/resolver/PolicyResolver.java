@@ -9,9 +9,12 @@
 package org.opendaylight.groupbasedpolicy.resolver;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -24,19 +27,20 @@ import javax.annotation.concurrent.Immutable;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
+import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyCache.ConditionSet;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyCache.Policy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.ConsumerSelectionRelator;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.Matcher.MatchType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.ProviderSelectionRelator;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRefBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.condition.matchers.ConditionMatcher;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.conditions.Condition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.target.selector.QualityMatcher;
@@ -49,6 +53,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.consumer.matchers.RequirementMatcher;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.CapabilityMatcher;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.Rule;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.RuleBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ConsumerNamedSelector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ConsumerTargetSelector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderNamedSelector;
@@ -80,14 +85,6 @@ import com.google.common.util.concurrent.ListenableFuture;
  * list of rules that apply to a given pair of endpoints depends on the
  * conditions that are active on the endpoints.
  *
- * In a more formal sense: Let there be endpoint groups G_n, and for each G_n a
- * set of conditions C_n that can apply to endpoints in G_n.  Further, let S be
- * the set of lists of rules defined in the policy.  Our policy can be
- * represented as a function F: (G_n, 2^C_n, G_m, 2^C_m) -> S, where 2^C_n
- * represents the power set of C_n. In other words, we want to map all the
- * possible tuples of pairs of endpoints along with their active conditions
- * onto the right list of rules to apply.
- *
  * <p>We need to be able to query against this policy model, enumerate the
  * relevant classes of traffic and endpoints, and notify renderers when there
  * are changes to policy as it applies to active sets of endpoints and
@@ -112,7 +109,13 @@ public class PolicyResolver implements AutoCloseable {
 
     protected ConcurrentMap<TenantId, TenantContext> resolvedTenants;
 
-    protected PolicyCache policyCache = new PolicyCache();
+    /**
+     * Store a policy object for each endpoint group pair.  The table
+     * is stored with the key as (consumer, provider).  Two endpoints could
+     * appear in both roles at the same time, in which case both policies would
+     * apply.
+     */
+    AtomicReference<PolicyInfo> policy = new AtomicReference<>();
 
     public PolicyResolver(DataBroker dataProvider,
                           ScheduledExecutorService executor) {
@@ -141,50 +144,14 @@ public class PolicyResolver implements AutoCloseable {
     // *************************
 
     /**
-     * Get the policy that currently applies to a pair of endpoints.
-     * with the specified groups and conditions.  The first endpoint acts as
-     * the consumer and the second endpoint acts as the provider, so to get
-     * all policy related to this pair of endpoints you must call this
-     * function twice: once for each possible order of endpoints.
-     *
-     * @param ep1Tenant the tenant ID for the first endpoint
-     * @param ep1Group the endpoint group for the first endpoint
-     * @param ep1Conds The conditions that apply to the first endpoint
-     * @param ep2Tenant the tenant ID for the second endpoint
-     * @param ep2Group the endpoint group for the second endpoint
-     * @param ep2Conds The conditions that apply to the second endpoint.
-     * @return a list of {@link RuleGroup} that apply to the endpoints.
-     * Cannot be null, but may be an empty list of rulegroups
+     * Get a snapshot of the current policy
+     * @return the {@link PolicyInfo} object representing an immutable
+     * snapshot of the policy state
      */
-    public List<RuleGroup> getPolicy(TenantId ep1Tenant,
-                                     EndpointGroupId ep1Group,
-                                     ConditionSet ep1Conds,
-                                     TenantId ep2Tenant,
-                                     EndpointGroupId ep2Group,
-                                     ConditionSet ep2Conds) {
-        return policyCache.getPolicy(ep1Tenant, ep1Group, ep1Conds,
-                                     ep2Tenant, ep2Group, ep2Conds);
+    public PolicyInfo getCurrentPolicy() {
+        return policy.get();
     }
-    /**
-     * Get the set of providers that have contracts with the consumer
-     * @param tenant the tenant ID for the endpoint group
-     * @param eg the endpoint group ID
-     */
-    public Set<EgKey> getProvidersForConsumer(TenantId tenant,
-                                              EndpointGroupId eg) {
-        return policyCache.getProvidersForConsumer(tenant, eg);
-    }
-    
-    /**
-     * Get the set of providers that apply 
-     * @param tenant the tenant ID for the endpoint group
-     * @param eg the endpoint group ID
-     */
-    public Set<EgKey> getConsumersForProvider(TenantId tenant,
-                                              EndpointGroupId eg) {
-        return policyCache.getConsumersForProvider(tenant, eg);
-    }
-    
+
     /**
      * Get the normalized tenant for the given ID
      * @param tenant the tenant ID
@@ -222,12 +189,50 @@ public class PolicyResolver implements AutoCloseable {
     // **************
 
     /**
-     * Notify the policy listeners about a set of updated consumers
+     * Atomically update the active policy and notify policy listeners 
+     * of relevant changes
+     * @param policyMap the new policy to set
+     * @param egConditions the map of endpoint groups to relevant condition sets
+     * @return the set of groups with updated policy
      */
-    private void notifyListeners(Set<EgKey> updatedConsumers) {
+    protected Set<EgKey> updatePolicy(Table<EgKey, EgKey, Policy> policyMap,
+                                      Map<EgKey, Set<ConditionSet>> egConditions,
+                                      List<PolicyScope> policyListenerScopes) {
+        PolicyInfo newPolicy = new PolicyInfo(policyMap, egConditions);
+        PolicyInfo oldPolicy = policy.getAndSet(newPolicy);
+        
+        HashSet<EgKey> notifySet = new HashSet<>(); 
+        
+        for (Cell<EgKey, EgKey, Policy> cell : newPolicy.getPolicyMap().cellSet()) {
+            Policy newp = cell.getValue();
+            Policy oldp = null;
+            if (oldPolicy != null)
+                oldp = oldPolicy.getPolicyMap().get(cell.getRowKey(),
+                                                    cell.getColumnKey());
+            if (oldp == null || !newp.equals(oldp)) {
+                notifySet.add(cell.getRowKey());
+                notifySet.add(cell.getColumnKey());
+            }
+        }
+        if (oldPolicy != null) {
+            for (Cell<EgKey, EgKey, Policy> cell : oldPolicy.getPolicyMap().cellSet()) {
+                if (!newPolicy.getPolicyMap().contains(cell.getRowKey(),
+                                                       cell.getColumnKey())) {
+                    notifySet.add(cell.getRowKey());
+                    notifySet.add(cell.getColumnKey());
+                }
+            }
+        }
+        return notifySet;
+    }
+    
+    /**
+     * Notify the policy listeners about a set of updated groups
+     */
+    private void notifyListeners(Set<EgKey> updatedGroups) {
         for (final PolicyScope scope : policyListenerScopes) {
             Set<EgKey> filtered =
-                    Sets.filter(updatedConsumers, new Predicate<EgKey>() {
+                    Sets.filter(updatedGroups, new Predicate<EgKey>() {
                         @Override
                         public boolean apply(EgKey input) {
                             return scope.contains(input.getTenantId(),
@@ -283,6 +288,8 @@ public class PolicyResolver implements AutoCloseable {
                 // context
                 registration.close();
                 context = oldContext;
+            } else {
+                LOG.info("Added tenant {} to policy scope", tenantId);
             }
         }
 
@@ -291,7 +298,7 @@ public class PolicyResolver implements AutoCloseable {
         final IndexedTenant ot = tenantRef.get();
         ReadOnlyTransaction transaction =
                 dataProvider.newReadOnlyTransaction();
-        InstanceIdentifier<Tenant> tiid = TenantUtils.tenantIid(tenantId);
+        final InstanceIdentifier<Tenant> tiid = TenantUtils.tenantIid(tenantId);
         ListenableFuture<Optional<Tenant>> unresolved;
 
         unresolved = transaction.read(LogicalDatastoreType.CONFIGURATION, tiid);
@@ -299,7 +306,9 @@ public class PolicyResolver implements AutoCloseable {
         Futures.addCallback(unresolved, new FutureCallback<Optional<Tenant>>() {
             @Override
             public void onSuccess(Optional<Tenant> result) {
-                if (!result.isPresent()) return;
+                if (!result.isPresent()) {
+                    LOG.warn("Tenant {} not found", tenantId);
+                }
 
                 Tenant t = InheritanceUtils.resolveTenant((Tenant)result.get());
                 IndexedTenant it = new IndexedTenant(t);
@@ -308,11 +317,10 @@ public class PolicyResolver implements AutoCloseable {
                     updateTenant(tenantId);
                 } else {
                     // Update the policy cache and notify listeners
-                    Table<EgKey, EgKey, Policy> policy = resolvePolicy(t);
-                    Set<EgKey> updatedConsumers =
-                            policyCache.updatePolicy(policy, policyListenerScopes);
-
-                    notifyListeners(updatedConsumers);
+                    WriteTransaction wt = dataProvider.newWriteOnlyTransaction();
+                    wt.put(LogicalDatastoreType.OPERATIONAL, tiid, t, true);
+                    wt.submit();
+                    updatePolicy();
                 }
             }
 
@@ -323,7 +331,23 @@ public class PolicyResolver implements AutoCloseable {
         }, executor);
     }
 
+    protected void updatePolicy() {
+        try {
+            Map<EgKey, Set<ConditionSet>> egConditions = new HashMap<>();
+            Table<EgKey, EgKey, Policy> policyMap = 
+                    resolvePolicy(resolvedTenants.values(), 
+                                  egConditions);
+            Set<EgKey> updatedGroups =
+                    updatePolicy(policyMap,
+                                 egConditions, 
+                                 policyListenerScopes);
 
+            notifyListeners(updatedGroups);
+        } catch (Exception e) {
+            LOG.error("Failed to update policy", e);
+        }
+    }
+    
     /**
      * Resolve the policy in three phases:
      * (1) select contracts that in scope based on contract selectors.
@@ -333,14 +357,16 @@ public class PolicyResolver implements AutoCloseable {
      * apply for each pair of endpoint groups and the conditions that can
      * apply for for each endpoint in those groups.
      */
-    protected Table<EgKey, EgKey, Policy> resolvePolicy(Tenant t) {
+    protected Table<EgKey, EgKey, Policy> 
+            resolvePolicy(Collection<TenantContext> tenants,
+                          Map<EgKey, Set<ConditionSet>> egConditions) {
         // select contracts that apply for the given tenant
         Table<EgKey, EgKey, List<ContractMatch>> contractMatches =
-                selectContracts(t);
+                selectContracts(tenants);
 
         // select subjects for the matching contracts and resolve the policy
         // for endpoint group pairs.  This does phase (2) and (3) as one step
-        return selectSubjects(contractMatches);
+        return selectSubjects(contractMatches, egConditions);
     }
 
     /**
@@ -348,12 +374,31 @@ public class PolicyResolver implements AutoCloseable {
      * groups, then perform subject selection for the pair
      */
     protected Table<EgKey, EgKey, List<ContractMatch>>
-        selectContracts(Tenant tenant) {
+        selectContracts(Collection<TenantContext> tenants) {
+        Table<TenantId, ContractId, 
+              List<ConsumerContractMatch>> consumerMatches =
+                HashBasedTable.create();
+        Table<EgKey, EgKey, List<ContractMatch>> contractMatches =
+                HashBasedTable.create();
+
+        for (TenantContext tenant : tenants) {
+            IndexedTenant t = tenant.tenant.get();
+            if (t == null) continue;
+            selectContracts(consumerMatches, 
+                            contractMatches, 
+                            t.getTenant());
+        }
+        return contractMatches;
+    }
+    protected void selectContracts(Table<TenantId, 
+                                         ContractId, 
+                                         List<ConsumerContractMatch>> consumerMatches,
+                                   Table<EgKey, EgKey, 
+                                         List<ContractMatch>> contractMatches,
+                                   Tenant tenant) {
         // For each endpoint group, match consumer selectors
         // against contracts to get a set of matching consumer selectors
-        Table<TenantId, ContractId, List<ConsumerContractMatch>> consumerMatches =
-                HashBasedTable.create();
-        if (tenant.getEndpointGroup() == null) return HashBasedTable.create();
+        if (tenant.getEndpointGroup() == null) return;
         for (EndpointGroup group : tenant.getEndpointGroup()) {
             List<ConsumerContractMatch> r =
                     matchConsumerContracts(tenant, group);
@@ -372,8 +417,6 @@ public class PolicyResolver implements AutoCloseable {
 
         // Match provider selectors, and check each match for a corresponding
         // consumer selector match.
-        Table<EgKey, EgKey, List<ContractMatch>> contractMatches =
-                HashBasedTable.create();
         for (EndpointGroup group : tenant.getEndpointGroup()) {
             List<ContractMatch> matches =
                     matchProviderContracts(tenant, group, consumerMatches);
@@ -393,7 +436,6 @@ public class PolicyResolver implements AutoCloseable {
                 egPairMatches.add(cm);
             }
         }
-        return contractMatches;
     }
 
     private boolean clauseMatches(Clause clause, ContractMatch match) {
@@ -482,8 +524,10 @@ public class PolicyResolver implements AutoCloseable {
 
     private Policy resolvePolicy(Tenant contractTenant,
                                  Contract contract,
+                                 boolean reverse,
                                  Policy merge,
-                                 Table<ConditionSet, ConditionSet, List<Subject>> subjectMap) {
+                                 Table<ConditionSet, ConditionSet,
+                                       List<Subject>> subjectMap) {
         Table<ConditionSet, ConditionSet, List<RuleGroup>> ruleMap =
                 HashBasedTable.create();
         if (merge != null) {
@@ -492,35 +536,107 @@ public class PolicyResolver implements AutoCloseable {
         for (Cell<ConditionSet, ConditionSet, List<Subject>> entry :
                 subjectMap.cellSet()) {
             List<RuleGroup> rules = new ArrayList<>();
+            ConditionSet rowKey = entry.getRowKey();
+            ConditionSet columnKey = entry.getColumnKey();
+            if (reverse) {
+                rowKey = columnKey;
+                columnKey = entry.getRowKey();
+            }
             List<RuleGroup> oldrules =
-                    ruleMap.get(entry.getRowKey(), entry.getColumnKey());
+                    ruleMap.get(rowKey, columnKey);
             if (oldrules != null) {
                 rules.addAll(oldrules);
             }
             for (Subject s : entry.getValue()) {
                 if (s.getRule() == null) continue;
-                List<Rule> srules = Ordering
-                        .from(TenantUtils.RULE_COMPARATOR)
-                        .immutableSortedCopy(s.getRule());
+                List<Rule> srules;
+                if (reverse)
+                    srules = reverseRules(s.getRule());
+                else
+                    srules = Ordering
+                            .from(TenantUtils.RULE_COMPARATOR)
+                            .immutableSortedCopy(s.getRule());
+
                 RuleGroup rg = new RuleGroup(srules, s.getOrder(),
                                              contractTenant, contract,
                                              s.getName());
                 rules.add(rg);
             }
             Collections.sort(rules);
-            ruleMap.put(entry.getRowKey(), entry.getColumnKey(),
+            ruleMap.put(rowKey, columnKey,
                         Collections.unmodifiableList(rules));
         }
         return new Policy(ruleMap);
     }
+    
+    private List<Rule> reverseRules(List<Rule> rules) {
+        ArrayList<Rule> nrules = new ArrayList<>();
+        for (Rule input : rules) {
+            if (input.getClassifierRef() == null ||
+                input.getClassifierRef().size() == 0) {
+                nrules.add(input);
+                continue;
+            }
 
+            List<ClassifierRef> classifiers = new ArrayList<>();
+            for (ClassifierRef clr : input.getClassifierRef()) {
+                Direction nd = Direction.Bidirectional;
+                if (clr.getDirection() != null) {
+                    switch (clr.getDirection()) {
+                    case In:
+                        nd = Direction.Out;
+                        break;
+                    case Out:
+                        nd = Direction.In;
+                        break;
+                    case Bidirectional:
+                    default:
+                        nd = Direction.Bidirectional;
+                    }
+                }
+                classifiers.add(new ClassifierRefBuilder(clr)
+                    .setDirection(nd).build());
+            }
+            nrules.add(new RuleBuilder(input)
+                .setClassifierRef(Collections.unmodifiableList(classifiers))
+                .build());
+        }
+        Collections.sort(nrules, TenantUtils.RULE_COMPARATOR);
+        return Collections.unmodifiableList(nrules);
+    }
+
+    /**
+     * Get the "natural" direction for the policy for the given pair of 
+     * endpoint groups.
+     * @param one The first endpoint group
+     * @param two The second endpoint group
+     * @return true if the order should be reversed in the index
+     */
+    protected static boolean shouldReverse(EgKey one, EgKey two) {
+        if (one.compareTo(two) < 0) {
+            return true;
+        }
+        return false;
+    }
+    
+    private void addConditionSet(EgKey eg, ConditionSet cs, 
+                                 Map<EgKey, Set<ConditionSet>> egConditions) {
+        if (egConditions == null) return;
+        Set<ConditionSet> cset = egConditions.get(eg);
+        if (cset == null) {
+            egConditions.put(eg, cset = new HashSet<>());
+        }
+        cset.add(cs);
+    }
+    
     /**
      * Choose the set of subjects that in scope for each possible set of
      * endpoint conditions
      */
     protected Table<EgKey, EgKey, Policy>
             selectSubjects(Table<EgKey, EgKey,
-                                 List<ContractMatch>> contractMatches) {
+                                 List<ContractMatch>> contractMatches,
+                           Map<EgKey, Set<ConditionSet>> egConditions) {
         // Note that it's possible to further simplify the resulting policy
         // in the case of things like repeated rules, condition sets that
         // cover other condition sets, etc.  This would be a good thing to do
@@ -539,20 +655,14 @@ public class PolicyResolver implements AutoCloseable {
                                        match.consumer.getId());
                 EgKey pkey = new EgKey(match.providerTenant.getId(),
                                        match.provider.getId());
-                Policy existing = policy.get(ckey, pkey);
-                boolean alreadyMatched = false;
-                if (existing != null) {
-                    for (List<RuleGroup> rgl : existing.ruleMap.values()) {
-                        for (RuleGroup rg : rgl) {
-                            if (rg.relatedContract == match.contract) {
-                                alreadyMatched = true;
-                                break;
-                            }
-                        }
-                        if (alreadyMatched) break;
-                    }
-                    if (alreadyMatched) continue;
+                EgKey one = ckey;
+                EgKey two = pkey;
+                boolean reverse = shouldReverse(ckey, pkey);
+                if (reverse) {
+                    one = pkey;
+                    two = ckey;
                 }
+                Policy existing = policy.get(one, two);
 
                 HashMap<SubjectName, Subject> subjects = new HashMap<>();
                 for (Subject s : subjectList) {
@@ -566,7 +676,9 @@ public class PolicyResolver implements AutoCloseable {
                     if (clause.getSubjectRefs() != null &&
                         clauseMatches(clause, match)) {
                         ConditionSet consCSet = buildConsConditionSet(clause);
+                        addConditionSet(ckey, consCSet, egConditions);
                         ConditionSet provCSet = buildProvConditionSet(clause);
+                        addConditionSet(pkey, provCSet, egConditions);
                         List<Subject> clauseSubjects =
                                 subjectMap.get(consCSet, provCSet);
                         if (clauseSubjects == null) {
@@ -580,9 +692,10 @@ public class PolicyResolver implements AutoCloseable {
                     }
                 }
 
-                policy.put(ckey, pkey,
+                policy.put(one, two,
                            resolvePolicy(match.contractTenant,
                                          match.contract,
+                                         reverse,
                                          existing,
                                          subjectMap));
             }
@@ -807,5 +920,4 @@ public class PolicyResolver implements AutoCloseable {
         }
 
     }
-
 }

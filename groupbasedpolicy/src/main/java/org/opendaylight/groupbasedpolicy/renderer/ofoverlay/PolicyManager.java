@@ -33,10 +33,15 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PortSecurity;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.SourceMapper;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
+import org.opendaylight.groupbasedpolicy.resolver.ConditionGroup;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
+import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyListener;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyScope;
+import org.opendaylight.groupbasedpolicy.util.SetUtils;
+import org.opendaylight.groupbasedpolicy.util.SingletonTask;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNodeBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
@@ -71,6 +76,7 @@ public class PolicyManager
 
     private final DataBroker dataBroker;
     private final SwitchManager switchManager;
+    private final PolicyResolver policyResolver;
     
     private final PolicyScope policyScope;
     
@@ -98,13 +104,17 @@ public class PolicyManager
     
     /**
      * Keep track of currently-allocated ordinals
-     * XXX should ultimately involve some sort of distributed agreement
-     * or a leader to allocate them.  For now we'll just use a counter and
-     * this local map
      */
+    // XXX For the endpoint groups, we need a globally unique ordinal, so
+    // should ultimately involve some sort of distributed agreement
+    // or a leader to allocate them.  For now we'll just use a counter and
+    // this local map.  Also theoretically need to garbage collect periodically
     private final ConcurrentMap<TenantId, ConcurrentMap<String, Integer>> ordinals = 
             new ConcurrentHashMap<>();
-    
+    // XXX - need to garbage collect
+    private final ConcurrentMap<ConditionGroup, Integer> cgOrdinals = 
+            new ConcurrentHashMap<>();
+            
     public PolicyManager(DataBroker dataBroker,
                          PolicyResolver policyResolver,
                          SwitchManager switchManager,
@@ -115,6 +125,7 @@ public class PolicyManager
         this.dataBroker = dataBroker;
         this.switchManager = switchManager;
         this.executor = executor;
+        this.policyResolver = policyResolver;
 
         if (dataBroker != null) {
             WriteTransaction t = dataBroker.newWriteOnlyTransaction();
@@ -247,7 +258,25 @@ public class PolicyManager
     public void setLearningMode(LearningMode learningMode) {
         // No-op for now
     }
-    
+
+    /**
+     * Get a unique ordinal for the given condition group, suitable for
+     * use in the data plane.  This is unique only for this node, and not 
+     * globally.
+     * @param cg the {@link ConditionGroup}
+     * @return the unique ID
+     */
+    public int getConfGroupOrdinal(final ConditionGroup cg) {
+        if (cg == null) return 0;
+        Integer ord = cgOrdinals.get(cg);
+        if (ord == null) {
+            ord = policyOrdinal.getAndIncrement();
+            Integer old = cgOrdinals.putIfAbsent(cg, ord);
+            if (old != null) ord = old; 
+        }
+        return ord.intValue();
+    }
+
     /**
      * Get a 32-bit context ordinal suitable for use in the OF data plane
      * for the given policy item.  Note that this function may block
@@ -337,10 +366,12 @@ public class PolicyManager
 
         @Override
         public Void call() throws Exception {
-            if (!switchManager.isSwitchReady(nodeId)) return null;            
+            if (!switchManager.isSwitchReady(nodeId)) return null;
+            PolicyInfo info = policyResolver.getCurrentPolicy();
+            if (info == null) return null;
             for (FlowTable table : flowPipeline) {
                 try {
-                    table.update(nodeId, dirty);
+                    table.update(nodeId, info, dirty);
                 } catch (Exception e) {
                     LOG.error("Failed to write flow table {}", 
                               table.getClass().getName(), e);

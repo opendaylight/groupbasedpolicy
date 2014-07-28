@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
+package org.opendaylight.groupbasedpolicy.util;
 
 import java.util.Collections;
 import java.util.Set;
@@ -14,12 +14,18 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * Random utilities
+ * Utility methods related to managing sets and maps
  * @author readams
  */
 public class SetUtils {
-
-    protected static <K1, K2> Set<K2> 
+    /**
+     * Get and/or allocate as needed a nested concurrent set inside a concurrent
+     * map in a threadsafe way.
+     * @param key the key to the concurrent map
+     * @param set the concurrent map
+     * @return the nested concurrent set
+     */
+    public static <K1, K2> Set<K2> 
             getNestedSet(K1 key, ConcurrentMap<K1, Set<K2>> set) {
         Set<K2> inner = set.get(key);
         if (inner == null) {

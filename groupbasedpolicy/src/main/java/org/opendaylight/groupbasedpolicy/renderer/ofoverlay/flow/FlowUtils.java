@@ -59,15 +59,15 @@ public final class FlowUtils {
     /**
      * ARP ethertype
      */
-    protected static final Long ARP = Long.valueOf(0x0806);
+    public static final Long ARP = Long.valueOf(0x0806);
     /**
      * IPv4 ethertype
      */
-    protected static final Long IPv4 = Long.valueOf(0x0800);
+    public static final Long IPv4 = Long.valueOf(0x0800);
     /**
      * IPv6 ethertype
      */
-    protected static final Long IPv6 = Long.valueOf(0x86DD);
+    public static final Long IPv6 = Long.valueOf(0x86DD);
     
     /**
      * Creates an Instance Identifier (path) for node with specified id

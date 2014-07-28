@@ -26,8 +26,9 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.AbstractEndpointRegistry;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.groupbasedpolicy.resolver.EndpointProvider;
+import org.opendaylight.groupbasedpolicy.util.SetUtils;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
@@ -47,7 +48,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 
-
 /**
  * Keep track of endpoints on the system.  Maintain an index of endpoints
  * and their locations for renderering.  The endpoint manager will maintain
@@ -61,7 +61,7 @@ import com.google.common.collect.Collections2;
  */
 public class EndpointManager 
         extends AbstractEndpointRegistry 
-        implements AutoCloseable, DataChangeListener
+        implements AutoCloseable, DataChangeListener, EndpointProvider
     {
     private static final Logger LOG = 
             LoggerFactory.getLogger(EndpointManager.class);
@@ -122,19 +122,6 @@ public class EndpointManager
     }
 
     /**
-     * Get a collection of endpoints in a particular endpoint group
-     * @param nodeId the nodeId of the switch to get endpoints for
-     * @return a collection of {@link Endpoint} objects.
-     */
-    public Collection<Endpoint> getEndpointsForGroup(TenantId tenantId, 
-                                                     EndpointGroupId egId) {
-        EgKey eg = new EgKey(tenantId, egId);
-        Collection<EpKey> ebg = endpointsByGroup.get(eg);
-        if (ebg == null) return Collections.emptyList();
-        return Collections2.transform(ebg, indexTransform);
-    }
-
-    /**
      * Get the endpoint object for the given key
      * @param epKey the key
      * @return the {@link Endpoint} corresponding to the key
@@ -150,7 +137,27 @@ public class EndpointManager
     public void setLearningMode(LearningMode learningMode) {
         // No-op for now
     }
-    
+
+    // ****************
+    // EndpointProvider
+    // ****************
+
+    @Override
+    public Collection<Endpoint> getEndpointsForGroup(EgKey eg) {
+        Collection<EpKey> ebg = endpointsByGroup.get(eg);
+        if (ebg == null) return Collections.emptyList();
+        return Collections2.transform(ebg, indexTransform);
+    }
+
+    @Override
+    public List<ConditionName> getCondsForEndpoint(Endpoint endpoint) {
+        // XXX TODO consider group conditions as well.  Also need to notify
+        // endpoint updated if the endpoint group conditions change
+        if (endpoint.getCondition() != null)
+            return endpoint.getCondition();
+        else return Collections.emptyList();
+    }
+
     // ************************
     // AbstractEndpointRegistry
     // ************************
@@ -312,13 +319,13 @@ public class EndpointManager
         if (newLoc != null) {
             Set<EpKey> eps = getEpNSet(newLoc);
             eps.add(epKey);
-            LOG.info("Endpoint {} added to node {}", epKey, newLoc);
+            LOG.debug("Endpoint {} added to node {}", epKey, newLoc);
             notifyNewLoc = true;
         }
         if (newKey != null) {
             Set<EpKey> gns = getEpGSet(newKey);
             gns.add(epKey);
-            LOG.info("Endpoint {} added to group {}", epKey, newKey);
+            LOG.debug("Endpoint {} added to group {}", epKey, newKey);
             notifyNewEg = true;
         }
 

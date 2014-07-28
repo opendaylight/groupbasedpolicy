@@ -14,6 +14,8 @@ import java.util.Map;
 
 import javax.annotation.concurrent.Immutable;
 
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
@@ -24,7 +26,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L2BridgeDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L2FloodDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L3Context;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.SubjectFeatureInstances;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Subnet;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ClassifierInstance;
 
 /**
  * Wrap some convenient indexes around a {@link Tenant} object
@@ -40,6 +45,10 @@ public class IndexedTenant {
     private final Map<ContractId, Contract> contracts =
             new HashMap<>();
     private final Map<String, NetworkDomain> networkDomains =
+            new HashMap<>();
+    private final Map<ClassifierName, ClassifierInstance> classifiers =
+            new HashMap<>();
+    private final Map<ActionName, ActionInstance> actions =
             new HashMap<>();
     
     public IndexedTenant(Tenant tenant) {
@@ -75,6 +84,19 @@ public class IndexedTenant {
         if (tenant.getSubnet() != null) {
             for (Subnet s : tenant.getSubnet()) {
                 networkDomains.put(s.getId().getValue(), s);
+            }
+        }
+        if (tenant.getSubjectFeatureInstances() != null) {
+            SubjectFeatureInstances sfi = tenant.getSubjectFeatureInstances();
+            if (sfi.getClassifierInstance() != null) {
+                for (ClassifierInstance ci : sfi.getClassifierInstance()) {
+                    classifiers.put(ci.getName(), ci);
+                }
+            }
+            if (sfi.getActionInstance() != null) {
+                for (ActionInstance action : sfi.getActionInstance()) {
+                    actions.put(action.getName(), action);
+                }
             }
         }
     }
@@ -115,6 +137,26 @@ public class IndexedTenant {
      */
     public Contract getContract(ContractId id) {
         return contracts.get(id);
+    }
+    
+    /**
+     * Look up the classifier instance specified
+     * @param name the {@link ClassifierName}
+     * @return the {@link ClassifierInstance} if it exists, or <code>null</code> 
+     * otherwise
+     */
+    public ClassifierInstance getClassifier(ClassifierName name) {
+        return classifiers.get(name);
+    }
+
+    /**
+     * Look up the classifier instance specified
+     * @param name the {@link ActionName}
+     * @return the {@link ActionInstance} if it exists, or <code>null</code> 
+     * otherwise
+     */
+    public ActionInstance getAction(ActionName name) {
+        return actions.get(name);
     }
 
     /**

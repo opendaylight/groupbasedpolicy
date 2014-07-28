@@ -13,6 +13,7 @@ import java.util.Set;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
+import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Prefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
@@ -57,7 +58,7 @@ public class PortSecurity extends FlowTable {
     public void sync(ReadWriteTransaction t,
                      InstanceIdentifier<Table> tiid,
                      Map<String, FlowCtx> flowMap,
-                     NodeId nodeId, Dirty dirty) {
+                     NodeId nodeId, PolicyInfo policyInfo, Dirty dirty) {
         // Allow traffic from tunnel and external ports
         NodeConnectorId tunnelIf = ctx.switchManager.getTunnelPort(nodeId);
         if (tunnelIf != null)
@@ -76,7 +77,7 @@ public class PortSecurity extends FlowTable {
         dropFlow(t, tiid, flowMap, 111, FlowUtils.IPv4);
         dropFlow(t, tiid, flowMap, 112, FlowUtils.IPv6);
 
-        for (Endpoint e : ctx.endpointManager.getEndpointsForNode(nodeId)) {
+        for (Endpoint e : ctx.epManager.getEndpointsForNode(nodeId)) {
             OfOverlayContext ofc = e.getAugmentation(OfOverlayContext.class);
             if (ofc != null && ofc.getNodeConnectorId() != null &&
                 (ofc.getLocationType() == null ||
@@ -112,29 +113,7 @@ public class PortSecurity extends FlowTable {
             writeFlow(t, tiid, flowb.build());
         }
     }
-    
-    private void dropFlow(ReadWriteTransaction t,
-                          InstanceIdentifier<Table> tiid,
-                          Map<String, FlowCtx> flowMap,
-                          Integer priority, Long etherType) {
-        FlowId flowid = new FlowId(new StringBuilder()
-            .append("drop|")
-            .append(etherType)
-            .toString());
-        if (visit(flowMap, flowid.getValue())) {
-            FlowBuilder flowb = base()
-                .setId(flowid)
-                .setPriority(priority)
-                .setInstructions(FlowUtils.dropInstructions());
-            if (etherType != null)
-                flowb.setMatch(new MatchBuilder()
-                    .setEthernetMatch(FlowUtils.ethernetMatch(null, null, 
-                                                              etherType))
-                        .build());
-            writeFlow(t, tiid, flowb.build());
-        }
-    }
-    
+        
     private void l2flow(ReadWriteTransaction t,
                         InstanceIdentifier<Table> tiid,
                         Map<String, FlowCtx> flowMap,
@@ -159,7 +138,6 @@ public class PortSecurity extends FlowTable {
             writeFlow(t, tiid, flowb.build());
         }
     }
-    
 
     private void l3flow(ReadWriteTransaction t,
                         InstanceIdentifier<Table> tiid,

@@ -68,9 +68,9 @@ public class DestinationMapperTest extends FlowTableTest {
     @Test
     public void testNoEps() throws Exception {
         ReadWriteTransaction t = dosync(null);
-        verify(t, never()).put(any(LogicalDatastoreType.class), 
-                               Matchers.<InstanceIdentifier<Flow>>any(), 
-                               any(Flow.class));
+        verify(t, times(1)).put(any(LogicalDatastoreType.class), 
+                                Matchers.<InstanceIdentifier<Flow>>any(), 
+                                any(Flow.class));
     }
 
     private void verifyDMap(Endpoint remoteEp, 
@@ -86,7 +86,11 @@ public class DestinationMapperTest extends FlowTableTest {
         HashMap<String, FlowCtx> flowMap = new HashMap<>();
         for (Flow f : ac.getAllValues()) {
             flowMap.put(f.getId().getValue(), new FlowCtx(f));
-            if (Objects.equals(localEp.getMacAddress(),
+            if (f.getMatch() == null) {
+                assertEquals(FlowUtils.dropInstructions(),
+                             f.getInstructions());
+                count += 1;
+            } else if (Objects.equals(localEp.getMacAddress(),
                                f.getMatch().getEthernetMatch()
                                    .getEthernetDestination().getAddress())) {
                 int icount = 0;
@@ -166,7 +170,7 @@ public class DestinationMapperTest extends FlowTableTest {
                 }
             }
         }
-        assertEquals(4, count);
+        assertEquals(5, count);
 
         t = dosync(flowMap);
         verify(t, never()).put(any(LogicalDatastoreType.class), 

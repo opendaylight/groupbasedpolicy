@@ -18,11 +18,11 @@ import java.util.Set;
 public interface PolicyListener {
 
     /**
-     * Indicates that the policy related to the set of consumer endpoint groups
+     * Indicates that the policy related to the set of endpoint groups
      * has changed
-     * @param updatedConsumers the set of consumer endpoint groups involved
+     * @param updatedConsumers the set of endpoint groups involved
      * in a contract whose policy has changed
      */
-    public void policyUpdated(Set<EgKey> updatedConsumers);
+    public void policyUpdated(Set<EgKey> updatedGroups);
     
 }

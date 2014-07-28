@@ -13,8 +13,9 @@ import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
 
 /**
- * Represent a group of rules that apply to a given pair of endpoints.  Includes
- * references back to the normalized policy that resulted in the rule group.
+ * Represent a group of rules that could apply to a given pair of endpoints.  
+ * Includes references back to the normalized policy that resulted in the rule 
+ * group.
  * @author readams
  */
 @Immutable 
@@ -23,7 +24,7 @@ public class RuleGroup implements Comparable<RuleGroup> {
     final Integer order;
     final Tenant contractTenant;
     final Contract relatedContract;
-    final SubjectName relatedSubject; 
+    final SubjectName relatedSubject;
 
     public RuleGroup(List<Rule> rules, Integer order,
                      Tenant contractTenant, Contract contract,
@@ -98,6 +99,8 @@ public class RuleGroup implements Comparable<RuleGroup> {
     public int compareTo(RuleGroup o) {
         return ComparisonChain.start()
             .compare(order, o.order, 
+                     Ordering.natural().nullsLast())
+            .compare(relatedSubject.getValue(), o.relatedSubject.getValue(),
                      Ordering.natural().nullsLast())
             .result();
     }

@@ -10,14 +10,18 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
+import org.opendaylight.groupbasedpolicy.resolver.ConditionGroup;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
+import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Prefix;
@@ -30,6 +34,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.I
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.Instruction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.InstructionBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
@@ -40,6 +45,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv4MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv6MatchBuilder;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.Sets;
 
 /**
  * Manage the table that maps the destination address to the next hop
@@ -47,6 +56,9 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
  * @author readams
  */
 public class DestinationMapper extends FlowTable {
+    protected static final Logger LOG =
+            LoggerFactory.getLogger(DestinationMapper.class);
+
     public static final short TABLE_ID = 2;
     /**
      * This is the MAC address of the magical router in the sky
@@ -67,34 +79,21 @@ public class DestinationMapper extends FlowTable {
     public void sync(ReadWriteTransaction t, 
                      InstanceIdentifier<Table> tiid,
                      Map<String, FlowCtx> flowMap, 
-                     NodeId nodeId, Dirty dirty)
+                     NodeId nodeId, PolicyInfo policyInfo, Dirty dirty)
                              throws Exception {
+        dropFlow(t, tiid, flowMap, Integer.valueOf(1), null);
+
         HashSet<EgKey> visitedEgs = new HashSet<>();
-        for (Endpoint e : ctx.endpointManager.getEndpointsForNode(nodeId)) {
+        for (Endpoint e : ctx.epManager.getEndpointsForNode(nodeId)) {
             if (e.getTenant() == null || e.getEndpointGroup() == null)
                 continue;
             EgKey key = new EgKey(e.getTenant(), e.getEndpointGroup());
-            syncEPG(t, tiid, flowMap, nodeId, key, visitedEgs);
             
-            Set<EgKey> peers = ctx.policyResolver
-                    .getProvidersForConsumer(e.getTenant(), 
-                                             e.getEndpointGroup());
-            syncEgKeys(t, tiid, flowMap, nodeId, peers, visitedEgs);
-            peers = ctx.policyResolver
-                    .getConsumersForProvider(e.getTenant(), 
-                                             e.getEndpointGroup());
-            syncEgKeys(t, tiid, flowMap, nodeId, peers, visitedEgs);
-        }
-    }
-    
-    private void syncEgKeys(ReadWriteTransaction t, 
-                            InstanceIdentifier<Table> tiid,
-                            Map<String, FlowCtx> flowMap, 
-                            NodeId nodeId,
-                            Set<EgKey> peers,
-                            HashSet<EgKey> visitedEgs) throws Exception {
-        for (EgKey key : peers) {
-            syncEPG(t, tiid, flowMap, nodeId, key, visitedEgs);
+            Set<EgKey> peers = Sets.union(Collections.singleton(key),
+                                          policyInfo.getPeers(key));
+            for (EgKey peer : peers) {
+                syncEPG(t, tiid, flowMap, nodeId, policyInfo, peer, visitedEgs);
+            }
         }
     }
 
@@ -103,28 +102,28 @@ public class DestinationMapper extends FlowTable {
     private void syncEPG(ReadWriteTransaction t, 
                          InstanceIdentifier<Table> tiid,
                          Map<String, FlowCtx> flowMap, 
-                         NodeId nodeId,
+                         NodeId nodeId, PolicyInfo policyInfo, 
                          EgKey key,
                          HashSet<EgKey> visitedEgs) throws Exception {
         if (visitedEgs.contains(key)) return;
         visitedEgs.add(key);
         
-        Collection<Endpoint> egEps = ctx.endpointManager
-                .getEndpointsForGroup(key.getTenantId(), key.getEgId());
+        Collection<Endpoint> egEps = ctx.epManager
+                .getEndpointsForGroup(key);
         for (Endpoint e : egEps) {
             if (e.getTenant() == null || e.getEndpointGroup() == null)
                 continue;
             OfOverlayContext ofc = e.getAugmentation(OfOverlayContext.class);
             if (ofc == null || ofc.getNodeId() == null) continue;
             
-            syncEP(t, tiid, flowMap, nodeId, e, ofc, key);
+            syncEP(t, tiid, flowMap, nodeId, policyInfo, e, ofc, key);
         }
     }
 
     private void syncEP(ReadWriteTransaction t,
                         InstanceIdentifier<Table> tiid,
                         Map<String, FlowCtx> flowMap, 
-                        NodeId nodeId, 
+                        NodeId nodeId, PolicyInfo policyInfo, 
                         Endpoint e, OfOverlayContext ofc,
                         EgKey key) 
                                  throws Exception {
@@ -148,6 +147,8 @@ public class DestinationMapper extends FlowTable {
                 // this is a local endpoint
                 nextHop = ofc.getNodeConnectorId().getValue();
 
+                // XXX - TODO - instead of outputting, write next hop
+                // to a register and output from the policy table
                 Action output = FlowUtils.outputAction(ofc.getNodeConnectorId());
 
                 instructions.add(new InstructionBuilder()
@@ -204,6 +205,17 @@ public class DestinationMapper extends FlowTable {
                 order +=1;
             }
         }
+        
+        int egId = ctx.policyManager.getContextOrdinal(e.getTenant(), 
+                                                       e.getEndpointGroup());
+        List<ConditionName> conds = ctx.epManager.getCondsForEndpoint(e);
+        ConditionGroup cg = 
+                policyInfo.getEgCondGroup(new EgKey(e.getTenant(), 
+                                                    e.getEndpointGroup()), 
+                                          conds);
+        int cgId = ctx.policyManager.getConfGroupOrdinal(cg);
+        
+        // XXX TODO - add action set dEPG and dCG into registers
         Instruction gotoTable = new InstructionBuilder()
             .setOrder(order++)
             .setInstruction(FlowUtils.gotoTableIns((short)(getTableId()+1)))
@@ -219,6 +231,7 @@ public class DestinationMapper extends FlowTable {
             .append(nextHop)
             .toString());
         if (visit(flowMap, flowid.getValue())) {
+            LOG.info("{} deg:{} dcg:{}", e.getMacAddress(), egId, cgId);
             // XXX TODO add match against bridge domain register
             FlowBuilder flowb = base()
                 .setId(flowid)

@@ -458,12 +458,19 @@ module policy {
         description "Objects containing lists of classifier references";
 
         list classifier-ref {
+            key "name";
             description 
                 "A reference to classifier instance that is used to match 
                  traffic traveling between the endpoint groups that
                  form the contract.";
 
             leaf name {
+                description "A unique name for this classifier reference";
+                type gbp-common:classifier-name;
+                mandatory true;
+            }
+
+            leaf instance-name {
                 description "The name of the classifier instance";
                 type leafref {
                     path "/tenants/tenant/subject-feature-instances/classifier-instance/name";
@@ -514,7 +521,6 @@ module policy {
                 }
                 mandatory true;
             }
-            uses has-direction;
             uses has-order;
         }
     }
@@ -857,6 +863,26 @@ module policy {
                 }
                 uses has-requirements;
                 uses has-capabilities;
+
+                leaf intra-group-policy {
+                    description 
+                        "Governs how traffic within the endpoint group 
+                         should be handled.";
+                    default allow;
+                    type enumeration {
+                        enum allow {
+                            description 
+                                "Traffic between two endpoints in the group
+                                 is always allowed";
+                        }
+                        enum require-contract {
+                            description
+                                "Traffic between two endpoints in the group
+                                 is allowed only when a contract exists to 
+                                 allow it explicitly";
+                        }
+                    }
+                }
 
                 list consumer-named-selector {
                     description
