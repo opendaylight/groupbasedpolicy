@@ -44,113 +44,94 @@ module opflex {
         }
     }
 
-    container domains {
+    // ******************
+    // Configuration Data
+    // ******************
+    leaf domain {
         description
-            "The list of all OpFlex domains.";
+            "The OpFlex administrative domain.";
 
         config true;
 
-        list domain {
+        type string;
+    }
+
+    container discovery-definitions {
+        description
+            "The nodes that any OpFlex agent needs to communicate
+             with in an OpFlex policy fabric.";
+
+        config true;
+
+        list policy-repository {
             description
-                "An administrative domain for OpFlex entities.";
+                "A repository that the OpFlex agent can use for resolving
+                 policies.";
 
             key "id";
 
             leaf id {
                 description 
-                    "The id for the domain.";
+                   "The id for the policy repository.";
                 type string;
-                config true;
             }
+            leaf port {
+                description 
+                   "The port number to use for the connection";
+                type int32;
+            }
+            leaf serialization-type {
+                description 
+                    "The serialization to use for this connection.";
+                type serialization;
+            }
+        }
 
-            // ******************
-            // Configuration Data
-            // ******************
-            container discovery-definitions {
-                description
-                    "The nodes that any OpFlex agent needs to communicate
-                     with in an OpFlex policy fabric.";
+        list endpoint-registry {
+            description
+                "A repository that the OpFlex agent can use for registration
+                 and lookup of endpoints.";
 
-                list policy-repository {
-                    description
-                        "A repository that the OpFlex agent can use for resolving
-                         policies.";
+            key "id";
 
-                    key "id";
+            leaf id {
+                description 
+                   "The id for the endpoint registry.";
+                type string;
+            }
+            leaf port {
+                description 
+                   "The port number to use for the connection";
+                type int32;
+            }
+            leaf serialization-type {
+                description 
+                    "The serialization to use for this connection.";
+                type serialization;
+            }
+        }
 
-                    leaf id {
-                        description 
-                           "The id for the policy repository.";
-                        type string;
-                        config true;
-                    }
-                    leaf port {
-                        description 
-                           "The port number to use for the connection";
-                        type int32;
-                        config true;
-                    }
-                    leaf serialization-type {
-                        description 
-                            "The serialization to use for this connection.";
-                        type serialization;
-                        config true;
-                    }
-                }
+        list observer {
+            description
+                "A repository that the OpFlex agent can send State Report
+                 messages to.";
 
-                list endpoint-registry {
-                    description
-                        "A repository that the OpFlex agent can use for registration
-                         and lookup of endpoints.";
+            key "id";
 
-                    key "id";
-
-                    leaf id {
-                        description 
-                           "The id for the endpoint registry.";
-                        type string;
-                        config true;
-                    }
-                    leaf port {
-                        description 
-                           "The port number to use for the connection";
-                        type int32;
-                        config true;
-                    }
-                    leaf serialization-type {
-                        description 
-                            "The serialization to use for this connection.";
-                        type serialization;
-                        config true;
-                    }
-                }
-
-                list observer {
-                    description
-                        "A repository that the OpFlex agent can send State Report
-                         messages to.";
-
-                    key "id";
-
-                    leaf id {
-                        description 
-                           "The id for the Observer.";
-                        type string;
-                        config true;
-                    }
-                    leaf port {
-                        description 
-                           "The port number to use for the connection";
-                        type int32;
-                        config true;
-                    }
-                    leaf serialization-type {
-                        description 
-                            "The serialization to use for this connection.";
-                        type serialization;
-                        config true;
-                    }
-                }
+            leaf id {
+                description 
+                   "The id for the Observer.";
+                type string;
+            }
+            leaf port {
+                description 
+                   "The port number to use for the connection";
+                type int32;
+            }
+            leaf serialization-type {
+                description 
+                    "The serialization to use for this connection.";
+                type serialization;
             }
         }
     }

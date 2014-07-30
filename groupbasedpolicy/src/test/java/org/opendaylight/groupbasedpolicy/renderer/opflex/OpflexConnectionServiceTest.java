@@ -12,7 +12,6 @@ package org.opendaylight.groupbasedpolicy.renderer.opflex;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.anyObject;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -37,17 +36,16 @@ import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcDecoder;
 import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcEndpoint;
 import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcServiceBinderHandler;
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcMessageMap;
+import org.opendaylight.groupbasedpolicy.jsonrpc.RpcServer;
 import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.IdentityResponse;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.Domains;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.Domain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.domain.DiscoveryDefinitions;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.domain.DiscoveryDefinitionsBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.domain.discovery.definitions.EndpointRegistry;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.domain.discovery.definitions.EndpointRegistryBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.domain.discovery.definitions.Observer;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.domain.discovery.definitions.ObserverBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.domain.discovery.definitions.PolicyRepository;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.domains.domain.discovery.definitions.PolicyRepositoryBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.DiscoveryDefinitions;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.DiscoveryDefinitionsBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.discovery.definitions.EndpointRegistry;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.discovery.definitions.EndpointRegistryBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.discovery.definitions.Observer;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.discovery.definitions.ObserverBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.discovery.definitions.PolicyRepository;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.discovery.definitions.PolicyRepositoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -103,20 +101,20 @@ public class OpflexConnectionServiceTest {
     @Mock
     private WriteTransaction mockWrite;
     @Mock
-    private ListenableFuture<Optional<Domains>> mockOption;
+    private ListenableFuture<Optional<DiscoveryDefinitions>> mockOption;
     @Mock
     CheckedFuture<Void, TransactionCommitFailedException> mockStatus;
     @Mock
-    private Optional<Domains> mockDao;
-    @Mock
-    private Domains mockDomains;
-    @Mock Domain mockDomain;
-    @Mock
-    private OpflexDomain mockOpflexDomain;
+    private Optional<DiscoveryDefinitions> mockDao;
     @Mock
     private OpflexRpcServer mockOpflexServer;
     @Mock
     private OpflexAgent mockAgent;
+
+    @Mock
+    private OpflexRpcServer mockServer;
+    @Mock
+    private RpcServer mockRpcServer;
     
     private ServerSocket create(int[] ports) throws IOException {
         for (int port : ports) {
@@ -155,15 +153,9 @@ public class OpflexConnectionServiceTest {
         when(mockDataBroker.newWriteOnlyTransaction()).thenReturn(mockWrite);
         when(mockWrite.submit()).thenReturn(mockStatus);
         when(mockRead.read(LogicalDatastoreType.CONFIGURATION,
-                OpflexConnectionService.DOMAINS_IID)).thenReturn(mockOption);
+                OpflexConnectionService.DISCOVERY_IID)).thenReturn(mockOption);
         when(mockOption.get()).thenReturn(mockDao);
-        when(mockDao.get()).thenReturn(mockDomains);
-        when(mockDomains.getDomain())
-        .thenReturn(new ArrayList<Domain>() {          
-            private static final long serialVersionUID = 6302503537798173568L;
-            { add(mockDomain); }});
-        
-        when(mockDomain.getDiscoveryDefinitions()).thenReturn(dummyDefinitions);
+        when(mockDao.get()).thenReturn(dummyDefinitions);
 
         /*
          * Builders for creating our own discovery definitions
@@ -217,38 +209,31 @@ public class OpflexConnectionServiceTest {
     public void testAddConnection() throws Exception {
         when(mockEp.getIdentifier()).thenReturn(TEST_EP_UUID);
         when(mockEp.getContext()).thenReturn(mockOpflexServer);
-        when(mockOpflexServer.getDomain()).thenReturn(mockOpflexDomain);
-        when(mockOpflexDomain.getDomain()).thenReturn(DOMAIN_UUID);
+        when(mockOpflexServer.getDomain()).thenReturn(DOMAIN_UUID);
 
         opflexService = new OpflexConnectionService();
         opflexService.setDataProvider(mockDataBroker);
         opflexService.addConnection(mockEp);
         verify(mockEp, Mockito.times(2)).getIdentifier();
-        verify(mockOpflexDomain, Mockito.times(1)).addOpflexAgent((OpflexAgent)anyObject());
     }
 
     @Test
     public void testChannelClosed() throws Exception {
         when(mockEp.getIdentifier()).thenReturn(TEST_EP_UUID);
         when(mockEp.getContext()).thenReturn(mockOpflexServer);
-        when(mockOpflexDomain.getDomain()).thenReturn(DOMAIN_UUID);
-        when(mockAgent.getDomain()).thenReturn(OpflexConnectionService.OPFLEX_DOMAIN);
-
 
         opflexService = new OpflexConnectionService();
         opflexService.setDataProvider(mockDataBroker);
         when(mockOpflexServer.getDomain()).
-            thenReturn(opflexService.opflexDomains.get(OpflexConnectionService.OPFLEX_DOMAIN));
+            thenReturn(OpflexConnectionService.OPFLEX_DOMAIN);
         opflexService.addConnection(mockEp);
 
         verify(mockEp, Mockito.times(2)).getIdentifier();
 
-        when(mockOpflexServer.getDomain()).thenReturn(mockOpflexDomain);
-        when(mockOpflexDomain.getOpflexAgent(TEST_EP_UUID)).thenReturn(mockAgent);
-        when(mockAgent.getDomain()).thenReturn(OpflexConnectionService.OPFLEX_DOMAIN);
+        assertTrue(opflexService.opflexAgents.size() > 0);
         when(mockAgent.getIdentity()).thenReturn(TEST_EP_UUID);
         opflexService.channelClosed(mockEp);
-        verify(mockAgent).getIdentity();
+        assertTrue(opflexService.opflexAgents.size() <=0);
     }
 
     @Test
@@ -282,7 +267,7 @@ public class OpflexConnectionServiceTest {
 
         when(mockOpflexServer.getRoles()).thenReturn(testRoles);
         when(mockOpflexServer.getDomain()).
-            thenReturn(opflexService.opflexDomains.get(OpflexConnectionService.OPFLEX_DOMAIN));
+            thenReturn(OpflexConnectionService.OPFLEX_DOMAIN);
         opflexService.addConnection(ep);
         channel.writeInbound(copiedBuffer(opflexIdentityRequest, CharsetUtil.UTF_8));
         Object result = channel.readOutbound();
@@ -297,4 +282,5 @@ public class OpflexConnectionServiceTest {
         assertTrue(resp.getResult().getMy_role()
                 .contains(Role.OBSERVER.toString()));
     }
+    
 }

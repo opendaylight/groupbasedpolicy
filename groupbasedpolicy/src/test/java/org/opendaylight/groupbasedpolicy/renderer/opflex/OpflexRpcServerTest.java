@@ -12,7 +12,6 @@ package org.opendaylight.groupbasedpolicy.renderer.opflex;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,8 +44,6 @@ public class OpflexRpcServerTest implements ConnectionService {
     private List<Role> roles = null;
 
     @Mock
-    private OpflexDomain mockDomain;
-    @Mock
     private RpcServer mockServer;
     @Mock
     private OpflexConnectionService mockService;
@@ -66,16 +63,15 @@ public class OpflexRpcServerTest implements ConnectionService {
         roles.add(Role.POLICY_REPOSITORY);
 
         testServer =
-                new OpflexRpcServer(mockDomain, TEST_IDENTITY, roles);
+                new OpflexRpcServer(TEST_DOMAIN, TEST_IDENTITY, roles);
         testServer.setRpcBroker(mockService);
         testServer.setConnectionService(mockService);
 
-        ts1 = new OpflexRpcServer(mockDomain, TEST_IDENTITY, roles);
-        ts2 = new OpflexRpcServer(mockDomain, TEST_IDENTITY2, roles);
+        ts1 = new OpflexRpcServer(TEST_DOMAIN, TEST_IDENTITY, roles);
+        ts2 = new OpflexRpcServer(TEST_DOMAIN, TEST_IDENTITY2, roles);
         roles = new ArrayList<Role>();
         roles.add(Role.POLICY_ELEMENT);
-        ts3 = new OpflexRpcServer(mockDomain, TEST_IDENTITY2, roles);
-        when(mockDomain.getDomain()).thenReturn(TEST_DOMAIN);
+        ts3 = new OpflexRpcServer(TEST_DOMAIN, TEST_IDENTITY2, roles);
     }
 
 

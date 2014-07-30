@@ -28,7 +28,7 @@ import org.opendaylight.groupbasedpolicy.jsonrpc.RpcServer;
 public class OpflexRpcServer {
 
     private String identity;
-    private OpflexDomain domain;
+    private String domain;
     private List<Role> roles;
     private RpcServer rpcServer;
     private ConnectionService connectionService;
@@ -45,7 +45,7 @@ public class OpflexRpcServer {
         }
     }
 
-    public OpflexRpcServer(OpflexDomain domain, String identity, List<Role> roles) {
+    public OpflexRpcServer(String domain, String identity, List<Role> roles) {
         this.domain = domain;
         this.roles = roles;
         parseAndSetIdentity(identity);
@@ -53,7 +53,7 @@ public class OpflexRpcServer {
         rpcServer.setContext(this);
     }
 
-    public OpflexDomain getDomain() {
+    public String getDomain() {
         return domain;
     }
 
@@ -141,7 +141,7 @@ public class OpflexRpcServer {
         if (!this.identity.equals(srv.identity))
             return false;
         if (this.domain == null ||
-                !this.domain.getDomain().equals(srv.getDomain().getDomain()))
+                !this.domain.equals(srv.getDomain()))
             return false;
         if (this.roles == null && srv.roles == null)
             return true;
