@@ -22,11 +22,7 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRefBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.TenantBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._4.match.TcpMatch;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._4.match.TcpMatchBuilder;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +33,7 @@ import static org.mockito.Matchers.*;
 
 import static org.mockito.Mockito.*;
 
-public class PolicyEnforcerTest extends FlowTableTest {
+public class PolicyEnforcerTest extends OfTableTest {
     protected static final Logger LOG = 
             LoggerFactory.getLogger(PolicyEnforcerTest.class);
 
@@ -54,7 +50,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
         ReadWriteTransaction t = dosync(null);
         verify(t, times(1)).put(any(LogicalDatastoreType.class), 
                                 Matchers.<InstanceIdentifier<Flow>>any(), 
-                                any(Flow.class));
+                                any(Flow.class), anyBoolean());
     }
     
     @Test
@@ -71,7 +67,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
         ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
         verify(t, atLeastOnce()).put(eq(LogicalDatastoreType.CONFIGURATION), 
                                      Matchers.<InstanceIdentifier<Flow>>any(),
-                                     ac.capture());
+                                     ac.capture(), anyBoolean());
         int count = 0;
         HashMap<String, FlowCtx> flowMap = new HashMap<>();
         for (Flow f : ac.getAllValues()) {
@@ -85,7 +81,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
         t = dosync(flowMap);
         verify(t, never()).put(any(LogicalDatastoreType.class), 
                                Matchers.<InstanceIdentifier<Flow>>any(), 
-                               any(Flow.class));
+                               any(Flow.class), anyBoolean());
     }
 
     @Test
@@ -110,7 +106,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
         ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
         verify(t, atLeastOnce()).put(eq(LogicalDatastoreType.CONFIGURATION), 
                                      Matchers.<InstanceIdentifier<Flow>>any(),
-                                     ac.capture());
+                                     ac.capture(), anyBoolean());
         int count = 0;
         HashMap<String, FlowCtx> flowMap = new HashMap<>();
         for (Flow f : ac.getAllValues()) {
@@ -153,7 +149,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
         t = dosync(flowMap);
         verify(t, never()).put(any(LogicalDatastoreType.class), 
                                Matchers.<InstanceIdentifier<Flow>>any(), 
-                               any(Flow.class));
+                               any(Flow.class), anyBoolean());
     }
 
     @Test

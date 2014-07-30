@@ -66,7 +66,7 @@ public class DestinationMapper extends FlowTable {
     public static final MacAddress ROUTER_MAC = 
             new MacAddress("88:f0:31:b5:12:b5");
 
-    public DestinationMapper(FlowTableCtx ctx) {
+    public DestinationMapper(OfTable.OfTableCtx ctx) {
         super(ctx);
     }
 
@@ -84,15 +84,12 @@ public class DestinationMapper extends FlowTable {
         dropFlow(t, tiid, flowMap, Integer.valueOf(1), null);
 
         HashSet<EgKey> visitedEgs = new HashSet<>();
-        for (Endpoint e : ctx.epManager.getEndpointsForNode(nodeId)) {
-            if (e.getTenant() == null || e.getEndpointGroup() == null)
-                continue;
-            EgKey key = new EgKey(e.getTenant(), e.getEndpointGroup());
-            
-            Set<EgKey> peers = Sets.union(Collections.singleton(key),
-                                          policyInfo.getPeers(key));
+        for (EgKey epg : ctx.epManager.getGroupsForNode(nodeId)) {
+            Set<EgKey> peers = Sets.union(Collections.singleton(epg),
+                                          policyInfo.getPeers(epg));
             for (EgKey peer : peers) {
-                syncEPG(t, tiid, flowMap, nodeId, policyInfo, peer, visitedEgs);
+                syncEPG(t, tiid, flowMap, nodeId, 
+                        policyInfo, peer, visitedEgs);
             }
         }
     }

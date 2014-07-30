@@ -47,7 +47,7 @@ import static org.mockito.Matchers.*;
 
 import static org.mockito.Mockito.*;
 
-public class PortSecurityTest extends FlowTableTest {
+public class PortSecurityTest extends OfTableTest {
     protected static final Logger LOG = 
             LoggerFactory.getLogger(PortSecurityTest.class);
     
@@ -64,7 +64,7 @@ public class PortSecurityTest extends FlowTableTest {
         ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
         verify(t, times(4)).put(eq(LogicalDatastoreType.CONFIGURATION), 
                                 Matchers.<InstanceIdentifier<Flow>>any(), 
-                                ac.capture());
+                                ac.capture(), anyBoolean());
         int count = 0;
         
         HashMap<String, FlowCtx> flowMap = new HashMap<>();
@@ -88,7 +88,7 @@ public class PortSecurityTest extends FlowTableTest {
         t = dosync(flowMap);
         verify(t, never()).put(any(LogicalDatastoreType.class), 
                                Matchers.<InstanceIdentifier<Flow>>any(), 
-                               any(Flow.class));
+                               any(Flow.class), anyBoolean());
     }
 
     @Test
@@ -103,7 +103,7 @@ public class PortSecurityTest extends FlowTableTest {
         ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
         verify(t, atLeastOnce()).put(eq(LogicalDatastoreType.CONFIGURATION), 
                                      Matchers.<InstanceIdentifier<Flow>>any(),
-                                     ac.capture());
+                                     ac.capture(), anyBoolean());
         
         int count = 0;
         HashMap<String, FlowCtx> flowMap = new HashMap<>();
@@ -122,7 +122,7 @@ public class PortSecurityTest extends FlowTableTest {
         t = dosync(flowMap);
         verify(t, never()).put(any(LogicalDatastoreType.class), 
                                Matchers.<InstanceIdentifier<Flow>>any(), 
-                               any(Flow.class));
+                               any(Flow.class), anyBoolean());
     }
     
     @Test
@@ -138,7 +138,7 @@ public class PortSecurityTest extends FlowTableTest {
         ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
         verify(t, atLeastOnce()).put(eq(LogicalDatastoreType.CONFIGURATION), 
                                      Matchers.<InstanceIdentifier<Flow>>any(),
-                                     ac.capture());
+                                     ac.capture(), anyBoolean());
 
         int count = 0;
         HashMap<String, FlowCtx> flowMap = new HashMap<>();
@@ -161,7 +161,7 @@ public class PortSecurityTest extends FlowTableTest {
         t = dosync(flowMap);
         verify(t, never()).put(any(LogicalDatastoreType.class), 
                                Matchers.<InstanceIdentifier<Flow>>any(), 
-                               any(Flow.class));
+                               any(Flow.class), anyBoolean());
     }
     
     @Test
@@ -181,7 +181,7 @@ public class PortSecurityTest extends FlowTableTest {
         ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
         verify(t, atLeastOnce()).put(eq(LogicalDatastoreType.CONFIGURATION), 
                                      Matchers.<InstanceIdentifier<Flow>>any(),
-                                     ac.capture());
+                                     ac.capture(), anyBoolean());
         
         int count = 0;
         HashMap<String, FlowCtx> flowMap = new HashMap<>();
@@ -211,6 +211,6 @@ public class PortSecurityTest extends FlowTableTest {
         t = dosync(flowMap);
         verify(t, never()).put(any(LogicalDatastoreType.class), 
                                Matchers.<InstanceIdentifier<Flow>>any(), 
-                               any(Flow.class));
+                               any(Flow.class), anyBoolean());
     }
 }

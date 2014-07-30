@@ -58,7 +58,7 @@ public class PolicyEnforcer extends FlowTable {
 
     public static final short TABLE_ID = 3;
 
-    public PolicyEnforcer(FlowTableCtx ctx) {
+    public PolicyEnforcer(OfTable.OfTableCtx ctx) {
         super(ctx);
     }
 
@@ -75,63 +75,59 @@ public class PolicyEnforcer extends FlowTable {
         dropFlow(t, tiid, flowMap, Integer.valueOf(1), null);
 
         HashSet<CgPair> visitedPairs = new HashSet<>();
-        HashSet<EgKey> visitedEgs = new HashSet<>();
-        for (Endpoint src : ctx.epManager.getEndpointsForNode(nodeId)) {
-            if (src.getTenant() == null || src.getEndpointGroup() == null)
-                continue;
 
-            List<ConditionName> conds = 
-                    ctx.epManager.getCondsForEndpoint(src);
-            ConditionGroup scg = 
-                    policyInfo.getEgCondGroup(new EgKey(src.getTenant(), 
-                                                        src.getEndpointGroup()),
-                                              conds);
+        for (EgKey sepg : ctx.epManager.getGroupsForNode(nodeId)) {
+            // Allow traffic within the same endpoint group if the policy
+            // specifies
+            IndexedTenant tenant = 
+                    ctx.policyResolver.getTenant(sepg.getTenantId());
+            EndpointGroup group = 
+                    tenant.getEndpointGroup(sepg.getEgId());
+            IntraGroupPolicy igp = group.getIntraGroupPolicy();
             int sepgId = 
-                    ctx.policyManager.getContextOrdinal(src.getTenant(), 
-                                                        src.getEndpointGroup());
-            int scgId = ctx.policyManager.getConfGroupOrdinal(scg);
-            
-            EgKey sepg = new EgKey(src.getTenant(), src.getEndpointGroup());
-
-            if (!visitedEgs.contains(sepg)) {
-                visitedEgs.add(sepg);
-                IndexedTenant tenant = 
-                        ctx.policyResolver.getTenant(sepg.getTenantId());
-                EndpointGroup group = 
-                        tenant.getEndpointGroup(sepg.getEgId());
-                IntraGroupPolicy igp = group.getIntraGroupPolicy();
-                if (igp == null || igp.equals(IntraGroupPolicy.Allow)) {
-                    allowSameEpg(t, tiid, flowMap, nodeId, sepgId);
-                }
+                    ctx.policyManager.getContextOrdinal(sepg.getTenantId(), 
+                                                        sepg.getEgId());
+            if (igp == null || igp.equals(IntraGroupPolicy.Allow)) {
+                allowSameEpg(t, tiid, flowMap, nodeId, sepgId);
             }
-            
-            Set<EgKey> peers = policyInfo.getPeers(sepg);
-            for (EgKey depg : peers) {
-                int depgId = 
-                        ctx.policyManager.getContextOrdinal(depg.getTenantId(), 
-                                                            depg.getEgId());
 
-                for (Endpoint dst : ctx.epManager.getEndpointsForGroup(depg)) {
-
-                    conds = ctx.epManager.getCondsForEndpoint(src);
-                    ConditionGroup dcg = 
-                            policyInfo.getEgCondGroup(new EgKey(dst.getTenant(), 
-                                                                dst.getEndpointGroup()),
-                                                      conds);
-                    int dcgId = ctx.policyManager.getConfGroupOrdinal(dcg);
-                    
-                    CgPair p = new CgPair(depgId, sepgId, dcgId, scgId);
-                    if (visitedPairs.contains(p)) continue;
-                    visitedPairs.add(p);
-                    syncPolicy(t, tiid, flowMap, nodeId, policyInfo, 
-                               p, depg, sepg, dcg, scg);
-
-                    p = new CgPair(sepgId, depgId, scgId, dcgId);
-                    if (visitedPairs.contains(p)) continue;
-                    visitedPairs.add(p);
-                    syncPolicy(t, tiid, flowMap, nodeId, policyInfo, 
-                               p, sepg, depg, scg, dcg);
-                    
+            for (Endpoint src : ctx.epManager.getEPsForNode(nodeId, sepg)) {
+                if (src.getTenant() == null || src.getEndpointGroup() == null)
+                    continue;
+                
+                List<ConditionName> conds = 
+                        ctx.epManager.getCondsForEndpoint(src);
+                ConditionGroup scg = policyInfo.getEgCondGroup(sepg, conds);
+                int scgId = ctx.policyManager.getConfGroupOrdinal(scg);
+                
+                Set<EgKey> peers = policyInfo.getPeers(sepg);
+                for (EgKey depg : peers) {
+                    int depgId = 
+                            ctx.policyManager.getContextOrdinal(depg.getTenantId(), 
+                                                                depg.getEgId());
+                
+                    for (Endpoint dst : ctx.epManager.getEndpointsForGroup(depg)) {
+                
+                        conds = ctx.epManager.getCondsForEndpoint(src);
+                        ConditionGroup dcg = 
+                                policyInfo.getEgCondGroup(new EgKey(dst.getTenant(), 
+                                                                    dst.getEndpointGroup()),
+                                                          conds);
+                        int dcgId = ctx.policyManager.getConfGroupOrdinal(dcg);
+                        
+                        CgPair p = new CgPair(depgId, sepgId, dcgId, scgId);
+                        if (visitedPairs.contains(p)) continue;
+                        visitedPairs.add(p);
+                        syncPolicy(t, tiid, flowMap, nodeId, policyInfo, 
+                                   p, depg, sepg, dcg, scg);
+                
+                        p = new CgPair(sepgId, depgId, scgId, dcgId);
+                        if (visitedPairs.contains(p)) continue;
+                        visitedPairs.add(p);
+                        syncPolicy(t, tiid, flowMap, nodeId, policyInfo, 
+                                   p, sepg, depg, scg, dcg);
+                        
+                    }
                 }
             }
         }

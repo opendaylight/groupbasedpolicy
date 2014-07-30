@@ -16,7 +16,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockEndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockPolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockSwitchManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable.FlowCtx;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable.FlowTableCtx;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OfTable.OfTableCtx;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.L4Classifier;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
 import org.opendaylight.groupbasedpolicy.resolver.MockPolicyResolver;
@@ -67,8 +67,8 @@ import com.google.common.collect.ImmutableList;
 
 import static org.mockito.Mockito.*;
 
-public class FlowTableTest {
-    FlowTableCtx ctx;
+public class OfTableTest {
+    OfTableCtx ctx;
     FlowTable table;
     
     MockEndpointManager endpointManager;
@@ -98,13 +98,13 @@ public class FlowTableTest {
         policyManager = new MockPolicyManager(policyResolver, endpointManager);
         switchManager = new MockSwitchManager();
         
-        ctx = new FlowTableCtx(null, 
-                               null, 
-                               policyManager, 
-                               policyResolver, 
-                               switchManager, 
-                               endpointManager, 
-                               null);
+        ctx = new OfTableCtx(null, 
+                             null, 
+                             policyManager, 
+                             policyResolver, 
+                             switchManager, 
+                             endpointManager, 
+                             null);
     }
     
     protected void setup() throws Exception {

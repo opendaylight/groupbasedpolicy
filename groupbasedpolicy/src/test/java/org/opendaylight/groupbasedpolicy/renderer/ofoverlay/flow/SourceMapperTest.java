@@ -30,7 +30,7 @@ import static org.mockito.Matchers.*;
 
 import static org.mockito.Mockito.*;
 
-public class SourceMapperTest extends FlowTableTest {
+public class SourceMapperTest extends OfTableTest {
     protected static final Logger LOG = 
             LoggerFactory.getLogger(SourceMapperTest.class);
     @Before
@@ -46,7 +46,7 @@ public class SourceMapperTest extends FlowTableTest {
         ReadWriteTransaction t = dosync(null);
         verify(t, times(1)).put(any(LogicalDatastoreType.class), 
                                 Matchers.<InstanceIdentifier<Flow>>any(), 
-                                any(Flow.class));
+                                any(Flow.class), anyBoolean());
     }
     
     @Test
@@ -59,7 +59,7 @@ public class SourceMapperTest extends FlowTableTest {
         ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
         verify(t, times(2)).put(eq(LogicalDatastoreType.CONFIGURATION), 
                                 Matchers.<InstanceIdentifier<Flow>>any(),
-                                ac.capture());
+                                ac.capture(), anyBoolean());
 
         int count = 0;
         HashMap<String, FlowCtx> flowMap = new HashMap<>();
@@ -82,7 +82,7 @@ public class SourceMapperTest extends FlowTableTest {
         t = dosync(flowMap);
         verify(t, never()).put(any(LogicalDatastoreType.class), 
                                Matchers.<InstanceIdentifier<Flow>>any(), 
-                               any(Flow.class));
+                               any(Flow.class), anyBoolean());
     }
     
 }

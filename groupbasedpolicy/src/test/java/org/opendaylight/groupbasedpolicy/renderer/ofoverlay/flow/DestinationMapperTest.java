@@ -49,7 +49,7 @@ import static org.mockito.Matchers.*;
 
 import static org.mockito.Mockito.*;
 
-public class DestinationMapperTest extends FlowTableTest {
+public class DestinationMapperTest extends OfTableTest {
     protected static final Logger LOG = 
             LoggerFactory.getLogger(DestinationMapperTest.class);
 
@@ -70,7 +70,7 @@ public class DestinationMapperTest extends FlowTableTest {
         ReadWriteTransaction t = dosync(null);
         verify(t, times(1)).put(any(LogicalDatastoreType.class), 
                                 Matchers.<InstanceIdentifier<Flow>>any(), 
-                                any(Flow.class));
+                                any(Flow.class), anyBoolean());
     }
 
     private void verifyDMap(Endpoint remoteEp, 
@@ -80,7 +80,7 @@ public class DestinationMapperTest extends FlowTableTest {
         ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
         verify(t, atLeastOnce()).put(eq(LogicalDatastoreType.CONFIGURATION), 
                                      Matchers.<InstanceIdentifier<Flow>>any(),
-                                     ac.capture());
+                                     ac.capture(), anyBoolean());
 
         int count = 0;
         HashMap<String, FlowCtx> flowMap = new HashMap<>();
@@ -175,7 +175,7 @@ public class DestinationMapperTest extends FlowTableTest {
         t = dosync(flowMap);
         verify(t, never()).put(any(LogicalDatastoreType.class), 
                                Matchers.<InstanceIdentifier<Flow>>any(), 
-                               any(Flow.class));
+                               any(Flow.class), anyBoolean());
     }
     
     @Override

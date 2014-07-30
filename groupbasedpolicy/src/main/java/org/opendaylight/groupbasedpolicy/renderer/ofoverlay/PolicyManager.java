@@ -27,9 +27,10 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.DestinationMapper;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable.FlowTableCtx;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.GroupTable;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OfTable;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OfTable.OfTableCtx;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PortSecurity;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.SourceMapper;
@@ -44,8 +45,6 @@ import org.opendaylight.groupbasedpolicy.util.SetUtils;
 import org.opendaylight.groupbasedpolicy.util.SingletonTask;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNodeBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.TableBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.UniqueId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig.LearningMode;
@@ -56,9 +55,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -88,7 +85,7 @@ public class PolicyManager
     /**
      * The flow tables that make up the processing pipeline
      */
-    private final List<? extends FlowTable> flowPipeline;
+    private final List<? extends OfTable> flowPipeline;
 
     /**
      * The delay before triggering the flow update task in response to an
@@ -109,7 +106,7 @@ public class PolicyManager
     // should ultimately involve some sort of distributed agreement
     // or a leader to allocate them.  For now we'll just use a counter and
     // this local map.  Also theoretically need to garbage collect periodically
-    private final ConcurrentMap<TenantId, ConcurrentMap<String, Integer>> ordinals = 
+    private final ConcurrentMap<String, Integer> ordinals = 
             new ConcurrentHashMap<>();
     // XXX - need to garbage collect
     private final ConcurrentMap<ConditionGroup, Integer> cgOrdinals = 
@@ -137,13 +134,14 @@ public class PolicyManager
             t.submit();
         }
 
-        FlowTableCtx ctx = new FlowTableCtx(dataBroker, rpcRegistry, 
-                                            this, policyResolver, switchManager, 
-                                            endpointManager, executor);
+        OfTableCtx ctx = new OfTableCtx(dataBroker, rpcRegistry, 
+                                        this, policyResolver, switchManager, 
+                                        endpointManager, executor);
         flowPipeline = ImmutableList.of(new PortSecurity(ctx),
                                         new SourceMapper(ctx),
                                         new DestinationMapper(ctx),
-                                        new PolicyEnforcer(ctx));
+                                        new PolicyEnforcer(ctx),
+                                        new GroupTable(ctx));
 
         policyScope = policyResolver.registerListener(this);
         if (switchManager != null)
@@ -164,38 +162,30 @@ public class PolicyManager
 
     @Override
     public void switchReady(final NodeId nodeId) {
-        WriteTransaction t = dataBroker.newWriteOnlyTransaction();
-        
-        NodeBuilder nb = new NodeBuilder()
-            .setId(nodeId)
-            .addAugmentation(FlowCapableNode.class, 
-                             new FlowCapableNodeBuilder()
-                                .setTable(Lists.transform(flowPipeline, 
-                                                          new Function<FlowTable, Table>() {
-                                    @Override
-                                    public Table apply(FlowTable input) {
-                                        return new TableBuilder()
-                                            .setId(Short.valueOf(input.getTableId()))
-                                            .build();
-                                    }
-                                })) .build());
-        t.put(LogicalDatastoreType.CONFIGURATION, 
-              FlowUtils.createNodePath(nodeId),
-              nb.build());
-        ListenableFuture<Void> result = t.submit();
-        Futures.addCallback(result, 
-                            new FutureCallback<Void>() {
-            @Override
-            public void onSuccess(Void result) {
-                dirty.get().addNode(nodeId);
-                scheduleUpdate();
-            }
-
-            @Override
-            public void onFailure(Throwable t) {
-                LOG.error("Could not add switch {}", nodeId, t);
-            }
-        });
+//        WriteTransaction t = dataBroker.newWriteOnlyTransaction();
+//        
+//        NodeBuilder nb = new NodeBuilder()
+//            .setId(nodeId)
+//            .addAugmentation(FlowCapableNode.class, 
+//                             new FlowCapableNodeBuilder()
+//                                .build());
+//        t.merge(LogicalDatastoreType.CONFIGURATION, 
+//                FlowUtils.createNodePath(nodeId),
+//                nb.build(), true);
+//        ListenableFuture<Void> result = t.submit();
+//        Futures.addCallback(result, 
+//                            new FutureCallback<Void>() {
+//            @Override
+//            public void onSuccess(Void result) {
+//                dirty.get().addNode(nodeId);
+//                scheduleUpdate();
+//            }
+//
+//            @Override
+//            public void onFailure(Throwable t) {
+//                LOG.error("Could not add switch {}", nodeId, t);
+//            }
+//        });
         
     }
 
@@ -276,10 +266,10 @@ public class PolicyManager
         }
         return ord.intValue();
     }
-
+    
     /**
      * Get a 32-bit context ordinal suitable for use in the OF data plane
-     * for the given policy item.  Note that this function may block
+     * for the given policy item. 
      * @param tenantId the tenant ID of the element
      * @param id the unique ID for the element
      * @return the 32-bit ordinal value
@@ -287,57 +277,24 @@ public class PolicyManager
     public int getContextOrdinal(final TenantId tenantId, 
                                  final UniqueId id) throws Exception {
         if (tenantId == null || id == null) return 0;
-        ConcurrentMap<String, Integer> m = ordinals.get(tenantId);
-        if (m == null) {
-            m = new ConcurrentHashMap<>();
-            ConcurrentMap<String, Integer> old = 
-                    ordinals.putIfAbsent(tenantId, m);
-            if (old != null) m = old;
-        }
-        Integer ord = m.get(id.getValue());
+        return getContextOrdinal(tenantId.getValue() + "|" + id.getValue());
+    }
+
+    /**
+     * Get a 32-bit context ordinal suitable for use in the OF data plane
+     * for the given policy item.
+     * @param id the unique ID for the element
+     * @return the 32-bit ordinal value
+     */
+    public int getContextOrdinal(final String id) throws Exception {
+
+        Integer ord = ordinals.get(id);
         if (ord == null) {
             ord = policyOrdinal.getAndIncrement();
-            Integer old = m.putIfAbsent(id.getValue(), ord);
+            Integer old = ordinals.putIfAbsent(id, ord);
             if (old != null) ord = old;
         }
-
         return ord.intValue();
-//        while (true) {
-//            final ReadWriteTransaction t = dataBroker.newReadWriteTransaction();
-//            InstanceIdentifier<DataPlaneOrdinal> iid =
-//                    InstanceIdentifier.builder(OfOverlayOperational.class)
-//                    .child(DataPlaneOrdinal.class, 
-//                           new DataPlaneOrdinalKey(id, tenantId))
-//                    .build();
-//            ListenableFuture<Optional<DataObject>> r = 
-//                    t.read(LogicalDatastoreType.OPERATIONAL, iid);
-//            Optional<DataObject> res = r.get();
-//            if (res.isPresent()) {
-//                DataPlaneOrdinal o = (DataPlaneOrdinal)res.get();
-//                return o.getOrdinal().intValue();
-//            }
-//            final int ordinal = policyOrdinal.getAndIncrement();
-//            OfOverlayOperational oo = new OfOverlayOperationalBuilder()
-//                .setDataPlaneOrdinal(ImmutableList.of(new DataPlaneOrdinalBuilder()
-//                    .setId(id)
-//                    .setTenant(tenantId)
-//                    .setOrdinal(Long.valueOf(ordinal))
-//                    .build()))
-//                .build();
-//            t.merge(LogicalDatastoreType.OPERATIONAL, 
-//                    InstanceIdentifier.builder(OfOverlayOperational.class)
-//                    .build(), 
-//                    oo);
-//            ListenableFuture<RpcResult<TransactionStatus>> commitr = t.commit();
-//            try {
-//                commitr.get();
-//                return ordinal;
-//            } catch (ExecutionException e) {
-//                if (e.getCause() instanceof OptimisticLockFailedException)
-//                    continue;
-//                throw e;
-//            }
-//        }
     }
     
     // **************
@@ -369,7 +326,7 @@ public class PolicyManager
             if (!switchManager.isSwitchReady(nodeId)) return null;
             PolicyInfo info = policyResolver.getCurrentPolicy();
             if (info == null) return null;
-            for (FlowTable table : flowPipeline) {
+            for (OfTable table : flowPipeline) {
                 try {
                     table.update(nodeId, info, dirty);
                 } catch (Exception e) {

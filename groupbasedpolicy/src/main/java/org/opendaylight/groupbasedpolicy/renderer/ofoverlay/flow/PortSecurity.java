@@ -13,6 +13,7 @@ import java.util.Set;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
+import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Prefix;
@@ -45,7 +46,7 @@ public class PortSecurity extends FlowTable {
     
     public static final short TABLE_ID = 0;
     
-    public PortSecurity(FlowTableCtx ctx) {
+    public PortSecurity(OfTable.OfTableCtx ctx) {
         super(ctx);
     }
 
@@ -77,19 +78,21 @@ public class PortSecurity extends FlowTable {
         dropFlow(t, tiid, flowMap, 111, FlowUtils.IPv4);
         dropFlow(t, tiid, flowMap, 112, FlowUtils.IPv6);
 
-        for (Endpoint e : ctx.epManager.getEndpointsForNode(nodeId)) {
-            OfOverlayContext ofc = e.getAugmentation(OfOverlayContext.class);
-            if (ofc != null && ofc.getNodeConnectorId() != null &&
-                (ofc.getLocationType() == null ||
-                 LocationType.Internal.equals(ofc.getLocationType()))) {
-                // Allow layer 3 traffic (ARP and IP) with the correct source
-                // IP, MAC, and source port
-                l3flow(t, tiid, flowMap, e, ofc, 120, false);
-                l3flow(t, tiid, flowMap, e, ofc, 121, true);
-                
-                // Allow layer 2 traffic with the correct source MAC and 
-                // source port (note lower priority than drop IP rules) 
-                l2flow(t, tiid, flowMap, e, ofc, 100);
+        for (EgKey sepg : ctx.epManager.getGroupsForNode(nodeId)) {
+            for (Endpoint e : ctx.epManager.getEPsForNode(nodeId, sepg)) {
+                OfOverlayContext ofc = e.getAugmentation(OfOverlayContext.class);
+                if (ofc != null && ofc.getNodeConnectorId() != null &&
+                        (ofc.getLocationType() == null ||
+                        LocationType.Internal.equals(ofc.getLocationType()))) {
+                    // Allow layer 3 traffic (ARP and IP) with the correct 
+                    // source IP, MAC, and source port
+                    l3flow(t, tiid, flowMap, e, ofc, 120, false);
+                    l3flow(t, tiid, flowMap, e, ofc, 121, true);
+
+                    // Allow layer 2 traffic with the correct source MAC and 
+                    // source port (note lower priority than drop IP rules) 
+                    l2flow(t, tiid, flowMap, e, ofc, 100);
+                }
             }
         }
     }

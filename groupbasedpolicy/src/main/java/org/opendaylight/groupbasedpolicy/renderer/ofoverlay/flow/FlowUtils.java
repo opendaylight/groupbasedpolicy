@@ -10,6 +10,7 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
 import java.util.ArrayList;
 
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Uri;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.DecNwTtlCaseBuilder;
@@ -37,6 +38,13 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instru
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.go.to.table._case.GoToTableBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.write.actions._case.WriteActionsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.InstructionBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.BucketId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.GroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.group.Buckets;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.group.buckets.Bucket;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.group.buckets.BucketKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.groups.Group;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.groups.GroupKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
@@ -85,9 +93,9 @@ public final class FlowUtils {
     /**
      * Creates a table path from a node ID and table ID
      *
-     * @param nodePath
-     * @param tableKey
-     * @return
+     * @param nodeId the ID of the node
+     * @param tableId the ID of the table
+     * @return the {@link InstanceIdentifier<Table>}
      */
     public static final InstanceIdentifier<Table> 
         createTablePath(final NodeId nodeId, 
@@ -97,7 +105,42 @@ public final class FlowUtils {
                 .child(Table.class, new TableKey(tableId))
                 .build();
     }
-
+    
+    /**
+     * Creates a group path from a node ID and group ID
+     *
+     * @param nodeId the Id of the node
+     * @param groupId the ID of the group table
+     * @return the {@link InstanceIdentifier<Group>}
+     */
+    public static final InstanceIdentifier<Group> 
+        createGroupPath(final NodeId nodeId, 
+                        final GroupId groupId) {
+        return createNodePath(nodeId).builder()
+                .augmentation(FlowCapableNode.class)
+                .child(Group.class, new GroupKey(groupId))
+                .build();
+    }
+    /**
+     * Creates a group path from a node ID and group ID
+     *
+     * @param nodeId the Id of the node
+     * @param groupId the ID of the group table
+     * @param bucketId the ID of the bucket in the group table
+     * @return the {@link InstanceIdentifier<Bucket>}
+     */
+    public static final InstanceIdentifier<Bucket> 
+        createBucketPath(final NodeId nodeId, 
+                         final GroupId groupId,
+                         final BucketId bucketId) {
+        return createNodePath(nodeId).builder()
+                .augmentation(FlowCapableNode.class)
+                .child(Group.class, new GroupKey(groupId))
+                .child(Buckets.class)
+                .child(Bucket.class, new BucketKey(bucketId))
+                .build();
+    }
+    
     /**
      * Creates a path for particular flow, by appending flow-specific information
      * to table path.
@@ -146,20 +189,24 @@ public final class FlowUtils {
     public static Instruction outputActionIns(NodeConnectorId id) {
         return writeActionIns(outputAction(id));
     }
-    
-    public static Instruction writeActionIns(Action... actions) {
+
+    public static ArrayList<org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.Action> writeActionList(Action... actions) {
         ArrayList<org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.Action> alist
             = new ArrayList<>();
         int count = 0;
         for (Action action : actions) {
             alist.add(new ActionBuilder()
-                .setOrder(Integer.valueOf(count++))
-                .setAction(action)
-                .build());
+            .setOrder(Integer.valueOf(count++))
+            .setAction(action)
+            .build());
         }
+        return alist;
+    }
+
+    public static Instruction writeActionIns(Action... actions) {
         return new WriteActionsCaseBuilder()
             .setWriteActions(new WriteActionsBuilder()
-                .setAction(alist)
+                .setAction(writeActionList(actions))
                 .build())
             .build();
     }
@@ -190,7 +237,7 @@ public final class FlowUtils {
     public static Action outputAction(NodeConnectorId id) {
         return new OutputActionCaseBuilder()
             .setOutputAction(new OutputActionBuilder()
-                .setOutputNodeConnector(id)
+                .setOutputNodeConnector(new Uri(id.getValue()))
                 .build())
             .build();
     }

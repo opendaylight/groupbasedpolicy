@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -26,7 +27,6 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.AbstractEndpointRegistry;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
-import org.opendaylight.groupbasedpolicy.resolver.EndpointProvider;
 import org.opendaylight.groupbasedpolicy.util.SetUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
@@ -46,7 +46,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.Sets;
 
 /**
  * Keep track of endpoints on the system.  Maintain an index of endpoints
@@ -61,7 +63,7 @@ import com.google.common.collect.Collections2;
  */
 public class EndpointManager 
         extends AbstractEndpointRegistry 
-        implements AutoCloseable, DataChangeListener, EndpointProvider
+        implements AutoCloseable, DataChangeListener
     {
     private static final Logger LOG = 
             LoggerFactory.getLogger(EndpointManager.class);
@@ -73,11 +75,12 @@ public class EndpointManager
 
     private final ConcurrentHashMap<EpKey, Endpoint> endpoints =
             new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<NodeId, Set<EpKey>> endpointsByNode =
+    private final ConcurrentHashMap<NodeId, 
+                                    ConcurrentMap<EgKey, Set<EpKey>>> endpointsByNode =
             new ConcurrentHashMap<>();
     private final ConcurrentHashMap<EgKey, Set<EpKey>> endpointsByGroup = 
             new ConcurrentHashMap<>();
-    
+            
     private List<EndpointListener> listeners = new CopyOnWriteArrayList<>();
 
     public EndpointManager(DataBroker dataProvider,
@@ -115,10 +118,45 @@ public class EndpointManager
      * @param nodeId the nodeId of the switch to get endpoints for
      * @return a collection of {@link Endpoint} objects.
      */
-    public Collection<Endpoint> getEndpointsForNode(NodeId nodeId) {
-        Collection<EpKey> ebn = endpointsByNode.get(nodeId);
+    public Set<EgKey> getGroupsForNode(NodeId nodeId) {
+        Map<EgKey, Set<EpKey>> nodeEps = endpointsByNode.get(nodeId);
+        if (nodeEps == null) return Collections.emptySet();
+        return Collections.unmodifiableSet(nodeEps.keySet());
+    }
+    
+    /**
+     * Get the set of nodes
+     * @param nodeId the nodeId of the switch to get endpoints for
+     * @return a collection of {@link Endpoint} objects.
+     */
+    public Set<NodeId> getNodesForGroup(final EgKey egKey) {
+        return Collections.unmodifiableSet(Sets.filter(endpointsByNode.keySet(),
+                                                       new Predicate<NodeId>() {
+            @Override
+            public boolean apply(NodeId input) {
+                Map<EgKey, Set<EpKey>> nodeEps = 
+                        endpointsByNode.get(input);
+                return (nodeEps != null && 
+                        nodeEps.containsKey(egKey));
+            }
+
+        }));
+    }
+    
+    /**
+     * Get the endpoints in a particular group on a particular node
+     * @param nodeId the node ID to look up
+     * @param eg the group to look up
+     * @return the endpoints
+     */
+    public Collection<Endpoint> getEPsForNode(NodeId nodeId, EgKey eg) {
+        Map<EgKey, Set<EpKey>> nodeEps = endpointsByNode.get(nodeId);
+        if (nodeEps == null) return Collections.emptyList();
+        Collection<EpKey> ebn = nodeEps.get(eg); 
         if (ebn == null) return Collections.emptyList();
-        return Collections2.transform(ebn, indexTransform);
+        return Collections.unmodifiableCollection(Collections2
+                                                  .transform(ebn, 
+                                                             indexTransform));
     }
 
     /**
@@ -137,19 +175,25 @@ public class EndpointManager
     public void setLearningMode(LearningMode learningMode) {
         // No-op for now
     }
-
-    // ****************
-    // EndpointProvider
-    // ****************
-
-    @Override
+    
+    /**
+     * Get a collection of endpoints in a particular endpoint group
+     * @param nodeId the nodeId of the switch to get endpoints for
+     * @return a collection of {@link Endpoint} objects.
+     */
     public Collection<Endpoint> getEndpointsForGroup(EgKey eg) {
         Collection<EpKey> ebg = endpointsByGroup.get(eg);
         if (ebg == null) return Collections.emptyList();
         return Collections2.transform(ebg, indexTransform);
     }
 
-    @Override
+    /**
+     * Get the effective list of conditions that apply to a particular 
+     * endpoint.  This could include additional conditions over the condition
+     * labels directly represented in the endpoint object
+     * @param endpoint the {@link Endpoint} to resolve
+     * @return the list of {@link ConditionName}
+     */
     public List<ConditionName> getCondsForEndpoint(Endpoint endpoint) {
         // XXX TODO consider group conditions as well.  Also need to notify
         // endpoint updated if the endpoint group conditions change
@@ -157,7 +201,7 @@ public class EndpointManager
             return endpoint.getCondition();
         else return Collections.emptyList();
     }
-
+    
     // ************************
     // AbstractEndpointRegistry
     // ************************
@@ -271,9 +315,20 @@ public class EndpointManager
         return new EgKey(endpoint.getTenant(), endpoint.getEndpointGroup());
     }
     
-    private Set<EpKey> getEpNSet(NodeId location) {
-        return SetUtils.getNestedSet(location, endpointsByNode);
+    private Set<EpKey> getEpNGSet(NodeId location, EgKey eg) {
+        ConcurrentMap<EgKey, Set<EpKey>> map = endpointsByNode.get(location);
+        if (map == null) {
+            map = new ConcurrentHashMap<>();
+            ConcurrentMap<EgKey, Set<EpKey>> old = 
+                    endpointsByNode.putIfAbsent(location, map);
+            if (old != null)
+                map = old;
+        }
+        return SetUtils.getNestedSet(eg, map);
     }
+    
+    private static final ConcurrentMap<EgKey, Set<EpKey>> EMPTY_MAP =
+            new ConcurrentHashMap<>();
 
     private Set<EpKey> getEpGSet(EgKey eg) {
         return SetUtils.getNestedSet(eg, endpointsByGroup);
@@ -303,10 +358,15 @@ public class EndpointManager
         if (newEp != null)
             endpoints.put(epKey, newEp);
 
-        if (oldLoc != null && 
-            (newLoc == null || !oldLoc.equals(newLoc))) {
-            Set<EpKey> eps = getEpNSet(oldLoc);
+        if (oldLoc != null && oldKey != null &&
+            (newLoc == null || !oldLoc.equals(newLoc) ||
+            newKey == null || !oldKey.equals(newKey))) {
+            ConcurrentMap<EgKey, Set<EpKey>> map = 
+                    endpointsByNode.get(oldLoc);
+            Set<EpKey> eps = map.get(oldKey);
             eps.remove(epKey);
+            map.remove(oldKey, Collections.emptySet());
+            endpointsByNode.remove(oldLoc, EMPTY_MAP);
             notifyOldLoc = true;
         }
         if (oldKey != null &&
@@ -316,8 +376,8 @@ public class EndpointManager
             notifyOldEg = true;
         }
 
-        if (newLoc != null) {
-            Set<EpKey> eps = getEpNSet(newLoc);
+        if (newLoc != null && newKey != null) {
+            Set<EpKey> eps = getEpNGSet(newLoc, newKey);
             eps.add(epKey);
             LOG.debug("Endpoint {} added to node {}", epKey, newLoc);
             notifyNewLoc = true;

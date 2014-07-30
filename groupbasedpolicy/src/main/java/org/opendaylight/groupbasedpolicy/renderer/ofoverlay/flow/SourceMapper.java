@@ -45,7 +45,7 @@ public class SourceMapper extends FlowTable {
 
     public static final short TABLE_ID = 1;
 
-    public SourceMapper(FlowTableCtx ctx) {
+    public SourceMapper(OfTable.OfTableCtx ctx) {
         super(ctx);
     }
 
@@ -63,15 +63,17 @@ public class SourceMapper extends FlowTable {
         dropFlow(t, tiid, flowMap, Integer.valueOf(1), null);
 
         // XXX TODO Set sEPG from tunnel ports using the tunnel ID
-        
-        for (Endpoint e : ctx.epManager.getEndpointsForNode(nodeId)) {
-            OfOverlayContext ofc = e.getAugmentation(OfOverlayContext.class);
-            if (ofc != null && ofc.getNodeConnectorId() != null &&
-                (ofc.getLocationType() == null ||
-                 LocationType.Internal.equals(ofc.getLocationType())) &&
-                 e.getTenant() != null && e.getEndpointGroup() != null) {
-                syncEP(t, tiid, flowMap, policyInfo, nodeId, e, ofc);
-            } 
+
+        for (EgKey sepg : ctx.epManager.getGroupsForNode(nodeId)) {
+            for (Endpoint e : ctx.epManager.getEPsForNode(nodeId, sepg)) {
+                OfOverlayContext ofc = e.getAugmentation(OfOverlayContext.class);
+                if (ofc != null && ofc.getNodeConnectorId() != null &&
+                        (ofc.getLocationType() == null ||
+                        LocationType.Internal.equals(ofc.getLocationType())) &&
+                        e.getTenant() != null && e.getEndpointGroup() != null) {
+                    syncEP(t, tiid, flowMap, policyInfo, nodeId, e, ofc);
+                } 
+            }
         }
     }
     
