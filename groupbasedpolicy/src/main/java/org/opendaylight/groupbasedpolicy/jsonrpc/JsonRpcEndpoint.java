@@ -198,7 +198,6 @@ public class JsonRpcEndpoint implements ChannelFutureListener {
 
                 message = objectMapper.treeToValue(requestJson, callback.getClass());
                 message.setId(requestJson.get("id").asText());
-                //message.setMethod(requestJson.get("method").asText());
 
                 broker.publish(this, message);
             } catch (JsonProcessingException  e) {

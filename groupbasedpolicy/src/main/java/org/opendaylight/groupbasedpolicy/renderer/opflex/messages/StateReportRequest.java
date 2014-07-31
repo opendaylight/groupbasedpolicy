@@ -127,4 +127,18 @@ public class StateReportRequest extends RpcMessage {
         this.name = STATE_MESSAGE;
         this.method = STATE_MESSAGE;
     }
+    
+    /**
+     * Minimal check on validity of message
+     * @return true if message has passed validity check
+     */
+    @JsonIgnore
+    @Override
+    public boolean valid() {
+        if (params == null)
+            return false;
+        if (params.get(0) == null)
+            return false;
+        return true;
+    }
 }

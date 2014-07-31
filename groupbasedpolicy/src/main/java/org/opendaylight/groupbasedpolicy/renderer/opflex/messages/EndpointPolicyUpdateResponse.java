@@ -95,5 +95,11 @@ public class EndpointPolicyUpdateResponse extends RpcMessage {
     public void setName(String name) {
         this.name = name;
     }
+    @JsonIgnore
+    @Override
+    public boolean valid() {
+        return true;
+    }
+    
 
 }
