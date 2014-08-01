@@ -26,8 +26,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * Base class for managing flow tables
@@ -78,8 +76,9 @@ public abstract class FlowTable extends OfTable {
             }
         }
 
-        ListenableFuture<Void> result = t.submit();
-        Futures.addCallback(result, updateCallback);
+        t.submit().get();
+        //ListenableFuture<Void> result = t.submit();
+        //Futures.addCallback(result, updateCallback);
     }
 
     // *********

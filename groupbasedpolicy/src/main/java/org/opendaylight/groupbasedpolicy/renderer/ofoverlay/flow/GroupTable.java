@@ -45,7 +45,9 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
-import com.google.common.util.concurrent.Futures;
+import com.google.common.collect.Ordering;
+
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.*;
 
 /**
  * Manage the group tables for handling broadcast/multicast
@@ -57,7 +59,6 @@ public class GroupTable extends OfTable {
 
     public GroupTable(OfTableCtx ctx) {
         super(ctx);
-        // TODO Auto-generated constructor stub
     }
     
     @Override
@@ -68,8 +69,7 @@ public class GroupTable extends OfTable {
         // Since this is happening concurrently with other things that are 
         // working in subtrees of nodes, we have to do two transactions
         ReadOnlyTransaction t = ctx.dataBroker.newReadOnlyTransaction();
-        InstanceIdentifier<Node> niid = 
-                FlowUtils.createNodePath(nodeId);
+        InstanceIdentifier<Node> niid = createNodePath(nodeId);
         Optional<Node> r =
                 t.read(LogicalDatastoreType.CONFIGURATION, niid).get();
         if (!r.isPresent()) return;
@@ -90,12 +90,20 @@ public class GroupTable extends OfTable {
         }
         
         sync(nodeId, policyInfo, dirty, groupMap);
-        
+
         WriteTransaction wt = ctx.dataBroker.newWriteOnlyTransaction();
+        boolean wrote = syncGroupToStore(wt, nodeId, groupMap);
+        if (wrote)
+            wt.submit().get();
+    }
+    
+    protected boolean syncGroupToStore(WriteTransaction wt,
+                                       NodeId nodeId, 
+                                       HashMap<GroupId, GroupCtx> groupMap) {
         boolean wrote = false;
         for (GroupCtx gctx : groupMap.values()) {
             InstanceIdentifier<Group> giid = 
-                    FlowUtils.createGroupPath(nodeId, gctx.groupId);
+                    createGroupPath(nodeId, gctx.groupId);
             if (!gctx.visited) {
                 // Remove group table
                 wrote = true;
@@ -109,37 +117,37 @@ public class GroupTable extends OfTable {
                     if (bctx.b != null) bid = bctx.b.getBucketId();
                     else bid = bctx.newb.getBucketId();
                     InstanceIdentifier<Bucket> biid = 
-                            FlowUtils.createBucketPath(nodeId,
-                                                       gctx.groupId, 
-                                                       bid);
+                            createBucketPath(nodeId,
+                                             gctx.groupId, 
+                                             bid);
                     if (!bctx.visited) {
                         // remove bucket
-                        LOG.info("delete {} {}", gctx.groupId, bid);
                         wrote = true;
                         wt.delete(LogicalDatastoreType.CONFIGURATION, biid);
-                    } else if (bctx.b == null || 
-                               !Objects.equal(bctx.newb, 
-                                              bctx.b)) {
+                    } else if (bctx.b == null) {
+                        // new bucket
+                        buckets.add(bctx.newb);
+                    } else if (!Objects.equal(bctx.newb.getAction(), 
+                                              Ordering.from(ActionComparator.INSTANCE)
+                                                  .sortedCopy(bctx.b.getAction()))) {
                         // update bucket
                         buckets.add(bctx.newb);
-                        LOG.info("{} {}", gctx.groupId, bctx.newb.getBucketId());
                     }
-                    if (buckets.size() > 0) {
-                        GroupBuilder gb = new GroupBuilder()
-                            .setGroupId(gctx.groupId)
-                            .setGroupType(GroupTypes.GroupAll)
-                            .setBuckets(new BucketsBuilder()
-                            .setBucket(buckets)
-                            .build());
-                        wrote = true;
-                        wt.merge(LogicalDatastoreType.CONFIGURATION, 
-                                 giid, gb.build());
-                    }
+                }
+                if (buckets.size() > 0) {
+                    GroupBuilder gb = new GroupBuilder()
+                        .setGroupId(gctx.groupId)
+                        .setGroupType(GroupTypes.GroupAll)
+                        .setBuckets(new BucketsBuilder()
+                        .setBucket(buckets)
+                        .build());
+                    wrote = true;
+                    wt.merge(LogicalDatastoreType.CONFIGURATION, 
+                             giid, gb.build());
                 }
             }
         }
-        if (wrote)
-            Futures.addCallback(wt.submit(), updateCallback);
+        return wrote;
     }
     
     protected void sync(NodeId nodeId, PolicyInfo policyInfo, Dirty dirty,
@@ -165,6 +173,8 @@ public class GroupTable extends OfTable {
             // we'll use the fdId with the high bit set for remote bucket
             // and just the local port number for local bucket
             for (NodeId destNode : ctx.epManager.getNodesForGroup(epg)) {
+                if (nodeId.equals(destNode)) continue;
+
                 long bucketId = (long)ctx.policyManager
                         .getContextOrdinal(destNode.getValue());
                 bucketId |= 1L << 31;
@@ -174,23 +184,21 @@ public class GroupTable extends OfTable {
                 NodeConnectorId tunPort =
                         ctx.switchManager.getTunnelPort(nodeId);
                 if (tunDst == null || tunPort == null) continue;
+                Action tundstAction = null;
                 if (tunDst.getIpv4Address() != null) {
-                    // XXX - TODO Add action: set tunnel dst to tunDst ipv4
-                } else if (tunDst.getIpv6Address() != null) {
-                    // XXX - TODO Add action: set tunnel dst to tunDst ipv6 
+                    String nextHop = tunDst.getIpv4Address().getValue();
+                    tundstAction = nxLoadTunIPv4Action(nextHop, true);
+                } else {
+                    LOG.error("IPv6 tunnel destination {} for {} not supported",
+                              tunDst.getIpv6Address().getValue(),
+                              destNode);
+                    continue;
                 }
-
-                int epgId = ctx.policyManager
-                        .getContextOrdinal(epg.getTenantId(),
-                                           epg.getEgId());
-
-                // TODO add action: set tunnel ID to epgId
-                
-                Action output = FlowUtils.outputAction(tunPort);
 
                 BucketBuilder bb = new BucketBuilder()
                     .setBucketId(new BucketId(Long.valueOf(bucketId)))
-                    .setAction(FlowUtils.writeActionList(output));
+                    .setAction(actionList(tundstAction,
+                                          outputAction(tunPort)));
                 updateBucket(gctx, bb);
             }
             for (Endpoint localEp : ctx.epManager.getEPsForNode(nodeId, epg)) {
@@ -199,23 +207,20 @@ public class GroupTable extends OfTable {
                 if (ofc == null || ofc.getNodeConnectorId() == null ||
                     (LocationType.External.equals(ofc.getLocationType())))
                     continue;
-                String cnid = ofc.getNodeConnectorId().getValue();
-                int ci = cnid.lastIndexOf(':');
-                if (ci < 0 || (ci+1 >= cnid.length()))
-                    continue;
+
                 long bucketId;
                 try {
-                    bucketId = Long.parseLong(cnid.substring(ci+1));                
+                    bucketId = getOfPortNum(ofc.getNodeConnectorId());
                 } catch (NumberFormatException e) {
-                    LOG.warn("Could not parse port number {}", cnid);
+                    LOG.warn("Could not parse port number {}", 
+                             ofc.getNodeConnectorId(), e);
                     continue;
                 }
 
-                Action output = FlowUtils.outputAction(ofc.getNodeConnectorId());
-
+                Action output = outputAction(ofc.getNodeConnectorId());
                 BucketBuilder bb = new BucketBuilder()
                     .setBucketId(new BucketId(Long.valueOf(bucketId)))
-                    .setAction(FlowUtils.writeActionList(output));
+                    .setAction(actionList(output));
                 updateBucket(gctx, bb);
             }
         }
@@ -231,7 +236,7 @@ public class GroupTable extends OfTable {
         bctx.newb = bb.build();        
     }
     
-    private static class BucketCtx {
+    protected static class BucketCtx {
         Bucket b;
         Bucket newb;
         boolean visited = false;
@@ -242,7 +247,7 @@ public class GroupTable extends OfTable {
         }
     }
     
-    private static class GroupCtx {
+    protected static class GroupCtx {
         GroupId groupId;
         Map<BucketId, BucketCtx> bucketMap = new HashMap<>();
         boolean visited = false;

@@ -123,7 +123,7 @@ public class PortSecurity extends FlowTable {
                         Endpoint e, OfOverlayContext ofc,
                         Integer priority) {
         FlowId flowid = new FlowId(new StringBuilder()
-            .append(ofc.getNodeConnectorId())
+            .append(ofc.getNodeConnectorId().getValue())
             .append("|")
             .append(e.getMacAddress().getValue())
             .toString());
@@ -178,7 +178,7 @@ public class PortSecurity extends FlowTable {
                 continue;
             }
             FlowId flowid = new FlowId(new StringBuilder()
-                .append(ofc.getNodeConnectorId())
+                .append(ofc.getNodeConnectorId().getValue())
                 .append("|")
                 .append(e.getMacAddress().getValue())
                 .append("|")

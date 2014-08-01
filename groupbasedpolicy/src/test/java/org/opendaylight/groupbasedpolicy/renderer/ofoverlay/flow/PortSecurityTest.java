@@ -47,7 +47,7 @@ import static org.mockito.Matchers.*;
 
 import static org.mockito.Mockito.*;
 
-public class PortSecurityTest extends OfTableTest {
+public class PortSecurityTest extends FlowTableTest {
     protected static final Logger LOG = 
             LoggerFactory.getLogger(PortSecurityTest.class);
     

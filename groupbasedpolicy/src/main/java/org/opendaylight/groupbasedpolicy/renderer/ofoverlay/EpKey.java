@@ -19,6 +19,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 @Immutable
 public class EpKey {
 
+    @Override
+    public String toString() {
+        return "EpKey [l2Context=" + l2Context + ", macAddress=" + macAddress +
+               "]";
+    }
+
     final L2ContextId l2Context;
     final MacAddress macAddress;
     

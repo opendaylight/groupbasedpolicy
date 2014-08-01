@@ -27,7 +27,6 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.DestinationMapper;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.GroupTable;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OfTable;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OfTable.OfTableCtx;
@@ -43,22 +42,16 @@ import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyScope;
 import org.opendaylight.groupbasedpolicy.util.SetUtils;
 import org.opendaylight.groupbasedpolicy.util.SingletonTask;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNode;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNodeBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.UniqueId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig.LearningMode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.SubjectFeatureDefinitions;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.NodeBuilder;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * Manage policies on switches by subscribing to updates from the 
@@ -71,7 +64,6 @@ public class PolicyManager
     private static final Logger LOG = 
             LoggerFactory.getLogger(PolicyManager.class);
 
-    private final DataBroker dataBroker;
     private final SwitchManager switchManager;
     private final PolicyResolver policyResolver;
     
@@ -119,7 +111,6 @@ public class PolicyManager
                          RpcProviderRegistry rpcRegistry,
                          ScheduledExecutorService executor) {
         super();
-        this.dataBroker = dataBroker;
         this.switchManager = switchManager;
         this.executor = executor;
         this.policyResolver = policyResolver;
@@ -138,10 +129,10 @@ public class PolicyManager
                                         this, policyResolver, switchManager, 
                                         endpointManager, executor);
         flowPipeline = ImmutableList.of(new PortSecurity(ctx),
+                                        new GroupTable(ctx),
                                         new SourceMapper(ctx),
                                         new DestinationMapper(ctx),
-                                        new PolicyEnforcer(ctx),
-                                        new GroupTable(ctx));
+                                        new PolicyEnforcer(ctx));
 
         policyScope = policyResolver.registerListener(this);
         if (switchManager != null)
@@ -256,7 +247,7 @@ public class PolicyManager
      * @param cg the {@link ConditionGroup}
      * @return the unique ID
      */
-    public int getConfGroupOrdinal(final ConditionGroup cg) {
+    public int getCondGroupOrdinal(final ConditionGroup cg) {
         if (cg == null) return 0;
         Integer ord = cgOrdinals.get(cg);
         if (ord == null) {
@@ -331,7 +322,7 @@ public class PolicyManager
                     table.update(nodeId, info, dirty);
                 } catch (Exception e) {
                     LOG.error("Failed to write flow table {}", 
-                              table.getClass().getName(), e);
+                              table.getClass().getSimpleName(), e);
                 }
             }
             return null;

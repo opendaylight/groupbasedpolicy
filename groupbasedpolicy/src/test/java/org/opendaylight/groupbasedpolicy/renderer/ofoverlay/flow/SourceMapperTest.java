@@ -8,7 +8,9 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
+import java.math.BigInteger;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Objects;
 
 import org.junit.Before;
@@ -18,8 +20,20 @@ import org.mockito.Matchers;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable.FlowCtx;
+import org.opendaylight.groupbasedpolicy.resolver.ConditionGroup;
+import org.opendaylight.groupbasedpolicy.resolver.EgKey;
+import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.ApplyActionsCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.Instruction;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg0;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg1;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg4;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg5;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg6;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +44,7 @@ import static org.mockito.Matchers.*;
 
 import static org.mockito.Mockito.*;
 
-public class SourceMapperTest extends OfTableTest {
+public class SourceMapperTest extends FlowTableTest {
     protected static final Logger LOG = 
             LoggerFactory.getLogger(SourceMapperTest.class);
     @Before
@@ -72,8 +86,33 @@ public class SourceMapperTest extends OfTableTest {
             } else if (Objects.equals(ep.getMacAddress(),
                                f.getMatch().getEthernetMatch()
                                    .getEthernetSource().getAddress())) {
-                // XXX TODO verify register setting in the instructions
-                LOG.info("{}", f);
+                PolicyInfo pi = policyResolver.getCurrentPolicy();
+                List<ConditionName> cset = endpointManager.getCondsForEndpoint(ep);
+                ConditionGroup cg = pi.getEgCondGroup(new EgKey(tid, eg), cset);
+                
+                Instruction ins = f.getInstructions().getInstruction().get(0);
+                assertTrue(ins.getInstruction() instanceof ApplyActionsCase);
+                List<Action> actions = ((ApplyActionsCase)ins.getInstruction()).getApplyActions().getAction();
+                int v = policyManager.getContextOrdinal(tid, eg);
+                assertEquals(FlowUtils.nxLoadRegAction(NxmNxReg0.class, 
+                                                       BigInteger.valueOf(v)),
+                             actions.get(0).getAction());
+                v = policyManager.getCondGroupOrdinal(cg);
+                assertEquals(FlowUtils.nxLoadRegAction(NxmNxReg1.class, 
+                                                       BigInteger.valueOf(v)),
+                             actions.get(1).getAction());
+                v = policyManager.getContextOrdinal(tid, bd);
+                assertEquals(FlowUtils.nxLoadRegAction(NxmNxReg4.class, 
+                                                       BigInteger.valueOf(v)),
+                             actions.get(2).getAction());
+                v = policyManager.getContextOrdinal(tid, fd);
+                assertEquals(FlowUtils.nxLoadRegAction(NxmNxReg5.class, 
+                                                       BigInteger.valueOf(v)),
+                             actions.get(3).getAction());
+                v = policyManager.getContextOrdinal(tid, l3c);
+                assertEquals(FlowUtils.nxLoadRegAction(NxmNxReg6.class, 
+                                                       BigInteger.valueOf(v)),
+                             actions.get(4).getAction());
                 count += 1;
             }
         }

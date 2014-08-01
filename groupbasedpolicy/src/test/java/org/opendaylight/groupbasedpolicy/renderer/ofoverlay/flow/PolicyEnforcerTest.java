@@ -8,6 +8,7 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Objects;
 
@@ -18,11 +19,16 @@ import org.mockito.Matchers;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable.FlowCtx;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfigBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._4.match.TcpMatch;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +39,9 @@ import static org.mockito.Matchers.*;
 
 import static org.mockito.Mockito.*;
 
-public class PolicyEnforcerTest extends OfTableTest {
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.*;
+
+public class PolicyEnforcerTest extends FlowTableTest {
     protected static final Logger LOG = 
             LoggerFactory.getLogger(PolicyEnforcerTest.class);
 
@@ -42,13 +50,19 @@ public class PolicyEnforcerTest extends OfTableTest {
         initCtx();
         table = new PolicyEnforcer(ctx);
         super.setup();
+        
+        switchManager.addSwitch(nodeId, tunnelId, 
+                                Collections.<NodeConnectorId>emptySet(),
+                                new OfOverlayNodeConfigBuilder()
+                                    .setTunnelIp(new IpAddress(new Ipv4Address("1.2.3.4")))
+                                    .build());
     }
     
 
     @Test
     public void testNoEps() throws Exception {
         ReadWriteTransaction t = dosync(null);
-        verify(t, times(1)).put(any(LogicalDatastoreType.class), 
+        verify(t, times(2)).put(any(LogicalDatastoreType.class), 
                                 Matchers.<InstanceIdentifier<Flow>>any(), 
                                 any(Flow.class), anyBoolean());
     }
@@ -72,7 +86,6 @@ public class PolicyEnforcerTest extends OfTableTest {
         HashMap<String, FlowCtx> flowMap = new HashMap<>();
         for (Flow f : ac.getAllValues()) {
             flowMap.put(f.getId().getValue(), new FlowCtx(f));
-            // XXX - TODO check actual match/action
             if (f.getId().getValue().indexOf("intraallow") == 0)
                 count += 1;
         }
@@ -114,6 +127,11 @@ public class PolicyEnforcerTest extends OfTableTest {
             if (f.getId().getValue().indexOf("intraallow") == 0) {
                 count += 1;
             } else if (f.getMatch() != null &&
+                       Objects.equals(tunnelId, f.getMatch().getInPort())) {
+                assertEquals(instructions(applyActionIns(nxOutputRegAction(NxmNxReg7.class))),
+                             f.getInstructions());
+                count += 1;
+            } else if (f.getMatch() != null &&
                        f.getMatch().getEthernetMatch() != null &&
                        Objects.equals(FlowUtils.IPv4,
                                       f.getMatch().getEthernetMatch()
@@ -124,7 +142,6 @@ public class PolicyEnforcerTest extends OfTableTest {
                        Objects.equals(Integer.valueOf(80),
                                       ((TcpMatch)f.getMatch().getLayer4Match())
                                           .getTcpDestinationPort().getValue())) {
-                // XXX - TODO - verify sepg/depg
                 count += 1;
             } else if (f.getMatch() != null &&
                        f.getMatch().getEthernetMatch() != null &&
@@ -137,14 +154,13 @@ public class PolicyEnforcerTest extends OfTableTest {
                        Objects.equals(Integer.valueOf(80),
                                       ((TcpMatch)f.getMatch().getLayer4Match())
                                           .getTcpDestinationPort().getValue())) {
-                // XXX - TODO - verify sepg/depg
                 count += 1;
-            }
+            } 
         }
         if (direction == null || direction.equals(Direction.Bidirectional))
-            assertEquals(6, count);
+            assertEquals(7, count);
         else
-            assertEquals(4, count);
+            assertEquals(5, count);
 
         t = dosync(flowMap);
         verify(t, never()).put(any(LogicalDatastoreType.class), 

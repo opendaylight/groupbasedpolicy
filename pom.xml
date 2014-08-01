@@ -19,6 +19,7 @@
     <module>groupbasedpolicy</module>
     <module>distribution</module>
   </modules>
+
   <build>
     <plugins>
       <plugin>

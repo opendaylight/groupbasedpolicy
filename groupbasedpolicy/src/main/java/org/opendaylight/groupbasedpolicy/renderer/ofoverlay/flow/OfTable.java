@@ -18,11 +18,10 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.SwitchManager;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.util.concurrent.FutureCallback;
 
 /**
  * Manage the state of a openflow  table by reacting to any events and updating
@@ -93,25 +92,16 @@ public abstract class OfTable {
     // Utility methods
     // ***************
 
-
     /**
-     * Generic callback for handling result of flow manipulation
-     * @author readams
-     *
-     * @param <T> the expected output type
+     * Parse an OF port number from a node connector ID
+     * @param id the ID
+     * @return the port number
      */
-    protected static class OfCallback<T> implements FutureCallback<T> {
-        @Override
-        public void onSuccess(T result) {
-        }
-
-        @Override
-        public void onFailure(Throwable t) {
-            LOG.error("Failed to add flow entry", t);
-        }
+    protected static long getOfPortNum(NodeConnectorId id) {
+        String cnid = id.getValue();
+        int ci = cnid.lastIndexOf(':');
+        if (ci < 0 || (ci+1 >= cnid.length()))
+            throw new NumberFormatException("Invalid node connector ID " + cnid);
+        return Long.parseLong(cnid.substring(ci+1));
     }
-    protected static final OfCallback<Void> updateCallback =
-            new OfCallback<>();
-
-
 }

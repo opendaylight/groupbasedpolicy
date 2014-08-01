@@ -19,6 +19,7 @@ import javax.annotation.concurrent.Immutable;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Classifier;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
 import org.opendaylight.groupbasedpolicy.resolver.ConditionGroup;
@@ -42,10 +43,18 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup.IntraGroupPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.Rule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ClassifierInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg0;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg1;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg2;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg3;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.*;
 
 /**
  * Manage the table that enforces policy on the traffic.  Traffic is denied
@@ -73,6 +82,7 @@ public class PolicyEnforcer extends FlowTable {
                      PolicyInfo policyInfo, Dirty dirty)
                              throws Exception {
         dropFlow(t, tiid, flowMap, Integer.valueOf(1), null);
+        allowFromTunnel(t, tiid, flowMap, nodeId);
 
         HashSet<CgPair> visitedPairs = new HashSet<>();
 
@@ -98,7 +108,7 @@ public class PolicyEnforcer extends FlowTable {
                 List<ConditionName> conds = 
                         ctx.epManager.getCondsForEndpoint(src);
                 ConditionGroup scg = policyInfo.getEgCondGroup(sepg, conds);
-                int scgId = ctx.policyManager.getConfGroupOrdinal(scg);
+                int scgId = ctx.policyManager.getCondGroupOrdinal(scg);
                 
                 Set<EgKey> peers = policyInfo.getPeers(sepg);
                 for (EgKey depg : peers) {
@@ -113,7 +123,7 @@ public class PolicyEnforcer extends FlowTable {
                                 policyInfo.getEgCondGroup(new EgKey(dst.getTenant(), 
                                                                     dst.getEndpointGroup()),
                                                           conds);
-                        int dcgId = ctx.policyManager.getConfGroupOrdinal(dcg);
+                        int dcgId = ctx.policyManager.getCondGroupOrdinal(dcg);
                         
                         CgPair p = new CgPair(depgId, sepgId, dcgId, scgId);
                         if (visitedPairs.contains(p)) continue;
@@ -141,11 +151,37 @@ public class PolicyEnforcer extends FlowTable {
             .append("intraallow|")
             .append(sepgId).toString());
         if (visit(flowMap, flowId.getValue())) {
-            // XXX - TODO - add match against sepg, depg registers
-            // XXX - TOOD - add output action from destination register
+            MatchBuilder mb = new MatchBuilder();
+            addNxRegMatch(mb, 
+                          RegMatch.of(NxmNxReg0.class,Long.valueOf(sepgId)),
+                          RegMatch.of(NxmNxReg2.class,Long.valueOf(sepgId)));
             FlowBuilder flow = base()
                 .setId(flowId)
-                .setPriority(65000);
+                .setMatch(mb.build())
+                .setPriority(65000)
+                .setInstructions(instructions(applyActionIns(nxOutputRegAction(NxmNxReg7.class))));
+            writeFlow(t, tiid, flow.build());
+        }
+    }
+    
+    private void allowFromTunnel(ReadWriteTransaction t, 
+                                 InstanceIdentifier<Table> tiid,
+                                 Map<String, FlowCtx> flowMap, NodeId nodeId) {
+        NodeConnectorId tunPort =
+                ctx.switchManager.getTunnelPort(nodeId);
+        if (tunPort == null) return;
+
+        FlowId flowId = new FlowId("tunnelallow");
+        if (visit(flowMap, flowId.getValue())) {
+            MatchBuilder mb = new MatchBuilder()
+                .setInPort(tunPort);
+            addNxRegMatch(mb, 
+                          RegMatch.of(NxmNxReg1.class,Long.valueOf(0xffffff)));
+            FlowBuilder flow = base()
+                .setId(flowId)
+                .setMatch(mb.build())
+                .setPriority(65000)
+                .setInstructions(instructions(applyActionIns(nxOutputRegAction(NxmNxReg7.class))));
             writeFlow(t, tiid, flow.build());
         }
     }
@@ -194,7 +230,7 @@ public class PolicyEnforcer extends FlowTable {
 
             MatchBuilder baseMatch = new MatchBuilder();
 
-            if (d.equals(Direction.Out)) {
+            if (d.equals(Direction.In)) {
                 idb.append(p.sepg)
                     .append("|")
                     .append(p.scgId)
@@ -204,8 +240,11 @@ public class PolicyEnforcer extends FlowTable {
                     .append(p.dcgId)
                     .append("|")
                     .append(priority);
-                // XXX - TODO - add match against sepg, depg, scg, and dcg
-                // registers
+                addNxRegMatch(baseMatch, 
+                              RegMatch.of(NxmNxReg0.class,Long.valueOf(p.sepg)),
+                              RegMatch.of(NxmNxReg1.class,Long.valueOf(p.scgId)),
+                              RegMatch.of(NxmNxReg2.class,Long.valueOf(p.depg)),
+                              RegMatch.of(NxmNxReg3.class,Long.valueOf(p.dcgId)));
             } else {
                 idb.append(p.depg)
                     .append("|")
@@ -216,8 +255,11 @@ public class PolicyEnforcer extends FlowTable {
                     .append(p.scgId)
                     .append("|")
                     .append(priority);                
-                // XXX - TODO - add match against sepg, depg, scg, and dcg
-                // registers
+                addNxRegMatch(baseMatch, 
+                              RegMatch.of(NxmNxReg0.class,Long.valueOf(p.depg)),
+                              RegMatch.of(NxmNxReg1.class,Long.valueOf(p.dcgId)),
+                              RegMatch.of(NxmNxReg2.class,Long.valueOf(p.sepg)),
+                              RegMatch.of(NxmNxReg3.class,Long.valueOf(p.scgId)));
             }
 
 
@@ -255,11 +297,11 @@ public class PolicyEnforcer extends FlowTable {
             for (MatchBuilder match : matches) {
                 Match m = match.build();
                 FlowId flowId = new FlowId(baseId + "|" + m.toString());
-                flow.setMatch(m)
-                    .setId(flowId)
-                    .setPriority(Integer.valueOf(priority));
                 if (visit(flowMap, flowId.getValue())) {
-                    LOG.info("{} {} {} {}", p.sepg, p.scgId, p.depg, p.dcgId);
+                    flow.setMatch(m)
+                        .setId(flowId)
+                        .setPriority(Integer.valueOf(priority))
+                        .setInstructions(instructions(applyActionIns(nxOutputRegAction(NxmNxReg7.class))));
                     writeFlow(t, tiid, flow.build());
                 }
             }

@@ -242,7 +242,7 @@ public class SwitchManager implements AutoCloseable {
     private void updateSwitchConfig(NodeId nodeId, OfOverlayNodeConfig config) {
         SwitchState state = getSwitchState(nodeId);
         state.setConfig(config);
-            notifySwitchUpdated(nodeId);
+        notifySwitchUpdated(nodeId);
     }
 
     private void notifySwitchUpdated(NodeId nodeId) {

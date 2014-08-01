@@ -627,7 +627,7 @@ module policy {
             description
                 "A classifier is used to match traffic traveling between 
                  the endpoint groups that form the contract.
-                 Classifier defintions can define parameters that
+                 Classifier definitions can define parameters that
                  will need to be filled in when a particular rule
                  references it.";
 
@@ -799,6 +799,12 @@ module policy {
                 leaf ip-prefix {
                     description "The IP prefix that defines the subnet";
                     type inet:ip-prefix;
+                }
+                leaf virtual-router-ip {
+                    description
+                        "IP address to use for a virtual gateway router
+                         for the subnet, if desired.";
+                    type inet:ip-address;
                 }
             }
 

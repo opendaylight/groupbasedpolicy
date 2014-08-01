@@ -12,10 +12,7 @@
   <packaging>bundle</packaging>
 
   <properties>
-    <sal.version>1.1-SNAPSHOT</sal.version>
-    <yangtools.binding.version>0.6.2-SNAPSHOT</yangtools.binding.version>
-    <yangtools.generator.version>0.6.2-SNAPSHOT</yangtools.generator.version>
-    <yangtools.version>0.6.2-SNAPSHOT</yangtools.version>
+    <openflowplugin-nicira.version>0.0.3-SNAPSHOT</openflowplugin-nicira.version>
   </properties>
 
   <dependencies>
@@ -87,6 +84,16 @@
     <dependency>
       <groupId>org.opendaylight.controller.model</groupId>
       <artifactId>model-inventory</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.openflowplugin</groupId>
+      <artifactId>openflowplugin-extension-nicira</artifactId>
+      <version>${openflowplugin-nicira.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.openflowplugin</groupId>
+      <artifactId>openflowjava-extension-nicira</artifactId>
+      <version>${openflowplugin-nicira.version}</version>
     </dependency>
     <dependency>
       <groupId>org.osgi</groupId>

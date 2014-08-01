@@ -16,6 +16,7 @@
         <exclude>opendaylight/plugins/org.opendaylight.controller.thirdparty.org.openflow.openflowj-*.jar</exclude>
         <exclude>opendaylight/plugins/org.opendaylight.controller.protocol_plugins.openflow-*.jar</exclude>
         <exclude>opendaylight/plugins/org.opendaylight.controller.samples.*.jar</exclude>
+        <exclude>opendaylight/plugins/org.opendaylight.controller.md.statistics-manager*.jar</exclude>
         <exclude>opendaylight/configuration/initial/*toaster*.xml</exclude>
       </excludes>
     </fileSet>

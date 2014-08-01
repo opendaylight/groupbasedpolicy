@@ -8,22 +8,18 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
-import java.util.Collections;
-import java.util.Map;
-
-import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockEndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockPolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockSwitchManager;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable.FlowCtx;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OfTable.OfTableCtx;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.L4Classifier;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
 import org.opendaylight.groupbasedpolicy.resolver.MockPolicyResolver;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClauseName;
@@ -61,16 +57,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ClassifierInstanceBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
-import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.collect.ImmutableList;
 
-import static org.mockito.Mockito.*;
-
 public class OfTableTest {
     OfTableCtx ctx;
-    FlowTable table;
-    
+
     MockEndpointManager endpointManager;
     MockPolicyResolver policyResolver;
     MockPolicyManager policyManager;
@@ -79,9 +71,11 @@ public class OfTableTest {
     NodeId nodeId = new NodeId("openflow:1");
     NodeId remoteNodeId = new NodeId("openflow:2");
     NodeConnectorId nodeConnectorId = 
-            new NodeConnectorId(nodeId.getValue() + ":1");
-    InstanceIdentifier<Table> tiid;
-    
+            new NodeConnectorId(nodeId.getValue() + ":4");
+
+    NodeConnectorId tunnelId = 
+            new NodeConnectorId(nodeId.getValue() + ":42");
+
     L3ContextId l3c = new L3ContextId("2cf51ee4-e996-467e-a277-2d380334a91d");
     L2BridgeDomainId bd = new L2BridgeDomainId("c95182ba-7807-43f8-98f7-6c7c720b7639");
     L2FloodDomainId fd = new L2FloodDomainId("98e1439e-52d2-46f8-bd69-5136e6088771");
@@ -105,11 +99,6 @@ public class OfTableTest {
                              switchManager, 
                              endpointManager, 
                              null);
-    }
-    
-    protected void setup() throws Exception {
-        tiid = FlowUtils.createTablePath(nodeId, 
-                                         table.getTableId());
     }
 
     protected TenantBuilder baseTenant() {
@@ -150,11 +139,13 @@ public class OfTableTest {
                     .setId(sub2)
                     .setParent(fd)
                     .setIpPrefix(new IpPrefix(new Ipv4Prefix("10.0.1.1/24")))
+                    .setVirtualRouterIp(new IpAddress(new Ipv4Address("10.0.1.1")))
                     .build(),
                 new SubnetBuilder()
                     .setId(sub)
                     .setParent(fd)
                     .setIpPrefix(new IpPrefix(new Ipv4Prefix("10.0.0.1/24")))
+                    .setVirtualRouterIp(new IpAddress(new Ipv4Address("10.0.0.1")))
                     .build()))
             .setSubjectFeatureInstances(new SubjectFeatureInstancesBuilder()
                 .setClassifierInstance(ImmutableList.of(new ClassifierInstanceBuilder()
@@ -215,20 +206,11 @@ public class OfTableTest {
     protected EndpointBuilder remoteEP(NodeId id) {
         OfOverlayContext ofc = new OfOverlayContextBuilder()
             .setNodeId(id)
-            .setNodeConnectorId(new NodeConnectorId(id.getValue() + ":1"))
+            .setNodeConnectorId(new NodeConnectorId(id.getValue() + ":5"))
             .build();
         return baseEP()
+            .setMacAddress(new MacAddress("00:00:00:00:00:02"))
             .addAugmentation(OfOverlayContext.class, ofc);
     }
     
-    protected ReadWriteTransaction dosync(Map<String, FlowCtx> flowMap) 
-              throws Exception {
-        ReadWriteTransaction t = mock(ReadWriteTransaction.class);
-        if (flowMap == null)
-            flowMap = Collections.emptyMap();
-        table.sync(t, tiid, flowMap, nodeId, policyResolver.getCurrentPolicy(), 
-                   null);
-        return t;
-    }
-
 }
