@@ -10,10 +10,6 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.opflex;
 
-import static io.netty.buffer.Unpooled.copiedBuffer;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 
@@ -31,6 +27,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcDecoder;
 import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcEndpoint;
@@ -53,7 +50,12 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
-import com.google.common.util.concurrent.ListenableFuture;
+
+import static io.netty.buffer.Unpooled.*;
+
+import static org.junit.Assert.*;
+
+import static org.mockito.Mockito.*;
 
 /**
  *
@@ -101,7 +103,7 @@ public class OpflexConnectionServiceTest {
     @Mock
     private WriteTransaction mockWrite;
     @Mock
-    private ListenableFuture<Optional<DiscoveryDefinitions>> mockOption;
+    private CheckedFuture<Optional<DiscoveryDefinitions>, ReadFailedException> mockOption;
     @Mock
     CheckedFuture<Void, TransactionCommitFailedException> mockStatus;
     @Mock
