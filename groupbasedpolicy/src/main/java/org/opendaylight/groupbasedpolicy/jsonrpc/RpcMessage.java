@@ -29,4 +29,5 @@ public abstract class RpcMessage {
     public abstract void setId(String id);
     public abstract String getMethod();
     public abstract void setMethod(String method);
+    public abstract boolean valid();
 }

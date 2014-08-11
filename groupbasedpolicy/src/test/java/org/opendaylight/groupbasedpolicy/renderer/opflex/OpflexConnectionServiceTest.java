@@ -10,6 +10,10 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.opflex;
 
+import static io.netty.buffer.Unpooled.copiedBuffer;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 
@@ -32,6 +36,8 @@ import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFaile
 import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcDecoder;
 import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcEndpoint;
 import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcServiceBinderHandler;
+import org.opendaylight.groupbasedpolicy.jsonrpc.RpcBroker;
+import org.opendaylight.groupbasedpolicy.jsonrpc.RpcMessage;
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcMessageMap;
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcServer;
 import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.IdentityResponse;
@@ -51,18 +57,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
 
-import static io.netty.buffer.Unpooled.*;
-
-import static org.junit.Assert.*;
-
-import static org.mockito.Mockito.*;
-
 /**
  *
  * Test the serialization and deserialization of RPC Messages,
  * and check against expected structure and values.
  */
-public class OpflexConnectionServiceTest {
+public class OpflexConnectionServiceTest implements RpcBroker.RpcCallback {
     protected static final Logger logger = LoggerFactory.getLogger(OpflexMessageTest.class);
 
     static private final String TEST_EP_UUID = "85d53c32-47af-4eaf-82fd-ced653ff74da";
@@ -144,6 +144,11 @@ public class OpflexConnectionServiceTest {
         }
     }
 
+    @Override
+    public void callback(JsonRpcEndpoint endpoint, RpcMessage request) {
+        opflexService.callback(endpoint, request);
+    }
+    
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
@@ -251,7 +256,11 @@ public class OpflexConnectionServiceTest {
          */
         opflexService = new OpflexConnectionService();
         opflexService.setDataProvider(mockDataBroker);
-
+        List<RpcMessage> messages = Role.POLICY_REPOSITORY.getMessages();
+        for (RpcMessage msg: messages) {
+            opflexService.subscribe(msg, this);
+        }
+        
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         decoder = new JsonRpcDecoder(1000);

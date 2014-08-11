@@ -164,6 +164,11 @@ public class JsonRpcEndpointTest implements RpcBroker, RpcBroker.RpcCallback {
         public void setMethod(String method) {
             this.method = method;
         }
+        @JsonIgnore
+        @Override
+        public boolean valid() {
+            return true;
+        }
     }
 
     @Override

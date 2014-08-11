@@ -166,4 +166,10 @@ public class EndpointRequestResponse extends RpcMessage {
     public EndpointRequestResponse() {
         this.name = REQUEST_MESSAGE_RESPONSE;
     }
+    @JsonIgnore
+    @Override
+    public boolean valid() {
+        return true;
+    }
+    
 }

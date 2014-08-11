@@ -297,13 +297,6 @@ public class OpflexConnectionService
         }
         opflexListenIp = listenIp;
 
-        /*
-         * Set up the messages supported by each OpFlex policy
-         * component
-         */
-        /* this class implements identity handlers */
-        subscribe(new IdentityRequest(), this);
-
         initializeServers();
     }
 
@@ -541,6 +534,7 @@ public class OpflexConnectionService
      @Override
      public void close() throws ExecutionException, InterruptedException {
 
+         stopping();
          executor.shutdownNow();
 
          if (dataProvider != null) {

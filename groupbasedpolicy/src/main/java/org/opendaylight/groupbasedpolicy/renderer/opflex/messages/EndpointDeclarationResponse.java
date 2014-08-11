@@ -95,5 +95,10 @@ public class EndpointDeclarationResponse extends RpcMessage {
     public void setName(String name) {
         this.name = name;
     }
-
+    @JsonIgnore
+    @Override
+    public boolean valid() {
+        return true;
+    }
+    
 }

@@ -96,4 +96,11 @@ public class PolicyUpdateResponse extends RpcMessage {
         this.name = name;
     }
 
+    @JsonIgnore
+    @Override
+    public boolean valid() {
+        return true;
+    }
+    
+
 }

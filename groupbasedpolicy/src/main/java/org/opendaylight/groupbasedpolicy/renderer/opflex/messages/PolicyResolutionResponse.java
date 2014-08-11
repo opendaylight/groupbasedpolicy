@@ -112,4 +112,11 @@ public class PolicyResolutionResponse extends RpcMessage {
         this.name = name;
     }
 
+    @JsonIgnore
+    @Override
+    public boolean valid() {
+        return true;
+    }
+    
+
 }
