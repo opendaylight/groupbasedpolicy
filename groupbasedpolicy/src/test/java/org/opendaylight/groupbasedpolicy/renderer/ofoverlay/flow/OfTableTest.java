@@ -81,6 +81,7 @@ public class OfTableTest {
     L2FloodDomainId fd = new L2FloodDomainId("98e1439e-52d2-46f8-bd69-5136e6088771");
     SubnetId sub = new SubnetId("4fcf8dfc-53b5-4aef-84d3-6b5586992fcb");
     SubnetId sub2 = new SubnetId("c285a59f-fcb8-42e6-bf29-87ea522fd626");
+    SubnetId sub3 = new SubnetId("a0380d52-2a25-48ef-882c-a4d4cd9e00ec");
     TenantId tid = new TenantId("1118c691-8520-47ad-80b8-4cf5e3fe3302");
     EndpointGroupId eg = new EndpointGroupId("36dec84a-08c7-497b-80b6-a0035af72a12");
     EndpointGroupId eg2 = new EndpointGroupId("632e5e11-7988-4eb5-8fe6-6c182d890276");
@@ -146,6 +147,12 @@ public class OfTableTest {
                     .setParent(fd)
                     .setIpPrefix(new IpPrefix(new Ipv4Prefix("10.0.0.1/24")))
                     .setVirtualRouterIp(new IpAddress(new Ipv4Address("10.0.0.1")))
+                    .build(),
+                new SubnetBuilder()
+                    .setId(sub3)
+                    .setParent(bd)
+                    .setIpPrefix(new IpPrefix(new Ipv4Prefix("10.0.2.1/24")))
+                    .setVirtualRouterIp(new IpAddress(new Ipv4Address("10.0.2.1")))
                     .build()))
             .setSubjectFeatureInstances(new SubjectFeatureInstancesBuilder()
                 .setClassifierInstance(ImmutableList.of(new ClassifierInstanceBuilder()

@@ -20,7 +20,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Matchers;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.controller.sal.utils.HexEncode;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable.FlowCtx;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
@@ -112,7 +111,7 @@ public class DestinationMapperTest extends FlowTableTest {
                 assertEquals(nxMoveArpShaToArpThaAction(),
                              actions.get(3).getAction());
                 assertEquals(Integer.valueOf(3), actions.get(3).getOrder());
-                assertEquals(nxLoadArpShaAction(new BigInteger(1, HexEncode
+                assertEquals(nxLoadArpShaAction(new BigInteger(1, DestinationMapper
                                                                .bytesFromHexString(DestinationMapper.ROUTER_MAC
                                                                                    .getValue()))),
                              actions.get(4).getAction());
@@ -121,7 +120,8 @@ public class DestinationMapperTest extends FlowTableTest {
                              actions.get(5).getAction());
                 assertEquals(Integer.valueOf(5), actions.get(5).getOrder());
                 assertTrue(nxLoadArpSpaAction("10.0.0.1").equals(actions.get(6).getAction()) ||
-                           nxLoadArpSpaAction("10.0.0.2").equals(actions.get(6).getAction()));
+                           nxLoadArpSpaAction("10.0.1.1").equals(actions.get(6).getAction()) ||
+                           nxLoadArpSpaAction("10.0.2.1").equals(actions.get(6).getAction()));
                 assertEquals(Integer.valueOf(6), actions.get(6).getOrder());
                 count += 1;
             } else if (Objects.equals(localEp.getMacAddress(),
@@ -228,7 +228,7 @@ public class DestinationMapperTest extends FlowTableTest {
                 count += 1;
             }
         }
-        assertEquals(7, count);
+        assertEquals(9, count);
 
         t = dosync(flowMap);
         verify(t, never()).put(any(LogicalDatastoreType.class), 
