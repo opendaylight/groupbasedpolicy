@@ -8,9 +8,11 @@
 
 package org.opendaylight.groupbasedpolicy.resolver;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.concurrent.Immutable;
 
@@ -19,6 +21,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubnetId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.NetworkDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
@@ -30,6 +33,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ClassifierInstance;
+
+import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
 
 /**
  * Wrap some convenient indexes around a {@link Tenant} object
@@ -50,6 +56,7 @@ public class IndexedTenant {
             new HashMap<>();
     private final Map<ActionName, ActionInstance> actions =
             new HashMap<>();
+    private final Map<String, Set<SubnetId>> subnetMap = new HashMap<>();
     
     public IndexedTenant(Tenant tenant) {
         super();
@@ -84,6 +91,12 @@ public class IndexedTenant {
         if (tenant.getSubnet() != null) {
             for (Subnet s : tenant.getSubnet()) {
                 networkDomains.put(s.getId().getValue(), s);
+                Set<SubnetId> sset = subnetMap.get(s.getParent().getValue());
+                if (sset == null) {
+                    subnetMap.put(s.getParent().getValue(), 
+                                  sset = new HashSet<SubnetId>());
+                }
+                sset.add(s.getId());
             }
         }
         if (tenant.getSubjectFeatureInstances() != null) {
@@ -192,15 +205,38 @@ public class IndexedTenant {
     }
 
     /**
-     * If the specified network domain represents a subnet, return it.
+     * Resolve all subnets applicable to the given network domain ID
      * @param id the {@link NetworkDomainId}
-     * @return the {@link Subnet} if it exists, or <code>null</code> otherwise
+     * @return the set of subnets.  Cannot be null, but could be empty.
      */
-    public Subnet resolveSubnet(NetworkDomainId id) {
-        NetworkDomain d = networkDomains.get(id.getValue());
-        if (d == null) return null;
-        if (d instanceof Subnet) return (Subnet)d;
-        return null;
+    public Collection<Subnet> resolveSubnets(NetworkDomainId id) {
+        Set<SubnetId> sset = new HashSet<>();
+        HashSet<NetworkDomainId> visited = new HashSet<>();        
+        while (id != null) {
+            if (visited.contains(id)) return null;
+            visited.add(id);
+            Set<SubnetId> cursset = subnetMap.get(id.getValue());
+            if (cursset != null)
+                sset.addAll(cursset);
+            NetworkDomain d = networkDomains.get(id.getValue());
+            if (d == null) break;
+            if (d instanceof Subnet) {
+                id = ((Subnet)d).getParent();
+                sset.add(((Subnet) d).getId());
+            } 
+            else if (d instanceof L2BridgeDomain)
+                id = ((L2BridgeDomain)d).getParent();
+            else if (d instanceof L2FloodDomain)
+                id = ((L2FloodDomain)d).getParent();
+            else
+                id = null;
+        }
+        return Collections2.transform(sset, new Function<SubnetId, Subnet>() {
+            @Override
+            public Subnet apply(SubnetId input) {
+                return (Subnet)networkDomains.get(input.getValue());
+            }
+        });
     }
 
     // ******
@@ -244,10 +280,12 @@ public class IndexedTenant {
             if (domainClass.isInstance(d)) return domainClass.cast(d);
             if (d instanceof Subnet)
                 id = ((Subnet)d).getParent();
-            if (d instanceof L2BridgeDomain)
+            else if (d instanceof L2BridgeDomain)
                 id = ((L2BridgeDomain)d).getParent();
-            if (d instanceof L2FloodDomain)
+            else if (d instanceof L2FloodDomain)
                 id = ((L2FloodDomain)d).getParent();
+            else
+                id = null;
         }
         return null;
     }

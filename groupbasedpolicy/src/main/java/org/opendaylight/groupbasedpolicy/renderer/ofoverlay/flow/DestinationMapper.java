@@ -19,7 +19,6 @@ import java.util.Objects;
 import java.util.Set;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
-import org.opendaylight.controller.sal.utils.HexEncode;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
 import org.opendaylight.groupbasedpolicy.resolver.ConditionGroup;
@@ -135,7 +134,7 @@ public class DestinationMapper extends FlowTable {
         IndexedTenant tenant = ctx.policyResolver.getTenant(key.getTenantId());
         EndpointGroup eg = tenant.getEndpointGroup(key.getEgId());
         L2FloodDomain fd = tenant.resolveL2FloodDomain(eg.getNetworkDomain());
-        Subnet sn = tenant.resolveSubnet(eg.getNetworkDomain());
+        Collection<Subnet> sns = tenant.resolveSubnets(eg.getNetworkDomain());
         L3Context l3c = tenant.resolveL3Context(eg.getNetworkDomain());
         int l3Id = 0;
 
@@ -182,11 +181,21 @@ public class DestinationMapper extends FlowTable {
                                                              groupAction(Long.valueOf(fdId)))));
             writeFlow(t, tiid, flow.build());
         }
-        
+        for (Subnet sn : sns) {
+            writeRouterArpFlow(t, tiid, flowMap, nodeId, sn, l3Id);
+        }
+    }
+
+    private void writeRouterArpFlow(ReadWriteTransaction t,
+                                    InstanceIdentifier<Table> tiid,
+                                    Map<String, FlowCtx> flowMap, 
+                                    NodeId nodeId,
+                                    Subnet sn,
+                                    int l3Id) {
         if (sn != null && sn.getVirtualRouterIp() != null) {
             if (sn.getVirtualRouterIp().getIpv4Address() != null) {
                 String ikey = sn.getVirtualRouterIp().getIpv4Address().getValue();
-                flowId = new FlowId(new StringBuffer()
+                FlowId flowId = new FlowId(new StringBuffer()
                     .append("routerarp|")
                     .append(sn.getId().getValue())
                     .append("|")
@@ -204,10 +213,8 @@ public class DestinationMapper extends FlowTable {
                     addNxRegMatch(mb, RegMatch.of(NxmNxReg6.class,
                                                   Long.valueOf(l3Id)));
                     BigInteger routerMac = 
-                            new BigInteger(1, HexEncode
-                                           .bytesFromHexString(ROUTER_MAC
-                                                               .getValue()));
-                    /* XXX - TODO add output to inport action */
+                            new BigInteger(1, bytesFromHexString(ROUTER_MAC
+                                                                 .getValue()));
                     FlowBuilder flowb = base()
                          .setPriority(150)
                          .setId(flowId)
@@ -228,7 +235,7 @@ public class DestinationMapper extends FlowTable {
             }
         }
     }
-
+    
     private void syncEP(ReadWriteTransaction t,
                         InstanceIdentifier<Table> tiid,
                         Map<String, FlowCtx> flowMap, 
@@ -444,5 +451,19 @@ public class DestinationMapper extends FlowTable {
                 writeFlow(t, tiid, flowb.build());
             }
         }
+    }
+    
+    static byte[] bytesFromHexString(String values) {
+        String target = "";
+        if (values != null) {
+            target = values;
+        }
+        String[] octets = target.split(":");
+
+        byte[] ret = new byte[octets.length];
+        for (int i = 0; i < octets.length; i++) {
+            ret[i] = Integer.valueOf(octets[i], 16).byteValue();
+        }
+        return ret;
     }
 }
