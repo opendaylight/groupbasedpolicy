@@ -36,9 +36,7 @@ import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.EndpointReques
 import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.EndpointRequestResponse;
 import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.IdentityRequest;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
-import org.opendaylight.groupbasedpolicy.resolver.EndpointProvider;
 import org.opendaylight.groupbasedpolicy.util.SetUtils;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
@@ -71,7 +69,7 @@ import com.google.common.collect.Collections2;
 public class EndpointManager 
         extends AbstractEndpointRegistry 
         implements AutoCloseable, DataChangeListener, 
-        EndpointProvider, RpcBroker.RpcCallback, 
+        RpcBroker.RpcCallback, 
         L2EprContext.Callback, L3EprContext.Callback {
     protected static final Logger LOG = 
             LoggerFactory.getLogger(EndpointManager.class);
@@ -79,9 +77,7 @@ public class EndpointManager
     private static final InstanceIdentifier<Endpoint> endpointsIid = 
             InstanceIdentifier.builder(Endpoints.class)
                 .child(Endpoint.class).build();
-    private static final InstanceIdentifier<EndpointL3> endpointsL3Iid = 
-            InstanceIdentifier.builder(Endpoints.class)
-                .child(EndpointL3.class).build();
+
     // TODO: hacks for now :(
     private static final String NO_ENDPOINTS = "No endpoints found.";
     private static final int DEFAULT_PRR = 1000;
@@ -161,26 +157,6 @@ public class EndpointManager
      */
     public Endpoint getEndpoint(EpKey epKey) {
         return endpoints.get(epKey);
-    }
-
-    // ****************
-    // EndpointProvider
-    // ****************
-
-    @Override
-    public Collection<Endpoint> getEndpointsForGroup(EgKey eg) {
-        Collection<EpKey> ebg = endpointsByGroup.get(eg);
-        if (ebg == null) return Collections.emptyList();
-        return Collections2.transform(ebg, indexTransform);
-    }
-
-    @Override
-    public List<ConditionName> getCondsForEndpoint(Endpoint endpoint) {
-        // XXX TODO consider group conditions as well.  Also need to notify
-        // endpoint updated if the endpoint group conditions change
-        if (endpoint.getCondition() != null)
-            return endpoint.getCondition();
-        return Collections.emptyList();
     }
 
     // ************************
