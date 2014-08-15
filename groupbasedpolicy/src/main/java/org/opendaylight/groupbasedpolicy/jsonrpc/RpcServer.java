@@ -144,7 +144,7 @@ public class RpcServer {
                                     new StringEncoder(CharsetUtil.UTF_8));
 
                             handleNewConnection(identifier, ch);
-                            logger.warn("Connected Node : " + identifier);
+                            logger.trace("Connected Node : " + identifier);
                         }
                     });
             b.option(ChannelOption.TCP_NODELAY, true);
@@ -153,7 +153,7 @@ public class RpcServer {
             // Start the server.
             ChannelFuture f = b.bind(identity, listenPort).sync();
             String id = f.channel().localAddress().toString();
-            logger.warn("Connected Node : " + id);
+            logger.trace("Connected Node : " + id);
 
             this.channel = f.channel();
 

@@ -145,7 +145,7 @@ public class JsonRpcEndpoint implements ChannelFutureListener {
     public void  sendResponse (RpcMessage message) throws Throwable {
 
         String s = objectMapper.writeValueAsString(message);
-        logger.warn("sendResponse: {}", s);
+        logger.trace("sendResponse: {}", s);
 
         nettyChannel.writeAndFlush(s);
     }
@@ -159,7 +159,7 @@ public class JsonRpcEndpoint implements ChannelFutureListener {
      */
     public void processResult(JsonNode response) throws NoSuchMethodException {
 
-        logger.warn("Response : {}", response.toString());
+        logger.trace("Response : {}", response.toString());
         CallContext returnCtxt = methodContext.get(response.get("id").asText());
         if (returnCtxt == null) return;
         RpcMessage message = messageMap.get(returnCtxt.getMethod());

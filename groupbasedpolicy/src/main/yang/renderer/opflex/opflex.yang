@@ -14,7 +14,9 @@ module opflex {
 
     import ietf-inet-types { prefix "inet"; revision-date 2010-09-24; }
 
+    import yang-ext {prefix ext; revision-date "2013-07-09";}
     import gbp-common {prefix gbp-common;}
+    import endpoint {prefix endpoint;}
 
     description
         "This module defines the group-based policy OpFlex renderer model.";
@@ -135,4 +137,54 @@ module opflex {
             }
         }
     }
+
+    grouping endpoint-location {
+        description 
+            "The location for this endpoint in the overlay network";
+
+        leaf location-type {
+            default internal;
+
+            type enumeration {
+                enum internal {
+                    description 
+                    "The endpoint is located on a port that is part of 
+                     the overlay network.  You must include the node
+                     ID and port number for this endpoint.";
+                }
+                enum external {
+                    description "This endpoint is not inside the overlay.";
+                }
+            }
+        }
+        leaf agent-id {
+            description 
+                "The OpFlex agent where the endpoing is located. Must be included 
+                 for all internal endpoints.  The format is the agent identifier,
+                 which is an IP address or DNS name ':' port number.";
+            type string;
+        }
+        leaf agent-ep-location {
+            description 
+                "The location of the endpoint on the OpFlex agent. The format of
+                 this is dependent on the renderer used by the agent.";
+            type string;
+        }
+    }
+
+    augment "/endpoint:endpoints/endpoint:endpoint" {
+        ext:augment-identifier "opflex-overlay-context";
+        uses endpoint-location;
+    }
+
+    augment "/endpoint:register-endpoint/endpoint:input" {
+        ext:augment-identifier "opflex-overlay-context-input";
+        uses endpoint-location;
+    }
+
+    augment "/endpoint:endpoints/endpoint:endpoint-l3" {
+        ext:augment-identifier "opflex-overlay-context-l3";
+        uses endpoint-location;
+    }
+
 }

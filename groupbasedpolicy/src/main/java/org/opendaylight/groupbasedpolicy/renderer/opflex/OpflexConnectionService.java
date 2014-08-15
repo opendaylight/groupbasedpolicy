@@ -29,13 +29,18 @@ import org.opendaylight.groupbasedpolicy.jsonrpc.ConnectionService;
 import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcEndpoint;
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcBroker;
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcMessage;
+import org.opendaylight.groupbasedpolicy.jsonrpc.RpcMessageMap;
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcServer;
 import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.IdentityRequest;
 import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.IdentityResponse;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.DiscoveryDefinitions;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.DiscoveryDefinitionsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.discovery.definitions.EndpointRegistry;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.discovery.definitions.EndpointRegistryBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.discovery.definitions.Observer;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.discovery.definitions.ObserverBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.discovery.definitions.PolicyRepository;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.discovery.definitions.PolicyRepositoryBuilder;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
@@ -60,7 +65,6 @@ import com.google.common.util.concurrent.ListenableFuture;
  *
  * @author tbachman
  *
- * TODO: Still too big - need to separate
  */
 public class OpflexConnectionService
     implements ConnectionService, RpcBroker,
@@ -90,6 +94,7 @@ public class OpflexConnectionService
 
     DiscoveryDefinitions currentIdentities;
     private DataBroker dataProvider;
+    private RpcMessageMap messageMap = null;
 
     public static final InstanceIdentifier<DiscoveryDefinitions> DISCOVERY_IID =
             InstanceIdentifier.builder(DiscoveryDefinitions.class).build();
@@ -149,28 +154,20 @@ public class OpflexConnectionService
     }
 
     private void initializeServers() {
-
-        readConfig();
         /*
          * Get the configured identities, if any. If lists are empty,
          * set up a single instance of each, using the default
          * interface, all inside a default domain
          */
-        List<OpflexRpcServer> serverList = createServerList(currentIdentities);
-        if (serverList != null && serverList.size() > 0) {
-            addServers(serverList);
-        }
-        else {
-            // TODO: should also write into config store?
-            logger.info("Setting default identities");
-            domain = OPFLEX_DOMAIN;
-            addServers(setDefaultIdentities());
-        }
+        domain = OPFLEX_DOMAIN;
+        readConfig();
+
     }
 
 
     private List<String> getPolicyRepositories(List<PolicyRepository> repositories ) {
         List<String> identityList = new ArrayList<String>() ;
+        if (repositories == null) return null;
         for ( PolicyRepository pr: repositories.toArray(new PolicyRepository[0]) ) {
             String identity = pr.getId() + ":" + pr.getPort().toString();
             identityList.add(identity);
@@ -180,6 +177,7 @@ public class OpflexConnectionService
 
     private List<String> getEndpointRegistries(List<EndpointRegistry> registries ) {
         List<String> identityList = new ArrayList<String>() ;
+        if (registries == null)return null;
         for ( EndpointRegistry epr: registries.toArray(new EndpointRegistry[0]) ) {
             String identity = epr.getId() + ":" + epr.getPort().toString();
             identityList.add(identity);
@@ -189,6 +187,7 @@ public class OpflexConnectionService
 
     private List<String> getObservers(List<Observer> observers ) {
         List<String> identityList = new ArrayList<String>() ;
+        if (observers == null) return null;
         for ( Observer o: observers.toArray(new Observer[0]) ) {
             String identity = o.getId() + ":" + o.getPort().toString();
             identityList.add(identity);
@@ -297,6 +296,13 @@ public class OpflexConnectionService
         }
         opflexListenIp = listenIp;
 
+        /* Subscribe to Discovery messages */
+        messageMap = new RpcMessageMap();
+        List<RpcMessage> messages = Role.DISCOVERY.getMessages();
+        messageMap.addList(messages);
+        for (RpcMessage msg: messages) {
+            this.subscribe(msg, this);
+        }
         initializeServers();
     }
 
@@ -399,7 +405,11 @@ public class OpflexConnectionService
             if (server != null) {
                 if ( !server.sameServer(srv)) {
                     OpflexRpcServer oldServer = opflexServers.remove(srv.getId());
-                    oldServer.getRpcServer().getChannel().disconnect();
+                    if (oldServer != null &&
+                        oldServer.getRpcServer() != null &&
+                        oldServer.getRpcServer().getChannel() != null) {
+                        oldServer.getRpcServer().getChannel().disconnect();
+                    }
                     opflexServers.put(srv.getId(), srv);
                     srv.start();
                 }
@@ -490,11 +500,6 @@ public class OpflexConnectionService
          Futures.addCallback(dao, new FutureCallback<Optional<DiscoveryDefinitions>>() {
              @Override
              public void onSuccess(final Optional<DiscoveryDefinitions> result) {
-                 if (!result.isPresent()) {
-                     dropServers(new ArrayList<String>(opflexServers.keySet()));
-                     addServers(setDefaultIdentities());             
-                     return;
-                 }
                  getNewConfig(result);
              }
 
@@ -510,14 +515,64 @@ public class OpflexConnectionService
           * Get the new list of discovery definitions from the
           * configuration store, and convert to a list for manipulation
           */
+         if (!result.isPresent()) {
+             domain = OPFLEX_DOMAIN;
+             if (currentIdentities != null) {
+                 dropServers(new ArrayList<String>(opflexServers.keySet()));
+             }
+             List<OpflexRpcServer> defaults = setDefaultIdentities();
+             addServers(defaults);
+             commitDefaultConfiguration(defaults);
+
+             return;
+         }
+
          currentIdentities = result.get();
          if (currentIdentities == null) {
-             dropServers(new ArrayList<String>(opflexServers.keySet()));             
-             addServers(setDefaultIdentities());             
+             dropServers(new ArrayList<String>(opflexServers.keySet()));
+             List<OpflexRpcServer> defaults = setDefaultIdentities();
+             addServers(defaults);
+             commitDefaultConfiguration(defaults);
          }
          else {
              updateServers(createServerList(currentIdentities));
          }
+     }
+
+     private void commitDefaultConfiguration(List<OpflexRpcServer> servers) {
+         EndpointRegistryBuilder erb = new EndpointRegistryBuilder();
+         PolicyRepositoryBuilder prb = new PolicyRepositoryBuilder();
+         ObserverBuilder ob = new ObserverBuilder();
+         DiscoveryDefinitionsBuilder ddb = new DiscoveryDefinitionsBuilder();
+         for (OpflexRpcServer srv: servers) {
+             if (srv.getRoles().contains(Role.ENDPOINT_REGISTRY)) {
+                 erb.setId(srv.getAddress());
+                 erb.setPort(srv.getPort());
+             }
+             if (srv.getRoles().contains(Role.POLICY_REPOSITORY)) {
+                 prb.setId(srv.getAddress());
+                 prb.setPort(srv.getPort());
+             }
+             if (srv.getRoles().contains(Role.OBSERVER)) {
+                 ob.setId(srv.getAddress());
+                 ob.setPort(srv.getPort());
+             }
+
+         }
+         List<EndpointRegistry> erl = new ArrayList<EndpointRegistry>();
+         List<PolicyRepository> prl = new ArrayList<PolicyRepository>();
+         List<Observer> ol = new ArrayList<Observer>();
+         erl.add(erb.build());
+         prl.add(prb.build());
+         ol.add(ob.build());
+
+         ddb.setEndpointRegistry(erl);
+         ddb.setObserver(ol);
+         ddb.setPolicyRepository(prl);
+         DiscoveryDefinitions identities = ddb.build();
+         WriteTransaction wt = dataProvider.newWriteOnlyTransaction();
+         wt.put(LogicalDatastoreType.CONFIGURATION, DISCOVERY_IID, identities);
+         wt.submit();
      }
 
     @Override
@@ -526,7 +581,7 @@ public class OpflexConnectionService
 
         readConfig();
     }
-    
+
     /**
      * Close the connection service. Implemented from the
      * AutoCloseable interface.
@@ -579,8 +634,6 @@ public class OpflexConnectionService
 
     /**
      * This notification handles the OpFlex Identity request messages.
-     * 
-     * TODO: implement Identity Response messages
      */
     @Override
     public void callback(JsonRpcEndpoint endpoint, RpcMessage message) {
@@ -672,8 +725,8 @@ public class OpflexConnectionService
     public void addConnection(JsonRpcEndpoint endpoint) {
 
         /*
-         * When the connection is added, we only have the 
-         * JsonRpcEndpoint. We use the JsonRpcEndpoint's 
+         * When the connection is added, we only have the
+         * JsonRpcEndpoint. We use the JsonRpcEndpoint's
          * context field to store the server object that created this
          * connection, and can look up things like the domain,
          * etc. to create the containing connection object.
@@ -688,7 +741,7 @@ public class OpflexConnectionService
         OpflexRpcServer server = (OpflexRpcServer)endpoint.getContext();
 
         /*
-         * The OpFlex domain is the same as the server 
+         * The OpFlex domain is the same as the server
          * that the agent connected to. Look up the OpFlex RPC
          * server using the server socket.
          *
@@ -704,9 +757,9 @@ public class OpflexConnectionService
         oc.setOpflexServer(server);
         oc.setRoles(server.getRoles());
 
-        logger.info("Adding agent {}", endpoint.getIdentifier());
+        logger.trace("Adding agent {}", endpoint.getIdentifier());
         addOpflexAgent(oc);
-        
+
         /*
          * Send an Identity Request
          */
@@ -730,20 +783,21 @@ public class OpflexConnectionService
             endpoint.sendRequest(ourId);
         }
         catch (Throwable t) {
-        }        
+            logger.error("Couldn't send Identity {}", t);
+        }
     }
 
     /**
-     * This is the notification we receive when a connection 
+     * This is the notification we receive when a connection
      * is closed. Retrieve the domain from the {@link JsonRpcEndpoint}'s
      * context field to get the {@link OpflexRpcServer}, which contains
-     * the OpFlex domain for this connection, then use the identity from 
-     * the {@link JsonRpcEndpoint} and domain to remove the {@link OpflexAgent} 
+     * the OpFlex domain for this connection, then use the identity from
+     * the {@link JsonRpcEndpoint} and domain to remove the {@link OpflexAgent}
      * from the domain
      */
     @Override
     public void channelClosed(JsonRpcEndpoint endpoint) throws Exception {
-        logger.info("Connection to Node : {} closed", endpoint.getIdentifier());
+        logger.trace("Connection to Node : {} closed", endpoint.getIdentifier());
         OpflexAgent agent = getOpflexConnection(endpoint);
         if (agent != null) {
             removeOpflexAgent(agent);

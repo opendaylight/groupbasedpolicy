@@ -6,44 +6,24 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-module opflex-provider-impl {
-    yang-version 1;
-    namespace "urn:opendaylight:params:xml:ns:yang:controller:config:opflex-provider:impl";
-    prefix "opflex-provider-impl";
+module opflex-provider {
+     yang-version 1;
+     namespace "urn:opendaylight:params:xml:ns:yang:controller:config:opflex-provider";
+     prefix "opflex-provider";
 
-    import config { prefix config; revision-date 2013-04-05; }
-    import opendaylight-md-sal-binding { prefix mdsal; revision-date 2013-10-28; }
+     import config { prefix config; revision-date 2013-04-05; }
 
+     description
+         "This module contains the base YANG definitions for 
+          opflex-provider services.";
 
-    description
-        "This module contains the base YANG definitions for 
-          opflex-provider impl implementation.";
+     revision "2014-04-21" {
+         description
+             "Initial revision.";
+     }
 
-    revision "2014-06-11" {
-        description
-            "Initial revision.";
-    }
-
-    identity opflex-provider-impl {
-        base "config:module-type";
-
-        config:java-name-prefix OpflexProvider;
-    }
-
-    // Augments the 'configuration' choice node under modules/module.  
-    augment "/config:modules/config:module/config:configuration" {
-        case opflex-provider-impl {
-            when "/config:modules/config:module/config:type = 'opflex-provider-impl'";
-
-            //wires in the data-broker service 
-            container data-broker {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-async-data-broker;
-                    }
-                }
-            }         
-        }
-    }
+     identity opflex-provider {
+         base "config:service-type";
+         config:java-class "org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.OpflexData";
+     }
 }

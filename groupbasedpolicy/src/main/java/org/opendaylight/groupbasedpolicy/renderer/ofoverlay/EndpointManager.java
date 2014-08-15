@@ -26,6 +26,7 @@ import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.AbstractEndpointRegistry;
+import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.util.SetUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;

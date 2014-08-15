@@ -73,6 +73,14 @@ public class OpflexRpcServer {
         this.connectionService = service;
     }
 
+    public String getAddress() {
+        return address;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
     public RpcBroker getRpcBroker() {
         return this.rpcBroker;
     }
@@ -101,6 +109,10 @@ public class OpflexRpcServer {
         for ( Role role : roles ) {
             rpcServer.addMessageList(role.getMessages());
         }
+        /*
+         * All servers get Discovery messages
+         */
+        rpcServer.addMessageList(Role.DISCOVERY.getMessages());
 
         new Thread() {
             private RpcServer server;

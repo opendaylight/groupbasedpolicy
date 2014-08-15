@@ -25,9 +25,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Renderer that uses OpenFlow and OVSDB to implement an overlay network
+ * Renderer that uses OpFlex to implement an overlay network
  * using Open vSwitch.
- * @author readams
+ * @author tbachman
  */
 public class OpflexRenderer implements AutoCloseable, DataChangeListener {
     private static final Logger LOG =
@@ -38,7 +38,7 @@ public class OpflexRenderer implements AutoCloseable, DataChangeListener {
     private final EndpointManager endpointManager;
     private final PolicyManager policyManager;
     private final OpflexConnectionService connectionService;
-
+    private final ListenerRegistration<DataChangeListener> dataChangeListenerRegistration;
     private final ScheduledExecutorService executor;
 
     ListenerRegistration<DataChangeListener> configReg;
@@ -53,18 +53,16 @@ public class OpflexRenderer implements AutoCloseable, DataChangeListener {
 
         connectionService = new OpflexConnectionService();
         connectionService.setDataProvider(dataBroker);
-        
+
         endpointManager = new EndpointManager(dataProvider, rpcRegistry,
                                               executor, connectionService);
         policyResolver = new PolicyResolver(dataProvider, executor);
 
-        policyManager = new PolicyManager(dataProvider,
-                                          policyResolver,
-                                          endpointManager,
-                                          rpcRegistry,
+        policyManager = new PolicyManager(policyResolver,
+                                          connectionService,
                                           executor);
-        
-        final ListenerRegistration<DataChangeListener> dataChangeListenerRegistration =
+
+        dataChangeListenerRegistration =
                 dataBroker
                 .registerDataChangeListener(LogicalDatastoreType.CONFIGURATION,
                         OpflexConnectionService.DISCOVERY_IID,

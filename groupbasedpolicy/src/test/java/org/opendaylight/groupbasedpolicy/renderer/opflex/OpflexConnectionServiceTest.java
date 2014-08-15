@@ -36,8 +36,6 @@ import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFaile
 import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcDecoder;
 import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcEndpoint;
 import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcServiceBinderHandler;
-import org.opendaylight.groupbasedpolicy.jsonrpc.RpcBroker;
-import org.opendaylight.groupbasedpolicy.jsonrpc.RpcMessage;
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcMessageMap;
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcServer;
 import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.IdentityResponse;
@@ -62,7 +60,7 @@ import com.google.common.util.concurrent.CheckedFuture;
  * Test the serialization and deserialization of RPC Messages,
  * and check against expected structure and values.
  */
-public class OpflexConnectionServiceTest implements RpcBroker.RpcCallback {
+public class OpflexConnectionServiceTest {
     protected static final Logger logger = LoggerFactory.getLogger(OpflexMessageTest.class);
 
     static private final String TEST_EP_UUID = "85d53c32-47af-4eaf-82fd-ced653ff74da";
@@ -117,7 +115,7 @@ public class OpflexConnectionServiceTest implements RpcBroker.RpcCallback {
     private OpflexRpcServer mockServer;
     @Mock
     private RpcServer mockRpcServer;
-    
+
     private ServerSocket create(int[] ports) throws IOException {
         for (int port : ports) {
             try {
@@ -130,11 +128,11 @@ public class OpflexConnectionServiceTest implements RpcBroker.RpcCallback {
         // if the program gets here, no port in the range was found
         throw new IOException("no free port found");
     }
-    
+
     private int getAvailableServerPort() {
         try {
             int freePort;
-            ServerSocket s = create(new int[] 
+            ServerSocket s = create(new int[]
                     { 6670, 6671, 6672, 6673, 6674, 6675, 6676, 6677, 6678 });
             freePort = s.getLocalPort();
             s.close();
@@ -144,11 +142,6 @@ public class OpflexConnectionServiceTest implements RpcBroker.RpcCallback {
         }
     }
 
-    @Override
-    public void callback(JsonRpcEndpoint endpoint, RpcMessage request) {
-        opflexService.callback(endpoint, request);
-    }
-    
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
@@ -256,11 +249,7 @@ public class OpflexConnectionServiceTest implements RpcBroker.RpcCallback {
          */
         opflexService = new OpflexConnectionService();
         opflexService.setDataProvider(mockDataBroker);
-        List<RpcMessage> messages = Role.POLICY_REPOSITORY.getMessages();
-        for (RpcMessage msg: messages) {
-            opflexService.subscribe(msg, this);
-        }
-        
+
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         decoder = new JsonRpcDecoder(1000);
@@ -269,7 +258,7 @@ public class OpflexConnectionServiceTest implements RpcBroker.RpcCallback {
         EmbeddedChannel channel = new EmbeddedChannel(decoder, binderHandler);
 
         RpcMessageMap messageMap = new RpcMessageMap();
-        messageMap.addList(Role.POLICY_REPOSITORY.getMessages());
+        messageMap.addList(Role.DISCOVERY.getMessages());
 
         JsonRpcEndpoint ep = new JsonRpcEndpoint(IDENTITY , opflexService,
                 objectMapper, channel, messageMap, opflexService);
@@ -293,5 +282,5 @@ public class OpflexConnectionServiceTest implements RpcBroker.RpcCallback {
         assertTrue(resp.getResult().getMy_role()
                 .contains(Role.OBSERVER.toString()));
     }
-    
+
 }

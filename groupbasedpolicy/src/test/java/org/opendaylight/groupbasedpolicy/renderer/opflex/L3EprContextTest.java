@@ -31,6 +31,7 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcEndpoint;
 import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.EndpointDeclarationRequest;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.EndpointRequestRequest;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address;
@@ -56,7 +57,7 @@ public class L3EprContextTest implements L3EprContext.Callback {
     private int callbacks;
     @Mock
     private DataBroker mockProvider;
-    private ScheduledExecutorService executor;    
+    private ScheduledExecutorService executor;
     @Mock
     private JsonRpcEndpoint mockPeer;
     @Mock
@@ -64,7 +65,9 @@ public class L3EprContextTest implements L3EprContext.Callback {
     @Mock
     private ReadOnlyTransaction mockReader;
     @Mock
-    private EndpointDeclarationRequest mockRequest;
+    private EndpointDeclarationRequest mockDeclRequest;
+    @Mock
+    private EndpointRequestRequest mockReqRequest;
     @Mock
     private Identity mockId;
     @Mock
@@ -79,60 +82,120 @@ public class L3EprContextTest implements L3EprContext.Callback {
     private Optional<EndpointL3> mockOption;
     @Mock
     private EndpointL3 mockEp;
+    @Mock
+    private List<EndpointDeclarationRequest.Params> mockDeclParamsList;
+    @Mock
+    private EndpointDeclarationRequest.Params mockDeclParams;
+    @Mock
+    private List<EndpointRequestRequest.Params> mockReqParamsList;
+    @Mock
+    private EndpointRequestRequest.Params mockReqParams;
+    @Mock
+    private List<String> mockIdentityList;
     private List<String> dummyList;
-    
-    @Before
-    public void setUp() throws Exception {
-        MockitoAnnotations.initMocks(this);
-        ctx =  new L3EprContext(mockPeer, mockRequest, 
-                TEST_SIZE,
-                mockProvider, executor);
-        ctx.setCallback(this);
-        
-    }
-
-    @Override
-    public void callback(L3EprContext ctx) {
-        callbacks++;
-    }
 
     private static final String TEST_CONTEXT = "foo";
     private static final String TEST_ID = "bar";
     private static final String TEST_IP1 = "192.168.194.131";
     private static final String TEST_IP2 = "192.168.194.132";
     private static final String TEST_IP3 = "192.168.194.133";
-    
+
+    @Before
+    public void setUp() throws Exception {
+        MockitoAnnotations.initMocks(this);
+    }
+
+    @Override
+    public void callback(EprContext ctx) {
+        callbacks++;
+    }
+
+
     @Test
     public void testEpCreate() throws Exception {
-        when(mockId.getL3Context()).thenReturn(mockL3Context);
-        when(mockId.getL3Identity()).thenReturn(mockIp);
-        when(mockId.getL3Addresses()).thenReturn(mockAddresses);
-        when(mockProvider.newWriteOnlyTransaction()).thenReturn(mockWriter);
+        ctx =  new L3EprContext(mockPeer, mockId, mockDeclRequest,
+                TEST_SIZE,
+                mockProvider, executor);
+        ctx.setCallback(this);
         dummyList = new ArrayList<String>();
         dummyList.add(TEST_IP1);
         dummyList.add(TEST_IP2);
         dummyList.add(TEST_IP3);
-        ctx.createL3Ep(TEST_CONTEXT, dummyList ,mockId);
+        when(mockId.getL3Context()).thenReturn(mockL3Context);
+        when(mockId.getL3Identity()).thenReturn(mockIp);
+        when(mockId.getL3Addresses()).thenReturn(mockAddresses);
+        when(mockDeclRequest.valid()).thenReturn(true);
+        when(mockDeclRequest.getParams()).thenReturn(mockDeclParamsList);
+        when(mockDeclParamsList.get(0)).thenReturn(mockDeclParams);
+        when(mockDeclParams.getContext()).thenReturn(TEST_CONTEXT);
+        when(mockDeclParams.getIdentifier()).thenReturn(dummyList);
+        when(mockProvider.newWriteOnlyTransaction()).thenReturn(mockWriter);
+
+        ctx.createEp();
+        verify(mockProvider).newWriteOnlyTransaction();
+        verify(mockWriter).submit();
+    }
+
+
+    @Test
+    public void testEpDelete() throws Exception {
+        ctx =  new L3EprContext(mockPeer, mockId, mockDeclRequest,
+                TEST_SIZE,
+                mockProvider, executor);
+        ctx.setCallback(this);
+        dummyList = new ArrayList<String>();
+        dummyList.add(TEST_IP1);
+        dummyList.add(TEST_IP2);
+        dummyList.add(TEST_IP3);
+        when(mockId.getL3Context()).thenReturn(mockL3Context);
+        when(mockId.getL3Identity()).thenReturn(mockIp);
+        when(mockId.getL3Addresses()).thenReturn(mockAddresses);
+        when(mockDeclRequest.valid()).thenReturn(true);
+        when(mockDeclRequest.getParams()).thenReturn(mockDeclParamsList);
+        when(mockDeclParamsList.get(0)).thenReturn(mockDeclParams);
+        when(mockDeclParams.getContext()).thenReturn(TEST_CONTEXT);
+        when(mockDeclParams.getIdentifier()).thenReturn(dummyList);
+        when(mockProvider.newWriteOnlyTransaction()).thenReturn(mockWriter);
+
+        ctx.deleteEp();
         verify(mockProvider).newWriteOnlyTransaction();
         verify(mockWriter).submit();
     }
 
     @Test
     public void testLookupEndpoint() throws Exception {
+        ctx =  new L3EprContext(mockPeer, mockId, mockReqRequest,
+                TEST_SIZE,
+                mockProvider, executor);
+        ctx.setCallback(this);
+        when(mockId.getL3Context()).thenReturn(mockL3Context);
+        when(mockId.getL3Identity()).thenReturn(mockIp);
+        when(mockId.getL3Addresses()).thenReturn(mockAddresses);
+        when(mockReqRequest.valid()).thenReturn(true);
+        when(mockReqRequest.getParams()).thenReturn(mockReqParamsList);
+        when(mockReqParamsList.get(0)).thenReturn(mockReqParams);
+        when(mockReqParams.getIdentifier()).thenReturn(mockIdentityList);
+        when(mockIdentityList.get(0)).thenReturn(TEST_ID);
+        when(mockReqParams.getContext()).thenReturn(TEST_CONTEXT);
         when(mockProvider.newReadOnlyTransaction()).thenReturn(mockReader);
         when(mockReader.read(eq(LogicalDatastoreType.OPERATIONAL),
                 Matchers.<InstanceIdentifier<Endpoint>>any())).thenReturn(mockFuture);
-        ctx.lookupEndpoint(TEST_CONTEXT, TEST_ID);
+        ctx.lookupEndpoint();
         verify(mockProvider).newReadOnlyTransaction();
     }
 
     @Test
     public void testCallback() throws Exception {
+        Identity id =
+                new Identity(TEST_ID);
+        ctx =  new L3EprContext(mockPeer, id, mockDeclRequest,
+                TEST_SIZE,
+                mockProvider, executor);
         callbacks = 0;
         ctx.setCallback(this);
         when(mockOption.get()).thenReturn(mockEp);
         ctx.onSuccess(mockOption);
-        assertTrue(callbacks == 1);  
+        assertTrue(callbacks == 1);
     }
 
 }

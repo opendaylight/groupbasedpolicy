@@ -26,6 +26,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
+import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.DestinationMapper;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.GroupTable;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OfTable;

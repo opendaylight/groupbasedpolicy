@@ -22,6 +22,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3AddressBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 
 import com.google.common.net.InetAddresses;
 
@@ -32,7 +34,7 @@ import com.google.common.net.InetAddresses;
  * by an abstract class with different concrete types.
  * At the moment, we're only dealing with IP and MAC
  * addresses.
- * 
+ *
  * This class also provides methods for getting the identity
  * in forms by the yang model, and are therefore usable by
  * other classes in the policy model (e.g. the objects
@@ -49,6 +51,7 @@ public class Identity {
     private Set<IpAddress> ips = null;
     private L2BridgeDomainId l2Context = null;
     private MacAddress mac = null;
+    private boolean validId = false;
     public Identity(String id) {
         /*
          * Determine the ID type and populate
@@ -63,9 +66,29 @@ public class Identity {
             type = IdentityType.MAC_ADDRESS;
             mac = normalizeMacAddress(id);
         }
-        
+
     }
-    
+
+    public Identity(Endpoint ep) {
+        type = IdentityType.MAC_ADDRESS;
+        mac = ep.getMacAddress();
+        l2Context = ep.getL2Context();
+    }
+
+    public Identity(EndpointL3 ep) {
+        type = IdentityType.IP_ADDRESS;
+        ips = Collections.newSetFromMap(new ConcurrentHashMap<IpAddress, Boolean>());
+        primaryIp = ep.getIpAddress();
+        List<L3Address> l3List = ep.getL3Address();
+        for (L3Address addr: l3List) {
+            ips.add(addr.getIpAddress());
+        }
+        if (ep.getTenant() != null &&
+            ep.getEndpointGroup() != null) {
+            validId = true;
+        }
+    }
+
     public void setContext(String context) {
         switch (type) {
         case MAC_ADDRESS:
@@ -78,11 +101,11 @@ public class Identity {
             break;
         }
     }
-    
+
     /**
      * Adds a new identifier to the list. Some types of
      * identities allow for list of identifiers (e.g. L3).
-     * 
+     *
      * @param id The new identifier to add to the list
      */
     public void addId(String id) {
@@ -94,11 +117,11 @@ public class Identity {
             break;
         }
     }
-    
+
     private boolean idIsIp(String id) {
         return InetAddresses.isInetAddress(id);
     }
-    
+
     /*
      * Verifies MAC addresses with the following formats:
      * 0xAA:0xBB:0xCC:0xDD:0xEE:0xFF
@@ -128,38 +151,55 @@ public class Identity {
                 return false;
             }
         }
-        return true;        
+        return true;
     }
-    
+
     /**
      * Check if this {@link Identity} is an L3 type (Ip Address)
-     * 
+     *
      * @return true if L3, false if not
      */
     public boolean isL3() {
         return (type == IdentityType.IP_ADDRESS);
     }
-    
+
     /**
-     * Check if this {@link Identity} is an L2 type (MAC Address) 
-     * 
+     * Check if this {@link Identity} is an L2 type (MAC Address)
+     *
      * @return true if L2, false if not
      */
     public boolean isL2() {
         return (type == IdentityType.MAC_ADDRESS);
     }
 
+    public boolean valid() {
+        switch (type) {
+        case MAC_ADDRESS:
+            if (getL2Context() != null && mac != null) {
+                return validId;
+            }
+            break;
+        case IP_ADDRESS:
+            if (getL3Context() != null && primaryIp != null) {
+                return validId;
+            }
+            default:
+                break;
+
+        }
+        return false;
+    }
     /**
      * Return the context, regardless of type, as a string.
-     * 
+     *
      * @return String representing the context for this Identity
      */
     public String contextAsString() {
         switch (type) {
         case MAC_ADDRESS:
-            return l2Context.toString();
+            return l2Context.getValue().toString();
         case IP_ADDRESS:
-            return l3Context.toString();
+            return l3Context.getValue().toString();
         default:
             return null;
         }
@@ -170,7 +210,7 @@ public class Identity {
      * of the string depends on the identity type.
      * When the identity is a actually a list, only
      * the first identity is returned.
-     * 
+     *
      * @return null if type is UKNOWN, otherwise String
      */
     public String identityAsString() {
@@ -190,21 +230,21 @@ public class Identity {
         }
         return null;
     }
-    
+
     /**
-     * Get the L2 context in an Endpoint Registry 
+     * Get the L2 context in an Endpoint Registry
      * compatible format
-     * 
+     *
      * @return The Layer 2 context
      */
     public L2BridgeDomainId getL2Context() {
         return l2Context;
     }
-    
+
     /**
-     * Get the L2 identity in an Endpoint Registry 
+     * Get the L2 identity in an Endpoint Registry
      * compatible format
-     * 
+     *
      * @return The Layer 2 identity
      */
     public MacAddress getL2Identity() {
@@ -212,19 +252,19 @@ public class Identity {
     }
 
     /**
-     * Get the L3 context in an Endpoint Registry 
+     * Get the L3 context in an Endpoint Registry
      * compatible format
-     * 
+     *
      * @return The Layer 3 context
-     */    
+     */
     public L3ContextId getL3Context() {
         return l3Context;
     }
 
     /**
-     * Get the L3 identity in an Endpoint Registry 
+     * Get the L3 identity in an Endpoint Registry
      * compatible format
-     * 
+     *
      * @return The Layer 3 identity
      */
     public IpAddress getL3Identity() {
@@ -236,7 +276,7 @@ public class Identity {
         List<L3Address> l3List= new ArrayList<L3Address>();
         List<IpAddress> ipList = new ArrayList<IpAddress>();
         ipList.addAll(ips);
-        for (IpAddress i: ipList){ 
+        for (IpAddress i: ipList){
             L3AddressBuilder l3ab = new L3AddressBuilder();
             l3ab.setIpAddress(i);
             l3ab.setL3Context(l3Context);
@@ -249,9 +289,65 @@ public class Identity {
     private IpAddress normalizeIpAddress(String identifier) {
         return IpAddressBuilder.getDefaultInstance(identifier);
     }
-    
+
     private MacAddress normalizeMacAddress(String identifier) {
         MacAddress m = new MacAddress(identifier);
         return m;
     }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((ips == null) ? 0 : ips.hashCode());
+        result = prime * result
+                + ((l2Context == null) ? 0 : l2Context.hashCode());
+        result = prime * result
+                + ((l3Context == null) ? 0 : l3Context.hashCode());
+        result = prime * result + ((mac == null) ? 0 : mac.hashCode());
+        result = prime * result
+                + ((primaryIp == null) ? 0 : primaryIp.hashCode());
+        result = prime * result + ((type == null) ? 0 : type.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        Identity other = (Identity) obj;
+        if (ips == null) {
+            if (other.ips != null)
+                return false;
+        } else if (!ips.equals(other.ips))
+            return false;
+        if (l2Context == null) {
+            if (other.l2Context != null)
+                return false;
+        } else if (!l2Context.equals(other.l2Context))
+            return false;
+        if (l3Context == null) {
+            if (other.l3Context != null)
+                return false;
+        } else if (!l3Context.equals(other.l3Context))
+            return false;
+        if (mac == null) {
+            if (other.mac != null)
+                return false;
+        } else if (!mac.equals(other.mac))
+            return false;
+        if (primaryIp == null) {
+            if (other.primaryIp != null)
+                return false;
+        } else if (!primaryIp.equals(other.primaryIp))
+            return false;
+        if (type != other.type)
+            return false;
+        return true;
+    }
+
 }

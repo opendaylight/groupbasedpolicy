@@ -19,19 +19,14 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 @JsonSerialize
 @JsonDeserialize
-public class EndpointDeclarationRequest extends RpcMessage {
+public class PolicyUnresolveRequest extends RpcMessage {
 
-    public static final String DECLARATION_MESSAGE = "endpoint_declaration";
+    public static final String UNRESOLVE_MESSAGE = "unresolve_policy";
 
     static public class Params {
         private String subject;
         private String context;
         private String policy_name;
-        private String location;
-        private List<String> identifier;
-        private List<String> data;
-        private String status;
-        private int prr;
         public String getSubject() {
             return subject;
         }
@@ -49,36 +44,6 @@ public class EndpointDeclarationRequest extends RpcMessage {
         }
         public void setPolicy_name(String policy_name) {
             this.policy_name = policy_name;
-        }
-        public String getLocation() {
-            return location;
-        }
-        public void setLocation(String location) {
-            this.location = location;
-        }
-        public List<String> getIdentifier() {
-            return identifier;
-        }
-        public void setIdentifier(List<String> identifier) {
-            this.identifier = identifier;
-        }
-        public List<String> getData() {
-            return data;
-        }
-        public void setData(List<String> data) {
-            this.data = data;
-        }
-        public String getStatus() {
-            return status;
-        }
-        public void setStatus(String status) {
-            this.status = status;
-        }
-        public int getPrr() {
-            return prr;
-        }
-        public void setPrr(int prr) {
-            this.prr = prr;
         }
     }
     private String id;
@@ -126,15 +91,15 @@ public class EndpointDeclarationRequest extends RpcMessage {
         this.name = name;
     }
 
-    public EndpointDeclarationRequest(String name) {
+    public PolicyUnresolveRequest(String name) {
         this.name = name;
     }
 
-    public EndpointDeclarationRequest() {
-        this.name = DECLARATION_MESSAGE;
-        this.method = DECLARATION_MESSAGE;
+    public PolicyUnresolveRequest() {
+        this.name = UNRESOLVE_MESSAGE;
+        this.method = UNRESOLVE_MESSAGE;
     }
-    
+
     /**
      * Minimal check on validity of message
      * @return true if message has passed validity check
@@ -146,21 +111,6 @@ public class EndpointDeclarationRequest extends RpcMessage {
             return false;
         if (params.get(0) == null)
             return false;
-        if (params.get(0).getSubject() == null)
-            return false;
-        if (params.get(0).getContext() == null)
-            return false;
-        if (params.get(0).getPolicy_name() == null)
-            return false;
-        if (params.get(0).getStatus() == null)
-            return false;
-        if (params.get(0).getLocation() == null)
-            return false;
-        if (params.get(0).getIdentifier() == null)
-            return false;
-        if (params.get(0).getIdentifier().size() <= 0)
-            return false;
-        
         return true;
     }
 }

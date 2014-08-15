@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.renderer.opflex;
+package org.opendaylight.groupbasedpolicy.endpoint;
 
 import javax.annotation.concurrent.Immutable;
 
@@ -18,6 +18,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
  */
 @Immutable
 public class EpKey {
+
+    @Override
+    public String toString() {
+        return "EpKey [l2Context=" + l2Context + ", macAddress=" + macAddress +
+               "]";
+    }
 
     final L2ContextId l2Context;
     final MacAddress macAddress;

@@ -17,8 +17,11 @@ import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcMessage;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.EndpointDeclarationRequest;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.EndpointRequestRequest;
 import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.IdentityRequest;
 import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.IdentityResponse;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.PolicyResolutionRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,17 +34,20 @@ public class RoleTest {
 
     private boolean idReq;
     private boolean idRsp;
+    private boolean polReq;
+    private boolean epDeclReq;
+    private boolean epReqReq;
+
 
     @Before
     public void setUp() throws Exception {
     }
-
     @Test
-    public void testPolicyRepository() throws Exception {
+    public void testDiscovery() throws Exception {
         idReq = false;
         idRsp = false;
 
-        List<RpcMessage> messages = Role.POLICY_REPOSITORY.getMessages();
+        List<RpcMessage> messages = Role.DISCOVERY.getMessages();
         for (RpcMessage msg : messages) {
             if (msg instanceof IdentityRequest) {
                 idReq = true;
@@ -52,42 +58,46 @@ public class RoleTest {
         }
         assertTrue(idReq == true);
         assertTrue(idRsp == true);
+    }
+
+
+    @Test
+    public void testPolicyRepository() throws Exception {
+        polReq = false;
+
+        List<RpcMessage> messages = Role.POLICY_REPOSITORY.getMessages();
+        for (RpcMessage msg : messages) {
+            if (msg instanceof PolicyResolutionRequest) {
+                polReq = true;
+            }
+        }
+        assertTrue(polReq == true);
     }
 
     @Test
     public void testEndpointRegistry() throws Exception {
-        idReq = false;
-        idRsp = false;
+        epDeclReq = false;
+        epReqReq = false;
 
         List<RpcMessage> messages = Role.ENDPOINT_REGISTRY.getMessages();
         for (RpcMessage msg : messages) {
-            if (msg instanceof IdentityRequest) {
-                idReq = true;
+            if (msg instanceof EndpointDeclarationRequest) {
+                epDeclReq = true;
             }
-            if (msg instanceof IdentityResponse) {
-                idRsp = true;
+            if (msg instanceof EndpointRequestRequest) {
+                epReqReq = true;
             }
         }
-        assertTrue(idReq == true);
-        assertTrue(idRsp == true);
+        assertTrue(epDeclReq == true);
+        assertTrue(epReqReq == true);
     }
 
-    @Test
+    //@Test
     public void testObserver() throws Exception {
-        idReq = false;
-        idRsp = false;
 
         List<RpcMessage> messages = Role.OBSERVER.getMessages();
         for (RpcMessage msg : messages) {
-            if (msg instanceof IdentityRequest) {
-                idReq = true;
-            }
-            if (msg instanceof IdentityResponse) {
-                idRsp = true;
-            }
         }
-        assertTrue(idReq == true);
-        assertTrue(idRsp == true);
     }
 
 }

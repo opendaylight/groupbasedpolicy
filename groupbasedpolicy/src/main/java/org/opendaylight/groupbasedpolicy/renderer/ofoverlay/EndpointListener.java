@@ -8,6 +8,7 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 
+import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 

@@ -29,13 +29,13 @@ public class IdentityTest {
     protected static final Logger logger = LoggerFactory.getLogger(IdentityTest.class);
 
     Identity id;
-    
+
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
-        
+
     }
-    
+
     private static final String TEST_IP = "192.168.194.132";
     private static final String TEST_MAC1 = "0x00:11:22:33:44:55";
     private static final String TEST_MAC2 = "11:22:33:44:55:66";
@@ -70,17 +70,17 @@ public class IdentityTest {
         assertTrue(id.identityAsString().equals(TEST_MAC1));
         assertTrue(id.getL2Context().getValue().equals(TEST_CONTEXT));
         assertTrue(id.getL2Identity().getValue().equals(TEST_MAC1));
-        
+
         id = new Identity(TEST_MAC2);
         id.setContext(TEST_CONTEXT);
         assertTrue(id.identityAsString().equals(TEST_MAC2));
         assertTrue(id.getL2Identity().getValue().equals(TEST_MAC2));
-        
+
         id = new Identity(TEST_MAC3);
         id.setContext(TEST_CONTEXT);
         assertTrue(id.identityAsString().equals(TEST_MAC3));
         assertTrue(id.getL2Identity().getValue().equals(TEST_MAC3));
-        
+
         id = new Identity(TEST_MAC4);
         id.setContext(TEST_CONTEXT);
         assertTrue(id.identityAsString().equals(TEST_MAC4));
@@ -106,5 +106,5 @@ public class IdentityTest {
         assertTrue(id.identityAsString().equals(TEST_MAC8));
         assertTrue(id.getL2Identity().getValue().equals(TEST_MAC8));
     }
-    
+
 }

@@ -27,6 +27,8 @@ import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.PolicyResoluti
 import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.PolicyResolutionResponse;
 import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.PolicyTriggerRequest;
 import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.PolicyTriggerResponse;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.PolicyUnresolveRequest;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.PolicyUnresolveResponse;
 import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.PolicyUpdateRequest;
 import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.PolicyUpdateResponse;
 import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.StateReportRequest;
@@ -112,7 +114,7 @@ public class OpflexMessageTest {
             "      \"data\":  \"" + DATA + "\"" +
             "   }] }";
 
-    private static final String emptyMo = 
+    private static final String emptyMo =
             "{         \"name\": \"" + MO_NAME + "\"," +
             "          \"properties\": [ {\"name\": \"" + PROP_NAME + "\", " +
             "                             \"data\": \"" + PROP_DATA + "\" }]," +
@@ -122,18 +124,18 @@ public class OpflexMessageTest {
             "          \"to_relations\": []," +
             "          \"faults\": []," +
             "          \"health\": [] }";
-            
-    private static final String managedObject = 
+
+    private static final String managedObject =
             "{ \"name\": \"" + MO_NAME + "\", " +
             "  \"properties\": [ { \"name\": \"" + PROP_NAME + "\", " +
-            "                      \"data\": \"" + PROP_DATA + "\" }]," +                    
+            "                      \"data\": \"" + PROP_DATA + "\" }]," +
             "  \"children\":   [ " + emptyMo + " ], " +
             "  \"statistics\":   [ " + emptyMo + " ], " +
             "  \"from_relations\":   [ " + emptyMo + " ], " +
             "  \"to_relations\":   [ " + emptyMo + " ], " +
             "  \"faults\":   [ " + emptyMo + " ], " +
             "  \"health\":   [ " + emptyMo + " ]}";
-            
+
     private static final String opflexPolicyResponse =
             "{ \"id\":     \"" + ID_UUID + "\"," +
             "  \"error\":  {}," +
@@ -155,6 +157,20 @@ public class OpflexMessageTest {
             "{ \"id\":     \"" + ID_UUID + "\"," +
             "  \"error\":  {}," +
             "  \"result\": {}}";
+
+    private static final String opflexUnresolveRequest =
+            "{ \"id\":     \"" + ID_UUID + "\"," +
+            "  \"method\": \"" + POLICY_REQUEST + "\"," +
+            "  \"params\": [ {" +
+            "      \"subject\":    \"" + SUBJECT + "\"," +
+            "      \"context\":  \"" + CONTEXT + "\"," +
+            "      \"policy_name\":  \"" + POLICY_NAME + "\"" +
+            "   }] }";
+
+    private static final String opflexUnresolveResponse =
+            "{ \"id\":     \"" + ID_UUID + "\"," +
+            "  \"error\":  {}," +
+            "  \"result\": {} }";
 
     private static final String TRIGGER_REQUEST = "trigger_policy";
     private static final String TYPE = "someType";
@@ -399,7 +415,7 @@ public class OpflexMessageTest {
         assertTrue(rpcMsg instanceof PolicyUpdateResponse);
         PolicyUpdateResponse opflexResponse = (PolicyUpdateResponse)rpcMsg;
         assertTrue(opflexResponse.getId().equals(ID_UUID));
-        
+
     }
 
     @Test
@@ -582,8 +598,8 @@ public class OpflexMessageTest {
         assertTrue(opflexResponse.getParams().get(0)
                 .getObject().getStatistics().get(0).getName().equals(MO_NAME));
         assertTrue(opflexResponse.getParams().get(0)
-                .getObject().getTo_relations().get(0).getName().equals(MO_NAME));           
-        
+                .getObject().getTo_relations().get(0).getName().equals(MO_NAME));
+
         assertTrue(opflexResponse.getParams()
                 .get(0).getFault().get(0).getName().equals(MO_NAME));
         assertTrue(opflexResponse.getParams().get(0)
@@ -601,7 +617,7 @@ public class OpflexMessageTest {
         assertTrue(opflexResponse.getParams().get(0)
                 .getFault().get(0).getStatistics().get(0).getName().equals(MO_NAME));
         assertTrue(opflexResponse.getParams().get(0)
-                .getFault().get(0).getTo_relations().get(0).getName().equals(MO_NAME));   
+                .getFault().get(0).getTo_relations().get(0).getName().equals(MO_NAME));
 
         assertTrue(opflexResponse.getParams()
                 .get(0).getEvent().get(0).getName().equals(MO_NAME));
@@ -620,9 +636,9 @@ public class OpflexMessageTest {
         assertTrue(opflexResponse.getParams().get(0)
                 .getEvent().get(0).getStatistics().get(0).getName().equals(MO_NAME));
         assertTrue(opflexResponse.getParams().get(0)
-                .getEvent().get(0).getTo_relations().get(0).getName().equals(MO_NAME));          
-        
-        
+                .getEvent().get(0).getTo_relations().get(0).getName().equals(MO_NAME));
+
+
         assertTrue(opflexResponse.getParams()
                 .get(0).getStatistics().get(0).getName().equals(MO_NAME));
         assertTrue(opflexResponse.getParams().get(0)
@@ -640,10 +656,10 @@ public class OpflexMessageTest {
         assertTrue(opflexResponse.getParams().get(0)
                 .getStatistics().get(0).getStatistics().get(0).getName().equals(MO_NAME));
         assertTrue(opflexResponse.getParams().get(0)
-                .getStatistics().get(0).getTo_relations().get(0).getName().equals(MO_NAME));           
-        
+                .getStatistics().get(0).getTo_relations().get(0).getName().equals(MO_NAME));
+
         assertTrue(opflexResponse.getParams()
-                .get(0).getHealth().get(0).getName().equals(MO_NAME));        
+                .get(0).getHealth().get(0).getName().equals(MO_NAME));
         assertTrue(opflexResponse.getParams().get(0)
                 .getHealth().get(0).getProperties().get(0).getName().equals(PROP_NAME));
         assertTrue(opflexResponse.getParams().get(0)
@@ -659,7 +675,7 @@ public class OpflexMessageTest {
         assertTrue(opflexResponse.getParams().get(0)
                 .getHealth().get(0).getStatistics().get(0).getName().equals(MO_NAME));
         assertTrue(opflexResponse.getParams().get(0)
-                .getHealth().get(0).getTo_relations().get(0).getName().equals(MO_NAME));   
+                .getHealth().get(0).getTo_relations().get(0).getName().equals(MO_NAME));
     }
 
     @Test
@@ -671,4 +687,34 @@ public class OpflexMessageTest {
         StateReportResponse opflexResponse = (StateReportResponse)rpcMsg;
         assertTrue(opflexResponse.getId().equals(ID_UUID));
     }
+
+    @Test
+    public void testPolicyUnresolveRequest() throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        RpcMessage rpcMsg = objectMapper.
+                readValue(opflexUnresolveRequest, PolicyUnresolveRequest.class);
+        assertTrue(rpcMsg instanceof PolicyUnresolveRequest);
+        PolicyUnresolveRequest opflexRequest = (PolicyUnresolveRequest)rpcMsg;
+        assertTrue(opflexRequest.getId().equals(ID_UUID));
+        assertTrue(opflexRequest.getMethod().equals(POLICY_REQUEST));
+        assertTrue(opflexRequest.getParams()
+                .get(0).getContext().equals(CONTEXT));
+        assertTrue(opflexRequest.getParams()
+                .get(0).getPolicy_name().equals(POLICY_NAME));
+        assertTrue(opflexRequest.getParams()
+                .get(0).getSubject().equals(SUBJECT));
+
+    }
+
+    @Test
+    public void testUnresolveResponse() throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        RpcMessage rpcMsg = objectMapper.
+                readValue(opflexUnresolveResponse, PolicyUnresolveResponse.class);
+        assertTrue(rpcMsg instanceof PolicyUnresolveResponse);
+        PolicyUnresolveResponse opflexResponse = (PolicyUnresolveResponse)rpcMsg;
+        assertTrue(opflexResponse.getId().equals(ID_UUID));
+    }
+
+
 }
