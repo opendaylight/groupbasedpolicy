@@ -539,6 +539,7 @@ public class InheritanceUtils {
         resolveQualityMatcher(Collection<QualityMatcher> toResolve,
                               HashMap<QualityMatcherName,
                                       QualityMatcher> matchers) {
+        if (toResolve == null) return;
         for (QualityMatcher qm : toResolve) {
             if (matchers.containsKey(qm.getName())) {
                 QualityMatcher oqm = matchers.get(qm.getName());
@@ -567,6 +568,7 @@ public class InheritanceUtils {
         resolveCapabilityMatcher(Collection<CapabilityMatcher> toResolve,
                                  HashMap<CapabilityMatcherName,
                                          CapabilityMatcher> matchers) {
+        if (toResolve == null) return;
         for (CapabilityMatcher m : toResolve) {
             if (matchers.containsKey(m.getName())) {
                 CapabilityMatcher om = matchers.get(m.getName());
@@ -595,6 +597,7 @@ public class InheritanceUtils {
         resolveRequirementMatcher(Collection<RequirementMatcher> toResolve,
                                   HashMap<RequirementMatcherName,
                                           RequirementMatcher> matchers) {
+        if (toResolve == null) return;
         for (RequirementMatcher m : toResolve) {
             if (matchers.containsKey(m.getName())) {
                 RequirementMatcher om = matchers.get(m.getName());
@@ -623,6 +626,7 @@ public class InheritanceUtils {
         resolveConditionMatcher(Collection<ConditionMatcher> toResolve,
                                  HashMap<ConditionMatcherName,
                                          ConditionMatcher> matchers) {
+        if (toResolve == null) return;
         for (ConditionMatcher m : toResolve) {
             if (matchers.containsKey(m.getName())) {
                 ConditionMatcher om = matchers.get(m.getName());

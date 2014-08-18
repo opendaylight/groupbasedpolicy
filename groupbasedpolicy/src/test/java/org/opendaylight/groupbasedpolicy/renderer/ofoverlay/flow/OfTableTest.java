@@ -174,22 +174,25 @@ public class OfTableTest {
                 .build())
             .setContract(ImmutableList.of(new ContractBuilder()
                 .setId(cid)
-                .setSubject(ImmutableList.of(new SubjectBuilder()
-                    .setName(new SubjectName("s1"))
-                    .setRule(ImmutableList.of(new RuleBuilder()
-                         .setActionRef(ImmutableList.of(new ActionRefBuilder()
-                             .setName(new ActionName("allow"))
-                             .build()))
-                         .setClassifierRef(ImmutableList.of(new ClassifierRefBuilder()
-                             .setName(new ClassifierName("tcp_80"))
-                             .setDirection(direction)
-                             .build()))
-                         .build()))
-                    .build()))
+                .setSubject(ImmutableList.of(baseSubject(direction).build()))
                 .setClause(ImmutableList.of(new ClauseBuilder()
                      .setName(new ClauseName("test"))
                      .setSubjectRefs(ImmutableList.of(new SubjectName("s1")))
                      .build()))
+                .build()));
+    }
+    
+    protected SubjectBuilder baseSubject(Direction direction) {
+        return new SubjectBuilder()
+            .setName(new SubjectName("s1"))
+            .setRule(ImmutableList.of(new RuleBuilder()
+                .setActionRef(ImmutableList.of(new ActionRefBuilder()
+                    .setName(new ActionName("allow"))
+                    .build()))
+                .setClassifierRef(ImmutableList.of(new ClassifierRefBuilder()
+                    .setName(new ClassifierName("tcp_80"))
+                    .setDirection(direction)
+                    .build()))
                 .build()));
     }
     

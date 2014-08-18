@@ -118,7 +118,7 @@ public class PolicyEnforcer extends FlowTable {
                 
                     for (Endpoint dst : ctx.epManager.getEndpointsForGroup(depg)) {
                 
-                        conds = ctx.epManager.getCondsForEndpoint(src);
+                        conds = ctx.epManager.getCondsForEndpoint(dst);
                         ConditionGroup dcg = 
                                 policyInfo.getEgCondGroup(new EgKey(dst.getTenant(), 
                                                                     dst.getEndpointGroup()),
