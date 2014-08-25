@@ -407,18 +407,20 @@ public class SwitchManager implements AutoCloseable {
             
             List<NodeConnector> ports = switchNode.getNodeConnector();
             HashSet<NodeConnectorId> externalPorts = new HashSet<>();
-            for (NodeConnector nc : ports) {
-                FlowCapableNodeConnector fcnc = 
-                        nc.getAugmentation(FlowCapableNodeConnector.class);
-                if (fcnc == null || fcnc.getName() == null) continue;
+            if (ports != null) {
+                for (NodeConnector nc : ports) {
+                    FlowCapableNodeConnector fcnc = 
+                            nc.getAugmentation(FlowCapableNodeConnector.class);
+                    if (fcnc == null || fcnc.getName() == null) continue;
 
-                if (fcnc.getName().matches(".*_(vxlan|tun)\\d+")) {
-                    tunnelPort = nc.getId();
-                }
-                if (nodeConfig != null) {
-                    for (String pattern : nodeConfig.getExternalInterfaces()) {
-                        if (fcnc.getName().matches(pattern))
-                            externalPorts.add(nc.getId());
+                    if (fcnc.getName().matches(".*_(vxlan|tun)\\d+")) {
+                        tunnelPort = nc.getId();
+                    }
+                    if (nodeConfig != null) {
+                        for (String pattern : nodeConfig.getExternalInterfaces()) {
+                            if (fcnc.getName().matches(pattern))
+                                externalPorts.add(nc.getId());
+                        }
                     }
                 }
             }
