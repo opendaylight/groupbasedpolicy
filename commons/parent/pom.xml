@@ -21,6 +21,8 @@
     <controller.distribution.version>0.1.2-SNAPSHOT</controller.distribution.version>
     <openflowplugin.distribution.version>0.0.3-SNAPSHOT</openflowplugin.distribution.version>
     <openflowjava.distribution.version>0.5-SNAPSHOT</openflowjava.distribution.version>
+    <config.configfile.directory>etc/opendaylight/karaf</config.configfile.directory>
+    <config.groupbasedpolicy.configfile>15-groupbasedpolicy-ofoverlay.xml</config.groupbasedpolicy.configfile>
   </properties>
 
   <build>

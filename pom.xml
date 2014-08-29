@@ -17,7 +17,9 @@
   <modules>
     <module>commons/parent</module>
     <module>groupbasedpolicy</module>
+    <module>groupbasedpolicy-ofoverlay-config</module>
     <module>distribution</module>
+    <module>features</module>
   </modules>
 
   <build>
