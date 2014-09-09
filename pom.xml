@@ -18,7 +18,7 @@
     <module>commons/parent</module>
     <module>groupbasedpolicy</module>
     <module>groupbasedpolicy-ofoverlay-config</module>
-    <module>distribution</module>
+    <module>distribution-karaf</module>
     <module>features</module>
   </modules>
 

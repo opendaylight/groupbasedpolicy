@@ -39,6 +39,21 @@
                     <type>xml</type>
                     <classifier>config</classifier>
                   </artifact>
+                  <artifact>
+                    <file>${project.build.directory}/classes/initial/43-openflowjava-nx-api-config.xml</file>
+                    <type>xml</type>
+                    <classifier>config-nx-api</classifier>
+                  </artifact>
+                  <artifact>
+                    <file>${project.build.directory}/classes/initial/44-nicira-extension.xml</file>
+                    <type>xml</type>
+                    <classifier>config-nx-ext</classifier>
+                  </artifact>
+                  <artifact>
+                    <file>${project.build.directory}/classes/initial/44-openflowjava-nx-config.xml</file>
+                    <type>xml</type>
+                    <classifier>config-nx-cfg</classifier>
+                  </artifact>
                 </artifacts>
               </configuration>
             </execution>
