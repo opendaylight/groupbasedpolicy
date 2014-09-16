@@ -416,7 +416,7 @@ public class SwitchManager implements AutoCloseable {
                     if (fcnc.getName().matches(".*_(vxlan|tun)\\d+")) {
                         tunnelPort = nc.getId();
                     }
-                    if (nodeConfig != null) {
+                    if (nodeConfig != null && nodeConfig.getExternalInterfaces() != null ) {
                         for (String pattern : nodeConfig.getExternalInterfaces()) {
                             if (fcnc.getName().matches(pattern))
                                 externalPorts.add(nc.getId());
