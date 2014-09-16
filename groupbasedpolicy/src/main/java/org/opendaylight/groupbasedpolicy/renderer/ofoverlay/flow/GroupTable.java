@@ -78,14 +78,16 @@ public class GroupTable extends OfTable {
 
         HashMap<GroupId, GroupCtx> groupMap = new HashMap<>();
 
-        for (Group g : fcn.getGroup()) {
-            GroupCtx gctx = new GroupCtx(g.getGroupId());
-            groupMap.put(g.getGroupId(), gctx);
+        if (fcn.getGroup() != null) {
+            for (Group g : fcn.getGroup()) {
+                GroupCtx gctx = new GroupCtx(g.getGroupId());
+                groupMap.put(g.getGroupId(), gctx);
 
-            Buckets bs = g.getBuckets();
-            if (bs != null && bs.getBucket() != null)
-            for (Bucket b : bs.getBucket()) {
-                gctx.bucketMap.put(b.getBucketId(), new BucketCtx(b));
+                Buckets bs = g.getBuckets();
+                if (bs != null && bs.getBucket() != null)
+                for (Bucket b : bs.getBucket()) {
+                    gctx.bucketMap.put(b.getBucketId(), new BucketCtx(b));
+                }
             }
         }
         
