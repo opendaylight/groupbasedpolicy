@@ -1,6 +1,9 @@
 
 import requests,json
+from requests.auth import HTTPBasicAuth
 
+USERNAME='admin'
+PASSWORD='admin'
 REGISTER_EP_URL="http://%s:8080/restconf/operations/endpoint:register-endpoint"
 REGISTER_TENANTS_URL="http://%s:8080/restconf/config/policy:tenants"
 REGISTER_NODES_URL="http://%s:8080/restconf/config/opendaylight-inventory:nodes"
@@ -168,7 +171,7 @@ def post(url, data):
                'Accept': 'application/yang.data+json'}
     print "POST %s" % url
     print json.dumps(data, indent=4, sort_keys=True)
-    r = requests.post(url, data=json.dumps(data), headers=headers)
+    r = requests.post(url, data=json.dumps(data), headers=headers, auth=HTTPBasicAuth(USERNAME, PASSWORD))
     print r.text
     r.raise_for_status()
 
@@ -177,7 +180,7 @@ def put(url, data):
                'Accept': 'application/yang.data+json'}
     print "PUT %s" % url
     print json.dumps(data, indent=4, sort_keys=True)
-    r = requests.put(url, data=json.dumps(data), headers=headers)
+    r = requests.put(url, data=json.dumps(data), headers=headers, auth=HTTPBasicAuth(USERNAME, PASSWORD))
     print r.text
     r.raise_for_status()
 
