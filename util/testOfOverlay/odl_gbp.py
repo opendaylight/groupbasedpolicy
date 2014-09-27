@@ -4,9 +4,9 @@ from requests.auth import HTTPBasicAuth
 
 USERNAME='admin'
 PASSWORD='admin'
-REGISTER_EP_URL="http://%s:8080/restconf/operations/endpoint:register-endpoint"
-REGISTER_TENANTS_URL="http://%s:8080/restconf/config/policy:tenants"
-REGISTER_NODES_URL="http://%s:8080/restconf/config/opendaylight-inventory:nodes"
+REGISTER_EP_URL="http://%s:8181/restconf/operations/endpoint:register-endpoint"
+REGISTER_TENANTS_URL="http://%s:8181/restconf/config/policy:tenants"
+REGISTER_NODES_URL="http://%s:8181/restconf/config/opendaylight-inventory:nodes"
 
 endpointGroups = {}
 
