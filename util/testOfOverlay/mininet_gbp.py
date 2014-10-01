@@ -11,6 +11,9 @@ import time
 from subprocess import call
 from subprocess import check_output
 
+def addController(sw, ip):
+    call(['ovs-vsctl', 'set-controller', sw, 'tcp:%s:6653' % ip ])
+
 def addSwitch(net, name, dpid=None):
     switch = net.addSwitch(name, dpid=dpid)
     return switch
@@ -41,8 +44,6 @@ def startMininet(switches, hosts, contIP='127.0.0.1'):
     net = Mininet(controller=None,
                   autoSetMacs=True,
                   listenPort=6634)
-    net.addController('c0', controller=RemoteController, 
-                      ip=contIP, port=6653)
 
     swobjs = {}
     swports = {}
@@ -74,6 +75,7 @@ def startMininet(switches, hosts, contIP='127.0.0.1'):
 
         for sw in switches:
             setOFVersion(sw['name'])
+            addController(sw['name'], contIP)
 
         return net
     except Exception, e:
