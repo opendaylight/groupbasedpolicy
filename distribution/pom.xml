@@ -7,7 +7,7 @@ see https://git.opendaylight.org/gerrit/#/c/390/
   <parent>
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>groupbasedpolicy.project</artifactId>
-    <version>0.1.0-Helium</version>
+    <version>0.1.1-SNAPSHOT</version>
     <relativePath>../</relativePath>
   </parent>
 

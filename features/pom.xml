@@ -10,7 +10,7 @@
   <parent>
     <artifactId>commons.groupbasedpolicy</artifactId>
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
-    <version>0.1.0-Helium</version>
+    <version>0.1.1-SNAPSHOT</version>
     <relativePath>../commons/parent</relativePath>
   </parent>
   <artifactId>features-groupbasedpolicy</artifactId>
@@ -18,11 +18,11 @@
   <packaging>jar</packaging>
   <properties>
     <features.file>features.xml</features.file>
-    <branding.version>1.0.0-Helium</branding.version>
-    <karaf.resources.version>1.4.2-Helium</karaf.resources.version>
+    <branding.version>1.0.1-SNAPSHOT</branding.version>
+    <karaf.resources.version>1.4.3-SNAPSHOT</karaf.resources.version>
     <karaf.version>3.0.1</karaf.version>
-    <feature.test.version>0.6.2-Helium</feature.test.version>
-    <karaf.empty.version>1.4.2-Helium</karaf.empty.version>
+    <feature.test.version>0.6.3-SNAPSHOT</feature.test.version>
+    <karaf.empty.version>1.4.3-SNAPSHOT</karaf.empty.version>
     <surefire.version>2.16</surefire.version>
   </properties>
   <dependencies>
@@ -77,7 +77,7 @@
     <dependency>
       <groupId>org.opendaylight.ovsdb</groupId>
       <artifactId>features-openflow-nxm</artifactId>
-      <version>0.0.3-Helium</version>
+      <version>0.0.4-SNAPSHOT</version>
       <classifier>features</classifier>
       <type>xml</type>
     </dependency>
