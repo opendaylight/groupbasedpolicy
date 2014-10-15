@@ -11,11 +11,12 @@ EG2="e593f05d-96be-47ad-acd5-ba81465680d5"
 
 CONTRACT="22282cca-9a13-4d0c-a67e-a933ebb0b0ae"
 
+# Config for switches, tunnelIP is the local IP address.
 switches = [{'name': 's1',
-             'tunnelIp': '10.160.9.20',
+             'tunnelIp': '192.168.56.30',
              'dpid': '1'},
             {'name': 's2',
-             'tunnelIp': '10.160.9.21',
+             'tunnelIp': '192.168.56.21',
              'dpid': '2'}]
 
 hosts = [{'name': 'h35_2',

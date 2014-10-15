@@ -26,6 +26,7 @@ def get_epg(tenantId, epgId):
 
 tenants = {}
 
+# This is where some of the policy is set, subject and classifiers
 def get_tenant(tenantId):
     if tenantId in tenants: 
         return tenants[tenantId]
@@ -127,6 +128,7 @@ def get_node_config(sw, tun_ip):
     nodes.append(data)
     return data
 
+# This is where specifics of the contract are defined. Note: Classifiers are SET in the get_tenant procedure.
 def get_contract(tenantId, pgroupId, cgroupId, contractId):
     tenant = get_tenant(tenantId)
     pgroup = get_epg(tenantId, pgroupId)
