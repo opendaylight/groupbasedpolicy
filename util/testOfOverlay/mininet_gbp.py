@@ -22,7 +22,7 @@ def addHost(net, switch, name, ip, mac):
     host = net.addHost(name, ip=ip, mac=mac)
     net.addLink(host, switch)
 
-def setOFVersion(sw, version='OpenFlow13'):
+def setOFVersion(sw, version='OpenFlow13,OpenFlow12,OpenFlow10'):
     call(['ovs-vsctl', 'set', 'bridge', sw, 'protocols={}'.format(version)])
 
 def addTunnel(sw, sourceIp=None):
@@ -73,6 +73,14 @@ def startMininet(switches, hosts, contIP='127.0.0.1'):
         # ODL is very fragile so let's give it some time
         time.sleep(1)
 
+        # This is a workaround for a bug encountered during
+        # the Helium release. Setting the vSwitch from 1.0
+        # to 1.3 while it was connected to the controller
+        # exposed a bug in the openflowplugin, which resulted
+        # in the controller missing some of the ports on the
+        # vswitch. This change avoids the bug by switching 
+        # the version before connecting the switch to the
+        # controller.
         for sw in switches:
             setOFVersion(sw['name'])
             addController(sw['name'], contIP)
