@@ -51,8 +51,7 @@ public class OpflexRenderer implements AutoCloseable, DataChangeListener {
         int numCPU = Runtime.getRuntime().availableProcessors();
         executor = Executors.newScheduledThreadPool(numCPU * 2);
 
-        connectionService = new OpflexConnectionService();
-        connectionService.setDataProvider(dataBroker);
+        connectionService = new OpflexConnectionService(dataBroker, executor);
 
         endpointManager = new EndpointManager(dataProvider, rpcRegistry,
                                               executor, connectionService);

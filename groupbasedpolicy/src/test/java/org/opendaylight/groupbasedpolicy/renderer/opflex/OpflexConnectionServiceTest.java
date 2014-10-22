@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -111,6 +113,8 @@ public class OpflexConnectionServiceTest {
     @Mock
     private OpflexAgent mockAgent;
 
+    private ScheduledExecutorService executor;
+
     @Mock
     private OpflexRpcServer mockServer;
     @Mock
@@ -146,6 +150,9 @@ public class OpflexConnectionServiceTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
 
+        int numCPU = Runtime.getRuntime().availableProcessors();
+        executor = Executors.newScheduledThreadPool(numCPU * 2);
+
         /*
          * Mocks
          */
@@ -176,8 +183,7 @@ public class OpflexConnectionServiceTest {
     @Test
     public void testNoDefinitions() throws Exception {
 
-        opflexService = new OpflexConnectionService();
-        opflexService.setDataProvider(mockDataBroker);
+        opflexService = new OpflexConnectionService(mockDataBroker, executor);
         verify(mockDataBroker).newReadOnlyTransaction();
     }
 
@@ -199,8 +205,8 @@ public class OpflexConnectionServiceTest {
         dummyDefinitions = discoveryBuilder.setObserver(observers)
                 .setEndpointRegistry(registries)
                 .setPolicyRepository(repositories).build();
-        opflexService = new OpflexConnectionService();
-        opflexService.setDataProvider(mockDataBroker);
+        opflexService = new OpflexConnectionService(mockDataBroker, executor);
+
         verify(mockDataBroker).newReadOnlyTransaction();
 
     }
@@ -211,8 +217,7 @@ public class OpflexConnectionServiceTest {
         when(mockEp.getContext()).thenReturn(mockOpflexServer);
         when(mockOpflexServer.getDomain()).thenReturn(DOMAIN_UUID);
 
-        opflexService = new OpflexConnectionService();
-        opflexService.setDataProvider(mockDataBroker);
+        opflexService = new OpflexConnectionService(mockDataBroker, executor);
         opflexService.addConnection(mockEp);
         verify(mockEp, Mockito.times(2)).getIdentifier();
     }
@@ -222,8 +227,7 @@ public class OpflexConnectionServiceTest {
         when(mockEp.getIdentifier()).thenReturn(TEST_EP_UUID);
         when(mockEp.getContext()).thenReturn(mockOpflexServer);
 
-        opflexService = new OpflexConnectionService();
-        opflexService.setDataProvider(mockDataBroker);
+        opflexService = new OpflexConnectionService(mockDataBroker, executor);
         when(mockOpflexServer.getDomain()).
             thenReturn(OpflexConnectionService.OPFLEX_DOMAIN);
         opflexService.addConnection(mockEp);
@@ -247,8 +251,7 @@ public class OpflexConnectionServiceTest {
         /*
          * This is *far* from UT, but worthwhile for now
          */
-        opflexService = new OpflexConnectionService();
-        opflexService.setDataProvider(mockDataBroker);
+        opflexService = new OpflexConnectionService(mockDataBroker, executor);
 
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);

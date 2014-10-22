@@ -99,21 +99,10 @@ public class OpflexConnectionService
     public static final InstanceIdentifier<DiscoveryDefinitions> DISCOVERY_IID =
             InstanceIdentifier.builder(DiscoveryDefinitions.class).build();
 
-    public OpflexConnectionService() {
-        int numCPU = Runtime.getRuntime().availableProcessors();
-        executor = Executors.newScheduledThreadPool(numCPU * 2);
-    }
-
-    /**
-     *
-     * Set the data store provider for the OpFlex connection service, and
-     * start the service using this data store.
-     *
-     * @param salDataProvider The MD-SAl data store provider
-     */
-    public void setDataProvider(DataBroker salDataProvider) {
+    public OpflexConnectionService(DataBroker salDataProvider, 
+    		ScheduledExecutorService executor) {
         dataProvider = salDataProvider;
-
+        this.executor = executor;
         start();
     }
 
