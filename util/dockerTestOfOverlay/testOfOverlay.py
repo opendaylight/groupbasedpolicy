@@ -2,12 +2,12 @@
 
 import infrastructure_launch
 import odl_gbp
-#import mininet.cli
 import ipaddr
 import uuid
 import re
 import argparse, sys
-from config import *
+import policy_config
+import infrastructure_config
 
 def getSubnet(ip):
     nw = ipaddr.IPv4Network(ip)
@@ -29,89 +29,91 @@ if __name__ == '__main__':
         parser.print_help()
         sys.exit(3)
 
-    # switches is a list from config.py, when this script is called with --local (switch) and its present in config, it is added to the conf_switches
+    # switches is a list from infrastructure_config.py, these are the OVS instances
     conf_switches = []
     if args.local:
-        for switch in switches:
+        for switch in infrastructure_config.switches:
             if switch['name'] == args.local:
                 conf_switches = [switch]
                 break
 
-    # Assuming we have switches defined (and hence conf_switches), start mininet with the "hosts" list also from config.py
-    net = None
+    # Assuming we have switches defined (and hence conf_switches), start containers with the "hosts" list also from infrastructure_config.py
     if len(conf_switches) > 0:
-        dpid=infrastructure_launch.launch(conf_switches, hosts, args.controller)
-    try :
-        if args.policy:
-            for switch in switches:
-                # This leverages a global from odl_gbp called "nodes", which appends "data" from this for loop
-                odl_gbp.get_node_config(switch['dpid'], switch['tunnelIp'])
-            #This also uses the global "nodes" from odl_gbp
-            odl_gbp.register_nodes(args.controller)
+        dpid=infrastructure_launch.launch(conf_switches, infrastructure_config.hosts, args.controller)
 
-        # TENANT, L3CTX, L2BD are imported from config.py
-        # get_tenant looks for the TENANT UUID in a global tenant dictionary in odl_gbp.
-        # If TENANT doesn't already exist in that dict. then a bunch of 'default' tenant data is defined, inluding
-        # subjects and classifiers (at writing specific to HTTP source/dest and ICMP)
-        tenant = odl_gbp.get_tenant(TENANT)
+    if args.policy:
+        for switch in infrastructure_config.switches:
+            # This leverages a global from odl_gbp called "nodes", which appends "data" from this for loop
+            odl_gbp.get_node_config(switch['dpid'], switch['tunnelIp'])
+        #This also uses the global "nodes" from odl_gbp
+        odl_gbp.register_nodes(args.controller)
 
-        # Layer3 context and Layer BridgeDomain are SET into the tenant{} structure in odl_gbp 
-        # TODO: (maybe call these set???)
-        odl_gbp.get_l3c(TENANT, L3CTX)
-        odl_gbp.get_bd(TENANT, L2BD, L3CTX)
+    #Only one tenant supported today
+    tenant = policy_config.tenants[0]
+    tenant = odl_gbp.initialize_tenant(tenant)
+    if len(tenant['l3-context']) ==0:
+        print "Setting L3 context"
+        odl_gbp.get_l3c(tenant['id'], policy_config.L3CTX)
+    l3context=tenant['l3-context'][0]['id']
+    if len(tenant['l2-bridge-domain']) == 0:
+        print "Setting L2 Bridge domain"
+        odl_gbp.get_bd(tenant['id'], policy_config.L2BD, tenant['l3-context'][0]['id'])
+    l2bridgeDomain=tenant['l2-bridge-domain'][0]['id']
+    # subnets and fds (flood domains)
+    subnets = {}
+    fds = {}
+    # hosts comes from infrastructure_config.py, which contains target switch, IP Address, MAC address, tenant and EPG
+    for host in infrastructure_config.hosts:
+        if args.local and host['switch'] != args.local:
+            continue
+        nw = ipaddr.IPv4Network(host['ip'])
+        snet = "{}/{}".format(nw.network + 1, nw.prefixlen)
+        router = "{}".format(nw.network + 1)
 
-       # subnets and fds (flood domains)
-        subnets = {}
-        fds = {}
-        # hosts comes from config.py, which contains target switch, IP Address, MAC address, tenant and EPG
-        for host in hosts:
-            print host
-            if args.local and host['switch'] != args.local:
-                continue
-            nw = ipaddr.IPv4Network(host['ip'])
-            snet = "{}/{}".format(nw.network + 1, nw.prefixlen)
-            router = "{}".format(nw.network + 1)
+        if snet not in subnets:
+            snid = str(uuid.uuid4())
+            fdid = str(uuid.uuid4())
+            # Sets flood domain where parent is L2BD from config.py
+            fds[fdid] = odl_gbp.get_fd(tenant['id'], fdid, l2bridgeDomain)
 
-            if snet not in subnets:
-                 snid = str(uuid.uuid4())
-                 fdid = str(uuid.uuid4())
-                 # Sets flood domain where parent is L2BD from config.py
-                 fds[fdid] = odl_gbp.get_fd(TENANT, fdid, L2BD)
+            # sets subnet from tenant, which also includes the flood domain
+            subnets[snet] = odl_gbp.get_subnet(tenant['id'], snid, fdid, snet, router)
+            # Sets the "network-domain" in global endpointGroups dict in odl_gbp.py
 
-                 # sets subnet from tenant, which also includes the flood domain
-                 subnets[snet] = odl_gbp.get_subnet(TENANT, snid, fdid, snet, router)
+            for endpointGroup in policy_config.endpointGroups:
+                if host['endpointGroup'] == endpointGroup['name']:
+                    groupId=endpointGroup['id']
+            odl_gbp.get_epg(tenant['id'], groupId)["network-domain"] = snid
 
-                 # Sets the "network-domain" in global endpointGroups dict in odl_gbp.py
-                 odl_gbp.get_epg(TENANT, host['endpointGroup'])["network-domain"] = snid
+        # Creates EP information and appends to endpoint list, a global
+        odl_gbp.get_ep(tenant['id'], 
+                       groupId, 
+                       l3context, 
+                       re.sub(r'/\d+$', '', host['ip']),
+                       l2bridgeDomain,
+                       host['mac'],
+                       dpid, 
+                       host['port'])
 
-            # Creates EP information and appends to endpoint list, a global
-            odl_gbp.get_ep(TENANT, 
-                           host['endpointGroup'], 
-                           L3CTX, 
-                           re.sub(r'/\d+$', '', host['ip']),
-                           L2BD,
-                           host['mac'],
-                           dpid, 
-                           host['port'])
+    # Resolve contract names to IDs and add to policy
+    contractConsumerEpgIDs=[]
+    contractProviderEpgIDs=[]
+    for contract in policy_config.contracts:
+        for endpointGroup in policy_config.endpointGroups:
+            if contract['name'] in endpointGroup['consumesContracts']:
+                contractConsumerEpgIDs.append(endpointGroup['id'])
+            if contract['name'] in endpointGroup['providesContracts']:
+                contractProviderEpgIDs.append(endpointGroup['id'])
 
-        # contracts is a global list from config.py.
-        # get_contract creates the specific subject, classifiers, rules etc for the contract
-        #     and appends this to the global tenant list.
-        for contract in contracts:
-             odl_gbp.get_contract(TENANT, 
-                          contract['provider'], contract['consumer'], 
-                          contract['id'])
-        
-        # POST to the controller to register tenants
-        if args.policy:
-            odl_gbp.register_tenants(args.controller)
+        odl_gbp.get_contract(tenant['id'], 
+                      contractProviderEpgIDs,
+                      contractConsumerEpgIDs, 
+                      contract)
 
-        # POST to controller to register EPS
-        # TODO: Should this be done on a per Tenant basis
-        odl_gbp.register_eps(args.controller)
+    # POST to the controller to register tenants
+    if args.policy:
+        odl_gbp.register_tenants(args.controller)
 
-        if net is not None:
-            mininet.cli.CLI(net)
-    finally:
-        if net is not None:
-            net.stop()
+    # POST to controller to register EPS
+    odl_gbp.register_eps(args.controller)
+

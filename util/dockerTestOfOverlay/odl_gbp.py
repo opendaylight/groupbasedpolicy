@@ -1,5 +1,6 @@
 
 import requests,json
+import uuid
 from requests.auth import HTTPBasicAuth
 
 USERNAME='admin'
@@ -26,7 +27,34 @@ def get_epg(tenantId, epgId):
 
 tenants = {}
 
-# This is where some of the policy is set, subject and classifiers
+def initialize_tenant(tenant):
+    # All tenants must have unique ID
+    if not tenant.has_key('id'):
+        print "No ID, initializing"
+        tenant['id']=str(uuid.uuid4())
+
+    # If the tenant has already been initialised, we must assume that the stored copy in 
+    # tenants dict is more up to date.
+    if tenant['id'] in tenants:
+        return tenants[tenant['id']]
+
+    # Dictionary items that must exist
+    data = {
+        "l3-context": [],
+        "l2-bridge-domain": [],
+        "l2-flood-domain": [],
+        "subnet": [],
+        "endpoint-group": [],
+        "contract": [],
+        "subject-feature-instances": {}
+    }
+
+    # This merges the base data dictionary with the passed tenant dictionary, and assumes that 
+    # over-riding anything in data with tenant is preferred, if not, order must be reversed
+    mergedData = dict(data.items() + tenant.items())
+    tenants[mergedData['id']] = mergedData
+    return mergedData
+
 def get_tenant(tenantId):
     if tenantId in tenants: 
         return tenants[tenantId]
@@ -38,32 +66,7 @@ def get_tenant(tenantId):
         "subnet": [],
         "endpoint-group": [],
         "contract": [],
-        "subject-feature-instances": {
-            "classifier-instance": [
-                {"name": "http-dest",
-                "classifier-definition-id": "4250ab32-e8b8-445a-aebb-e1bd2cdd291f",
-                "parameter-value": [
-                    {"name": "type",
-                     "string-value": "TCP"}, 
-                    {"name": "destport",
-                     "int-value": "80"}
-                ]},
-                {"name": "http-src",
-                "classifier-definition-id": "4250ab32-e8b8-445a-aebb-e1bd2cdd291f",
-                "parameter-value": [
-                    {"name": "type",
-                     "string-value": "TCP"}, 
-                    {"name": "sourceport",
-                     "int-value": "80"}
-                ]},
-                {"name": "icmp",
-                "classifier-definition-id": "79c6fdb2-1e1a-4832-af57-c65baf5c2335",
-                "parameter-value": [
-                    {"name": "proto",
-                     "int-value": "1"}
-                ]},
-            ]
-        }
+        "subject-feature-instances": {}
     }
     tenants[tenantId] = data
     return data
@@ -104,7 +107,7 @@ def get_subnet(tenantId, subnetId, parent, prefix, router):
 
 endpoints = []
 
-def get_ep(tenantId, groupId, l3ctx, ip, l2ctx, mac, sw,port):
+def get_ep(tenantId, groupId, l3ctx, ip, l2ctx, mac, sw, port):
     group = get_epg(tenantId, groupId)
     data = {"tenant": tenantId,
             "endpoint-group": groupId,
@@ -113,7 +116,7 @@ def get_ep(tenantId, groupId, l3ctx, ip, l2ctx, mac, sw,port):
             "l3-address": [{"l3-context": l3ctx,
                             "ip-address": ip}], 
             "ofoverlay:node-id": "openflow:{}".format(sw), 
-            "ofoverlay:node-connector-id": "{}".format(port)
+            "ofoverlay:node-connector-id": "openflow:{}:{}".format(sw, port)
         }
     endpoints.append(data)
     return data
@@ -128,42 +131,28 @@ def get_node_config(sw, tun_ip):
     nodes.append(data)
     return data
 
-# This is where specifics of the contract are defined. Note: Classifiers are SET in the get_tenant procedure.
-def get_contract(tenantId, pgroupId, cgroupId, contractId):
+def get_contract(tenantId, pgroupIds, cgroupIds, contract):
+#TODO: This assumes a single provider/consumer per contract. Should be able to process list, just
+# note entirely sure if everything should be repeated, or just IDs ??? For now, assuming single
     tenant = get_tenant(tenantId)
-    pgroup = get_epg(tenantId, pgroupId)
-    cgroup = get_epg(tenantId, cgroupId)
-    data = {
-        "id": contractId,
-        "subject": [{"name": "allow-http-subject",
-                     "rule": [
-                         {"name": "allow-http-rule",
-                          "classifier-ref": [
-                              {"name": "http-dest",
-                               "direction": "in"},
-                              {"name": "http-src",
-                               "direction": "out"}
-                          ]}
-                     ]},
-                    {"name": "allow-icmp-subject",
-                     "rule": [
-                         {"name": "allow-icmp-rule",
-                          "classifier-ref": [
-                              {"name": "icmp"}
-                          ]}
-                     ]}],
-        "clause": [{"name": "allow-http-clause",
-                    "subject-refs": ["allow-http-subject", 
-                                     "allow-icmp-subject"]}]
-    }
+    pgroup = get_epg(tenantId, pgroupIds[0])
+    cgroup = get_epg(tenantId, cgroupIds[0])
+
+    if not contract.has_key('id'):
+        contract['id']=str(uuid.uuid4())
+    # tenant's contract construct has no idea of "name" so creating a copy of the contract dict,
+    # removing name altogether, and using that
+    data=dict(contract)
+    del data['name']
+
     tenant["contract"].append(data)
     cgroup["consumer-named-selector"].append({
-        "name": "{}-{}-{}".format(pgroupId, cgroupId, contractId),
-        "contract": [contractId]
+        "name": "{}-{}-{}".format(pgroupIds[0], cgroupIds[0], data['id']),
+        "contract": [data['id']]
     })
     pgroup["provider-named-selector"].append({
-        "name": "{}-{}-{}".format(pgroupId, cgroupId, contractId),
-        "contract": [contractId]
+        "name": "{}-{}-{}".format(pgroupIds[0], cgroupIds[0], data['id']),
+        "contract": [data['id']]
     })
 
     return data
@@ -186,26 +175,14 @@ def put(url, data):
     print r.text
     r.raise_for_status()
 
-def get(url):
-#     headers = {'Content-type': 'application/yang.data+json',
-#                'Accept': 'application/yang.data+json'}
-    print "GET %s" % url
-#     r = requests.get(url, headers=headers, auth=HTTPBasicAuth(USERNAME, PASSWORD))
-    r = requests.get(url, auth=HTTPBasicAuth(USERNAME, PASSWORD))
-    r.raise_for_status()
-    return r.json()
-
-def get_operational_nodes_data(contHost):
-    return get(OPERATIONAL_NODES_URL % contHost)
-
 def register_tenants(contHost):
     data = {"policy:tenants": {"tenant": tenants.values()}}
     put(REGISTER_TENANTS_URL % contHost, data)
 
 def register_eps(contHost):
     for ep in endpoints:
-       data = {"input": ep}
-       post(REGISTER_EP_URL % contHost, data)
+        data = {"input": ep}
+        post(REGISTER_EP_URL % contHost, data)
 
 def register_nodes(contHost):
     data = {"opendaylight-inventory:nodes": {"node": nodes}}
