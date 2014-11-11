@@ -4,12 +4,12 @@
   <parent>
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>commons.groupbasedpolicy</artifactId>
-    <version>0.1.1-Helium-SR1</version>
+    <version>0.1.2-SNAPSHOT</version>
     <relativePath>commons/parent</relativePath>
   </parent>
   <groupId>org.opendaylight.groupbasedpolicy</groupId>
   <artifactId>groupbasedpolicy.project</artifactId>
-  <version>0.1.1-Helium-SR1</version>
+  <version>0.1.2-SNAPSHOT</version>
   <packaging>pom</packaging>
   <prerequisites>
     <maven>3.0</maven>

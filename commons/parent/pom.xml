@@ -4,11 +4,11 @@
   <parent>
     <groupId>org.opendaylight.controller</groupId>
     <artifactId>commons.opendaylight</artifactId>
-    <version>1.4.3-Helium-SR1</version>
+    <version>1.4.4-SNAPSHOT</version>
   </parent>
   <groupId>org.opendaylight.groupbasedpolicy</groupId>
   <artifactId>commons.groupbasedpolicy</artifactId>
-  <version>0.1.1-Helium-SR1</version>
+  <version>0.1.2-SNAPSHOT</version>
   <packaging>pom</packaging>
   <prerequisites>
     <maven>3.0</maven>
@@ -18,11 +18,11 @@
     <java.version.target>1.7</java.version.target>
     <nexusproxy>http://nexus.opendaylight.org/content</nexusproxy>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <controller.distribution.version>0.1.3-Helium-SR1</controller.distribution.version>
-    <openflowplugin.distribution.version>0.0.4-Helium-SR1</openflowplugin.distribution.version>
-    <openflowjava.distribution.version>0.5.1-Helium-SR1</openflowjava.distribution.version>
+    <controller.distribution.version>0.1.4-SNAPSHOT</controller.distribution.version>
+    <openflowplugin.distribution.version>0.0.5-SNAPSHOT</openflowplugin.distribution.version>
+    <openflowjava.distribution.version>0.5.2-SNAPSHOT</openflowjava.distribution.version>
     <config.configfile.directory>etc/opendaylight/karaf</config.configfile.directory>
-    <groupbasedpolicy.project.version>0.1.1-Helium-SR1</groupbasedpolicy.project.version>
+    <groupbasedpolicy.project.version>0.1.2-SNAPSHOT</groupbasedpolicy.project.version>
     <config.groupbasedpolicy.configfile>15-groupbasedpolicy-ofoverlay.xml</config.groupbasedpolicy.configfile>
   </properties>
 
