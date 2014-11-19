@@ -104,11 +104,12 @@ if __name__ == '__main__':
                 contractConsumerEpgIDs.append(endpointGroup['id'])
             if contract['name'] in endpointGroup['providesContracts']:
                 contractProviderEpgIDs.append(endpointGroup['id'])
-
-        odl_gbp.get_contract(tenant['id'], 
-                      contractProviderEpgIDs,
-                      contractConsumerEpgIDs, 
-                      contract)
+        for contractProviderEpgID in contractProviderEpgIDs:
+            for contractConsumerEpgID in contractConsumerEpgIDs:
+                odl_gbp.get_contract(tenant['id'],
+                              contractProviderEpgID,
+                              contractConsumerEpgID,
+                              contract)
 
     # POST to the controller to register tenants
     if args.policy:

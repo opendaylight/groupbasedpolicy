@@ -32,7 +32,7 @@ def addTunnel(sw, sourceIp=None):
     ifaceName = '{}_vxlan0'.format(sw)
     cmd = ['ovs-vsctl', 'add-port', sw, ifaceName,
            '--', 'set', 'Interface', ifaceName,
-           'type=vxlan', 
+           'type=vxlan',
            'options:remote_ip=flow',
            'options:key=flow']
     if sourceIp is not None:

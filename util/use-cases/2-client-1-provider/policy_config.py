@@ -56,7 +56,7 @@ contracts = [
                     {'name': 'allow-icmp-rule',
                      'classifier-ref': [
                         {'name': 'icmp'}
-                          ]}
+                                                  ]}
                           ]
                  }],
               'clause': [
@@ -69,10 +69,15 @@ contracts = [
                         ]
               }]
 endpointGroups = [
-                   {'name':'client',
+                   {'name':'client1',
                     'providesContracts' : [], #List of contract names provided
                     'consumesContracts' : ['pingall+web'],
                     'id' : '1eaf9a67-a171-42a8-9282-71cf702f61dd',
+                    },
+                   {'name':'client2',
+                    'providesContracts' : [], #List of contract names provided
+                    'consumesContracts' : ['pingall+web'],
+                    'id' : '6c787c-156a-49ed-8546-547bdccf283c',
                     },
                   {'name':'webserver',
                     'providesContracts' : ['pingall+web'], #List of contract names provided

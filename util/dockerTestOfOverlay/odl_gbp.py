@@ -1,6 +1,7 @@
 
 import requests,json
 import uuid
+import sys
 from requests.auth import HTTPBasicAuth
 
 USERNAME='admin'
@@ -131,12 +132,10 @@ def get_node_config(sw, tun_ip):
     nodes.append(data)
     return data
 
-def get_contract(tenantId, pgroupIds, cgroupIds, contract):
-#TODO: This assumes a single provider/consumer per contract. Should be able to process list, just
-# note entirely sure if everything should be repeated, or just IDs ??? For now, assuming single
+def get_contract(tenantId, pgroupId, cgroupId, contract):
     tenant = get_tenant(tenantId)
-    pgroup = get_epg(tenantId, pgroupIds[0])
-    cgroup = get_epg(tenantId, cgroupIds[0])
+    pgroup = get_epg(tenantId, pgroupId)
+    cgroup = get_epg(tenantId, cgroupId)
 
     if not contract.has_key('id'):
         contract['id']=str(uuid.uuid4())
@@ -145,16 +144,33 @@ def get_contract(tenantId, pgroupIds, cgroupIds, contract):
     data=dict(contract)
     del data['name']
 
-    tenant["contract"].append(data)
-    cgroup["consumer-named-selector"].append({
-        "name": "{}-{}-{}".format(pgroupIds[0], cgroupIds[0], data['id']),
-        "contract": [data['id']]
-    })
-    pgroup["provider-named-selector"].append({
-        "name": "{}-{}-{}".format(pgroupIds[0], cgroupIds[0], data['id']),
-        "contract": [data['id']]
-    })
-
+    if not tenant["contract"]:
+        tenant["contract"].append(data)
+    else:
+        contractExists=False
+        for tenantContract in tenant["contract"]:
+            if tenantContract["id"] == data["id"]: contractExists=True
+        if not contractExists:
+            tenant["contract"].append(data)
+    name="{}-{}-{}".format(pgroupId, cgroupId, data['id'])
+    if not cgroup["consumer-named-selector"]:
+        cgroup["consumer-named-selector"].append({"name": name, "contract": [data['id']]})
+    else:
+        contractExists=False
+        for consumerContract in cgroup["consumer-named-selector"]:
+            if consumerContract["contract"][0] == data["id"]:
+                contractExists=True
+        if not contractExists:
+            cgroup["consumer-named-selector"].append({"name": name,"contract": [data['id']]})
+    if not pgroup["provider-named-selector"]:
+        pgroup["provider-named-selector"].append({"name": name,"contract": [data['id']]})
+    else:
+        contractExists=False
+        for providerContract in pgroup["provider-named-selector"]:
+            if providerContract["contract"][0] == data["id"]:
+                contractExists=True
+        if not contractExists:
+            pgroup["provider-named-selector"].append({"name": name,"contract": [data['id']]})
     return data
 
 def post(url, data):
