@@ -156,7 +156,7 @@ public class PolicyResolverTest {
         .setOrder(Integer.valueOf(3))
         .build();
     Subject s3 = new SubjectBuilder()
-        .setName(new SubjectName("3"))
+        .setName(new SubjectName("s3"))
         .setRule(ImmutableList.of(rule3))
         .setOrder(Integer.valueOf(3))
         .build();

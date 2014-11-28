@@ -91,8 +91,9 @@ public class L2EprContextTest implements EprContext.Callback {
 
 
 
-    private static final String TEST_CONTEXT = "foo";
+    private static final String TEST_CONTEXT = "BD27A352-53D4-4D42-9862-F333D86E922D";
     private static final String TEST_ID = "bar";
+    private static final String TEST_MAC = "00:11:22:33:44:55";
 
     @Before
     public void setUp() throws Exception {
@@ -157,7 +158,7 @@ public class L2EprContextTest implements EprContext.Callback {
         when(mockReqParams.getIdentifier()).thenReturn(mockIdentityList);
         when(mockId.getL2Context()).thenReturn(mockL2Context);
         when(mockId.getL2Identity()).thenReturn(mockMac);
-        when(mockIdentityList.get(0)).thenReturn(TEST_ID);
+        when(mockIdentityList.get(0)).thenReturn(TEST_MAC);
         when(mockProvider.newReadOnlyTransaction()).thenReturn(mockReader);
         when(mockReader.read(eq(LogicalDatastoreType.OPERATIONAL),
                 Matchers.<InstanceIdentifier<Endpoint>>any())).thenReturn(mockFuture);

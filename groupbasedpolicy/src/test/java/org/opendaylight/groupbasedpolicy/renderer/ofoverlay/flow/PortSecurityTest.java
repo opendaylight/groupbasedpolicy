@@ -193,15 +193,15 @@ public class PortSecurityTest extends FlowTableTest {
                 ((f.getMatch().getLayer3Match() != null &&
                   f.getMatch().getLayer3Match() instanceof Ipv4Match &&
                   Objects.equals(ep.getL3Address().get(0).getIpAddress().getIpv4Address().getValue(),
-                                 ((Ipv4Match)f.getMatch().getLayer3Match()).getIpv4Source().getValue())) ||
+                                 ((Ipv4Match)f.getMatch().getLayer3Match()).getIpv4Source().getValue().split("/")[0])) ||
                  (f.getMatch().getLayer3Match() != null &&
                   f.getMatch().getLayer3Match() instanceof ArpMatch &&
                   Objects.equals(ep.getL3Address().get(0).getIpAddress().getIpv4Address().getValue(),
-                                 ((ArpMatch)f.getMatch().getLayer3Match()).getArpSourceTransportAddress().getValue())) ||
+                                 ((ArpMatch)f.getMatch().getLayer3Match()).getArpSourceTransportAddress().getValue().split("/")[0])) ||
                  (f.getMatch().getLayer3Match() != null &&
                   f.getMatch().getLayer3Match() instanceof Ipv6Match &&
                   Objects.equals(ep.getL3Address().get(1).getIpAddress().getIpv6Address().getValue(),
-                                 ((Ipv6Match)f.getMatch().getLayer3Match()).getIpv6Source().getValue())))) {
+                                 ((Ipv6Match)f.getMatch().getLayer3Match()).getIpv6Source().getValue().split("/")[0])))) {
                 count += 1;
                 assertEquals(FlowUtils.gotoTableInstructions((short)(table.getTableId()+1)),
                              f.getInstructions());

@@ -45,7 +45,7 @@ public class IdentityTest {
     private static final String TEST_MAC6 = "0xaa-0xBB-0xCC-0xdd-0xEE-0xFF";
     private static final String TEST_MAC7 = "1:22:3:44:5:66";
     private static final String TEST_MAC8 = "1-22-3-44-5-66";
-    private static final String TEST_CONTEXT = "foo";
+    private static final String TEST_CONTEXT = "9AC3DB0E-C47A-4409-B1AD-BDE647A29440";
 
     @Test
     public void testL3Identity() throws Exception {
@@ -65,46 +65,11 @@ public class IdentityTest {
 
     @Test
     public void testL2Identity() throws Exception {
-        id = new Identity(TEST_MAC1);
-        id.setContext(TEST_CONTEXT);
-        assertTrue(id.identityAsString().equals(TEST_MAC1));
-        assertTrue(id.getL2Context().getValue().equals(TEST_CONTEXT));
-        assertTrue(id.getL2Identity().getValue().equals(TEST_MAC1));
-
         id = new Identity(TEST_MAC2);
         id.setContext(TEST_CONTEXT);
         assertTrue(id.identityAsString().equals(TEST_MAC2));
         assertTrue(id.getL2Identity().getValue().equals(TEST_MAC2));
 
-        id = new Identity(TEST_MAC3);
-        id.setContext(TEST_CONTEXT);
-        assertTrue(id.identityAsString().equals(TEST_MAC3));
-        assertTrue(id.getL2Identity().getValue().equals(TEST_MAC3));
-
-        id = new Identity(TEST_MAC4);
-        id.setContext(TEST_CONTEXT);
-        assertTrue(id.identityAsString().equals(TEST_MAC4));
-        assertTrue(id.getL2Identity().getValue().equals(TEST_MAC4));
-
-        id = new Identity(TEST_MAC5);
-        id.setContext(TEST_CONTEXT);
-        assertTrue(id.identityAsString().equals(TEST_MAC5));
-        assertTrue(id.getL2Identity().getValue().equals(TEST_MAC5));
-
-        id = new Identity(TEST_MAC6);
-        id.setContext(TEST_CONTEXT);
-        assertTrue(id.identityAsString().equals(TEST_MAC6));
-        assertTrue(id.getL2Identity().getValue().equals(TEST_MAC6));
-
-        id = new Identity(TEST_MAC7);
-        id.setContext(TEST_CONTEXT);
-        assertTrue(id.identityAsString().equals(TEST_MAC7));
-        assertTrue(id.getL2Identity().getValue().equals(TEST_MAC7));
-
-        id = new Identity(TEST_MAC8);
-        id.setContext(TEST_CONTEXT);
-        assertTrue(id.identityAsString().equals(TEST_MAC8));
-        assertTrue(id.getL2Identity().getValue().equals(TEST_MAC8));
     }
 
 }

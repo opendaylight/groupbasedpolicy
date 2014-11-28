@@ -107,6 +107,7 @@ public class MessageUtilsTest {
     public static final String EPG_RN = "endpoint-group";
     public static final String TENANT_UUID = "8ca978fa-05bc-4120-b037-f74802d18396";
     public static final String EPG_UUID = "420c5855-0578-4ca5-b3d2-3057e640e55a";
+    public static final String EPG_NAME = "webFarm1";
 
     public static final String TEST_TARGET_NAME1 = "target1";
     public static final String TEST_TARGET_NAME2 = "target2";
@@ -135,7 +136,7 @@ public class MessageUtilsTest {
     private static final String TEST_CONDITION_NAME1 = "condition1";
     private static final String TEST_CAPABILITY_MATCHER_NAME1 = "capability-matcher-name1";
     private static final String TEST_CAPABILITY_NAME1 = "capabilit-name1";
-    private static final String TEST_NETWORK_DOMAIN_ID = "network-domain-id1";
+    private static final String TEST_NETWORK_DOMAIN_ID = "9AF7B4EF-1C5B-4FA9-A769-F368F781C4E6";
     private static final String TEST_QUALITY_NAME1 = "quality-name1";
     private static final String TEST_QUALITY_MATCHER_NAME1 = "quality-matcher-name1";
     private static final String TEST_INTRAGROUP_POLICY_NAME1 = "intragroup-policy1";
@@ -532,7 +533,7 @@ public class MessageUtilsTest {
 
         epgb.setIntraGroupPolicy(IntraGroupPolicy.Allow);
         epgb.setNetworkDomain(new NetworkDomainId(TEST_NETWORK_DOMAIN_ID));
-        epgb.setName(new Name(EPG_UUID));
+        epgb.setName(new Name(EPG_NAME));
         epgb.setId(new EndpointGroupId(EPG_UUID));
 
         EndpointGroup epg = epgb.build();

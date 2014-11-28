@@ -155,7 +155,7 @@ public class PortSecurity extends FlowTable {
             Long etherType = null;
             String ikey = null;
             if (l3.getIpAddress().getIpv4Address() != null) {
-                ikey = l3.getIpAddress().getIpv4Address().getValue();
+                ikey = l3.getIpAddress().getIpv4Address().getValue()+"/32";
                 if (arp) {
                     m = new ArpMatchBuilder()
                         .setArpSourceTransportAddress(new Ipv4Prefix(ikey))
@@ -169,7 +169,7 @@ public class PortSecurity extends FlowTable {
                 }
             } else if (l3.getIpAddress().getIpv6Address() != null) {
                 if (arp) continue;
-                ikey = l3.getIpAddress().getIpv6Address().getValue();
+                ikey = l3.getIpAddress().getIpv6Address().getValue()+"/128";
                 m = new Ipv6MatchBuilder()
                     .setIpv6Source(new Ipv6Prefix(ikey))
                     .build();

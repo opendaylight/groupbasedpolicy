@@ -208,7 +208,7 @@ public class DestinationMapper extends FlowTable {
                         .setEthernetMatch(ethernetMatch(null, null, ARP))
                         .setLayer3Match(new ArpMatchBuilder()
                             .setArpOp(Integer.valueOf(1))
-                            .setArpTargetTransportAddress(new Ipv4Prefix(ikey))
+                            .setArpTargetTransportAddress(new Ipv4Prefix(ikey+"/32"))
                             .build());
                     addNxRegMatch(mb, RegMatch.of(NxmNxReg6.class,
                                                   Long.valueOf(l3Id)));
@@ -411,13 +411,13 @@ public class DestinationMapper extends FlowTable {
             Long etherType = null;
             String ikey = null;
             if (l3a.getIpAddress().getIpv4Address() != null) {
-                ikey = l3a.getIpAddress().getIpv4Address().getValue();
+                ikey = l3a.getIpAddress().getIpv4Address().getValue() + "/32";
                 etherType = IPv4;
                 m = new Ipv4MatchBuilder()
                     .setIpv4Destination(new Ipv4Prefix(ikey))
                     .build();
             } else if (l3a.getIpAddress().getIpv6Address() != null) {
-                ikey = l3a.getIpAddress().getIpv6Address().getValue();
+                ikey = l3a.getIpAddress().getIpv6Address().getValue() + "/128";
                 etherType = IPv6;
                 m = new Ipv6MatchBuilder()
                     .setIpv6Destination(new Ipv6Prefix(ikey))
