@@ -82,17 +82,8 @@
       <artifactId>model-flow-service</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.opendaylight.controller.model</groupId>
-      <artifactId>model-inventory</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.opendaylight.openflowplugin</groupId>
       <artifactId>openflowplugin-extension-nicira</artifactId>
-      <version>${openflowplugin-nicira.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.openflowplugin</groupId>
-      <artifactId>openflowjava-extension-nicira</artifactId>
       <version>${openflowplugin-nicira.version}</version>
     </dependency>
     <dependency>

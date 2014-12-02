@@ -122,13 +122,14 @@ public class JsonRpcEndpoint implements ChannelFutureListener {
         if (messageMap.get(message.getName()) == null) {
                 return null;
         }
-        message.setId(UUID.randomUUID().toString());
+        JsonNode jn = objectMapper.getNodeFactory().textNode(UUID.randomUUID().toString());
+        message.setId(jn);
 
-        String s = objectMapper.writeValueAsString(message);
+        String s = objectMapper.writeValueAsString(message) + "\0";
         logger.trace("invoke: {}", s);
 
         SettableFuture<Object> sf = SettableFuture.create();
-        methodContext.put(message.getId(), new CallContext(message.getName(), sf));
+        methodContext.put(message.getId().asText(), new CallContext(message.getName(), sf));
 
         nettyChannel.writeAndFlush(s);
 
@@ -144,7 +145,7 @@ public class JsonRpcEndpoint implements ChannelFutureListener {
      */
     public void  sendResponse (RpcMessage message) throws Throwable {
 
-        String s = objectMapper.writeValueAsString(message);
+        String s = objectMapper.writeValueAsString(message) + "\0";
         logger.trace("sendResponse: {}", s);
 
         nettyChannel.writeAndFlush(s);
@@ -197,7 +198,7 @@ public class JsonRpcEndpoint implements ChannelFutureListener {
                 logger.trace("Request : {} {}", requestJson.get("method"), requestJson.get("params"));
 
                 message = objectMapper.treeToValue(requestJson, callback.getClass());
-                message.setId(requestJson.get("id").asText());
+                message.setId(requestJson.get("id"));
 
                 broker.publish(this, message);
             } catch (JsonProcessingException  e) {
@@ -213,7 +214,7 @@ public class JsonRpcEndpoint implements ChannelFutureListener {
             response.setError(null);
             String s = null;
             try {
-                s = objectMapper.writeValueAsString(response);
+                s = objectMapper.writeValueAsString(response) + "\0";
                 nettyChannel.writeAndFlush(s);
             } catch (JsonProcessingException e) {
                 logger.error("Exception while processing JSON string " + s, e );

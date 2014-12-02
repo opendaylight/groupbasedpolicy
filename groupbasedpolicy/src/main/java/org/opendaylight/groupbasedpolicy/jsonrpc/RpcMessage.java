@@ -9,6 +9,9 @@
  */
 package org.opendaylight.groupbasedpolicy.jsonrpc;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
+
 /**
  * The abstract {@link RpcMessage} is used for creating application
  * specific RPC messages that can be used by the RPC library. The RPC
@@ -25,8 +28,8 @@ public abstract class RpcMessage {
 
     public abstract String getName();
     public abstract void setName(String name);
-    public abstract String getId();
-    public abstract void setId(String id);
+    public abstract JsonNode getId();
+    public abstract void setId(JsonNode id);
     public abstract String getMethod();
     public abstract void setMethod(String method);
     public abstract boolean valid();

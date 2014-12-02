@@ -46,24 +46,21 @@ module opflex {
         }
     }
 
-    // ******************
-    // Configuration Data
-    // ******************
-    leaf domain {
-        description
-            "The OpFlex administrative domain.";
-
-        config true;
-
-        type string;
-    }
-
     container discovery-definitions {
         description
             "The nodes that any OpFlex agent needs to communicate
              with in an OpFlex policy fabric.";
 
         config true;
+
+        leaf domain {
+            description
+                "The OpFlex administrative domain.";
+    
+            config true;
+    
+            type string;
+        }
 
         list policy-repository {
             description

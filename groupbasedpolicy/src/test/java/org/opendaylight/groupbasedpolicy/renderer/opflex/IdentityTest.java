@@ -37,14 +37,7 @@ public class IdentityTest {
     }
 
     private static final String TEST_IP = "192.168.194.132";
-    private static final String TEST_MAC1 = "0x00:11:22:33:44:55";
     private static final String TEST_MAC2 = "11:22:33:44:55:66";
-    private static final String TEST_MAC3 = "0xaa:0xBB:0xCC:0xdd:0xEE:0xFF";
-    private static final String TEST_MAC4 = "0x00-11-22-33-44-55";
-    private static final String TEST_MAC5 = "11-22-33-44-55-66";
-    private static final String TEST_MAC6 = "0xaa-0xBB-0xCC-0xdd-0xEE-0xFF";
-    private static final String TEST_MAC7 = "1:22:3:44:5:66";
-    private static final String TEST_MAC8 = "1-22-3-44-5-66";
     private static final String TEST_CONTEXT = "9AC3DB0E-C47A-4409-B1AD-BDE647A29440";
 
     @Test

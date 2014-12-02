@@ -31,10 +31,23 @@ import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcEndpoint;
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcBroker;
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcMessage;
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcMessageMap;
-import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.EndpointDeclarationRequest;
-import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.EndpointDeclarationResponse;
-import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.EndpointPolicyUpdateRequest;
-import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.EndpointRequestRequest;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.OpflexAgent;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.OpflexConnectionService;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.Role;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages.EndpointDeclareRequest;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages.EndpointDeclareResponse;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages.EndpointIdentity;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages.EndpointResolveResponse;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages.EndpointUndeclareRequest;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages.EndpointUndeclareResponse;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages.EndpointUnresolveRequest;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages.EndpointUnresolveResponse;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages.EndpointUpdateRequest;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages.EndpointResolveRequest;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages.ManagedObject;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.mit.MitLib;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.mit.PolicyUri;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Uri;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
@@ -66,7 +79,7 @@ import org.slf4j.LoggerFactory;
 public class EndpointManager
         extends AbstractEndpointRegistry
         implements AutoCloseable, DataChangeListener, RpcBroker.RpcCallback,
-        EprContext.Callback {
+        EprContext.EprCtxCallback {
     protected static final Logger LOG =
             LoggerFactory.getLogger(EndpointManager.class);
 
@@ -80,23 +93,19 @@ public class EndpointManager
     final ListenerRegistration<DataChangeListener> listenerReg;
     final ListenerRegistration<DataChangeListener> listenerL3Reg;
 
-    private OpflexConnectionService connectionService;
-    final ConcurrentHashMap<EpKey, Endpoint> endpoints =
-            new ConcurrentHashMap<>();
-    private ConcurrentHashMap<String, Set<String>> epSubscriptions =
-            new ConcurrentHashMap<>();
+    private final OpflexConnectionService connectionService;
+    private final MitLib mitLibrary;
 
+    final ConcurrentHashMap<EpKey, Endpoint> endpoints;
+
+    private ConcurrentHashMap<String, Set<String>> epSubscriptions;
     private RpcMessageMap messageMap = null;
-
-    Set<L2EprContext> l2RpcCtxts =
-            Collections.newSetFromMap(new ConcurrentHashMap<L2EprContext, Boolean>());
-    Set<L3EprContext> l3RpcCtxts =
-            Collections.newSetFromMap(new ConcurrentHashMap<L3EprContext, Boolean>());
 
     public EndpointManager(DataBroker dataProvider,
                            RpcProviderRegistry rpcRegistry,
                            ScheduledExecutorService executor,
-                           OpflexConnectionService connectionService) {
+                           OpflexConnectionService connectionService,
+                           MitLib opflexLibrary) {
         super(dataProvider, rpcRegistry, executor);
 
         if (dataProvider != null) {
@@ -116,6 +125,10 @@ public class EndpointManager
         }
 
         this.connectionService = connectionService;
+        this.mitLibrary = opflexLibrary;
+
+        endpoints = new ConcurrentHashMap<EpKey, Endpoint>();
+        epSubscriptions = new ConcurrentHashMap<String, Set<String>>();
 
         /* Subscribe to EPR messages */
         messageMap = new RpcMessageMap();
@@ -125,6 +138,14 @@ public class EndpointManager
             this.connectionService.subscribe(msg, this);
         }
         LOG.trace("Initialized OpFlex endpoint manager");
+    }
+
+    /**
+     * Shut down the {@link EndpointManager}
+     *
+     */
+    public void shutdown() {
+
     }
 
     // ***************
@@ -210,11 +231,13 @@ public class EndpointManager
         if (obj instanceof Endpoint) {
             Endpoint ep = (Endpoint)obj;
             id = new Identity(ep);
+            id.setContext(ep.getL2Context().getValue());
         }
 
         if (obj instanceof EndpointL3) {
             EndpointL3 ep = (EndpointL3)obj;
             id = new Identity(ep);
+            id.setContext(ep.getL3Context().getValue());
         }
         if (id != null && !id.valid()) {
             return null;
@@ -222,6 +245,9 @@ public class EndpointManager
         return id;
     }
 
+    private synchronized Set<String> getEpSubscriptions(String id) {
+    	return epSubscriptions.get(id);
+    }
 
     /**
      *  Provide endpoint policy update messages based on changes
@@ -238,34 +264,28 @@ public class EndpointManager
 
         /* This covers additions or updates */
         if (newId != null) {
-            Set<String> agentList = epSubscriptions.get(newId.identityAsString());
+            Set<String> agentList = getEpSubscriptions(newId.identityAsString());
             if (agentList != null) {
                 for (String agentId : agentList) {
                     OpflexAgent agent = connectionService.getOpflexAgent(agentId);
                     if (agent != null) {
-                        EpStatus epStatus;
-                        if (oldId == null) {
-                            epStatus = EpStatus.EP_STATUS_ATTACH;
-                        }
-                        else {
-                            epStatus = EpStatus.EP_STATUS_MODIFY;
-                        }
-                        updateQ.add(new EndpointUpdate(agent.getEndpoint(),
-                                newId, newEp, epStatus));
+                        updateQ.add(new EndpointUpdate(EndpointUpdate.UpdateType.ADD_CHANGE,
+                                    agent.getEndpoint(),
+                                    newEp));
                     }
                 }
             }
         }
         /* this covers deletions */
         if ((newId == null) && (oldId != null)) {
-            Set<String> agentList = epSubscriptions.get(oldId.identityAsString());
+            Set<String> agentList = getEpSubscriptions(oldId.identityAsString());
             if (agentList != null) {
                 for (String agentId : agentList) {
                     OpflexAgent agent = connectionService.getOpflexAgent(agentId);
                     if (agent != null) {
-                        updateQ.add(new EndpointUpdate(agent.getEndpoint(),
-                                oldId, oldEp,
-                                EpStatus.EP_STATUS_DETACH));
+                        updateQ.add(new EndpointUpdate(EndpointUpdate.UpdateType.DELETE,
+                                    agent.getEndpoint(),
+                                    oldEp));
                     }
                 }
             }
@@ -275,59 +295,54 @@ public class EndpointManager
     }
 
     private static class EndpointUpdate implements Runnable {
+    	public static enum UpdateType {
+    		ADD_CHANGE("add_change"),
+    		DELETE("delete");
+
+    		private String updateType;
+
+    		UpdateType(String updateType) {
+    			this.updateType = updateType;
+    		}
+
+    		@Override
+    		public String toString() {
+    			return this.updateType;
+    		}
+    	}
+
+    	private final UpdateType type;
         private final JsonRpcEndpoint agent;
-        private final Identity id;
-        private final EpStatus status;
-        private int ttl;
-        private String tid;
-        private String epgId;
-        private String location;
-        EndpointUpdate(JsonRpcEndpoint agent, Identity id, DataObject obj, EpStatus status) {
+        private final ManagedObject mo;
+        EndpointUpdate(UpdateType type, JsonRpcEndpoint agent, DataObject obj) {
+        	this.type = type;
             this.agent = agent;
-            this.id = id;
-            this.status = status;
-            if (obj instanceof Endpoint) {
-                Endpoint ep = (Endpoint)obj;
-                tid = ep.getTenant().getValue();
-                epgId = ep.getEndpointGroup().getValue();
-                ttl = ep.getTimestamp().intValue();
-                OpflexOverlayContext context =
-                        ep.getAugmentation(OpflexOverlayContext.class);
-                if (context != null) {
-                    location = context.getAgentEpLocation();
-                }
-            }
-            if (obj instanceof EndpointL3) {
-                EndpointL3 ep = (EndpointL3)obj;
-                tid = ep.getTenant().getValue();
-                epgId = ep.getEndpointGroup().getValue();
-                ttl = ep.getTimestamp().intValue();
-                OpflexOverlayContextL3 context =
-                        ep.getAugmentation(OpflexOverlayContextL3.class);
-                if (context != null) {
-                    location = context.getAgentEpLocation();
-                }
-            }
+            mo = MessageUtils.getMoFromEp(obj);
         }
 
         @Override
         public void run() {
-            EndpointPolicyUpdateRequest request =
-                    new EndpointPolicyUpdateRequest();
-            EndpointPolicyUpdateRequest.Params params =
-                    new EndpointPolicyUpdateRequest.Params();
-            List<EndpointPolicyUpdateRequest.Params> paramList =
-                    new ArrayList<EndpointPolicyUpdateRequest.Params>();
-            List<String> idList = new ArrayList<String>();
+            EndpointUpdateRequest request =
+                    new EndpointUpdateRequest();
+            EndpointUpdateRequest.Params params =
+                    new EndpointUpdateRequest.Params();
+            List<EndpointUpdateRequest.Params> paramList =
+                    new ArrayList<EndpointUpdateRequest.Params>();
 
-            params.setContext(id.contextAsString());
-            idList.add(id.identityAsString());
-            params.setIdentifier(idList);
-            params.setStatus(status.toString());
-            params.setTtl(ttl);
-            params.setPolicy_name(MessageUtils.createEpgUri(tid, epgId));
-            params.setLocation(location);
-            //params.setSubject(new String());
+            // TODO: how do we get delete URIs from the
+            // normalized policy?
+            List<Uri> delete_uri = new ArrayList<Uri>();
+            List<ManagedObject> replace = new ArrayList<ManagedObject>();
+            if (mo != null) {
+                replace.add(mo);
+                delete_uri.add(mo.getUri());
+            }
+            if (type == EndpointUpdate.UpdateType.ADD_CHANGE) {
+                params.setReplace(replace);
+            }
+            else if (type == EndpointUpdate.UpdateType.DELETE) {
+                params.setDelete_uri(delete_uri);
+            }
 
             paramList.add(params);
             request.setParams(paramList);
@@ -348,6 +363,118 @@ public class EndpointManager
         }
     }
 
+	/**
+     * Create an Endpoint Registry Context for an OpFlex
+     * Request message.
+     *
+	 * @param agent
+	 * @param request
+	 * @param dataProvider
+	 * @param executor
+	 * @return
+	 */
+    public EprContext create(JsonRpcEndpoint agent,
+                             RpcMessage message,
+                             DataBroker dataProvider,
+                             ScheduledExecutorService executor) {
+
+    	EprContext ec = null;
+
+    	if (message instanceof EndpointDeclareRequest) {
+    		EndpointDeclareRequest request = (EndpointDeclareRequest)message;
+	    	/*
+	    	 * There theoretically could be a list of parameters,
+	    	 * but we'll likely only ever see one element.
+	    	 */
+	    	ec = new EprContext(agent, request, dataProvider, executor);
+	        for (EndpointDeclareRequest.Params params : request.getParams()) {
+
+	        	int prr = params.getPrr();
+
+	            /*
+		         * We have a list of endpoints, so iterate through the
+		         * list and register each one, extracting the identities
+		         * for registration.
+		         */
+		        List<ManagedObject> endpoints = params.getEndpoint();
+		        if (endpoints != null) {
+		        	for (ManagedObject mo: endpoints) {
+		        		EprOperation eo =
+		        		        MessageUtils.getEprOpFromEpMo(mo, prr, agent.getIdentifier());
+		        		ec.addOperation(eo);
+		        	}
+		        }
+	        }
+    	}
+    	else if (message instanceof EndpointUndeclareRequest) {
+    		EndpointUndeclareRequest request = (EndpointUndeclareRequest)message;
+        	ec = new EprContext(agent, request, dataProvider, executor);
+        	for (EndpointUndeclareRequest.Params params : request.getParams()) {
+
+        		/*
+        		 * A single URI is provided per param in Undeclare messages
+        		 */
+        		String subject = params.getSubject();
+    	        Uri uri = params.getEndpoint_uri();
+    	        if (uri != null) {
+    	    		EprOperation op = MessageUtils.getEprOpFromUri(uri, subject);
+    	    		ec.addOperation(op);
+    	        }
+        	}
+        }
+    	else if (message instanceof EndpointResolveRequest) {
+    		EndpointResolveRequest request = (EndpointResolveRequest)message;
+        	ec = new EprContext(agent, request, dataProvider, executor);
+        	for (EndpointResolveRequest.Params params: request.getParams()) {
+    	        /*
+    	         * The resolve message contains either the URI
+    	         * or a context/URI and an identifier. There is only
+    	         * one of these per param array entry.
+    	         */
+    	        EndpointIdentity eid = params.getEndpoint_ident();
+
+    	        String subject = params.getSubject();
+
+    	        if (eid != null) {
+
+    	        	EprOperation op = MessageUtils.getEprOpFromEpId(eid, subject);
+    	        	ec.addOperation(op);
+
+    	        } else {
+    	            /*
+    	             * Extract the list to add the EP to from
+    	             * the URI
+    	             */
+    	            Uri uri = params.getEndpoint_uri();
+    		        if (uri != null) {
+    		    		EprOperation op = MessageUtils.getEprOpFromUri(uri, subject);
+    		    		ec.addOperation(op);
+    		        }
+    	        }
+        	}
+        }
+        return ec;
+    }
+
+    private synchronized void addEpSubscription(JsonRpcEndpoint agent, String id) {
+        Set<String> agents = epSubscriptions.get(id);
+        if (agents == null) {
+            agents = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+            Set<String> result = epSubscriptions.putIfAbsent(id, agents);
+            if (result != null) {
+            	agents = result;
+            }
+        }
+        agents.add(agent.getIdentifier());
+    }
+
+    private synchronized void removeEpSubscription(JsonRpcEndpoint agent, String id) {
+        Set<String> agents = epSubscriptions.get(id);
+        if (agents != null) {
+        	agents.remove(id);
+        }
+    }
+
     /**
      * This notification handles the OpFlex Endpoint messages.
      * We should only receive request messages. Responses are
@@ -360,7 +487,6 @@ public class EndpointManager
     @Override
     public void callback(JsonRpcEndpoint agent, RpcMessage request) {
 
-        RpcMessage response = null;
         if (messageMap.get(request.getMethod()) == null) {
             LOG.warn("message {} was not subscribed to, but was delivered.", request);
             return;
@@ -369,88 +495,267 @@ public class EndpointManager
         /*
          * For declaration requests, we need to make sure that this
          * EP is in our registry. Since we can have multiple identifiers,
-\        * we create a Set of endpoints.
+         * we create a Set of endpoints.
          */
 
-        if (request instanceof EndpointDeclarationRequest) {
-            EndpointDeclarationRequest req = (EndpointDeclarationRequest)request;
-            EndpointDeclarationResponse msg = new EndpointDeclarationResponse();
+        if (request instanceof EndpointDeclareRequest) {
+            EndpointDeclareRequest req = (EndpointDeclareRequest)request;
 
-            msg.setId(request.getId());
-            response = msg;
 
+            /*
+             * valid() ensures presence of params and MOs, so we know those
+             * won't be null
+             */
             if (!req.valid()) {
                 LOG.warn("Invalid declaration request: {}", req);
                 // TODO: should return error reply?
                 return;
             }
 
-            EprContext ctx = EprContextFactory.create(agent, req, dataProvider, executor);
+            /*
+             * OpFlex EP declaration/registration is different from
+             * REST EP declaration/registration -- REST only allows
+             * a single EP to be registered at a time. Since each MO
+             * represents an Endpoint that's being declared, we need
+             * add each one up separately,yet provide a single response.
+             * We also want to know the result of the registration so
+             * we can provide the appropriate response. We create a
+             * context for the Endpoint Registry interaction, where
+             * we can track the status of all the EP registrations,
+             * and provide a response when all have completed.
+             */
+            EprContext ctx = create(agent, req, dataProvider, executor);
             ctx.setCallback(this);
-
-            EndpointDeclarationRequest.Params params = req.getParams().get(0);
-            String epStatus = params.getStatus();
-            if (epStatus != null &&
-                    (epStatus.equals(EpStatus.EP_STATUS_ATTACH.toString()) ||
-                            epStatus.equals(EpStatus.EP_STATUS_MODIFY.toString()))) {
-                ctx.createEp();
-            }
-            else if (epStatus != null &&
-                    epStatus.equals(EpStatus.EP_STATUS_DETACH.toString())) {
-                ctx.deleteEp();
-            }
-
+            ctx.createEp();
         }
-        else if (request instanceof EndpointRequestRequest) {
-            EndpointRequestRequest req = (EndpointRequestRequest)request;
+        else if (request instanceof EndpointUndeclareRequest) {
+            EndpointUndeclareRequest req = (EndpointUndeclareRequest)request;
+
+            /*
+             * valid() ensures presence of params and URIs, so we know those
+             * won't be null
+             */
+            if (!req.valid()) {
+                LOG.warn("Invalid declaration request: {}", req);
+                // TODO: should return error reply?
+                return;
+            }
+
+            /*
+             * OpFlex EP undeclaration/unregistration is different from
+             * REST EP declaration/registration -- REST only allows
+             * a single EP to be unregistered at a time. Since each MO
+             * represents an Endpoint that's being undeclared, we need
+             * add each one up separately,yet provide a single response.
+             * We also want to know the result of the unregistration so
+             * we can provide the appropriate response. We create a
+             * context for the Endpoint Registry interaction, where
+             * we can track the status of all the EP unregistrations,
+             * and provide a response when all have completed.
+             */
+            EprContext ctx = create(agent, req, dataProvider, executor);
+            ctx.setCallback(this);
+            ctx.deleteEp();
+        }
+        else if (request instanceof EndpointResolveRequest) {
+            EndpointResolveRequest req = (EndpointResolveRequest)request;
 
             if (!req.valid()) {
                 LOG.warn("Invalid endpoint request: {}", req);
                 // TODO: should return error reply?
                 return;
             }
-            EprContext ctx = EprContextFactory.create(agent, req, dataProvider, executor);
+            List<EndpointResolveRequest.Params> paramList =
+            		req.getParams();
 
-            /*
-             * We query the EPR for the EP. This is an asynchronous
-             * operation, so we send the response in the callback
-             */
-            ctx.setCallback(this);
-            ctx.lookupEndpoint();
+            for (EndpointResolveRequest.Params param: paramList) {
+                EprContext ctx = create(agent, req, dataProvider, executor);
 
-            /*
-             * A request is effectively a subscription. Add this agent
-             * to the set of listeners.
-             */
-            Identity id =
-                    new Identity(req.getParams().get(0).getIdentifier().get(0));
-            Set<String> agents = epSubscriptions.get(id.identityAsString());
-            if (agents == null) {
-                agents = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+                /*
+                 * We query the EPR for the EP. This is an asynchronous
+                 * operation, so we send the response in the callback
+                 */
+                ctx.setCallback(this);
+                ctx.lookupEndpoint();
+
+                /*
+                 * A request is effectively a subscription. Add this agent
+                 * to the set of listeners.
+                 */
+                Identity id = null;
+                if (param.getEndpoint_ident() != null) {
+                    id = new Identity(param.getEndpoint_ident().getIdentifier());
+                }
+                else if (param.getEndpoint_uri() != null) {
+                	PolicyUri puri = new PolicyUri(param.getEndpoint_uri().getValue());
+            	    id = new Identity(puri.pop());
+                }
+                else {
+                	// TOOD: should return error reply
+                	return;
+                }
+                addEpSubscription(agent, id.identityAsString());
             }
-            agents.add(agent.getIdentifier());
-            epSubscriptions.put(id.identityAsString(), agents);
+        }
+        else if (request instanceof EndpointUnresolveRequest) {
+        	EndpointUnresolveRequest req = (EndpointUnresolveRequest)request;
+
+            if (!req.valid()) {
+                LOG.warn("Invalid endpoint request: {}", req);
+                // TODO: should return error reply?
+                return;
+            }
+
+        	List<EndpointUnresolveRequest.Params> params =
+        			((EndpointUnresolveRequest) request).getParams();
+
+        	for (EndpointUnresolveRequest.Params param: params) {
+                /*
+                 * No interaction with the Data Store is required -- just
+                 * cancel the notification subscription for this EP..
+                 */
+                Identity id = null;
+                if (param.getEndpoint_ident() != null) {
+                    id = new Identity(param.getEndpoint_ident().getIdentifier());
+                }
+                else if (param.getEndpoint_uri() != null) {
+                	PolicyUri puri = new PolicyUri(param.getEndpoint_uri().getValue());
+            	    id = new Identity(puri.pop());
+                }
+                else {
+                	// TOODO: should return an error
+                	return;
+                }
+                removeEpSubscription(agent, id.identityAsString());
+        	}
+
+            /*
+             * No EprContext is used in unresolve -- so
+             * just send the response directly
+             */
+            EndpointUnresolveResponse resp =
+                    new EndpointUnresolveResponse();
+            EndpointUnresolveResponse.Result result =
+                    new EndpointUnresolveResponse.Result();
+            resp.setResult(result);
+            resp.setId(req.getId());
+            try {
+                agent.sendResponse(resp);
+            }
+            catch (Throwable t) {
+                LOG.warn("Response {} could not be sent to {}", resp, agent);
+            }
+
         }
         else {
             LOG.warn("Unexpected callback, {}", request);
         }
 
-        if (response != null) {
-            try {
-                agent.sendResponse(response);
-            }
-            catch (Throwable t) {
-                LOG.warn("Response {} could not be sent to {}", response, agent);
-            }
+    }
+
+    private class EndpointResponse implements Runnable {
+
+        private EprContext ctx;
+        private RpcMessage resp;
+        public EndpointResponse(EprContext ctx, RpcMessage resp) {
+            this.ctx = ctx;
+            this.resp = resp;
         }
+
+        @Override
+        public void run() {
+            try {
+                ctx.getPeer().sendResponse(resp);
+            } catch (Throwable t) {
+                // TODO: what to do here
+            }
+
+        }
+
     }
 
     /**
-     * This notification handles the callback from a query
-     * of the Endpoint Registry
+     * This notification handles the callback from an interaction
+     * with the Endpoint Registry. The context for the callback
+     * is a notification from the data store, so so the code
+     * has to ensure that it won't block. Responses are sent
+     * using an executor
      */
     @Override
     public void callback(EprContext ctx) {
-        ctx.sendResponse();
+    	RpcMessage resp = null;
+    	if (ctx.getRequest() == null) return;
+
+        if (!(ctx.getRequest() instanceof EndpointDeclareRequest) &&
+            !(ctx.getRequest() instanceof EndpointUndeclareRequest) &&
+    	    !(ctx.getRequest() instanceof EndpointResolveRequest)) {
+            return;
+        }
+
+    	if (ctx.getRequest() instanceof EndpointDeclareRequest) {
+    		EndpointDeclareRequest req =
+    				(EndpointDeclareRequest)ctx.getRequest();
+    		EndpointDeclareResponse response = new EndpointDeclareResponse();
+    		EndpointDeclareResponse.Result result =
+    				new EndpointDeclareResponse.Result();
+            response.setResult(result);
+            response.setId(req.getId());
+            response.setError(null); // TODO: real errors
+            resp = response;
+    	}
+    	else if (ctx.getRequest() instanceof EndpointUndeclareRequest) {
+    		EndpointUndeclareRequest req =
+    				(EndpointUndeclareRequest)ctx.getRequest();
+    		EndpointUndeclareResponse response = new EndpointUndeclareResponse();
+    		EndpointUndeclareResponse.Result result =
+    				new EndpointUndeclareResponse.Result();
+            response.setResult(result);
+            response.setId(req.getId());
+            response.setError(null); // TODO: real errors
+            resp = response;
+    	}
+    	else {
+	        EndpointResolveRequest req =
+	                (EndpointResolveRequest)ctx.getRequest();
+	        EndpointResolveResponse response = new EndpointResolveResponse();
+	        response.setId(req.getId());
+	        EndpointResolveResponse.Result result =
+	                new EndpointResolveResponse.Result();
+	        List<ManagedObject> epList =
+	                new ArrayList<ManagedObject>();
+
+
+	        if (ctx.getOperations().size() > 0) {
+
+	            /*
+	             * If we get any EP, then we can
+	             * provide a response to the original request
+	             * Note that we could potentially have multiple
+	             * requests outstanding for the same EP, and
+	             * even using different context types (L2 or L3).
+	             */
+		        for (EprOperation op: ctx.getOperations()) {
+
+	                ManagedObject mo = MessageUtils.getMoFromOp(op);
+	                if (mo != null) {
+	                    epList.add(mo);
+	                }
+	                /*
+	                 * For EPs on a different agent, we need to look up the
+	                 * VTEP information. For now, we're only supporting
+	                 * VXLAN VTEPs, so we look up the destination tunnel IP,
+	                 * and provide that in the data field of the response
+	                 */
+	                // TODO: Need to look this up in op store
+	                //endpoint.setData();
+	            }
+	            result.setEndpoint(epList);
+	            response.setResult(result);
+	            resp = response;
+	        }
+        }
+        if (resp != null) {
+            executor.execute(new EndpointResponse(ctx, resp));
+    	}
     }
 }

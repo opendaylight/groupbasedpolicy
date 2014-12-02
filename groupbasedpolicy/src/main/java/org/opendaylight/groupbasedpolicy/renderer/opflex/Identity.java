@@ -51,7 +51,6 @@ public class Identity {
     private Set<IpAddress> ips = null;
     private L2BridgeDomainId l2Context = null;
     private MacAddress mac = null;
-    private boolean validId = false;
     public Identity(String id) {
         /*
          * Determine the ID type and populate
@@ -82,10 +81,6 @@ public class Identity {
         List<L3Address> l3List = ep.getL3Address();
         for (L3Address addr: l3List) {
             ips.add(addr.getIpAddress());
-        }
-        if (ep.getTenant() != null &&
-            ep.getEndpointGroup() != null) {
-            validId = true;
         }
     }
 
@@ -176,12 +171,12 @@ public class Identity {
         switch (type) {
         case MAC_ADDRESS:
             if (getL2Context() != null && mac != null) {
-                return validId;
+                return true;
             }
             break;
         case IP_ADDRESS:
             if (getL3Context() != null && primaryIp != null) {
-                return validId;
+                return true;
             }
             default:
                 break;

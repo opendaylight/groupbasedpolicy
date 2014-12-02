@@ -108,7 +108,7 @@ public class JsonRpcEndpointTest implements RpcBroker, RpcBroker.RpcCallback {
     @JsonDeserialize
     static final class OpflexTest extends RpcMessage {
 
-        private String id;
+        private JsonNode id;
         private String method;
 
         private List<Params> params;
@@ -146,12 +146,12 @@ public class JsonRpcEndpointTest implements RpcBroker, RpcBroker.RpcCallback {
         }
 
         @Override
-        public String getId() {
+        public JsonNode getId() {
             return id;
         }
 
         @Override
-        public void setId(String id) {
+        public void setId(JsonNode id) {
             this.id = id;
         }
 

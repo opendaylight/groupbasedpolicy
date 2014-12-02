@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 /**
  * A (soon-to-be) generic RPC server. It creates {@link JsonRpcEndpoint} objects
@@ -104,6 +105,7 @@ public class RpcServer {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.configure(
                 DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
 
         JsonRpcEndpoint endpoint = new JsonRpcEndpoint(identifier, connectionService,
                 objectMapper, newChannel, messageMap, broker);

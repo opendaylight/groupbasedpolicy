@@ -10,7 +10,6 @@
 package org.opendaylight.groupbasedpolicy.jsonrpc;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.SettableFuture;
 
@@ -45,7 +44,7 @@ public class JsonRpcServiceBinderHandler extends ChannelInboundHandlerAdapter {
             if (jsonNode.has("result")) {
                 endpoint.processResult(jsonNode);
             } else if (jsonNode.hasNonNull("method")) {
-                if (jsonNode.has("id") && !Strings.isNullOrEmpty(jsonNode.get("id").asText())) {
+                if (jsonNode.has("id") && (jsonNode.get("id") != null)) {
                     endpoint.processRequest(jsonNode);
                 }
             }

@@ -113,7 +113,13 @@ public class JsonRpcDecoder extends ByteToMessageDecoder {
                 break;
             }
 
-            if (i - buf.readerIndex() >= maxFrameLength) {
+            if (isEom(buf.getByte(i) & 0xFF)) {
+                // Dump up to this point in the buffer
+                buf.readerIndex(1 + i);
+                leftCurlies = rightCurlies = lastRecordBytes = 0;
+                ctx.fireChannelReadComplete();
+            }
+            else if (i - buf.readerIndex() >= maxFrameLength) {
                 fail(ctx, i - buf.readerIndex());
             }
         }
@@ -129,10 +135,17 @@ public class JsonRpcDecoder extends ByteToMessageDecoder {
         return recordsRead;
     }
 
+    private static boolean isEom(int ch) throws IOException {
+        if (ch == '\0') {
+            return true;
+        }
+        return false;
+    }
+
     private static void skipSpaces(ByteBuf b) throws IOException {
         while (b.isReadable()) {
             int ch = b.getByte(b.readerIndex()) & 0xFF;
-            if (!(ch == ' ' || ch == '\r' || ch == '\n' || ch == '\t')) {
+            if (!(ch == ' ' || ch == '\r' || ch == '\n' || ch == '\t' || ch == '\0')) {
                 return;
             }
             b.readByte(); //move the read index

@@ -40,8 +40,15 @@ import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFaile
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcEndpoint;
-import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.EndpointDeclarationRequest;
-import org.opendaylight.groupbasedpolicy.renderer.opflex.messages.EndpointRequestRequest;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.OpflexConnectionService;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages.EndpointDeclareRequest;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages.EndpointIdentity;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages.EndpointResolveRequest;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages.EndpointUndeclareRequest;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages.EndpointUnresolveRequest;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.mit.MitLib;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.mit.PolicyUri;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Uri;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
@@ -55,6 +62,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
 
@@ -65,16 +73,15 @@ import com.google.common.util.concurrent.CheckedFuture;
  */
 public class EndpointManagerTest implements DataChangeListener {
     protected static final Logger logger = LoggerFactory.getLogger(EndpointManagerTest.class);
-    private static final String TEST_MSG_ID = "7b77f5f7-b078-4276-b220-6fed8596c6aa";
-    private static final String TEST_CONTEXT = "604f7808-21d3-424c-a2f0-934ac34780c0";
-    private static final String TEST_LOCATION = "area54";
-    private static final String TEST_POLICY =
-            "/policy/tenants/tenant/95ef18d6-0ae4-4157-803e-03a38b58ccd8/" +
-            "endpoint-group/d9c5625e-a489-42b4-bbe7-a1ca9502b5ef";
+    private static final String TEST_CONTEXT = "3de31df2-5a65-4d5a-b42b-01fa3bdd82ea";
     private static final int TEST_PRR = 1000;
     private static final String TEST_IDENTIFIER = "00:11:22:33:44:55";
     private static final String TEST_AGENT_ID = "192.168.194.132:6742";
+    private static final String TEST_EP_URI = "/EprL2Universe/EprL2Ep/3de31df2-5a65-4d5a-b42b-01fa3bdd82ea/00:11:22:33:44:55";
+    private static final String TEST_SUBJECT = "EprL2Ep";
 
+    @Mock
+    private JsonNode TEST_MSG_ID;
     @Mock
     private DataBroker mockBroker;
     @Mock
@@ -90,7 +97,7 @@ public class EndpointManagerTest implements DataChangeListener {
     @Mock
     private JsonRpcEndpoint mockAgent;
     @Mock
-    private EndpointDeclarationRequest mockRpcMessage;
+    private EndpointDeclareRequest mockRpcMessage;
     @Mock
     private BindingAwareBroker.RpcRegistration<EndpointService> mockRpcRegistration;
     @Mock
@@ -111,7 +118,10 @@ public class EndpointManagerTest implements DataChangeListener {
     private DataObject mockDao;
     @Mock
     private InstanceIdentifier<?> mockIid;
+    @Mock
+    private MitLib mockOpflexLib;
 
+    private EndpointIdentity testIdentity;
     private EndpointManager epManager;
 
 
@@ -136,7 +146,12 @@ public class EndpointManagerTest implements DataChangeListener {
                 Matchers.<InstanceIdentifier<Endpoint>>any())).thenReturn(mockReadFuture);
         when(mockWriteTransaction.submit()).thenReturn(mockWriteFuture);
         epManager = new EndpointManager(mockBroker,
-                mockRpcRegistry, mockExecutor, mockConnService);
+                mockRpcRegistry, mockExecutor, mockConnService, mockOpflexLib);
+        MessageUtils.init();
+        PolicyUri puri = new PolicyUri(TEST_EP_URI);
+        testIdentity = new EndpointIdentity();
+        testIdentity.setIdentifier(puri.pop());
+        testIdentity.setContext(puri.getUri());
     }
 
 
@@ -148,14 +163,14 @@ public class EndpointManagerTest implements DataChangeListener {
     }
 
     @Test
-    public void testCallbackEpAttach() throws Exception {
+    public void testCallbackEpDeclare() throws Exception {
         JsonRpcEndpoint agent = mock(JsonRpcEndpoint.class);
-        EndpointDeclarationRequest mockReq =
-                mock(EndpointDeclarationRequest.class);
-        EndpointDeclarationRequest.Params mockParams =
-                mock(EndpointDeclarationRequest.Params.class);
-        List<EndpointDeclarationRequest.Params> paramList =
-                new ArrayList<EndpointDeclarationRequest.Params>();
+        EndpointDeclareRequest mockReq =
+                mock(EndpointDeclareRequest.class);
+        EndpointDeclareRequest.Params mockParams =
+                mock(EndpointDeclareRequest.Params.class);
+        List<EndpointDeclareRequest.Params> paramList =
+                new ArrayList<EndpointDeclareRequest.Params>();
         paramList.add(mockParams);
         List<String> idList =
                 new ArrayList<String>();
@@ -163,28 +178,24 @@ public class EndpointManagerTest implements DataChangeListener {
 
         when(mockReq.valid()).thenReturn(true);
         when(mockReq.getId()).thenReturn(TEST_MSG_ID);
-        when(mockReq.getMethod()).thenReturn(EndpointDeclarationRequest.DECLARATION_MESSAGE);
+        when(mockReq.getMethod()).thenReturn(EndpointDeclareRequest.DECLARE_MESSAGE);
         when(mockReq.getParams()).thenReturn(paramList);
-        when(mockParams.getContext()).thenReturn(TEST_CONTEXT);
-        when(mockParams.getLocation()).thenReturn(TEST_LOCATION);
-        when(mockParams.getPolicy_name()).thenReturn(TEST_POLICY);
+        when(mockParams.getEndpoint()).thenReturn(null);
         when(mockParams.getPrr()).thenReturn(TEST_PRR);
-        when(mockParams.getStatus()).thenReturn(EpStatus.EP_STATUS_ATTACH.toString());
-        when(mockParams.getIdentifier()).thenReturn(idList);
         epManager.callback(agent, mockReq);
-        verify(mockParams).getStatus();
+        verify(mockParams).getEndpoint();
 
     }
 
     @Test
-    public void testCallbackEpDetach() throws Exception {
+    public void testCallbackEpUndeclare() throws Exception {
         JsonRpcEndpoint agent = mock(JsonRpcEndpoint.class);
-        EndpointDeclarationRequest mockReq =
-                mock(EndpointDeclarationRequest.class);
-        EndpointDeclarationRequest.Params mockParams =
-                mock(EndpointDeclarationRequest.Params.class);
-        List<EndpointDeclarationRequest.Params> paramList =
-                new ArrayList<EndpointDeclarationRequest.Params>();
+        EndpointUndeclareRequest mockReq =
+                mock(EndpointUndeclareRequest.class);
+        EndpointUndeclareRequest.Params mockParams =
+                mock(EndpointUndeclareRequest.Params.class);
+        List<EndpointUndeclareRequest.Params> paramList =
+                new ArrayList<EndpointUndeclareRequest.Params>();
         paramList.add(mockParams);
         List<String> idList =
                 new ArrayList<String>();
@@ -192,42 +203,107 @@ public class EndpointManagerTest implements DataChangeListener {
 
         when(mockReq.valid()).thenReturn(true);
         when(mockReq.getId()).thenReturn(TEST_MSG_ID);
-        when(mockReq.getMethod()).thenReturn(EndpointDeclarationRequest.DECLARATION_MESSAGE);
+        when(mockReq.getMethod()).thenReturn(EndpointUndeclareRequest.UNDECLARE_MESSAGE);
         when(mockReq.getParams()).thenReturn(paramList);
-        when(mockParams.getContext()).thenReturn(TEST_CONTEXT);
-        when(mockParams.getLocation()).thenReturn(TEST_LOCATION);
-        when(mockParams.getPolicy_name()).thenReturn(TEST_POLICY);
-        when(mockParams.getPrr()).thenReturn(TEST_PRR);
-        when(mockParams.getStatus()).thenReturn(EpStatus.EP_STATUS_DETACH.toString());
-        when(mockParams.getIdentifier()).thenReturn(idList);
+        when(mockParams.getEndpoint_uri()).thenReturn(null);
+        when(mockParams.getSubject()).thenReturn(TEST_SUBJECT);
         epManager.callback(agent, mockReq);
-        verify(mockParams).getStatus();
+        verify(mockParams).getEndpoint_uri();
 
     }
 
     @Test
-    public void testCallbackEpRequest() throws Exception {
+    public void testCallbackEpResolve1() throws Exception {
         JsonRpcEndpoint mockRpcEp = mock(JsonRpcEndpoint.class);
-        EndpointRequestRequest mockReq =
-                mock(EndpointRequestRequest.class);
-        EndpointRequestRequest.Params mockParams =
-                mock(EndpointRequestRequest.Params.class);
-        List<EndpointRequestRequest.Params> paramList =
-                new ArrayList<EndpointRequestRequest.Params>();
+        EndpointResolveRequest mockReq =
+                mock(EndpointResolveRequest.class);
+        EndpointResolveRequest.Params mockParams =
+                mock(EndpointResolveRequest.Params.class);
+        List<EndpointResolveRequest.Params> paramList =
+                new ArrayList<EndpointResolveRequest.Params>();
         paramList.add(mockParams);
-        List<String> idList =
-                new ArrayList<String>();
-        idList.add(TEST_IDENTIFIER);
 
         when(mockRpcEp.getIdentifier()).thenReturn(TEST_IDENTIFIER);
         when(mockReq.valid()).thenReturn(true);
         when(mockReq.getId()).thenReturn(TEST_MSG_ID);
-        when(mockReq.getMethod()).thenReturn(EndpointDeclarationRequest.DECLARATION_MESSAGE);
+        when(mockReq.getMethod()).thenReturn(EndpointResolveRequest.EP_RESOLVE_REQUEST_MESSAGE);
         when(mockReq.getParams()).thenReturn(paramList);
-        when(mockParams.getContext()).thenReturn(TEST_CONTEXT);
-        when(mockParams.getIdentifier()).thenReturn(idList);
+        when(mockParams.getEndpoint_ident()).thenReturn(null);
+        when(mockParams.getEndpoint_uri()).thenReturn(new Uri(TEST_EP_URI));
+        when(mockParams.getSubject()).thenReturn(TEST_SUBJECT);
         epManager.callback(mockRpcEp, mockReq);
-        verify(mockParams, times(4)).getIdentifier();
+        verify(mockParams, times(3)).getEndpoint_uri();
+    }
+
+    @Test
+    public void testCallbackEpResolve2() throws Exception {
+        JsonRpcEndpoint mockRpcEp = mock(JsonRpcEndpoint.class);
+        EndpointResolveRequest mockReq =
+                mock(EndpointResolveRequest.class);
+        EndpointResolveRequest.Params mockParams =
+                mock(EndpointResolveRequest.Params.class);
+        List<EndpointResolveRequest.Params> paramList =
+                new ArrayList<EndpointResolveRequest.Params>();
+        paramList.add(mockParams);
+
+        when(mockRpcEp.getIdentifier()).thenReturn(TEST_IDENTIFIER);
+        when(mockReq.valid()).thenReturn(true);
+        when(mockReq.getId()).thenReturn(TEST_MSG_ID);
+        when(mockReq.getMethod()).thenReturn(EndpointResolveRequest.EP_RESOLVE_REQUEST_MESSAGE);
+        when(mockReq.getParams()).thenReturn(paramList);
+        when(mockParams.getEndpoint_ident()).thenReturn(testIdentity);
+        when(mockParams.getEndpoint_uri()).thenReturn(null);
+        when(mockParams.getSubject()).thenReturn(TEST_SUBJECT);
+        epManager.callback(mockRpcEp, mockReq);
+        verify(mockParams, times(3)).getEndpoint_ident();
+    }
+
+    @Test
+    public void testCallbackEpUnresolve1() throws Exception {
+        JsonRpcEndpoint mockRpcEp = mock(JsonRpcEndpoint.class);
+        EndpointUnresolveRequest mockReq =
+                mock(EndpointUnresolveRequest.class);
+        EndpointUnresolveRequest.Params mockParams =
+                mock(EndpointUnresolveRequest.Params.class);
+        List<EndpointUnresolveRequest.Params> paramList =
+                new ArrayList<EndpointUnresolveRequest.Params>();
+        paramList.add(mockParams);
+
+        when(mockRpcEp.getIdentifier()).thenReturn(TEST_IDENTIFIER);
+        when(mockReq.valid()).thenReturn(true);
+        when(mockReq.getId()).thenReturn(TEST_MSG_ID);
+        when(mockReq.getMethod()).thenReturn(EndpointUnresolveRequest.EP_UNRESOLVE_REQUEST_MESSAGE);
+        when(mockReq.getParams()).thenReturn(paramList);
+        when(mockParams.getEndpoint_ident()).thenReturn(null);
+        when(mockParams.getEndpoint_uri()).thenReturn(new Uri(TEST_EP_URI));
+        when(mockParams.getSubject()).thenReturn(TEST_SUBJECT);
+        epManager.callback(mockRpcEp, mockReq);
+        verify(mockParams, times(2)).getEndpoint_uri();
+
+    }
+
+    @Test
+    public void testCallbackEpUnresolve2() throws Exception {
+        JsonRpcEndpoint mockRpcEp = mock(JsonRpcEndpoint.class);
+        EndpointUnresolveRequest mockReq =
+                mock(EndpointUnresolveRequest.class);
+        EndpointUnresolveRequest.Params mockParams =
+                mock(EndpointUnresolveRequest.Params.class);
+        List<EndpointUnresolveRequest.Params> paramList =
+                new ArrayList<EndpointUnresolveRequest.Params>();
+        paramList.add(mockParams);
+
+        when(mockRpcEp.getIdentifier()).thenReturn(TEST_IDENTIFIER);
+        when(mockReq.valid()).thenReturn(true);
+        when(mockReq.getId()).thenReturn(TEST_MSG_ID);
+        when(mockReq.getMethod()).thenReturn(EndpointUnresolveRequest.EP_UNRESOLVE_REQUEST_MESSAGE);
+        when(mockReq.getParams()).thenReturn(paramList);
+        when(mockParams.getEndpoint_ident()).thenReturn(testIdentity);
+        when(mockParams.getEndpoint_uri()).thenReturn(null);
+        when(mockParams.getSubject()).thenReturn(TEST_SUBJECT);
+        epManager.callback(mockRpcEp, mockReq);
+        verify(mockParams, times(2)).getEndpoint_ident();
+
     }
 
     @Test
@@ -249,6 +325,7 @@ public class EndpointManagerTest implements DataChangeListener {
         when(mockEp.getEndpointGroup()).thenReturn(mockEpgId);
         when(mockEp.getTenant()).thenReturn(mockTid);
         when(mockEp.getL2Context()).thenReturn(mockBdId);
+        when(mockBdId.getValue()).thenReturn(TEST_CONTEXT);
         when(mockEp.getMacAddress()).thenReturn(mockMac);
         when(mockEp.getAugmentation(OpflexOverlayContext.class)).thenReturn(mockCtx);
         when(mockCtx.getAgentId()).thenReturn(TEST_AGENT_ID);
@@ -283,6 +360,7 @@ public class EndpointManagerTest implements DataChangeListener {
         when(mockEp.getEndpointGroup()).thenReturn(mockEpgId);
         when(mockEp.getTenant()).thenReturn(mockTid);
         when(mockEp.getL2Context()).thenReturn(mockBdId);
+        when(mockBdId.getValue()).thenReturn(TEST_CONTEXT);
         when(mockEp.getMacAddress()).thenReturn(mockMac);
         when(mockEp.getAugmentation(OpflexOverlayContext.class)).thenReturn(mockCtx);
         when(mockCtx.getAgentId()).thenReturn(TEST_AGENT_ID);
