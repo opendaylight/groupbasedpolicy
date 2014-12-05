@@ -24,6 +24,15 @@
         <bundle start="true">mvn:com.fasterxml.jackson.core/jackson-annotations/${jackson.version}</bundle>
         <bundle start="true">mvn:com.fasterxml.jackson.core/jackson-core/${jackson.version}</bundle>
         <bundle start="true">mvn:com.fasterxml.jackson.core/jackson-databind/${jackson.version}</bundle>
-        <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.configfile}">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-ofoverlay-config/${project.version}/xml/config</configfile>
+        <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.ofoverlayconfigfile}">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-ofoverlay-config/${project.version}/xml/config</configfile>
+    </feature>
+    <feature name='odl-groupbasedpolicy-openstackgbp' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Support OpenStack GBP Endpoints '>
+        <feature version="${project.version}">odl-groupbasedpolicy-ofoverlay</feature>
+        <feature version="${mdsal.version}">odl-mdsal-broker</feature>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy/${project.version}</bundle>
+        <bundle start="true">mvn:com.fasterxml.jackson.core/jackson-annotations/${jackson.version}</bundle>
+        <bundle start="true">mvn:com.fasterxml.jackson.core/jackson-core/${jackson.version}</bundle>
+        <bundle start="true">mvn:com.fasterxml.jackson.core/jackson-databind/${jackson.version}</bundle>
+        <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.openstackendpointconfigfile}">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-openstackendpoint-config/${project.version}/xml/config</configfile>
     </feature>
 </features>

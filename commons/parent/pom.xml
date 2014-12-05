@@ -23,7 +23,8 @@
     <openflowjava.distribution.version>0.6.0-SNAPSHOT</openflowjava.distribution.version>
     <config.configfile.directory>etc/opendaylight/karaf</config.configfile.directory>
     <groupbasedpolicy.project.version>0.2.0-SNAPSHOT</groupbasedpolicy.project.version>
-    <config.groupbasedpolicy.configfile>15-groupbasedpolicy-ofoverlay.xml</config.groupbasedpolicy.configfile>
+    <config.groupbasedpolicy.ofoverlayconfigfile>15-groupbasedpolicy-ofoverlay.xml</config.groupbasedpolicy.ofoverlayconfigfile>
+    <config.groupbasedpolicy.openstackendpointconfigfile>15-groupbasedpolicy-openstackendpoint.xml</config.groupbasedpolicy.openstackendpointconfigfile>
   </properties>
 
   <build>

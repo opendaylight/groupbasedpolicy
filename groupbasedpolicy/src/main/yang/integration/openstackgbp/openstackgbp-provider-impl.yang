@@ -1,0 +1,57 @@
+/*
+ * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
+module openstack-endpoint-provider-impl {
+    yang-version 1;
+    namespace "urn:opendaylight:params:xml:ns:yang:controller:config:openstack-endpoint-provider:impl";
+    prefix "openstack-endpoint-provider-impl";
+
+    import config { prefix config; revision-date 2013-04-05; }
+    import opendaylight-md-sal-binding { prefix mdsal; revision-date 2013-10-28; }
+
+    description
+        "This module contains the base YANG definitions for openstack-endpoint-provider impl implementation.";
+
+    revision "2014-12-04" {
+        description
+            "Initial revision.";
+    }
+
+    // This is the definition of the service implementation as a module identity
+    identity openstack-endpoint-provider-impl {
+            base config:module-type;
+
+            // Specifies the prefix for generated java classes.
+            config:java-name-prefix OpenstackEndpointProvider;
+    }
+
+    // Augments the 'configuration' choice node under modules/module.
+    augment "/config:modules/config:module/config:configuration" {
+        case openstack-endpoint-provider-impl {
+            when "/config:modules/config:module/config:type = 'openstack-endpoint-provider-impl'";
+
+            //wires in the data-broker service
+            container data-broker {
+                uses config:service-ref {
+                    refine type {
+                        mandatory false;
+                        config:required-identity mdsal:binding-async-data-broker;
+                    }
+                }
+            }
+            container rpc-registry {
+               uses config:service-ref {
+                   refine type {
+                       mandatory true;
+                       config:required-identity mdsal:binding-rpc-registry;
+                   }
+               }
+           }
+        }
+    }
+}
