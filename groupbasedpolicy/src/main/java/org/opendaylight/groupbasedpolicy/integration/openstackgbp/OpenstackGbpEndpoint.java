@@ -26,7 +26,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstacke
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstackendpoint.rev141204.OpenstackEndpointService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstackendpoint.rev141204.RegisterEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstackendpoint.rev141204.endpoint.fields.L3Address;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstackendpoint.rev141204.endpoint.fields.L3AddressKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstackendpoint.rev141204.openstack.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstackendpoint.rev141204.openstack.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstackendpoint.rev141204.openstack.endpoints.EndpointKey;
@@ -75,7 +74,6 @@ OpenstackEndpointService {
 
     public OpenstackGbpEndpoint(DataBroker dataProvider,
             RpcProviderRegistry rpcRegistry) {
-        // TODO cargo culted... this kicks off a thread (I hope).
         super();
         this.dataProvider = dataProvider;
         executor = Executors.newScheduledThreadPool(1);
@@ -105,8 +103,6 @@ OpenstackEndpointService {
 
                 @Override
                 public void onSuccess(Void result) {
-                    // TODO Auto-generated method stub
-
                 }
             });
             nodesReg = dataProvider.registerDataChangeListener(
@@ -464,8 +460,6 @@ OpenstackEndpointService {
         }
     }
 
-    // TODO Pulled cargo cult style from AbstractEndpointRegistry.
-    // WHAT DOES THIS MEAN??
 
     Function<Void, RpcResult<Void>> futureTrans = new Function<Void, RpcResult<Void>>() {
         @Override

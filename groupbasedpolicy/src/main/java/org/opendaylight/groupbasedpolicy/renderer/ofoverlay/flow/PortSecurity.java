@@ -41,11 +41,11 @@ import org.slf4j.LoggerFactory;
  * @author readams
  */
 public class PortSecurity extends FlowTable {
-    protected static final Logger LOG = 
+    protected static final Logger LOG =
             LoggerFactory.getLogger(PortSecurity.class);
-    
+
     public static final short TABLE_ID = 0;
-    
+
     public PortSecurity(OfTable.OfTableCtx ctx) {
         super(ctx);
     }
@@ -64,7 +64,7 @@ public class PortSecurity extends FlowTable {
         NodeConnectorId tunnelIf = ctx.switchManager.getTunnelPort(nodeId);
         if (tunnelIf != null)
             allowFromPort(t, tiid, flowMap, tunnelIf);
-        Set<NodeConnectorId> external = 
+        Set<NodeConnectorId> external =
                 ctx.switchManager.getExternalPorts(nodeId);
         for (NodeConnectorId extIf: external) {
             allowFromPort(t, tiid, flowMap, extIf);
@@ -72,7 +72,7 @@ public class PortSecurity extends FlowTable {
 
         // Default drop all
         dropFlow(t, tiid, flowMap, 1, null);
-        
+
         // Drop IP traffic that doesn't match a source IP rule
         dropFlow(t, tiid, flowMap, 110, FlowUtils.ARP);
         dropFlow(t, tiid, flowMap, 111, FlowUtils.IPv4);
@@ -84,19 +84,20 @@ public class PortSecurity extends FlowTable {
                 if (ofc != null && ofc.getNodeConnectorId() != null &&
                         (ofc.getLocationType() == null ||
                         LocationType.Internal.equals(ofc.getLocationType()))) {
-                    // Allow layer 3 traffic (ARP and IP) with the correct 
+                    // Allow layer 3 traffic (ARP and IP) with the correct
                     // source IP, MAC, and source port
                     l3flow(t, tiid, flowMap, e, ofc, 120, false);
                     l3flow(t, tiid, flowMap, e, ofc, 121, true);
+                    l3DhcpDoraFlow(t, tiid, flowMap, e, ofc, 115);
 
-                    // Allow layer 2 traffic with the correct source MAC and 
-                    // source port (note lower priority than drop IP rules) 
+                    // Allow layer 2 traffic with the correct source MAC and
+                    // source port (note lower priority than drop IP rules)
                     l2flow(t, tiid, flowMap, e, ofc, 100);
                 }
             }
         }
     }
-    
+
     private void allowFromPort(ReadWriteTransaction t,
                                InstanceIdentifier<Table> tiid,
                                Map<String, FlowCtx> flowMap,
@@ -116,7 +117,7 @@ public class PortSecurity extends FlowTable {
             writeFlow(t, tiid, flowb.build());
         }
     }
-        
+
     private void l2flow(ReadWriteTransaction t,
                         InstanceIdentifier<Table> tiid,
                         Map<String, FlowCtx> flowMap,
@@ -132,13 +133,49 @@ public class PortSecurity extends FlowTable {
                 .setPriority(priority)
                 .setId(flowid)
                 .setMatch(new MatchBuilder()
-                    .setEthernetMatch(FlowUtils.ethernetMatch(e.getMacAddress(), 
+                    .setEthernetMatch(FlowUtils.ethernetMatch(e.getMacAddress(),
                                                               null, null))
                     .setInPort(ofc.getNodeConnectorId())
                     .build())
                 .setInstructions(FlowUtils.gotoTableInstructions((short)(TABLE_ID + 1)));
 
             writeFlow(t, tiid, flowb.build());
+        }
+    }
+
+    private void l3DhcpDoraFlow(ReadWriteTransaction t,
+                                InstanceIdentifier<Table> tiid,
+                                Map<String, FlowCtx> flowMap,
+                                Endpoint e, OfOverlayContext ofc,
+                                Integer priority) {
+
+        Long etherType= FlowUtils.IPv4;
+        // DHCP DORA destination is broadcast
+        String ikey="255.255.255.255/32";
+        Layer3Match m=new Ipv4MatchBuilder().setIpv4Destination(new Ipv4Prefix(ikey)).build();
+
+        FlowId flowid = new FlowId(new StringBuilder()
+        .append(ofc.getNodeConnectorId().getValue())
+        .append("|")
+        .append(e.getMacAddress().getValue())
+        .append("|dhcp|")
+        .append(etherType)
+        .toString());
+        if (visit(flowMap, flowid.getValue())) {
+            Flow flow = base()
+                    .setPriority(priority)
+                    .setId(flowid)
+                    .setMatch(new MatchBuilder()
+                    .setEthernetMatch(FlowUtils.ethernetMatch(e.getMacAddress(),
+                            null,
+                            etherType))
+                            .setLayer3Match(m)
+                            .setInPort(ofc.getNodeConnectorId())
+                            .build())
+                            .setInstructions(FlowUtils.gotoTableInstructions((short)(TABLE_ID + 1)))
+                            .build();
+
+            writeFlow(t, tiid, flow);
         }
     }
 
@@ -191,8 +228,8 @@ public class PortSecurity extends FlowTable {
                     .setPriority(priority)
                     .setId(flowid)
                     .setMatch(new MatchBuilder()
-                        .setEthernetMatch(FlowUtils.ethernetMatch(e.getMacAddress(), 
-                                                                  null, 
+                        .setEthernetMatch(FlowUtils.ethernetMatch(e.getMacAddress(),
+                                                                  null,
                                                                   etherType))
                         .setLayer3Match(m)
                         .setInPort(ofc.getNodeConnectorId())

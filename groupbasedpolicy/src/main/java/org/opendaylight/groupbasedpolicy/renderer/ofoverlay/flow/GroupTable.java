@@ -54,19 +54,19 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
  * @author readams
  */
 public class GroupTable extends OfTable {
-    private static final Logger LOG = 
+    private static final Logger LOG =
             LoggerFactory.getLogger(GroupTable.class);
 
     public GroupTable(OfTableCtx ctx) {
         super(ctx);
     }
-    
+
     @Override
     public void update(NodeId nodeId, PolicyInfo policyInfo, Dirty dirty)
             throws Exception {
         // there appears to be no way of getting only the existing group
         // tables unfortunately, so we have to get the whole goddamned node.
-        // Since this is happening concurrently with other things that are 
+        // Since this is happening concurrently with other things that are
         // working in subtrees of nodes, we have to do two transactions
         ReadOnlyTransaction t = ctx.dataBroker.newReadOnlyTransaction();
         InstanceIdentifier<Node> niid = createNodePath(nodeId);
@@ -90,7 +90,7 @@ public class GroupTable extends OfTable {
                 }
             }
         }
-        
+
         sync(nodeId, policyInfo, dirty, groupMap);
 
         WriteTransaction wt = ctx.dataBroker.newWriteOnlyTransaction();
@@ -98,13 +98,13 @@ public class GroupTable extends OfTable {
         if (wrote)
             wt.submit().get();
     }
-    
+
     protected boolean syncGroupToStore(WriteTransaction wt,
-                                       NodeId nodeId, 
+                                       NodeId nodeId,
                                        HashMap<GroupId, GroupCtx> groupMap) {
         boolean wrote = false;
         for (GroupCtx gctx : groupMap.values()) {
-            InstanceIdentifier<Group> giid = 
+            InstanceIdentifier<Group> giid =
                     createGroupPath(nodeId, gctx.groupId);
             if (!gctx.visited) {
                 // Remove group table
@@ -112,15 +112,15 @@ public class GroupTable extends OfTable {
                 wt.delete(LogicalDatastoreType.CONFIGURATION, giid);
             } else {
                 ArrayList<Bucket> buckets = new ArrayList<>();
-                
+
                 // update group table
                 for (BucketCtx bctx : gctx.bucketMap.values()) {
                     BucketId bid;
                     if (bctx.b != null) bid = bctx.b.getBucketId();
                     else bid = bctx.newb.getBucketId();
-                    InstanceIdentifier<Bucket> biid = 
+                    InstanceIdentifier<Bucket> biid =
                             createBucketPath(nodeId,
-                                             gctx.groupId, 
+                                             gctx.groupId,
                                              bid);
                     if (!bctx.visited) {
                         // remove bucket
@@ -129,7 +129,7 @@ public class GroupTable extends OfTable {
                     } else if (bctx.b == null) {
                         // new bucket
                         buckets.add(bctx.newb);
-                    } else if (!Objects.equal(bctx.newb.getAction(), 
+                    } else if (!Objects.equal(bctx.newb.getAction(),
                                               Ordering.from(ActionComparator.INSTANCE)
                                                   .sortedCopy(bctx.b.getAction()))) {
                         // update bucket
@@ -144,14 +144,14 @@ public class GroupTable extends OfTable {
                         .setBucket(buckets)
                         .build());
                     wrote = true;
-                    wt.merge(LogicalDatastoreType.CONFIGURATION, 
+                    wt.merge(LogicalDatastoreType.CONFIGURATION,
                              giid, gb.build());
                 }
             }
         }
         return wrote;
     }
-    
+
     protected void sync(NodeId nodeId, PolicyInfo policyInfo, Dirty dirty,
                         HashMap<GroupId, GroupCtx> groupMap) throws Exception {
 
@@ -168,20 +168,20 @@ public class GroupTable extends OfTable {
             GroupId gid = new GroupId(Long.valueOf(fdId));
             GroupCtx gctx = groupMap.get(gid);
             if (gctx == null) {
-                groupMap.put(gid, gctx = new GroupCtx(gid)); 
+                groupMap.put(gid, gctx = new GroupCtx(gid));
             }
             gctx.visited = true;
-            
+
             // we'll use the fdId with the high bit set for remote bucket
             // and just the local port number for local bucket
             for (NodeId destNode : ctx.epManager.getNodesForGroup(epg)) {
                 if (nodeId.equals(destNode)) continue;
 
-                long bucketId = (long)ctx.policyManager
+                long bucketId = ctx.policyManager
                         .getContextOrdinal(destNode.getValue());
                 bucketId |= 1L << 31;
 
-                IpAddress tunDst = 
+                IpAddress tunDst =
                         ctx.switchManager.getTunnelIP(destNode);
                 NodeConnectorId tunPort =
                         ctx.switchManager.getTunnelPort(nodeId);
@@ -204,7 +204,7 @@ public class GroupTable extends OfTable {
                 updateBucket(gctx, bb);
             }
             for (Endpoint localEp : ctx.epManager.getEPsForNode(nodeId, epg)) {
-                OfOverlayContext ofc = 
+                OfOverlayContext ofc =
                         localEp.getAugmentation(OfOverlayContext.class);
                 if (ofc == null || ofc.getNodeConnectorId() == null ||
                     (LocationType.External.equals(ofc.getLocationType())))
@@ -214,7 +214,7 @@ public class GroupTable extends OfTable {
                 try {
                     bucketId = getOfPortNum(ofc.getNodeConnectorId());
                 } catch (NumberFormatException e) {
-                    LOG.warn("Could not parse port number {}", 
+                    LOG.warn("Could not parse port number {}",
                              ofc.getNodeConnectorId(), e);
                     continue;
                 }
@@ -231,13 +231,13 @@ public class GroupTable extends OfTable {
     private static void updateBucket(GroupCtx gctx, BucketBuilder bb) {
         BucketCtx bctx = gctx.bucketMap.get(bb.getBucketId());
         if (bctx == null) {
-            gctx.bucketMap.put(bb.getBucketId(), 
+            gctx.bucketMap.put(bb.getBucketId(),
                                bctx = new BucketCtx(null));
         }
         bctx.visited = true;
-        bctx.newb = bb.build();        
+        bctx.newb = bb.build();
     }
-    
+
     protected static class BucketCtx {
         Bucket b;
         Bucket newb;
@@ -248,7 +248,7 @@ public class GroupTable extends OfTable {
             this.b = b;
         }
     }
-    
+
     protected static class GroupCtx {
         GroupId groupId;
         Map<BucketId, BucketCtx> bucketMap = new HashMap<>();
@@ -259,5 +259,5 @@ public class GroupTable extends OfTable {
             this.groupId = groupId;
         }
     }
-    
+
 }
