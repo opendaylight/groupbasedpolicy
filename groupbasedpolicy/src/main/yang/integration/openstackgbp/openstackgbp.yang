@@ -164,19 +164,6 @@ module openstack-endpoint {
 
     }
 
-    rpc register-endpoint {
-        description
-            "Register a new endpoint into the registry.  If there
-             is already an existing endpoint with the same keys, they
-             will be overwritten with the new information.";
-
-        input {
-            uses endpoint-fields;
-          }
-        }
-    }
-
-/*
     rpc unregister-endpoint {
         description "Unregister an endpoint or endpoints from the registry.";
 
@@ -192,25 +179,16 @@ module openstack-endpoint {
         }
     }
 
-    rpc set-endpoint-group-conditions {
+    rpc register-endpoint {
         description
-            "Set a list of conditions for a particular endpoint group.
-             These conditions will apply to all endpoints in the
-             endpoint group.  These conditions will be added to the
-             existing list of conditions.";
+            "Register a new endpoint into the registry.  If there
+             is already an existing endpoint with the same keys, they
+             will be overwritten with the new information.";
 
         input {
-            uses has-endpoint-group-conditions;
+            uses endpoint-fields;
+          }
         }
     }
 
-    rpc unset-endpoint-group-conditions {
-        description
-            "Remove a list of conditions from an endpoint group.";
-
-        input {
-            uses has-endpoint-group-conditions;
-        }
-    }
-*/
 }

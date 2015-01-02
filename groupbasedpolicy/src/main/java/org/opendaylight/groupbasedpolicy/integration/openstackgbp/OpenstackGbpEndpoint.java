@@ -2,6 +2,7 @@ package org.opendaylight.groupbasedpolicy.integration.openstackgbp;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
@@ -15,16 +16,15 @@ import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFaile
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
-import org.opendaylight.groupbasedpolicy.endpoint.AbstractEndpointRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNodeConnector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextInputBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstackendpoint.rev141204.OpenstackEndpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstackendpoint.rev141204.OpenstackEndpointsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstackendpoint.rev141204.OpenstackEndpointService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstackendpoint.rev141204.RegisterEndpointInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstackendpoint.rev141204.UnregisterEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstackendpoint.rev141204.endpoint.fields.L3Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstackendpoint.rev141204.openstack.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstackendpoint.rev141204.openstack.endpoints.EndpointBuilder;
@@ -32,6 +32,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstacke
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstackendpoint.rev141204.openstack.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstackendpoint.rev141204.openstack.endpoints.EndpointL3Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstackendpoint.rev141204.openstack.endpoints.EndpointL3Key;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstackendpoint.rev141204.unregister.endpoint.input.L2;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.openstackendpoint.rev141204.unregister.endpoint.input.L3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.node.NodeConnector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node;
@@ -53,7 +55,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 
 public class OpenstackGbpEndpoint implements AutoCloseable,
-OpenstackEndpointService {
+        OpenstackEndpointService {
 
     public static final InstanceIdentifier<OpenstackEndpoints> OPENSTACKEP_IID = InstanceIdentifier
             .builder(OpenstackEndpoints.class).build();
@@ -64,8 +66,8 @@ OpenstackEndpointService {
     private DataBroker dataProvider;
     private final ScheduledExecutorService executor;
 
-    private final static InstanceIdentifier<Nodes> nodesIid =
-            InstanceIdentifier.builder(Nodes.class).build();
+    private final static InstanceIdentifier<Nodes> nodesIid = InstanceIdentifier
+            .builder(Nodes.class).build();
     private final static InstanceIdentifier<Node> nodeIid = InstanceIdentifier
             .builder(Nodes.class).child(Node.class).build();
     private ListenerRegistration<DataChangeListener> nodesReg;
@@ -170,6 +172,123 @@ OpenstackEndpointService {
     }
 
     @Override
+    public Future<RpcResult<Void>> unregisterEndpoint(
+            UnregisterEndpointInput input) {
+        WriteTransaction t = dataProvider.newWriteOnlyTransaction();
+        if (input.getL2() != null) {
+            for (L2 l2a : input.getL2()) {
+                EndpointKey key = new EndpointKey(l2a.getL2Context(),
+                        l2a.getMacAddress());
+                InstanceIdentifier<Endpoint> iid = InstanceIdentifier
+                        .builder(OpenstackEndpoints.class)
+                        .child(Endpoint.class, key).build();
+                t.delete(LogicalDatastoreType.OPERATIONAL, iid);
+            }
+        }
+        if (input.getL3() != null) {
+            for (L3 l3addr : input.getL3()) {
+                EndpointL3Key key3 = new EndpointL3Key(l3addr.getIpAddress(),
+                        l3addr.getL3Context());
+                InstanceIdentifier<EndpointL3> iid_l3 = InstanceIdentifier
+                        .builder(OpenstackEndpoints.class)
+                        .child(EndpointL3.class, key3).build();
+                t.delete(LogicalDatastoreType.OPERATIONAL, iid_l3);
+            }
+        }
+        unregisterStandardEndpoint(input);
+        ListenableFuture<Void> r = t.submit();
+        return Futures.transform(r, futureTrans, executor);
+    }
+
+    public Future<RpcResult<Void>> unregisterStandardEndpoint(
+            UnregisterEndpointInput input) {
+        WriteTransaction t = dataProvider.newWriteOnlyTransaction();
+        if (input.getL2() != null) {
+            for (L2 l2a : input.getL2()) {
+                org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey key = new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey(
+                        l2a.getL2Context(), l2a.getMacAddress());
+                if (existsL2Endpoint(key)) {
+                    InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint> iid = InstanceIdentifier
+                            .builder(
+                                    org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints.class)
+                            .child(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint.class,
+                                    key).build();
+                    t.delete(LogicalDatastoreType.OPERATIONAL, iid);
+                }
+
+            }
+        }
+        if (input.getL3() != null) {
+            for (L3 l3addr : input.getL3()) {
+                org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key key3 = new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key(
+                        l3addr.getIpAddress(), l3addr.getL3Context());
+                if (existsL3Endpoint(key3)) {
+                    InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3> iid_l3 = InstanceIdentifier
+                            .builder(Endpoints.class)
+                            .child(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3.class,
+                                    key3).build();
+                    t.delete(LogicalDatastoreType.OPERATIONAL, iid_l3);
+                }
+            }
+        }
+        ListenableFuture<Void> r = t.submit();
+        return Futures.transform(r, futureTrans, executor);
+    }
+
+    private Boolean existsL2Endpoint(
+            org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey key) {
+        Boolean exists = false;
+        InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint> iid = InstanceIdentifier
+                .builder(Endpoints.class)
+                .child(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint.class,
+                        key).build();
+
+        if (dataProvider != null) {
+            Optional<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint> result;
+            try {
+                result = dataProvider.newReadOnlyTransaction()
+                        .read(LogicalDatastoreType.OPERATIONAL, iid).get();
+                if (result.isPresent()) {
+                    exists = true;
+                }
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+        return exists;
+    }
+
+    private Boolean existsL3Endpoint(
+            org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key keyL3) {
+        Boolean exists = false;
+        InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3> iidL3 = InstanceIdentifier
+                .builder(Endpoints.class)
+                .child(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3.class,
+                        keyL3).build();
+        if (dataProvider != null) {
+            Optional<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3> result;
+            try {
+                result = dataProvider.newReadOnlyTransaction()
+                        .read(LogicalDatastoreType.OPERATIONAL, iidL3).get();
+                if (result.isPresent()) {
+                    exists = true;
+                }
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+        return exists;
+    }
+
+    @Override
     public Future<RpcResult<Void>> registerEndpoint(RegisterEndpointInput input) {
         long timestamp = System.currentTimeMillis();
 
@@ -184,9 +303,12 @@ OpenstackEndpointService {
                     .builder(OpenstackEndpoints.class)
                     .child(Endpoint.class, key).build();
             t.put(LogicalDatastoreType.OPERATIONAL, iid, ep);
-            NodeInfo nodeInfo=mapNeutronPortToNodeInfo(ep.getNeutronPortId().getValue());
-            if(nodeInfo.getNode()!=null && nodeInfo.getNodeConnector()!=null) {
-                writeNewEp(translateEndpoint(ep,nodeInfo.getNodeConnector().getId(),nodeInfo.getNode().getId()));
+            NodeInfo nodeInfo = mapNeutronPortToNodeInfo(ep.getNeutronPortId()
+                    .getValue());
+            if (nodeInfo.getNode() != null
+                    && nodeInfo.getNodeConnector() != null) {
+                writeNewEp(translateEndpoint(ep, nodeInfo.getNodeConnector()
+                        .getId(), nodeInfo.getNode().getId()));
             }
         }
         if (input.getL3Address() != null) {
@@ -201,9 +323,13 @@ OpenstackEndpointService {
                         .builder(OpenstackEndpoints.class)
                         .child(EndpointL3.class, key3).build();
                 t.put(LogicalDatastoreType.OPERATIONAL, iid_l3, ep3);
-                NodeInfo nodeInfo=mapNeutronPortToNodeInfo(ep3.getNeutronPortId().toString());
-                if(nodeInfo.getNode()!=null && nodeInfo.getNodeConnector()!=null) {
-                    writeNewEpL3(translateEndpointL3(ep3,nodeInfo.getNodeConnector().getId(),nodeInfo.getNode().getId()));
+                NodeInfo nodeInfo = mapNeutronPortToNodeInfo(ep3
+                        .getNeutronPortId().toString());
+                if (nodeInfo.getNode() != null
+                        && nodeInfo.getNodeConnector() != null) {
+                    writeNewEpL3(translateEndpointL3(ep3, nodeInfo
+                            .getNodeConnector().getId(), nodeInfo.getNode()
+                            .getId()));
                 }
             }
         }
@@ -212,16 +338,19 @@ OpenstackEndpointService {
         // Now check for Nodes that match the neutron port id
     }
 
-    private class NodeInfo {
+    // A wrapper class around node, noeConnector info so we can pass a final
+    // object inside OnSuccess anonymous inner class
+    private static class NodeInfo {
         NodeConnector nodeConnector;
         Node node;
 
-        private NodeInfo () {
+        private NodeInfo() {
 
         }
+
         private NodeInfo(NodeConnector nc, Node node) {
-            this.nodeConnector=nc;
-            this.node=node;
+            this.nodeConnector = nc;
+            this.node = node;
         }
 
         private Node getNode() {
@@ -246,18 +375,17 @@ OpenstackEndpointService {
 
         if (dataProvider != null) {
 
-            ListenableFuture<Optional<Nodes>>future = dataProvider.newReadOnlyTransaction()
-                    .read(LogicalDatastoreType.OPERATIONAL, nodesIid);
+            ListenableFuture<Optional<Nodes>> future = dataProvider
+                    .newReadOnlyTransaction().read(
+                            LogicalDatastoreType.OPERATIONAL, nodesIid);
 
-            Futures.addCallback(future,
-                    new FutureCallback<Optional<Nodes>>() {
+            Futures.addCallback(future, new FutureCallback<Optional<Nodes>>() {
                 @Override
-                public void onSuccess(
-                        Optional<Nodes> result) {
+                public void onSuccess(Optional<Nodes> result) {
                     if (result.isPresent()) {
                         Nodes nodes = result.get();
-                        for(Node node : nodes.getNode()){
-                            if(node.getNodeConnector() != null) {
+                        for (Node node : nodes.getNode()) {
+                            if (node.getNodeConnector() != null) {
                                 for (NodeConnector nc : node.getNodeConnector()) {
                                     FlowCapableNodeConnector fcnc = nc
                                             .getAugmentation(FlowCapableNodeConnector.class);
@@ -281,25 +409,28 @@ OpenstackEndpointService {
         return nodeInfo;
     }
 
-
-    private Future<RpcResult<Void>> writeNewEp(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint ep) {
+    private Future<RpcResult<Void>> writeNewEp(
+            org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint ep) {
         WriteTransaction t = dataProvider.newWriteOnlyTransaction();
-        InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint> iid =
-                InstanceIdentifier.builder(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints.class)
-                .child(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint.class, ep.getKey())
-                .build();
+        InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint> iid = InstanceIdentifier
+                .builder(
+                        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints.class)
+                .child(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint.class,
+                        ep.getKey()).build();
         t.put(LogicalDatastoreType.OPERATIONAL, iid, ep);
         ListenableFuture<Void> r = t.submit();
         return Futures.transform(r, futureTrans, executor);
 
     }
 
-    private Future<RpcResult<Void>> writeNewEpL3(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3 ep) {
+    private Future<RpcResult<Void>> writeNewEpL3(
+            org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3 ep) {
         WriteTransaction t = dataProvider.newWriteOnlyTransaction();
-        InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3> iid =
-                InstanceIdentifier.builder(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints.class)
-                .child(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3.class, ep.getKey())
-                .build();
+        InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3> iid = InstanceIdentifier
+                .builder(
+                        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints.class)
+                .child(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3.class,
+                        ep.getKey()).build();
         t.put(LogicalDatastoreType.OPERATIONAL, iid, ep);
         ListenableFuture<Void> r = t.submit();
         return Futures.transform(r, futureTrans, executor);
@@ -312,27 +443,29 @@ OpenstackEndpointService {
                 && endpoint.getL2Context() != null && endpoint.getMacAddress() != null);
     }
 
-    private org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint translateEndpoint(Endpoint ep, NodeConnectorId nodeConnectorId, NodeId nodeId) {
+    private org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint translateEndpoint(
+            Endpoint ep, NodeConnectorId nodeConnectorId, NodeId nodeId) {
         OfOverlayContextBuilder ofOverlayAugmentation = new OfOverlayContextBuilder();
         ofOverlayAugmentation.setNodeId(nodeId);
-        ofOverlayAugmentation
-        .setNodeConnectorId(nodeConnectorId);
+        ofOverlayAugmentation.setNodeConnectorId(nodeConnectorId);
         org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder newEpBuilder = new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder();
-        newEpBuilder.addAugmentation(
-                OfOverlayContext.class,
+        newEpBuilder.addAugmentation(OfOverlayContext.class,
                 ofOverlayAugmentation.build());
         newEpBuilder.setCondition(ep.getCondition());
         newEpBuilder.setEndpointGroup(ep.getEndpointGroup());
         newEpBuilder.setL2Context(ep.getL2Context());
         newEpBuilder.setMacAddress(ep.getMacAddress());
-        // TODO This is horrible, and a consequence of the openstackendpoint.yang not either including or importing
-        // groups from endpoint.yang ... cargo cult code again that needs to be cleaned up.
-        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey newEpKey = new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey(ep.getL2Context(),ep.getMacAddress());
+        // TODO This is horrible, and a consequence of the
+        // openstackendpoint.yang not either including or importing
+        // groups from endpoint.yang ... cargo cult code again that needs to be
+        // cleaned up.
+        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey newEpKey = new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey(
+                ep.getL2Context(), ep.getMacAddress());
         newEpBuilder.setKey(newEpKey);
         // TODO As per above, horrible
         List<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address> newL3AddressList = new ArrayList<>();
-        if(ep.getL3Address() !=null) {
-            for(L3Address l3 : ep.getL3Address() ) {
+        if (ep.getL3Address() != null) {
+            for (L3Address l3 : ep.getL3Address()) {
                 LOG.debug(l3.toString());
                 org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3AddressBuilder newL3AddressBuilder = new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3AddressBuilder();
                 newL3AddressBuilder.setIpAddress(l3.getIpAddress());
@@ -346,7 +479,8 @@ OpenstackEndpointService {
         return newEpBuilder.build();
     }
 
-    private org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3 translateEndpointL3(EndpointL3 ep, NodeConnectorId nodeConnectorId, NodeId nodeId){
+    private org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3 translateEndpointL3(
+            EndpointL3 ep, NodeConnectorId nodeConnectorId, NodeId nodeId) {
         org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Builder newEpL3Builder = new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Builder();
 
         newEpL3Builder.setCondition(ep.getCondition());
@@ -355,13 +489,16 @@ OpenstackEndpointService {
         newEpL3Builder.setEndpointGroup(ep.getEndpointGroup());
         newEpL3Builder.setL2Context(ep.getL2Context());
         newEpL3Builder.setMacAddress(ep.getMacAddress());
-        // TODO This is horrible, and a consequence of the openstackendpoint.yang not either including or importing
-        // groups from endpoint.yang ... cargo cult code again that needs to be cleaned up.
-        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key newEpL3Key = new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key(ep.getIpAddress(),ep.getL3Context());
+        // TODO This is horrible, and a consequence of the
+        // openstackendpoint.yang not either including or importing
+        // groups from endpoint.yang ... cargo cult code again that needs to be
+        // cleaned up.
+        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key newEpL3Key = new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key(
+                ep.getIpAddress(), ep.getL3Context());
         newEpL3Builder.setKey(newEpL3Key);
         // TODO As per above, horrible
         List<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address> newL3AddressList = new ArrayList<>();
-        for(L3Address l3 : ep.getL3Address() ) {
+        for (L3Address l3 : ep.getL3Address()) {
             LOG.debug(l3.toString());
             org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3AddressBuilder newL3AddressBuilder = new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3AddressBuilder();
             newL3AddressBuilder.setIpAddress(l3.getIpAddress());
@@ -385,39 +522,49 @@ OpenstackEndpointService {
                             LogicalDatastoreType.OPERATIONAL, iid);
             Futures.addCallback(future,
                     new FutureCallback<Optional<OpenstackEndpoints>>() {
-                @Override
-                public void onSuccess(
-                        Optional<OpenstackEndpoints> result) {
-                    if (result.isPresent()) {
-                        OpenstackEndpoints openstackEndpoints = result.get();
-                        if(openstackEndpoints.getEndpoint()!=null) {
-                            for (Endpoint ep : openstackEndpoints.getEndpoint()) {
-                                if (validEp(ep) && ep.getNeutronPortId().getValue().equals(neutronPortId)) {
-                                    LOG.debug("Match: " + ep.toString());
-                                    org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint newEp = translateEndpoint( ep,  nodeConnectorId,  nodeId);
-                                    writeNewEp(newEp);
-                                    LOG.debug(newEp.toString());
+                        @Override
+                        public void onSuccess(
+                                Optional<OpenstackEndpoints> result) {
+                            if (result.isPresent()) {
+                                OpenstackEndpoints openstackEndpoints = result
+                                        .get();
+                                if (openstackEndpoints.getEndpoint() != null) {
+                                    for (Endpoint ep : openstackEndpoints
+                                            .getEndpoint()) {
+                                        if (validEp(ep)
+                                                && ep.getNeutronPortId()
+                                                        .getValue()
+                                                        .equals(neutronPortId)) {
+                                            LOG.debug("Match: " + ep.toString());
+                                            org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint newEp = translateEndpoint(
+                                                    ep, nodeConnectorId, nodeId);
+                                            writeNewEp(newEp);
+                                            LOG.debug(newEp.toString());
+                                        }
+                                    }
+                                }
+                                if (openstackEndpoints.getEndpointL3() != null) {
+                                    for (EndpointL3 ep : openstackEndpoints
+                                            .getEndpointL3()) {
+                                        if (ep.getNeutronPortId().getValue()
+                                                .equals(neutronPortId)) {
+                                            LOG.debug("L3 Match: "
+                                                    + ep.toString());
+                                            org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3 newEpL3 = translateEndpointL3(
+                                                    ep, nodeConnectorId, nodeId);
+                                            writeNewEpL3(newEpL3);
+                                            LOG.debug(newEpL3.toString());
+                                        }
+                                    }
                                 }
                             }
                         }
-                        if(openstackEndpoints.getEndpointL3()!=null) {
-                            for (EndpointL3 ep : openstackEndpoints.getEndpointL3()) {
-                                if (ep.getNeutronPortId().getValue().equals(neutronPortId)) {
-                                    LOG.debug("L3 Match: " + ep.toString());
-                                    org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3 newEpL3 = translateEndpointL3( ep,  nodeConnectorId,  nodeId);
-                                    writeNewEpL3(newEpL3);
-                                    LOG.debug(newEpL3.toString());
-                                }
-                            }
-                        }
-                    }
-                }
 
-                @Override
-                public void onFailure(Throwable t) {
-                    LOG.error("Count not read switch information", t);
-                }
-            });
+                        @Override
+                        public void onFailure(Throwable t) {
+                            LOG.error("Count not read switch information", t);
+                        }
+                    });
         }
     }
 
@@ -426,13 +573,15 @@ OpenstackEndpointService {
         public void onDataChanged(
                 AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
             for (DataObject dao : change.getCreatedData().values()) {
-                if (!(dao instanceof Node)) continue;
+                if (!(dao instanceof Node))
+                    continue;
                 Node node = (Node) dao;
-                if(node.getNodeConnector() != null) {
+                if (node.getNodeConnector() != null) {
                     for (NodeConnector nc : node.getNodeConnector()) {
                         FlowCapableNodeConnector fcnc = nc
                                 .getAugmentation(FlowCapableNodeConnector.class);
-                        if (fcnc.getName().matches("tap[a-f,0-9]{8}-[a-f,0-9]{2}")) {
+                        if (fcnc.getName().matches(
+                                "tap[a-f,0-9]{8}-[a-f,0-9]{2}")) {
                             LOG.debug("Created Tap:" + fcnc.getName() + ": "
                                     + nc.getId() + " : " + node.getId());
                             updateOfOverlayEndpoint(fcnc.getName(), nc.getId(),
@@ -442,13 +591,15 @@ OpenstackEndpointService {
                 }
             }
             for (DataObject dao : change.getUpdatedData().values()) {
-                if (!(dao instanceof Node)) continue;
+                if (!(dao instanceof Node))
+                    continue;
                 Node node = (Node) dao;
-                if(node.getNodeConnector() != null) {
+                if (node.getNodeConnector() != null) {
                     for (NodeConnector nc : node.getNodeConnector()) {
                         FlowCapableNodeConnector fcnc = nc
                                 .getAugmentation(FlowCapableNodeConnector.class);
-                        if (fcnc.getName().matches("tap[a-f,0-9]{8}-[a-f,0-9]{2}")) {
+                        if (fcnc.getName().matches(
+                                "tap[a-f,0-9]{8}-[a-f,0-9]{2}")) {
                             LOG.debug("Updated Tap:" + fcnc.getName() + ": "
                                     + nc.getId() + " : " + node.getId());
                             updateOfOverlayEndpoint(fcnc.getName(), nc.getId(),
@@ -459,7 +610,6 @@ OpenstackEndpointService {
             }
         }
     }
-
 
     Function<Void, RpcResult<Void>> futureTrans = new Function<Void, RpcResult<Void>>() {
         @Override
