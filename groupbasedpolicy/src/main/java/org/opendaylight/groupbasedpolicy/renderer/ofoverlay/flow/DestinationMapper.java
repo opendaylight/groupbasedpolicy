@@ -191,9 +191,9 @@ public class DestinationMapper extends FlowTable {
                                 groupAction(Long.valueOf(fdId)))));
                 writeFlow(t, tiid, flow.build());
             }
-            for (Subnet sn : sns) {
-                writeRouterArpFlow(t, tiid, flowMap, nodeId, sn, l3Id);
-            }
+        }
+        for (Subnet sn : sns) {
+            writeRouterArpFlow(t, tiid, flowMap, nodeId, sn, l3Id);
         }
     }
 

@@ -234,7 +234,7 @@ public class DestinationMapperTest extends FlowTableTest {
         // DestinationMapper now checking for GroupTable entries. Flows will not be written.
         // TODO: alagalah to resolve correct unit tests.
         //        assertEquals(9, count);
-        assertEquals(5, count);
+        assertEquals(8, count);
 
         t = dosync(flowMap);
         verify(t, never()).put(any(LogicalDatastoreType.class),
