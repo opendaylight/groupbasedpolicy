@@ -13,13 +13,13 @@
     <repository>mvn:org.opendaylight.yangtools/features-yangtools/${yangtools.version}/xml/features</repository>
     <repository>mvn:org.opendaylight.controller/features-mdsal/${mdsal.version}/xml/features</repository>
     <repository>mvn:org.opendaylight.openflowplugin/features-openflowplugin/${openflowplugin.distribution.version}/xml/features</repository>
-    <repository>mvn:org.opendaylight.ovsdb/features-openflow-nxm/${openflowplugin.distribution.version}/xml/features</repository>
+    <repository>mvn:org.opendaylight.openflowplugin/features-openflowplugin-extension/${openflowplugin.distribution.version}/xml/features</repository>
     <feature name='odl-groupbasedpolicy-ofoverlay' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: OpenFlow Overlay '>
         <feature version="${mdsal.version}">odl-mdsal-broker</feature>
         <feature version='${yangtools.version}'>odl-yangtools-binding</feature>
         <feature version='${yangtools.version}'>odl-yangtools-models</feature>
         <feature version="${openflowplugin.distribution.version}">odl-openflowplugin-flow-services</feature>
-        <feature version='${openflowplugin.distribution.version}'>odl-openflow-nxm-extensions</feature>
+        <feature version='${openflowplugin.distribution.version}'>odl-openflowplugin-nxm-extensions</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy/${project.version}</bundle>
         <bundle start="true">mvn:com.fasterxml.jackson.core/jackson-annotations/${jackson.version}</bundle>
         <bundle start="true">mvn:com.fasterxml.jackson.core/jackson-core/${jackson.version}</bundle>
