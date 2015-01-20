@@ -8,6 +8,7 @@ USERNAME='admin'
 PASSWORD='admin'
 REGISTER_EP_URL="http://%s:8181/restconf/operations/endpoint:register-endpoint"
 REGISTER_TENANTS_URL="http://%s:8181/restconf/config/policy:tenants"
+REGISTER_TENANT_URL="http://%s:8181/restconf/config/policy:tenants/policy:tenant"
 REGISTER_NODES_URL="http://%s:8181/restconf/config/opendaylight-inventory:nodes"
 
 endpointGroups = {}
@@ -192,8 +193,12 @@ def put(url, data):
     r.raise_for_status()
 
 def register_tenants(contHost):
-    data = {"policy:tenants": {"tenant": tenants.values()}}
-    put(REGISTER_TENANTS_URL % contHost, data)
+    for tenant in tenants.values():
+        register_tenant(contHost, tenant)
+
+def register_tenant(contHost, tenant):
+    data = {"policy:tenant": tenant}
+    put(REGISTER_TENANT_URL % contHost + '/' + tenant.get('id'), data)
 
 def register_eps(contHost):
     for ep in endpoints:
