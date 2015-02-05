@@ -25,6 +25,8 @@
     <groupbasedpolicy.project.version>0.2.0-SNAPSHOT</groupbasedpolicy.project.version>
     <config.groupbasedpolicy.ofoverlayconfigfile>15-groupbasedpolicy-ofoverlay.xml</config.groupbasedpolicy.ofoverlayconfigfile>
     <config.groupbasedpolicy.openstackendpointconfigfile>15-groupbasedpolicy-openstackendpoint.xml</config.groupbasedpolicy.openstackendpointconfigfile>
+    <karaf.version>3.0.2</karaf.version>
+    <exam.version>4.4.0</exam.version> <!-- Needs to remain exported, as its used for dependencies, too -->
   </properties>
 
   <build>

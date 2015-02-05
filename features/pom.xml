@@ -20,7 +20,6 @@
     <features.file>features.xml</features.file>
     <branding.version>1.1.0-SNAPSHOT</branding.version>
     <karaf.resources.version>1.5.0-SNAPSHOT</karaf.resources.version>
-    <karaf.version>3.0.1</karaf.version>
     <feature.test.version>0.7.0-SNAPSHOT</feature.test.version>
     <karaf.empty.version>1.5.0-SNAPSHOT</karaf.empty.version>
     <surefire.version>2.16</surefire.version>
@@ -96,6 +95,20 @@
       <type>xml</type>
     </dependency>
 -->
+      <!-- Add Pax Exam -->
+    <dependency>
+      <groupId>org.ops4j.pax.exam</groupId>
+      <artifactId>pax-exam</artifactId>
+      <version>${exam.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.ops4j.pax.exam</groupId>
+      <artifactId>pax-exam-container-karaf</artifactId>
+      <version>${exam.version}</version>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
   <build>
     <resources>
