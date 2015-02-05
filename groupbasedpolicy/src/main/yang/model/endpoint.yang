@@ -84,6 +84,11 @@ module endpoint {
             description 
                 "The conditions associated with this endpoint";
         }
+        leaf port-name {
+            type gbp-common:name;
+            description 
+                "Port name";
+        }
         leaf timestamp {
             type int64;
             description
