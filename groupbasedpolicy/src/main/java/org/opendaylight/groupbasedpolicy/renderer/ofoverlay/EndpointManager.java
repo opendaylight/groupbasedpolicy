@@ -567,12 +567,14 @@ public class EndpointManager
         if(ictx!=null) {
             ictxBuilder.setNodeConnectorId(ictx.getNodeConnectorId());
             ictxBuilder.setNodeId(ictx.getNodeId());
-        } else {
+        } else if(input.getPortName()!=null) {
             NodeInfo augmentation = fetchAugmentation(input.getPortName().getValue());
             if(augmentation != null) {
                 ictxBuilder.setNodeId(augmentation.getNode().getId());
                 ictxBuilder.setNodeConnectorId(augmentation.getNodeConnector().getId());
             }
+        } else {
+            ictxBuilder=null;
         }
         return ictxBuilder;
     }
