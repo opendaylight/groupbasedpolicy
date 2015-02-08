@@ -15,11 +15,7 @@ import java.util.Objects;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Matchers;
-import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable.FlowCtx;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
 import org.opendaylight.groupbasedpolicy.resolver.ConditionGroup;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
@@ -53,18 +49,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev14
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.general.rev140714.GeneralAugMatchNodesNodeTableFlow;
-import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
 import static org.junit.Assert.*;
-
-import static org.mockito.Matchers.*;
-
-import static org.mockito.Mockito.*;
-
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.*;
 
 public class PolicyEnforcerTest extends FlowTableTest {
@@ -86,12 +76,10 @@ public class PolicyEnforcerTest extends FlowTableTest {
 
     @Test
     public void testNoEps() throws Exception {
-        ReadWriteTransaction t = dosync(null);
-        verify(t, times(2)).put(any(LogicalDatastoreType.class), 
-                                Matchers.<InstanceIdentifier<Flow>>any(), 
-                                any(Flow.class), anyBoolean());
+        FlowMap fm = dosync(null);
+        assertEquals(2, fm.getTableForNode(nodeId, (short) 3).getFlow().size());
     }
-    
+
     @Test
     public void testSameEg() throws Exception {
         Endpoint ep1 = localEP().build();
@@ -101,25 +89,20 @@ public class PolicyEnforcerTest extends FlowTableTest {
             .build();
         endpointManager.addEndpoint(ep2);
         policyResolver.addTenant(baseTenant().build());
-        
-        ReadWriteTransaction t = dosync(null);
-        ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
-        verify(t, atLeastOnce()).put(eq(LogicalDatastoreType.CONFIGURATION), 
-                                     Matchers.<InstanceIdentifier<Flow>>any(),
-                                     ac.capture(), anyBoolean());
+
+        FlowMap fm = dosync(null);
+        assertNotEquals(0, fm.getTableForNode(nodeId, (short) 3).getFlow().size());
         int count = 0;
-        HashMap<String, FlowCtx> flowMap = new HashMap<>();
-        for (Flow f : ac.getAllValues()) {
-            flowMap.put(f.getId().getValue(), new FlowCtx(f));
+        HashMap<String, Flow> flowMap = new HashMap<>();
+        for (Flow f : fm.getTableForNode(nodeId, (short) 3).getFlow()) {
+            flowMap.put(f.getId().getValue(), f);
             if (f.getId().getValue().indexOf("intraallow") == 0)
                 count += 1;
         }
         assertEquals(1, count);
-
-        t = dosync(flowMap);
-        verify(t, never()).put(any(LogicalDatastoreType.class), 
-                               Matchers.<InstanceIdentifier<Flow>>any(), 
-                               any(Flow.class), anyBoolean());
+        assertEquals(3, fm.getTableForNode(nodeId, (short) 3).getFlow().size());
+        fm = dosync(flowMap);
+        assertEquals(3, fm.getTableForNode(nodeId, (short) 3).getFlow().size());
     }
 
     @Test
@@ -129,7 +112,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
         doTestDifferentEg(Direction.In);
         doTestDifferentEg(Direction.Out);
     }
-    
+
     public void doTestDifferentEg(Direction direction) throws Exception {
         Endpoint ep1 = localEP().build();
         endpointManager.addEndpoint(ep1);
@@ -139,16 +122,13 @@ public class PolicyEnforcerTest extends FlowTableTest {
             .build();
         endpointManager.addEndpoint(ep2);
         policyResolver.addTenant(baseTenant(direction).build());
-        
-        ReadWriteTransaction t = dosync(null);
-        ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
-        verify(t, atLeastOnce()).put(eq(LogicalDatastoreType.CONFIGURATION), 
-                                     Matchers.<InstanceIdentifier<Flow>>any(),
-                                     ac.capture(), anyBoolean());
+
+        FlowMap fm = dosync(null);
+        assertNotEquals(0, fm.getTableForNode(nodeId, (short) 3).getFlow().size());
         int count = 0;
-        HashMap<String, FlowCtx> flowMap = new HashMap<>();
-        for (Flow f : ac.getAllValues()) {
-            flowMap.put(f.getId().getValue(), new FlowCtx(f));
+        HashMap<String, Flow> flowMap = new HashMap<>();
+        for (Flow f : fm.getTableForNode(nodeId, (short) 3).getFlow()) {
+            flowMap.put(f.getId().getValue(), f);
             if (f.getId().getValue().indexOf("intraallow") == 0) {
                 count += 1;
             } else if (f.getMatch() != null &&
@@ -186,11 +166,9 @@ public class PolicyEnforcerTest extends FlowTableTest {
             assertEquals(7, count);
         else
             assertEquals(5, count);
-
-        t = dosync(flowMap);
-        verify(t, never()).put(any(LogicalDatastoreType.class), 
-                               Matchers.<InstanceIdentifier<Flow>>any(), 
-                               any(Flow.class), anyBoolean());
+        int numberOfFlows = fm.getTableForNode(nodeId, (short) 3).getFlow().size();
+        fm = dosync(flowMap);
+        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, (short) 3).getFlow().size());
     }
 
     @Test
@@ -212,7 +190,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
             .setEndpointGroup(eg2)
             .build();
         endpointManager.addEndpoint(ep2);        
-        
+
         TenantBuilder tb = baseTenant()
             .setContract(ImmutableList.of(new ContractBuilder()
                 .setId(cid)
@@ -249,11 +227,11 @@ public class PolicyEnforcerTest extends FlowTableTest {
                 policy.getEgCondGroup(new EgKey(tb.getId(), 
                                                 ep2.getEndpointGroup()),
                                       ep2c);
-        int cg1Id = policyManager.getCondGroupOrdinal(cg1);
-        int cg2Id = policyManager.getCondGroupOrdinal(cg2);
-        int eg1Id = policyManager.getContextOrdinal(ep1.getTenant(),
+        int cg1Id = OrdinalFactory.getCondGroupOrdinal(cg1);
+        int cg2Id = OrdinalFactory.getCondGroupOrdinal(cg2);
+        int eg1Id = OrdinalFactory.getContextOrdinal(ep1.getTenant(),
                                                     ep1.getEndpointGroup());
-        int eg2Id = policyManager.getContextOrdinal(ep1.getTenant(),
+        int eg2Id = OrdinalFactory.getContextOrdinal(ep1.getTenant(),
                                                     ep2.getEndpointGroup());
 
         assertNotEquals(cg1Id, cg2Id);
@@ -273,30 +251,21 @@ public class PolicyEnforcerTest extends FlowTableTest {
                                 RegMatch.of(NxmNxReg3.class, Long.valueOf(cg1Id)));
         GeneralAugMatchNodesNodeTableFlow m2 =
                 mb.getAugmentation(GeneralAugMatchNodesNodeTableFlow.class);
-
-        ReadWriteTransaction t = dosync(null);
-        ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
-        verify(t, atLeastOnce()).put(eq(LogicalDatastoreType.CONFIGURATION), 
-                                     Matchers.<InstanceIdentifier<Flow>>any(),
-                                     ac.capture(), anyBoolean());
         int count = 0;
-        HashMap<String, FlowCtx> flowMap = new HashMap<>();
-        for (Flow f : ac.getAllValues()) {
-            flowMap.put(f.getId().getValue(), new FlowCtx(f));
+        FlowMap fm = dosync(null);
+        assertEquals(6, fm.getTableForNode(nodeId, (short) 3).getFlow().size());
+        HashMap<String, Flow> flowMap = new HashMap<>();
+        for (Flow f : fm.getTableForNode(nodeId, (short) 3).getFlow()) {
+            flowMap.put(f.getId().getValue(), f);
             if (f.getMatch() != null &&
                 f.getMatch().getEthernetMatch() != null) {
-                GeneralAugMatchNodesNodeTableFlow fm =
-                        f.getMatch().getAugmentation(GeneralAugMatchNodesNodeTableFlow.class);
-                assertTrue(Objects.equals(fm, m1) ||
-                           Objects.equals(fm, m2));
-                count += 1;
+                count++;
             }
         }
         assertEquals(2, count);
-
-        t = dosync(flowMap);
-        verify(t, never()).put(any(LogicalDatastoreType.class), 
-                               Matchers.<InstanceIdentifier<Flow>>any(), 
-                               any(Flow.class), anyBoolean());
+        fm = dosync(flowMap);
+        int numberOfFlows = fm.getTableForNode(nodeId, (short) 3).getFlow().size();
+        fm = dosync(flowMap);
+        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, (short) 3).getFlow().size());
     }
 }

@@ -131,6 +131,7 @@ public class SwitchManager implements AutoCloseable {
         return state.externalPorts;
     }
     
+    //TODO OVSDB CRUD belongs in here. (see Trello)
     public NodeConnectorId getTunnelPort(NodeId nodeId) {
         SwitchState state = switches.get(nodeId);
         if (state == null) return null;

@@ -47,6 +47,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ContractBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup.IntraGroupPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroupBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Clause;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.ClauseBuilder;
@@ -85,6 +86,8 @@ import com.google.common.collect.ImmutableList;
 /**
  * Utilities useful for resolving the inheritance rules for the various objects
  * in the system
+ *
+ * @author readams
  *
  */
 public class InheritanceUtils {
@@ -162,6 +165,7 @@ public class InheritanceUtils {
         HashMap<SelectorName, ProviderNamedSelector> resolvedPns =
                 new HashMap<>();
         NetworkDomainId domain = unresolvedEg.getNetworkDomain();
+        IntraGroupPolicy igp = unresolvedEg.getIntraGroupPolicy();
 
         if (unresolvedEg.getConsumerTargetSelector() != null) {
             for (ConsumerTargetSelector s : unresolvedEg.getConsumerTargetSelector()) {
@@ -212,6 +216,9 @@ public class InheritanceUtils {
             if (domain == null) {
                 domain = parent.getNetworkDomain();
             }
+            if (igp == null) {
+                igp = parent.getIntraGroupPolicy();
+            }
         }
 
         // Note: do not set parent, or any of the values that only exist
@@ -219,11 +226,13 @@ public class InheritanceUtils {
         EndpointGroup resolvedEg = new EndpointGroupBuilder()
                 .setId(unresolvedEg.getId())
                 .setDescription(unresolvedEg.getDescription())
+                .setName(unresolvedEg.getName())
                 .setConsumerTargetSelector(ImmutableList.copyOf(resolvedCts.values()))
                 .setConsumerNamedSelector(ImmutableList.copyOf(resolvedCns.values()))
                 .setProviderTargetSelector(ImmutableList.copyOf(resolvedPts.values()))
                 .setProviderNamedSelector(ImmutableList.copyOf(resolvedPns.values()))
                 .setNetworkDomain(domain)
+                .setIntraGroupPolicy(igp)
                 .build();
         resolvedEgs.put(resolvedEg.getId(), resolvedEg);
     }

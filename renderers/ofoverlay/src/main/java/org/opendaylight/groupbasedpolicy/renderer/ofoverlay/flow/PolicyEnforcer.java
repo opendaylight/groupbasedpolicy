@@ -24,10 +24,10 @@ import java.util.Set;
 
 import javax.annotation.concurrent.Immutable;
 
-import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Action;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.AllowAction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ClassificationResult;
@@ -42,7 +42,7 @@ import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.groupbasedpolicy.resolver.RuleGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
@@ -65,7 +65,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev14
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg2;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
-import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,9 +72,8 @@ import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
 
 /**
- * Manage the table that enforces policy on the traffic.  Traffic is denied
+ * Manage the table that enforces policy on the traffic. Traffic is denied
  * unless specifically allowed by policy
- * @author readams
  */
 public class PolicyEnforcer extends FlowTable {
     protected static final Logger LOG =
@@ -93,121 +91,122 @@ public class PolicyEnforcer extends FlowTable {
     }
 
     @Override
-    public void sync(ReadWriteTransaction t, InstanceIdentifier<Table> tiid,
-                     Map<String, FlowCtx> flowMap, NodeId nodeId,
-                     PolicyInfo policyInfo, Dirty dirty)
-                             throws Exception {
-        dropFlow(t, tiid, flowMap, Integer.valueOf(1), null);
-        allowFromTunnel(t, tiid, flowMap, nodeId);
+    public void sync(NodeId nodeId, PolicyInfo policyInfo, FlowMap flowMap) throws Exception {
+
+        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null));
+
+        flowMap.writeFlow(nodeId, TABLE_ID, allowFromTunnel(nodeId));
 
         HashSet<CgPair> visitedPairs = new HashSet<>();
 
-        for (EgKey sepg : ctx.getEndpointManager().getGroupsForNode(nodeId)) {
-            // Allow traffic within the same endpoint group if the policy
-            // specifies
-            IndexedTenant tenant =
-                    ctx.getPolicyResolver().getTenant(sepg.getTenantId());
-            EndpointGroup group =
-                    tenant.getEndpointGroup(sepg.getEgId());
-            IntraGroupPolicy igp = group.getIntraGroupPolicy();
-            int sepgId =
-                    ctx.getPolicyManager().getContextOrdinal(sepg.getTenantId(),
-                                                        sepg.getEgId());
-            if (igp == null || igp.equals(IntraGroupPolicy.Allow)) {
-                allowSameEpg(t, tiid, flowMap, nodeId, sepgId);
-            }
+        for (Endpoint srcEp : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
+            for (EgKey srcEpgKey : ctx.getEndpointManager().getEgKeysForEndpoint(srcEp)) {
+                Set<EgKey> peers = policyInfo.getPeers(srcEpgKey);
+                for (EgKey dstEpgKey : peers) {
+                    for (Endpoint dstEp : ctx.getEndpointManager().getEndpointsForGroup(dstEpgKey)) {
+                        // mEPG ordinals
+                        EndpointFwdCtxOrdinals srcEpFwdCxtOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, srcEp);
+                        EndpointFwdCtxOrdinals dstEpFwdCxtOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, dstEp);
+                        int dcgId = dstEpFwdCxtOrds.getCgId();
+                        int depgId = dstEpFwdCxtOrds.getEpgId();
+                        int scgId = srcEpFwdCxtOrds.getCgId();
+                        int sepgId = srcEpFwdCxtOrds.getEpgId();
 
-            for (Endpoint src : ctx.getEndpointManager().getEPsForNode(nodeId, sepg)) {
-                if (src.getTenant() == null || src.getEndpointGroup() == null)
-                    continue;
-
-                List<ConditionName> conds =
-                        ctx.getEndpointManager().getCondsForEndpoint(src);
-                ConditionGroup scg = policyInfo.getEgCondGroup(sepg, conds);
-                int scgId = ctx.getPolicyManager().getCondGroupOrdinal(scg);
-
-                Set<EgKey> peers = policyInfo.getPeers(sepg);
-                for (EgKey depg : peers) {
-                    int depgId =
-                            ctx.getPolicyManager().getContextOrdinal(depg.getTenantId(),
-                                                                depg.getEgId());
-
-                    for (Endpoint dst : ctx.getEndpointManager().getEndpointsForGroup(depg)) {
-
-                        conds = ctx.getEndpointManager().getCondsForEndpoint(dst);
-                        ConditionGroup dcg =
-                                policyInfo.getEgCondGroup(new EgKey(dst.getTenant(),
-                                                                    dst.getEndpointGroup()),
-                                                          conds);
-                        int dcgId = ctx.getPolicyManager().getCondGroupOrdinal(dcg);
+                        List<ConditionName> conds = ctx.getEndpointManager().getCondsForEndpoint(srcEp);
+                        ConditionGroup scg = policyInfo.getEgCondGroup(srcEpgKey, conds);
+                        conds = ctx.getEndpointManager().getCondsForEndpoint(dstEp);
+                        ConditionGroup dcg = policyInfo.getEgCondGroup(dstEpgKey, conds);
 
                         CgPair p = new CgPair(depgId, sepgId, dcgId, scgId);
-                        if (visitedPairs.contains(p)) continue;
+                        if (visitedPairs.contains(p))
+                            continue;
                         visitedPairs.add(p);
-                        syncPolicy(t, tiid, flowMap, nodeId, policyInfo,
-                                   p, depg, sepg, dcg, scg);
+                        syncPolicy(flowMap, nodeId, policyInfo,
+                                p, dstEpgKey, srcEpgKey, dcg, scg);
 
+                        //Reverse
                         p = new CgPair(sepgId, depgId, scgId, dcgId);
-                        if (visitedPairs.contains(p)) continue;
+                        if (visitedPairs.contains(p))
+                            continue;
                         visitedPairs.add(p);
-                        syncPolicy(t, tiid, flowMap, nodeId, policyInfo,
-                                   p, sepg, depg, scg, dcg);
+                        syncPolicy(flowMap, nodeId, policyInfo,
+                                p, srcEpgKey, dstEpgKey, scg, dcg);
                     }
                 }
             }
         }
+
+        // Allow same EPG
+//        Set<Endpoint> visitedEps = new HashSet<>();
+        for (Endpoint srcEp : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
+//            visitedEps.add(srcEp);
+            for (EgKey srcEpgKey : ctx.getEndpointManager().getEgKeysForEndpoint(srcEp)) {
+
+                IndexedTenant tenant = ctx.getPolicyResolver().getTenant(srcEpgKey.getTenantId());
+                EndpointGroup group = tenant.getEndpointGroup(srcEpgKey.getEgId());
+                IntraGroupPolicy igp = group.getIntraGroupPolicy();
+
+                if (igp == null || igp.equals(IntraGroupPolicy.Allow)) {
+                    for (Endpoint dstEp : ctx.getEndpointManager().getEndpointsForGroup(srcEpgKey)) {
+                        // mEPG ordinals
+//                        if(visitedEps.contains(dstEp)) {
+//                            continue;
+//                        }
+//                        visitedEps.add(dstEp);
+                        EndpointFwdCtxOrdinals srcEpFwdCxtOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, srcEp);
+                        EndpointFwdCtxOrdinals dstEpFwdCxtOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, dstEp);
+                        int depgId = dstEpFwdCxtOrds.getEpgId();
+                        int sepgId = srcEpFwdCxtOrds.getEpgId();
+                        flowMap.writeFlow(nodeId, TABLE_ID, allowSameEpg(sepgId, depgId));
+                        flowMap.writeFlow(nodeId, TABLE_ID, allowSameEpg(depgId, sepgId));
+                    }
+                }
+            }
+        }
+
     }
 
-    private void allowSameEpg(ReadWriteTransaction t,
-                              InstanceIdentifier<Table> tiid,
-                              Map<String, FlowCtx> flowMap, NodeId nodeId,
-                              int sepgId) {
+    private Flow allowSameEpg(int sepgId, int depgId) {
         FlowId flowId = new FlowId(new StringBuilder()
-            .append("intraallow|")
-            .append(sepgId).toString());
-        if (visit(flowMap, flowId.getValue())) {
+                .append("intraallow|")
+                .append(sepgId).toString());
             MatchBuilder mb = new MatchBuilder();
             addNxRegMatch(mb,
-                          RegMatch.of(NxmNxReg0.class,Long.valueOf(sepgId)),
-                          RegMatch.of(NxmNxReg2.class,Long.valueOf(sepgId)));
+                    RegMatch.of(NxmNxReg0.class, Long.valueOf(sepgId)),
+                    RegMatch.of(NxmNxReg2.class, Long.valueOf(depgId)));
             FlowBuilder flow = base()
-                .setId(flowId)
-                .setMatch(mb.build())
-                .setPriority(65000)
-                .setInstructions(instructions(applyActionIns(nxOutputRegAction(NxmNxReg7.class))));
-            writeFlow(t, tiid, flow.build());
-        }
+                    .setId(flowId)
+                    .setMatch(mb.build())
+                    .setPriority(65000)
+                    .setInstructions(instructions(applyActionIns(nxOutputRegAction(NxmNxReg7.class))));
+            return flow.build();
     }
 
-    private void allowFromTunnel(ReadWriteTransaction t,
-                                 InstanceIdentifier<Table> tiid,
-                                 Map<String, FlowCtx> flowMap, NodeId nodeId) {
+    private Flow allowFromTunnel(NodeId nodeId) {
         NodeConnectorId tunPort =
                 ctx.getSwitchManager().getTunnelPort(nodeId);
-        if (tunPort == null) return;
+        if (tunPort == null)
+            return null;
 
         FlowId flowId = new FlowId("tunnelallow");
-        if (visit(flowMap, flowId.getValue())) {
-            MatchBuilder mb = new MatchBuilder()
+        MatchBuilder mb = new MatchBuilder()
                 .setInPort(tunPort);
-            addNxRegMatch(mb,
-                          RegMatch.of(NxmNxReg1.class,Long.valueOf(0xffffff)));
-            FlowBuilder flow = base()
+        addNxRegMatch(mb,
+                RegMatch.of(NxmNxReg1.class, Long.valueOf(0xffffff)));
+        FlowBuilder flow = base()
                 .setId(flowId)
                 .setMatch(mb.build())
                 .setPriority(65000)
                 .setInstructions(instructions(applyActionIns(nxOutputRegAction(NxmNxReg7.class))));
-            writeFlow(t, tiid, flow.build());
-        }
+        return flow.build();
+
     }
 
-    private void syncPolicy(ReadWriteTransaction t,
-                            InstanceIdentifier<Table> tiid,
-                            Map<String, FlowCtx> flowMap, NodeId nodeId,
-                            PolicyInfo policyInfo,
-                            CgPair p, EgKey sepg, EgKey depg,
-                            ConditionGroup scg, ConditionGroup dcg)
-                             throws Exception {
+    private void syncPolicy(FlowMap flowMap, NodeId nodeId,
+            PolicyInfo policyInfo,
+            CgPair p, EgKey sepg, EgKey depg,
+            ConditionGroup scg, ConditionGroup dcg)
+            throws Exception {
         // XXX - TODO raise an exception for rules between the same
         // endpoint group that are asymmetric
         Policy policy = policyInfo.getPolicy(sepg, depg);
@@ -218,10 +217,10 @@ public class PolicyEnforcer extends FlowTable {
             TenantId tenantId = rg.getContractTenant().getId();
             IndexedTenant tenant = ctx.getPolicyResolver().getTenant(tenantId);
             for (Rule r : rg.getRules()) {
-                syncDirection(t, tiid, flowMap, nodeId, tenant,
-                                    p, r, Direction.In, priority);
-                syncDirection(t, tiid, flowMap, nodeId, tenant,
-                                    p, r, Direction.Out, priority);
+                syncDirection(flowMap, nodeId, tenant,
+                        p, r, Direction.In, priority);
+                syncDirection(flowMap, nodeId, tenant,
+                        p, r, Direction.Out, priority);
 
                 priority -= 1;
             }
@@ -229,13 +228,10 @@ public class PolicyEnforcer extends FlowTable {
     }
 
     /**
-     * Private internal class for ordering Actions in Rules. The
-     * order is determined first by the value of the order parameter,
-     * with the lower order actions being applied first; for Actions
-     * with either the same order or no order, ordering is lexicographical
-     * by name.
-     *
-     * @author tbachman
+     * Private internal class for ordering Actions in Rules. The order is
+     * determined first by the value of the order parameter, with the lower
+     * order actions being applied first; for Actions with either the same order
+     * or no order, ordering is lexicographical by name.
      *
      */
     private static class ActionRefComparator implements Comparator<ActionRef> {
@@ -245,54 +241,54 @@ public class PolicyEnforcer extends FlowTable {
         public int compare(ActionRef arg0, ActionRef arg1) {
             return ComparisonChain.start()
                     .compare(arg0.getOrder(), arg1.getOrder(),
-                             Ordering.natural().nullsLast())
+                            Ordering.natural().nullsLast())
                     .compare(arg0.getName().getValue(), arg1.getName().getValue(),
-                             Ordering.natural().nullsLast())
+                            Ordering.natural().nullsLast())
                     .result();
         }
 
     }
 
-    private void syncDirection(ReadWriteTransaction t,
-                               InstanceIdentifier<Table> tiid,
-                               Map<String, FlowCtx> flowMap, NodeId nodeId,
-                               IndexedTenant contractTenant,
-                               CgPair p, Rule r, Direction d, int priority) {
+    private void syncDirection(FlowMap flowMap, NodeId nodeId, IndexedTenant contractTenant,
+            CgPair cgPair, Rule rule, Direction direction, int priority) {
         /*
-         * Create the ordered action list. The implicit action is
-         * "allow", and is therefore always in the list
+         * Create the ordered action list. The implicit action is "allow", and
+         * is therefore always in the list
          *
-         * TODO: revisit implicit vs. default for "allow"
-         * TODO: look into incorporating operational policy for actions
+         * TODO: revisit implicit vs. default for "allow" TODO: look into
+         * incorporating operational policy for actions
          */
+
+        //TODO: can pass Comparator ActionRefComparator to List constructor, rather than referencing in sort
         List<ActionBuilder> abl = new ArrayList<ActionBuilder>();
-        if (r.getActionRef() != null) {
+        if (rule.getActionRef() != null) {
             /*
              * Pre-sort by references using order, then name
              */
-            List<ActionRef> arl = new ArrayList<ActionRef>(r.getActionRef());
+            List<ActionRef> arl = new ArrayList<ActionRef>(rule.getActionRef());
             Collections.sort(arl, ActionRefComparator.INSTANCE);
 
-            for (ActionRef ar: arl) {
+            for (ActionRef ar : arl) {
                 ActionInstance ai = contractTenant.getAction(ar.getName());
                 if (ai == null) {
                     // XXX TODO fail the match and raise an exception
                     LOG.warn("Action instance {} not found",
-                             ar.getName().getValue());
+                            ar.getName().getValue());
                     return;
                 }
                 Action act = SubjectFeatures.getAction(ai.getActionDefinitionId());
                 if (act == null) {
                     // XXX TODO fail the match and raise an exception
                     LOG.warn("Action definition {} not found",
-                             ai.getActionDefinitionId().getValue());
+                            ai.getActionDefinitionId().getValue());
                     return;
                 }
 
-                Map<String,Object> params = new HashMap<>();
+                Map<String, Object> params = new HashMap<>();
                 if (ai.getParameterValue() != null) {
                     for (ParameterValue v : ai.getParameterValue()) {
-                        if (v.getName() == null) continue;
+                        if (v.getName() == null)
+                            continue;
                         if (v.getIntValue() != null) {
                             params.put(v.getName().getValue(), v.getIntValue());
                         } else if (v.getStringValue() != null) {
@@ -301,22 +297,22 @@ public class PolicyEnforcer extends FlowTable {
                     }
                 }
                 /*
-                 * Convert the GBP Action to one or more OpenFlow
-                 * Actions
+                 * Convert the GBP Action to one or more OpenFlow Actions
                  */
                 abl = act.updateAction(abl, params, ar.getOrder());
             }
         }
         else {
             Action act = SubjectFeatures.getAction(AllowAction.DEFINITION.getId());
-            abl = act.updateAction(abl, new HashMap<String,Object>(),  0);
+            abl = act.updateAction(abl, new HashMap<String, Object>(), 0);
         }
 
-        for (ClassifierRef cr : r.getClassifierRef()) {
+        for (ClassifierRef cr : rule.getClassifierRef()) {
             if (cr.getDirection() != null &&
-                !cr.getDirection().equals(Direction.Bidirectional) &&
-                !cr.getDirection().equals(d))
+                    !cr.getDirection().equals(Direction.Bidirectional) &&
+                    !cr.getDirection().equals(direction)) {
                 continue;
+            }
 
             StringBuilder idb = new StringBuilder();
             // XXX - TODO - implement connection tracking (requires openflow
@@ -325,43 +321,43 @@ public class PolicyEnforcer extends FlowTable {
 
             MatchBuilder baseMatch = new MatchBuilder();
 
-            if (d.equals(Direction.In)) {
-                idb.append(p.sepg)
-                    .append("|")
-                    .append(p.scgId)
-                    .append("|")
-                    .append(p.depg)
-                    .append("|")
-                    .append(p.dcgId)
-                    .append("|")
-                    .append(priority);
+            if (direction.equals(Direction.In)) {
+                idb.append(cgPair.sepg)
+                        .append("|")
+                        .append(cgPair.scgId)
+                        .append("|")
+                        .append(cgPair.depg)
+                        .append("|")
+                        .append(cgPair.dcgId)
+                        .append("|")
+                        .append(priority);
                 addNxRegMatch(baseMatch,
-                              RegMatch.of(NxmNxReg0.class,Long.valueOf(p.sepg)),
-                              RegMatch.of(NxmNxReg1.class,Long.valueOf(p.scgId)),
-                              RegMatch.of(NxmNxReg2.class,Long.valueOf(p.depg)),
-                              RegMatch.of(NxmNxReg3.class,Long.valueOf(p.dcgId)));
+                        RegMatch.of(NxmNxReg0.class, Long.valueOf(cgPair.sepg)),
+                        RegMatch.of(NxmNxReg1.class, Long.valueOf(cgPair.scgId)),
+                        RegMatch.of(NxmNxReg2.class, Long.valueOf(cgPair.depg)),
+                        RegMatch.of(NxmNxReg3.class, Long.valueOf(cgPair.dcgId)));
             } else {
-                idb.append(p.depg)
-                    .append("|")
-                    .append(p.dcgId)
-                    .append("|")
-                    .append(p.sepg)
-                    .append("|")
-                    .append(p.scgId)
-                    .append("|")
-                    .append(priority);
+                idb.append(cgPair.depg)
+                        .append("|")
+                        .append(cgPair.dcgId)
+                        .append("|")
+                        .append(cgPair.sepg)
+                        .append("|")
+                        .append(cgPair.scgId)
+                        .append("|")
+                        .append(priority);
                 addNxRegMatch(baseMatch,
-                              RegMatch.of(NxmNxReg0.class,Long.valueOf(p.depg)),
-                              RegMatch.of(NxmNxReg1.class,Long.valueOf(p.dcgId)),
-                              RegMatch.of(NxmNxReg2.class,Long.valueOf(p.sepg)),
-                              RegMatch.of(NxmNxReg3.class,Long.valueOf(p.scgId)));
+                        RegMatch.of(NxmNxReg0.class, Long.valueOf(cgPair.depg)),
+                        RegMatch.of(NxmNxReg1.class, Long.valueOf(cgPair.dcgId)),
+                        RegMatch.of(NxmNxReg2.class, Long.valueOf(cgPair.sepg)),
+                        RegMatch.of(NxmNxReg3.class, Long.valueOf(cgPair.scgId)));
             }
 
             ClassifierInstance ci = contractTenant.getClassifier(cr.getName());
             if (ci == null) {
                 // XXX TODO fail the match and raise an exception
                 LOG.warn("Classifier instance {} not found",
-                         cr.getName().getValue());
+                        cr.getName().getValue());
                 return;
             }
             Classifier cfier = SubjectFeatures
@@ -369,12 +365,13 @@ public class PolicyEnforcer extends FlowTable {
             if (cfier == null) {
                 // XXX TODO fail the match and raise an exception
                 LOG.warn("Classifier definition {} not found",
-                         ci.getClassifierDefinitionId().getValue());
+                        ci.getClassifierDefinitionId().getValue());
                 return;
             }
 
             Map<String,ParameterValue> params = new HashMap<>();
             for (ParameterValue v : ci.getParameterValue()) {
+
                 if (v.getIntValue() != null) {
                     params.put(v.getName().getValue(), v);
                 } else if (v.getStringValue() != null) {
@@ -396,11 +393,13 @@ public class PolicyEnforcer extends FlowTable {
                 for (MatchBuilder match : result.getMatchBuilders()) {
                     Match m = match.build();
                     FlowId flowId = new FlowId(baseId + "|" + m.toString());
-                    if (visit(flowMap, flowId.getValue())) {
-                        flow.setMatch(m).setId(flowId).setPriority(Integer.valueOf(priority))
-                                .setInstructions(instructions(applyActionIns(abl)));
-                        writeFlow(t, tiid, flow.build());
-                    }
+                flow.setMatch(m)
+                        .setId(flowId)
+                        .setPriority(Integer.valueOf(priority))
+                        .setInstructions(instructions(applyActionIns(abl)));
+                flowMap.writeFlow(nodeId, TABLE_ID, flow.build());
+
+
                 }
             }
         }

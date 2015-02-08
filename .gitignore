@@ -18,3 +18,5 @@ target
 .settings
 MANIFEST.MF
 renderers/ofoverlay/src/test/java/org/opendaylight/groupbasedpolicy/resolver/
+.gitignore
+.checkstyle

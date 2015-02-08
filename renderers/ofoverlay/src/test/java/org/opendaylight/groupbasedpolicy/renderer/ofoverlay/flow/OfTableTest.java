@@ -67,7 +67,6 @@ public class OfTableTest {
     MockPolicyResolver policyResolver;
     MockPolicyManager policyManager;
     MockSwitchManager switchManager;
-
     NodeId nodeId = new NodeId("openflow:1");
     NodeId remoteNodeId = new NodeId("openflow:2");
     NodeConnectorId nodeConnectorId =
@@ -92,7 +91,6 @@ public class OfTableTest {
         policyResolver = new MockPolicyResolver();
         policyManager = new MockPolicyManager(policyResolver, endpointManager);
         switchManager = new MockSwitchManager();
-
         ctx = new OfContext(null,
                              null,
                              policyManager,

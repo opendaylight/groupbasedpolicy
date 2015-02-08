@@ -8,6 +8,14 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.actionList;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.createBucketPath;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.createGroupPath;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.createNodePath;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.getOfPortNum;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadTunIPv4Action;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.outputAction;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,9 +24,9 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
-import org.opendaylight.groupbasedpolicy.resolver.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action;
@@ -35,8 +43,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.group
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L2FloodDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node;
@@ -48,12 +54,11 @@ import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.collect.Ordering;
 
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.*;
-
 /**
  * Manage the group tables for handling broadcast/multicast
- * @author readams
+ *
  */
+
 public class GroupTable extends OfTable {
     private static final Logger LOG =
             LoggerFactory.getLogger(GroupTable.class);
@@ -62,8 +67,9 @@ public class GroupTable extends OfTable {
         super(ctx);
     }
 
+    // @Override
     @Override
-    public void update(NodeId nodeId, PolicyInfo policyInfo, Dirty dirty)
+    public void update(NodeId nodeId, PolicyInfo policyInfo, FlowMap flowMap)
             throws Exception {
         // there appears to be no way of getting only the existing group
         // tables unfortunately, so we have to get the whole goddamned node.
@@ -73,9 +79,11 @@ public class GroupTable extends OfTable {
         InstanceIdentifier<Node> niid = createNodePath(nodeId);
         Optional<Node> r =
                 t.read(LogicalDatastoreType.CONFIGURATION, niid).get();
-        if (!r.isPresent()) return;
+        if (!r.isPresent())
+            return;
         FlowCapableNode fcn = r.get().getAugmentation(FlowCapableNode.class);
-        if (fcn == null) return;
+        if (fcn == null)
+            return;
 
         HashMap<GroupId, GroupCtx> groupMap = new HashMap<>();
 
@@ -86,13 +94,14 @@ public class GroupTable extends OfTable {
 
                 Buckets bs = g.getBuckets();
                 if (bs != null && bs.getBucket() != null)
-                for (Bucket b : bs.getBucket()) {
-                    gctx.bucketMap.put(b.getBucketId(), new BucketCtx(b));
-                }
+                    for (Bucket b : bs.getBucket()) {
+                        gctx.bucketMap.put(b.getBucketId(), new BucketCtx(b));
+                    }
             }
         }
 
-        sync(nodeId, policyInfo, dirty, groupMap);
+        // sync(nodeId, policyInfo, dirty, groupMap);
+        sync(nodeId, policyInfo, groupMap);
 
         WriteTransaction wt = ctx.getDataBroker().newWriteOnlyTransaction();
         boolean wrote = syncGroupToStore(wt, nodeId, groupMap);
@@ -101,8 +110,8 @@ public class GroupTable extends OfTable {
     }
 
     protected boolean syncGroupToStore(WriteTransaction wt,
-                                       NodeId nodeId,
-                                       HashMap<GroupId, GroupCtx> groupMap) {
+            NodeId nodeId,
+            HashMap<GroupId, GroupCtx> groupMap) {
         boolean wrote = false;
         for (GroupCtx gctx : groupMap.values()) {
             InstanceIdentifier<Group> giid =
@@ -117,12 +126,14 @@ public class GroupTable extends OfTable {
                 // update group table
                 for (BucketCtx bctx : gctx.bucketMap.values()) {
                     BucketId bid;
-                    if (bctx.b != null) bid = bctx.b.getBucketId();
-                    else bid = bctx.newb.getBucketId();
+                    if (bctx.b != null)
+                        bid = bctx.b.getBucketId();
+                    else
+                        bid = bctx.newb.getBucketId();
                     InstanceIdentifier<Bucket> biid =
                             createBucketPath(nodeId,
-                                             gctx.groupId,
-                                             bid);
+                                    gctx.groupId,
+                                    bid);
                     if (!bctx.visited) {
                         // remove bucket
                         wrote = true;
@@ -131,84 +142,79 @@ public class GroupTable extends OfTable {
                         // new bucket
                         buckets.add(bctx.newb);
                     } else if (!Objects.equal(bctx.newb.getAction(),
-                                              Ordering.from(ActionComparator.INSTANCE)
-                                                  .sortedCopy(bctx.b.getAction()))) {
+                            Ordering.from(ActionComparator.INSTANCE)
+                                    .sortedCopy(bctx.b.getAction()))) {
                         // update bucket
                         buckets.add(bctx.newb);
                     }
                 }
                 if (buckets.size() > 0) {
                     GroupBuilder gb = new GroupBuilder()
-                        .setGroupId(gctx.groupId)
-                        .setGroupType(GroupTypes.GroupAll)
-                        .setBuckets(new BucketsBuilder()
-                        .setBucket(buckets)
-                        .build());
+                            .setGroupId(gctx.groupId)
+                            .setGroupType(GroupTypes.GroupAll)
+                            .setBuckets(new BucketsBuilder()
+                                    .setBucket(buckets)
+                                    .build());
                     wrote = true;
                     wt.merge(LogicalDatastoreType.CONFIGURATION,
-                             giid, gb.build());
+                            giid, gb.build());
                 }
             }
         }
         return wrote;
     }
 
-    protected void sync(NodeId nodeId, PolicyInfo policyInfo, Dirty dirty,
-                        HashMap<GroupId, GroupCtx> groupMap) throws Exception {
+    protected void sync(NodeId nodeId, PolicyInfo policyInfo, HashMap<GroupId, GroupCtx> groupMap) throws Exception {
 
-        for (EgKey epg : ctx.getEndpointManager().getGroupsForNode(nodeId)) {
-            IndexedTenant it = ctx.getPolicyResolver().getTenant(epg.getTenantId());
-            if (it == null) continue;
-            EndpointGroup eg = it.getEndpointGroup(epg.getEgId());
-            if (eg == null || eg.getNetworkDomain() == null) continue;
-            L2FloodDomain fd = it.resolveL2FloodDomain(eg.getNetworkDomain());
-            if (fd == null) continue;
 
-            int fdId = ctx.getPolicyManager().getContextOrdinal(epg.getTenantId(),
-                                                           fd.getId());
-            GroupId gid = new GroupId(Long.valueOf(fdId));
-            GroupCtx gctx = groupMap.get(gid);
-            if (gctx == null) {
-                groupMap.put(gid, gctx = new GroupCtx(gid));
-            }
-            gctx.visited = true;
-
-            // we'll use the fdId with the high bit set for remote bucket
-            // and just the local port number for local bucket
-            for (NodeId destNode : ctx.getEndpointManager().getNodesForGroup(epg)) {
-                if (nodeId.equals(destNode)) continue;
-
-                long bucketId = ctx.getPolicyManager()
-                        .getContextOrdinal(destNode.getValue());
-                bucketId |= 1L << 31;
-
-                IpAddress tunDst =
-                        ctx.getSwitchManager().getTunnelIP(destNode);
-                NodeConnectorId tunPort =
-                        ctx.getSwitchManager().getTunnelPort(nodeId);
-                if (tunDst == null || tunPort == null) continue;
-                Action tundstAction = null;
-                if (tunDst.getIpv4Address() != null) {
-                    String nextHop = tunDst.getIpv4Address().getValue();
-                    tundstAction = nxLoadTunIPv4Action(nextHop, true);
-                } else {
-                    LOG.error("IPv6 tunnel destination {} for {} not supported",
-                              tunDst.getIpv6Address().getValue(),
-                              destNode);
-                    continue;
+            for (Endpoint localEp : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
+                EndpointFwdCtxOrdinals localEpFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, localEp);
+                GroupId gid = new GroupId(Long.valueOf(localEpFwdCtxOrds.getFdId()));
+                GroupCtx gctx = groupMap.get(gid);
+                if (gctx == null) {
+                    groupMap.put(gid, gctx = new GroupCtx(gid));
                 }
+                gctx.visited = true;
 
-                BucketBuilder bb = new BucketBuilder()
-                    .setBucketId(new BucketId(Long.valueOf(bucketId)))
-                    .setAction(actionList(tundstAction,
-                                          outputAction(tunPort)));
-                updateBucket(gctx, bb);
-            }
-            for (Endpoint localEp : ctx.getEndpointManager().getEPsForNode(nodeId, epg)) {
+                for (EgKey epg : ctx.getEndpointManager().getGroupsForNode(nodeId)) {
+
+
+                    // we'll use the fdId with the high bit set for remote bucket
+                    // and just the local port number for local bucket
+                    for (NodeId destNode : ctx.getEndpointManager().getNodesForGroup(epg)) {
+                        if (nodeId.equals(destNode))
+                            continue;
+
+                        long bucketId = OrdinalFactory.getContextOrdinal(destNode);
+                        bucketId |= 1L << 31;
+
+                        IpAddress tunDst =
+                                ctx.getSwitchManager().getTunnelIP(destNode);
+                        NodeConnectorId tunPort =
+                                ctx.getSwitchManager().getTunnelPort(nodeId);
+                        if (tunDst == null || tunPort == null)
+                            continue;
+                        Action tundstAction = null;
+                        if (tunDst.getIpv4Address() != null) {
+                            String nextHop = tunDst.getIpv4Address().getValue();
+                            tundstAction = nxLoadTunIPv4Action(nextHop, true);
+                        } else {
+                            LOG.error("IPv6 tunnel destination {} for {} not supported",
+                                    tunDst.getIpv6Address().getValue(),
+                                    destNode);
+                            continue;
+                        }
+
+                        BucketBuilder bb = new BucketBuilder()
+                                .setBucketId(new BucketId(Long.valueOf(bucketId)))
+                                .setAction(actionList(tundstAction,
+                                        outputAction(tunPort)));
+                        updateBucket(gctx, bb);
+                    }
                 OfOverlayContext ofc =
                         localEp.getAugmentation(OfOverlayContext.class);
                 if (ofc == null || ofc.getNodeConnectorId() == null ||
-                    (LocationType.External.equals(ofc.getLocationType())))
+                        (LocationType.External.equals(ofc.getLocationType())))
                     continue;
 
                 long bucketId;
@@ -216,14 +222,14 @@ public class GroupTable extends OfTable {
                     bucketId = getOfPortNum(ofc.getNodeConnectorId());
                 } catch (NumberFormatException e) {
                     LOG.warn("Could not parse port number {}",
-                             ofc.getNodeConnectorId(), e);
+                            ofc.getNodeConnectorId(), e);
                     continue;
                 }
 
                 Action output = outputAction(ofc.getNodeConnectorId());
                 BucketBuilder bb = new BucketBuilder()
-                    .setBucketId(new BucketId(Long.valueOf(bucketId)))
-                    .setAction(actionList(output));
+                        .setBucketId(new BucketId(Long.valueOf(bucketId)))
+                        .setAction(actionList(output));
                 updateBucket(gctx, bb);
             }
         }
@@ -233,7 +239,7 @@ public class GroupTable extends OfTable {
         BucketCtx bctx = gctx.bucketMap.get(bb.getBucketId());
         if (bctx == null) {
             gctx.bucketMap.put(bb.getBucketId(),
-                               bctx = new BucketCtx(null));
+                    bctx = new BucketCtx(null));
         }
         bctx.visited = true;
         bctx.newb = bb.build();
@@ -260,5 +266,4 @@ public class GroupTable extends OfTable {
             this.groupId = groupId;
         }
     }
-
 }

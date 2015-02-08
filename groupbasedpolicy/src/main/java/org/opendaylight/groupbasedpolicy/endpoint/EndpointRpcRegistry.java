@@ -178,7 +178,7 @@ public class EndpointRpcRegistry implements EndpointService {
             });
         }
 
-        // XXX TODO - age out endpoint data and remove
+        // TODO Be alagalah - age out endpoint data and remove
         // endpoint group/condition mappings with no conditions
     }
 

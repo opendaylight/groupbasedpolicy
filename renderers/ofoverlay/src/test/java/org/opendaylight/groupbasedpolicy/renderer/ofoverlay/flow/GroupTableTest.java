@@ -8,6 +8,9 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import java.util.Collections;
 import java.util.HashMap;
 
@@ -26,17 +29,15 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Objects;
 
-import static org.junit.Assert.*;
-
 public class GroupTableTest extends OfTableTest {
-    protected static final Logger LOG = 
+    protected static final Logger LOG =
             LoggerFactory.getLogger(GroupTableTest.class);
 
     GroupTable table;
 
-    NodeConnectorId tunnelId = 
+    NodeConnectorId tunnelId =
             new NodeConnectorId(nodeId.getValue() + ":42");
-    NodeConnectorId remoteTunnelId = 
+    NodeConnectorId remoteTunnelId =
             new NodeConnectorId(remoteNodeId.getValue() + ":101");
 
     @Before
@@ -44,20 +45,20 @@ public class GroupTableTest extends OfTableTest {
         initCtx();
         table = new GroupTable(ctx);
     }
-    
+
     @Test
     public void testGroup() throws Exception {
         Endpoint localEp = localEP().build();
         endpointManager.addEndpoint(localEp);
         Endpoint remoteEp = remoteEP(remoteNodeId).build();
         endpointManager.addEndpoint(remoteEp);
-        
-        switchManager.addSwitch(nodeId, tunnelId, 
+
+        switchManager.addSwitch(nodeId, tunnelId,
                                 Collections.<NodeConnectorId>emptySet(),
                                 new OfOverlayNodeConfigBuilder()
                                     .setTunnelIp(new IpAddress(new Ipv4Address("1.2.3.4")))
                                     .build());
-        switchManager.addSwitch(remoteNodeId, remoteTunnelId, 
+        switchManager.addSwitch(remoteNodeId, remoteTunnelId,
                                 Collections.<NodeConnectorId>emptySet(),
                                 new OfOverlayNodeConfigBuilder()
                                     .setTunnelIp(new IpAddress(new Ipv4Address("1.2.3.5")))
@@ -66,17 +67,16 @@ public class GroupTableTest extends OfTableTest {
         policyResolver.addTenant(baseTenant().build());
 
         HashMap<GroupId, GroupCtx> groupMap = new HashMap<>();
-        table.sync(nodeId, ctx.getPolicyResolver().getCurrentPolicy(),
-                   null, groupMap);
-        
+        table.sync(nodeId, ctx.getPolicyResolver().getCurrentPolicy(), groupMap);
+
         assertEquals(1, groupMap.size());
-        int fdId = ctx.getPolicyManager().getContextOrdinal(tid, fd);
+        int fdId = OrdinalFactory.getContextOrdinal(tid, fd);
         GroupCtx ctx = groupMap.get(new GroupId(Long.valueOf(fdId)));
         assertNotNull(ctx);
-        long tunBucketId = 
-                (long)policyManager.getContextOrdinal(remoteNodeId.getValue());
+        long tunBucketId =
+                OrdinalFactory.getContextOrdinal(remoteNodeId);
         tunBucketId |= 1L << 31;
- 
+
         int count = 0;
         for (BucketCtx bctx : ctx.bucketMap.values()) {
             if (Objects.equal(Long.valueOf(4),
@@ -84,7 +84,7 @@ public class GroupTableTest extends OfTableTest {
                 count += 1;
             } else if (Objects.equal(Long.valueOf(tunBucketId),
                                      bctx.newb.getBucketId().getValue())) {
-                
+
                 count += 1;
             }
         }

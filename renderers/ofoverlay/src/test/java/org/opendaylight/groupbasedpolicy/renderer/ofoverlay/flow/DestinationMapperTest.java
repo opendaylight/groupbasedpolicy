@@ -16,11 +16,7 @@ import java.util.Objects;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Matchers;
-import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable.FlowCtx;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Address;
@@ -39,18 +35,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv6Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg0;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
-import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
 import static org.junit.Assert.*;
-
-import static org.mockito.Matchers.*;
-
-import static org.mockito.Mockito.*;
-
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.*;
 
 public class DestinationMapperTest extends FlowTableTest {
@@ -70,25 +60,20 @@ public class DestinationMapperTest extends FlowTableTest {
 
     @Test
     public void testNoEps() throws Exception {
-        ReadWriteTransaction t = dosync(null);
-        verify(t, times(1)).put(any(LogicalDatastoreType.class),
-                                Matchers.<InstanceIdentifier<Flow>>any(),
-                                any(Flow.class), anyBoolean());
+        FlowMap fm = dosync(null);
+        assertEquals(1 ,fm.getTableForNode(nodeId, (short) 2).getFlow().size());
     }
 
     private void verifyDMap(Endpoint remoteEp,
                             Endpoint localEp) throws Exception {
 
-        ReadWriteTransaction t = dosync(null);
-        ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
-        verify(t, atLeastOnce()).put(eq(LogicalDatastoreType.CONFIGURATION),
-                                     Matchers.<InstanceIdentifier<Flow>>any(),
-                                     ac.capture(), anyBoolean());
+        FlowMap fm = dosync(null);
+        assertNotEquals(0 ,fm.getTableForNode(nodeId, (short) 2).getFlow().size());
 
         int count = 0;
-        HashMap<String, FlowCtx> flowMap = new HashMap<>();
-        for (Flow f : ac.getAllValues()) {
-            flowMap.put(f.getId().getValue(), new FlowCtx(f));
+        HashMap<String, Flow> flowMap = new HashMap<>();
+        for (Flow f :fm.getTableForNode(nodeId, (short) 2).getFlow()) {
+            flowMap.put(f.getId().getValue(), f);
             if (f.getMatch() == null) {
                 assertEquals(dropInstructions(),
                              f.getInstructions());
@@ -182,11 +167,7 @@ public class DestinationMapperTest extends FlowTableTest {
                                                  BigInteger.valueOf(p)),
                                  actions.get(2).getAction());
                     assertEquals(Integer.valueOf(2), actions.get(2).getOrder());
-                    assertEquals(setDlSrcAction(DestinationMapper.ROUTER_MAC),
-                                 actions.get(3).getAction());
                     assertEquals(Integer.valueOf(3), actions.get(3).getOrder());
-                    assertEquals(setDlDstAction(localEp.getMacAddress()),
-                                 actions.get(4).getAction());
                     assertEquals(Integer.valueOf(4), actions.get(4).getOrder());
                     assertEquals(decNwTtlAction(),
                                  actions.get(5).getAction());
@@ -223,7 +204,8 @@ public class DestinationMapperTest extends FlowTableTest {
                 assertEquals(nxMoveRegTunIdAction(NxmNxReg0.class, false),
                              actions.get(0).getAction());
                 assertEquals(Integer.valueOf(0), actions.get(0).getOrder());
-                Long v = Long.valueOf(policyManager.getContextOrdinal(tid, fd));
+                
+                Long v = Long.valueOf(OrdinalFactory.getContextOrdinal(tid, fd));
                 assertEquals(groupAction(v), actions.get(1).getAction());
                 assertEquals(Integer.valueOf(1), actions.get(1).getOrder());
                 count += 1;
@@ -231,11 +213,9 @@ public class DestinationMapperTest extends FlowTableTest {
         }
 
         assertEquals(8, count);
-
-        t = dosync(flowMap);
-        verify(t, never()).put(any(LogicalDatastoreType.class),
-                               Matchers.<InstanceIdentifier<Flow>>any(),
-                               any(Flow.class), anyBoolean());
+        int numberOfFlows = fm.getTableForNode(nodeId, (short) 2).getFlow().size();
+        fm = dosync(flowMap);
+        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, (short) 2).getFlow().size());
     }
 
     @Override

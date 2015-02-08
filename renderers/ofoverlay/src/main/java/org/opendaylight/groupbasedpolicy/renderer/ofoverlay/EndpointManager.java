@@ -8,9 +8,9 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -27,7 +27,6 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
@@ -36,11 +35,11 @@ import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.util.SetUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNodeConnector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterL3PrefixEndpointInput;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3AddressBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Builder;
@@ -65,9 +64,6 @@ import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.CheckedFuture;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 
 /**
  * Keep track of endpoints on the system. Maintain an index of endpoints and
@@ -78,6 +74,8 @@ import com.google.common.util.concurrent.Futures;
  * In order to render the policy, we need to be able to efficiently enumerate
  * all endpoints on a particular switch and also all the switches containing
  * each particular endpoint group
+ *
+ * @author readams
  */
 public class EndpointManager implements AutoCloseable, DataChangeListener
 {
@@ -96,8 +94,11 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
 
     private final ConcurrentHashMap<EpKey, Endpoint> endpoints =
             new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<NodeId, ConcurrentMap<EgKey, Set<EpKey>>> endpointsByNode =
+    private final ConcurrentHashMap<NodeId, ConcurrentMap<EgKey, Set<EpKey>>> endpointsByGroupByNode =
             new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<NodeId, Set<EpKey>> endpointsByNode =
+            new ConcurrentHashMap<>();
+
     private final ConcurrentHashMap<EgKey, Set<EpKey>> endpointsByGroup =
             new ConcurrentHashMap<>();
 
@@ -154,7 +155,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
      * @return a collection of {@link Endpoint} objects.
      */
     public Set<EgKey> getGroupsForNode(NodeId nodeId) {
-        Map<EgKey, Set<EpKey>> nodeEps = endpointsByNode.get(nodeId);
+        Map<EgKey, Set<EpKey>> nodeEps = endpointsByGroupByNode.get(nodeId);
         if (nodeEps == null)
             return Collections.emptySet();
         return Collections.unmodifiableSet(nodeEps.keySet());
@@ -163,17 +164,17 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
     /**
      * Get the set of nodes
      *
-     * @param nodeId
-     *            the nodeId of the switch to get endpoints for
-     * @return a collection of {@link Endpoint} objects.
+     * @param egKey
+     *            the egKey of the endpointgroup to get nodes for
+     * @return a collection of {@link NodeId} objects.
      */
     public Set<NodeId> getNodesForGroup(final EgKey egKey) {
-        return Collections.unmodifiableSet(Sets.filter(endpointsByNode.keySet(),
+        return Collections.unmodifiableSet(Sets.filter(endpointsByGroupByNode.keySet(),
                 new Predicate<NodeId>() {
                     @Override
                     public boolean apply(NodeId input) {
                         Map<EgKey, Set<EpKey>> nodeEps =
-                                endpointsByNode.get(input);
+                                endpointsByGroupByNode.get(input);
                         return (nodeEps != null &&
                         nodeEps.containsKey(egKey));
                     }
@@ -190,8 +191,11 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
      *            the group to look up
      * @return the endpoints
      */
-    public Collection<Endpoint> getEPsForNode(NodeId nodeId, EgKey eg) {
-        Map<EgKey, Set<EpKey>> nodeEps = endpointsByNode.get(nodeId);
+    public Collection<Endpoint> getEndpointsForNode(NodeId nodeId, EgKey eg) {
+        // TODO: alagalah Create method findEndpointsByNode() that uses
+        // datastore
+
+        Map<EgKey, Set<EpKey>> nodeEps = endpointsByGroupByNode.get(nodeId);
         if (nodeEps == null)
             return Collections.emptyList();
         Collection<EpKey> ebn = nodeEps.get(eg);
@@ -200,6 +204,54 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
         return Collections.unmodifiableCollection(Collections2
                 .transform(ebn,
                         indexTransform));
+    }
+
+    /**
+     * Get the endpoints on a particular node
+     *
+     * @param nodeId
+     *            the node ID to look up
+     * @return the endpoints
+     */
+    public Collection<Endpoint> getEndpointsForNode(final NodeId nodeId) {
+        // TODO: alagalah Create method findEndpointsByNode() that uses
+        // datastore. See commented code below.
+
+        Collection<Endpoint> epsByNode = Collections.emptyList();
+        // Blocking for test.
+        // // Predicate for filtering only the endpoints we need for this nodeID
+        // //TODO: This pulls from datastore. Will be more performant to update
+        // // endpointByNode in updateEndpoint.
+        // Predicate<Endpoint> predicate = new Predicate<Endpoint>() {
+        // @Override
+        // public boolean apply(Endpoint ep) {
+        // return
+        // ep.getAugmentation(OfOverlayContext.class).getNodeId().getValue().equals(nodeId.getValue());
+        // }
+        // };
+        //
+        // Optional<Endpoints> epResult;
+        // final InstanceIdentifier<Endpoints> endpointsIid =
+        // InstanceIdentifier.builder(Endpoints.class).build();
+        // try {
+        // epResult =
+        // dataProvider.newReadOnlyTransaction().read(LogicalDatastoreType.OPERATIONAL,
+        // endpointsIid).get();
+        // if(epResult.isPresent()) {
+        // Endpoints endpoints = epResult.get();
+        // epsByNode =
+        // Collections2.filter((Collection<Endpoint>)endpoints.getEndpoint(),predicate);
+        // }
+        // } catch (InterruptedException | ExecutionException e) {
+        // LOG.error("Caught exception in getEPsForNode");
+        // }
+        Collection<EpKey> ebn = endpointsByNode.get(nodeId);
+        if (ebn == null)
+            return Collections.emptyList();
+        return Collections.unmodifiableCollection(Collections2
+                .transform(ebn,
+                        indexTransform));
+
     }
 
     /**
@@ -247,7 +299,8 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
      * @return the list of {@link ConditionName}
      */
     public List<ConditionName> getCondsForEndpoint(Endpoint endpoint) {
-        // XXX TODO consider group conditions as well. Also need to notify
+        // TODO Be alagalah From Helium: consider group conditions as well. Also
+        // need to notify
         // endpoint updated if the endpoint group conditions change
         if (endpoint.getCondition() != null)
             return endpoint.getCondition();
@@ -322,6 +375,11 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
         }
     }
 
+    // TODO: alagalah Investigate using the internal project listener structure
+    // for this. ie Endpoint should listen to
+    // SwitchManager updates and update the EP maps accordingly (update
+    // Endpoint). Removal should include the overloaded
+    // method updateEndpoint(Node node)
     private class NodesListener implements DataChangeListener {
         @Override
         public void onDataChanged(
@@ -331,8 +389,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
                     continue;
                 Node node = (Node) dao;
                 if (node.getNodeConnector() != null) {
-                    executor.execute(new UpdateEndpoint(node));
-                    return;
+                    updateEndpoint(node);
                 }
             }
             for (DataObject dao : change.getUpdatedData().values()) {
@@ -340,115 +397,83 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
                     continue;
                 Node node = (Node) dao;
                 if (node.getNodeConnector() != null) {
-                    executor.execute(new UpdateEndpoint(node));
-                    return;
+                    updateEndpoint(node);
                 }
             }
         }
     }
 
-    private class UpdateEndpoint implements Runnable {
-        private final Node node;
-        private final InstanceIdentifier<Endpoints> endpointsIid;
+    // TODO Li alagalah move this near to other updateEndpoint()
+    private void updateEndpoint(Node node) {
+        final InstanceIdentifier<Endpoints> endpointsIid = InstanceIdentifier.builder(Endpoints.class).build();
 
-        public UpdateEndpoint(Node node) {
-            this.node = node;
-            this.endpointsIid = InstanceIdentifier.builder(Endpoints.class).build();
-        }
-
-        @Override
-        public void run() {
-            Optional<Endpoints> epResult;
-            EpKey epKey = null;
-            for (NodeConnector nc : node.getNodeConnector()) {
-                FlowCapableNodeConnector fcnc = nc
-                        .getAugmentation(FlowCapableNodeConnector.class);
-                try {
-                    epResult = dataProvider.newReadOnlyTransaction()
-                            .read(LogicalDatastoreType.OPERATIONAL, endpointsIid).get();
-                    if (epResult.isPresent()) {
-                        Endpoints endpoints = epResult.get();
-                        if (endpoints.getEndpoint() != null) {
-                            WriteTransaction tx = dataProvider.newWriteOnlyTransaction();
-                            Boolean isEmpty = true;
-                            for (Endpoint ep : endpoints.getEndpoint()) {
-                                // 2. Search for portname
-                                OfOverlayContext currentAugmentation = ep.getAugmentation(OfOverlayContext.class);
-                                if (ep.getPortName().getValue().equals(fcnc.getName())) {
-                                    NodeId nodeId;
-                                    NodeConnectorId nodeConnectorId;
-                                    try {
-                                        nodeId = currentAugmentation.getNodeId();
-                                        nodeConnectorId = currentAugmentation.getNodeConnectorId();
-                                    } catch (Exception e) {
-                                        nodeId = null;
-                                        nodeConnectorId = null;
-                                    }
-                                    Boolean process = false;
-                                    if (nodeId == null && nodeConnectorId == null) {
-                                        LOG.debug("ep NodeID and NC ID Both null");
+        Optional<Endpoints> epResult;
+        EpKey epKey = null;
+        for (NodeConnector nc : node.getNodeConnector()) {
+            FlowCapableNodeConnector fcnc = nc
+                    .getAugmentation(FlowCapableNodeConnector.class);
+            try {
+                epResult = dataProvider.newReadOnlyTransaction().read(LogicalDatastoreType.OPERATIONAL, endpointsIid)
+                        .get();
+                if (epResult.isPresent()) {
+                    Endpoints endpoints = epResult.get();
+                    if (endpoints.getEndpoint() != null) {
+                        Boolean isEmpty = true;
+                        for (Endpoint ep : endpoints.getEndpoint()) {
+                            // 2. Search for portname
+                            OfOverlayContext currentAugmentation = ep.getAugmentation(OfOverlayContext.class);
+                            if (ep.getPortName() != null && fcnc.getName() != null
+                                    && ep.getPortName().getValue().equals(fcnc.getName())) {
+                                NodeId nodeId;
+                                NodeConnectorId nodeConnectorId;
+                                try {
+                                    nodeId = currentAugmentation.getNodeId();
+                                    nodeConnectorId = currentAugmentation.getNodeConnectorId();
+                                } catch (Exception e) {
+                                    nodeId = null;
+                                    nodeConnectorId = null;
+                                }
+                                Boolean process = false;
+                                if (nodeId == null && nodeConnectorId == null) {
+                                    LOG.debug("ep NodeID and NC ID Both null");
+                                    process = true;
+                                }
+                                if (nodeId != null && nodeConnectorId != null) {
+                                    if (!(nodeConnectorId.getValue().equals(nc.getId().getValue()))) {
+                                        LOG.debug("ep NodeID and NC ID Both NOT null but epNCID !=nodeNCID");
                                         process = true;
                                     }
-                                    if (nodeId != null && nodeConnectorId != null) {
-                                        if (!(nodeConnectorId.getValue().equals(nc.getId().getValue()))) {
-                                            LOG.debug("ep NodeID and NC ID Both NOT null but epNCID !=nodeNCID");
-                                            process = true;
-                                        }
-                                    }
-                                    if (process) {
-                                        // 3. Update endpoint
-                                        EndpointBuilder epBuilder = new EndpointBuilder(ep);
-                                        OfOverlayContextBuilder ofOverlayAugmentation = new OfOverlayContextBuilder();
-                                        ofOverlayAugmentation.setNodeId(node.getId());
-                                        ofOverlayAugmentation.setNodeConnectorId(nc.getId());
-                                        epBuilder
-                                                .addAugmentation(OfOverlayContext.class, ofOverlayAugmentation.build());
-                                        // TODO Hack to remove:
-                                        List<L3Address> l3Addresses = new ArrayList<>();
-                                        for (L3Address l3Address : ep.getL3Address()) {
-                                            L3AddressBuilder l3AB = new L3AddressBuilder();
-                                            l3AB.setIpAddress(l3Address.getIpAddress()).setL3Context(
-                                                    l3Address.getL3Context());
-                                            l3Addresses.add(l3AB.build());
-                                        }
-                                        epBuilder.setL3Address(l3Addresses);
-                                        InstanceIdentifier<Endpoint> iidEp = InstanceIdentifier
-                                                .builder(Endpoints.class).child(Endpoint.class, ep.getKey()).build();
-                                        tx.put(LogicalDatastoreType.OPERATIONAL, iidEp, epBuilder.build());
-                                        epKey = new EpKey(ep.getKey().getL2Context(), ep.getKey().getMacAddress());
-                                        LOG.debug("Values:");
-                                        LOG.debug("node: Node ID:" + node.getId().getValue());
-                                        LOG.debug("node: NodeConnectorID: " + nc.getId().getValue());
-                                        if (nodeId != null && nodeConnectorId != null) {
-                                            LOG.debug("ep: nodeID:" + nodeId.getValue());
-                                            LOG.debug("ep: nodeConnectorID:" + nodeConnectorId.getValue());
-                                        }
-                                        isEmpty = false;
-                                    }
                                 }
-                            }
-                            if (!isEmpty) {
-                                CheckedFuture<Void, TransactionCommitFailedException> f = tx.submit();
-                                notifyEndpointUpdated(epKey);
-                                Futures.addCallback(f, new FutureCallback<Void>() {
-                                    @Override
-                                    public void onFailure(Throwable t) {
-                                        LOG.error("Could not over-write endpoint with augmentation", t);
+                                if (process) {
+                                    WriteTransaction tx = dataProvider.newWriteOnlyTransaction();
+                                    // 3. Update endpoint
+                                    EndpointBuilder epBuilder = new EndpointBuilder(ep);
+                                    OfOverlayContextBuilder ofOverlayAugmentation = new OfOverlayContextBuilder();
+                                    ofOverlayAugmentation.setNodeId(node.getId());
+                                    ofOverlayAugmentation.setNodeConnectorId(nc.getId());
+                                    epBuilder.addAugmentation(OfOverlayContext.class, ofOverlayAugmentation.build());
+                                    epBuilder.setL3Address(ep.getL3Address());
+                                    InstanceIdentifier<Endpoint> iidEp = InstanceIdentifier.builder(Endpoints.class)
+                                            .child(Endpoint.class, ep.getKey()).build();
+                                    tx.put(LogicalDatastoreType.OPERATIONAL, iidEp, epBuilder.build());
+                                    tx.submit().get();
+                                    epKey = new EpKey(ep.getKey().getL2Context(), ep.getKey().getMacAddress());
+                                    notifyEndpointUpdated(epKey);
+                                    LOG.debug("Values:");
+                                    LOG.debug("node: Node ID:" + node.getId().getValue());
+                                    LOG.debug("node: NodeConnectorID: " + nc.getId().getValue());
+                                    if (nodeId != null && nodeConnectorId != null) {
+                                        LOG.debug("ep: nodeID:" + nodeId.getValue());
+                                        LOG.debug("ep: nodeConnectorID:" + nodeConnectorId.getValue());
                                     }
-
-                                    @Override
-                                    public void onSuccess(Void result) {
-                                        LOG.debug("Success over-writing endpoint augmentation");
-                                    }
-                                });
-                            } else {
-                                LOG.debug("UpdateEndpoint: Empty list");
+                                    isEmpty = false;
+                                }
                             }
                         }
                     }
-                } catch (InterruptedException | ExecutionException e) {
-                    LOG.error("Caught exception in UpdateEndpoint", e);
                 }
+            } catch (InterruptedException | ExecutionException e) {
+                LOG.error("Exception in UpdateEndpoint", e);
             }
         }
     }
@@ -485,7 +510,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
 
     private boolean validEp(Endpoint endpoint) {
         return (endpoint != null && endpoint.getTenant() != null &&
-                endpoint.getEndpointGroup() != null &&
+                (endpoint.getEndpointGroup() != null || endpoint.getEndpointGroups() != null) &&
                 endpoint.getL2Context() != null && endpoint.getMacAddress() != null);
     }
 
@@ -506,18 +531,32 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
         return new EpKey(endpoint.getL2Context(), endpoint.getMacAddress());
     }
 
-    private EgKey getEgKey(Endpoint endpoint) {
+    public EgKey getEgKey(Endpoint endpoint) {
         if (!validEp(endpoint))
             return null;
         return new EgKey(endpoint.getTenant(), endpoint.getEndpointGroup());
     }
 
+    public Set<EgKey> getEgKeysForEndpoint(Endpoint ep) {
+        Set<EgKey> egKeys = new HashSet<EgKey>();
+
+        if (ep.getEndpointGroup() != null) {
+            egKeys.add(new EgKey(ep.getTenant(), ep.getEndpointGroup()));
+        }
+        if (ep.getEndpointGroups() != null) {
+            for (EndpointGroupId epgId : ep.getEndpointGroups()) {
+                egKeys.add(new EgKey(ep.getTenant(), epgId));
+            }
+        }
+        return egKeys;
+    }
+
     private Set<EpKey> getEpNGSet(NodeId location, EgKey eg) {
-        ConcurrentMap<EgKey, Set<EpKey>> map = endpointsByNode.get(location);
+        ConcurrentMap<EgKey, Set<EpKey>> map = endpointsByGroupByNode.get(location);
         if (map == null) {
             map = new ConcurrentHashMap<>();
             ConcurrentMap<EgKey, Set<EpKey>> old =
-                    endpointsByNode.putIfAbsent(location, map);
+                    endpointsByGroupByNode.putIfAbsent(location, map);
             if (old != null)
                 map = old;
         }
@@ -535,72 +574,248 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
      * Update the endpoint indexes. Set newEp to null to remove.
      */
     protected void updateEndpoint(Endpoint oldEp, Endpoint newEp) {
-        // XXX TODO only keep track of endpoints that are attached
+        // TODO Be alagalah From Helium only keep track of endpoints that are
+        // attached
         // to switches that are actually connected to us
+
+        // TODO Li alagalah: This needs a major clean up and refactor. For now
+        // it works.
         NodeId oldLoc = getLocation(oldEp);
         NodeId newLoc = getLocation(newEp);
-
-        EgKey oldKey = getEgKey(oldEp);
-        EgKey newKey = getEgKey(newEp);
-
-        EpKey epKey = getEpKey(oldEp);
-        if (epKey == null)
-            epKey = getEpKey(newEp);
-        if (epKey == null)
-            return;
+        // EgKey oldEgKey = getEgKey(oldEp);
+        EpKey oldEpKey = getEpKey(oldEp);
+        EpKey newEpKey = getEpKey(newEp);
 
         boolean notifyOldLoc = false;
         boolean notifyNewLoc = false;
         boolean notifyOldEg = false;
         boolean notifyNewEg = false;
 
-        if (newEp != null)
-            endpoints.put(epKey, newEp);
+        // When newLoc and oldLoc are null there is nothing to do
+        if (!(newLoc == null && oldLoc == null)) {
 
-        if (oldLoc != null && oldKey != null &&
-                (newLoc == null || !oldLoc.equals(newLoc) ||
-                        newKey == null || !oldKey.equals(newKey))) {
-            ConcurrentMap<EgKey, Set<EpKey>> map =
-                    endpointsByNode.get(oldLoc);
-            Set<EpKey> eps = map.get(oldKey);
-            eps.remove(epKey);
-            map.remove(oldKey, Collections.emptySet());
-            endpointsByNode.remove(oldLoc, EMPTY_MAP);
-            notifyOldLoc = true;
+            Set<EndpointGroupId> newEpgIds = new HashSet<EndpointGroupId>();
+            TenantId tenantId = null;
+            if (newEp != null) {
+                if (newEp.getEndpointGroups() != null) {
+                    newEpgIds.addAll(newEp.getEndpointGroups());
+                }
+                if (newEp.getEndpointGroup() != null) {
+                    newEpgIds.add(newEp.getEndpointGroup());
+                }
+                tenantId = newEp.getTenant();
+            }
+
+            Set<EndpointGroupId> oldEpgIds = new HashSet<EndpointGroupId>();
+            if (oldEp != null) {
+                if (oldEp.getEndpointGroups() != null) {
+                    oldEpgIds.addAll(oldEp.getEndpointGroups());
+                }
+                if (oldEp.getEndpointGroup() != null) {
+                    oldEpgIds.add(oldEp.getEndpointGroup());
+                }
+            }
+
+            /*
+             * maintainIndex(endpointsByNode,oldEp,newEp) Maintain following
+             * maps endpoints - <EpKey, Endpoint> endpointsByGroupByNode -
+             * <NodeId, ConcurrentMap<EgKey, Set<EpKey>>> endpointsByNode -
+             * <NodeId,Set<EpKey>> endpointsByGroup ConcurrentHashMap<EgKey,
+             * Set<EpKey>>
+             */
+
+            // Maintain "endpoints" map
+            if (newEp != null) {
+                endpoints.put(newEpKey, newEp);
+            } else {
+                endpoints.remove(oldEpKey);
+            }
+
+            /*
+             * New endpoint with location information
+             */
+            if (oldEp == null && newEp != null && newLoc != null) {
+                // Update endpointsByNode
+                if (endpointsByNode.get(newLoc) == null) {
+                    // TODO: alagalah cleaner way with checking epsNode
+                    // then do this.
+                    Set<EpKey> epsNode = new HashSet<EpKey>();
+                    epsNode.add(newEpKey);
+                    endpointsByNode.put(newLoc, epsNode);
+                } else {
+                    Set<EpKey> epsNode = endpointsByNode.get(newLoc);
+                    epsNode.add(newEpKey);
+                }
+                // Update endpointsByGroupByNode and endpointsByGroup
+                for (EndpointGroupId newEpgId : newEpgIds) {
+                    // endpointsByGroupByNode
+                    EgKey newEgKey = new EgKey(tenantId, newEpgId);
+                    Set<EpKey> eps = getEpNGSet(newLoc, newEgKey);
+                    eps.add(newEpKey);
+                    // endpointsByGroup
+                    Set<EpKey> geps = endpointsByGroup.get(newEgKey);
+                    if (geps == null) {
+                        geps = new HashSet<>();
+                    }
+                    geps.add(newEpKey);
+                    endpointsByGroup.put(newEgKey, geps);
+                    LOG.debug("Endpoint {} added to node {}", newEpKey, newLoc);
+
+                }
+
+                notifyNewLoc = true;
+                notifyNewEg = true;
+            }
+
+            /*
+             * Removed endpoint
+             */
+            if (oldEp != null && newEp == null) {
+                // Update endpointsByNode
+                Set<EpKey> epsNode = endpointsByNode.get(oldLoc);
+                if (epsNode != null) {
+                    epsNode.remove(oldEpKey);
+                    if (epsNode.isEmpty())
+                        endpointsByNode.remove(oldLoc);
+                }
+                // Update endpointsByGroupByNode
+                // Update endpointsByGroup
+                // Get map of EPGs and their Endpoints for Node
+                ConcurrentMap<EgKey, Set<EpKey>> map =
+                        endpointsByGroupByNode.get(oldLoc);
+                // For each EPG in the removed endpoint...
+                for (EndpointGroupId oldEpgId : newEpgIds) {
+                    EgKey oldEgKey = new EgKey(oldEp.getTenant(), oldEpgId);
+                    // Get list of endpoints for EPG
+                    Set<EpKey> eps = map.get(oldEgKey);
+                    // Remove the endpoint from the map
+                    if (eps != null) {
+                        eps.remove(oldEpKey);
+                        if (eps.isEmpty())
+                            map.remove(oldEgKey, Collections.emptySet());
+                    }
+                    // endpointsByGroup
+                    Set<EpKey> geps = endpointsByGroup.get(oldEgKey);
+                    if (geps != null) {
+                        geps.remove(oldEpKey);
+                        if (geps.isEmpty())
+                            endpointsByGroup.remove(oldEgKey);
+                    }
+                }
+                // If map is empty, no more EPGs on this node, remove node from
+                // map
+                if (map.isEmpty())
+                    endpointsByGroupByNode.remove(oldLoc, EMPTY_MAP);
+                notifyOldLoc = true;
+                notifyOldEg = true;
+            }
+
+            /*
+             * Moved endpoint (from node to node or from NULL to node)
+             */
+            if ((oldEp != null && newEp != null && oldEpKey != null && newEpKey != null) &&
+                    (oldEpKey.toString().equals(newEpKey.toString()))) {
+                // old and new Endpoints have same key. (same endpoint)
+
+                /*
+                 * Remove old endpoint if moved.
+                 */
+                if (oldLoc != null && !(oldLoc.getValue().equals(newLoc.getValue()))) {
+                    // This is an endpoint that has moved, remove from old node
+                    Set<EpKey> epsNode = endpointsByNode.get(oldLoc);
+                    if (epsNode != null) {
+                        epsNode.remove(oldEpKey);
+                        if (epsNode.isEmpty())
+                            endpointsByNode.remove(oldLoc);
+                    }
+                    // Update endpointsByGroupByNode
+                    // Get map of EPGs and their Endpoints for Node
+                    ConcurrentMap<EgKey, Set<EpKey>> map =
+                            endpointsByGroupByNode.get(oldLoc);
+                    // For each EPG in the removed endpoint...
+                    for (EndpointGroupId oldEpgId : oldEpgIds) {
+                        EgKey oldEgKey = new EgKey(oldEp.getTenant(), oldEpgId);
+                        // Get list of endpoints for EPG
+                        Set<EpKey> eps = map.get(oldEgKey);
+                        // Remove the endpoint from the map
+                        if (eps != null) {
+                            eps.remove(oldEpKey);
+                            if (eps.isEmpty())
+                                map.remove(oldEgKey, Collections.emptySet());
+                        }
+                        // endpointsByGroup
+                        Set<EpKey> geps = endpointsByGroup.get(oldEgKey);
+                        if (geps != null)
+                        {
+                            geps.remove(oldEpKey);
+                            if (geps.isEmpty())
+                                endpointsByGroup.remove(oldEgKey);
+                        }
+                    }
+                    // If map is empty, no more EPGs on this node, remove node
+                    // from map
+                    if (map.isEmpty())
+                        endpointsByGroupByNode.remove(oldLoc, EMPTY_MAP);
+                    notifyOldLoc = true;
+                    notifyOldEg = true;
+                }
+
+                /*
+                 * Add new endpoint
+                 */
+                // Update endpointsByNode
+                if (endpointsByNode.get(newLoc) == null) {
+                    Set<EpKey> newEpsNode = new HashSet<EpKey>();
+                    newEpsNode.add(newEpKey);
+                    endpointsByNode.put(newLoc, newEpsNode);
+                } else {
+                    Set<EpKey> newEpsNode = endpointsByNode.get(newLoc);
+                    newEpsNode.add(newEpKey);
+                }
+                notifyNewLoc = true;
+
+                // Update endpointsByGroupByNode
+                // Update endpointsByGroup
+                for (EndpointGroupId newEpgId : newEpgIds) {
+                    EgKey newEgKey = new EgKey(tenantId, newEpgId);
+                    Set<EpKey> eps = getEpNGSet(newLoc, newEgKey);
+                    eps.add(newEpKey);
+                    // endpointsByGroup
+                    Set<EpKey> geps = endpointsByGroup.get(newEgKey);
+                    if (geps == null) {
+                        geps = new HashSet<>();
+                    }
+                    geps.add(newEpKey);
+                    endpointsByGroup.put(newEgKey, geps);
+                    notifyNewEg = true;
+
+                    LOG.debug("Endpoint {} added to node {}", newEpKey, newLoc);
+                }
+
+            }
+
+            if (newEp != null)
+                notifyEndpointUpdated(newEpKey);
+            else
+                notifyEndpointUpdated(oldEpKey);
+
+            // TODO alagalah NEXt: ensure right notification flags are set.
+            if (notifyOldLoc)
+                notifyNodeEndpointUpdated(oldLoc, oldEpKey);
+            if (notifyNewLoc)
+                notifyNodeEndpointUpdated(newLoc, newEpKey);
+            if (notifyOldEg)
+                for (EndpointGroupId oldEpgId : oldEpgIds) {
+                    EgKey oldEgKey = new EgKey(oldEp.getTenant(), oldEpgId);
+                    notifyGroupEndpointUpdated(oldEgKey, oldEpKey);
+                }
+            if (notifyNewEg)
+                for (EndpointGroupId newEpgId : newEpgIds) {
+                    EgKey newEgKey = new EgKey(newEp.getTenant(), newEpgId);
+                    notifyGroupEndpointUpdated(newEgKey, newEpKey);
+                }
+
         }
-        if (oldKey != null &&
-                (newKey == null || !oldKey.equals(newKey))) {
-            Set<EpKey> gns = getEpGSet(oldKey);
-            gns.remove(epKey);
-            notifyOldEg = true;
-        }
-
-        if (newLoc != null && newKey != null) {
-            Set<EpKey> eps = getEpNGSet(newLoc, newKey);
-            eps.add(epKey);
-            LOG.debug("Endpoint {} added to node {}", epKey, newLoc);
-            notifyNewLoc = true;
-        }
-        if (newKey != null) {
-            Set<EpKey> gns = getEpGSet(newKey);
-            gns.add(epKey);
-            LOG.debug("Endpoint {} added to group {}", epKey, newKey);
-            notifyNewEg = true;
-        }
-
-        if (newEp == null)
-            endpoints.remove(epKey);
-
-        notifyEndpointUpdated(epKey);
-
-        if (notifyOldLoc)
-            notifyNodeEndpointUpdated(oldLoc, epKey);
-        if (notifyNewLoc)
-            notifyNodeEndpointUpdated(newLoc, epKey);
-        if (notifyOldEg)
-            notifyGroupEndpointUpdated(oldKey, epKey);
-        if (notifyNewEg)
-            notifyGroupEndpointUpdated(newKey, epKey);
     }
 
     private OfOverlayContextBuilder checkAugmentation(RegisterEndpointInput input) {
@@ -623,7 +838,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
         return ictxBuilder;
     }
 
-    // A wrapper class around node, noeConnector info so we can pass a final
+    // A wrapper class around node, nodeConnector info so we can pass a final
     // object inside OnSuccess anonymous inner class
     private static class NodeInfo {
         NodeConnector nodeConnector;
@@ -687,7 +902,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
                     }
                 }
             } catch (InterruptedException | ExecutionException e) {
-                LOG.error("Could not fetch Node Augmentation", e);
+                LOG.error("Caught exception in fetchAugmentation portName", e);
             }
 
         }

@@ -83,24 +83,20 @@ import com.google.common.util.concurrent.ListenableFuture;
  * The policy resolver is a utility for renderers to help in resolving
  * group-based policy into a form that is easier to apply to the actual network.
  *
- * <p>
  * For any pair of endpoint groups, there is a set of rules that could apply to
  * the endpoints on that group based on the policy configuration. The exact list
  * of rules that apply to a given pair of endpoints depends on the conditions
  * that are active on the endpoints.
  *
- * <p>
  * We need to be able to query against this policy model, enumerate the relevant
  * classes of traffic and endpoints, and notify renderers when there are changes
  * to policy as it applies to active sets of endpoints and endpoint groups.
  *
- * <p>
  * The policy resolver will maintain the necessary state for all tenants in its
  * control domain, which is the set of tenants for which policy listeners have
  * been registered.
  *
  */
-
 public class PolicyResolver implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(PolicyResolver.class);
 
@@ -672,7 +668,8 @@ public class PolicyResolver implements AutoCloseable {
             selectSubjects(Table<EgKey, EgKey,
                     List<ContractMatch>> contractMatches,
                     Map<EgKey, Set<ConditionSet>> egConditions) {
-        // Note that it's possible to further simplify the resulting policy
+        // TODO: Note that it's possible to further simplify the resulting
+        // policy
         // in the case of things like repeated rules, condition sets that
         // cover other condition sets, etc. This would be a good thing to do
         // at some point

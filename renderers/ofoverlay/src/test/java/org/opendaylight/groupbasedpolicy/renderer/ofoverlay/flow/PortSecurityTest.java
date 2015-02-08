@@ -11,16 +11,13 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Matchers;
-import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable.FlowCtx;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Address;
@@ -34,7 +31,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.ArpMatch;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv4Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv6Match;
-import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,10 +38,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import static org.junit.Assert.*;
-
-import static org.mockito.Matchers.*;
-
-import static org.mockito.Mockito.*;
 
 public class PortSecurityTest extends FlowTableTest {
     protected static final Logger LOG =
@@ -61,35 +53,25 @@ public class PortSecurityTest extends FlowTableTest {
 
     @Test
     public void testDefaultDeny() throws Exception {
-        ReadWriteTransaction t = dosync(null);
-        ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
-        verify(t, times(4)).put(eq(LogicalDatastoreType.CONFIGURATION),
-                                Matchers.<InstanceIdentifier<Flow>>any(),
-                                ac.capture(), anyBoolean());
+        FlowMap fm = dosync(null);
         int count = 0;
-
-        HashMap<String, FlowCtx> flowMap = new HashMap<>();
-        for (Flow f : ac.getAllValues()) {
-            flowMap.put(f.getId().getValue(), new FlowCtx(f));
+        Map<String, Flow> flowMap = new HashMap<>();
+        for (Flow f : fm.getTableForNode(nodeId, (short) 0).getFlow()) {
+            flowMap.put(f.getId().getValue(), f);
             Long etherType = null;
             if (f.getMatch() != null) {
-                etherType = f.getMatch().getEthernetMatch()
-                        .getEthernetType().getType().getValue();
+                etherType = f.getMatch().getEthernetMatch().getEthernetType().getType().getValue();
             }
-            if (f.getMatch() == null ||
-                FlowUtils.ARP.equals(etherType) ||
-                FlowUtils.IPv4.equals(etherType) ||
-                FlowUtils.IPv6.equals(etherType)) {
+            if (f.getMatch() == null || FlowUtils.ARP.equals(etherType) || FlowUtils.IPv4.equals(etherType)
+                    || FlowUtils.IPv6.equals(etherType)) {
                 count += 1;
-                assertEquals(FlowUtils.dropInstructions(),
-                             f.getInstructions());
+                assertEquals(FlowUtils.dropInstructions(), f.getInstructions());
             }
         }
         assertEquals(4, count);
-        t = dosync(flowMap);
-        verify(t, never()).put(any(LogicalDatastoreType.class),
-                               Matchers.<InstanceIdentifier<Flow>>any(),
-                               any(Flow.class), anyBoolean());
+        int numberOfFlows = fm.getTableForNode(nodeId, (short) 0).getFlow().size();
+        fm = dosync(flowMap);
+        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, (short) 0).getFlow().size());
     }
 
     @Test
@@ -99,18 +81,14 @@ public class PortSecurityTest extends FlowTableTest {
                        new NodeConnectorId("openflow:1:1"),
                        ImmutableSet.of(new NodeConnectorId("openflow:1:2")),
                        null);
-
-        ReadWriteTransaction t = dosync(null);
-        ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
-        verify(t, atLeastOnce()).put(eq(LogicalDatastoreType.CONFIGURATION),
-                                     Matchers.<InstanceIdentifier<Flow>>any(),
-                                     ac.capture(), anyBoolean());
+        FlowMap fm = dosync(null);
+        assertNotEquals(0 ,fm.getTableForNode(nodeId, (short) 0).getFlow().size());
 
         int count = 0;
-        HashMap<String, FlowCtx> flowMap = new HashMap<>();
+        HashMap<String, Flow> flowMap = new HashMap<>();
         Set<String> ncs = ImmutableSet.of("openflow:1:1", "openflow:1:2");
-        for (Flow f : ac.getAllValues()) {
-            flowMap.put(f.getId().getValue(), new FlowCtx(f));
+        for (Flow f : fm.getTableForNode(nodeId, (short) 0).getFlow()) {
+            flowMap.put(f.getId().getValue(), f);
             if (f.getMatch() != null && f.getMatch().getInPort() != null &&
                 ncs.contains(f.getMatch().getInPort().getValue())) {
                 assertEquals(f.getInstructions(),
@@ -119,11 +97,9 @@ public class PortSecurityTest extends FlowTableTest {
             }
         }
         assertEquals(2, count);
-
-        t = dosync(flowMap);
-        verify(t, never()).put(any(LogicalDatastoreType.class),
-                               Matchers.<InstanceIdentifier<Flow>>any(),
-                               any(Flow.class), anyBoolean());
+        int numberOfFlows = fm.getTableForNode(nodeId, (short) 0).getFlow().size();
+        fm = dosync(flowMap);
+        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, (short) 0).getFlow().size());
     }
 
     @Test
@@ -135,16 +111,13 @@ public class PortSecurityTest extends FlowTableTest {
 
         endpointManager.addEndpoint(ep);
 
-        ReadWriteTransaction t = dosync(null);
-        ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
-        verify(t, atLeastOnce()).put(eq(LogicalDatastoreType.CONFIGURATION),
-                                     Matchers.<InstanceIdentifier<Flow>>any(),
-                                     ac.capture(), anyBoolean());
+        FlowMap fm = dosync(null);
+        assertNotEquals(0 ,fm.getTableForNode(nodeId, (short) 0).getFlow().size());
 
         int count = 0;
-        HashMap<String, FlowCtx> flowMap = new HashMap<>();
-        for (Flow f : ac.getAllValues()) {
-            flowMap.put(f.getId().getValue(), new FlowCtx(f));
+        HashMap<String, Flow> flowMap = new HashMap<>();
+        for (Flow f : fm.getTableForNode(nodeId, (short) 0).getFlow()) {
+            flowMap.put(f.getId().getValue(), f);
             if (f.getMatch() != null &&
                 f.getMatch().getEthernetMatch() != null &&
                 f.getMatch().getEthernetMatch().getEthernetSource() != null &&
@@ -159,10 +132,9 @@ public class PortSecurityTest extends FlowTableTest {
             }
         }
         assertEquals(2, count);
-        t = dosync(flowMap);
-        verify(t, never()).put(any(LogicalDatastoreType.class),
-                               Matchers.<InstanceIdentifier<Flow>>any(),
-                               any(Flow.class), anyBoolean());
+        int numberOfFlows = fm.getTableForNode(nodeId, (short) 0).getFlow().size();
+        fm = dosync(flowMap);
+        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, (short) 0).getFlow().size());
     }
 
     @Test
@@ -178,16 +150,13 @@ public class PortSecurityTest extends FlowTableTest {
 
         endpointManager.addEndpoint(ep);
 
-        ReadWriteTransaction t = dosync(null);
-        ArgumentCaptor<Flow> ac = ArgumentCaptor.forClass(Flow.class);
-        verify(t, atLeastOnce()).put(eq(LogicalDatastoreType.CONFIGURATION),
-                                     Matchers.<InstanceIdentifier<Flow>>any(),
-                                     ac.capture(), anyBoolean());
+        FlowMap fm = dosync(null);
+        assertNotEquals(0 ,fm.getTableForNode(nodeId, (short) 0).getFlow().size());
 
         int count = 0;
-        HashMap<String, FlowCtx> flowMap = new HashMap<>();
-        for (Flow f : ac.getAllValues()) {
-            flowMap.put(f.getId().getValue(), new FlowCtx(f));
+        HashMap<String, Flow> flowMap = new HashMap<>();
+        for (Flow f : fm.getTableForNode(nodeId, (short) 0).getFlow()) {
+            flowMap.put(f.getId().getValue(), f);
             if (f.getMatch() != null &&
                 Objects.equals(ep.getAugmentation(OfOverlayContext.class).getNodeConnectorId(),
                                f.getMatch().getInPort()) &&
@@ -215,9 +184,8 @@ public class PortSecurityTest extends FlowTableTest {
             }
         }
         assertEquals(4, count);
-        t = dosync(flowMap);
-        verify(t, never()).put(any(LogicalDatastoreType.class),
-                               Matchers.<InstanceIdentifier<Flow>>any(),
-                               any(Flow.class), anyBoolean());
+        int numberOfFlows = fm.getTableForNode(nodeId, (short) 0).getFlow().size();
+        fm = dosync(flowMap);
+        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, (short) 0).getFlow().size());
     }
 }
