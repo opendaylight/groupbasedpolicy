@@ -213,7 +213,7 @@ public class IndexedTenant {
         Set<SubnetId> sset = new HashSet<>();
         HashSet<NetworkDomainId> visited = new HashSet<>();        
         while (id != null) {
-            if (visited.contains(id)) return null;
+            if (visited.contains(id)) break;
             visited.add(id);
             Set<SubnetId> cursset = subnetMap.get(id.getValue());
             if (cursset != null)
