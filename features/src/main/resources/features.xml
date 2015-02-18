@@ -14,6 +14,8 @@
     <repository>mvn:org.opendaylight.controller/features-mdsal/${mdsal.version}/xml/features</repository>
     <repository>mvn:org.opendaylight.openflowplugin/features-openflowplugin/${openflowplugin.distribution.version}/xml/features</repository>
     <repository>mvn:org.opendaylight.openflowplugin/features-openflowplugin-extension/${openflowplugin.distribution.version}/xml/features</repository>
+    <repository>mvn:org.opendaylight.controller/features-base/1.5.0-SNAPSHOT/xml/features</repository>
+    <repository>mvn:org.opendaylight.controller/features-nsf/0.5.0-SNAPSHOT/xml/features</repository>
     <feature name='odl-groupbasedpolicy-ofoverlay' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: OpenFlow Overlay '>
         <feature version="${mdsal.version}">odl-mdsal-broker</feature>
         <feature version='${yangtools.version}'>odl-yangtools-binding</feature>
@@ -26,6 +28,21 @@
         <bundle start="true">mvn:com.fasterxml.jackson.core/jackson-databind/${jackson.version}</bundle>
         <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.ofoverlayconfigfile}">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-ofoverlay-config/${project.version}/xml/config</configfile>
     </feature>
+
+    <feature name='odl-groupbasedpolicy-oc' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Opencontrail'>
+        <feature version="${mdsal.version}">odl-mdsal-broker</feature>
+        <feature>odl-base-all</feature>
+        <feature>odl-nsf-all</feature>
+        <feature version='${yangtools.version}'>odl-yangtools-binding</feature>
+        <feature version='${yangtools.version}'>odl-yangtools-models</feature>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy/${project.version}</bundle>
+        <bundle start="true">mvn:com.fasterxml.jackson.core/jackson-annotations/${jackson.version}</bundle>
+        <bundle start="true">mvn:com.fasterxml.jackson.core/jackson-core/${jackson.version}</bundle>
+        <bundle start="true">mvn:com.fasterxml.jackson.core/jackson-databind/${jackson.version}</bundle>
+        <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.occonfigfile}">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-oc-config/${project.version}/xml/config
+       </configfile>
+    </feature>
+
     <feature name='odl-groupbasedpolicy-openstackgbp' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Support OpenStack GBP Endpoints '>
         <feature version="${project.version}">odl-groupbasedpolicy-ofoverlay</feature>
         <feature version="${mdsal.version}">odl-mdsal-broker</feature>
@@ -36,3 +53,4 @@
         <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.openstackendpointconfigfile}">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-openstackendpoint-config/${project.version}/xml/config</configfile>
     </feature>
 </features>
+

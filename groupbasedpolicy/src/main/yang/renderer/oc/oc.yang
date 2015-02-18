@@ -1,0 +1,87 @@
+/*
+ * Copyright (c) 2015 Juniper Networks, Inc.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
+module oc {
+    yang-version 1;
+
+    namespace "urn:opendaylight:groupbasedpolicy:oc";
+    prefix "oc";
+
+    import ietf-inet-types { prefix "inet"; revision-date 2010-09-24; }
+
+    import yang-ext {prefix ext; revision-date "2013-07-09";}
+
+    import gbp-common {prefix gbp-common;}
+    import endpoint {prefix endpoint;}
+
+    description
+        "This module defines the group-based policy oc renderer model.";
+
+    revision "2014-05-28" {
+        description
+            "Initial revision.";
+    }
+
+    // ******************
+    // Configuration Data
+    // ******************
+    container oc-config {
+        description
+            "Configuration for the OC renderer";
+        config true;
+
+           leaf learning-mode {
+            description
+                "Selects how and whether we learn endpoints";
+            type enumeration {
+                enum orchestrated {
+                    description
+                        "An external orchestration system will provide
+                         information about all endpoints, and no
+                         direct learning will occur.";
+                }
+            }
+        }
+    }
+
+    grouping endpoint-location {
+        description
+            "The location for this endpoint in the overlay network";
+
+        leaf location-type {
+            default internal;
+
+            type enumeration {
+                enum internal {
+                    description
+                    "The endpoint is located on a port that is part of
+                     the network.  You must include the node
+                     ID and port number for this endpoint.";
+                }
+                enum external {
+                    description "This endpoint is not inside the network.";
+                }
+            }
+        }
+        leaf port-id {
+            description
+                "The port where the endpoint is located.";
+            type string;
+        }
+    }
+
+    augment "/endpoint:endpoints/endpoint:endpoint" {
+        ext:augment-identifier "oc-context";
+        uses endpoint-location;
+    }
+
+    augment "/endpoint:register-endpoint/endpoint:input" {
+        ext:augment-identifier "oc-context-input";
+        uses endpoint-location;
+    }
+}

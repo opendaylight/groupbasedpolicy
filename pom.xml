@@ -20,6 +20,7 @@
     <module>commons/parent</module>
     <module>groupbasedpolicy</module>
     <module>groupbasedpolicy-ofoverlay-config</module>
+    <module>groupbasedpolicy-oc-config</module>
     <module>groupbasedpolicy-openstackendpoint-config</module>
     <module>distribution-karaf</module>
     <module>features</module>
@@ -46,3 +47,4 @@
   </scm>
 
 </project>
+

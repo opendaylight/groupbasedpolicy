@@ -23,6 +23,7 @@
     <feature.test.version>0.7.0-SNAPSHOT</feature.test.version>
     <karaf.empty.version>1.5.0-SNAPSHOT</karaf.empty.version>
     <surefire.version>2.16</surefire.version>
+    <yangtools.version>0.7.0-SNAPSHOT</yangtools.version>
   </properties>
   <dependencies>
     <dependency>
@@ -31,6 +32,13 @@
       <version>${yangtools.version}</version>
       <classifier>features</classifier>
       <type>xml</type>
+    </dependency>
+     <dependency>
+       <groupId>org.opendaylight.controller</groupId>
+       <artifactId>features-nsf</artifactId>
+       <version>0.5.0-SNAPSHOT</version>
+       <classifier>features</classifier>
+       <type>xml</type>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.controller</groupId>
@@ -51,7 +59,13 @@
       <artifactId>groupbasedpolicy</artifactId>
       <version>${project.version}</version>
     </dependency>
-
+    <dependency>
+       <groupId>org.opendaylight.controller</groupId>
+       <artifactId>features-base</artifactId>
+       <version>1.5.0-SNAPSHOT</version>
+       <classifier>features</classifier>
+       <type>xml</type>
+    </dependency>
     <dependency>
       <groupId>org.opendaylight.yangtools</groupId>
       <artifactId>features-test</artifactId>
@@ -61,6 +75,13 @@
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>groupbasedpolicy-ofoverlay-config</artifactId>
+      <version>${project.version}</version>
+      <type>xml</type>
+      <classifier>config</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>groupbasedpolicy-oc-config</artifactId>
       <version>${project.version}</version>
       <type>xml</type>
       <classifier>config</classifier>
@@ -177,3 +198,4 @@
     <url>https://git.opendaylight.org/gerrit/gitweb?p=groupbasedpolicy.git;a=summary</url>
   </scm>
 </project>
+

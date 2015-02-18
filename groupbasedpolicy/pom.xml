@@ -10,12 +10,33 @@
 
   <artifactId>groupbasedpolicy</artifactId>
   <packaging>bundle</packaging>
+  <repositories>
+  <repository>
+    <id>juniper-contrail</id>
+    <url>https://github.com/Juniper/contrail-maven/raw/master/releases</url>
+   </repository>
+  </repositories>
 
   <properties>
     <openflowplugin-nicira.version>0.1.0-SNAPSHOT</openflowplugin-nicira.version>
   </properties>
 
   <dependencies>
+   <dependency>
+    <groupId>net.juniper.contrail</groupId>
+    <artifactId>juniper-contrail-api</artifactId>
+    <version>1.2</version>
+    </dependency>
+    <dependency>
+     <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpcore</artifactId>
+       <version>4.3.2</version>
+      </dependency>
+      <dependency>
+     <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>4.3.2</version>
+     </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
@@ -90,7 +111,16 @@
       <groupId>org.osgi</groupId>
       <artifactId>org.osgi.core</artifactId>
     </dependency>
-
+    <dependency>
+      <groupId>commons-lang</groupId>
+      <artifactId>commons-lang</artifactId>
+      <version>2.6</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-exec</artifactId>
+      <version>1.1</version>
+    </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -99,6 +129,19 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-all</artifactId>
+      <version>1.9.5</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.powermock</groupId>
+      <artifactId>powermock-module-junit4</artifactId>
+      <version>1.5.6</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.powermock</groupId>
+      <artifactId>powermock-api-mockito</artifactId>
+      <version>1.5.6</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -112,12 +155,16 @@
         <extensions>true</extensions>
         <configuration>
           <instructions>
-            <Import-Package>*</Import-Package>
+            <Import-Package>
+             org.apache.http.*;version="4.3.2",
+             *;resolution:=optional</Import-Package>
+             <Embed-Dependency>httpclient,httpcore,commons-lang,commons-exec;type=!pom;inline=false</Embed-Dependency>
             <Export-Package>
 	      org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.*,
 	      org.opendaylight.controller.config.yang.config.endpoint_provider,
 	      org.opendaylight.groupbasedpolicy.endpoint,
-	      org.opendaylight.groupbasedpolicy.resolver
+	      org.opendaylight.groupbasedpolicy.resolver,
+	      net.juniper.contrail.api.*;version="1.2"
 	    </Export-Package>
           </instructions>
           <manifestLocation>${project.basedir}/META-INF</manifestLocation>
@@ -221,3 +268,4 @@
     </plugins>
   </build>
 </project>
+
