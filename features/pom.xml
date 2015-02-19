@@ -60,6 +60,21 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>oc-renderer</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>opflex-renderer</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>ofoverlay-renderer</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
        <groupId>org.opendaylight.controller</groupId>
        <artifactId>features-base</artifactId>
        <version>1.5.0-SNAPSHOT</version>
@@ -69,7 +84,7 @@
     <dependency>
       <groupId>org.opendaylight.odlparent</groupId>
       <artifactId>features-test</artifactId>
-      <version>1.5.0-SNAPSHOT</version>
+      <version>${odlparent.features-test.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>

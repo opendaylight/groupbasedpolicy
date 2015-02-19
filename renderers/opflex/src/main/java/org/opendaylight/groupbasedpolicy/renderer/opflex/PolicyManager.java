@@ -47,7 +47,6 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig.LearningMode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -126,14 +125,6 @@ public class PolicyManager
     public void policyUpdated(Set<EgKey> updatedConsumers) {
 
         sendPolicyUpdates(updatedConsumers);
-    }
-
-    /**
-     * Set the learning mode to the specified value
-     * @param learningMode the learning mode to set
-     */
-    public void setLearningMode(LearningMode learningMode) {
-        // No-op for now
     }
 
     // **************
