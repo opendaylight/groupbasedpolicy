@@ -136,6 +136,16 @@
       <version>1.5.6</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.opendaylight.sfc</groupId>
+      <artifactId>sfc-model</artifactId>
+      <version>${sfc.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.sfc</groupId>
+      <artifactId>sfc-provider</artifactId>
+      <version>${sfc.version}</version>
+    </dependency>
   </dependencies>
 
   <!-- project build -->

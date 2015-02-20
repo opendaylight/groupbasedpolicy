@@ -8,14 +8,16 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 
-import java.util.concurrent.ScheduledExecutorService;
-
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
+import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
@@ -33,10 +35,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * Manage all things SFC
@@ -80,6 +79,7 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
     // place-holder - not sure what we'll call it
     private final String SFC_CHAIN_ACTION = "CHAIN";
     private final String SFC_CHAIN_NAME = "sfc-chain-name";
+    private final String SFC_RSP_NAME = "rsp-sfc-gbp";
 
     public SfcManager(DataBroker dataBroker,
                       PolicyResolver policyResolver,
@@ -187,7 +187,7 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
                      *  2) the name is defined in the ActionInstance
                      */
                     if (actionInstance.getParameterValue() != null) {
-                        getSfcChain();
+                        getSfcRsp();
                     }
                 }
             }
@@ -210,6 +210,27 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
                 }
             }
         }
+
+        /**
+         * Go get the RenderedServicePath from SFC
+         *
+         * TBD: what to do with this once we have it - who to
+         * give it to
+         */
+        private void getSfcRsp() {
+            for (ParameterValue pv: actionInstance.getParameterValue()) {
+                if (pv.getName().getValue().equals(SFC_CHAIN_NAME)) {
+
+
+/*                  Uncomment when new SFC artifacts are pushed
+                    RenderedServicePathFirstHop renderedServicePathFirstHop =
+                            SfcProviderRenderedPathAPI.readRenderedServicePathFirstHop(SFC_CHAIN_NAME);*/
+
+                }
+            }
+        }
+
+
     }
 
     @Override
