@@ -176,7 +176,6 @@
             <feature>standard</feature>
               <feature>standard</feature>
               <feature>odl-groupbasedpolicy-ofoverlay</feature>
-              <feature>odl-groupbasedpolicy-oc</feature>
               <feature>odl-restconf</feature>
           </bootFeatures>
         </configuration>

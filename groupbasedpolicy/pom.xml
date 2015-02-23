@@ -95,14 +95,6 @@
       <artifactId>yang-common</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.opendaylight.controller.model</groupId>
-      <artifactId>model-flow-base</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.controller.model</groupId>
-      <artifactId>model-flow-service</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.opendaylight.openflowplugin</groupId>
       <artifactId>openflowplugin-extension-nicira</artifactId>
       <version>${openflowplugin-nicira.version}</version>
