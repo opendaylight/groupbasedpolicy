@@ -524,6 +524,7 @@ module policy {
                 "A reference to an action defined in the subject 
                  feature instances for the tenant.";
 
+            key name;
             leaf name {
                 description "The name of the action instance";
                 type leafref {
@@ -634,7 +635,7 @@ module policy {
              MAY instead apply the parent subject feature and instead
              raise a nonfatal exception.";
 
-        config false;
+        config true;
 
         list classifier-definition {
             description
@@ -1321,13 +1322,15 @@ module policy {
                      tenant, and provider matchers will apply against
                      capabilities and conditions in the referenced
                      tenant.";
-                
+
+                key contract-id;
+
                 leaf tenant-id {
                     description
                         "The tenant ID of the tenant containing the 
                          contract.";
                     type leafref {
-                        path "/tenants/tenant/contract/id";
+                        path "/tenants/tenant/id";
                     }
                 }
                 leaf contract-id {
