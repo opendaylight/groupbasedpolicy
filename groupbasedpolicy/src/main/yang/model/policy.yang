@@ -439,6 +439,16 @@ module policy {
             leaf int-value {
                 type int64;
             }
+            container range-value {
+                leaf min {
+                    type int64;
+                    mandatory true;
+                }
+                leaf max {
+                    type int64;
+                    mandatory true;
+                }
+            }
         }
     }
 
@@ -559,6 +569,9 @@ module policy {
                     }
                     enum int {
                         description "An integer-valued parameter";
+                    }
+                    enum range {
+                        description "An integer-range parameter";
                     }
                 }
             }

@@ -36,29 +36,41 @@ public class L4Classifier extends IpProtoClassifier {
     public static final ClassifierDefinitionId ID = 
             new ClassifierDefinitionId("4250ab32-e8b8-445a-aebb-e1bd2cdd291f");
     private static final String SPORT = "sourceport";
+    private static final String SPORT_RANGE = "sourceport_range";
     private static final String DPORT = "destport";
-    private static final ClassifierDefinition DEF = 
+    private static final String DPORT_RANGE = "destport_range";
+    private static final ClassifierDefinition DEF =
             new ClassifierDefinitionBuilder()
                 .setId(new ClassifierDefinitionId("4250ab32-e8b8-445a-aebb-e1bd2cdd291f"))
                 .setParent(IpProtoClassifier.ID)
                 .setName(new ClassifierName("l4"))
                 .setDescription(new Description("Match on the port number of UDP or TCP traffic"))
                 .setParameter(ImmutableList.of(new ParameterBuilder()
-                        .setName(new ParameterName(SPORT))
-                        .setDescription(new Description("The source port number to match against"))
-                        .setType(Type.Int)
-                        .build(),
-                    new ParameterBuilder()
-                        .setName(new ParameterName(DPORT))
-                        .setDescription(new Description("The destination port number to match against"))
-                        .setType(Type.Int)
-                        .build(),
-                    new ParameterBuilder()
-                        .setName(new ParameterName(TYPE))
-                        .setDescription(new Description("TCP or UDP"))
-                        .setIsRequired(IsRequired.Required)
-                        .setType(Type.String)
-                        .build()))
+                                .setName(new ParameterName(SPORT))
+                                .setDescription(new Description("The source port number to match against"))
+                                .setType(Type.Int)
+                                .build(),
+                        new ParameterBuilder()
+                                .setName(new ParameterName(SPORT_RANGE))
+                                .setDescription(new Description("The source port range to match against"))
+                                .setType(Type.Range)
+                                .build(),
+                        new ParameterBuilder()
+                                .setName(new ParameterName(DPORT))
+                                .setDescription(new Description("The destination port number to match against"))
+                                .setType(Type.Int)
+                                .build(),
+                        new ParameterBuilder()
+                                .setName(new ParameterName(DPORT_RANGE))
+                                .setDescription(new Description("The destination port range to match against"))
+                                .setType(Type.Range)
+                                .build(),
+                        new ParameterBuilder()
+                                .setName(new ParameterName(TYPE))
+                                .setDescription(new Description("TCP or UDP"))
+                                .setIsRequired(IsRequired.Required)
+                                .setType(Type.String)
+                                .build()))
                 .build();
     
     private static final Map<String, Object> tcp = 
