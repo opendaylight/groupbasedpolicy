@@ -10,12 +10,6 @@
 
   <artifactId>groupbasedpolicy</artifactId>
   <packaging>bundle</packaging>
-  <repositories>
-  <repository>
-    <id>juniper-contrail</id>
-    <url>https://github.com/Juniper/contrail-maven/raw/master/releases</url>
-   </repository>
-  </repositories>
 
   <properties>
     <openflowplugin-nicira.version>0.1.0-SNAPSHOT</openflowplugin-nicira.version>
