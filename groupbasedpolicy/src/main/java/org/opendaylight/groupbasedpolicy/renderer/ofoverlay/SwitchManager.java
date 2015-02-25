@@ -214,7 +214,7 @@ public class SwitchManager implements AutoCloseable {
             SwitchState old = 
                     switches.putIfAbsent(id, state);
             if (old != null)
-                state = null;
+                state = old;
         }
         return state;
     }
