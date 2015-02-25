@@ -16,7 +16,6 @@
   <properties>
     <java.version.source>1.7</java.version.source>
     <java.version.target>1.7</java.version.target>
-    <nexusproxy>http://nexus.opendaylight.org/content</nexusproxy>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <controller.distribution.version>0.2.0-SNAPSHOT</controller.distribution.version>
     <openflowplugin.distribution.version>0.1.0-SNAPSHOT</openflowplugin.distribution.version>
@@ -52,49 +51,5 @@
     <developerConnection>scm:git:ssh://git.opendaylight.org:29418/groupbasedpolicy.git</developerConnection>
     <tag>HEAD</tag>
   </scm>
-  <repositories>
-    <!-- Opendaylight public group -->
-    <repository>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <id>opendaylight-public</id>
-      <name>opendaylight-public</name>
-      <url>${nexusproxy}/groups/public/</url>
-    </repository>
-    <!-- OpenDayLight Released artifact -->
-    <repository>
-      <id>opendaylight-release</id>
-      <name>opendaylight-release</name>
-      <url>http://nexus.opendaylight.org/content/repositories/opendaylight.release/</url>
-    </repository>
-    <!-- OpenDayLight Snapshot artifact -->
-    <repository>
-      <id>opendaylight-snapshot</id>
-      <name>opendaylight-snapshot</name>
-      <url>http://nexus.opendaylight.org/content/repositories/opendaylight.snapshot/</url>
-    </repository>
-  </repositories>
-
-  <pluginRepositories>
-    <pluginRepository>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <id>opendaylight-public</id>
-      <name>opendaylight-public</name>
-      <url>http://nexus.opendaylight.org/content/groups/public/</url>
-    </pluginRepository>
-    <pluginRepository>
-      <id>opendaylight-release</id>
-      <name>central2</name>
-      <url>http://nexus.opendaylight.org/content/repositories/opendaylight.release/</url>
-    </pluginRepository>
-    <pluginRepository>
-      <id>opendaylight-snapshot</id>
-      <name>central2</name>
-      <url>http://nexus.opendaylight.org/content/repositories/opendaylight.snapshot/</url>
-    </pluginRepository>
-  </pluginRepositories>
 </project>
 
