@@ -3,6 +3,7 @@ target/
 *.class
 *.iml
 **/target
+target-ide/
 **/bin
 dist
 **/logs
