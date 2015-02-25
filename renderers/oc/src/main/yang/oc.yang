@@ -16,7 +16,6 @@ module oc {
 
     import yang-ext {prefix ext; revision-date "2013-07-09";}
 
-    import gbp-common {prefix gbp-common;}
     import endpoint {prefix endpoint;}
 
     description

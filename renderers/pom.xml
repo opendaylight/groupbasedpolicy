@@ -8,13 +8,22 @@
     <relativePath>../</relativePath>
   </parent>
 
-  <artifactId>groupbasedpolicy</artifactId>
-  <packaging>bundle</packaging>
+  <artifactId>groupbasedpolicy-renderers</artifactId>
+  <version>0.2.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
 
-  <properties>
-  </properties>
+  <modules>
+    <module>oc</module>
+    <module>opflex</module>
+    <module>ofoverlay</module>
+  </modules>
 
   <dependencies>
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>groupbasedpolicy</artifactId>
+      <version>${project.version}</version>
+    </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
@@ -42,7 +51,7 @@
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-all</artifactId>
-      <version>${netty.version}</version>
+      <version>4.0.10.Final</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.controller</groupId>
@@ -110,14 +119,10 @@
           <instructions>
             <Import-Package>
              org.apache.http.*;version="4.3.2",
-             *;resolution:=optional</Import-Package>
-             <Embed-Dependency>httpclient,httpcore,commons-lang,commons-exec;type=!pom;inline=false</Embed-Dependency>
+	     *;resolution:=optional
+            </Import-Package>
+            <Embed-Dependency>httpclient,httpcore,commons-lang,commons-exec;type=!pom;inline=false</Embed-Dependency>
             <Export-Package>
-	      org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.*,
-	      org.opendaylight.controller.config.yang.config.endpoint_provider,
-	      org.opendaylight.groupbasedpolicy.endpoint,
-	      org.opendaylight.groupbasedpolicy.resolver,
-	      org.opendaylight.groupbasedpolicy.util,
 	    </Export-Package>
           </instructions>
           <manifestLocation>${project.basedir}/META-INF</manifestLocation>

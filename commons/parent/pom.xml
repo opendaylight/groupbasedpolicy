@@ -18,7 +18,9 @@
     <java.version.target>1.7</java.version.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <controller.distribution.version>0.2.0-SNAPSHOT</controller.distribution.version>
+    <odlparent.features-test.version>1.5.0-SNAPSHOT</odlparent.features-test.version>
     <openflowplugin.distribution.version>0.1.0-SNAPSHOT</openflowplugin.distribution.version>
+    <openflowplugin-nicira.version>0.1.0-SNAPSHOT</openflowplugin-nicira.version>
     <openflowjava.distribution.version>0.6.0-SNAPSHOT</openflowjava.distribution.version>
     <config.configfile.directory>etc/opendaylight/karaf</config.configfile.directory>
     <groupbasedpolicy.project.version>0.2.0-SNAPSHOT</groupbasedpolicy.project.version>
