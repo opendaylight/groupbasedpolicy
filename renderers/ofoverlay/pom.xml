@@ -24,6 +24,16 @@
 
   <!-- project build -->
   <build>
+	  <!--
+	       We use the maven-resources-plugin to copy
+               a class from the groupbasepolicy bundle that
+               we need in order to run some unit tests in
+	       the renderer (classes in the test directory
+               aren't packaged in bundles, and instead of
+               keeping separate copies, we just copy the
+               file(s) needed in order to run the test).
+          -->
+              
     <plugins>
       <plugin>
         <artifactId>maven-resources-plugin</artifactId>
