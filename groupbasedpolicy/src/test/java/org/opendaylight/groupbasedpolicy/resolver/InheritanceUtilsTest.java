@@ -93,7 +93,7 @@ public class InheritanceUtilsTest {
     // ******
     // Labels
     // ******
-    
+
     Quality q1 = new QualityBuilder()
         .setName(new QualityName("q1"))
         .build();
@@ -141,7 +141,7 @@ public class InheritanceUtilsTest {
     Capability c3 = new CapabilityBuilder()
         .setName(new CapabilityName("c3"))
         .build();
-    
+
     Condition cond1 = new ConditionBuilder()
         .setName(new ConditionName("cond1"))
         .build();
@@ -162,13 +162,13 @@ public class InheritanceUtilsTest {
         .setName(q2TargetName)
         .setQuality(ImmutableList.of(q2))
         .build();
-    
+
     TargetName q1ExcludeTargetName = new TargetName("q1_exclude");
     Target q1ExcludeTarget = new TargetBuilder()
         .setName(q1ExcludeTargetName)
         .setQuality(ImmutableList.of(q1Exclude, q2))
         .build();
-    
+
     TargetName q1IncludeTargetName = new TargetName("q1_include");
     Target q1IncludeTarget = new TargetBuilder()
         .setName(q1IncludeTargetName)
@@ -182,7 +182,8 @@ public class InheritanceUtilsTest {
 
     SubjectName subject1 = new SubjectName("subject1");
     SubjectName subject2 = new SubjectName("subject2");
-    
+    SubjectName subject3 = new SubjectName("subject3");
+
     RequirementMatcher rm_r1 = new RequirementMatcherBuilder()
         .setName(new RequirementMatcherName("rm_r1"))
         .setMatcherRequirement(ImmutableList.of(new MatcherRequirementBuilder(r1)
@@ -214,7 +215,7 @@ public class InheritanceUtilsTest {
         .setName(new ConditionMatcherName("cm_c2"))
         .setCondition(ImmutableList.of(cond2exlude))
         .build();
-    
+
     ClauseName clauseName1 = new ClauseName("clauseName1");
     Clause clause1 = new ClauseBuilder()
         .setName(clauseName1)
@@ -229,7 +230,7 @@ public class InheritanceUtilsTest {
             .build())
         .build();
 
-    Clause clause1plus = new ClauseBuilder()
+    Clause clause1withConsMatcher = new ClauseBuilder()
         .setName(clauseName1)
         .setSubjectRefs(ImmutableList.of(subject2))
         .setConsumerMatchers(new ConsumerMatchersBuilder()
@@ -237,6 +238,15 @@ public class InheritanceUtilsTest {
             .setConditionMatcher(ImmutableList.of(cm_c2_plus))
             .build())
         .build();
+
+    Clause clause1withProvMatcher = new ClauseBuilder()
+    .setName(clauseName1)
+    .setSubjectRefs(ImmutableList.of(subject3))
+    .setProviderMatchers(new ProviderMatchersBuilder()
+        .setCapabilityMatcher(ImmutableList.of(capm_c1))
+        .setConditionMatcher(ImmutableList.of(cm_c2_plus))
+        .build())
+    .build();
 
     ActionRef a1 = new ActionRefBuilder()
         .setName(new ActionName("a1"))
@@ -275,6 +285,10 @@ public class InheritanceUtilsTest {
         .setName(new SubjectName("s2"))
         .setOrder(5)
         .build();
+    Subject s2_plus = new SubjectBuilder()
+    .setName(new SubjectName(s2.getName()))
+    .setOrder(6)
+    .build();
 
     ContractId contractId1 = 
             new ContractId("e7e6804f-7fcb-46cf-9bc6-abfec0896d95");
@@ -294,8 +308,18 @@ public class InheritanceUtilsTest {
         .setId(contractId2)
         .setParent(contractId1)
         .setTarget(ImmutableList.of(q2PlusTarget, q1IncludeTarget))
-        .setClause(ImmutableList.of(clause1plus))
+        .setClause(ImmutableList.of(clause1withConsMatcher))
         .setSubject(ImmutableList.of(s1_plus, s2))
+        .build();
+
+    ContractId contractId3 = 
+            new ContractId("38d52ec1-301b-453a-88a6-3ffa777d7795");
+    Contract contract3 = new ContractBuilder()
+        .setId(contractId3)
+        .setParent(contractId1)
+        .setTarget(ImmutableList.of(q2PlusTarget, q1IncludeTarget))
+        .setClause(ImmutableList.of(clause1withProvMatcher))
+        .setSubject(ImmutableList.of(s2_plus, s2))
         .build();
 
     ContractId cloop2Id = new ContractId("89700928-7316-4216-a853-a7ea3934b8f4");
@@ -319,11 +343,11 @@ public class InheritanceUtilsTest {
         .setId(new ContractId("f72c15f3-76ab-4c7e-a817-eb5f6efcb654"))
         .setParent(new ContractId("eca4d0d5-8c62-4f46-ad42-71c1f4d3da12"))
         .build();
-    
+
     // ***************
     // Endpoint Groups
     // ***************
-    
+
     SelectorName cnsName1 = new SelectorName("cns1");
     ConsumerNamedSelector cns1 = new ConsumerNamedSelectorBuilder()
         .setName(cnsName1)
@@ -336,7 +360,7 @@ public class InheritanceUtilsTest {
         .setContract(ImmutableList.of(contractId2))
         .setRequirement(ImmutableList.of(r3))
         .build();
-    
+
     ProviderNamedSelector pns1 = new ProviderNamedSelectorBuilder()
         .setName(cnsName1)
         .setContract(ImmutableList.of(contractId1))
@@ -348,7 +372,7 @@ public class InheritanceUtilsTest {
         .setContract(ImmutableList.of(contractId2))
         .setCapability(ImmutableList.of(c3))
         .build();
-    
+
     QualityMatcher qm_q1_all = new QualityMatcherBuilder()
         .setName(new QualityMatcherName("qm_q1_all"))
         .setMatcherQuality(ImmutableList.of(new MatcherQualityBuilder(q1)
@@ -389,7 +413,7 @@ public class InheritanceUtilsTest {
     QualityMatcher qm_q1_plus = new QualityMatcherBuilder()
         .setName(new QualityMatcherName("qm_q1_any"))
         .build();
-    
+
     SelectorName ctsName1 = new SelectorName("cts1");
     ConsumerTargetSelector cts1 = new ConsumerTargetSelectorBuilder()
         .setName(ctsName1)
@@ -415,7 +439,7 @@ public class InheritanceUtilsTest {
                                               qm_q2q3_plus))
         .setRequirement(ImmutableList.of(r3))
         .build();
-    
+
     SelectorName ptsName1 = new SelectorName("pts1");
     ProviderTargetSelector pts1 = new ProviderTargetSelectorBuilder()
         .setName(ptsName1)
@@ -441,7 +465,7 @@ public class InheritanceUtilsTest {
                                               qm_q2q3_plus))
         .setCapability(ImmutableList.of(c3))
         .build();
-    
+
     EndpointGroupId egId1 = 
             new EndpointGroupId("c0e5edfb-02d2-412b-8757-a77b3daeb5d4");
     EndpointGroup eg1 = new EndpointGroupBuilder()
@@ -488,16 +512,16 @@ public class InheritanceUtilsTest {
         .setId(new EndpointGroupId("feafeac9-ce1a-4b19-8455-8fcc9a4ff013"))
         .setParent(new EndpointGroupId("aa9dfcf1-610c-42f9-8c3a-f67b43196821"))
         .build();
-    
+
     // *******
     // Tenants
     // *******
-    
+
     TenantId tenantId1 = new TenantId("0ac5d219-979c-4cca-8f90-83b69bc414ad");
     Tenant tenant1 = new TenantBuilder()
         .setId(tenantId1)
         .setEndpointGroup(ImmutableList.of(eg1, eg2))
-        .setContract(ImmutableList.of(contract1, contract2))
+        .setContract(ImmutableList.of(contract1, contract2,contract3))
         .build();
 
     Tenant malformed = new TenantBuilder()
@@ -505,7 +529,7 @@ public class InheritanceUtilsTest {
         .setContract(ImmutableList.of(cloop1, cloop2, cselfloop, corphan))
         .setEndpointGroup(ImmutableList.of(egloop1, egloop2, egselfloop, egorphan))
         .build();
-    
+
     // ****************
     // Other test state
     // ****************
@@ -539,7 +563,7 @@ public class InheritanceUtilsTest {
         qualities = result.getQuality();
         assertTrue(q1.getName() + " found in q1IncludeTargetName", 
                    containsQuality(qualities, q1));
-        
+
         // target with a quality from the containing contract but overridden
         // in the target
         result = TenantUtils.findTarget(c1, q1ExcludeTargetName);
@@ -587,7 +611,7 @@ public class InheritanceUtilsTest {
         assertFalse(q3.getName() + " found in q1ExcludeTargetName", 
                     containsQuality(qualities, q3));
     }
-    
+
     private boolean containsRequirement(List<? extends RequirementBase> requirements, 
                                        RequirementBase requirement) {
         for (RequirementBase r : requirements) {
@@ -596,7 +620,7 @@ public class InheritanceUtilsTest {
         }
         return false;
     }
-    
+
     private boolean containsCapability(List<? extends CapabilityBase> capabilities, 
                                       CapabilityBase capability) {
         for (CapabilityBase r : capabilities) {
@@ -614,12 +638,12 @@ public class InheritanceUtilsTest {
         }
         return false;
     }
-    
+
     @Test
     public void testConsumerTargetSelectorSimple() throws Exception {
         Tenant tenant = InheritanceUtils.resolveTenant(tenant1);
         EndpointGroup egResult1 = TenantUtils.findEndpointGroup(tenant, egId1);
-        
+
         // should get r1 from eg1 and r2 from target selector
         ConsumerTargetSelector result =
                 TenantUtils.findCts(egResult1, ctsName1);
@@ -629,7 +653,7 @@ public class InheritanceUtilsTest {
                    containsRequirement(requirements, r1));
         assertTrue(r2.getName() + " found in " + requirements,
                    containsRequirement(requirements, r2));
-        
+
         List<QualityMatcher> matchers = result.getQualityMatcher();
         assertEquals(2, matchers.size());
         for (QualityMatcher m : matchers) {
@@ -653,7 +677,7 @@ public class InheritanceUtilsTest {
                    containsRequirement(requirements, r2));
         assertTrue(r3.getName() + " found in " + requirements,
                    containsRequirement(requirements, r3));
-        
+
         matchers = result.getQualityMatcher();
         assertEquals(1, matchers.size());
         assertTrue(containsQuality(matchers.get(0).getMatcherQuality(), q2));
@@ -674,7 +698,7 @@ public class InheritanceUtilsTest {
                    containsRequirement(requirements, r1));
         assertTrue(r3.getName() + " found in " + requirements,
                    containsRequirement(requirements, r3));
-        
+
         // should have three matchers, 
         // (1) qm_q1_all inherited from endpoint group 1
         // (2) qm_q1_any inherited from endpoint group 1, but overridden in 
@@ -697,11 +721,11 @@ public class InheritanceUtilsTest {
                 assertEquals(MatchType.Any, m.getMatchType());
             }
         }
-        
+
         result = TenantUtils.findCts(egResult2, ctsName2);
         assertEquals(ctsName2, result.getName());
         requirements = result.getRequirement();
-        
+
         // should get r1 from eg1 but excluded in target selector
         // r3 comes from target selector
         assertFalse(r1.getName() + " found in " + requirements,
@@ -710,7 +734,7 @@ public class InheritanceUtilsTest {
                    containsRequirement(requirements, r2));
         assertTrue(r3.getName() + " found in " + requirements,
                    containsRequirement(requirements, r3));
-        
+
         // Should get 2 matchers: 
         // (1) qm_q2q2_any inherited from eg1, except that q2 is excluded 
         //     by qm_q2q3_plus and q3 has a target namespace added 
@@ -739,12 +763,12 @@ public class InheritanceUtilsTest {
             }
         }
     }
-    
+
     @Test
     public void testConsumerNamedSelectorSimple() throws Exception {
         Tenant tenant = InheritanceUtils.resolveTenant(tenant1);
         EndpointGroup egResult1 = TenantUtils.findEndpointGroup(tenant, egId1);
-        
+
         // should get r1 from eg1 and r2 from selector
         ConsumerNamedSelector result =
                 TenantUtils.findCns(egResult1, cnsName1);
@@ -755,7 +779,7 @@ public class InheritanceUtilsTest {
                    containsRequirement(requirements, r1));
         assertTrue(r2.getName() + " found in " + requirements,
                    containsRequirement(requirements, r2));
-        
+
         assertEquals(1, result.getContract().size());
         HashSet<ContractId> cids = new HashSet<>();
         cids.addAll(result.getContract());
@@ -791,7 +815,7 @@ public class InheritanceUtilsTest {
     public void testProviderTargetSelectorSimple() throws Exception {
         Tenant tenant = InheritanceUtils.resolveTenant(tenant1);
         EndpointGroup egResult1 = TenantUtils.findEndpointGroup(tenant, egId1);
-        
+
         // should get c1 from eg1 and c2 from target selector
         ProviderTargetSelector result =
                 TenantUtils.findPts(egResult1, ptsName1);
@@ -801,7 +825,7 @@ public class InheritanceUtilsTest {
                    containsCapability(capabilities, c1));
         assertTrue(c2.getName() + " found in " + capabilities,
                    containsCapability(capabilities, c2));
-        
+
         List<QualityMatcher> matchers = result.getQualityMatcher();
         assertEquals(2, matchers.size());
         for (QualityMatcher m : matchers) {
@@ -825,7 +849,7 @@ public class InheritanceUtilsTest {
                    containsCapability(capabilities, c2));
         assertTrue(c3.getName() + " found in " + capabilities,
                    containsCapability(capabilities, c3));
-        
+
         matchers = result.getQualityMatcher();
         assertEquals(1, matchers.size());
         assertTrue(containsQuality(matchers.get(0).getMatcherQuality(), q2));
@@ -846,7 +870,7 @@ public class InheritanceUtilsTest {
                    containsCapability(capabilities, c1));
         assertTrue(c3.getName() + " found in " + capabilities,
                    containsCapability(capabilities, c3));
-        
+
         // should have three matchers, 
         // (1) qm_q1_all inherited from endpoint group 1
         // (2) qm_q1_any inherited from endpoint group 1, but overridden in 
@@ -869,11 +893,11 @@ public class InheritanceUtilsTest {
                 assertEquals(MatchType.Any, m.getMatchType());
             }
         }
-        
+
         result = TenantUtils.findPts(egResult2, ptsName2);
         assertEquals(ptsName2, result.getName());
         capabilities = result.getCapability();
-        
+
         // should get c1 from eg1 but excluded in target selector
         // c3 comes from target selector
         assertFalse(c1.getName() + " found in " + capabilities,
@@ -882,7 +906,7 @@ public class InheritanceUtilsTest {
                    containsCapability(capabilities, c2));
         assertTrue(c3.getName() + " found in " + capabilities,
                    containsCapability(capabilities, c3));
-        
+
         // Should get 2 matchers: 
         // (1) qm_q2q2_any inherited from eg1, except that q2 is excluded 
         //     by qm_q2q3_plus and q3 has a target namespace added 
@@ -927,7 +951,7 @@ public class InheritanceUtilsTest {
                    containsCapability(capabilities, c1));
         assertTrue(c2.getName() + " found in " + capabilities,
                    containsCapability(capabilities, c2));
-        
+
         assertEquals(1, result.getContract().size());
         HashSet<ContractId> cids = new HashSet<>();
         cids.addAll(result.getContract());
@@ -966,7 +990,7 @@ public class InheritanceUtilsTest {
         
         Clause result = TenantUtils.findClause(cresult1, clauseName1);
         assertEquals(clauseName1, result.getName());
-        
+
         // subject refs: subject1 from clause1
         assertEquals(1, result.getSubjectRefs().size());
         assertEquals(ImmutableSet.of(subject1), 
@@ -1003,7 +1027,7 @@ public class InheritanceUtilsTest {
     public void testClauseInheritance() throws Exception {
         Tenant tenant = InheritanceUtils.resolveTenant(tenant1);
         Contract cresult2 = TenantUtils.findContract(tenant, contractId2);
-        
+
         Clause result = TenantUtils.findClause(cresult2, clauseName1);
         assertEquals(clauseName1, result.getName());
  
@@ -1018,13 +1042,13 @@ public class InheritanceUtilsTest {
         assertEquals(1, cm.size());
         assertEquals(1, cm.get(0).getCondition().size());
         assertTrue(containsCondition(cm.get(0).getCondition(), cond1));
-        
+
         List<CapabilityMatcher> capm = 
                 result.getProviderMatchers().getCapabilityMatcher();
         assertEquals(1, capm.size());
         assertEquals(1, capm.get(0).getMatcherCapability().size());
         assertTrue(containsCapability(capm.get(0).getMatcherCapability(), c1));
-        
+
         assertNotNull(result.getConsumerMatchers());
         cm = result.getConsumerMatchers().getConditionMatcher();
         assertEquals(1, cm.size());
@@ -1079,7 +1103,7 @@ public class InheritanceUtilsTest {
             }
         }
     }
-    
+
     @Test
     public void testMalformedPolicy() throws Exception {
         Tenant tenant = 
@@ -1092,12 +1116,12 @@ public class InheritanceUtilsTest {
         assertEquals(1, clause.getProviderMatchers().getConditionMatcher().size());
         assertEquals(1, clause.getProviderMatchers().getCapabilityMatcher().size());
         assertEquals(2, c.getSubject().size());
-        
+
         EndpointGroup eg = TenantUtils.findEndpointGroup(tenant, egloop2Id);
         assertEquals(1, eg.getConsumerNamedSelector().size());
         assertEquals(1, eg.getConsumerTargetSelector().size());
         assertEquals(1, eg.getProviderNamedSelector().size());
         assertEquals(1, eg.getProviderTargetSelector().size());
-        
+
     }
 }
