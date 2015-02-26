@@ -29,8 +29,9 @@ import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
-import org.opendaylight.groupbasedpolicy.endpoint.AbstractEndpointRegistry;
+import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
+import org.opendaylight.groupbasedpolicy.endpoint.EpRendererAugmentation;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.util.SetUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNodeConnector;
@@ -77,9 +78,7 @@ import com.google.common.util.concurrent.Futures;
  * each particular endpoint group
  * @author readams
  */
-public class EndpointManager 
-        extends AbstractEndpointRegistry 
-        implements AutoCloseable, DataChangeListener
+public class EndpointManager implements AutoCloseable, DataChangeListener
     {
     private static final Logger LOG = 
             LoggerFactory.getLogger(EndpointManager.class);
@@ -104,12 +103,19 @@ public class EndpointManager
             
     private List<EndpointListener> listeners = new CopyOnWriteArrayList<>();
 
+    final private OfEndpointAug endpointRpcAug = new OfEndpointAug();
+
+    final private ScheduledExecutorService executor;
+
+    final private DataBroker dataProvider;
+
     public EndpointManager(DataBroker dataProvider,
                            RpcProviderRegistry rpcRegistry,
                            ScheduledExecutorService executor,
                            SwitchManager switchManager) {
-        super(dataProvider, rpcRegistry, executor);
-        
+        this.executor = executor;
+        this.dataProvider = dataProvider;
+        EndpointRpcRegistry.register(dataProvider, rpcRegistry, executor, endpointRpcAug);
         if (dataProvider != null) {
             listenerReg = dataProvider
                     .registerDataChangeListener(LogicalDatastoreType.OPERATIONAL, 
@@ -120,7 +126,7 @@ public class EndpointManager
                     LogicalDatastoreType.OPERATIONAL, nodeIid,
                     new NodesListener(), DataChangeScope.SUBTREE);
 
-        } else
+        } else 
             listenerReg = null;
 
         LOG.debug("Initialized OFOverlay endpoint manager");
@@ -228,26 +234,27 @@ public class EndpointManager
     }
     
     // ************************
-    // AbstractEndpointRegistry
+    // Endpoint Augmentation
     // ************************
-    
-    @Override
-    protected EndpointBuilder buildEndpoint(RegisterEndpointInput input) {
-        // In order to support both the port-name and the data-path information, allow
-        // an EP to register without the augmentations, and resolve later.
-        OfOverlayContextBuilder ictx = checkAugmentation(input);
-            if(ictx == null) {
-                return super.buildEndpoint(input);
-            } else {
-                return super.buildEndpoint(input).addAugmentation(OfOverlayContext.class, ictx.build());
+    private class OfEndpointAug implements EpRendererAugmentation {
+
+        @Override
+        public void buildEndpointAugmentation(EndpointBuilder eb,
+                RegisterEndpointInput input) {
+            // In order to support both the port-name and the data-path information, allow
+            // an EP to register without the augmentations, and resolve later.
+            OfOverlayContextBuilder ictx = checkAugmentation(input);
+            if (ictx != null) {
+                eb.addAugmentation(OfOverlayContext.class, ictx.build());
             }
+        }
+
+        @Override
+        public void buildEndpointL3Augmentation(EndpointL3Builder eb,
+                RegisterEndpointInput input) {
+        }
     }
 
-    @Override
-    protected EndpointL3Builder buildEndpointL3(RegisterEndpointInput input) {
-        return super.buildEndpointL3(input);
-    }
-    
     // *************
     // AutoCloseable
     // *************
@@ -255,7 +262,7 @@ public class EndpointManager
     @Override
     public void close() throws Exception {
         if (listenerReg != null) listenerReg.close();
-        super.close();
+        EndpointRpcRegistry.unregister(endpointRpcAug);
     }
 
     // ******************

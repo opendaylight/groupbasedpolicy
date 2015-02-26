@@ -25,8 +25,9 @@ import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataCh
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
-import org.opendaylight.groupbasedpolicy.endpoint.AbstractEndpointRegistry;
+import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
+import org.opendaylight.groupbasedpolicy.endpoint.EpRendererAugmentation;
 import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcEndpoint;
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcBroker;
 import org.opendaylight.groupbasedpolicy.jsonrpc.RpcMessage;
@@ -77,7 +78,6 @@ import org.slf4j.LoggerFactory;
  * @author tbachman
  */
 public class EndpointManager
-        extends AbstractEndpointRegistry
         implements AutoCloseable, DataChangeListener, RpcBroker.RpcCallback,
         EprContext.EprCtxCallback {
     protected static final Logger LOG =
@@ -101,12 +101,20 @@ public class EndpointManager
     private ConcurrentHashMap<String, Set<String>> epSubscriptions;
     private RpcMessageMap messageMap = null;
 
+    final private OfEndpointAug endpointRpcAug = new OfEndpointAug();
+
+    final private ScheduledExecutorService executor;
+
+    final private DataBroker dataProvider;
+
     public EndpointManager(DataBroker dataProvider,
                            RpcProviderRegistry rpcRegistry,
                            ScheduledExecutorService executor,
                            OpflexConnectionService connectionService,
                            MitLib opflexLibrary) {
-        super(dataProvider, rpcRegistry, executor);
+        this.executor = executor;
+        this.dataProvider = dataProvider;
+        EndpointRpcRegistry.register(dataProvider, rpcRegistry, executor, endpointRpcAug);
 
         if (dataProvider != null) {
             listenerReg = dataProvider
@@ -161,26 +169,29 @@ public class EndpointManager
         return endpoints.get(epKey);
     }
 
-    // ************************
-    // AbstractEndpointRegistry
-    // ************************
 
-    @Override
-    protected EndpointBuilder buildEndpoint(RegisterEndpointInput input) {
-        OpflexOverlayContextInput ictx =
-                input.getAugmentation(OpflexOverlayContextInput.class);
-        return super.buildEndpoint(input)
-                .addAugmentation(OpflexOverlayContext.class,
-                                 new OpflexOverlayContextBuilder(ictx).build());
-    }
+    // ************************
+    // Endpoint Augmentation
+    // ************************
+    private class OfEndpointAug implements EpRendererAugmentation {
 
-    @Override
-    protected EndpointL3Builder buildEndpointL3(RegisterEndpointInput input) {
-        OpflexOverlayContextInput ictx =
-                input.getAugmentation(OpflexOverlayContextInput.class);
-        return super.buildEndpointL3(input)
-                .addAugmentation(OpflexOverlayContextL3.class,
-                                 new OpflexOverlayContextL3Builder(ictx).build());
+        @Override
+        public void buildEndpointAugmentation(EndpointBuilder eb,
+                RegisterEndpointInput input) {
+            OpflexOverlayContextInput ictx = input
+                    .getAugmentation(OpflexOverlayContextInput.class);
+            eb.addAugmentation(OpflexOverlayContext.class,
+                    new OpflexOverlayContextBuilder(ictx).build());
+        }
+
+        @Override
+        public void buildEndpointL3Augmentation(EndpointL3Builder eb,
+                RegisterEndpointInput input) {
+            OpflexOverlayContextInput ictx = input
+                    .getAugmentation(OpflexOverlayContextInput.class);
+            eb.addAugmentation(OpflexOverlayContextL3.class,
+                    new OpflexOverlayContextL3Builder(ictx).build());
+        }
     }
 
     // *************
@@ -190,7 +201,7 @@ public class EndpointManager
     @Override
     public void close() throws Exception {
         if (listenerReg != null) listenerReg.close();
-        super.close();
+        EndpointRpcRegistry.unregister(endpointRpcAug);
     }
 
     // ******************

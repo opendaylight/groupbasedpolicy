@@ -8,6 +8,9 @@
 
 package org.opendaylight.groupbasedpolicy.endpoint;
 
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -54,26 +57,100 @@ import com.google.common.util.concurrent.ListenableFuture;
  * updating information about endpoints.
  * @author readamsO
  */
-public abstract class AbstractEndpointRegistry 
-        implements AutoCloseable, EndpointService {
+public class EndpointRpcRegistry implements EndpointService {
     private static final Logger LOG = 
-            LoggerFactory.getLogger(AbstractEndpointRegistry.class);
+            LoggerFactory.getLogger(EndpointRpcRegistry.class);
 
-    protected final DataBroker dataProvider;
-    protected final ScheduledExecutorService executor;
-    
+    private final DataBroker dataProvider;
+    private final ScheduledExecutorService executor;
+    private final RpcProviderRegistry rpcRegistry;
+    private static EndpointRpcRegistry endpointRpcRegistry;
+
     final BindingAwareBroker.RpcRegistration<EndpointService> rpcRegistration;
 
-    public AbstractEndpointRegistry(DataBroker dataProvider,
+    private final static ConcurrentMap<String, EpRendererAugmentation> registeredRenderers = new ConcurrentHashMap<String, EpRendererAugmentation>();
+
+
+    /**
+     * This method registers a renderer for endpoint RPC API. This method
+     * ensures single RPC registration for all renderers since a single RPC
+     * registration is only allowed.
+     *
+     * @param dataProvider
+     *            - the dataProvider
+     * @param rpcRegistry
+     *            - the rpcRegistry
+     * @param executor
+     *            - thread pool executor
+     * @param epRendererAugmentation
+     *            - specific implementation RPC augmentation, if any. Otherwise NULL
+     */
+    public static void register(DataBroker dataProvider,
+            RpcProviderRegistry rpcRegistry, ScheduledExecutorService executor,
+            EpRendererAugmentation epRendererAugmentation) {
+        if (dataProvider == null || rpcRegistry == null || executor == null) {
+            if (epRendererAugmentation != null) {
+                LOG.warn("Couldn't register class {} for endpoint RPC because of missing required info");
+            }
+            return;
+        }
+        if (endpointRpcRegistry == null) {
+            synchronized (EndpointRpcRegistry.class) {
+                if (endpointRpcRegistry == null) {
+                    endpointRpcRegistry = new EndpointRpcRegistry(dataProvider,
+                            rpcRegistry, executor);
+                }
+            }
+        }
+        if (epRendererAugmentation != null) {
+            registeredRenderers.putIfAbsent(epRendererAugmentation.getClass()
+                    .getName(), epRendererAugmentation);
+        }
+    }
+
+    /**
+     *
+     * @param regImp
+     * @throws Exception
+     */
+    public static void unregister(EpRendererAugmentation regImp)
+            throws Exception {
+        if (regImp == null
+                || !registeredRenderers
+                        .containsKey(regImp.getClass().getName())) {
+            return;
+        }
+        registeredRenderers.remove(regImp.getClass().getName());
+        LOG.info("Unregistered {}", regImp.getClass().getName());
+        if (registeredRenderers.isEmpty() && endpointRpcRegistry != null) {
+            synchronized (EndpointRpcRegistry.class) {
+                if (registeredRenderers.isEmpty()
+                        && endpointRpcRegistry != null) {
+                    endpointRpcRegistry.rpcRegistration.close();
+                    endpointRpcRegistry = null;
+                }
+            }
+        }
+    }
+
+    /**
+     * Constructor
+     *
+     * @param dataProvider
+     * @param rpcRegistry
+     * @param executor
+     */
+    private EndpointRpcRegistry(DataBroker dataProvider,
                                     RpcProviderRegistry rpcRegistry,
                                     ScheduledExecutorService executor) {
-        super();
         this.dataProvider = dataProvider;
         this.executor = executor;
+        this.rpcRegistry = rpcRegistry;
 
-        if (rpcRegistry != null) {
+        if (this.rpcRegistry != null) {
             rpcRegistration =
-                    rpcRegistry.addRpcImplementation(EndpointService.class, this);
+                    this.rpcRegistry.addRpcImplementation(EndpointService.class, this);
+            LOG.debug("Added RPC Implementation Correctly");
         } else
             rpcRegistration = null;
         
@@ -104,32 +181,45 @@ public abstract class AbstractEndpointRegistry
         // XXX TODO - age out endpoint data and remove 
         // endpoint group/condition mappings with no conditions
     }
-
-    @Override
-    public void close() throws Exception {
-        rpcRegistration.close();
-    }
-    
+  
     /**
      * Construct an endpoint with the appropriate augmentations from the 
-     * endpoint input.  This can be overridden by a concrete implementation.
+     * endpoint input.  Each concrete implementation can provides its specifics earlier.
      * @param input the input object
-     * @param timestamp the current timestamp
      */
-    protected EndpointBuilder buildEndpoint(RegisterEndpointInput input) {
-        return new EndpointBuilder(input);
+    private EndpointBuilder buildEndpoint(RegisterEndpointInput input) {
+        EndpointBuilder eb = new EndpointBuilder(input);
+        for (Entry<String, EpRendererAugmentation> entry : registeredRenderers
+                .entrySet()) {
+            try {
+                entry.getValue().buildEndpointAugmentation(eb, input);
+            } catch (Throwable t) {
+                LOG.warn("Endpoint Augmentation error while processing "
+                        + entry.getKey() + ". Reason: ", t);
+            }
+        }
+        return eb;
     }
-    
+
     /**
      * Construct an L3 endpoint with the appropriate augmentations from the 
-     * endpoint input.  This can be overridden by a concrete implementation.
+     * endpoint input.  Each concrete implementation can provides its specifics earlier.
      * @param input the input object
-     * @param timestamp the current timestamp
      */
-    protected EndpointL3Builder buildEndpointL3(RegisterEndpointInput input) {
-        return new EndpointL3Builder(input);
+    private EndpointL3Builder buildEndpointL3(RegisterEndpointInput input) {
+        EndpointL3Builder eb = new EndpointL3Builder(input);
+        for (Entry<String, EpRendererAugmentation> entry : registeredRenderers
+                .entrySet()) {
+            try {
+                entry.getValue().buildEndpointL3Augmentation(eb, input);
+            } catch (Throwable t) {
+                LOG.warn("L3 endpoint Augmentation error while processing "
+                        + entry.getKey() + ". Reason: ", t);
+            }
+        }
+        return eb;
     }
-    
+
     @Override
     public Future<RpcResult<Void>>
         registerEndpoint(RegisterEndpointInput input) {
