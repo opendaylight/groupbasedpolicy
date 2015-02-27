@@ -12,6 +12,7 @@ import com.google.common.base.Optional;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
@@ -20,6 +21,12 @@ import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
+import org.opendaylight.sfc.provider.SfcProviderRpc;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.ReadRenderedServicePathFirstHopInputBuilder;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.ReadRenderedServicePathFirstHopOutput;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.path.first.hop.info.RenderedServicePathFirstHop;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.PortNumber;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.SubjectFeatureDefinitions;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.Tenants;
@@ -32,9 +39,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -44,21 +53,7 @@ import java.util.concurrent.ScheduledExecutorService;
  * that we'll need to add for SFC integration. This
  * will likely change a lot.
  *
- * One problem is that the ActionInstance can reference
- * an ActionDefintion that doesn't yet exist. Since the
- * life cycles of these two objects are independent, we'd
- * need some way of doing this check if there's ever an
- * update that creates the ActionDefinition with a "chain"
- * action  after the ActionInstance that references it
- * (i.e the creation of the ActionDefinition event).
- *
- * There are some other questions that need resolving -- how are
- * updates to SFC chains received and managed by GBP?  We
- * may need to either add an RPC that SFC calls for updates
- * or implement a data change listener to manage SFC state
- * updates.
- *
- * TODO Move SfcManager out out ofoverlay renderer -- should be something
+ * TODO Move SfcManager out of ofoverlay renderer -- should be something
  *       that's shared by renderers, not specific to ofoverlay
  *
  * @author tbachman
@@ -108,7 +103,6 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
     public void onDataChanged(
             AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
 
-        // For now, just go off new ActionInstance objects
         for (DataObject dao : change.getCreatedData().values()) {
             if (dao instanceof ActionInstance) {
                 ActionInstance ai = (ActionInstance)dao;
@@ -117,17 +111,20 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
             }
         }
 
-        // We'll worry about udpates and deletes later
+        // TODO: how to handle deletes (comment out for now)
 //        for (InstanceIdentifier<?> iid : change.getRemovedPaths()) {
 //            DataObject old = change.getOriginalData().get(iid);
-//            if (old != null && old instanceof Rule) {
+//            if (old != null && old instanceof ActionInstance) {
 //
 //            }
 //        }
-//
-//        for (DataObject dao : change.getUpdatedData().values()) {
-//
-//        }
+
+        for (DataObject dao : change.getUpdatedData().values()) {
+            if (dao instanceof ActionInstance) {
+                ActionInstance ai = (ActionInstance)dao;
+                executor.execute(new MatchActionDefTask(ai));
+            }
+        }
     }
 
     /**
@@ -165,7 +162,7 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
         public void run() {
             ReadOnlyTransaction rot = dataBroker.newReadOnlyTransaction();
             ListenableFuture<Optional<ActionDefinition>> dao =
-                    rot.read(LogicalDatastoreType.CONFIGURATION, adIid);
+                    rot.read(LogicalDatastoreType.OPERATIONAL, adIid);
             Futures.addCallback(dao, this, executor);
 
         }
@@ -199,33 +196,30 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
          * TBD: what to do with this once we have it - who to
          * give it to
          */
-        private void getSfcChain() {
-            for (ParameterValue pv: actionInstance.getParameterValue()) {
-                if (pv.getName().getValue().equals(SFC_CHAIN_NAME)) {
-
-                    // Go get the RSP
-//                    RenderedServicePath rsp =
-//                            createRenderedServicePathAndState(pv.getStringValue());
-
-                }
-            }
-        }
-
-        /**
-         * Go get the RenderedServicePath from SFC
-         *
-         * TBD: what to do with this once we have it - who to
-         * give it to
-         */
         private void getSfcRsp() {
             for (ParameterValue pv: actionInstance.getParameterValue()) {
                 if (pv.getName().getValue().equals(SFC_CHAIN_NAME)) {
-
-
-/*                  Uncomment when new SFC artifacts are pushed
-                    RenderedServicePathFirstHop renderedServicePathFirstHop =
-                            SfcProviderRenderedPathAPI.readRenderedServicePathFirstHop(SFC_CHAIN_NAME);*/
-
+                    // TODO: check for rspFirstHop.getTransportType()
+                    ReadRenderedServicePathFirstHopInputBuilder builder =
+                        new ReadRenderedServicePathFirstHopInputBuilder();
+                    builder.setName(SFC_CHAIN_NAME);
+                    Future<RpcResult<ReadRenderedServicePathFirstHopOutput>> result =
+                        SfcProviderRpc.getSfcProviderRpc().readRenderedServicePathFirstHop(builder.build());
+                    try {
+                        RpcResult<ReadRenderedServicePathFirstHopOutput> output = result.get();
+                        if (output.isSuccessful()) {
+                            RenderedServicePathFirstHop rspFirstHop =
+                                output.getResult().getRenderedServicePathFirstHop();
+                            IpAddress ip = rspFirstHop.getIp();
+                            PortNumber pn = rspFirstHop.getPort();
+                            // TODO: use NSI, NSP, SPI
+                            //Short nsi = rspFirstHop.getStartingIndex();
+                            //Long nsp = rspFirstHop.getPathId();
+                            //Long spi = rspFirstHop.getSymmetricPathId();
+                        }
+                    } catch (Exception e) {
+                    	// TODO: proper exception handling
+                    }
                 }
             }
         }
