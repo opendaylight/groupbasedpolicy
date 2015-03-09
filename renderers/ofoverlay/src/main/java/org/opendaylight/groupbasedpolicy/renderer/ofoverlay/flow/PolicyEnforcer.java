@@ -8,7 +8,9 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -20,7 +22,9 @@ import javax.annotation.concurrent.Immutable;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.AllowAction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Classifier;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Action;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
 import org.opendaylight.groupbasedpolicy.resolver.ConditionGroup;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
@@ -28,6 +32,7 @@ import org.opendaylight.groupbasedpolicy.resolver.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.resolver.Policy;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.groupbasedpolicy.resolver.RuleGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
@@ -37,11 +42,13 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup.IntraGroupPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.Rule;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ClassifierInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
@@ -53,6 +60,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev14
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ComparisonChain;
+import com.google.common.collect.Ordering;
 
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.*;
 
@@ -212,12 +222,92 @@ public class PolicyEnforcer extends FlowTable {
             }
         }
     }
-    
+
+    /**
+     * Private internal class for ordering Actions in Rules. The
+     * order is determined first by the value of the order parameter,
+     * with the lower order actions being applied first; for Actions
+     * with either the same order or no order, ordering is lexicographical
+     * by name.
+     *
+     * @author tbachman
+     *
+     */
+    private static class ActionRefComparator implements Comparator<ActionRef> {
+        public static final ActionRefComparator INSTANCE = new ActionRefComparator();
+
+        @Override
+        public int compare(ActionRef arg0, ActionRef arg1) {
+            return ComparisonChain.start()
+                    .compare(arg0.getOrder(), arg1.getOrder(),
+                             Ordering.natural().nullsLast())
+                    .compare(arg0.getName().getValue(), arg1.getName().getValue(),
+                             Ordering.natural().nullsLast())
+                    .result();
+        }
+
+    }
+
     private void syncDirection(ReadWriteTransaction t, 
                                InstanceIdentifier<Table> tiid,
                                Map<String, FlowCtx> flowMap, NodeId nodeId,
                                IndexedTenant contractTenant,
                                CgPair p, Rule r, Direction d, int priority) {
+        /*
+         * Create the ordered action list. The implicit action is
+         * "allow", and is therefore always in the list
+         *
+         * TODO: revisit implicit vs. default for "allow"
+         * TODO: look into incorporating operational policy for actions
+         */
+        List<ActionBuilder> abl = new ArrayList<ActionBuilder>();
+        if (r.getActionRef() != null) {
+            /*
+             * Pre-sort by references using order, then name
+             */
+            List<ActionRef> arl = new ArrayList<ActionRef>(r.getActionRef());
+            Collections.sort(arl, ActionRefComparator.INSTANCE);
+
+            for (ActionRef ar: arl) {
+                ActionInstance ai = contractTenant.getAction(ar.getName());
+                if (ai == null) {
+                    // XXX TODO fail the match and raise an exception
+                    LOG.warn("Action instance {} not found",
+                             ar.getName().getValue());
+                    return;
+                }
+                Action act = SubjectFeatures.getAction(ai.getActionDefinitionId());
+                if (act == null) {
+                    // XXX TODO fail the match and raise an exception
+                    LOG.warn("Action definition {} not found",
+                             ai.getActionDefinitionId().getValue());
+                    return;
+                }
+
+                Map<String,Object> params = new HashMap<>();
+                if (ai.getParameterValue() != null) {
+                    for (ParameterValue v : ai.getParameterValue()) {
+                        if (v.getName() == null) continue;
+                        if (v.getIntValue() != null) {
+                            params.put(v.getName().getValue(), v.getIntValue());
+                        } else if (v.getStringValue() != null) {
+                            params.put(v.getName().getValue(), v.getStringValue());
+                        }
+                    }
+                }
+                /*
+                 * Convert the GBP Action to one or more OpenFlow
+                 * Actions
+                 */
+                abl = act.updateAction(abl, params, ar.getOrder());
+            }
+        }
+        else {
+            Action act = SubjectFeatures.getAction(AllowAction.ID);
+            abl = act.updateAction(abl, new HashMap<String,Object>(),  0);
+        }
+
+
         for (ClassifierRef cr : r.getClassifierRef()) {
             if (cr.getDirection() != null && 
                 !cr.getDirection().equals(Direction.Bidirectional) && 
@@ -301,7 +391,7 @@ public class PolicyEnforcer extends FlowTable {
                     flow.setMatch(m)
                         .setId(flowId)
                         .setPriority(Integer.valueOf(priority))
-                        .setInstructions(instructions(applyActionIns(nxOutputRegAction(NxmNxReg7.class))));
+                        .setInstructions(instructions(applyActionIns(abl)));
                     writeFlow(t, tiid, flow.build());
                 }
             }
