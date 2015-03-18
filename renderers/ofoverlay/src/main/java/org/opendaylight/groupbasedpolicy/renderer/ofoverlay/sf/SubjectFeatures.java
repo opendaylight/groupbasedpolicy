@@ -34,7 +34,8 @@ public class SubjectFeatures {
             ImmutableMap.<ClassifierDefinitionId, Classifier>
                 of(EtherTypeClassifier.ID, new EtherTypeClassifier(),
                    IpProtoClassifier.ID, new IpProtoClassifier(),
-                   L4Classifier.ID, new L4Classifier());
+                   L4Classifier.ID, new L4Classifier(),
+                   IpAddressClassifier.ID, new IpAddressClassifier());
 
     private static final List<ClassifierDefinition> classifierDefs =
             ImmutableList.copyOf(Collections2.transform(classifiers.values(), 
@@ -78,6 +79,7 @@ public class SubjectFeatures {
         return classifiers.get(id);
     }
 
+
     /**
      * Get the {@link Action} associated with the given
      * {@link ActionDefinitionId}
@@ -88,5 +90,4 @@ public class SubjectFeatures {
     public static Action getAction(ActionDefinitionId id) {
         return actions.get(id);
     }
-                                           
 }

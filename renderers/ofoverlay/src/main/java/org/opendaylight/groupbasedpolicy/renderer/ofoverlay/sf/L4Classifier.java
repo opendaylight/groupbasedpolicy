@@ -95,11 +95,13 @@ public class L4Classifier extends IpProtoClassifier {
         // XXX TODO generate exception and fail the match
         if (t == null || !(t instanceof String)) return matches;
         String type = (String)t;
-        
-        if ("UDP".equals(type))
-            matches = super.updateMatch(matches, udp);
-        else
-            matches = super.updateMatch(matches, tcp);            
+
+        if ("UDP".equals(type)){
+            params.putAll(udp);
+        } else {
+            params.putAll(tcp);
+        }
+        matches = super.updateMatch(matches, params);
 
         Long sport = null;
         Long dport = null;
