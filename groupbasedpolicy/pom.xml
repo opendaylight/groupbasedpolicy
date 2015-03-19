@@ -118,6 +118,7 @@
 	      org.opendaylight.groupbasedpolicy.endpoint,
 	      org.opendaylight.groupbasedpolicy.resolver,
 	      org.opendaylight.groupbasedpolicy.util,
+	      org.opendaylight.groupbasedpolicy.jsonrpc,
 	    </Export-Package>
           </instructions>
           <manifestLocation>${project.basedir}/META-INF</manifestLocation>

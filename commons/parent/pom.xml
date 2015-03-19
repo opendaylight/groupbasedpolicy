@@ -25,6 +25,7 @@
     <config.configfile.directory>etc/opendaylight/karaf</config.configfile.directory>
     <groupbasedpolicy.project.version>0.2.0-SNAPSHOT</groupbasedpolicy.project.version>
     <config.groupbasedpolicy.ofoverlayconfigfile>15-groupbasedpolicy-ofoverlay.xml</config.groupbasedpolicy.ofoverlayconfigfile>
+    <config.groupbasedpolicy.opflexconfigfile>15-groupbasedpolicy-opflex.xml</config.groupbasedpolicy.opflexconfigfile>
     <config.groupbasedpolicy.occonfigfile>15-groupbasedpolicy-oc.xml</config.groupbasedpolicy.occonfigfile>
     <config.groupbasedpolicy.openstackendpointconfigfile>15-groupbasedpolicy-openstackendpoint.xml</config.groupbasedpolicy.openstackendpointconfigfile>
     <karaf.version>3.0.1</karaf.version>
