@@ -47,6 +47,20 @@
     </feature>
 
     <!--
+        The OpFlex renderer.
+
+        This can be added to the base to enable an
+        OpFlex renderer in the controller
+    -->
+    <feature name='odl-groupbasedpolicy-opflex' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: OpFlex Renderer'>
+        <!--
+        <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
+        -->
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/opflex-renderer/${project.version}</bundle>
+        <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.opflexconfigfile}">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-opflex-config/${project.version}/xml/config</configfile>
+    </feature>
+
+    <!--
          The OpenStack Group Based Policy Northbound API.
 
          This is actually built/packaged with the OpenFlow

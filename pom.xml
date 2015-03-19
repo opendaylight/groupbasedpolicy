@@ -21,6 +21,7 @@
     <module>groupbasedpolicy</module>
     <module>renderers</module>
     <module>groupbasedpolicy-ofoverlay-config</module>
+    <module>groupbasedpolicy-opflex-config</module>
     <module>groupbasedpolicy-oc-config</module>
     <module>groupbasedpolicy-openstackendpoint-config</module>
     <module>distribution-karaf</module>
