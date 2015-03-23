@@ -46,16 +46,24 @@ public class SubjectFeatures {
                 }
             ));
     
-    public static final ActionDefinition ALLOW = 
-            new ActionDefinitionBuilder()
-                .setId(new ActionDefinitionId("f942e8fd-e957-42b7-bd18-f73d11266d17"))
-                .setName(new ActionName("allow"))
-                .setDescription(new Description("Allow the specified traffic to pass"))
-                .build();
+    private static final Map<ActionDefinitionId, Action> actions =
+            ImmutableMap.<ActionDefinitionId, Action>
+                of(AllowAction.ID, new AllowAction());
+
+    public static final List<ActionDefinition> actionDefs =
+            ImmutableList.copyOf(Collections2.transform(actions.values(),
+                new Function<Action, ActionDefinition>() {
+                    @Override
+                    public ActionDefinition apply(Action input) {
+                        return input.getActionDef();
+                    }
+                }
+             ));
+
 
     public static final SubjectFeatureDefinitions OF_OVERLAY_FEATURES =
             new SubjectFeatureDefinitionsBuilder()
-                .setActionDefinition(ImmutableList.of(ALLOW))
+                .setActionDefinition(actionDefs)
                 .setClassifierDefinition(classifierDefs)
                 .build();
 
@@ -68,6 +76,17 @@ public class SubjectFeatures {
      */
     public static Classifier getClassifier(ClassifierDefinitionId id) {
         return classifiers.get(id);
+    }
+
+    /**
+     * Get the {@link Action} associated with the given
+     * {@link ActionDefinitionId}
+     * @param id the {@link ActionDefinitionId} to look up
+     * @return the {@link Action} if one exists, or <code>null</code>
+     * otherwise
+     */
+    public static Action getAction(ActionDefinitionId id) {
+        return actions.get(id);
     }
                                            
 }

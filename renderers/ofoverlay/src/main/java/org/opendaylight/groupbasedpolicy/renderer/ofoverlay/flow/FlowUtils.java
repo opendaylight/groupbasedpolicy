@@ -10,6 +10,7 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Uri;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
@@ -268,7 +269,25 @@ public final class FlowUtils {
         }
         return alist;
     }
+    public static ArrayList<org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.Action> actionList(List<ActionBuilder> actions) {
+        ArrayList<org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.Action> alist
+            = new ArrayList<>();
+        int count = 0;
+        for (ActionBuilder action : actions) {
+            alist.add(action
+            .setOrder(Integer.valueOf(count++))
+            .build());
+        }
+        return alist;
+    }
     public static Instruction applyActionIns(Action... actions) {
+        return new ApplyActionsCaseBuilder()
+            .setApplyActions(new ApplyActionsBuilder()
+                .setAction(actionList(actions))
+                .build())
+            .build();
+    }
+    public static Instruction applyActionIns(List<ActionBuilder> actions) {
         return new ApplyActionsCaseBuilder()
             .setApplyActions(new ApplyActionsBuilder()
                 .setAction(actionList(actions))

@@ -12,6 +12,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockEndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockPolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockSwitchManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OfTable.OfTableCtx;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.AllowAction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.L4Classifier;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
 import org.opendaylight.groupbasedpolicy.resolver.MockPolicyResolver;
@@ -169,7 +170,7 @@ public class OfTableTest {
                      .build()))
                 .setActionInstance(ImmutableList.of(new ActionInstanceBuilder()
                     .setName(new ActionName("allow"))
-                    .setActionDefinitionId(SubjectFeatures.ALLOW.getId())
+                    .setActionDefinitionId(new AllowAction().getId())
                     .build()))
                 .build())
             .setContract(ImmutableList.of(new ContractBuilder()
