@@ -155,9 +155,6 @@ public class EndpointRpcRegistry implements EndpointService {
             rpcRegistration = null;
         
         if (dataProvider != null) {
-            // XXX - This is a hack to avoid a bug in the data broker
-            // API where you have to write all the parents before you can write
-            // a child
             InstanceIdentifier<Endpoints> iid = 
                     InstanceIdentifier.builder(Endpoints.class).build();
             WriteTransaction t = this.dataProvider.newWriteOnlyTransaction();
@@ -172,7 +169,6 @@ public class EndpointRpcRegistry implements EndpointService {
 
                 @Override
                 public void onSuccess(Void result) {
-                    // TODO Auto-generated method stub
                     
                 }
             });

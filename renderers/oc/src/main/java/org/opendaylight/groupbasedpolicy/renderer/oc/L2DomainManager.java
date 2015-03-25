@@ -79,8 +79,7 @@ public class L2DomainManager implements AutoCloseable, DataChangeListener {
 			try {
 				createL2FloodDomain((Tenant)dao);
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				LOG.error("Could not create L2FloodDomain",e);
 			}
 		}
 		Map<InstanceIdentifier<?>,DataObject> d = change.getUpdatedData();
@@ -92,16 +91,15 @@ public class L2DomainManager implements AutoCloseable, DataChangeListener {
                 olddata = (Tenant)old;
                 try {
                 	updateL2FloodDomain(olddata, (Tenant)entry.getValue());
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+                } catch (IOException e) {
+                	LOG.error("Could not update L2FloodDomain",e);
 			}
         }
 	}
 
 	@Override
 	public void close() throws Exception {
-		// TODO Auto-generated method stub
+		LOG.info("Closed L2Domain Manager");
 	}
 
 	 /**

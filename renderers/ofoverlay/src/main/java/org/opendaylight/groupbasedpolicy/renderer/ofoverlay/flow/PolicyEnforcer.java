@@ -316,7 +316,8 @@ public class PolicyEnforcer extends FlowTable {
             
             StringBuilder idb = new StringBuilder();
             // XXX - TODO - implement connection tracking (requires openflow 
-            // extension and data plane support)
+            // extension and data plane support - in 2.4. Will need to handle
+            // case where we are working with mix of nodes.
 
             MatchBuilder baseMatch = new MatchBuilder();
 

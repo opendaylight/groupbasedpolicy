@@ -54,6 +54,11 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 
+/*
+ * TODO: Remove YANG for this class, and other OpenStackGBP APIs,
+ * this has been replaced by standard API in Kilo and backported to Juno
+*/
+@Deprecated
 public class OpenstackGbpEndpoint implements AutoCloseable,
         OpenstackEndpointService {
 
@@ -87,9 +92,6 @@ public class OpenstackGbpEndpoint implements AutoCloseable,
             rpcRegistration = null;
 
         if (dataProvider != null) {
-            // XXX - This is a hack to avoid a bug in the data broker
-            // API where you have to write all the parents before you can write
-            // a child
             InstanceIdentifier<OpenstackEndpoints> iid = InstanceIdentifier
                     .builder(OpenstackEndpoints.class).build();
             WriteTransaction t = this.dataProvider.newWriteOnlyTransaction();
@@ -112,11 +114,6 @@ public class OpenstackGbpEndpoint implements AutoCloseable,
                     new NodesListener(), DataChangeScope.SUBTREE);
         }
     }
-
-    // private OpenstackEndpoints buildOpenstackEndpoint(Name neutronPortId,
-    // TenantId tenant) {
-    // return new OpenstackEndpoints();
-    // }
 
     public void setDataProvider(final DataBroker salDataProvider) {
         this.dataProvider = salDataProvider;
@@ -172,6 +169,7 @@ public class OpenstackGbpEndpoint implements AutoCloseable,
     }
 
     @Override
+    @Deprecated
     public Future<RpcResult<Void>> unregisterEndpoint(
             UnregisterEndpointInput input) {
         WriteTransaction t = dataProvider.newWriteOnlyTransaction();
@@ -252,10 +250,8 @@ public class OpenstackGbpEndpoint implements AutoCloseable,
                     exists = true;
                 }
             } catch (InterruptedException e) {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             } catch (ExecutionException e) {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
         }
@@ -278,17 +274,16 @@ public class OpenstackGbpEndpoint implements AutoCloseable,
                     exists = true;
                 }
             } catch (InterruptedException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+                LOG.error("Error reading L3 EP",e);
             } catch (ExecutionException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+                LOG.error("Error reading L3 EP",e);
             }
         }
         return exists;
     }
 
     @Override
+    @Deprecated
     public Future<RpcResult<Void>> registerEndpoint(RegisterEndpointInput input) {
         long timestamp = System.currentTimeMillis();
 
@@ -455,14 +450,9 @@ public class OpenstackGbpEndpoint implements AutoCloseable,
         newEpBuilder.setEndpointGroup(ep.getEndpointGroup());
         newEpBuilder.setL2Context(ep.getL2Context());
         newEpBuilder.setMacAddress(ep.getMacAddress());
-        // TODO This is horrible, and a consequence of the
-        // openstackendpoint.yang not either including or importing
-        // groups from endpoint.yang ... cargo cult code again that needs to be
-        // cleaned up.
         org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey newEpKey = new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey(
                 ep.getL2Context(), ep.getMacAddress());
         newEpBuilder.setKey(newEpKey);
-        // TODO As per above, horrible
         List<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address> newL3AddressList = new ArrayList<>();
         if (ep.getL3Address() != null) {
             for (L3Address l3 : ep.getL3Address()) {
@@ -489,14 +479,10 @@ public class OpenstackGbpEndpoint implements AutoCloseable,
         newEpL3Builder.setEndpointGroup(ep.getEndpointGroup());
         newEpL3Builder.setL2Context(ep.getL2Context());
         newEpL3Builder.setMacAddress(ep.getMacAddress());
-        // TODO This is horrible, and a consequence of the
-        // openstackendpoint.yang not either including or importing
-        // groups from endpoint.yang ... cargo cult code again that needs to be
-        // cleaned up.
+
         org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key newEpL3Key = new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key(
                 ep.getIpAddress(), ep.getL3Context());
         newEpL3Builder.setKey(newEpL3Key);
-        // TODO As per above, horrible
         List<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address> newL3AddressList = new ArrayList<>();
         for (L3Address l3 : ep.getL3Address()) {
             LOG.debug(l3.toString());

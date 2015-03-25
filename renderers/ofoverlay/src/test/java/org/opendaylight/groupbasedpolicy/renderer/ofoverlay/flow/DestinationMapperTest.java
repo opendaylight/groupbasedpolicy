@@ -230,10 +230,6 @@ public class DestinationMapperTest extends FlowTableTest {
             }
         }
 
-        //This assertion no longer holds true, due to GroupTable=null in TestFlow pipeline and
-        // DestinationMapper now checking for GroupTable entries. Flows will not be written.
-        // TODO: alagalah to resolve correct unit tests.
-        //        assertEquals(9, count);
         assertEquals(8, count);
 
         t = dosync(flowMap);

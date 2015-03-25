@@ -649,8 +649,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
                     }
                 }
             } catch (InterruptedException | ExecutionException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+                LOG.error("Could not fetch Node Augmentation",e);
             }
          
         }
