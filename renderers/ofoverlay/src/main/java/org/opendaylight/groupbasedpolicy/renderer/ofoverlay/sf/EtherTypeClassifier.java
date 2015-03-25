@@ -60,10 +60,10 @@ public class EtherTypeClassifier extends Classifier {
     @Override
     public List<MatchBuilder> updateMatch(List<MatchBuilder> matches,
                                           Map<String, Object> params) {
-        Object t = params.get(TYPE);
+        Object param = params.get(TYPE);
         // XXX TODO generate exception and fail the match
-        if (t == null || !(t instanceof Long)) return matches;
-        Long type = (Long)t;
+        if (param == null || !(param instanceof Long)) return matches;
+        Long type = (Long)param;
         for (MatchBuilder match : matches) {
             EthernetMatchBuilder em;
             if (match.getEthernetMatch() != null)

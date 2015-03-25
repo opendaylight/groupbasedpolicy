@@ -377,6 +377,8 @@ public class PolicyEnforcer extends FlowTable {
                     params.put(v.getName().getValue(), v.getIntValue());
                 } else if (v.getStringValue() != null) {
                     params.put(v.getName().getValue(), v.getStringValue());
+                } else if (v.getRangeValue() != null) {
+                    params.put(v.getName().getValue(), v.getRangeValue());
                 }
             }
             

@@ -68,10 +68,10 @@ public class IpProtoClassifier extends EtherTypeClassifier {
     @Override
     public List<MatchBuilder> updateMatch(List<MatchBuilder> matches,
                                           Map<String, Object> params) {
-        Object t = params.get(PROTO);
+        Object param = params.get(PROTO);
         // XXX TODO generate exception and fail the match
-        if (t == null || !(t instanceof Long)) return matches;
-        Long proto = (Long)t;
+        if (param == null || !(param instanceof Long)) return matches;
+        Long proto = (Long)param;
         
         ArrayList<MatchBuilder> r = new ArrayList<>();
         for (MatchBuilder b : matches) {
