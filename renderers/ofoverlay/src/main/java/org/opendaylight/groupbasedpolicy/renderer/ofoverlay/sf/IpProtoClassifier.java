@@ -32,7 +32,7 @@ import com.google.common.collect.ImmutableMap;
 /**
  * Match on the IP protocol of IP traffic
  */
-public class IpProtoClassifier extends IpAddressClassifier {
+public class IpProtoClassifier extends EtherTypeClassifier {
     public static final ClassifierDefinitionId ID = 
             new ClassifierDefinitionId("79c6fdb2-1e1a-4832-af57-c65baf5c2335");
     protected static final String PROTO = "proto";
@@ -49,6 +49,11 @@ public class IpProtoClassifier extends IpAddressClassifier {
                     .setType(Type.Int)
                     .build()))
                 .build();
+
+    private static final Map<String, Object> ipv4 = 
+        ImmutableMap.<String,Object>of(TYPE, FlowUtils.IPv4);
+    private static final Map<String, Object> ipv6 = 
+            ImmutableMap.<String,Object>of(TYPE, FlowUtils.IPv6);
 
     @Override
     public ClassifierDefinitionId getId() {
@@ -70,7 +75,8 @@ public class IpProtoClassifier extends IpAddressClassifier {
         
         ArrayList<MatchBuilder> r = new ArrayList<>();
         for (MatchBuilder b : matches) {
-            r.addAll(updateMatch(new MatchBuilder(b.build()), proto, params));
+            r.addAll(updateMatch(new MatchBuilder(b.build()), proto, ipv4));
+            r.addAll(updateMatch(new MatchBuilder(b.build()), proto, ipv6));
         }
         return r;
     }
