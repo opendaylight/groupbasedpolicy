@@ -18,7 +18,6 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.SwitchManager;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -87,21 +86,4 @@ public abstract class OfTable {
     public abstract void update(NodeId nodeId, 
                                 PolicyInfo policyInfo,
                                 Dirty dirty) throws Exception;
-    
-    // ***************
-    // Utility methods
-    // ***************
-
-    /**
-     * Parse an OF port number from a node connector ID
-     * @param id the ID
-     * @return the port number
-     */
-    protected static long getOfPortNum(NodeConnectorId id) {
-        String cnid = id.getValue();
-        int ci = cnid.lastIndexOf(':');
-        if (ci < 0 || (ci+1 >= cnid.length()))
-            throw new NumberFormatException("Invalid node connector ID " + cnid);
-        return Long.parseLong(cnid.substring(ci+1));
-    }
 }

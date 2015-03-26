@@ -131,7 +131,7 @@ public class DestinationMapperTest extends FlowTableTest {
                 int icount = 0;
                 for (Instruction ins : f.getInstructions().getInstruction()) {
                     if (ins.getInstruction() instanceof ApplyActionsCase) {
-                        long p = OfTable.getOfPortNum(nodeConnectorId);
+                        long p = getOfPortNum(nodeConnectorId);
                         List<Action> actions = ((ApplyActionsCase)ins.getInstruction()).getApplyActions().getAction();
                         assertEquals(nxLoadRegAction(NxmNxReg7.class,
                                                      BigInteger.valueOf(p)),
@@ -152,7 +152,7 @@ public class DestinationMapperTest extends FlowTableTest {
                 int icount = 0;
                 for (Instruction ins : f.getInstructions().getInstruction()) {
                     if (ins.getInstruction() instanceof ApplyActionsCase) {
-                        long p = OfTable.getOfPortNum(tunnelId);
+                        long p = getOfPortNum(tunnelId);
                         List<Action> actions = ((ApplyActionsCase)ins.getInstruction()).getApplyActions().getAction();
                         assertEquals(nxLoadRegAction(NxmNxReg7.class,
                                                      BigInteger.valueOf(p)),
@@ -177,7 +177,7 @@ public class DestinationMapperTest extends FlowTableTest {
                     Instruction ins = f.getInstructions().getInstruction().get(0);
                     assertTrue(ins.getInstruction() instanceof ApplyActionsCase);
                     List<Action> actions = ((ApplyActionsCase)ins.getInstruction()).getApplyActions().getAction();
-                    long p = OfTable.getOfPortNum(nodeConnectorId);
+                    long p = getOfPortNum(nodeConnectorId);
                     assertEquals(nxLoadRegAction(NxmNxReg7.class,
                                                  BigInteger.valueOf(p)),
                                  actions.get(2).getAction());
@@ -198,7 +198,7 @@ public class DestinationMapperTest extends FlowTableTest {
                     Instruction ins = f.getInstructions().getInstruction().get(0);
                     assertTrue(ins.getInstruction() instanceof ApplyActionsCase);
                     List<Action> actions = ((ApplyActionsCase)ins.getInstruction()).getApplyActions().getAction();
-                    long p = OfTable.getOfPortNum(tunnelId);
+                    long p = getOfPortNum(tunnelId);
                     assertEquals(nxLoadRegAction(NxmNxReg7.class,
                                                  BigInteger.valueOf(p)),
                                  actions.get(4).getAction());
