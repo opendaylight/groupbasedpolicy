@@ -61,19 +61,19 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import com.google.common.collect.ImmutableList;
 
 public class OfTableTest {
-	OfContext ctx;
+    OfContext ctx;
 
     MockEndpointManager endpointManager;
     MockPolicyResolver policyResolver;
     MockPolicyManager policyManager;
     MockSwitchManager switchManager;
-    
+
     NodeId nodeId = new NodeId("openflow:1");
     NodeId remoteNodeId = new NodeId("openflow:2");
-    NodeConnectorId nodeConnectorId = 
+    NodeConnectorId nodeConnectorId =
             new NodeConnectorId(nodeId.getValue() + ":4");
 
-    NodeConnectorId tunnelId = 
+    NodeConnectorId tunnelId =
             new NodeConnectorId(nodeId.getValue() + ":42");
 
     L3ContextId l3c = new L3ContextId("2cf51ee4-e996-467e-a277-2d380334a91d");
@@ -86,19 +86,19 @@ public class OfTableTest {
     EndpointGroupId eg = new EndpointGroupId("36dec84a-08c7-497b-80b6-a0035af72a12");
     EndpointGroupId eg2 = new EndpointGroupId("632e5e11-7988-4eb5-8fe6-6c182d890276");
     ContractId cid = new ContractId("a5874893-bcd5-46de-96af-3c8d99bedf9f");
-    
+
     protected void initCtx() {
         endpointManager = new MockEndpointManager();
         policyResolver = new MockPolicyResolver();
         policyManager = new MockPolicyManager(policyResolver, endpointManager);
         switchManager = new MockSwitchManager();
-        
+
         ctx = new OfContext(null,
-                             null, 
-                             policyManager, 
-                             policyResolver, 
-                             switchManager, 
-                             endpointManager, 
+                             null,
+                             policyManager,
+                             policyResolver,
+                             switchManager,
+                             endpointManager,
                              null);
     }
 
@@ -163,8 +163,8 @@ public class OfTableTest {
                               .setIntValue(Long.valueOf(80))
                               .build(),
                           new ParameterValueBuilder()
-                             .setName(new ParameterName("type"))
-                             .setStringValue("TCP")
+                             .setName(new ParameterName("proto"))
+                             .setIntValue(Long.valueOf(6))
                              .build()))
                      .build()))
                 .setActionInstance(ImmutableList.of(new ActionInstanceBuilder()
@@ -181,7 +181,7 @@ public class OfTableTest {
                      .build()))
                 .build()));
     }
-    
+
     protected SubjectBuilder baseSubject(Direction direction) {
         return new SubjectBuilder()
             .setName(new SubjectName("s1"))
