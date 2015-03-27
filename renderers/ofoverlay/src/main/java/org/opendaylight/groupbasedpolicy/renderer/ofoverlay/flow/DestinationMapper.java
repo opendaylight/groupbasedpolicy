@@ -21,9 +21,9 @@ import java.util.Set;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
-
 import org.opendaylight.groupbasedpolicy.resolver.ConditionGroup;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.resolver.IndexedTenant;
@@ -95,7 +95,7 @@ public class DestinationMapper extends FlowTable {
     public static final MacAddress MULTICAST_MAC =
             new MacAddress("01:00:00:00:00:00");
 
-    public DestinationMapper(OfTable.OfTableCtx ctx) {
+    public DestinationMapper(OfContext ctx) {
         super(ctx);
     }
 
@@ -115,7 +115,7 @@ public class DestinationMapper extends FlowTable {
         HashSet<EgKey> visitedEgs = new HashSet<>();
         HashSet<Integer> visitedFds = new HashSet<>();
 
-        for (EgKey epg : ctx.epManager.getGroupsForNode(nodeId)) {
+        for (EgKey epg : ctx.getEndpointManager().getGroupsForNode(nodeId)) {
             Set<EgKey> peers = Sets.union(Collections.singleton(epg),
                                           policyInfo.getPeers(epg));
             for (EgKey peer : peers) {
@@ -138,7 +138,7 @@ public class DestinationMapper extends FlowTable {
         if (visitedEgs.contains(key)) return;
         visitedEgs.add(key);
 
-        IndexedTenant tenant = ctx.policyResolver.getTenant(key.getTenantId());
+        IndexedTenant tenant = ctx.getPolicyResolver().getTenant(key.getTenantId());
         EndpointGroup eg = tenant.getEndpointGroup(key.getEgId());
         L2FloodDomain fd = tenant.resolveL2FloodDomain(eg.getNetworkDomain());
         Collection<Subnet> sns = tenant.resolveSubnets(eg.getNetworkDomain());
@@ -146,10 +146,10 @@ public class DestinationMapper extends FlowTable {
         int l3Id = 0;
 
         if (l3c != null)
-            l3Id = ctx.policyManager.getContextOrdinal(key.getTenantId(),
+            l3Id = ctx.getPolicyManager().getContextOrdinal(key.getTenantId(),
                                                        l3c.getId());
 
-        Collection<Endpoint> egEps = ctx.epManager
+        Collection<Endpoint> egEps = ctx.getEndpointManager()
                 .getEndpointsForGroup(key);
 
         for (Endpoint e : egEps) {
@@ -162,7 +162,7 @@ public class DestinationMapper extends FlowTable {
         }
 
         if (fd == null) return;
-        Integer fdId = ctx.policyManager.getContextOrdinal(key.getTenantId(),
+        Integer fdId = ctx.getPolicyManager().getContextOrdinal(key.getTenantId(),
                                                            fd.getId());
         if (visitedFds.contains(fdId)) return;
         visitedFds.add(fdId);
@@ -199,9 +199,9 @@ public class DestinationMapper extends FlowTable {
 
     private boolean groupExists(NodeId nodeId, Integer fdId) throws Exception {
         //Fetch existing GroupTables
-        if(ctx.dataBroker==null) return false;
+        if(ctx.getDataBroker()==null) return false;
 
-        ReadOnlyTransaction t = ctx.dataBroker.newReadOnlyTransaction();
+        ReadOnlyTransaction t = ctx.getDataBroker().newReadOnlyTransaction();
         InstanceIdentifier<Node> niid = createNodePath(nodeId);
         Optional<Node> r =
                 t.read(LogicalDatastoreType.CONFIGURATION, niid).get();
@@ -290,21 +290,21 @@ public class DestinationMapper extends FlowTable {
 
         int egId = 0, bdId = 0, l3Id = 0, cgId = 0;
 
-        egId = ctx.policyManager.getContextOrdinal(e.getTenant(),
+        egId = ctx.getPolicyManager().getContextOrdinal(e.getTenant(),
                                                    e.getEndpointGroup());
         if (bd != null)
-            bdId = ctx.policyManager.getContextOrdinal(e.getTenant(),
+            bdId = ctx.getPolicyManager().getContextOrdinal(e.getTenant(),
                                                        bd.getId());
         if (l3c != null)
-            l3Id = ctx.policyManager.getContextOrdinal(e.getTenant(),
+            l3Id = ctx.getPolicyManager().getContextOrdinal(e.getTenant(),
                                                        l3c.getId());
 
-        List<ConditionName> conds = ctx.epManager.getCondsForEndpoint(e);
+        List<ConditionName> conds = ctx.getEndpointManager().getCondsForEndpoint(e);
         ConditionGroup cg =
                 policyInfo.getEgCondGroup(new EgKey(e.getTenant(),
                                                     e.getEndpointGroup()),
                                           conds);
-        cgId = ctx.policyManager.getCondGroupOrdinal(cg);
+        cgId = ctx.getPolicyManager().getCondGroupOrdinal(cg);
         Action setdEPG = nxLoadRegAction(NxmNxReg2.class,
                                          BigInteger.valueOf(egId));
         Action setdCG = nxLoadRegAction(NxmNxReg3.class,
@@ -347,9 +347,9 @@ public class DestinationMapper extends FlowTable {
                 // appropriate tunnel
 
                 IpAddress tunDst =
-                        ctx.switchManager.getTunnelIP(ofc.getNodeId());
+                        ctx.getSwitchManager().getTunnelIP(ofc.getNodeId());
                 NodeConnectorId tunPort =
-                        ctx.switchManager.getTunnelPort(nodeId);
+                        ctx.getSwitchManager().getTunnelPort(nodeId);
                 if (tunDst == null) return;
                 if (tunPort == null) return;
 

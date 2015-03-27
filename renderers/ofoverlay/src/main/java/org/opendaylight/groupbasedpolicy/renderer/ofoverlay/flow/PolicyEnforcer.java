@@ -20,6 +20,7 @@ import java.util.Set;
 import javax.annotation.concurrent.Immutable;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.AllowAction;
@@ -77,7 +78,7 @@ public class PolicyEnforcer extends FlowTable {
 
     public static final short TABLE_ID = 3;
 
-    public PolicyEnforcer(OfTable.OfTableCtx ctx) {
+    public PolicyEnforcer(OfContext ctx) {
         super(ctx);
     }
 
@@ -96,44 +97,44 @@ public class PolicyEnforcer extends FlowTable {
 
         HashSet<CgPair> visitedPairs = new HashSet<>();
 
-        for (EgKey sepg : ctx.epManager.getGroupsForNode(nodeId)) {
+        for (EgKey sepg : ctx.getEndpointManager().getGroupsForNode(nodeId)) {
             // Allow traffic within the same endpoint group if the policy
             // specifies
             IndexedTenant tenant = 
-                    ctx.policyResolver.getTenant(sepg.getTenantId());
+                    ctx.getPolicyResolver().getTenant(sepg.getTenantId());
             EndpointGroup group = 
                     tenant.getEndpointGroup(sepg.getEgId());
             IntraGroupPolicy igp = group.getIntraGroupPolicy();
             int sepgId = 
-                    ctx.policyManager.getContextOrdinal(sepg.getTenantId(), 
+                    ctx.getPolicyManager().getContextOrdinal(sepg.getTenantId(),
                                                         sepg.getEgId());
             if (igp == null || igp.equals(IntraGroupPolicy.Allow)) {
                 allowSameEpg(t, tiid, flowMap, nodeId, sepgId);
             }
 
-            for (Endpoint src : ctx.epManager.getEPsForNode(nodeId, sepg)) {
+            for (Endpoint src : ctx.getEndpointManager().getEPsForNode(nodeId, sepg)) {
                 if (src.getTenant() == null || src.getEndpointGroup() == null)
                     continue;
                 
                 List<ConditionName> conds = 
-                        ctx.epManager.getCondsForEndpoint(src);
+                        ctx.getEndpointManager().getCondsForEndpoint(src);
                 ConditionGroup scg = policyInfo.getEgCondGroup(sepg, conds);
-                int scgId = ctx.policyManager.getCondGroupOrdinal(scg);
+                int scgId = ctx.getPolicyManager().getCondGroupOrdinal(scg);
                 
                 Set<EgKey> peers = policyInfo.getPeers(sepg);
                 for (EgKey depg : peers) {
                     int depgId = 
-                            ctx.policyManager.getContextOrdinal(depg.getTenantId(), 
+                            ctx.getPolicyManager().getContextOrdinal(depg.getTenantId(),
                                                                 depg.getEgId());
                 
-                    for (Endpoint dst : ctx.epManager.getEndpointsForGroup(depg)) {
+                    for (Endpoint dst : ctx.getEndpointManager().getEndpointsForGroup(depg)) {
                 
-                        conds = ctx.epManager.getCondsForEndpoint(dst);
+                        conds = ctx.getEndpointManager().getCondsForEndpoint(dst);
                         ConditionGroup dcg = 
-                                policyInfo.getEgCondGroup(new EgKey(dst.getTenant(), 
+                                policyInfo.getEgCondGroup(new EgKey(dst.getTenant(),
                                                                     dst.getEndpointGroup()),
                                                           conds);
-                        int dcgId = ctx.policyManager.getCondGroupOrdinal(dcg);
+                        int dcgId = ctx.getPolicyManager().getCondGroupOrdinal(dcg);
                         
                         CgPair p = new CgPair(depgId, sepgId, dcgId, scgId);
                         if (visitedPairs.contains(p)) continue;
@@ -178,7 +179,7 @@ public class PolicyEnforcer extends FlowTable {
                                  InstanceIdentifier<Table> tiid,
                                  Map<String, FlowCtx> flowMap, NodeId nodeId) {
         NodeConnectorId tunPort =
-                ctx.switchManager.getTunnelPort(nodeId);
+                ctx.getSwitchManager().getTunnelPort(nodeId);
         if (tunPort == null) return;
 
         FlowId flowId = new FlowId("tunnelallow");
@@ -211,7 +212,7 @@ public class PolicyEnforcer extends FlowTable {
         int priority = 65000;
         for (RuleGroup rg : rgs) {
             TenantId tenantId = rg.getContractTenant().getId();
-            IndexedTenant tenant = ctx.policyResolver.getTenant(tenantId); 
+            IndexedTenant tenant = ctx.getPolicyResolver().getTenant(tenantId);
             for (Rule r : rg.getRules()) {
                 syncDirection(t, tiid, flowMap, nodeId, tenant,
                                     p, r, Direction.In, priority);

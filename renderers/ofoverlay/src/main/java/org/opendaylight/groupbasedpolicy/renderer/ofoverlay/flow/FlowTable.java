@@ -13,6 +13,7 @@ import java.util.Map;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
@@ -35,7 +36,7 @@ public abstract class FlowTable extends OfTable {
     protected static final Logger LOG =
             LoggerFactory.getLogger(FlowTable.class);
 
-    public FlowTable(OfTableCtx ctx) {
+    public FlowTable(OfContext ctx) {
         super(ctx);
     }
 
@@ -46,7 +47,7 @@ public abstract class FlowTable extends OfTable {
     @Override
     public void update(NodeId nodeId, PolicyInfo policyInfo,
                        Dirty dirty) throws Exception {
-        ReadWriteTransaction t = ctx.dataBroker.newReadWriteTransaction();
+        ReadWriteTransaction t = ctx.getDataBroker().newReadWriteTransaction();
         InstanceIdentifier<Table> tiid =
                 FlowUtils.createTablePath(nodeId, getTableId());
         Optional<Table> r =

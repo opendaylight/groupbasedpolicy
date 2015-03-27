@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
 import org.opendaylight.groupbasedpolicy.resolver.ConditionGroup;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
@@ -55,7 +56,7 @@ public class SourceMapper extends FlowTable {
 
     public static final short TABLE_ID = 1;
 
-    public SourceMapper(OfTable.OfTableCtx ctx) {
+    public SourceMapper(OfContext ctx) {
         super(ctx);
     }
 
@@ -72,9 +73,9 @@ public class SourceMapper extends FlowTable {
                      Dirty dirty) throws Exception {
         dropFlow(t, tiid, flowMap, Integer.valueOf(1), null);
 
-        for (EgKey sepg : ctx.epManager.getGroupsForNode(nodeId)) {
+        for (EgKey sepg : ctx.getEndpointManager().getGroupsForNode(nodeId)) {
             IndexedTenant tenant = 
-                    ctx.policyResolver.getTenant(sepg.getTenantId());
+                    ctx.getPolicyResolver().getTenant(sepg.getTenantId());
             if (tenant == null) continue;
 
             EndpointGroup eg = tenant.getEndpointGroup(sepg.getEgId());
@@ -83,20 +84,20 @@ public class SourceMapper extends FlowTable {
             L2FloodDomain fd = tenant.resolveL2FloodDomain(eg.getNetworkDomain());
             int egId = 0, bdId = 0, fdId = 0, l3Id = 0;
             
-            egId = ctx.policyManager.getContextOrdinal(sepg.getTenantId(), 
+            egId = ctx.getPolicyManager().getContextOrdinal(sepg.getTenantId(),
                                                        sepg.getEgId());
             if (bd != null)
-                bdId = ctx.policyManager.getContextOrdinal(sepg.getTenantId(), 
+                bdId = ctx.getPolicyManager().getContextOrdinal(sepg.getTenantId(),
                                                            bd.getId());
             if (fd != null)
-                fdId = ctx.policyManager.getContextOrdinal(sepg.getTenantId(), 
+                fdId = ctx.getPolicyManager().getContextOrdinal(sepg.getTenantId(),
                                                            fd.getId());
             if (l3c != null)
-                l3Id = ctx.policyManager.getContextOrdinal(sepg.getTenantId(), 
+                l3Id = ctx.getPolicyManager().getContextOrdinal(sepg.getTenantId(),
                                                            l3c.getId());
 
             NodeConnectorId tunPort =
-                    ctx.switchManager.getTunnelPort(nodeId);
+                    ctx.getSwitchManager().getTunnelPort(nodeId);
             if (tunPort != null) {
                 FlowId flowid = new FlowId(new StringBuilder()
                     .append(tunPort.getValue())
@@ -139,7 +140,7 @@ public class SourceMapper extends FlowTable {
                 }
             }
             
-            for (Endpoint e : ctx.epManager.getEPsForNode(nodeId, sepg)) {
+            for (Endpoint e : ctx.getEndpointManager().getEPsForNode(nodeId, sepg)) {
                 OfOverlayContext ofc = e.getAugmentation(OfOverlayContext.class);
                 if (ofc != null && ofc.getNodeConnectorId() != null &&
                         (ofc.getLocationType() == null ||
@@ -162,12 +163,12 @@ public class SourceMapper extends FlowTable {
         // Set sEPG, flood domain, bridge domain, and layer 3 context 
         // for internal endpoints by directly matching each endpoint
 
-        List<ConditionName> conds = ctx.epManager.getCondsForEndpoint(e);
+        List<ConditionName> conds = ctx.getEndpointManager().getCondsForEndpoint(e);
         ConditionGroup cg = 
                 policyInfo.getEgCondGroup(new EgKey(e.getTenant(), 
                                                     e.getEndpointGroup()), 
                                           conds);
-        int cgId = ctx.policyManager.getCondGroupOrdinal(cg);
+        int cgId = ctx.getPolicyManager().getCondGroupOrdinal(cg);
 
         FlowId flowid = new FlowId(new StringBuilder()
             .append(ofc.getNodeConnectorId().getValue())

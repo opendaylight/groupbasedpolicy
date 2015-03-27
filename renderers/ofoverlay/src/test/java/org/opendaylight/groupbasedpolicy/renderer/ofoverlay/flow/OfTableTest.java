@@ -11,10 +11,9 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockEndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockPolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockSwitchManager;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OfTable.OfTableCtx;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.AllowAction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.L4Classifier;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
 import org.opendaylight.groupbasedpolicy.resolver.MockPolicyResolver;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
@@ -62,7 +61,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import com.google.common.collect.ImmutableList;
 
 public class OfTableTest {
-    OfTableCtx ctx;
+	OfContext ctx;
 
     MockEndpointManager endpointManager;
     MockPolicyResolver policyResolver;
@@ -94,7 +93,7 @@ public class OfTableTest {
         policyManager = new MockPolicyManager(policyResolver, endpointManager);
         switchManager = new MockSwitchManager();
         
-        ctx = new OfTableCtx(null, 
+        ctx = new OfContext(null,
                              null, 
                              policyManager, 
                              policyResolver, 

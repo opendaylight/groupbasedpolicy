@@ -15,6 +15,7 @@ import java.util.Map;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.resolver.IndexedTenant;
@@ -57,7 +58,7 @@ public class GroupTable extends OfTable {
     private static final Logger LOG =
             LoggerFactory.getLogger(GroupTable.class);
 
-    public GroupTable(OfTableCtx ctx) {
+    public GroupTable(OfContext ctx) {
         super(ctx);
     }
 
@@ -68,7 +69,7 @@ public class GroupTable extends OfTable {
         // tables unfortunately, so we have to get the whole goddamned node.
         // Since this is happening concurrently with other things that are
         // working in subtrees of nodes, we have to do two transactions
-        ReadOnlyTransaction t = ctx.dataBroker.newReadOnlyTransaction();
+        ReadOnlyTransaction t = ctx.getDataBroker().newReadOnlyTransaction();
         InstanceIdentifier<Node> niid = createNodePath(nodeId);
         Optional<Node> r =
                 t.read(LogicalDatastoreType.CONFIGURATION, niid).get();
@@ -93,7 +94,7 @@ public class GroupTable extends OfTable {
 
         sync(nodeId, policyInfo, dirty, groupMap);
 
-        WriteTransaction wt = ctx.dataBroker.newWriteOnlyTransaction();
+        WriteTransaction wt = ctx.getDataBroker().newWriteOnlyTransaction();
         boolean wrote = syncGroupToStore(wt, nodeId, groupMap);
         if (wrote)
             wt.submit().get();
@@ -155,15 +156,15 @@ public class GroupTable extends OfTable {
     protected void sync(NodeId nodeId, PolicyInfo policyInfo, Dirty dirty,
                         HashMap<GroupId, GroupCtx> groupMap) throws Exception {
 
-        for (EgKey epg : ctx.epManager.getGroupsForNode(nodeId)) {
-            IndexedTenant it = ctx.policyResolver.getTenant(epg.getTenantId());
+        for (EgKey epg : ctx.getEndpointManager().getGroupsForNode(nodeId)) {
+            IndexedTenant it = ctx.getPolicyResolver().getTenant(epg.getTenantId());
             if (it == null) continue;
             EndpointGroup eg = it.getEndpointGroup(epg.getEgId());
             if (eg == null || eg.getNetworkDomain() == null) continue;
             L2FloodDomain fd = it.resolveL2FloodDomain(eg.getNetworkDomain());
             if (fd == null) continue;
 
-            int fdId = ctx.policyManager.getContextOrdinal(epg.getTenantId(),
+            int fdId = ctx.getPolicyManager().getContextOrdinal(epg.getTenantId(),
                                                            fd.getId());
             GroupId gid = new GroupId(Long.valueOf(fdId));
             GroupCtx gctx = groupMap.get(gid);
@@ -174,17 +175,17 @@ public class GroupTable extends OfTable {
 
             // we'll use the fdId with the high bit set for remote bucket
             // and just the local port number for local bucket
-            for (NodeId destNode : ctx.epManager.getNodesForGroup(epg)) {
+            for (NodeId destNode : ctx.getEndpointManager().getNodesForGroup(epg)) {
                 if (nodeId.equals(destNode)) continue;
 
-                long bucketId = ctx.policyManager
+                long bucketId = ctx.getPolicyManager()
                         .getContextOrdinal(destNode.getValue());
                 bucketId |= 1L << 31;
 
                 IpAddress tunDst =
-                        ctx.switchManager.getTunnelIP(destNode);
+                        ctx.getSwitchManager().getTunnelIP(destNode);
                 NodeConnectorId tunPort =
-                        ctx.switchManager.getTunnelPort(nodeId);
+                        ctx.getSwitchManager().getTunnelPort(nodeId);
                 if (tunDst == null || tunPort == null) continue;
                 Action tundstAction = null;
                 if (tunDst.getIpv4Address() != null) {
@@ -203,7 +204,7 @@ public class GroupTable extends OfTable {
                                           outputAction(tunPort)));
                 updateBucket(gctx, bb);
             }
-            for (Endpoint localEp : ctx.epManager.getEPsForNode(nodeId, epg)) {
+            for (Endpoint localEp : ctx.getEndpointManager().getEPsForNode(nodeId, epg)) {
                 OfOverlayContext ofc =
                         localEp.getAugmentation(OfOverlayContext.class);
                 if (ofc == null || ofc.getNodeConnectorId() == null ||

@@ -66,11 +66,11 @@ public class GroupTableTest extends OfTableTest {
         policyResolver.addTenant(baseTenant().build());
 
         HashMap<GroupId, GroupCtx> groupMap = new HashMap<>();
-        table.sync(nodeId, ctx.policyResolver.getCurrentPolicy(), 
+        table.sync(nodeId, ctx.getPolicyResolver().getCurrentPolicy(),
                    null, groupMap);
         
         assertEquals(1, groupMap.size());
-        int fdId = ctx.policyManager.getContextOrdinal(tid, fd);
+        int fdId = ctx.getPolicyManager().getContextOrdinal(tid, fd);
         GroupCtx ctx = groupMap.get(new GroupId(Long.valueOf(fdId)));
         assertNotNull(ctx);
         long tunBucketId = 

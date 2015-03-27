@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
@@ -46,7 +47,7 @@ public class PortSecurity extends FlowTable {
 
     public static final short TABLE_ID = 0;
 
-    public PortSecurity(OfTable.OfTableCtx ctx) {
+    public PortSecurity(OfContext ctx) {
         super(ctx);
     }
 
@@ -61,11 +62,11 @@ public class PortSecurity extends FlowTable {
                      Map<String, FlowCtx> flowMap,
                      NodeId nodeId, PolicyInfo policyInfo, Dirty dirty) {
         // Allow traffic from tunnel and external ports
-        NodeConnectorId tunnelIf = ctx.switchManager.getTunnelPort(nodeId);
+        NodeConnectorId tunnelIf = ctx.getSwitchManager().getTunnelPort(nodeId);
         if (tunnelIf != null)
             allowFromPort(t, tiid, flowMap, tunnelIf);
         Set<NodeConnectorId> external =
-                ctx.switchManager.getExternalPorts(nodeId);
+                ctx.getSwitchManager().getExternalPorts(nodeId);
         for (NodeConnectorId extIf: external) {
             allowFromPort(t, tiid, flowMap, extIf);
         }
@@ -78,8 +79,8 @@ public class PortSecurity extends FlowTable {
         dropFlow(t, tiid, flowMap, 111, FlowUtils.IPv4);
         dropFlow(t, tiid, flowMap, 112, FlowUtils.IPv6);
 
-        for (EgKey sepg : ctx.epManager.getGroupsForNode(nodeId)) {
-            for (Endpoint e : ctx.epManager.getEPsForNode(nodeId, sepg)) {
+        for (EgKey sepg : ctx.getEndpointManager().getGroupsForNode(nodeId)) {
+            for (Endpoint e : ctx.getEndpointManager().getEPsForNode(nodeId, sepg)) {
                 OfOverlayContext ofc = e.getAugmentation(OfOverlayContext.class);
                 if (ofc != null && ofc.getNodeConnectorId() != null &&
                         (ofc.getLocationType() == null ||

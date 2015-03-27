@@ -30,7 +30,6 @@ import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.DestinationMapper;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.GroupTable;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OfTable;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OfTable.OfTableCtx;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PortSecurity;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.SourceMapper;
@@ -126,7 +125,7 @@ public class PolicyManager
             t.submit();
         }
 
-        OfTableCtx ctx = new OfTableCtx(dataBroker, rpcRegistry, 
+        OfContext ctx = new OfContext(dataBroker, rpcRegistry,
                                         this, policyResolver, switchManager, 
                                         endpointManager, executor);
         flowPipeline = ImmutableList.of(new PortSecurity(ctx),

@@ -13,6 +13,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.EndpointManager;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.SwitchManager;
@@ -33,46 +34,13 @@ public abstract class OfTable {
     protected static final Logger LOG =
             LoggerFactory.getLogger(OfTable.class);
 
-    protected final OfTableCtx ctx;
+    protected final OfContext ctx;
 
-    public OfTable(OfTableCtx ctx) {
+    public OfTable(OfContext ctx) {
         super();
         this.ctx = ctx;
     }
 
-    /**
-     * The context needed for flow tables
-     */
-    public static class OfTableCtx {
-        protected final DataBroker dataBroker;
-        protected final RpcProviderRegistry rpcRegistry;
-    
-        protected final PolicyManager policyManager;
-        protected final SwitchManager switchManager;
-        protected final EndpointManager epManager;
-    
-        protected final PolicyResolver policyResolver;
-    
-        protected final ScheduledExecutorService executor;
-    
-        public OfTableCtx(DataBroker dataBroker,
-                          RpcProviderRegistry rpcRegistry,
-                          PolicyManager policyManager,
-                          PolicyResolver policyResolver,
-                          SwitchManager switchManager,
-                          EndpointManager endpointManager,
-                          ScheduledExecutorService executor) {
-            super();
-            this.dataBroker = dataBroker;
-            this.rpcRegistry = rpcRegistry;
-            this.policyManager = policyManager;
-            this.switchManager = switchManager;
-            this.epManager = endpointManager;
-            this.policyResolver = policyResolver;
-            this.executor = executor;
-        }
-    
-    }
 
     // *******
     // OfTable
