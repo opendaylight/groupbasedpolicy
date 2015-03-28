@@ -23,12 +23,14 @@
     <openflowplugin.distribution.version>0.1.0-SNAPSHOT</openflowplugin.distribution.version>
     <openflowplugin-nicira.version>0.1.0-SNAPSHOT</openflowplugin-nicira.version>
     <openflowjava.distribution.version>0.6.0-SNAPSHOT</openflowjava.distribution.version>
+    <neutron.version>0.5.0-SNAPSHOT</neutron.version>
     <restconf.project.version>1.2.0-SNAPSHOT</restconf.project.version>
     <config.configfile.directory>etc/opendaylight/karaf</config.configfile.directory>
     <groupbasedpolicy.project.version>0.2.0-SNAPSHOT</groupbasedpolicy.project.version>
     <config.groupbasedpolicy.ofoverlayconfigfile>15-groupbasedpolicy-ofoverlay.xml</config.groupbasedpolicy.ofoverlayconfigfile>
     <config.groupbasedpolicy.opflexconfigfile>15-groupbasedpolicy-opflex.xml</config.groupbasedpolicy.opflexconfigfile>
     <config.groupbasedpolicy.openstackendpointconfigfile>15-groupbasedpolicy-openstackendpoint.xml</config.groupbasedpolicy.openstackendpointconfigfile>
+    <config.groupbasedpolicy.neutronmapperconfigfile>15-neutron-mapper.xml</config.groupbasedpolicy.neutronmapperconfigfile>
     <karaf.version>3.0.1</karaf.version>
     <exam.version>4.4.0</exam.version> <!-- Needs to remain exported, as its used for dependencies, too -->
     <sfc.version>0.1.0-SNAPSHOT</sfc.version>

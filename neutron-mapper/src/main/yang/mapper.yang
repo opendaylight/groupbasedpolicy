@@ -1,0 +1,66 @@
+module neutron-mapper {
+    yang-version 1;
+
+    namespace "urn:opendaylight:groupbasedpolicy:neutron-mapper";
+    prefix "gbp-neutron-mapper";
+
+    import gbp-common {prefix gbp-common;}
+    import endpoint {prefix gbp-endpoint;}
+    import ietf-inet-types {prefix inet;}
+
+    description 
+        "This module defines the mapping model between Neutron IDs and GBP IDs.";
+
+    revision "2015-02-23" {
+        description
+            "Initial revision.";
+    }
+
+    grouping tenant-id-fields {
+        leaf tenant-id {
+                description "A unique ID for the tenant";
+                mandatory true;
+                type gbp-common:tenant-id;
+        }
+    }
+
+    grouping endpoint-group-pair-fields {
+        leaf provider-epg-id {
+            type gbp-common:endpoint-group-id;
+        }
+        leaf consumer-epg-id {
+            type gbp-common:endpoint-group-id;
+        }
+        leaf contract-id {
+            type gbp-common:contract-id;
+        }
+    }
+
+    container mappings {
+        config false;
+        container network-mappings {
+            list network-mapping {
+                key network-id;
+                leaf network-id {
+                    description "A unique ID for the neutron network == gbp l2-flood-domain";
+                    type gbp-common:unique-id;
+                }
+                leaf l2-bridge-domain-id {
+                    description "A unique ID of l2-bridge-domain generated for neutron network";
+                    type gbp-common:l2-bridge-domain-id;
+                }
+                leaf l3-context-id {
+                    description "A unique ID of l3-context generated for neutron network";
+                    type gbp-common:l3-context-id;
+                }
+            }
+        }
+        container endpoint-group-pair-to-contract-mappings {
+            list endpoint-group-pair-to-contract-mapping {
+                key "provider-epg-id consumer-epg-id";
+                uses endpoint-group-pair-fields;
+            }
+        }
+    }
+
+}
