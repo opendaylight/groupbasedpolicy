@@ -55,11 +55,9 @@ public class PolicyManager implements PolicyListener, L2DomainListener {
     }
 
     public void L2DomainUpdated(L2FloodDomainId id) {
-		// TODO Auto-generated method stub
 	}
 
 	@Override
 	public void policyUpdated(Set<EgKey> updatedGroups) {
-		// TODO Auto-generated method stub
 	}
 }
