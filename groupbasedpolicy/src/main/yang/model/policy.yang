@@ -992,6 +992,19 @@ module policy {
                 }
             }
 
+            list external-implicit-group {
+                description
+                    ".";
+
+                key "id";
+            
+                leaf id {
+                    mandatory true;
+                    type gbp-common:endpoint-group-id;
+                }
+                // Fields to be determined and completed before Code Freeze                
+
+            }
             // *************************
             // Subject feature instances
             // *************************
@@ -1161,14 +1174,12 @@ module policy {
                          requirements on the consumer endpoint group,
                          capabilities on the provider endpoint group, and
                          conditions on the individual endpoints in the
-                         endpoint group.";
-                
+                         endpoint group.";             
                     key "name";
                     leaf name {
                         type gbp-common:clause-name;
                         mandatory true;
-                    }
-                
+                    }               
                     // ********
                     // Matchers
                     // ********
@@ -1177,108 +1188,196 @@ module policy {
                         description 
                             "Matchers that apply to the consumer endpoint 
                              group.";
-                        list requirement-matcher {
-                            description 
-                                "Match against requirements in the consumer 
-                                 endpoint group.";
-                
-                            key "name";
-                            leaf name {
-                                description 
-                                    "A name for the requirement matcher";
-                                type gbp-common:requirement-matcher-name;
-                                mandatory true;
+                        
+                        // GIC mutually OR'd within role
+                        choice group-identification-constraints {
+                            description "Returns Groups which match, MUTALLY OR within role. Must be Either/Or";
+
+                            case group-name-constraint-case {                                
+                                list group-name-constraint {
+                                    key endpoint-group-name;
+                                    leaf endpoint-group-name {
+                                        type gbp-common:name;
+                                    }
+                                } 
                             }
-                
-                            uses matcher;
-                            list matcher-requirement {
-                                description 
-                                    "A matcher requirement is a 
-                                     requirement with a selector name
-                                     field used in requirement
-                                     matchers.  The name of the
-                                     matcher requirement matches
-                                     against requirements in endpoint
-                                     groups.";
-
-                                key name;
-                                uses requirement-base;
-
-                                leaf selector-namespace {
+                            case group-requirement-constraint-case {
+                                list requirement-matcher {
                                     description 
-                                        "The name of the selector to  
-                                         match.  This allows us to
-                                         specify that we want to match
-                                         only requirements scoped to a
-                                         particular selector name.
+                                        "Match against requirements in the consumer 
+                                         endpoint group.";
+                        
+                                    key "name";
+                                    leaf name {
+                                        description 
+                                            "A name for the requirement matcher";
+                                        type gbp-common:requirement-matcher-name;
+                                        mandatory true;
+                                    }
+                        
+                                    uses matcher;
+                                    list matcher-requirement {
+                                        description 
+                                            "A matcher requirement is a 
+                                             requirement with a selector name
+                                             field used in requirement
+                                             matchers.  The name of the
+                                             matcher requirement matches
+                                             against requirements in endpoint
+                                             groups.";
 
-                                         This parameter is optional;
-                                         if not specified, use an
-                                         inherited selector namespace
-                                         if it exists, or match
-                                         against any selector name.";
-                
-                                    type gbp-common:selector-name;
+                                        key name;
+                                        uses requirement-base;
+
+                                        leaf selector-namespace {
+                                            description 
+                                                "The name of the selector to  
+                                                 match.  This allows us to
+                                                 specify that we want to match
+                                                 only requirements scoped to a
+                                                 particular selector name.
+
+                                                 This parameter is optional;
+                                                 if not specified, use an
+                                                 inherited selector namespace
+                                                 if it exists, or match
+                                                 against any selector name.";
+                        
+                                            type gbp-common:selector-name;
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            case group-any-case {
+                                container group-any {
+
+                                    description 
+                                        "A presence container stating that, if this exists,
+                                        the role matcher will match on any group.";
+                                    presence "This matches any group";
                                 }
                             }
                         }
+                        
+
+                        
                         uses has-condition-matchers;
+
+                        container endpoint-identification-constraints {
+                            description
+                                "Identify endpoints via other attributes other than conditions.
+                                These can be things such as ip-prefix, vlan, mpls label etc. These
+                                things are intended to be explicity stated, and should not contain 
+                                references to other objects like endpointsIDs.";
+                            container l3-endpoint-identification-constraints {
+                                list prefix-constraint {
+                                    key ip-prefix;
+                                    leaf ip-prefix {
+                                        type inet:ip-prefix;
+                                    }
+                                }
+                            }
+                        }
                     }
-                
+
                     container provider-matchers {
-                        description 
-                            "Matchers that apply to the provider endpoint 
+                        description
+                            "Matchers that apply to the provider endpoint
                              group";
-                
-                        list capability-matcher {
-                            description 
-                                "Match against capabilities in the provider  
-                                 endpoint group.";
-                
-                            key "name";
-                            leaf name {
-                                description 
-                                    "A name for the capability matcher";
-                                type gbp-common:capability-matcher-name;
-                                mandatory true;
+                                      
+                        // GIC mutually OR'd within role
+                        choice group-identification-constraints {
+                            description "Returns Groups which match, MUTALLY OR within role. Must be Either/Or";
+
+                            case group-name-constraint-case {
+                                list group-name-constraint {
+                                    key endpoint-group-name;
+                                    leaf endpoint-group-name {
+                                        type gbp-common:name;
+                                    }
+                                }
                             }
-                
-                            uses matcher;
-
-                            list matcher-capability {
-                                description 
-                                    "A matcher capability is a 
-                                     capability with a selector
-                                     name field used in capability
-                                     mat  chers.  The name of the
-                                     matcher capability matches
-                                     against capabilities in
-                                     endpoint groups.";
-
-                                key name;
-                                uses capability-base;
-
-                                leaf selector-namespace {
+                            case group-capability-constraint-case {
+                                list capability-matcher {
                                     description 
-                                        "The name of the selector to
-                                         match.  This allows us to
-                                         specify that we want to match
-                                         only capabilities scoped to a
-                                         particular selector name.
+                                        "Match against capabilities in the provider
+                                         endpoint group.";
 
-                                         This parameter is optional;
-                                         if not specified, use an
-                                         inherited selector namespace
-                                         if it exists, or match
-                                         against any selector name.";
-                
-                                    type gbp-common:selector-name;
+                                    key "name";
+                                    leaf name {
+                                        description 
+                                            "A name for the capability matcher";
+                                        type gbp-common:capability-matcher-name;
+                                        mandatory true;
+                                    }
+
+                                    uses matcher;
+
+                                    list matcher-capability {
+                                        description
+                                            "A matcher capability is a
+                                             capability with a selector
+                                             name field used in capability
+                                             mat  chers.  The name of the
+                                             matcher capability matches
+                                             against capabilities in
+                                             endpoint groups.";
+
+                                        key name;
+                                        uses capability-base;
+
+                                        leaf selector-namespace {
+                                            description
+                                                "The name of the selector to
+                                                 match.  This allows us to
+                                                 specify that we want to match
+                                                 only capabilities scoped to a
+                                                 particular selector name.
+
+                                                 This parameter is optional;
+                                                 if not specified, use an
+                                                 inherited selector namespace
+                                                 if it exists, or match
+                                                 against any selector name.";
+
+                                            type gbp-common:selector-name;
+                                        }
+                                    }
+                                }
+                            }
+                            case group-any-case {
+                                container group-any {
+                                    presence "any";
                                 }
                             }
                         }
+         
                         uses has-condition-matchers;
+                        
+                        container endpoint-identification-constraints {
+                            description
+                                "Identify endpoints via other attributes other than conditions.
+                                These can be things such as ip-prefix, vlan, mpls label etc. These
+                                things are intended to be explicity stated, and should not contain 
+                                references to other objects like endpointsIDs.";
+                            container l3-endpoint-identification-constraints {
+                                list prefix-constraint {
+                                    key ip-prefix;
+                                    leaf ip-prefix {
+                                        type inet:ip-prefix;
+                                    }
+                                }
+                            }
+                        }
                     }
                 
+                    container any-matchers {
+                        description
+                            "Matchers that apply to either provider endpoint group or consumer endpoint group.";
+                        // TODO fill this out, may need additional groupings so as to not confuse capability or requirement.
+                   }
+
                     // ******************
                     // Subject References
                     // ******************

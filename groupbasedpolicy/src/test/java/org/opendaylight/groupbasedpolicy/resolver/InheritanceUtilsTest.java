@@ -8,6 +8,13 @@
 
 package org.opendaylight.groupbasedpolicy.resolver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.util.HashSet;
 import java.util.List;
 
@@ -67,12 +74,16 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.TargetBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.ConsumerMatchersBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.ProviderMatchersBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.consumer.matchers.RequirementMatcher;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.consumer.matchers.RequirementMatcherBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.consumer.matchers.requirement.matcher.MatcherRequirementBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.CapabilityMatcher;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.CapabilityMatcherBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.capability.matcher.MatcherCapabilityBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.consumer.matchers.group.identification.constraints.GroupRequirementConstraintCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.consumer.matchers.group.identification.constraints.GroupRequirementConstraintCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.consumer.matchers.group.identification.constraints.group.requirement.constraint._case.RequirementMatcher;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.consumer.matchers.group.identification.constraints.group.requirement.constraint._case.RequirementMatcherBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.consumer.matchers.group.identification.constraints.group.requirement.constraint._case.requirement.matcher.MatcherRequirementBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.group.identification.constraints.GroupCapabilityConstraintCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.group.identification.constraints.GroupCapabilityConstraintCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.group.identification.constraints.group.capability.constraint._case.CapabilityMatcher;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.group.identification.constraints.group.capability.constraint._case.CapabilityMatcherBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.group.identification.constraints.group.capability.constraint._case.capability.matcher.MatcherCapabilityBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.Rule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.RuleBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ConsumerNamedSelector;
@@ -86,8 +97,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-
-import static org.junit.Assert.*;
 
 public class InheritanceUtilsTest {
     // ******
@@ -221,11 +230,13 @@ public class InheritanceUtilsTest {
         .setName(clauseName1)
         .setSubjectRefs(ImmutableList.of(subject1))
         .setProviderMatchers(new ProviderMatchersBuilder()
-            .setCapabilityMatcher(ImmutableList.of(capm_c1))
+        .setGroupIdentificationConstraints(new GroupCapabilityConstraintCaseBuilder()
+            .setCapabilityMatcher(ImmutableList.of(capm_c1)).build())
             .setConditionMatcher(ImmutableList.of(cm_c1))
             .build())
         .setConsumerMatchers(new ConsumerMatchersBuilder()
-            .setRequirementMatcher(ImmutableList.of(rm_r1))
+        .setGroupIdentificationConstraints(new GroupRequirementConstraintCaseBuilder()
+            .setRequirementMatcher(ImmutableList.of(rm_r1)).build())
             .setConditionMatcher(ImmutableList.of(cm_c2))
             .build())
         .build();
@@ -234,7 +245,8 @@ public class InheritanceUtilsTest {
         .setName(clauseName1)
         .setSubjectRefs(ImmutableList.of(subject2))
         .setConsumerMatchers(new ConsumerMatchersBuilder()
-            .setRequirementMatcher(ImmutableList.of(rm_r1_plus))
+        .setGroupIdentificationConstraints(new GroupRequirementConstraintCaseBuilder()
+            .setRequirementMatcher(ImmutableList.of(rm_r1_plus)).build())
             .setConditionMatcher(ImmutableList.of(cm_c2_plus))
             .build())
         .build();
@@ -243,7 +255,8 @@ public class InheritanceUtilsTest {
     .setName(clauseName1)
     .setSubjectRefs(ImmutableList.of(subject3))
     .setProviderMatchers(new ProviderMatchersBuilder()
-        .setCapabilityMatcher(ImmutableList.of(capm_c1))
+    .setGroupIdentificationConstraints(new GroupCapabilityConstraintCaseBuilder()
+        .setCapabilityMatcher(ImmutableList.of(capm_c1)).build())
         .setConditionMatcher(ImmutableList.of(cm_c2_plus))
         .build())
     .build();
@@ -1003,8 +1016,9 @@ public class InheritanceUtilsTest {
         assertEquals(1, cm.get(0).getCondition().size());
         assertTrue(containsCondition(cm.get(0).getCondition(), cond1));
 
+        
         List<CapabilityMatcher> capm = 
-                result.getProviderMatchers().getCapabilityMatcher();
+                ((GroupCapabilityConstraintCase)result.getProviderMatchers().getGroupIdentificationConstraints()).getCapabilityMatcher();
         assertEquals(1, capm.size());
         assertEquals(1, capm.get(0).getMatcherCapability().size());
         assertTrue(containsCapability(capm.get(0).getMatcherCapability(), c1));
@@ -1016,7 +1030,7 @@ public class InheritanceUtilsTest {
         assertTrue(containsCondition(cm.get(0).getCondition(), cond2));
 
         List<RequirementMatcher> pm = 
-                result.getConsumerMatchers().getRequirementMatcher();
+                ((GroupRequirementConstraintCase)result.getConsumerMatchers().getGroupIdentificationConstraints()).getRequirementMatcher();
         assertEquals(1, pm.size());
         assertEquals(1, pm.get(0).getMatcherRequirement().size());
         assertTrue(containsRequirement(pm.get(0).getMatcherRequirement(), r1));
@@ -1044,7 +1058,7 @@ public class InheritanceUtilsTest {
         assertTrue(containsCondition(cm.get(0).getCondition(), cond1));
 
         List<CapabilityMatcher> capm = 
-                result.getProviderMatchers().getCapabilityMatcher();
+                ((GroupCapabilityConstraintCase)result.getProviderMatchers().getGroupIdentificationConstraints()).getCapabilityMatcher();
         assertEquals(1, capm.size());
         assertEquals(1, capm.get(0).getMatcherCapability().size());
         assertTrue(containsCapability(capm.get(0).getMatcherCapability(), c1));
@@ -1057,7 +1071,7 @@ public class InheritanceUtilsTest {
         assertEquals(0, cm.get(0).getCondition().size());
 
         List<RequirementMatcher> pm = 
-                result.getConsumerMatchers().getRequirementMatcher();
+                ((GroupRequirementConstraintCase)result.getConsumerMatchers().getGroupIdentificationConstraints()).getRequirementMatcher();
         assertEquals(1, pm.size());
         assertEquals(2, pm.get(0).getMatcherRequirement().size());
         assertTrue(containsRequirement(pm.get(0).getMatcherRequirement(), r1));
@@ -1112,9 +1126,9 @@ public class InheritanceUtilsTest {
         assertEquals(1, c.getClause().size());
         Clause clause = c.getClause().get(0);
         assertEquals(1, clause.getConsumerMatchers().getConditionMatcher().size());
-        assertEquals(1, clause.getConsumerMatchers().getRequirementMatcher().size());
+        assertEquals(1, ((GroupRequirementConstraintCase)clause.getConsumerMatchers().getGroupIdentificationConstraints()).getRequirementMatcher().size());
         assertEquals(1, clause.getProviderMatchers().getConditionMatcher().size());
-        assertEquals(1, clause.getProviderMatchers().getCapabilityMatcher().size());
+        assertEquals(1, ((GroupCapabilityConstraintCase)clause.getProviderMatchers().getGroupIdentificationConstraints()).getCapabilityMatcher().size());
         assertEquals(2, c.getSubject().size());
 
         EndpointGroup eg = TenantUtils.findEndpointGroup(tenant, egloop2Id);
