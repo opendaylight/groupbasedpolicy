@@ -1,10 +1,10 @@
 /*
  * Copyright (C) 2014 Cisco Systems, Inc.
- *
+ * 
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
- *
+ * 
  * Authors : Thomas Bachman
  */
 package org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages;
@@ -26,21 +26,27 @@ public class StateReportRequest extends RpcMessage {
     public static final String STATE_MESSAGE = "report_state";
 
     static public class Params {
+
         private Uri object;
         private List<ManagedObject> observable;
+
         public Uri getObject() {
             return object;
         }
+
         public void setObject(Uri object) {
             this.object = object;
         }
+
         public List<ManagedObject> getObservable() {
             return observable;
         }
+
         public void setObservable(List<ManagedObject> observable) {
             this.observable = observable;
         }
     }
+
     private JsonNode id;
     private String method;
     private List<Params> params;
@@ -97,6 +103,7 @@ public class StateReportRequest extends RpcMessage {
 
     /**
      * Minimal check on validity of message
+     * 
      * @return true if message has passed validity check
      */
     @JsonIgnore

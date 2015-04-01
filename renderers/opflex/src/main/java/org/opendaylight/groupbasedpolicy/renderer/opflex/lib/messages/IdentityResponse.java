@@ -1,10 +1,10 @@
 /*
  * Copyright (C) 2014 Cisco Systems, Inc.
- *
+ * 
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
- *
+ * 
  * Authors : Thomas Bachman
  */
 package org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages;
@@ -26,6 +26,7 @@ public class IdentityResponse extends RpcMessage {
     public static final String IDENTITY_MESSAGE_RESPONSE = "send_identity_response";
 
     static public class Peer {
+
         private List<String> role;
         private String connectivity_info;
 
@@ -45,11 +46,11 @@ public class IdentityResponse extends RpcMessage {
             this.connectivity_info = connectivity_info;
         }
 
-        public Peer() {
-        }
+        public Peer() {}
     }
 
     static public class Result {
+
         private String name;
         private String domain;
         private List<String> my_role;
@@ -92,6 +93,7 @@ public class IdentityResponse extends RpcMessage {
         }
 
     }
+
     private JsonNode id;
     private Result result;
     private OpflexError error;
@@ -125,8 +127,7 @@ public class IdentityResponse extends RpcMessage {
     }
 
     @Override
-    public void setMethod(String method) {
-    }
+    public void setMethod(String method) {}
 
     public Result getResult() {
         return this.result;

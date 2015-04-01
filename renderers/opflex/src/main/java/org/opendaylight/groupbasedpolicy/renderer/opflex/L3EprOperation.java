@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
- *
+ * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
+ * 
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -33,17 +33,15 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 
-
 /**
  * A context for mapping OpFlex messaging to asynchronous
  * requests to the Endpoint Registry's list of L3 Endpoints.
  *
  * @author tbachman
- *
  */
-public class L3EprOperation implements EprOperation, FutureCallback<Optional<EndpointL3>>{
+public class L3EprOperation implements EprOperation, FutureCallback<Optional<EndpointL3>> {
 
-	private EprOpCallback cb;
+    private EprOpCallback cb;
     private EndpointL3 ep;
     private InstanceIdentifier<EndpointL3> iid;
 
@@ -61,47 +59,48 @@ public class L3EprOperation implements EprOperation, FutureCallback<Optional<End
         this.timeout = Long.valueOf(prr);
     }
 
-    public L3EprOperation() {
-    }
+    public L3EprOperation() {}
 
     public void setAgentId(String agentId) {
         this.agentId = agentId;
     }
 
     public void setTenantId(TenantId tid) {
-    	this.tid = tid;
+        this.tid = tid;
     }
 
     public void setEndpointGroupId(EndpointGroupId egid) {
-    	this.egid = egid;
+        this.egid = egid;
     }
 
     public void setContextId(L3ContextId l3cid) {
-    	this.l3cid = l3cid;
+        this.l3cid = l3cid;
     }
 
     public void setL2BridgDomainId(L2BridgeDomainId l2bdid) {
-    	this.l2bdid = l2bdid;
+        this.l2bdid = l2bdid;
     }
 
     public void setMacAddress(MacAddress mac) {
-    	this.mac = mac;
+        this.mac = mac;
     }
 
     public void setIpAddress(IpAddress ip) {
-    	this.ip = ip;
+        this.ip = ip;
     }
 
     public void setL3AddressList(List<L3Address> l3al) {
-    	this.l3al = l3al;
+        this.l3al = l3al;
     }
 
     public void addL3Address(L3Address l3a) {
-    	this.l3al.add(l3a);
+        this.l3al.add(l3a);
     }
+
     public EndpointL3 getEp() {
         return ep;
     }
+
     public void setEp(EndpointL3 ep) {
         this.ep = ep;
     }
@@ -112,18 +111,17 @@ public class L3EprOperation implements EprOperation, FutureCallback<Optional<End
         oocb.setAgentId(this.agentId);
 
         epBuilder.setTenant(this.tid)
-                 .setEndpointGroup(this.egid)
-                 .setL2Context(this.l2bdid)
-                 .setL3Context(this.l3cid)
-                 .setL3Address(l3al)
-                 .setMacAddress(this.mac)
-                 .setIpAddress(this.ip)
-                 .setTimestamp(this.timeout)
-                 .addAugmentation(OpflexOverlayContextL3.class, oocb.build());
-
+            .setEndpointGroup(this.egid)
+            .setL2Context(this.l2bdid)
+            .setL3Context(this.l3cid)
+            .setL3Address(l3al)
+            .setMacAddress(this.mac)
+            .setIpAddress(this.ip)
+            .setTimestamp(this.timeout)
+            .addAugmentation(OpflexOverlayContextL3.class, oocb.build());
 
         // TODO: add support for conditions
-        //epBuilder.setCondition(new List<ConditionName>());
+        // epBuilder.setCondition(new List<ConditionName>());
 
         return epBuilder.build();
     }
@@ -145,45 +143,38 @@ public class L3EprOperation implements EprOperation, FutureCallback<Optional<End
         cb.callback(this);
     }
 
-
     @Override
     public void onFailure(Throwable t) {
         // TODO: implement another callback
     }
 
-	@Override
-	public void put(WriteTransaction wt) {
+    @Override
+    public void put(WriteTransaction wt) {
         ep = buildEp();
-        this.iid = InstanceIdentifier.builder(Endpoints.class)
-            	.child(EndpointL3.class, ep.getKey())
-            	.build();
+        this.iid = InstanceIdentifier.builder(Endpoints.class).child(EndpointL3.class, ep.getKey()).build();
         wt.put(LogicalDatastoreType.OPERATIONAL, iid, ep);
-	}
+    }
 
-	@Override
-	public void delete(WriteTransaction wt) {
+    @Override
+    public void delete(WriteTransaction wt) {
         ep = buildEp();
-        this.iid = InstanceIdentifier.builder(Endpoints.class)
-            	.child(EndpointL3.class, ep.getKey())
-            	.build();
+        this.iid = InstanceIdentifier.builder(Endpoints.class).child(EndpointL3.class, ep.getKey()).build();
         wt.delete(LogicalDatastoreType.OPERATIONAL, iid);
-	}
+    }
 
-	@Override
-	public void read(ReadOnlyTransaction rot, ScheduledExecutorService executor) {
+    @Override
+    public void read(ReadOnlyTransaction rot, ScheduledExecutorService executor) {
         ep = buildEp();
-    	this.iid = InstanceIdentifier.builder(Endpoints.class)
-            	.child(EndpointL3.class, ep.getKey())
-            	.build();
+        this.iid = InstanceIdentifier.builder(Endpoints.class).child(EndpointL3.class, ep.getKey()).build();
 
-    	ListenableFuture<Optional<EndpointL3>> dao =
-                rot.read(LogicalDatastoreType.OPERATIONAL, iid);
+        ListenableFuture<Optional<EndpointL3>> dao = rot.read(LogicalDatastoreType.OPERATIONAL, iid);
         Futures.addCallback(dao, this, executor);
 
-	}
-	@Override
-	public void setCallback(EprOpCallback callback) {
-		this.cb = callback;
-	}
+    }
+
+    @Override
+    public void setCallback(EprOpCallback callback) {
+        this.cb = callback;
+    }
 
 }

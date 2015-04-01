@@ -1,10 +1,10 @@
 /*
  * Copyright (C) 2014 Cisco Systems, Inc.
- *
+ * 
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
- *
+ * 
  * Authors : Thomas Bachman
  */
 package org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages;
@@ -26,28 +26,36 @@ public class PolicyUpdateRequest extends RpcMessage {
     public static final String UPDATE_MESSAGE = "policy_update";
 
     static public class Params {
+
         private List<ManagedObject> replace;
         private List<ManagedObject> merge_children;
         private List<Uri> delete_uri;
+
         public List<ManagedObject> getReplace() {
             return replace;
         }
+
         public void setReplace(List<ManagedObject> replace) {
             this.replace = replace;
         }
+
         public List<ManagedObject> getMerge_children() {
             return merge_children;
         }
+
         public void setMerge_children(List<ManagedObject> merge_children) {
             this.merge_children = merge_children;
         }
+
         public List<Uri> getDelete_uri() {
             return delete_uri;
         }
+
         public void setDelete_uri(List<Uri> delete_uri) {
             this.delete_uri = delete_uri;
         }
     }
+
     private JsonNode id;
     private String method;
     private List<Params> params;
@@ -104,6 +112,7 @@ public class PolicyUpdateRequest extends RpcMessage {
 
     /**
      * Minimal check on validity of message
+     * 
      * @return true if message has passed validity check
      */
     @JsonIgnore

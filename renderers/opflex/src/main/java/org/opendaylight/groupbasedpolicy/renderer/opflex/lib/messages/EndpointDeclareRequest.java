@@ -1,10 +1,10 @@
 /*
  * Copyright (C) 2014 Cisco Systems, Inc.
- *
+ * 
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
- *
+ * 
  * Authors : Thomas Bachman
  */
 package org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages;
@@ -25,21 +25,27 @@ public class EndpointDeclareRequest extends RpcMessage {
     public static final String DECLARE_MESSAGE = "endpoint_declare";
 
     static public class Params {
+
         private List<ManagedObject> endpoint;
         private int prr;
+
         public List<ManagedObject> getEndpoint() {
             return endpoint;
         }
+
         public void setEndpoint(List<ManagedObject> endpoint) {
             this.endpoint = endpoint;
         }
+
         public int getPrr() {
             return prr;
         }
+
         public void setPrr(int prr) {
             this.prr = prr;
         }
     }
+
     private JsonNode id;
     private String method;
     private List<Params> params;
@@ -96,6 +102,7 @@ public class EndpointDeclareRequest extends RpcMessage {
 
     /**
      * Minimal check on validity of message
+     * 
      * @return true if message has passed validity check
      */
     @JsonIgnore

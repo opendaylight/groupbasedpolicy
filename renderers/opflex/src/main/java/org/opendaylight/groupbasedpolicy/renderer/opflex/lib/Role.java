@@ -1,10 +1,10 @@
 /*
  * Copyright (C) 2014 Cisco Systems, Inc.
- *
+ * 
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
- *
+ * 
  * Authors : Thomas Bachman
  */
 package org.opendaylight.groupbasedpolicy.renderer.opflex.lib;
@@ -35,14 +35,10 @@ import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages.PolicyUpda
  * Enum for OpFlex roles and their supported messages
  *
  * @author tbachman
- *
  */
 public enum Role {
-    DISCOVERY("discovery"),
-    POLICY_REPOSITORY("policy_repository"),
-    ENDPOINT_REGISTRY("endpoint_registry"),
-    OBSERVER("observer"),
-    POLICY_ELEMENT("policy_element");
+    DISCOVERY("discovery"), POLICY_REPOSITORY("policy_repository"), ENDPOINT_REGISTRY("endpoint_registry"), OBSERVER(
+            "observer"), POLICY_ELEMENT("policy_element");
 
     static IdentityRequest idReq = new IdentityRequest();
     static IdentityResponse idRsp = new IdentityResponse();
@@ -79,8 +75,7 @@ public enum Role {
             msgList.add(idReq);
             msgList.add(idRsp);
             return msgList;
-        }
-        else if (role.equals(POLICY_REPOSITORY.toString())) {
+        } else if (role.equals(POLICY_REPOSITORY.toString())) {
             List<RpcMessage> msgList = new ArrayList<RpcMessage>();
             msgList.add(polReq);
             msgList.add(polUpdReq);
@@ -88,8 +83,7 @@ public enum Role {
             msgList.add(polUnReq);
             msgList.add(polUnRsp);
             return msgList;
-        }
-        else if (role.equals(ENDPOINT_REGISTRY.toString())) {
+        } else if (role.equals(ENDPOINT_REGISTRY.toString())) {
             List<RpcMessage> msgList = new ArrayList<RpcMessage>();
             msgList.add(epDeclReq);
             msgList.add(epUndeclReq);
@@ -98,8 +92,7 @@ public enum Role {
             msgList.add(epPolUpdReq);
             msgList.add(epPolUpdRsp);
             return msgList;
-        }
-        else if (role.equals(OBSERVER.toString())) {
+        } else if (role.equals(OBSERVER.toString())) {
             List<RpcMessage> msgList = new ArrayList<RpcMessage>();
             return msgList;
         }

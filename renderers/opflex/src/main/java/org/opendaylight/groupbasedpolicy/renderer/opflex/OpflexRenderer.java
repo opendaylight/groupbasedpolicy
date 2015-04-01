@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
- *
+ * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
+ * 
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -25,11 +25,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Renderer that uses OpFlex to implement an overlay network
  * using Open vSwitch.
+ * 
  * @author tbachman
  */
 public class OpflexRenderer implements AutoCloseable {
-    private static final Logger LOG =
-            LoggerFactory.getLogger(OpflexRenderer.class);
+
+    private static final Logger LOG = LoggerFactory.getLogger(OpflexRenderer.class);
 
     private final PolicyResolver policyResolver;
     private final EndpointManager endpointManager;
@@ -40,8 +41,7 @@ public class OpflexRenderer implements AutoCloseable {
 
     ListenerRegistration<DataChangeListener> configReg;
 
-    public OpflexRenderer(DataBroker dataProvider,
-                             RpcProviderRegistry rpcRegistry) {
+    public OpflexRenderer(DataBroker dataProvider, RpcProviderRegistry rpcRegistry) {
         super();
 
         int numCPU = Runtime.getRuntime().availableProcessors();
@@ -54,14 +54,10 @@ public class OpflexRenderer implements AutoCloseable {
 
         connectionService = new OpflexConnectionService(dataProvider, executor);
 
-        endpointManager = new EndpointManager(dataProvider, rpcRegistry,
-                                              executor, connectionService, mitLibrary);
+        endpointManager = new EndpointManager(dataProvider, rpcRegistry, executor, connectionService, mitLibrary);
         policyResolver = new PolicyResolver(dataProvider, executor);
 
-        policyManager = new PolicyManager(policyResolver,
-                                          connectionService,
-                                          executor, mitLibrary);
-
+        policyManager = new PolicyManager(policyResolver, connectionService, executor, mitLibrary);
 
         LOG.info("Initialized OpFlex renderer");
     }
@@ -73,11 +69,16 @@ public class OpflexRenderer implements AutoCloseable {
     @Override
     public void close() throws Exception {
         executor.shutdownNow();
-        if (configReg != null) configReg.close();
-        if (policyResolver != null) policyResolver.close();
-        if (policyManager != null) policyManager.close();
-        if (connectionService != null) connectionService.close();
-        if (endpointManager != null) endpointManager.close();
+        if (configReg != null)
+            configReg.close();
+        if (policyResolver != null)
+            policyResolver.close();
+        if (policyManager != null)
+            policyManager.close();
+        if (connectionService != null)
+            connectionService.close();
+        if (endpointManager != null)
+            endpointManager.close();
     }
 
     // **************

@@ -1,10 +1,10 @@
 /*
  * Copyright (C) 2013 Red Hat, Inc. Copyright (C) 2014 Cisco Systems, Inc.
- *
+ * 
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
- *
+ * 
  * Authors : Madhu Venugopal, Brent Salisbury, Evan Zeller, Thomas Bachman
  */
 package org.opendaylight.groupbasedpolicy.renderer.opflex.lib;
@@ -55,18 +55,16 @@ import com.google.common.util.concurrent.ListenableFuture;
  * Manages the different OpFlex entity connections. It does this on behalf of
  * each logical OpFlex entity: o Policy Repositories o Endpoint Registries o
  * Observers
- *
  * Each OpFlex entity defines the JSON RPC methods supported, and manages their
  * connection/discovery using dedicated servers. Servers and connections are
  * maintained in dedicated client and server maps.
  *
  * @author tbachman
- *
  */
-public class OpflexConnectionService implements ConnectionService, RpcBroker,
-        RpcBroker.RpcCallback, DataChangeListener, AutoCloseable {
-    protected static final Logger logger = LoggerFactory
-            .getLogger(OpflexConnectionService.class);
+public class OpflexConnectionService implements ConnectionService, RpcBroker, RpcBroker.RpcCallback,
+        DataChangeListener, AutoCloseable {
+
+    protected static final Logger logger = LoggerFactory.getLogger(OpflexConnectionService.class);
 
     public static final String OPFLEX_DOMAIN = "default";
     static final String INVALID_DOMAIN = "Domain mismatch";
@@ -91,11 +89,10 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker,
     private final DataBroker dataProvider;
     private RpcMessageMap messageMap = null;
 
-    public static final InstanceIdentifier<DiscoveryDefinitions> DISCOVERY_IID = InstanceIdentifier
-            .builder(DiscoveryDefinitions.class).build();
+    public static final InstanceIdentifier<DiscoveryDefinitions> DISCOVERY_IID = InstanceIdentifier.builder(
+            DiscoveryDefinitions.class).build();
 
-    public OpflexConnectionService(DataBroker salDataProvider,
-            ScheduledExecutorService executor) {
+    public OpflexConnectionService(DataBroker salDataProvider, ScheduledExecutorService executor) {
         this.dataProvider = salDataProvider;
         this.executor = executor;
 
@@ -129,10 +126,8 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker,
 
         initializeServers();
 
-        this.dataListener = dataProvider.registerDataChangeListener(
-                LogicalDatastoreType.CONFIGURATION,
-                OpflexConnectionService.DISCOVERY_IID, this,
-                DataChangeScope.SUBTREE);
+        this.dataListener = dataProvider.registerDataChangeListener(LogicalDatastoreType.CONFIGURATION,
+                OpflexConnectionService.DISCOVERY_IID, this, DataChangeScope.SUBTREE);
     }
 
     private List<OpflexRpcServer> setDefaultIdentities() {
@@ -155,13 +150,11 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker,
 
     }
 
-    private List<OpflexRpcServer> createServerList(
-            DiscoveryDefinitions identities) {
+    private List<OpflexRpcServer> createServerList(DiscoveryDefinitions identities) {
 
         if (identities != null) {
             Map<String, OpflexRpcServer> servers = new ConcurrentHashMap<String, OpflexRpcServer>();
-            List<String> addList = getPolicyRepositories(identities
-                    .getPolicyRepository());
+            List<String> addList = getPolicyRepositories(identities.getPolicyRepository());
             addServerList(servers, addList, Role.POLICY_REPOSITORY);
             addList = getEndpointRegistries(identities.getEndpointRegistry());
             addServerList(servers, addList, Role.ENDPOINT_REGISTRY);
@@ -183,8 +176,7 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker,
 
     }
 
-    private List<String> getPolicyRepositories(
-            List<PolicyRepository> repositories) {
+    private List<String> getPolicyRepositories(List<PolicyRepository> repositories) {
         List<String> identityList = new ArrayList<String>();
         if (repositories == null)
             return null;
@@ -217,8 +209,7 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker,
         return identityList;
     }
 
-    private void addServerList(Map<String, OpflexRpcServer> servers,
-            List<String> idList, Role role) {
+    private void addServerList(Map<String, OpflexRpcServer> servers, List<String> idList, Role role) {
         if (idList == null || idList.size() <= 0)
             return;
 
@@ -243,9 +234,8 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker,
      * Find the {@link OpflexAgent} that owns this {@link JsonRpcEndpoint}.
      *
      * @param endpoint
-     *            The endpoint to look up
+     *        The endpoint to look up
      * @return The OpflexConnection that owns this endpoint
-     *
      *         TODO: should throw an exception of there is no OpflexConnection
      *         that contains this endpoint
      */
@@ -258,18 +248,16 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker,
      * Get the OpflexRpcServer that spawned this endpoint.
      *
      * @param endpoint
-     *            The endpoint to look up
+     *        The endpoint to look up
      * @return The OpflexRpcServer that owns this endpoint, or null if the
      *         server no longer exists
-     *
      *         TODO: exception if the endpoint is owned by anything
      */
     public OpflexRpcServer getOpflexServer(JsonRpcEndpoint endpoint) {
         if (endpoint.getContext() instanceof OpflexRpcServer) {
             return (OpflexRpcServer) endpoint.getContext();
         }
-        logger.warn("Couldn't find OpflexConnection for endpoint {}",
-                endpoint.getIdentifier());
+        logger.warn("Couldn't find OpflexConnection for endpoint {}", endpoint.getIdentifier());
         return null;
     }
 
@@ -292,8 +280,7 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker,
         return opflexServers;
     }
 
-    public void setOpflexServers(
-            ConcurrentMap<String, OpflexRpcServer> opflexServers) {
+    public void setOpflexServers(ConcurrentMap<String, OpflexRpcServer> opflexServers) {
         this.opflexServers = opflexServers;
     }
 
@@ -333,7 +320,7 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker,
      * Add an {@link OpflexAgent} to the domain
      *
      * @param agent
-     *            The agent to add
+     *        The agent to add
      */
     public void addOpflexAgent(OpflexAgent agent) {
         opflexAgents.put(agent.getIdentity(), agent);
@@ -343,7 +330,7 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker,
      * Return the {@link OpflexAgent} associated with this identity
      *
      * @param identity
-     *            A string representing the connections identity
+     *        A string representing the connections identity
      * @return The connection represented by that key, or null if not found
      */
     public OpflexAgent getOpflexAgent(String identity) {
@@ -354,7 +341,7 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker,
      * Add the List of servers to the domain
      *
      * @param serverList
-     *            List of new servers to start
+     *        List of new servers to start
      */
     public void addServers(List<OpflexRpcServer> serverList) {
 
@@ -369,8 +356,7 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker,
             OpflexRpcServer server = opflexServers.get(srv.getId());
             if (server != null) {
                 if (!server.sameServer(srv)) {
-                    OpflexRpcServer oldServer = opflexServers.remove(srv
-                            .getId());
+                    OpflexRpcServer oldServer = opflexServers.remove(srv.getId());
                     if (oldServer != null && oldServer.getRpcServer() != null
                             && oldServer.getRpcServer().getChannel() != null) {
                         oldServer.getRpcServer().getChannel().disconnect();
@@ -389,10 +375,9 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker,
      * Drop the list of servers from the domain
      *
      * @param oldServers
-     *            The list of servers to drop
-     *
-     *            TODO: Should we provide notifications to or close the
-     *            connections that were spawned by the deleted servers?
+     *        The list of servers to drop
+     *        TODO: Should we provide notifications to or close the
+     *        connections that were spawned by the deleted servers?
      */
     public void dropServers(List<String> oldServers) {
         OpflexRpcServer server;
@@ -415,7 +400,7 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker,
      * the updated parameters.
      *
      * @param serverList
-     *            The new server configurations
+     *        The new server configurations
      */
     public void updateServers(List<OpflexRpcServer> serverList) {
         /* Get the new list of configured servers in this domain */
@@ -457,22 +442,20 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker,
     }
 
     private void readConfig() {
-        ListenableFuture<Optional<DiscoveryDefinitions>> dao = dataProvider
-                .newReadOnlyTransaction().read(
-                        LogicalDatastoreType.CONFIGURATION, DISCOVERY_IID);
-        Futures.addCallback(dao,
-                new FutureCallback<Optional<DiscoveryDefinitions>>() {
-                    @Override
-                    public void onSuccess(
-                            final Optional<DiscoveryDefinitions> result) {
-                        getNewConfig(result);
-                    }
+        ListenableFuture<Optional<DiscoveryDefinitions>> dao = dataProvider.newReadOnlyTransaction().read(
+                LogicalDatastoreType.CONFIGURATION, DISCOVERY_IID);
+        Futures.addCallback(dao, new FutureCallback<Optional<DiscoveryDefinitions>>() {
 
-                    @Override
-                    public void onFailure(Throwable t) {
-                        logger.error("Failed to read configuration", t);
-                    }
-                }, executor);
+            @Override
+            public void onSuccess(final Optional<DiscoveryDefinitions> result) {
+                getNewConfig(result);
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                logger.error("Failed to read configuration", t);
+            }
+        }, executor);
     }
 
     void getNewConfig(final Optional<DiscoveryDefinitions> result) {
@@ -550,8 +533,7 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker,
     // ******************
 
     @Override
-    public void onDataChanged(
-            final AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
+    public void onDataChanged(final AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
 
         readConfig();
     }
@@ -591,15 +573,12 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker,
 
     /**
      * Publish the {@link RpcMessage} to all subscribers.
-     *
      */
     @Override
-    public synchronized void publish(JsonRpcEndpoint endpoint,
-            RpcMessage message) {
+    public synchronized void publish(JsonRpcEndpoint endpoint, RpcMessage message) {
         List<RpcCallback> cbList = brokerMap.get(message.getName());
         if (cbList == null) {
-            System.out
-                    .println("Unhandled Message name is " + message.getName());
+            System.out.println("Unhandled Message name is " + message.getName());
             return;
         }
 
@@ -703,8 +682,7 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker,
          * etc. to create the containing connection object.
          */
         if (!(endpoint.getContext() instanceof OpflexRpcServer)) {
-            logger.error("Connection for endpoint {} invalid",
-                    endpoint.getIdentifier());
+            logger.error("Connection for endpoint {} invalid", endpoint.getIdentifier());
             // TODO: close connection?
             return;
         }
@@ -714,7 +692,7 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker,
         /*
          * The OpFlex domain is the same as the server that the agent connected
          * to. Look up the OpFlex RPC server using the server socket.
-         *
+         * 
          * It's possible that the server was closed or changed between the
          * connection establishment and now (race condition). Treat that as a
          * failure, closing the connection.

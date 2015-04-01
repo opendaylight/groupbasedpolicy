@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
- *
+ * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
+ * 
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -54,17 +54,16 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
-
 /**
  * Manage policies on agents by subscribing to updates from the
  * policy resolver and information about endpoints from the endpoint
  * registry
+ * 
  * @author tbachman
  */
-public class PolicyManager
-     implements PolicyListener, RpcBroker.RpcCallback, AutoCloseable  {
-    private static final Logger LOG =
-            LoggerFactory.getLogger(PolicyManager.class);
+public class PolicyManager implements PolicyListener, RpcBroker.RpcCallback, AutoCloseable {
+
+    private static final Logger LOG = LoggerFactory.getLogger(PolicyManager.class);
 
     private static final String UKNOWN_POLICY = "unknown policy name";
 
@@ -82,11 +81,8 @@ public class PolicyManager
     private ConcurrentHashMap<EgKey, Set<String>> epgSubscriptions;
     private RpcMessageMap messageMap = null;
 
-
-    public PolicyManager(PolicyResolver policyResolver,
-                         OpflexConnectionService connectionService,
-                         ScheduledExecutorService executor,
-                         MitLib mitLibrary) {
+    public PolicyManager(PolicyResolver policyResolver, OpflexConnectionService connectionService,
+            ScheduledExecutorService executor, MitLib mitLibrary) {
         super();
         this.executor = executor;
         this.policyResolver = policyResolver;
@@ -99,7 +95,7 @@ public class PolicyManager
         messageMap = new RpcMessageMap();
         List<RpcMessage> messages = Role.POLICY_REPOSITORY.getMessages();
         messageMap.addList(messages);
-        for (RpcMessage msg: messages) {
+        for (RpcMessage msg : messages) {
             this.connectionService.subscribe(msg, this);
         }
 
@@ -132,31 +128,31 @@ public class PolicyManager
     // **************
 
     /**
-     * Update all policy on all agents as needed.  Note that this will block
+     * Update all policy on all agents as needed. Note that this will block
      * one of the threads on the executor.
+     * 
      * @author tbachman
      */
     private void sendPolicyUpdates(Set<EgKey> updatedConsumers) {
         Map<String, Set<EgKey>> agentMap = new HashMap<String, Set<EgKey>>();
 
         PolicyInfo info = policyResolver.getCurrentPolicy();
-        if (info == null) return;
+        if (info == null)
+            return;
 
         /*
          * First build a per-agent set of EPGs that need updating
          */
-        for (EgKey cepg: updatedConsumers) {
+        for (EgKey cepg : updatedConsumers) {
 
-        	/*
-        	 * Find the set of agents that have subscribed to
-        	 * updates for this EPG
-        	 */
-            for (String agentId: epgSubscriptions.get(cepg)) {
+            /*
+             * Find the set of agents that have subscribed to
+             * updates for this EPG
+             */
+            for (String agentId : epgSubscriptions.get(cepg)) {
                 Set<EgKey> egSet = agentMap.get(agentId);
                 if (egSet == null) {
-                    egSet =
-                          Collections.
-                          newSetFromMap(new ConcurrentHashMap<EgKey, Boolean>());
+                    egSet = Collections.newSetFromMap(new ConcurrentHashMap<EgKey, Boolean>());
                     agentMap.put(agentId, egSet);
                 }
                 egSet.add(cepg);
@@ -166,10 +162,10 @@ public class PolicyManager
         /*
          * Go through each agent and provide a single update for all EPGs
          */
-        for (Map.Entry<String,Set<EgKey>> entry: agentMap.entrySet()) {
-            OpflexAgent agent = connectionService.
-                    getOpflexAgent(entry.getKey());
-            if (agent == null) continue;
+        for (Map.Entry<String, Set<EgKey>> entry : agentMap.entrySet()) {
+            OpflexAgent agent = connectionService.getOpflexAgent(entry.getKey());
+            if (agent == null)
+                continue;
 
             sendPolicyUpdate(agent.getEndpoint(), entry.getValue(), info);
 
@@ -177,13 +173,13 @@ public class PolicyManager
     }
 
     /**
-     * This implements Runnable, which allows the {@link ScheduledExecutorservice}
-     * to execute the run() method to implement the update
+     * This implements Runnable, which allows the {@link ScheduledExecutorservice} to execute the
+     * run() method to implement the update
      *
      * @author tbachman
-     *
      */
     private class PolicyUpdate implements Runnable {
+
         private final JsonRpcEndpoint agent;
         private final Set<EgKey> epgSet;
         private final PolicyInfo info;
@@ -196,15 +192,11 @@ public class PolicyManager
 
         @Override
         public void run() {
-            List<ManagedObject> subtrees =
-                    new ArrayList<ManagedObject>();
+            List<ManagedObject> subtrees = new ArrayList<ManagedObject>();
 
-            PolicyUpdateRequest request =
-                    new PolicyUpdateRequest();
-            List<PolicyUpdateRequest.Params> paramsList =
-                    new ArrayList<>();
-            PolicyUpdateRequest.Params params =
-                    new PolicyUpdateRequest.Params();
+            PolicyUpdateRequest request = new PolicyUpdateRequest();
+            List<PolicyUpdateRequest.Params> paramsList = new ArrayList<>();
+            PolicyUpdateRequest.Params params = new PolicyUpdateRequest.Params();
 
             /*
              * We may need to optimize this in the future. Currently
@@ -215,14 +207,14 @@ public class PolicyManager
              * PolicyResolver to provide this delta, or we'd have to
              * keep cached state for each node.
              */
-            for (EgKey epg: epgSet) {
-            	/*
-            	 * Get EPGs from the IndexedTenant, as the EPGs from
-            	 * the IndexedTenenat alread has collapsed the EPGs
-            	 * (i.e. inheritance accounted for)
-            	 *
-            	 * TODO: needed?
-            	 */
+            for (EgKey epg : epgSet) {
+                /*
+                 * Get EPGs from the IndexedTenant, as the EPGs from
+                 * the IndexedTenenat alread has collapsed the EPGs
+                 * (i.e. inheritance accounted for)
+                 * 
+                 * TODO: needed?
+                 */
 
                 IndexedTenant it = policyResolver.getTenant(epg.getTenantId());
                 List<ManagedObject> relatedMos = getPolicy(epg, info, it);
@@ -239,8 +231,7 @@ public class PolicyManager
             request.setParams(paramsList);
             try {
                 agent.sendRequest(request);
-            }
-            catch (Throwable t) {
+            } catch (Throwable t) {
 
             }
         }
@@ -250,9 +241,6 @@ public class PolicyManager
         executor.execute(new PolicyUpdate(agent, epgSet, info));
     }
 
-
-
-
     /**
      * This method creates {@link ManagedObject} POJOs for all of the
      * policy objects that need to be sent as a result of policy
@@ -261,36 +249,38 @@ public class PolicyManager
      * @param epg The Endpoint Group that was resolved
      * @param policySnapshot A snapshot of the current resolved policy
      */
-    private List<ManagedObject> getPolicy(EgKey epg,
-            PolicyInfo policySnapshot, IndexedTenant it) {
-        if (policySnapshot == null) return null;
+    private List<ManagedObject> getPolicy(EgKey epg, PolicyInfo policySnapshot, IndexedTenant it) {
+        if (policySnapshot == null)
+            return null;
 
         Set<ManagedObject> policyMos = Sets.newHashSet();
         Set<EgKey> peers = policySnapshot.getPeers(epg);
 
-        if (peers == null || peers.size() <= 0) return null;
+        if (peers == null || peers.size() <= 0)
+            return null;
 
         // Allocate an MO for the requested EPG
         ManagedObject epgMo = new ManagedObject();
-        for (EgKey depg: peers) {
-        	/*
-        	 * Construct the base URI, so that we can
-        	 * continue adding on to create child MOs.
-        	 * We use the peer EPG for getting the policy
-        	 */
+        for (EgKey depg : peers) {
+            /*
+             * Construct the base URI, so that we can
+             * continue adding on to create child MOs.
+             * We use the peer EPG for getting the policy
+             */
             PolicyUri uri = new PolicyUri();
             uri.push(MessageUtils.TENANTS_RN);
             uri.push(MessageUtils.TENANT_RN);
             uri.push(depg.getTenantId().getValue());
 
             Policy policy = policySnapshot.getPolicy(epg, depg);
-            if (policy == null || policy == Policy.EMPTY) continue;
+            if (policy == null || policy == Policy.EMPTY)
+                continue;
 
             /*
              * We now have a policy that we need to send to the agent.
              * Provide empty condition lists for now - need to be
              * an actual empty list, instead of null
-             *
+             * 
              * TODO: get actual condition groups
              */
             List<ConditionName> conds = new ArrayList<ConditionName>();
@@ -303,10 +293,9 @@ public class PolicyManager
              * we need to keep track of contracts returned and merge
              * the results into a single ManagedObject
              */
-            Map<Contract, ManagedObject> contracts =
-                    new ConcurrentHashMap<Contract, ManagedObject>();
+            Map<Contract, ManagedObject> contracts = new ConcurrentHashMap<Contract, ManagedObject>();
 
-            for (RuleGroup rg: rgl) {
+            for (RuleGroup rg : rgl) {
 
                 /*
                  * Construct a new URI for the EPG requested.
@@ -319,42 +308,39 @@ public class PolicyManager
                 puri.push(epg.getTenantId().getValue());
                 puri.push(MessageUtils.EPG_RN);
                 puri.push(epg.getEgId().getValue());
-                Set<ManagedObject> epgMos = MessageUtils.
-                            getEndpointGroupMo(epgMo,
-                                               puri,
-                                               it.getEndpointGroup(epg.getEgId()),
-                                               rg);
+                Set<ManagedObject> epgMos = MessageUtils.getEndpointGroupMo(epgMo, puri,
+                        it.getEndpointGroup(epg.getEgId()), rg);
                 if (epgMos != null) {
                     policyMos.addAll(epgMos);
                 }
 
-
                 Contract c = rg.getRelatedContract();
-            	/*
-            	 * This cmol list is used as a container to pass
-            	 * an out parameter for the contract MO. This MO
-            	 * is returned separately from the others because
-            	 * may require merging -- different RuleGroup
-            	 * objects can refer to the same contract
-            	 */
+                /*
+                 * This cmol list is used as a container to pass
+                 * an out parameter for the contract MO. This MO
+                 * is returned separately from the others because
+                 * may require merging -- different RuleGroup
+                 * objects can refer to the same contract
+                 */
                 List<ManagedObject> cmol = new ArrayList<ManagedObject>();
                 List<ManagedObject> mol = null;
 
                 uri.push(MessageUtils.CONTRACT_RN);
                 uri.push(c.getId().getValue());
                 mol = MessageUtils.getContractAndSubMos(cmol, uri, c, rg, it);
-                if (mol == null) continue;
+                if (mol == null)
+                    continue;
 
                 // walk back to the tenant for next contract URI
-                uri.pop(); uri.pop();
+                uri.pop();
+                uri.pop();
 
-                if(contracts.get(c) != null) {
+                if (contracts.get(c) != null) {
                     /*
                      * Aggregate the child URIs and properties.
                      */
-                	MessageUtils.mergeMos(contracts.get(c), cmol.remove(0));
-                }
-                else {
+                    MessageUtils.mergeMos(contracts.get(c), cmol.remove(0));
+                } else {
                     contracts.put(c, cmol.remove(0));
                 }
                 policyMos.addAll(mol);
@@ -372,11 +358,10 @@ public class PolicyManager
 
         Set<String> agents = epgSubscriptions.get(epgId);
         if (agents == null) {
-            agents = Collections.
-                    newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+            agents = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
             Set<String> result = epgSubscriptions.putIfAbsent(epgId, agents);
             if (result != null) {
-            	agents = result;
+                agents = result;
             }
         }
         agents.add(endpoint.getIdentifier());
@@ -402,7 +387,7 @@ public class PolicyManager
         RpcMessage response = null;
 
         if (request instanceof PolicyResolveRequest) {
-            PolicyResolveRequest req = (PolicyResolveRequest)request;
+            PolicyResolveRequest req = (PolicyResolveRequest) request;
             PolicyResolveResponse msg = new PolicyResolveResponse();
             PolicyResolveResponse.Result result = new PolicyResolveResponse.Result();
             msg.setId(request.getId());
@@ -411,62 +396,59 @@ public class PolicyManager
                 LOG.warn("Invalid resolve request: {}", req);
                 OpflexError error = new OpflexError();
                 error.setCode(OpflexError.ErrorCode.ERROR.toString());
-                //error.setData(data);
-                //error.setMessage(message);
-                //error.setTrace(trace);
+                // error.setData(data);
+                // error.setMessage(message);
+                // error.setTrace(trace);
                 msg.setError(error);
             }
 
             Uri policyUri = null;
-        	List<ManagedObject> mol = new ArrayList<ManagedObject>();
+            List<ManagedObject> mol = new ArrayList<ManagedObject>();
 
-            for (PolicyResolveRequest.Params p: req.getParams()) {
+            for (PolicyResolveRequest.Params p : req.getParams()) {
 
-            	// Skip this if we already have an error
-            	if (msg.getError() != null) break;
+                // Skip this if we already have an error
+                if (msg.getError() != null)
+                    break;
 
                 /*
-            	 * Only Policy Identity or Policy URI is present.
-            	 * Convert Policy Identities to a URI that we can use
-            	 */
+                 * Only Policy Identity or Policy URI is present.
+                 * Convert Policy Identities to a URI that we can use
+                 */
                 policyUri = p.getPolicy_uri();
-            	if (policyUri == null) {
-            		Uri rn = p.getPolicy_ident().getContext();
-            		String name = p.getPolicy_ident().getName();
-            		PolicyUri puri = new PolicyUri(rn.getValue());
-            		puri.push(name);
-            		policyUri = puri.getUri();
-            	}
+                if (policyUri == null) {
+                    Uri rn = p.getPolicy_ident().getContext();
+                    String name = p.getPolicy_ident().getName();
+                    PolicyUri puri = new PolicyUri(rn.getValue());
+                    puri.push(name);
+                    policyUri = puri.getUri();
+                }
 
-            	// See if the request has an EPG in the URI
+                // See if the request has an EPG in the URI
                 if (MessageUtils.hasEpg(policyUri.getValue())) {
                     /*
                      * Keep track of EPGs requested by agents.
                      */
-                    EndpointGroupId egid = new EndpointGroupId(MessageUtils.
-                            getEndpointGroupFromUri(policyUri.getValue()));
-                    TenantId tid = new TenantId(MessageUtils.
-                            getTenantFromUri(policyUri.getValue()));
+                    EndpointGroupId egid = new EndpointGroupId(
+                            MessageUtils.getEndpointGroupFromUri(policyUri.getValue()));
+                    TenantId tid = new TenantId(MessageUtils.getTenantFromUri(policyUri.getValue()));
                     EgKey epgId = new EgKey(tid, egid);
 
                     addPolicySubscription(endpoint, epgId);
 
                     IndexedTenant it = policyResolver.getTenant(tid);
                     if (it != null) {
-                        List<ManagedObject> relatedMos =
-                                getPolicy(epgId, policyResolver.getCurrentPolicy(), it);
+                        List<ManagedObject> relatedMos = getPolicy(epgId, policyResolver.getCurrentPolicy(), it);
                         if (relatedMos != null) {
                             mol.addAll(relatedMos);
                         }
                     }
-                }
-                else {
-                    OpflexError error =
-                            new OpflexError();
+                } else {
+                    OpflexError error = new OpflexError();
                     error.setMessage(UKNOWN_POLICY);
                     error.setCode(OpflexError.ErrorCode.EUNSUPPORTED.toString());
-                    //error.setData(data);
-                    //error.setTrace(trace);
+                    // error.setData(data);
+                    // error.setTrace(trace);
                     msg.setError(error);
                 }
 
@@ -474,9 +456,8 @@ public class PolicyManager
             result.setPolicy(mol);
             msg.setResult(result);
             response = msg;
-        }
-        else if (request instanceof PolicyUnresolveRequest) {
-            PolicyUnresolveRequest req = (PolicyUnresolveRequest)request;
+        } else if (request instanceof PolicyUnresolveRequest) {
+            PolicyUnresolveRequest req = (PolicyUnresolveRequest) request;
             PolicyUnresolveResponse msg = new PolicyUnresolveResponse();
             msg.setId(request.getId());
             Uri policyUri;
@@ -484,46 +465,44 @@ public class PolicyManager
             if (!req.valid()) {
                 OpflexError error = new OpflexError();
                 error.setCode(OpflexError.ErrorCode.ERROR.toString());
-                //error.setData(data);
-                //error.setMessage(message);
-                //error.setTrace(trace);
+                // error.setData(data);
+                // error.setMessage(message);
+                // error.setTrace(trace);
                 msg.setError(error);
             }
 
-            for (PolicyUnresolveRequest.Params p: req.getParams()) {
+            for (PolicyUnresolveRequest.Params p : req.getParams()) {
 
-            	// Skip this if we already have an error
-            	if (msg.getError() != null) break;
+                // Skip this if we already have an error
+                if (msg.getError() != null)
+                    break;
 
                 /*
-            	 * Only Policy Identity or Policy URI is present.
-            	 * Convert to a URI that we'll use
-            	 */
+                 * Only Policy Identity or Policy URI is present.
+                 * Convert to a URI that we'll use
+                 */
                 policyUri = p.getPolicy_uri();
-            	if (policyUri == null) {
-            		// Convert the RN/name to DN
-            		Uri rn = p.getPolicy_ident().getContext();
-            		String name = p.getPolicy_ident().getName();
-            		PolicyUri puri = new PolicyUri(rn.getValue());
-            		puri.push(name);
-            		policyUri = puri.getUri();
-            	}
+                if (policyUri == null) {
+                    // Convert the RN/name to DN
+                    Uri rn = p.getPolicy_ident().getContext();
+                    String name = p.getPolicy_ident().getName();
+                    PolicyUri puri = new PolicyUri(rn.getValue());
+                    puri.push(name);
+                    policyUri = puri.getUri();
+                }
 
                 if (MessageUtils.hasEpg(policyUri.getValue())) {
                     /*
                      * Keep track of EPGs requested by agents.
                      */
-                    EndpointGroupId egid = new EndpointGroupId(MessageUtils.
-                            getEndpointGroupFromUri(policyUri.getValue()));
-                    TenantId tid = new TenantId(MessageUtils.
-                            getTenantFromUri(policyUri.getValue()));
+                    EndpointGroupId egid = new EndpointGroupId(
+                            MessageUtils.getEndpointGroupFromUri(policyUri.getValue()));
+                    TenantId tid = new TenantId(MessageUtils.getTenantFromUri(policyUri.getValue()));
                     EgKey epgId = new EgKey(tid, egid);
 
                     removePolicySubscription(endpoint, epgId);
-                }
-                else {
-                    OpflexError error =
-                            new OpflexError();
+                } else {
+                    OpflexError error = new OpflexError();
                     error.setMessage(UKNOWN_POLICY);
                     msg.setError(error);
                 }
@@ -532,12 +511,11 @@ public class PolicyManager
 
         }
         if (response != null) {
-	        try {
-	            endpoint.sendResponse(response);
-	        }
-	        catch (Throwable t) {
+            try {
+                endpoint.sendResponse(response);
+            } catch (Throwable t) {
                 LOG.warn("Error sending response {}", t);
-	        }
+            }
         }
 
     }

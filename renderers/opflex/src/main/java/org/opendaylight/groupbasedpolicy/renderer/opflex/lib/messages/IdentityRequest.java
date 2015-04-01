@@ -1,10 +1,10 @@
 /*
  * Copyright (C) 2014 Cisco Systems, Inc.
- *
+ * 
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
- *
+ * 
  * Authors : Thomas Bachman
  */
 package org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages;
@@ -27,10 +27,12 @@ public class IdentityRequest extends RpcMessage {
     public static final String OPFLEX_PROTOCOL_VERSION = "1.0";
 
     static public class Params {
-    	private final String proto_version;
+
+        private final String proto_version;
         private String name;
         private String domain;
         private List<String> my_role;
+
         public String getName() {
             return this.name;
         }
@@ -40,12 +42,12 @@ public class IdentityRequest extends RpcMessage {
         }
 
         public Params() {
-        	this.proto_version = OPFLEX_PROTOCOL_VERSION;
+            this.proto_version = OPFLEX_PROTOCOL_VERSION;
             my_role = new ArrayList<String>();
         }
 
         public String getProto_version() {
-        	return proto_version;
+            return proto_version;
         }
 
         public String getDomain() {
@@ -64,8 +66,8 @@ public class IdentityRequest extends RpcMessage {
             this.my_role = my_role;
         }
 
-
     }
+
     private JsonNode id;
     private String method;
     private List<Params> params;
@@ -122,6 +124,7 @@ public class IdentityRequest extends RpcMessage {
 
     /**
      * Minimal check on validity of message
+     * 
      * @return true if message has passed validity check
      */
     @JsonIgnore

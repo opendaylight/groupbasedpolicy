@@ -1,10 +1,10 @@
 /*
  * Copyright (C) 2014 Cisco Systems, Inc.
- *
+ * 
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
- *
+ * 
  * Authors : Thomas Bachman
  */
 package org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages;
@@ -25,6 +25,7 @@ public class EndpointResolveResponse extends RpcMessage {
     public static final String EPP_RESOLVE_MESSAGE_RESPONSE = "endpoint_resolve_response";
 
     static public class Result {
+
         List<ManagedObject> endpoint;
 
         public List<ManagedObject> getEndpoint() {
@@ -35,7 +36,6 @@ public class EndpointResolveResponse extends RpcMessage {
             this.endpoint = endpoint;
         }
     }
-
 
     private JsonNode id;
     private Result result;
@@ -70,8 +70,7 @@ public class EndpointResolveResponse extends RpcMessage {
     }
 
     @Override
-    public void setMethod(String method) {
-    }
+    public void setMethod(String method) {}
 
     public Result getResult() {
         return this.result;
@@ -98,6 +97,7 @@ public class EndpointResolveResponse extends RpcMessage {
     public EndpointResolveResponse() {
         this.name = EPP_RESOLVE_MESSAGE_RESPONSE;
     }
+
     @JsonIgnore
     @Override
     public boolean valid() {

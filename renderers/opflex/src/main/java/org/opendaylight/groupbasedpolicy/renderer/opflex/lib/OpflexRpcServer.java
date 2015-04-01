@@ -1,10 +1,10 @@
 /*
  * Copyright (C) 2014 Cisco Systems, Inc.
- *
+ * 
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
- *
+ * 
  * Authors : Thomas Bachman
  */
 package org.opendaylight.groupbasedpolicy.renderer.opflex.lib;
@@ -23,7 +23,6 @@ import org.opendaylight.groupbasedpolicy.jsonrpc.RpcServer;
  * the server is closed
  *
  * @author tbachman
- *
  */
 public class OpflexRpcServer {
 
@@ -41,7 +40,7 @@ public class OpflexRpcServer {
         if (id.split(":").length == 2) {
             this.identity = id;
             this.address = id.split(":")[0];
-            this.port =  Integer.parseInt(id.split(":")[1]);
+            this.port = Integer.parseInt(id.split(":")[1]);
         }
     }
 
@@ -99,14 +98,13 @@ public class OpflexRpcServer {
      * configured. It creates an {@link RpcServer} object,
      * passes it the context owned by the {@link OpflexRpcServer},
      * and starts the server in its own thread.
-     *
      * TODO: should use executor service instead?
      */
     public void start() {
         rpcServer.setConnectionService(connectionService);
         rpcServer.setRpcBroker(rpcBroker);
 
-        for ( Role role : roles ) {
+        for (Role role : roles) {
             rpcServer.addMessageList(role.getMessages());
         }
         /*
@@ -115,12 +113,14 @@ public class OpflexRpcServer {
         rpcServer.addMessageList(Role.DISCOVERY.getMessages());
 
         new Thread() {
+
             private RpcServer server;
 
             public Thread initializeServerParams(RpcServer srv) {
                 this.server = srv;
                 return this;
             }
+
             @Override
             public void run() {
                 try {
@@ -152,15 +152,13 @@ public class OpflexRpcServer {
             return false;
         if (!this.identity.equals(srv.identity))
             return false;
-        if (this.domain == null ||
-                !this.domain.equals(srv.getDomain()))
+        if (this.domain == null || !this.domain.equals(srv.getDomain()))
             return false;
         if (this.roles == null && srv.roles == null)
             return true;
         if (this.roles == null || srv.roles == null)
             return false;
-        if (this.roles.size() == srv.roles.size()
-                && this.roles.containsAll(srv.roles))
+        if (this.roles.size() == srv.roles.size() && this.roles.containsAll(srv.roles))
             return true;
         return false;
     }

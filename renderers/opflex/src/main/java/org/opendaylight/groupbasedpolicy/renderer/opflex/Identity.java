@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
- *
+ * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
+ * 
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -27,30 +27,30 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 
 import com.google.common.net.InetAddresses;
 
-
 /**
  * An Identity for OpFlex. Identities can take on many
  * forms, so it's possible that this class may be replaced
  * by an abstract class with different concrete types.
  * At the moment, we're only dealing with IP and MAC
  * addresses.
- *
  * This class also provides methods for getting the identity
  * in forms by the yang model, and are therefore usable by
  * other classes in the policy model (e.g. the objects
  * needed by the Endpoint Registry).
- *
  */
 public class Identity {
+
     enum IdentityType {
         UNKNOWN, IP_ADDRESS, MAC_ADDRESS;
     }
+
     private IdentityType type = IdentityType.UNKNOWN;
     private L3ContextId l3Context = null;
     private IpAddress primaryIp = null;
     private Set<IpAddress> ips = null;
     private L2BridgeDomainId l2Context = null;
     private MacAddress mac = null;
+
     public Identity(String id) {
         /*
          * Determine the ID type and populate
@@ -58,10 +58,10 @@ public class Identity {
         if (idIsIp(id)) {
             type = IdentityType.IP_ADDRESS;
             ips = Collections.newSetFromMap(new ConcurrentHashMap<IpAddress, Boolean>());
-            if (primaryIp == null) primaryIp = normalizeIpAddress(id);
+            if (primaryIp == null)
+                primaryIp = normalizeIpAddress(id);
             ips.add(normalizeIpAddress(id));
-        }
-        else if (idIsMac(id)) {
+        } else if (idIsMac(id)) {
             type = IdentityType.MAC_ADDRESS;
             mac = normalizeMacAddress(id);
         }
@@ -79,21 +79,21 @@ public class Identity {
         ips = Collections.newSetFromMap(new ConcurrentHashMap<IpAddress, Boolean>());
         primaryIp = ep.getIpAddress();
         List<L3Address> l3List = ep.getL3Address();
-        for (L3Address addr: l3List) {
+        for (L3Address addr : l3List) {
             ips.add(addr.getIpAddress());
         }
     }
 
     public void setContext(String context) {
         switch (type) {
-        case MAC_ADDRESS:
-            l2Context = new L2BridgeDomainId(context);
-            break;
-        case IP_ADDRESS:
-            l3Context = new L3ContextId(context);
-            break;
-        default:
-            break;
+            case MAC_ADDRESS:
+                l2Context = new L2BridgeDomainId(context);
+                break;
+            case IP_ADDRESS:
+                l3Context = new L3ContextId(context);
+                break;
+            default:
+                break;
         }
     }
 
@@ -105,11 +105,11 @@ public class Identity {
      */
     public void addId(String id) {
         switch (type) {
-        case IP_ADDRESS:
-            ips.add(normalizeIpAddress(id));
-            break;
-        default:
-            break;
+            case IP_ADDRESS:
+                ips.add(normalizeIpAddress(id));
+                break;
+            default:
+                break;
         }
     }
 
@@ -139,7 +139,7 @@ public class Identity {
         for (String field : sixFields) {
             /* Strip '0x' if present */
             field = field.replace("0x", "");
-            if (field.length() > 2 || field.length() <1) {
+            if (field.length() > 2 || field.length() < 1) {
                 return false;
             }
             if (!Pattern.matches("[0-9a-fA-F]{1,2}", field)) {
@@ -169,21 +169,22 @@ public class Identity {
 
     public boolean valid() {
         switch (type) {
-        case MAC_ADDRESS:
-            if (getL2Context() != null && mac != null) {
-                return true;
-            }
-            break;
-        case IP_ADDRESS:
-            if (getL3Context() != null && primaryIp != null) {
-                return true;
-            }
+            case MAC_ADDRESS:
+                if (getL2Context() != null && mac != null) {
+                    return true;
+                }
+                break;
+            case IP_ADDRESS:
+                if (getL3Context() != null && primaryIp != null) {
+                    return true;
+                }
             default:
                 break;
 
         }
         return false;
     }
+
     /**
      * Return the context, regardless of type, as a string.
      *
@@ -191,12 +192,12 @@ public class Identity {
      */
     public String contextAsString() {
         switch (type) {
-        case MAC_ADDRESS:
-            return l2Context.getValue().toString();
-        case IP_ADDRESS:
-            return l3Context.getValue().toString();
-        default:
-            return null;
+            case MAC_ADDRESS:
+                return l2Context.getValue().toString();
+            case IP_ADDRESS:
+                return l3Context.getValue().toString();
+            default:
+                return null;
         }
     }
 
@@ -210,18 +211,17 @@ public class Identity {
      */
     public String identityAsString() {
         switch (type) {
-        case MAC_ADDRESS:
-            return mac.getValue();
-        case IP_ADDRESS:
-            List<IpAddress> ipl = new ArrayList<IpAddress>(ips);
-            IpAddress i = ipl.get(0);
-            if (i.getIpv4Address() != null) {
-                return i.getIpv4Address().getValue();
-            }
-            else if (i.getIpv6Address() != null) {
-                return i.getIpv6Address().getValue();
-            }
-        default:
+            case MAC_ADDRESS:
+                return mac.getValue();
+            case IP_ADDRESS:
+                List<IpAddress> ipl = new ArrayList<IpAddress>(ips);
+                IpAddress i = ipl.get(0);
+                if (i.getIpv4Address() != null) {
+                    return i.getIpv4Address().getValue();
+                } else if (i.getIpv6Address() != null) {
+                    return i.getIpv6Address().getValue();
+                }
+            default:
         }
         return null;
     }
@@ -268,10 +268,10 @@ public class Identity {
 
     public List<L3Address> getL3Addresses() {
 
-        List<L3Address> l3List= new ArrayList<L3Address>();
+        List<L3Address> l3List = new ArrayList<L3Address>();
         List<IpAddress> ipList = new ArrayList<IpAddress>();
         ipList.addAll(ips);
-        for (IpAddress i: ipList){
+        for (IpAddress i : ipList) {
             L3AddressBuilder l3ab = new L3AddressBuilder();
             l3ab.setIpAddress(i);
             l3ab.setL3Context(l3Context);
@@ -295,13 +295,10 @@ public class Identity {
         final int prime = 31;
         int result = 1;
         result = prime * result + ((ips == null) ? 0 : ips.hashCode());
-        result = prime * result
-                + ((l2Context == null) ? 0 : l2Context.hashCode());
-        result = prime * result
-                + ((l3Context == null) ? 0 : l3Context.hashCode());
+        result = prime * result + ((l2Context == null) ? 0 : l2Context.hashCode());
+        result = prime * result + ((l3Context == null) ? 0 : l3Context.hashCode());
         result = prime * result + ((mac == null) ? 0 : mac.hashCode());
-        result = prime * result
-                + ((primaryIp == null) ? 0 : primaryIp.hashCode());
+        result = prime * result + ((primaryIp == null) ? 0 : primaryIp.hashCode());
         result = prime * result + ((type == null) ? 0 : type.hashCode());
         return result;
     }

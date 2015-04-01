@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
- *
+ * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
+ * 
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -29,9 +29,9 @@ import com.google.common.util.concurrent.CheckedFuture;
  * used to send responses
  *
  * @author tbachman
- *
  */
 public class EprContext implements Runnable, EprOperation.EprOpCallback {
+
     private EprCtxCallback cb;
     private final DataBroker dataProvider;
     private final ScheduledExecutorService executor;
@@ -41,8 +41,8 @@ public class EprContext implements Runnable, EprOperation.EprOpCallback {
     private AtomicReference<Integer> completedOperations;
     private CheckedFuture<Void, TransactionCommitFailedException> f;
 
-    public EprContext(JsonRpcEndpoint peer, RpcMessage request,
-            DataBroker dataProvider, ScheduledExecutorService executor) {
+    public EprContext(JsonRpcEndpoint peer, RpcMessage request, DataBroker dataProvider,
+            ScheduledExecutorService executor) {
         this.dataProvider = dataProvider;
         this.executor = executor;
         this.peer = peer;
@@ -74,9 +74,9 @@ public class EprContext implements Runnable, EprOperation.EprOpCallback {
      * EPR.
      *
      * @author tbachman
-     *
      */
     public static interface EprCtxCallback {
+
         public void callback(EprContext ctx);
     }
 
@@ -91,7 +91,6 @@ public class EprContext implements Runnable, EprOperation.EprOpCallback {
     /**
      * Create an Endpoint in the Endopint Registry. This can only be called in
      * response to an {@link EndpointDeclareRequest} message
-     *
      */
     public void createEp() {
 
@@ -113,7 +112,6 @@ public class EprContext implements Runnable, EprOperation.EprOpCallback {
     /**
      * Delete an Endpoint in the Endpoint Registry. This can only be called in
      * response to an {@link EndpointUndeclareRequest} message
-     *
      */
     public void deleteEp() {
 
@@ -136,7 +134,6 @@ public class EprContext implements Runnable, EprOperation.EprOpCallback {
      * response to an {@link EndpointResolveRequest} message. It initiates all
      * of the reads, one by one, and invokes the callback when all of them have
      * completed.
-     *
      */
     public void lookupEndpoint() {
 
@@ -145,8 +142,7 @@ public class EprContext implements Runnable, EprOperation.EprOpCallback {
          * for each operation, so we can determine when all of the read
          * operations have completed.
          */
-        this.completedOperations = new AtomicReference<Integer>(
-                Integer.valueOf(0));
+        this.completedOperations = new AtomicReference<Integer>(Integer.valueOf(0));
         if (operations != null) {
             for (EprOperation eo : operations) {
                 ReadOnlyTransaction rot = dataProvider.newReadOnlyTransaction();
@@ -173,7 +169,6 @@ public class EprContext implements Runnable, EprOperation.EprOpCallback {
 
     /**
      * This implements the callback for the lookup operation.
-     *
      */
     @Override
     public void callback(EprOperation op) {

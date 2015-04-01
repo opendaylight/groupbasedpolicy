@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
- *
+ * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
+ * 
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -32,17 +32,15 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 
-
 /**
  * A context for mapping OpFlex messaging to asynchronous
  * requests to the Endpoint Registry's list of L2 Endpoints.
  *
  * @author tbachman
- *
  */
-public class L2EprOperation implements EprOperation, FutureCallback<Optional<Endpoint>>{
+public class L2EprOperation implements EprOperation, FutureCallback<Optional<Endpoint>> {
 
-	private EprOpCallback cb;
+    private EprOpCallback cb;
     private Endpoint ep;
     private InstanceIdentifier<Endpoint> iid;
 
@@ -54,41 +52,39 @@ public class L2EprOperation implements EprOperation, FutureCallback<Optional<End
     private List<L3Address> l3al;
     private Long timeout;
 
-
     public L2EprOperation(int prr) {
         this.timeout = Long.valueOf(prr);
         this.l3al = new ArrayList<L3Address>();
     }
 
-    public L2EprOperation() {
-    }
+    public L2EprOperation() {}
 
     public void setAgentId(String agentId) {
         this.agentId = agentId;
     }
 
     public void setTenantId(TenantId tid) {
-    	this.tid = tid;
+        this.tid = tid;
     }
 
     public void setEndpointGroupId(EndpointGroupId egid) {
-    	this.egid = egid;
+        this.egid = egid;
     }
 
     public void setContextId(L2BridgeDomainId l2bdid) {
-    	this.l2bdid = l2bdid;
+        this.l2bdid = l2bdid;
     }
 
     public void setMacAddress(MacAddress mac) {
-    	this.mac = mac;
+        this.mac = mac;
     }
 
     public void setL3AddressList(List<L3Address> l3al) {
-    	this.l3al = l3al;
+        this.l3al = l3al;
     }
 
     public void addL3Address(L3Address l3a) {
-    	this.l3al.add(l3a);
+        this.l3al.add(l3a);
     }
 
     public Endpoint getEp() {
@@ -105,15 +101,15 @@ public class L2EprOperation implements EprOperation, FutureCallback<Optional<End
         oocb.setAgentId(this.agentId);
 
         epBuilder.setTenant(this.tid)
-                 .setEndpointGroup(this.egid)
-                 .setL2Context(this.l2bdid)
-                 .setL3Address(l3al)
-                 .setMacAddress(this.mac)
-                 .setTimestamp(this.timeout)
-                 .addAugmentation(OpflexOverlayContext.class, oocb.build());
+            .setEndpointGroup(this.egid)
+            .setL2Context(this.l2bdid)
+            .setL3Address(l3al)
+            .setMacAddress(this.mac)
+            .setTimestamp(this.timeout)
+            .addAugmentation(OpflexOverlayContext.class, oocb.build());
 
         // TODO: add support for conditions
-        //epBuilder.setCondition(new List<ConditionName>());
+        // epBuilder.setCondition(new List<ConditionName>());
 
         return epBuilder.build();
     }
@@ -127,9 +123,7 @@ public class L2EprOperation implements EprOperation, FutureCallback<Optional<End
     public void put(WriteTransaction wt) {
 
         ep = buildEp();
-        this.iid = InstanceIdentifier.builder(Endpoints.class)
-            	.child(Endpoint.class, ep.getKey())
-            	.build();
+        this.iid = InstanceIdentifier.builder(Endpoints.class).child(Endpoint.class, ep.getKey()).build();
         wt.put(LogicalDatastoreType.OPERATIONAL, iid, ep);
     }
 
@@ -137,9 +131,7 @@ public class L2EprOperation implements EprOperation, FutureCallback<Optional<End
     public void delete(WriteTransaction wt) {
 
         ep = buildEp();
-        this.iid = InstanceIdentifier.builder(Endpoints.class)
-            	.child(Endpoint.class, ep.getKey())
-            	.build();
+        this.iid = InstanceIdentifier.builder(Endpoints.class).child(Endpoint.class, ep.getKey()).build();
         wt.delete(LogicalDatastoreType.OPERATIONAL, iid);
     }
 
@@ -147,27 +139,23 @@ public class L2EprOperation implements EprOperation, FutureCallback<Optional<End
      * Get/read an L2 endpoint in the registry, given a context
      * and an identifier.
      * .
+     * 
      * @param rot The read transaction
      */
     @Override
-    public void read(ReadOnlyTransaction rot,
-    		ScheduledExecutorService executor) {
+    public void read(ReadOnlyTransaction rot, ScheduledExecutorService executor) {
 
-    	ep = buildEp();
-    	this.iid = InstanceIdentifier.builder(Endpoints.class)
-            	.child(Endpoint.class, ep.getKey())
-            	.build();
+        ep = buildEp();
+        this.iid = InstanceIdentifier.builder(Endpoints.class).child(Endpoint.class, ep.getKey()).build();
 
-    	ListenableFuture<Optional<Endpoint>> dao =
-                rot.read(LogicalDatastoreType.OPERATIONAL, iid);
+        ListenableFuture<Optional<Endpoint>> dao = rot.read(LogicalDatastoreType.OPERATIONAL, iid);
         Futures.addCallback(dao, this, executor);
     }
 
     @Override
     public void setCallback(EprOpCallback callback) {
-    	this.cb = callback;
+        this.cb = callback;
     }
-
 
     @Override
     public void onSuccess(final Optional<Endpoint> result) {
@@ -185,7 +173,6 @@ public class L2EprOperation implements EprOperation, FutureCallback<Optional<End
         setEp(result.get());
         cb.callback(this);
     }
-
 
     @Override
     public void onFailure(Throwable t) {

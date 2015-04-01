@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
- *
+ * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
+ * 
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -20,17 +20,17 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
  * operations are supported.
  *
  * @author thbachma
- *
  */
 public interface EprOperation {
-	/**
-	 * Callback interface used to provide notifications
-	 * to other objects.
-	 *
-	 * @author thbachma
-	 *
-	 */
+
+    /**
+     * Callback interface used to provide notifications
+     * to other objects.
+     *
+     * @author thbachma
+     */
     public interface EprOpCallback {
+
         public void callback(EprOperation op);
     }
 
@@ -41,28 +41,27 @@ public interface EprOperation {
      *
      * @param wt
      */
-	public void put(WriteTransaction wt);
+    public void put(WriteTransaction wt);
 
-	/**
-	 * Perform a DELETE operation for the requested Endpoint.
-	 *
-	 * @param wt
-	 */
-	public void delete(WriteTransaction wt);
+    /**
+     * Perform a DELETE operation for the requested Endpoint.
+     *
+     * @param wt
+     */
+    public void delete(WriteTransaction wt);
 
-	/**
-	 * Return the data associated with the requested Endpoint.
-	 *
-	 * @param rot
-	 * @param executor
-	 */
-	public void read(ReadOnlyTransaction rot,
-			ScheduledExecutorService executor);
+    /**
+     * Return the data associated with the requested Endpoint.
+     *
+     * @param rot
+     * @param executor
+     */
+    public void read(ReadOnlyTransaction rot, ScheduledExecutorService executor);
 
-	/**
-	 * Set the callback notification
-	 *
-	 * @param callback
-	 */
-	public void setCallback(EprOpCallback callback);
+    /**
+     * Set the callback notification
+     *
+     * @param callback
+     */
+    public void setCallback(EprOpCallback callback);
 }

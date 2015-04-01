@@ -1,10 +1,10 @@
 /*
  * Copyright (C) 2014 Cisco Systems, Inc.
- *
+ * 
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
- *
+ * 
  * Authors : tbachman
  */
 package org.opendaylight.groupbasedpolicy.renderer.opflex;
@@ -68,12 +68,12 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.Sets;
 
 public class MessageUtils {
-    private static final Logger LOG = LoggerFactory
-            .getLogger(MessageUtils.class);
+
+    private static final Logger LOG = LoggerFactory.getLogger(MessageUtils.class);
     /*
      * Endpoint Groups in ODL's Group Based Policy are specified in the
      * following format:
-     *
+     * 
      * /tenants/tenant/<tenant UUID>/endpoint-group/<endpoint-group UUID>
      */
     public static final String POLICY_ROOT = "";
@@ -100,8 +100,7 @@ public class MessageUtils {
     public static final String GENIE_ENDPOINT_L3_RN = "EprL3Ep";
 
     public static final String GENIE_TENANTS_RN = "PolicyUniverse";
-    public static final String GENIE_POLICY_ROOT = PolicyUri.POLICY_URI_SEP
-            + GENIE_TENANTS_RN;
+    public static final String GENIE_POLICY_ROOT = PolicyUri.POLICY_URI_SEP + GENIE_TENANTS_RN;
     public static final String GENIE_TENANT_RN = "PolicySpace";
     public static final String GENIE_CONTRACT_RN = "GbpContract";
     public static final String GENIE_SUBJECT_RN = "GbpSubject";
@@ -137,11 +136,9 @@ public class MessageUtils {
     public static final String GENIE_EPG_TO_NETWORK_DOMAIN_RN = "GbpEpGroupToNetworkRSrc";
     public static final String GENIE_SUBNET_TO_NETWORK_SRC_REF = "GbpSubnetsToNetworkRSrc";
 
-    public static final String TENANT_PREFIX = POLICY_ROOT
-            + PolicyUri.POLICY_URI_SEP + TENANTS_RN + PolicyUri.POLICY_URI_SEP
-            + TENANT_RN + PolicyUri.POLICY_URI_SEP;
-    public static final String GENIE_TENANT_PREFIX = GENIE_POLICY_ROOT
-            + PolicyUri.POLICY_URI_SEP + GENIE_TENANT_RN
+    public static final String TENANT_PREFIX = POLICY_ROOT + PolicyUri.POLICY_URI_SEP + TENANTS_RN
+            + PolicyUri.POLICY_URI_SEP + TENANT_RN + PolicyUri.POLICY_URI_SEP;
+    public static final String GENIE_TENANT_PREFIX = GENIE_POLICY_ROOT + PolicyUri.POLICY_URI_SEP + GENIE_TENANT_RN
             + PolicyUri.POLICY_URI_SEP;
 
     public static final String GENIE_CONTRACT_NAME = "name";
@@ -229,10 +226,8 @@ public class MessageUtils {
 
         odlToGenieMap = new ConcurrentHashMap<String, String>();
         odlToGenieMap.put(ENDPOINTS_RN, "");
-        odlToGenieMap.put(ENDPOINT_RN, GENIE_EPR_L2_ROOT
-                + PolicyUri.POLICY_URI_SEP + GENIE_ENDPOINT_RN);
-        odlToGenieMap.put(ENDPOINT_L3_RN, GENIE_EPR_L3_ROOT
-                + PolicyUri.POLICY_URI_SEP + GENIE_ENDPOINT_L3_RN);
+        odlToGenieMap.put(ENDPOINT_RN, GENIE_EPR_L2_ROOT + PolicyUri.POLICY_URI_SEP + GENIE_ENDPOINT_RN);
+        odlToGenieMap.put(ENDPOINT_L3_RN, GENIE_EPR_L3_ROOT + PolicyUri.POLICY_URI_SEP + GENIE_ENDPOINT_L3_RN);
         odlToGenieMap.put(TENANTS_RN, GENIE_TENANTS_RN);
         odlToGenieMap.put(TENANT_RN, GENIE_TENANT_RN);
         odlToGenieMap.put(EPG_RN, GENIE_EPG_RN);
@@ -243,8 +238,7 @@ public class MessageUtils {
         odlToGenieMap.put(CLASSIFIER_REF_RN, GENIE_CLASSIFIER_RN);
         odlToGenieMap.put(L2_FLOOD_DOMAIN_RN, GENIE_FLOOD_DOMAIN_RN);
         odlToGenieMap.put(L2_BRIDGE_DOMAIN_RN, GENIE_BRIDGE_DOMAIN_RN);
-        odlToGenieMap.put(SUBNET_RN, GENIE_SUBNETS_RN
-                + PolicyUri.POLICY_URI_SEP + GENIE_SUBNET_NAME_DEFAULT
+        odlToGenieMap.put(SUBNET_RN, GENIE_SUBNETS_RN + PolicyUri.POLICY_URI_SEP + GENIE_SUBNET_NAME_DEFAULT
                 + PolicyUri.POLICY_URI_SEP + GENIE_SUBNET_RN);
         odlToGenieMap.put(L3_CONTEXT_RN, GENIE_ROUTING_DOMAIN_RN);
 
@@ -286,7 +280,7 @@ public class MessageUtils {
     /*
      * Until I clean this up, this is going to accept the Genie URI. The format
      * for these URIs is:
-     *
+     * 
      * /PolicyUniverse/PolicySpace/[name]
      */
     public static String getTenantFromUri(String uri) {
@@ -299,9 +293,9 @@ public class MessageUtils {
     /*
      * Until I clean this up, this is going to be the Genie URI. The format for
      * these URIs is:
-     *
+     * 
      * /PolicyUniverse/PolicySpace/[name]/GbpEpGroup/[name]
-     *
+     * 
      * Where [name] is the tenant and ID for the EPG
      */
     public static String getEndpointGroupFromUri(String uri) {
@@ -340,8 +334,8 @@ public class MessageUtils {
     }
 
     public static String createEpgUri(String tenantId, String epgId) {
-        return GENIE_TENANT_PREFIX + tenantId + PolicyUri.POLICY_URI_SEP
-                + GENIE_EPG_RN + PolicyUri.POLICY_URI_SEP + epgId;
+        return GENIE_TENANT_PREFIX + tenantId + PolicyUri.POLICY_URI_SEP + GENIE_EPG_RN + PolicyUri.POLICY_URI_SEP
+                + epgId;
     }
 
     public static boolean hasEpg(String uri) {
@@ -369,8 +363,7 @@ public class MessageUtils {
      */
     public static boolean isGenieUri(Uri uri) {
         PolicyUri puri = new PolicyUri(uri.toString());
-        List<String> genieRoot = Arrays.asList("PolicyUniverse",
-                "EprL2Universe", "EprL3Universe");
+        List<String> genieRoot = Arrays.asList("PolicyUniverse", "EprL2Universe", "EprL3Universe");
 
         if (genieRoot.contains(puri.getElement(0)))
             return true;
@@ -400,9 +393,9 @@ public class MessageUtils {
      * values needed for URI translation.
      *
      * @author tbachman
-     *
      */
     public static class UriIterator implements Iterator<String> {
+
         private PolicyUri uri;
         private int index;
         private int keyCount;
@@ -465,9 +458,7 @@ public class MessageUtils {
     /**
      * Convert ODL URI to a Genie URI. The ODL names are unique, so we are able
      * to provide a conversion based solely on name.
-     *
      * This only maps URIs from the following roots:
-     *
      * /endpoint /policy
      *
      * @param odlUri
@@ -489,15 +480,15 @@ public class MessageUtils {
 
             /*
              * Get the converted element, then make the following checks:
-             *
+             * 
              * o element is key - push the element directly onto the stack
-             *   without translation
+             * without translation
              * o no corresponding genie element - return --
-             *   we're done
+             * we're done
              * o genie element, but result is null - don't push
-             *   anything on the stack; continue
+             * anything on the stack; continue
              * o regular element - convert the
-             *   element and push it on the stack
+             * element and push it on the stack
              */
             String element = it.getElement();
             String genieElement = odlToGenieMap.get(element);
@@ -536,15 +527,15 @@ public class MessageUtils {
 
             /*
              * Get the converted element, then make the following checks:
-             *
+             * 
              * o element is key - push the element directly onto the stack
-             *   without translation
+             * without translation
              * o no corresponding genie element - return --
-             *   we're done
+             * we're done
              * o genie element, but result is null - don't push
-             *   anything on the stack; continue
+             * anything on the stack; continue
              * o regular element - convert the
-             *   element and push it on the stack
+             * element and push it on the stack
              */
             String element = it.getElement();
             String odlElement = genieToOdlMap.get(element);
@@ -568,8 +559,8 @@ public class MessageUtils {
 
     }
 
-    private static void setParentFields(PolicyUri current,
-            PolicyObjectInstance poi, String parentRelation, boolean hasId) {
+    private static void setParentFields(PolicyUri current, PolicyObjectInstance poi, String parentRelation,
+            boolean hasId) {
         PolicyUri uriCopy = new PolicyUri(current);
 
         // Pop off the subject name and class to get to parent
@@ -587,8 +578,7 @@ public class MessageUtils {
         poi.setParentRelation(parentRelation);
     }
 
-    public static List<ManagedObject> getSubjectMo(PolicyUri current,
-            Subject s, RuleGroup rg, IndexedTenant it) {
+    public static List<ManagedObject> getSubjectMo(PolicyUri current, Subject s, RuleGroup rg, IndexedTenant it) {
         if (s == null)
             return null;
 
@@ -616,11 +606,9 @@ public class MessageUtils {
             return null;
 
         for (PolicyPropertyInfo ppi : ppil) {
-            if (ppi.getPropName().equals(GENIE_SUBJECT_NAME)
-                    && s.getName() != null) {
+            if (ppi.getPropName().equals(GENIE_SUBJECT_NAME) && s.getName() != null) {
                 poi.setString(ppi.getPropId(), s.getName().getValue());
-            } else if (ppi.getPropName().equals(GENIE_RULE_RN)
-                    && s.getRule() != null) {
+            } else if (ppi.getPropName().equals(GENIE_RULE_RN) && s.getRule() != null) {
                 /*
                  * Each subject has a set of resolved rules. Add those as
                  * children.
@@ -651,8 +639,7 @@ public class MessageUtils {
         return mol;
     }
 
-    public static List<ManagedObject> getRuleMo(PolicyUri current, Rule r,
-            RuleGroup rg, IndexedTenant it) {
+    public static List<ManagedObject> getRuleMo(PolicyUri current, Rule r, RuleGroup rg, IndexedTenant it) {
         if (r == null)
             return null;
 
@@ -680,23 +667,18 @@ public class MessageUtils {
             return null;
 
         for (PolicyPropertyInfo ppi : ppil) {
-            if (ppi.getPropName().equals(GENIE_RULE_NAME)
-                    && r.getName() != null) {
+            if (ppi.getPropName().equals(GENIE_RULE_NAME) && r.getName() != null) {
                 poi.setString(ppi.getPropId(), r.getName().getValue());
-            } else if (ppi.getPropName().equals(GENIE_RULE_ORDER)
-                    && r.getOrder() != null) {
-                poi.setUint64(ppi.getPropId(), intToBigInt(r.getOrder()
-                        .intValue()));
-            } else if (ppi.getPropName().equals(GENIE_CLASSIFIER_REF_RN)
-                    && r.getClassifierRef() != null) {
+            } else if (ppi.getPropName().equals(GENIE_RULE_ORDER) && r.getOrder() != null) {
+                poi.setUint64(ppi.getPropId(), intToBigInt(r.getOrder().intValue()));
+            } else if (ppi.getPropName().equals(GENIE_CLASSIFIER_REF_RN) && r.getClassifierRef() != null) {
                 for (ClassifierRef cr : r.getClassifierRef()) {
                     ClassifierInstance ci = it.getClassifier(cr.getName());
                     if (ci != null) {
                         PolicyUri uri = new PolicyUri(prefix);
                         uri.push(GENIE_CLASSIFIER_REF_RN);
                         uri.push(cr.getName().getValue());
-                        mol.addAll(MessageUtils.getClassifierRefMo(uri, ci, cr,
-                                rg, it));
+                        mol.addAll(MessageUtils.getClassifierRefMo(uri, ci, cr, rg, it));
                         childrenUris.add(uri.getUri());
                         poi.addChild(uri.getUri()); // TODO: remove?
                     }
@@ -725,8 +707,7 @@ public class MessageUtils {
      * @param c
      * @return
      */
-    public static List<ManagedObject> getContractAndSubMos(
-            List<ManagedObject> cmol, PolicyUri current, Contract c,
+    public static List<ManagedObject> getContractAndSubMos(List<ManagedObject> cmol, PolicyUri current, Contract c,
             RuleGroup rg, IndexedTenant it) {
         if (c == null)
             return null;
@@ -756,11 +737,9 @@ public class MessageUtils {
         if (c.getSubject() == null)
             LOG.warn("subject is NULL");
         for (PolicyPropertyInfo ppi : ppil) {
-            if (ppi.getPropName().equals(GENIE_CONTRACT_NAME)
-                    && c.getId() != null) {
+            if (ppi.getPropName().equals(GENIE_CONTRACT_NAME) && c.getId() != null) {
                 poi.setString(ppi.getPropId(), c.getId().getValue());
-            } else if (ppi.getPropName().equals(GENIE_SUBJECT_RN)
-                    && c.getSubject() != null) {
+            } else if (ppi.getPropName().equals(GENIE_SUBJECT_RN) && c.getSubject() != null) {
 
                 LOG.warn("related subject is {}", rg.getRelatedSubject());
                 /*
@@ -804,8 +783,7 @@ public class MessageUtils {
         return mol;
     }
 
-    public static ManagedObject getConsumerNamedSelectorMo(PolicyUri current,
-            Contract c) {
+    public static ManagedObject getConsumerNamedSelectorMo(PolicyUri current, Contract c) {
         if (c == null)
             return null;
 
@@ -836,8 +814,7 @@ public class MessageUtils {
                 uri.push(GENIE_CONSUMER_CONTRACT_REF_RN);
                 uri.push(c.getId().getValue());
                 String newUri = odlUriToGenieUri(uri).toString();
-                PolicyReference pr = new PolicyReference(pci.getClassId(),
-                        new Uri(newUri));
+                PolicyReference pr = new PolicyReference(pci.getClassId(), new Uri(newUri));
                 poi.setReference(ppi.getPropId(), pr);
             }
         }
@@ -853,8 +830,7 @@ public class MessageUtils {
         return mo;
     }
 
-    public static ManagedObject getProviderNamedSelectorMo(PolicyUri current,
-            Contract c) {
+    public static ManagedObject getProviderNamedSelectorMo(PolicyUri current, Contract c) {
         if (c == null)
             return null;
         ManagedObject mo = new ManagedObject();
@@ -884,8 +860,7 @@ public class MessageUtils {
                 uri.push(GENIE_CONTRACT_RN);
                 uri.push(c.getId().getValue());
                 String newUri = odlUriToGenieUri(uri).toString();
-                PolicyReference pr = new PolicyReference(pci.getClassId(),
-                        new Uri(newUri));
+                PolicyReference pr = new PolicyReference(pci.getClassId(), new Uri(newUri));
                 // TODO: should we chase the contracts?
                 poi.setReference(ppi.getPropId(), pr);
             }
@@ -903,8 +878,7 @@ public class MessageUtils {
 
     }
 
-    private static List<BigInteger> getParamList(
-            HashMap<String, List<BigInteger>> hm, String type) {
+    private static List<BigInteger> getParamList(HashMap<String, List<BigInteger>> hm, String type) {
         List<BigInteger> pvl = null;
         pvl = hm.get(type);
         if (pvl == null) {
@@ -925,8 +899,7 @@ public class MessageUtils {
      * @param cr
      * @return
      */
-    private static HashMap<String, List<BigInteger>> buildParameterValues(
-            ClassifierInstance ci, ClassifierRef cr) {
+    private static HashMap<String, List<BigInteger>> buildParameterValues(ClassifierInstance ci, ClassifierRef cr) {
         HashMap<String, List<BigInteger>> pmap = new HashMap<String, List<BigInteger>>();
         List<BigInteger> pvl = null;
 
@@ -942,20 +915,20 @@ public class MessageUtils {
             if (pv.getName().getValue().equals("type")) {
                 if (pv.getIntValue() != null) {
                     switch (pv.getIntValue().intValue()) {
-                    case 0x0806:
-                    case 0x8906:
-                    case 0x0800:
-                    case 0x86DD:
-                    case 0x88E5:
-                    case 0x8847:
-                    case 0x22F3:
+                        case 0x0806:
+                        case 0x8906:
+                        case 0x0800:
+                        case 0x86DD:
+                        case 0x88E5:
+                        case 0x8847:
+                        case 0x22F3:
 
-                        pvl = getParamList(pmap, GENIE_CLASSIFIER_ETHERT);
-                        pvl.add(intToBigInt(pv.getIntValue().intValue()));
-                        break;
+                            pvl = getParamList(pmap, GENIE_CLASSIFIER_ETHERT);
+                            pvl.add(intToBigInt(pv.getIntValue().intValue()));
+                            break;
 
-                    default:
-                        break;
+                        default:
+                            break;
                     }
                 } else if (pv.getStringValue() != null) {
                     if (pv.getStringValue().equals("TCP")) {
@@ -1007,9 +980,8 @@ public class MessageUtils {
 
     }
 
-    public static List<ManagedObject> getClassifierRefMo(PolicyUri current,
-            ClassifierInstance ci, ClassifierRef cr, RuleGroup rg,
-            IndexedTenant it) {
+    public static List<ManagedObject> getClassifierRefMo(PolicyUri current, ClassifierInstance ci, ClassifierRef cr,
+            RuleGroup rg, IndexedTenant it) {
 
         List<ManagedObject> mol = new ArrayList<ManagedObject>();
         ManagedObject mo = new ManagedObject();
@@ -1038,14 +1010,12 @@ public class MessageUtils {
                 uri.push(rg.getContractTenant().getId().getValue());
                 uri.push(GENIE_CLASSIFIER_RN);
                 uri.push(ci.getName().getValue());
-                ManagedObject clMo = getClassifierInstanceMo(uri, ci, cr, rg,
-                        it);
+                ManagedObject clMo = getClassifierInstanceMo(uri, ci, cr, rg, it);
                 if (clMo != null) {
                     mol.add(clMo);
                 }
 
-                PolicyReference pr = new PolicyReference(pci.getClassId(),
-                        uri.getUri());
+                PolicyReference pr = new PolicyReference(pci.getClassId(), uri.getUri());
                 poi.setReference(ppi.getPropId(), pr);
             }
         }
@@ -1073,9 +1043,8 @@ public class MessageUtils {
      * @param it
      * @return
      */
-    public static ManagedObject getClassifierInstanceMo(PolicyUri current,
-            ClassifierInstance ci, ClassifierRef cr, RuleGroup rg,
-            IndexedTenant it) {
+    public static ManagedObject getClassifierInstanceMo(PolicyUri current, ClassifierInstance ci, ClassifierRef cr,
+            RuleGroup rg, IndexedTenant it) {
         if (ci == null)
             return null;
 
@@ -1106,18 +1075,14 @@ public class MessageUtils {
         String prefix = convertedUri.toString();
 
         for (PolicyPropertyInfo ppi : ppil) {
-            if (ppi.getPropName().equals(GENIE_CLASSIFIER_NAME)
-                    && cr.getName() != null) {
+            if (ppi.getPropName().equals(GENIE_CLASSIFIER_NAME) && cr.getName() != null) {
                 poi.setString(ppi.getPropId(), cr.getName().getValue());
-                Uri child = new Uri(prefix + GENIE_CLASSIFIER_NAME
-                        + cr.getName().getValue());
+                Uri child = new Uri(prefix + GENIE_CLASSIFIER_NAME + cr.getName().getValue());
                 poi.setUri(child);
-            } else if (ppi.getPropName().equals(GENIE_CLASSIFIER_DIRECTION)
-                    && cr.getDirection() != null) {
+            } else if (ppi.getPropName().equals(GENIE_CLASSIFIER_DIRECTION) && cr.getDirection() != null) {
                 // initialize with bogus values for placeholders, then replace
                 // with real ones
-                List<Integer> odl2genie = new ArrayList<Integer>(Arrays.asList(
-                        1, 2, 3));
+                List<Integer> odl2genie = new ArrayList<Integer>(Arrays.asList(1, 2, 3));
                 odl2genie.set(0, 1);
                 odl2genie.set(1, 2);
                 odl2genie.set(2, 0);
@@ -1129,43 +1094,29 @@ public class MessageUtils {
                  * Value: | ODL | Genie --------------+-----+--------
                  * bidirectional | 2 | 0 in | 0 | 1 out | 1 | 2
                  */
-                Integer genieDirection = odl2genie.get(cr.getDirection()
-                        .getIntValue());
-                poi.setUint64(ppi.getPropId(),
-                        new BigInteger(genieDirection.toString()));
-            } else if (ppi.getPropName().equals(
-                    GENIE_CLASSIFIER_CONNECTION_TRACKING)
+                Integer genieDirection = odl2genie.get(cr.getDirection().getIntValue());
+                poi.setUint64(ppi.getPropId(), new BigInteger(genieDirection.toString()));
+            } else if (ppi.getPropName().equals(GENIE_CLASSIFIER_CONNECTION_TRACKING)
                     && cr.getConnectionTracking() != null) {
-                poi.setUint64(ppi.getPropId(), intToBigInt(cr
-                        .getConnectionTracking().getIntValue()));
-            } else if (ppi.getPropName().equals(GENIE_CLASSIFIER_ARP_OPC)
-                    && pmap.get(GENIE_CLASSIFIER_ARP_OPC) != null) {
-                poi.setUint64(ppi.getPropId(),
-                        pmap.get(GENIE_CLASSIFIER_ARP_OPC).get(0));
-            } else if (ppi.getPropName().equals(GENIE_CLASSIFIER_ETHERT)
-                    && pmap.get(GENIE_CLASSIFIER_ETHERT) != null) {
-                poi.setUint64(ppi.getPropId(), pmap
-                        .get(GENIE_CLASSIFIER_ETHERT).get(0));
+                poi.setUint64(ppi.getPropId(), intToBigInt(cr.getConnectionTracking().getIntValue()));
+            } else if (ppi.getPropName().equals(GENIE_CLASSIFIER_ARP_OPC) && pmap.get(GENIE_CLASSIFIER_ARP_OPC) != null) {
+                poi.setUint64(ppi.getPropId(), pmap.get(GENIE_CLASSIFIER_ARP_OPC).get(0));
+            } else if (ppi.getPropName().equals(GENIE_CLASSIFIER_ETHERT) && pmap.get(GENIE_CLASSIFIER_ETHERT) != null) {
+                poi.setUint64(ppi.getPropId(), pmap.get(GENIE_CLASSIFIER_ETHERT).get(0));
             } else if (ppi.getPropName().equals(GENIE_CLASSIFIER_DFROM_PORT)
                     && pmap.get(GENIE_CLASSIFIER_DFROM_PORT) != null) {
-                poi.setUint64(ppi.getPropId(),
-                        pmap.get(GENIE_CLASSIFIER_DFROM_PORT).get(0));
+                poi.setUint64(ppi.getPropId(), pmap.get(GENIE_CLASSIFIER_DFROM_PORT).get(0));
             } else if (ppi.getPropName().equals(GENIE_CLASSIFIER_DTO_PORT)
                     && pmap.get(GENIE_CLASSIFIER_DTO_PORT) != null) {
-                poi.setUint64(ppi.getPropId(),
-                        pmap.get(GENIE_CLASSIFIER_DTO_PORT).get(0));
+                poi.setUint64(ppi.getPropId(), pmap.get(GENIE_CLASSIFIER_DTO_PORT).get(0));
             } else if (ppi.getPropName().equals(GENIE_CLASSIFIER_SFROM_PORT)
                     && pmap.get(GENIE_CLASSIFIER_SFROM_PORT) != null) {
-                poi.setUint64(ppi.getPropId(),
-                        pmap.get(GENIE_CLASSIFIER_SFROM_PORT).get(0));
+                poi.setUint64(ppi.getPropId(), pmap.get(GENIE_CLASSIFIER_SFROM_PORT).get(0));
             } else if (ppi.getPropName().equals(GENIE_CLASSIFIER_STO_PORT)
                     && pmap.get(GENIE_CLASSIFIER_STO_PORT) != null) {
-                poi.setUint64(ppi.getPropId(),
-                        pmap.get(GENIE_CLASSIFIER_STO_PORT).get(0));
-            } else if (ppi.getPropName().equals(GENIE_CLASSIFIER_PROT)
-                    && pmap.get(GENIE_CLASSIFIER_PROT) != null) {
-                poi.setUint64(ppi.getPropId(), pmap.get(GENIE_CLASSIFIER_PROT)
-                        .get(0));
+                poi.setUint64(ppi.getPropId(), pmap.get(GENIE_CLASSIFIER_STO_PORT).get(0));
+            } else if (ppi.getPropName().equals(GENIE_CLASSIFIER_PROT) && pmap.get(GENIE_CLASSIFIER_PROT) != null) {
+                poi.setUint64(ppi.getPropId(), pmap.get(GENIE_CLASSIFIER_PROT).get(0));
             }
         }
 
@@ -1181,6 +1132,7 @@ public class MessageUtils {
     }
 
     public static class Ipv4PlusSubnet {
+
         private String prefix;
         private String mask;
 
@@ -1199,8 +1151,7 @@ public class MessageUtils {
             int msk = -1 << (32 - Integer.parseInt(parts[1]));
             int sub = ip & msk;
             for (int i = 0; i < 3; i++) {
-                this.prefix = this.prefix
-                        + String.valueOf((sub >> (24 - 8 * i)) & 0xff) + ".";
+                this.prefix = this.prefix + String.valueOf((sub >> (24 - 8 * i)) & 0xff) + ".";
             }
             this.prefix = this.prefix + String.valueOf(sub & 0xff);
         }
@@ -1223,8 +1174,7 @@ public class MessageUtils {
 
     }
 
-    public static ManagedObject getSubnetMo(PolicyUri current, Subnet s,
-            Tenant t) {
+    public static ManagedObject getSubnetMo(PolicyUri current, Subnet s, Tenant t) {
 
         /*
          * Build up the equivalent Genie object
@@ -1245,31 +1195,25 @@ public class MessageUtils {
             return null;
 
         // convert this once - we'll use it below
-        Ipv4PlusSubnet ipv4 = new Ipv4PlusSubnet(s.getIpPrefix()
-                .getIpv4Prefix().getValue());
+        Ipv4PlusSubnet ipv4 = new Ipv4PlusSubnet(s.getIpPrefix().getIpv4Prefix().getValue());
 
         for (PolicyPropertyInfo ppi : ppil) {
 
             // use the subnet ID for the subnets (plural) ID
-            if (ppi.getPropName().equals(GENIE_SUBNET_NAME)
-                    && s.getId() != null) {
+            if (ppi.getPropName().equals(GENIE_SUBNET_NAME) && s.getId() != null) {
                 poi.setString(ppi.getPropId(), GENIE_SUBNET_NAME_DEFAULT);
             }
-            if (ppi.getPropName().equals(GENIE_SUBNET_ADDRESS)
-                    && s.getIpPrefix() != null) {
+            if (ppi.getPropName().equals(GENIE_SUBNET_ADDRESS) && s.getIpPrefix() != null) {
                 /*
                  * We need to strip off the subnet delimiter
                  */
                 poi.setString(ppi.getPropId(), ipv4.getPrefixAsString());
             }
-            if (ppi.getPropName().equals(GENIE_SUBNET_PREFIX_LEN)
-                    && s.getIpPrefix() != null) {
+            if (ppi.getPropName().equals(GENIE_SUBNET_PREFIX_LEN) && s.getIpPrefix() != null) {
                 poi.setUint64(ppi.getPropId(), ipv4.getMaskAsBigInt());
             }
-            if (ppi.getPropName().equals(GENIE_SUBNET_VIRTUAL_ROUTER_IP)
-                    && s.getVirtualRouterIp() != null) {
-                poi.setString(ppi.getPropId(), s.getVirtualRouterIp()
-                        .getIpv4Address().getValue());
+            if (ppi.getPropName().equals(GENIE_SUBNET_VIRTUAL_ROUTER_IP) && s.getVirtualRouterIp() != null) {
+                poi.setString(ppi.getPropId(), s.getVirtualRouterIp().getIpv4Address().getValue());
             }
         }
 
@@ -1285,8 +1229,7 @@ public class MessageUtils {
         return mo;
     }
 
-    public static List<ManagedObject> getSubnetNetworkRefMo(PolicyUri current,
-            NetworkDomainId ndid, Tenant t) {
+    public static List<ManagedObject> getSubnetNetworkRefMo(PolicyUri current, NetworkDomainId ndid, Tenant t) {
         if (ndid == null)
             return null;
 
@@ -1310,8 +1253,7 @@ public class MessageUtils {
             return null;
 
         for (PolicyPropertyInfo ppi : ppil) {
-            if (ppi.getPropName()
-                    .equals(GENIE_SUBNETS_TO_NETWORK_DOMAIN_TARGET)) {
+            if (ppi.getPropName().equals(GENIE_SUBNETS_TO_NETWORK_DOMAIN_TARGET)) {
 
                 PolicyUri uri = new PolicyUri(convertedUri);
                 uri.pop();
@@ -1341,8 +1283,7 @@ public class MessageUtils {
                  * We default to this being a routing domain reference if the
                  * actual reference can't be resolved.
                  */
-                PolicyReference pr = new PolicyReference(pci.getClassId(),
-                        uri.getUri());
+                PolicyReference pr = new PolicyReference(pci.getClassId(), uri.getUri());
                 poi.setReference(ppi.getPropId(), pr);
             }
         }
@@ -1359,8 +1300,7 @@ public class MessageUtils {
         return mol;
     }
 
-    public static List<ManagedObject> getSubnetsMo(PolicyUri current,
-            NetworkDomainId nid, Tenant t) {
+    public static List<ManagedObject> getSubnetsMo(PolicyUri current, NetworkDomainId nid, Tenant t) {
         if (nid == null)
             return null;
         List<ManagedObject> mol = new ArrayList<ManagedObject>();
@@ -1402,12 +1342,10 @@ public class MessageUtils {
 
         for (PolicyPropertyInfo ppi : ppil) {
             // use the subnet ID for the subnets (plural) ID
-            if (ppi.getPropName().equals(GENIE_SUBNETS_NAME)
-                    && subnetMatch.getId() != null) {
+            if (ppi.getPropName().equals(GENIE_SUBNETS_NAME) && subnetMatch.getId() != null) {
                 poi.setString(ppi.getPropId(), subnetMatch.getId().getValue());
             }
-            if (ppi.getPropName().equals(GENIE_SUBNET_RN)
-                    && subnetMatch.getId() != null) {
+            if (ppi.getPropName().equals(GENIE_SUBNET_RN) && subnetMatch.getId() != null) {
                 PolicyUri child = new PolicyUri(prefix);
                 child.push(GENIE_SUBNET_RN);
                 child.push(GENIE_SUBNET_NAME_DEFAULT);
@@ -1417,8 +1355,7 @@ public class MessageUtils {
                 }
                 childrenUris.add(child.getUri());
             }
-            if (ppi.getPropName().equals(GENIE_SUBNETS_TO_NETWORK_RN)
-                    && subnetMatch.getParent() != null) {
+            if (ppi.getPropName().equals(GENIE_SUBNETS_TO_NETWORK_RN) && subnetMatch.getParent() != null) {
                 PolicyUri child = new PolicyUri(prefix);
                 child.push(GENIE_SUBNETS_TO_NETWORK_RN);
                 mol = getSubnetNetworkRefMo(child, subnetMatch.getParent(), t);
@@ -1441,8 +1378,7 @@ public class MessageUtils {
         return mol;
     }
 
-    public static List<ManagedObject> getL2FloodDomainRefMo(PolicyUri current,
-            NetworkDomainId ndid, Tenant t) {
+    public static List<ManagedObject> getL2FloodDomainRefMo(PolicyUri current, NetworkDomainId ndid, Tenant t) {
         if (ndid == null)
             return null;
         List<ManagedObject> mol = new ArrayList<ManagedObject>();
@@ -1458,8 +1394,7 @@ public class MessageUtils {
             return null;
 
         PolicyObjectInstance poi = new PolicyObjectInstance(pci.getClassId());
-        setParentFields(convertedUri, poi, GENIE_FLOOD_DOMAIN_TO_NETWORK_RN,
-                false);
+        setParentFields(convertedUri, poi, GENIE_FLOOD_DOMAIN_TO_NETWORK_RN, false);
         poi.setUri(convertedUri.getUri());
 
         List<PolicyPropertyInfo> ppil = pci.getProperties();
@@ -1499,8 +1434,7 @@ public class MessageUtils {
                  * We default to this being a routing domain reference if the
                  * actual reference can't be resolved.
                  */
-                PolicyReference pr = new PolicyReference(pci.getClassId(),
-                        uri.getUri());
+                PolicyReference pr = new PolicyReference(pci.getClassId(), uri.getUri());
                 poi.setReference(ppi.getPropId(), pr);
             }
         }
@@ -1517,8 +1451,7 @@ public class MessageUtils {
         return mol;
     }
 
-    public static List<ManagedObject> getL2FloodDomainMo(PolicyUri current,
-            NetworkDomainId ndid, Tenant t) {
+    public static List<ManagedObject> getL2FloodDomainMo(PolicyUri current, NetworkDomainId ndid, Tenant t) {
         if (ndid == null)
             return null;
 
@@ -1563,15 +1496,13 @@ public class MessageUtils {
             if (ppi.getPropName().equals(GENIE_FLOOD_DOMAIN_NAME)) {
                 poi.setString(ppi.getPropId(), l2fdMatch.getId().getValue());
             }
-            if (ppi.getPropName().equals(GENIE_FLOOD_DOMAIN_TO_NETWORK_RN)
-                    && l2fdMatch.getParent() != null) {
+            if (ppi.getPropName().equals(GENIE_FLOOD_DOMAIN_TO_NETWORK_RN) && l2fdMatch.getParent() != null) {
                 /*
                  * Add as a child, not a property, and get the child
                  */
                 PolicyUri child = new PolicyUri(prefix);
                 child.push(GENIE_FLOOD_DOMAIN_TO_NETWORK_RN);
-                mol.addAll(getL2FloodDomainRefMo(child, l2fdMatch.getParent(),
-                        t));
+                mol.addAll(getL2FloodDomainRefMo(child, l2fdMatch.getParent(), t));
                 childrenUris.add(child.getUri());
             }
         }
@@ -1590,8 +1521,7 @@ public class MessageUtils {
         return mol;
     }
 
-    public static List<ManagedObject> getL2BridgeDomainRefMo(PolicyUri current,
-            NetworkDomainId ndid, Tenant t) {
+    public static List<ManagedObject> getL2BridgeDomainRefMo(PolicyUri current, NetworkDomainId ndid, Tenant t) {
         if (ndid == null)
             return null;
 
@@ -1608,8 +1538,7 @@ public class MessageUtils {
             return null;
 
         PolicyObjectInstance poi = new PolicyObjectInstance(pci.getClassId());
-        setParentFields(convertedUri, poi, GENIE_BRIDGE_DOMAIN_TO_NETWORK_RN,
-                false);
+        setParentFields(convertedUri, poi, GENIE_BRIDGE_DOMAIN_TO_NETWORK_RN, false);
         poi.setUri(convertedUri.getUri());
 
         List<PolicyPropertyInfo> ppil = pci.getProperties();
@@ -1617,8 +1546,7 @@ public class MessageUtils {
             return null;
 
         for (PolicyPropertyInfo ppi : ppil) {
-            if (ppi.getPropName().equals(
-                    GENIE_BRIDGE_DOMAIN_TO_NETWORK_DOMAIN_TARGET)) {
+            if (ppi.getPropName().equals(GENIE_BRIDGE_DOMAIN_TO_NETWORK_DOMAIN_TARGET)) {
 
                 /*
                  * We have to move back to the tenant, since all of the
@@ -1639,8 +1567,7 @@ public class MessageUtils {
                  * We default to this being a routing domain reference if the
                  * actual reference can't be resolved.
                  */
-                PolicyReference pr = new PolicyReference(pci.getClassId(),
-                        uri.getUri());
+                PolicyReference pr = new PolicyReference(pci.getClassId(), uri.getUri());
                 poi.setReference(ppi.getPropId(), pr);
             }
         }
@@ -1658,8 +1585,7 @@ public class MessageUtils {
         return mol;
     }
 
-    public static List<ManagedObject> getL2BridgeDomainMo(PolicyUri current,
-            NetworkDomainId ndid, Tenant t) {
+    public static List<ManagedObject> getL2BridgeDomainMo(PolicyUri current, NetworkDomainId ndid, Tenant t) {
         List<L2BridgeDomain> l2bdl = t.getL2BridgeDomain();
         if (ndid == null || l2bdl == null)
             return null;
@@ -1702,15 +1628,13 @@ public class MessageUtils {
             if (ppi.getPropName().equals(GENIE_BRIDGE_DOMAIN_NAME)) {
                 poi.setString(ppi.getPropId(), l2bdMatch.getId().getValue());
             }
-            if (ppi.getPropName().equals(GENIE_BRIDGE_DOMAIN_TO_NETWORK_RN)
-                    && l2bdMatch.getParent() != null) {
+            if (ppi.getPropName().equals(GENIE_BRIDGE_DOMAIN_TO_NETWORK_RN) && l2bdMatch.getParent() != null) {
                 /*
                  * Add as a child, not a property, and get the child
                  */
                 PolicyUri child = new PolicyUri(prefix);
                 child.push(GENIE_BRIDGE_DOMAIN_TO_NETWORK_RN);
-                mol.addAll(getL2BridgeDomainRefMo(child, l2bdMatch.getParent(),
-                        t));
+                mol.addAll(getL2BridgeDomainRefMo(child, l2bdMatch.getParent(), t));
                 childrenUris.add(child.getUri());
             }
         }
@@ -1729,8 +1653,7 @@ public class MessageUtils {
         return mol;
     }
 
-    public static ManagedObject getL3ContextMo(PolicyUri current,
-            NetworkDomainId ndid, Tenant t) {
+    public static ManagedObject getL3ContextMo(PolicyUri current, NetworkDomainId ndid, Tenant t) {
         List<L3Context> l3cl = t.getL3Context();
         if (ndid == null || l3cl == null)
             return null;
@@ -1791,8 +1714,7 @@ public class MessageUtils {
      * @param t
      * @return
      */
-    public static List<ManagedObject> getNetwokDomainRefMo(PolicyUri current,
-            NetworkDomainId ndid, Tenant t) {
+    public static List<ManagedObject> getNetwokDomainRefMo(PolicyUri current, NetworkDomainId ndid, Tenant t) {
         if (ndid == null)
             return null;
         List<ManagedObject> mol = new ArrayList<ManagedObject>();
@@ -1808,8 +1730,7 @@ public class MessageUtils {
             return null;
 
         PolicyObjectInstance poi = new PolicyObjectInstance(pci.getClassId());
-        setParentFields(convertedUri, poi, GENIE_EPG_TO_NETWORK_DOMAIN_RN,
-                false);
+        setParentFields(convertedUri, poi, GENIE_EPG_TO_NETWORK_DOMAIN_RN, false);
         poi.setUri(convertedUri.getUri());
 
         List<PolicyPropertyInfo> ppil = pci.getProperties();
@@ -1863,8 +1784,7 @@ public class MessageUtils {
                  * We default to this being a routing domain reference if the
                  * actual reference can't be resolved.
                  */
-                PolicyReference pr = new PolicyReference(pci.getClassId(),
-                        uri.getUri());
+                PolicyReference pr = new PolicyReference(pci.getClassId(), uri.getUri());
                 poi.setReference(ppi.getPropId(), pr);
             }
         }
@@ -1882,8 +1802,8 @@ public class MessageUtils {
 
     }
 
-    public static Set<ManagedObject> getEndpointGroupMo(ManagedObject epgMo,
-            PolicyUri current, EndpointGroup epg, RuleGroup rg) {
+    public static Set<ManagedObject> getEndpointGroupMo(ManagedObject epgMo, PolicyUri current, EndpointGroup epg,
+            RuleGroup rg) {
         if (epg == null)
             return null;
 
@@ -1914,20 +1834,16 @@ public class MessageUtils {
 
         Contract c = rg.getRelatedContract();
         for (PolicyPropertyInfo ppi : ppil) {
-            if (ppi.getPropName().equals(GENIE_ENDPOINT_GROUP_NAME)
-                    && epg.getId() != null) {
+            if (ppi.getPropName().equals(GENIE_ENDPOINT_GROUP_NAME) && epg.getId() != null) {
                 poi.setString(ppi.getPropId(), epg.getId().getValue());
             }
-            if (ppi.getPropName().equals(GENIE_INTRA_EPG_RN)
-                    && epg.getIntraGroupPolicy() != null) {
-                poi.setUint64(ppi.getPropId(), intToBigInt(epg
-                        .getIntraGroupPolicy().getIntValue()));
+            if (ppi.getPropName().equals(GENIE_INTRA_EPG_RN) && epg.getIntraGroupPolicy() != null) {
+                poi.setUint64(ppi.getPropId(), intToBigInt(epg.getIntraGroupPolicy().getIntValue()));
             }
 
             // TODO: the following only maps named selectors. What about target
             // selectors?
-            if (ppi.getPropName().equals(GENIE_CONSUMER_CONTRACT_REF_RN)
-                    && epg.getConsumerNamedSelector() != null) {
+            if (ppi.getPropName().equals(GENIE_CONSUMER_CONTRACT_REF_RN) && epg.getConsumerNamedSelector() != null) {
                 // TODO: this does all the selectors -- should we just do those
                 // that are in scope?
                 for (ConsumerNamedSelector cns : epg.getConsumerNamedSelector()) {
@@ -1936,8 +1852,7 @@ public class MessageUtils {
                             PolicyUri child = new PolicyUri(prefix);
                             child.push(GENIE_CONSUMER_CONTRACT_REF_RN);
                             child.push(cns.getName().getValue());
-                            ManagedObject conMo = getConsumerNamedSelectorMo(
-                                    child, c);
+                            ManagedObject conMo = getConsumerNamedSelectorMo(child, c);
                             if (conMo != null) {
                                 mol.add(conMo);
                             }
@@ -1949,8 +1864,7 @@ public class MessageUtils {
 
             // TODO: the following only maps named selectors. What about target
             // selectors?
-            if (ppi.getPropName().equals(GENIE_PROVIDER_CONTRACT_REF_RN)
-                    && epg.getProviderNamedSelector() != null) {
+            if (ppi.getPropName().equals(GENIE_PROVIDER_CONTRACT_REF_RN) && epg.getProviderNamedSelector() != null) {
                 // TODO: this does all the selectors -- should we just do those
                 // that are in scope?
                 for (ProviderNamedSelector pns : epg.getProviderNamedSelector()) {
@@ -1959,8 +1873,7 @@ public class MessageUtils {
                             PolicyUri child = new PolicyUri(prefix);
                             child.push(GENIE_PROVIDER_CONTRACT_REF_RN);
                             child.push(pns.getName().getValue());
-                            ManagedObject provMo = getProviderNamedSelectorMo(
-                                    child, c);
+                            ManagedObject provMo = getProviderNamedSelectorMo(child, c);
                             if (provMo != null) {
                                 mol.add(provMo);
                             }
@@ -1972,12 +1885,10 @@ public class MessageUtils {
             /*
              * Don't bother getting network references if we have them already
              */
-            if (ppi.getPropName().equals(GENIE_EPG_TO_NETWORK_DOMAIN_RN)
-                    && epg.getNetworkDomain() != null) {
+            if (ppi.getPropName().equals(GENIE_EPG_TO_NETWORK_DOMAIN_RN) && epg.getNetworkDomain() != null) {
                 PolicyUri child = new PolicyUri(prefix);
                 child.push(GENIE_EPG_TO_NETWORK_DOMAIN_RN);
-                mol.addAll(MessageUtils.getNetwokDomainRefMo(child,
-                        epg.getNetworkDomain(), rg.getContractTenant()));
+                mol.addAll(MessageUtils.getNetwokDomainRefMo(child, epg.getNetworkDomain(), rg.getContractTenant()));
                 childrenUris.add(child.getUri());
             }
 
@@ -2003,8 +1914,7 @@ public class MessageUtils {
      * @param mo
      * @return
      */
-    public static EprOperation getEprOpFromEpMo(ManagedObject mo, int prr,
-            String agentId) {
+    public static EprOperation getEprOpFromEpMo(ManagedObject mo, int prr, String agentId) {
         MacAddress mac = null;
         EndpointGroupId epgid = null;
         L2BridgeDomainId l2bdid = null;
@@ -2036,45 +1946,42 @@ public class MessageUtils {
          */
         // TODO: add support for vector values
         for (PolicyPropertyInfo ppi : ppil) {
-            if (poi.isSet(ppi.getPropId(), ppi.getType(),
-                    ppi.getPropCardinality())) {
+            if (poi.isSet(ppi.getPropId(), ppi.getType(), ppi.getPropCardinality())) {
                 switch (ppi.getPropName()) {
-                case GENIE_ENDPOINT_MAC:
-                    mac = poi.getMacAddress(ppi.getPropId());
-                    break;
-                case GENIE_ENDPOINT_EPG:
-                    /*
-                     * This must be a full URI of the EPG -- otherwise, it can't
-                     * be uniquely resolved.
-                     */
-                    String epg = poi.getString(ppi.getPropId());
-                    epgid = new EndpointGroupId(epg);
-                    break;
-                case GENIE_ENDPOINT_CONTEXT:
-                    /*
-                     * It seems like this should be scoped by tenant as well,
-                     * which means it would have to be a full URI. If that's the
-                     * case, then the code below needs fixing.
-                     */
-                    if (mo.getSubject().equals(GENIE_ENDPOINT_RN)) {
-                        l2bdid = new L2BridgeDomainId(poi.getString(ppi
-                                .getPropId()));
-                    } else if (mo.getSubject().equals(GENIE_ENDPOINT_L3_RN)) {
-                        l3cid = new L3ContextId(poi.getString(ppi.getPropId()));
-                    }
-                    break;
-                case GENIE_ENDPOINT_UUID:
-                    uuid = poi.getString(ppi.getPropId());
-                    tid = new TenantId(uuid);
-                    break;
-                case GENIE_ENDPOINT_IP:
-                    // TODO: support v6
-                    Ipv4Address ipv4 = new Ipv4Address(poi.getString(ppi
-                            .getPropId()));
-                    ip = new IpAddress(ipv4);
-                    break;
-                default:
-                    break;
+                    case GENIE_ENDPOINT_MAC:
+                        mac = poi.getMacAddress(ppi.getPropId());
+                        break;
+                    case GENIE_ENDPOINT_EPG:
+                        /*
+                         * This must be a full URI of the EPG -- otherwise, it can't
+                         * be uniquely resolved.
+                         */
+                        String epg = poi.getString(ppi.getPropId());
+                        epgid = new EndpointGroupId(epg);
+                        break;
+                    case GENIE_ENDPOINT_CONTEXT:
+                        /*
+                         * It seems like this should be scoped by tenant as well,
+                         * which means it would have to be a full URI. If that's the
+                         * case, then the code below needs fixing.
+                         */
+                        if (mo.getSubject().equals(GENIE_ENDPOINT_RN)) {
+                            l2bdid = new L2BridgeDomainId(poi.getString(ppi.getPropId()));
+                        } else if (mo.getSubject().equals(GENIE_ENDPOINT_L3_RN)) {
+                            l3cid = new L3ContextId(poi.getString(ppi.getPropId()));
+                        }
+                        break;
+                    case GENIE_ENDPOINT_UUID:
+                        uuid = poi.getString(ppi.getPropId());
+                        tid = new TenantId(uuid);
+                        break;
+                    case GENIE_ENDPOINT_IP:
+                        // TODO: support v6
+                        Ipv4Address ipv4 = new Ipv4Address(poi.getString(ppi.getPropId()));
+                        ip = new IpAddress(ipv4);
+                        break;
+                    default:
+                        break;
                 }
             }
 
@@ -2155,8 +2062,7 @@ public class MessageUtils {
         return op;
     }
 
-    public static EprOperation getEprOpFromEpId(EndpointIdentity eid,
-            String subject) {
+    public static EprOperation getEprOpFromEpId(EndpointIdentity eid, String subject) {
         EprOperation op = null;
         Uri uri = eid.getContext();
         String rn = eid.getIdentifier();
@@ -2254,24 +2160,24 @@ public class MessageUtils {
         // TODO: add support for vector values
         for (PolicyPropertyInfo ppi : ppil) {
             switch (ppi.getPropName()) {
-            case GENIE_ENDPOINT_MAC:
-                poi.setMacAddress(ppi.getPropId(), mac);
-                break;
-            case GENIE_ENDPOINT_EPG:
-                poi.setString(ppi.getPropId(), epgid.getValue());
-                break;
-            case GENIE_ENDPOINT_CONTEXT:
-                poi.setString(ppi.getPropId(), context);
-                break;
-            case GENIE_ENDPOINT_IP:
-                // TODO: support v6
-                poi.setString(ppi.getPropId(), ip.toString());
-                break;
-            case GENIE_ENDPOINT_UUID:
-                poi.setString(ppi.getPropId(), uuid);
-                break;
-            default:
-                break;
+                case GENIE_ENDPOINT_MAC:
+                    poi.setMacAddress(ppi.getPropId(), mac);
+                    break;
+                case GENIE_ENDPOINT_EPG:
+                    poi.setString(ppi.getPropId(), epgid.getValue());
+                    break;
+                case GENIE_ENDPOINT_CONTEXT:
+                    poi.setString(ppi.getPropId(), context);
+                    break;
+                case GENIE_ENDPOINT_IP:
+                    // TODO: support v6
+                    poi.setString(ppi.getPropId(), ip.toString());
+                    break;
+                case GENIE_ENDPOINT_UUID:
+                    poi.setString(ppi.getPropId(), uuid);
+                    break;
+                default:
+                    break;
 
             }
         }
@@ -2340,22 +2246,22 @@ public class MessageUtils {
         // TODO: add support for vector values
         for (PolicyPropertyInfo ppi : ppil) {
             switch (ppi.getPropName()) {
-            case GENIE_ENDPOINT_MAC:
-                poi.setMacAddress(ppi.getPropId(), mac);
-                break;
-            case GENIE_ENDPOINT_EPG:
-                poi.setString(ppi.getPropId(), epgid.getValue());
-                break;
-            case GENIE_ENDPOINT_CONTEXT:
-                poi.setString(ppi.getPropId(), context);
-                break;
-            case GENIE_ENDPOINT_IP:
-                // TODO: support v6
-                poi.setString(ppi.getPropId(), ip.toString());
-                break;
-            case GENIE_ENDPOINT_UUID:
-            default:
-                break;
+                case GENIE_ENDPOINT_MAC:
+                    poi.setMacAddress(ppi.getPropId(), mac);
+                    break;
+                case GENIE_ENDPOINT_EPG:
+                    poi.setString(ppi.getPropId(), epgid.getValue());
+                    break;
+                case GENIE_ENDPOINT_CONTEXT:
+                    poi.setString(ppi.getPropId(), context);
+                    break;
+                case GENIE_ENDPOINT_IP:
+                    // TODO: support v6
+                    poi.setString(ppi.getPropId(), ip.toString());
+                    break;
+                case GENIE_ENDPOINT_UUID:
+                default:
+                    break;
 
             }
         }
@@ -2376,8 +2282,7 @@ public class MessageUtils {
         /*
          * Some sanity checks, to make sure we're dealing with the same MO
          */
-        if (!mo1.getSubject().equals(mo2.getSubject())
-                || !mo1.getUri().getValue().equals(mo2.getUri().getValue())) {
+        if (!mo1.getSubject().equals(mo2.getSubject()) || !mo1.getUri().getValue().equals(mo2.getUri().getValue())) {
             return;
         }
 
