@@ -249,11 +249,9 @@ public class OpenstackGbpEndpoint implements AutoCloseable,
                 if (result.isPresent()) {
                     exists = true;
                 }
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            } catch (ExecutionException e) {
-                e.printStackTrace();
-            }
+            } catch (InterruptedException | ExecutionException e) {
+		LOG.error("Caught exception in existsL2Endpoint", e);
+	    }
         }
         return exists;
     }
@@ -273,11 +271,9 @@ public class OpenstackGbpEndpoint implements AutoCloseable,
                 if (result.isPresent()) {
                     exists = true;
                 }
-            } catch (InterruptedException e) {
-                LOG.error("Error reading L3 EP",e);
-            } catch (ExecutionException e) {
-                LOG.error("Error reading L3 EP",e);
-            }
+            } catch (InterruptedException | ExecutionException e) {
+		LOG.error("Caught exception in existsL3Endpoint",e);
+	    }
         }
         return exists;
     }

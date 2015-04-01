@@ -411,8 +411,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
                         }
                     }
                 } catch (InterruptedException | ExecutionException e) {
-                    e.printStackTrace();
-                    LOG.warn("Caught exception in UpdateEndpoint");
+                    LOG.error("Caught exception in UpdateEndpoint",e);
                 }
             }
         }
