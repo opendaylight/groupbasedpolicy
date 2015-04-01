@@ -651,5 +651,18 @@ public final class FlowUtils {
                 .build());
         return emb.build();
     }
+
+    /**
+     * Parse an OF port number from a node connector ID
+     * @param id the ID
+     * @return the port number
+     */
+    public static long getOfPortNum(NodeConnectorId id) {
+        String cnid = id.getValue();
+        int ci = cnid.lastIndexOf(':');
+        if (ci < 0 || (ci+1 >= cnid.length()))
+            throw new NumberFormatException("Invalid node connector ID " + cnid);
+        return Long.parseLong(cnid.substring(ci+1));
+    }
 }
 
