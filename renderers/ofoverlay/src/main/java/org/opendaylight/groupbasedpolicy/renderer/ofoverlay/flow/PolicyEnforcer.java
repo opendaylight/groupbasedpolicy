@@ -24,8 +24,10 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.AllowAction;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ClassificationResult;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Classifier;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Action;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ParamDerivator;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
 import org.opendaylight.groupbasedpolicy.resolver.ConditionGroup;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
@@ -89,7 +91,7 @@ public class PolicyEnforcer extends FlowTable {
 
     @Override
     public void sync(ReadWriteTransaction t, InstanceIdentifier<Table> tiid,
-                     Map<String, FlowCtx> flowMap, NodeId nodeId, 
+                     Map<String, FlowCtx> flowMap, NodeId nodeId,
                      PolicyInfo policyInfo, Dirty dirty)
                              throws Exception {
         dropFlow(t, tiid, flowMap, Integer.valueOf(1), null);
@@ -100,12 +102,12 @@ public class PolicyEnforcer extends FlowTable {
         for (EgKey sepg : ctx.getEndpointManager().getGroupsForNode(nodeId)) {
             // Allow traffic within the same endpoint group if the policy
             // specifies
-            IndexedTenant tenant = 
+            IndexedTenant tenant =
                     ctx.getPolicyResolver().getTenant(sepg.getTenantId());
-            EndpointGroup group = 
+            EndpointGroup group =
                     tenant.getEndpointGroup(sepg.getEgId());
             IntraGroupPolicy igp = group.getIntraGroupPolicy();
-            int sepgId = 
+            int sepgId =
                     ctx.getPolicyManager().getContextOrdinal(sepg.getTenantId(),
                                                         sepg.getEgId());
             if (igp == null || igp.equals(IntraGroupPolicy.Allow)) {
@@ -115,46 +117,45 @@ public class PolicyEnforcer extends FlowTable {
             for (Endpoint src : ctx.getEndpointManager().getEPsForNode(nodeId, sepg)) {
                 if (src.getTenant() == null || src.getEndpointGroup() == null)
                     continue;
-                
-                List<ConditionName> conds = 
+
+                List<ConditionName> conds =
                         ctx.getEndpointManager().getCondsForEndpoint(src);
                 ConditionGroup scg = policyInfo.getEgCondGroup(sepg, conds);
                 int scgId = ctx.getPolicyManager().getCondGroupOrdinal(scg);
-                
+
                 Set<EgKey> peers = policyInfo.getPeers(sepg);
                 for (EgKey depg : peers) {
-                    int depgId = 
+                    int depgId =
                             ctx.getPolicyManager().getContextOrdinal(depg.getTenantId(),
                                                                 depg.getEgId());
-                
+
                     for (Endpoint dst : ctx.getEndpointManager().getEndpointsForGroup(depg)) {
-                
+
                         conds = ctx.getEndpointManager().getCondsForEndpoint(dst);
-                        ConditionGroup dcg = 
+                        ConditionGroup dcg =
                                 policyInfo.getEgCondGroup(new EgKey(dst.getTenant(),
                                                                     dst.getEndpointGroup()),
                                                           conds);
                         int dcgId = ctx.getPolicyManager().getCondGroupOrdinal(dcg);
-                        
+
                         CgPair p = new CgPair(depgId, sepgId, dcgId, scgId);
                         if (visitedPairs.contains(p)) continue;
                         visitedPairs.add(p);
-                        syncPolicy(t, tiid, flowMap, nodeId, policyInfo, 
+                        syncPolicy(t, tiid, flowMap, nodeId, policyInfo,
                                    p, depg, sepg, dcg, scg);
-                
+
                         p = new CgPair(sepgId, depgId, scgId, dcgId);
                         if (visitedPairs.contains(p)) continue;
                         visitedPairs.add(p);
-                        syncPolicy(t, tiid, flowMap, nodeId, policyInfo, 
+                        syncPolicy(t, tiid, flowMap, nodeId, policyInfo,
                                    p, sepg, depg, scg, dcg);
-                        
                     }
                 }
             }
         }
     }
-    
-    private void allowSameEpg(ReadWriteTransaction t, 
+
+    private void allowSameEpg(ReadWriteTransaction t,
                               InstanceIdentifier<Table> tiid,
                               Map<String, FlowCtx> flowMap, NodeId nodeId,
                               int sepgId) {
@@ -163,7 +164,7 @@ public class PolicyEnforcer extends FlowTable {
             .append(sepgId).toString());
         if (visit(flowMap, flowId.getValue())) {
             MatchBuilder mb = new MatchBuilder();
-            addNxRegMatch(mb, 
+            addNxRegMatch(mb,
                           RegMatch.of(NxmNxReg0.class,Long.valueOf(sepgId)),
                           RegMatch.of(NxmNxReg2.class,Long.valueOf(sepgId)));
             FlowBuilder flow = base()
@@ -174,8 +175,8 @@ public class PolicyEnforcer extends FlowTable {
             writeFlow(t, tiid, flow.build());
         }
     }
-    
-    private void allowFromTunnel(ReadWriteTransaction t, 
+
+    private void allowFromTunnel(ReadWriteTransaction t,
                                  InstanceIdentifier<Table> tiid,
                                  Map<String, FlowCtx> flowMap, NodeId nodeId) {
         NodeConnectorId tunPort =
@@ -186,7 +187,7 @@ public class PolicyEnforcer extends FlowTable {
         if (visit(flowMap, flowId.getValue())) {
             MatchBuilder mb = new MatchBuilder()
                 .setInPort(tunPort);
-            addNxRegMatch(mb, 
+            addNxRegMatch(mb,
                           RegMatch.of(NxmNxReg1.class,Long.valueOf(0xffffff)));
             FlowBuilder flow = base()
                 .setId(flowId)
@@ -196,19 +197,19 @@ public class PolicyEnforcer extends FlowTable {
             writeFlow(t, tiid, flow.build());
         }
     }
-    
-    private void syncPolicy(ReadWriteTransaction t, 
+
+    private void syncPolicy(ReadWriteTransaction t,
                             InstanceIdentifier<Table> tiid,
                             Map<String, FlowCtx> flowMap, NodeId nodeId,
-                            PolicyInfo policyInfo, 
+                            PolicyInfo policyInfo,
                             CgPair p, EgKey sepg, EgKey depg,
-                            ConditionGroup scg, ConditionGroup dcg) 
+                            ConditionGroup scg, ConditionGroup dcg)
                              throws Exception {
         // XXX - TODO raise an exception for rules between the same
         // endpoint group that are asymmetric
         Policy policy = policyInfo.getPolicy(sepg, depg);
         List<RuleGroup> rgs = policy.getRules(scg, dcg);
-        
+
         int priority = 65000;
         for (RuleGroup rg : rgs) {
             TenantId tenantId = rg.getContractTenant().getId();
@@ -218,7 +219,7 @@ public class PolicyEnforcer extends FlowTable {
                                     p, r, Direction.In, priority);
                 syncDirection(t, tiid, flowMap, nodeId, tenant,
                                     p, r, Direction.Out, priority);
-                
+
                 priority -= 1;
             }
         }
@@ -249,7 +250,7 @@ public class PolicyEnforcer extends FlowTable {
 
     }
 
-    private void syncDirection(ReadWriteTransaction t, 
+    private void syncDirection(ReadWriteTransaction t,
                                InstanceIdentifier<Table> tiid,
                                Map<String, FlowCtx> flowMap, NodeId nodeId,
                                IndexedTenant contractTenant,
@@ -308,15 +309,14 @@ public class PolicyEnforcer extends FlowTable {
             abl = act.updateAction(abl, new HashMap<String,Object>(),  0);
         }
 
-
         for (ClassifierRef cr : r.getClassifierRef()) {
-            if (cr.getDirection() != null && 
-                !cr.getDirection().equals(Direction.Bidirectional) && 
+            if (cr.getDirection() != null &&
+                !cr.getDirection().equals(Direction.Bidirectional) &&
                 !cr.getDirection().equals(d))
                 continue;
-            
+
             StringBuilder idb = new StringBuilder();
-            // XXX - TODO - implement connection tracking (requires openflow 
+            // XXX - TODO - implement connection tracking (requires openflow
             // extension and data plane support - in 2.4. Will need to handle
             // case where we are working with mix of nodes.
 
@@ -332,7 +332,7 @@ public class PolicyEnforcer extends FlowTable {
                     .append(p.dcgId)
                     .append("|")
                     .append(priority);
-                addNxRegMatch(baseMatch, 
+                addNxRegMatch(baseMatch,
                               RegMatch.of(NxmNxReg0.class,Long.valueOf(p.sepg)),
                               RegMatch.of(NxmNxReg1.class,Long.valueOf(p.scgId)),
                               RegMatch.of(NxmNxReg2.class,Long.valueOf(p.depg)),
@@ -346,19 +346,18 @@ public class PolicyEnforcer extends FlowTable {
                     .append("|")
                     .append(p.scgId)
                     .append("|")
-                    .append(priority);                
-                addNxRegMatch(baseMatch, 
+                    .append(priority);
+                addNxRegMatch(baseMatch,
                               RegMatch.of(NxmNxReg0.class,Long.valueOf(p.depg)),
                               RegMatch.of(NxmNxReg1.class,Long.valueOf(p.dcgId)),
                               RegMatch.of(NxmNxReg2.class,Long.valueOf(p.sepg)),
                               RegMatch.of(NxmNxReg3.class,Long.valueOf(p.scgId)));
             }
 
-
             ClassifierInstance ci = contractTenant.getClassifier(cr.getName());
             if (ci == null) {
                 // XXX TODO fail the match and raise an exception
-                LOG.warn("Classifier instance {} not found", 
+                LOG.warn("Classifier instance {} not found",
                          cr.getName().getValue());
                 return;
             }
@@ -366,41 +365,42 @@ public class PolicyEnforcer extends FlowTable {
                     .getClassifier(ci.getClassifierDefinitionId());
             if (cfier == null) {
                 // XXX TODO fail the match and raise an exception
-                LOG.warn("Classifier definition {} not found", 
+                LOG.warn("Classifier definition {} not found",
                          ci.getClassifierDefinitionId().getValue());
                 return;
             }
 
-            List<MatchBuilder> matches = Collections.singletonList(baseMatch);
-            Map<String,Object> params = new HashMap<>();
+            Map<String,ParameterValue> params = new HashMap<>();
             for (ParameterValue v : ci.getParameterValue()) {
-                if (v.getName() == null) continue;
                 if (v.getIntValue() != null) {
-                    params.put(v.getName().getValue(), v.getIntValue());
+                    params.put(v.getName().getValue(), v);
                 } else if (v.getStringValue() != null) {
-                    params.put(v.getName().getValue(), v.getStringValue());
+                    params.put(v.getName().getValue(), v);
                 } else if (v.getRangeValue() != null) {
-                    params.put(v.getName().getValue(), v.getRangeValue());
+                    params.put(v.getName().getValue(), v);
                 }
             }
-            
-            matches = cfier.updateMatch(matches, params);
-            String baseId = idb.toString();
-            FlowBuilder flow = base()
-                    .setPriority(Integer.valueOf(priority));
-            for (MatchBuilder match : matches) {
-                Match m = match.build();
-                FlowId flowId = new FlowId(baseId + "|" + m.toString());
-                if (visit(flowMap, flowId.getValue())) {
-                    flow.setMatch(m)
-                        .setId(flowId)
-                        .setPriority(Integer.valueOf(priority))
-                        .setInstructions(instructions(applyActionIns(abl)));
-                    writeFlow(t, tiid, flow.build());
+            List<Map<String, ParameterValue>> derivedParams = ParamDerivator.ETHER_TYPE_DERIVATOR.deriveParameter(params);
+            for (Map<String, ParameterValue> flowParams : derivedParams) {
+                List<MatchBuilder> matches = Collections.singletonList(new MatchBuilder(baseMatch.build()));
+                ClassificationResult result = cfier.updateMatch(matches, flowParams);
+                if(!result.isSuccessfull()) {
+                    //TODO consider different handling.
+                    throw new IllegalArgumentException(result.getMessage());
+                }
+                String baseId = idb.toString();
+                FlowBuilder flow = base().setPriority(Integer.valueOf(priority));
+                for (MatchBuilder match : result.getMatchBuilders()) {
+                    Match m = match.build();
+                    FlowId flowId = new FlowId(baseId + "|" + m.toString());
+                    if (visit(flowMap, flowId.getValue())) {
+                        flow.setMatch(m).setId(flowId).setPriority(Integer.valueOf(priority))
+                                .setInstructions(instructions(applyActionIns(abl)));
+                        writeFlow(t, tiid, flow.build());
+                    }
                 }
             }
-        } 
-
+        }
     }
 
     @Immutable
@@ -409,7 +409,7 @@ public class PolicyEnforcer extends FlowTable {
         private final int depg;
         private final int scgId;
         private final int dcgId;
-        
+
         public CgPair(int sepg, int depg, int scgId, int dcgId) {
             super();
             this.sepg = sepg;

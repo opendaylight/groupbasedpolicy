@@ -12,13 +12,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.SubjectFeatureDefinitions;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.SubjectFeatureDefinitionsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ActionDefinition;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ActionDefinitionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinition;
 
 import com.google.common.base.Function;
@@ -32,12 +29,12 @@ import com.google.common.collect.ImmutableMap;
 public class SubjectFeatures {
     private static final Map<ClassifierDefinitionId, Classifier> classifiers =
             ImmutableMap.<ClassifierDefinitionId, Classifier>
-                of(EtherTypeClassifier.ID, new EtherTypeClassifier(),
-                   IpProtoClassifier.ID, new IpProtoClassifier(),
-                   L4Classifier.ID, new L4Classifier());
+                of(EtherTypeClassifier.ID, Classifier.ETHER_TYPE_CL,
+                   IpProtoClassifier.ID, Classifier.IP_PROTO_CL,
+                   L4Classifier.ID, Classifier.L4_CL);
 
     private static final List<ClassifierDefinition> classifierDefs =
-            ImmutableList.copyOf(Collections2.transform(classifiers.values(), 
+            ImmutableList.copyOf(Collections2.transform(classifiers.values(),
                 new Function<Classifier, ClassifierDefinition>() {
                     @Override
                     public ClassifierDefinition apply(Classifier input) {
@@ -45,7 +42,7 @@ public class SubjectFeatures {
                     }
                 }
             ));
-    
+
     private static final Map<ActionDefinitionId, Action> actions =
             ImmutableMap.<ActionDefinitionId, Action>
                 of(AllowAction.ID, new AllowAction());
@@ -60,7 +57,6 @@ public class SubjectFeatures {
                 }
              ));
 
-
     public static final SubjectFeatureDefinitions OF_OVERLAY_FEATURES =
             new SubjectFeatureDefinitionsBuilder()
                 .setActionDefinition(actionDefs)
@@ -68,10 +64,10 @@ public class SubjectFeatures {
                 .build();
 
     /**
-     * Get the {@link Classifier} associated with the given 
+     * Get the {@link Classifier} associated with the given
      * {@link ClassifierDefinitionId}
      * @param id the {@link ClassifierDefinitionId} to look up
-     * @return the {@link Classifier} if one exists, or <code>null</code> 
+     * @return the {@link Classifier} if one exists, or <code>null</code>
      * otherwise
      */
     public static Classifier getClassifier(ClassifierDefinitionId id) {
@@ -88,5 +84,4 @@ public class SubjectFeatures {
     public static Action getAction(ActionDefinitionId id) {
         return actions.get(id);
     }
-                                           
 }

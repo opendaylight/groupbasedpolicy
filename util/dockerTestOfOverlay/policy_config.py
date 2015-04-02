@@ -10,16 +10,16 @@ tenants = [
                 {'name': 'http-dest',
                 'classifier-definition-id': '4250ab32-e8b8-445a-aebb-e1bd2cdd291f',
                 'parameter-value': [
-                    {'name': 'type',
-                     'string-value': 'TCP'},
+                    {'name': 'proto',
+                     'int-value': '6'},
                     {'name': 'destport',
                      'int-value': '80'}
                 ]},
                 {'name': 'http-src',
                 'classifier-definition-id': '4250ab32-e8b8-445a-aebb-e1bd2cdd291f',
                 'parameter-value': [
-                    {'name': 'type',
-                     'string-value': 'TCP'},
+                    {'name': 'proto',
+                     'int-value': '6'},
                     {'name': 'sourceport',
                      'int-value': '80'}
                 ]},
