@@ -50,8 +50,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Clause;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Subject;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Target;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.consumer.matchers.RequirementMatcher;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.CapabilityMatcher;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.consumer.matchers.GroupIdentificationConstraints;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.consumer.matchers.group.identification.constraints.GroupRequirementConstraintCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.consumer.matchers.group.identification.constraints.group.requirement.constraint._case.RequirementMatcher;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.group.identification.constraints.GroupCapabilityConstraintCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.group.identification.constraints.group.capability.constraint._case.CapabilityMatcher;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.Rule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.RuleBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ConsumerNamedSelector;
@@ -440,25 +443,34 @@ public class PolicyResolver implements AutoCloseable {
 
     private boolean clauseMatches(Clause clause, ContractMatch match) {
         if (clause.getConsumerMatchers() != null) {
-            List<RequirementMatcher> reqMatchers =
-                    clause.getConsumerMatchers().getRequirementMatcher();
-            if (reqMatchers != null) {
-                for (RequirementMatcher reqMatcher : reqMatchers) {
-                    if (!MatcherUtils.applyReqMatcher(reqMatcher,
-                                                      match.consumerRelator)) {
-                        return false;
+            GroupIdentificationConstraints groupIdentificationConstraintsConsumer = clause.getConsumerMatchers()
+                    .getGroupIdentificationConstraints();
+            if (groupIdentificationConstraintsConsumer instanceof GroupRequirementConstraintCase) {
+                List<RequirementMatcher> reqMatchers = ((GroupRequirementConstraintCase) groupIdentificationConstraintsConsumer)
+                        .getRequirementMatcher();
+                if (reqMatchers != null) {
+                    for (RequirementMatcher reqMatcher : reqMatchers) {
+                        if (!MatcherUtils.applyReqMatcher(reqMatcher,
+                                match.consumerRelator)) {
+                            return false;
+                        }
                     }
                 }
             }
         }
         if (clause.getProviderMatchers() != null) {
-            List<CapabilityMatcher> capMatchers =
-                    clause.getProviderMatchers().getCapabilityMatcher();
-            if (capMatchers != null) {
-                for (CapabilityMatcher capMatcher : capMatchers) {
-                    if (!MatcherUtils.applyCapMatcher(capMatcher,
-                                                      match.providerRelator)) {
-                        return false;
+            org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.GroupIdentificationConstraints groupIdentificationConstraintsProvider = clause
+                    .getProviderMatchers().getGroupIdentificationConstraints();
+            if (groupIdentificationConstraintsProvider instanceof GroupCapabilityConstraintCase) {
+                List<CapabilityMatcher> capMatchers = ((GroupCapabilityConstraintCase) groupIdentificationConstraintsProvider)
+                        .getCapabilityMatcher();
+
+                if (capMatchers != null) {
+                    for (CapabilityMatcher capMatcher : capMatchers) {
+                        if (!MatcherUtils.applyCapMatcher(capMatcher,
+                                match.providerRelator)) {
+                            return false;
+                        }
                     }
                 }
             }

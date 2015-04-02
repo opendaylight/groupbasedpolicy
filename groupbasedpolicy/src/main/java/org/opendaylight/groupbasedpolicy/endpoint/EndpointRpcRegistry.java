@@ -24,6 +24,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterL3PrefixEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.SetEndpointGroupConditionsInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnregisterEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnsetEndpointGroupConditionsInput;
@@ -36,11 +37,15 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3PrefixBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3PrefixKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.has.endpoint.group.conditions.EndpointGroupCondition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.has.endpoint.group.conditions.EndpointGroupConditionKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L2;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L3;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+import org.opendaylight.yangtools.yang.common.RpcError.ErrorType;
 import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.opendaylight.yangtools.yang.common.RpcResultBuilder;
 import org.slf4j.Logger;
@@ -216,11 +221,31 @@ public class EndpointRpcRegistry implements EndpointService {
         return eb;
     }
 
+    /**
+     * Construct an L3 endpoint with the appropriate augmentations from the 
+     * endpoint input.  Each concrete implementation can provides its specifics earlier.
+     * @param input the input object
+     */
+    private EndpointL3PrefixBuilder buildL3PrefixEndpoint(RegisterL3PrefixEndpointInput input) {
+        EndpointL3PrefixBuilder eb = new EndpointL3PrefixBuilder(input);
+        for (Entry<String, EpRendererAugmentation> entry : registeredRenderers
+                .entrySet()) {
+            try {
+                entry.getValue().buildL3PrefixEndpointAugmentation(eb, input);
+            } catch (Throwable t) {
+                LOG.warn("L3 endpoint Augmentation error while processing "
+                        + entry.getKey() + ". Reason: ", t);
+            }
+        }
+        return eb;
+    }
+
     @Override
     public Future<RpcResult<Void>>
         registerEndpoint(RegisterEndpointInput input) {
         long timestamp = System.currentTimeMillis();
-        
+
+        //TODO: Replicate RPC feedback implemented in L3Prefix register for unmet requirements.
         WriteTransaction t = dataProvider.newWriteOnlyTransaction();
 
         if (input.getL2Context() != null &&
@@ -258,6 +283,44 @@ public class EndpointRpcRegistry implements EndpointService {
     }
 
     @Override
+    public Future<RpcResult<Void>> registerL3PrefixEndpoint(RegisterL3PrefixEndpointInput input) {
+
+        if (input.getL3Context() == null) {
+            return Futures.immediateFuture(RpcResultBuilder.<Void> failed()
+                    .withError(ErrorType.RPC, "L3 Prefix Endpoint must have L3Context.").build());
+        }
+        if (input.getIpPrefix() == null) {
+            return Futures.immediateFuture(RpcResultBuilder.<Void> failed()
+                    .withError(ErrorType.RPC, "L3 Prefix Endpoint must have ip-prefix.").build());
+        }
+
+        if (input.getTenant() == null) {
+            return Futures.immediateFuture(RpcResultBuilder.<Void> failed()
+                    .withError(ErrorType.RPC, "L3 Prefix Endpoint must have tenant.").build());
+        }
+
+
+        WriteTransaction t = dataProvider.newWriteOnlyTransaction();
+
+        long timestamp = System.currentTimeMillis();
+
+        //TODO: Convert IPPrefix into it's IPv4/IPv6 canonical form. 
+        // See org.apache.commons.net.util.SubnetUtils.SubnetInfo
+            
+        EndpointL3PrefixKey epL3PrefixKey = new EndpointL3PrefixKey(input.getIpPrefix(),input.getL3Context());
+            
+        EndpointL3Prefix epL3Prefix = buildL3PrefixEndpoint(input).setTimestamp(timestamp).build();
+        InstanceIdentifier<EndpointL3Prefix> iid_l3prefix = 
+                InstanceIdentifier.builder(Endpoints.class)
+                        .child(EndpointL3Prefix.class, epL3PrefixKey)
+                        .build();
+        t.put(LogicalDatastoreType.OPERATIONAL, iid_l3prefix, epL3Prefix);
+
+        ListenableFuture<Void> r = t.submit();
+        return Futures.transform(r, futureTrans, executor);    
+    }
+    
+    @Override
     public Future<RpcResult<Void>>
         unregisterEndpoint(UnregisterEndpointInput input) {
         WriteTransaction t = dataProvider.newWriteOnlyTransaction();
@@ -284,6 +347,7 @@ public class EndpointRpcRegistry implements EndpointService {
                 t.delete(LogicalDatastoreType.OPERATIONAL, iid_l3);
             }
         }
+        //TODO: Implement L3Prefix
 
         ListenableFuture<Void> r = t.submit();
         return Futures.transform(r, futureTrans, executor);
@@ -343,4 +407,7 @@ public class EndpointRpcRegistry implements EndpointService {
             return RpcResultBuilder.<Void>success().build();
         }
     };
+
+
+
 }

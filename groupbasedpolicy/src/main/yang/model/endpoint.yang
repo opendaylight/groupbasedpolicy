@@ -56,6 +56,23 @@ module endpoint {
         }
     }
 
+    grouping l3-prefix-key {
+        description 
+            "The fields that identify an endpoint by a layer 3 prefix";
+        leaf l3-context {
+            type gbp-common:l3-context-id;
+            mandatory true;
+            description 
+                "The context for this layer 3 prefix";
+        }
+        leaf ip-prefix {
+            type inet:ip-prefix;
+            mandatory true;
+            description 
+                "The IP prefix for the endpoint";
+        }
+    }
+
     // A base type for an end point
     grouping endpoint-fields {
         description "An endpoint and its associated metadata";
@@ -67,7 +84,13 @@ module endpoint {
         }
 
         uses l2-key;
-
+        
+        leaf network-containment {
+            description 
+                "The network domain associated with this endpoint's fowarding 
+                context.";
+            type gbp-common:network-domain-id;
+        }
         list l3-address {
             description
                 "All the layer 3 addresses associated with this endpoint";
@@ -79,15 +102,64 @@ module endpoint {
             description 
                 "The group associated with this endpoint";
         }
+        leaf-list endpoint-groups {
+            type gbp-common:endpoint-group-id;
+            description 
+                "The groups associated with this endpoint";
+            ordered-by user;
+        }
         leaf-list condition {
             type gbp-common:condition-name;
             description 
                 "The conditions associated with this endpoint";
         }
+        // This was a mistake and now it's an abomination.
         leaf port-name {
             type gbp-common:name;
             description 
                 "Port name";
+        } // end the abomination.
+        leaf timestamp {
+            type int64;
+            description
+                "The last timestamp associated with this endpoint record.  
+                 This will be used for aging data in the registry.";
+        }
+    }
+    
+    //  L3 Prefix EndPointFields
+    grouping endpoint-l3-prefix-fields {
+        description "An l3 prefix endpoint and its associated metadata";
+        uses l3-prefix-key;
+        leaf tenant {
+            type gbp-common:tenant-id;
+            mandatory true;
+            description 
+                "The tenant with which this endpoint is associated";
+        }
+        leaf endpoint-group {
+            type gbp-common:endpoint-group-id;
+            description 
+                "The group associated with this endpoint";
+        }
+        leaf-list endpoint-groups {
+            type gbp-common:endpoint-group-id;
+            description 
+                "The groups associated with this endpoint";
+            ordered-by user;
+        }
+        leaf-list condition {
+            type gbp-common:condition-name;
+            description 
+                "The conditions associated with this endpoint";
+        }
+        list endpoint-l2-gateways {
+            key "l2-context mac-address";
+            uses l2-key;
+        }
+        list endpoint-l3-gateways {
+            key "l3-context ip-address";
+            uses l3-key;
         }
         leaf timestamp {
             type int64;
@@ -138,13 +210,16 @@ module endpoint {
                 "Endpoints indexed by layer 3 addreses.  When modifying 
                  data here, you must also modify data in the endpoints
                  list as well.";
-
             key "l3-context ip-address";
             uses l3-key;
-
             uses endpoint-fields;
         }
 
+        list endpoint-l3-prefix {
+            key "l3-context ip-prefix";
+            uses endpoint-l3-prefix-fields;
+        }
+        
         list condition-mapping {
             description 
                 "A list mapping conditions to entire endpoint groups.
@@ -167,6 +242,17 @@ module endpoint {
         }
     }
 
+    rpc register-l3-prefix-endpoint {
+        description
+            "Register an L3 Prefix Endpoint to the endpoint registery. If there
+            is already an existing endpoint with the same keys, they
+            will be overwritten with the new information.";
+
+        input {
+            uses endpoint-l3-prefix-fields;
+        }
+    }
+
     rpc unregister-endpoint {
         description "Unregister an endpoint or endpoints from the registry.";
 
@@ -178,6 +264,10 @@ module endpoint {
             list l3 {
                 key "l3-context ip-address";
                 uses l3-key;
+            }
+            list l3-prefix {
+                key "l3-context ip-prefix";
+                uses l3-prefix-key;
             }
         }
     }

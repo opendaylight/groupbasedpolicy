@@ -8,8 +8,10 @@
 package org.opendaylight.groupbasedpolicy.endpoint;
 
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterL3PrefixEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Builder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3PrefixBuilder;
 
 /**
  *
@@ -23,5 +25,8 @@ public interface EpRendererAugmentation {
 
     void buildEndpointL3Augmentation(EndpointL3Builder eb,
             RegisterEndpointInput input);
+
+    void buildL3PrefixEndpointAugmentation(EndpointL3PrefixBuilder eb,
+            RegisterL3PrefixEndpointInput input);
 
 }

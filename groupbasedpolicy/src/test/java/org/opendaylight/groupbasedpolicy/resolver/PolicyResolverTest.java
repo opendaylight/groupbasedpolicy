@@ -8,6 +8,10 @@
 
 package org.opendaylight.groupbasedpolicy.resolver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -18,8 +22,6 @@ import java.util.Set;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
-import org.opendaylight.groupbasedpolicy.resolver.ConditionSet;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver.ContractMatch;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver.TenantContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.CapabilityMatcherName;
@@ -66,12 +68,14 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.TargetBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.ConsumerMatchersBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.ProviderMatchersBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.consumer.matchers.RequirementMatcher;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.consumer.matchers.RequirementMatcherBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.consumer.matchers.requirement.matcher.MatcherRequirementBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.CapabilityMatcher;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.CapabilityMatcherBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.capability.matcher.MatcherCapabilityBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.consumer.matchers.group.identification.constraints.GroupRequirementConstraintCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.consumer.matchers.group.identification.constraints.group.requirement.constraint._case.RequirementMatcher;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.consumer.matchers.group.identification.constraints.group.requirement.constraint._case.RequirementMatcherBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.consumer.matchers.group.identification.constraints.group.requirement.constraint._case.requirement.matcher.MatcherRequirementBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.group.identification.constraints.GroupCapabilityConstraintCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.group.identification.constraints.group.capability.constraint._case.CapabilityMatcher;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.group.identification.constraints.group.capability.constraint._case.CapabilityMatcherBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.group.identification.constraints.group.capability.constraint._case.capability.matcher.MatcherCapabilityBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.Rule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.RuleBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ConsumerNamedSelector;
@@ -86,8 +90,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Table;
-
-import static org.junit.Assert.*;
 
 public class PolicyResolverTest {
     Quality q1 = new QualityBuilder()
@@ -188,11 +190,13 @@ public class PolicyResolverTest {
     Clause clause1 = new ClauseBuilder()
         .setName(new ClauseName("clause1"))
         .setConsumerMatchers(new ConsumerMatchersBuilder()
-            .setRequirementMatcher(ImmutableList.of(rm1))
+            .setGroupIdentificationConstraints(new GroupRequirementConstraintCaseBuilder()
+            .setRequirementMatcher(ImmutableList.of(rm1)).build())
             .setConditionMatcher(ImmutableList.of(condm1, condm2, condm3))
             .build())
         .setProviderMatchers(new ProviderMatchersBuilder()
-            .setCapabilityMatcher(ImmutableList.of(capm1))
+            .setGroupIdentificationConstraints(new GroupCapabilityConstraintCaseBuilder()
+            .setCapabilityMatcher(ImmutableList.of(capm1)).build())
             .build())
         .setSubjectRefs(ImmutableList.of(s1.getName()))
         .build();
