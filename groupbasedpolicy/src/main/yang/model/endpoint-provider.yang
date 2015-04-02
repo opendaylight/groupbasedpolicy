@@ -14,7 +14,7 @@ module endpoint-provider {
      import config { prefix config; revision-date 2013-04-05; }
 
      description
-         "This module contains the base YANG definitions for 
+         "This module contains the base YANG definitions for
           endpoint-provider services.";
 
      revision "2014-04-21" {

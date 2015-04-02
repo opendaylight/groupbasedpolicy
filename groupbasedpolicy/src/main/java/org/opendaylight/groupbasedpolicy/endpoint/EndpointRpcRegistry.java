@@ -58,12 +58,11 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 
 /**
- * Endpoint registry provides a scalable store for accessing and 
- * updating information about endpoints.
- * @author readamsO
+ * Endpoint registry provides a scalable store for accessing and updating
+ * information about endpoints.
  */
 public class EndpointRpcRegistry implements EndpointService {
-    private static final Logger LOG = 
+    private static final Logger LOG =
             LoggerFactory.getLogger(EndpointRpcRegistry.class);
 
     private final DataBroker dataProvider;
@@ -74,7 +73,6 @@ public class EndpointRpcRegistry implements EndpointService {
     final BindingAwareBroker.RpcRegistration<EndpointService> rpcRegistration;
 
     private final static ConcurrentMap<String, EpRendererAugmentation> registeredRenderers = new ConcurrentHashMap<String, EpRendererAugmentation>();
-
 
     /**
      * This method registers a renderer for endpoint RPC API. This method
@@ -88,7 +86,8 @@ public class EndpointRpcRegistry implements EndpointService {
      * @param executor
      *            - thread pool executor
      * @param epRendererAugmentation
-     *            - specific implementation RPC augmentation, if any. Otherwise NULL
+     *            - specific implementation RPC augmentation, if any. Otherwise
+     *            NULL
      */
     public static void register(DataBroker dataProvider,
             RpcProviderRegistry rpcRegistry, ScheduledExecutorService executor,
@@ -146,8 +145,8 @@ public class EndpointRpcRegistry implements EndpointService {
      * @param executor
      */
     private EndpointRpcRegistry(DataBroker dataProvider,
-                                    RpcProviderRegistry rpcRegistry,
-                                    ScheduledExecutorService executor) {
+            RpcProviderRegistry rpcRegistry,
+            ScheduledExecutorService executor) {
         this.dataProvider = dataProvider;
         this.executor = executor;
         this.rpcRegistry = rpcRegistry;
@@ -158,13 +157,13 @@ public class EndpointRpcRegistry implements EndpointService {
             LOG.debug("Added RPC Implementation Correctly");
         } else
             rpcRegistration = null;
-        
+
         if (dataProvider != null) {
-            InstanceIdentifier<Endpoints> iid = 
+            InstanceIdentifier<Endpoints> iid =
                     InstanceIdentifier.builder(Endpoints.class).build();
             WriteTransaction t = this.dataProvider.newWriteOnlyTransaction();
-            t.put(LogicalDatastoreType.OPERATIONAL, 
-                  iid, new EndpointsBuilder().build());
+            t.put(LogicalDatastoreType.OPERATIONAL,
+                    iid, new EndpointsBuilder().build());
             CheckedFuture<Void, TransactionCommitFailedException> f = t.submit();
             Futures.addCallback(f, new FutureCallback<Void>() {
                 @Override
@@ -174,19 +173,22 @@ public class EndpointRpcRegistry implements EndpointService {
 
                 @Override
                 public void onSuccess(Void result) {
-                    
+
                 }
             });
         }
 
-        // XXX TODO - age out endpoint data and remove 
+        // XXX TODO - age out endpoint data and remove
         // endpoint group/condition mappings with no conditions
     }
-  
+
     /**
-     * Construct an endpoint with the appropriate augmentations from the 
-     * endpoint input.  Each concrete implementation can provides its specifics earlier.
-     * @param input the input object
+     * Construct an endpoint with the appropriate augmentations from the
+     * endpoint input. Each concrete implementation can provides its specifics
+     * earlier.
+     *
+     * @param input
+     *            the input object
      */
     private EndpointBuilder buildEndpoint(RegisterEndpointInput input) {
         EndpointBuilder eb = new EndpointBuilder(input);
@@ -203,9 +205,12 @@ public class EndpointRpcRegistry implements EndpointService {
     }
 
     /**
-     * Construct an L3 endpoint with the appropriate augmentations from the 
-     * endpoint input.  Each concrete implementation can provides its specifics earlier.
-     * @param input the input object
+     * Construct an L3 endpoint with the appropriate augmentations from the
+     * endpoint input. Each concrete implementation can provides its specifics
+     * earlier.
+     *
+     * @param input
+     *            the input object
      */
     private EndpointL3Builder buildEndpointL3(RegisterEndpointInput input) {
         EndpointL3Builder eb = new EndpointL3Builder(input);
@@ -222,9 +227,12 @@ public class EndpointRpcRegistry implements EndpointService {
     }
 
     /**
-     * Construct an L3 endpoint with the appropriate augmentations from the 
-     * endpoint input.  Each concrete implementation can provides its specifics earlier.
-     * @param input the input object
+     * Construct an L3 endpoint with the appropriate augmentations from the
+     * endpoint input. Each concrete implementation can provides its specifics
+     * earlier.
+     *
+     * @param input
+     *            the input object
      */
     private EndpointL3PrefixBuilder buildL3PrefixEndpoint(RegisterL3PrefixEndpointInput input) {
         EndpointL3PrefixBuilder eb = new EndpointL3PrefixBuilder(input);
@@ -242,39 +250,40 @@ public class EndpointRpcRegistry implements EndpointService {
 
     @Override
     public Future<RpcResult<Void>>
-        registerEndpoint(RegisterEndpointInput input) {
+            registerEndpoint(RegisterEndpointInput input) {
         long timestamp = System.currentTimeMillis();
 
-        //TODO: Replicate RPC feedback implemented in L3Prefix register for unmet requirements.
+        // TODO: Replicate RPC feedback implemented in L3Prefix register for
+        // unmet requirements.
         WriteTransaction t = dataProvider.newWriteOnlyTransaction();
 
         if (input.getL2Context() != null &&
-            input.getMacAddress() != null) {
+                input.getMacAddress() != null) {
             Endpoint ep = buildEndpoint(input)
                     .setTimestamp(timestamp)
                     .build();
 
-            EndpointKey key = 
+            EndpointKey key =
                     new EndpointKey(ep.getL2Context(), ep.getMacAddress());
-            InstanceIdentifier<Endpoint> iid = 
+            InstanceIdentifier<Endpoint> iid =
                     InstanceIdentifier.builder(Endpoints.class)
-                    .child(Endpoint.class, key)
-                    .build();
+                            .child(Endpoint.class, key)
+                            .build();
             t.put(LogicalDatastoreType.OPERATIONAL, iid, ep);
         }
         if (input.getL3Address() != null) {
             for (L3Address l3addr : input.getL3Address()) {
-                EndpointL3Key key3 = new EndpointL3Key(l3addr.getIpAddress(), 
-                                                       l3addr.getL3Context());
+                EndpointL3Key key3 = new EndpointL3Key(l3addr.getIpAddress(),
+                        l3addr.getL3Context());
                 EndpointL3 ep3 = buildEndpointL3(input)
-                    .setIpAddress(key3.getIpAddress())
-                    .setL3Context(key3.getL3Context())
-                    .setTimestamp(timestamp)
-                    .build();
-                InstanceIdentifier<EndpointL3> iid_l3 = 
+                        .setIpAddress(key3.getIpAddress())
+                        .setL3Context(key3.getL3Context())
+                        .setTimestamp(timestamp)
+                        .build();
+                InstanceIdentifier<EndpointL3> iid_l3 =
                         InstanceIdentifier.builder(Endpoints.class)
-                            .child(EndpointL3.class, key3)
-                            .build();
+                                .child(EndpointL3.class, key3)
+                                .build();
                 t.put(LogicalDatastoreType.OPERATIONAL, iid_l3, ep3);
             }
         }
@@ -299,76 +308,75 @@ public class EndpointRpcRegistry implements EndpointService {
                     .withError(ErrorType.RPC, "L3 Prefix Endpoint must have tenant.").build());
         }
 
-
         WriteTransaction t = dataProvider.newWriteOnlyTransaction();
 
         long timestamp = System.currentTimeMillis();
 
-        //TODO: Convert IPPrefix into it's IPv4/IPv6 canonical form. 
+        // TODO: Convert IPPrefix into it's IPv4/IPv6 canonical form.
         // See org.apache.commons.net.util.SubnetUtils.SubnetInfo
-            
-        EndpointL3PrefixKey epL3PrefixKey = new EndpointL3PrefixKey(input.getIpPrefix(),input.getL3Context());
-            
+
+        EndpointL3PrefixKey epL3PrefixKey = new EndpointL3PrefixKey(input.getIpPrefix(), input.getL3Context());
+
         EndpointL3Prefix epL3Prefix = buildL3PrefixEndpoint(input).setTimestamp(timestamp).build();
-        InstanceIdentifier<EndpointL3Prefix> iid_l3prefix = 
+        InstanceIdentifier<EndpointL3Prefix> iid_l3prefix =
                 InstanceIdentifier.builder(Endpoints.class)
                         .child(EndpointL3Prefix.class, epL3PrefixKey)
                         .build();
         t.put(LogicalDatastoreType.OPERATIONAL, iid_l3prefix, epL3Prefix);
 
         ListenableFuture<Void> r = t.submit();
-        return Futures.transform(r, futureTrans, executor);    
+        return Futures.transform(r, futureTrans, executor);
     }
-    
+
     @Override
     public Future<RpcResult<Void>>
-        unregisterEndpoint(UnregisterEndpointInput input) {
+            unregisterEndpoint(UnregisterEndpointInput input) {
         WriteTransaction t = dataProvider.newWriteOnlyTransaction();
         if (input.getL2() != null) {
             for (L2 l2a : input.getL2()) {
-                EndpointKey key = 
-                        new EndpointKey(l2a.getL2Context(), 
-                                        l2a.getMacAddress());
-                InstanceIdentifier<Endpoint> iid = 
+                EndpointKey key =
+                        new EndpointKey(l2a.getL2Context(),
+                                l2a.getMacAddress());
+                InstanceIdentifier<Endpoint> iid =
                         InstanceIdentifier.builder(Endpoints.class)
-                        .child(Endpoint.class, key).build();
+                                .child(Endpoint.class, key).build();
                 t.delete(LogicalDatastoreType.OPERATIONAL, iid);
             }
         }
         if (input.getL3() != null) {
             for (L3 l3addr : input.getL3()) {
-                EndpointL3Key key3 = 
-                        new EndpointL3Key(l3addr.getIpAddress(), 
-                                          l3addr.getL3Context());
-                InstanceIdentifier<EndpointL3> iid_l3 = 
+                EndpointL3Key key3 =
+                        new EndpointL3Key(l3addr.getIpAddress(),
+                                l3addr.getL3Context());
+                InstanceIdentifier<EndpointL3> iid_l3 =
                         InstanceIdentifier.builder(Endpoints.class)
-                        .child(EndpointL3.class, key3)
-                        .build();
+                                .child(EndpointL3.class, key3)
+                                .build();
                 t.delete(LogicalDatastoreType.OPERATIONAL, iid_l3);
             }
         }
-        //TODO: Implement L3Prefix
+        // TODO: Implement L3Prefix
 
         ListenableFuture<Void> r = t.submit();
         return Futures.transform(r, futureTrans, executor);
     }
 
     @Override
-    public Future<RpcResult<Void>> 
-        setEndpointGroupConditions(SetEndpointGroupConditionsInput input) {
+    public Future<RpcResult<Void>>
+            setEndpointGroupConditions(SetEndpointGroupConditionsInput input) {
         WriteTransaction t = dataProvider.newWriteOnlyTransaction();
 
-        ConditionMappingKey key = 
+        ConditionMappingKey key =
                 new ConditionMappingKey(input.getEndpointGroup());
-        
-        for (EndpointGroupCondition condition: input.getEndpointGroupCondition()) {
-            EndpointGroupConditionKey ckey = 
+
+        for (EndpointGroupCondition condition : input.getEndpointGroupCondition()) {
+            EndpointGroupConditionKey ckey =
                     new EndpointGroupConditionKey(condition.getCondition());
-            InstanceIdentifier<EndpointGroupCondition> iid = 
+            InstanceIdentifier<EndpointGroupCondition> iid =
                     InstanceIdentifier.builder(Endpoints.class)
-                        .child(ConditionMapping.class, key)
-                        .child(EndpointGroupCondition.class, ckey)
-                        .build();
+                            .child(ConditionMapping.class, key)
+                            .child(EndpointGroupCondition.class, ckey)
+                            .build();
             t.put(LogicalDatastoreType.OPERATIONAL, iid, condition);
         }
 
@@ -377,21 +385,21 @@ public class EndpointRpcRegistry implements EndpointService {
     }
 
     @Override
-    public Future<RpcResult<Void>> 
-        unsetEndpointGroupConditions(UnsetEndpointGroupConditionsInput input) {
+    public Future<RpcResult<Void>>
+            unsetEndpointGroupConditions(UnsetEndpointGroupConditionsInput input) {
         WriteTransaction t = dataProvider.newWriteOnlyTransaction();
 
-        ConditionMappingKey key = 
+        ConditionMappingKey key =
                 new ConditionMappingKey(input.getEndpointGroup());
-        
-        for (EndpointGroupCondition condition: input.getEndpointGroupCondition()) {
-            EndpointGroupConditionKey ckey = 
+
+        for (EndpointGroupCondition condition : input.getEndpointGroupCondition()) {
+            EndpointGroupConditionKey ckey =
                     new EndpointGroupConditionKey(condition.getCondition());
-            InstanceIdentifier<EndpointGroupCondition> iid = 
+            InstanceIdentifier<EndpointGroupCondition> iid =
                     InstanceIdentifier.builder(Endpoints.class)
-                        .child(ConditionMapping.class, key)
-                        .child(EndpointGroupCondition.class, ckey)
-                        .build();
+                            .child(ConditionMapping.class, key)
+                            .child(EndpointGroupCondition.class, ckey)
+                            .build();
 
             t.delete(LogicalDatastoreType.OPERATIONAL, iid);
         }
@@ -401,13 +409,11 @@ public class EndpointRpcRegistry implements EndpointService {
     }
 
     Function<Void, RpcResult<Void>> futureTrans =
-            new Function<Void,RpcResult<Void>>() {
-        @Override
-        public RpcResult<Void> apply(Void input) {
-            return RpcResultBuilder.<Void>success().build();
-        }
-    };
-
-
+            new Function<Void, RpcResult<Void>>() {
+                @Override
+                public RpcResult<Void> apply(Void input) {
+                    return RpcResultBuilder.<Void> success().build();
+                }
+            };
 
 }

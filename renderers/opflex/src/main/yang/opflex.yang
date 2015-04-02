@@ -25,7 +25,7 @@ module opflex {
         description
             "Initial revision.";
     }
-    
+
     typedef serialization {
         description
             "The serialization to use for OpFlex messages.";
@@ -56,9 +56,9 @@ module opflex {
         leaf domain {
             description
                 "The OpFlex administrative domain.";
-    
+
             config true;
-    
+
             type string;
         }
 
@@ -70,17 +70,17 @@ module opflex {
             key "id";
 
             leaf id {
-                description 
+                description
                    "The id for the policy repository.";
                 type string;
             }
             leaf port {
-                description 
+                description
                    "The port number to use for the connection";
                 type int32;
             }
             leaf serialization-type {
-                description 
+                description
                     "The serialization to use for this connection.";
                 type serialization;
             }
@@ -94,17 +94,17 @@ module opflex {
             key "id";
 
             leaf id {
-                description 
+                description
                    "The id for the endpoint registry.";
                 type string;
             }
             leaf port {
-                description 
+                description
                    "The port number to use for the connection";
                 type int32;
             }
             leaf serialization-type {
-                description 
+                description
                     "The serialization to use for this connection.";
                 type serialization;
             }
@@ -118,17 +118,17 @@ module opflex {
             key "id";
 
             leaf id {
-                description 
+                description
                    "The id for the Observer.";
                 type string;
             }
             leaf port {
-                description 
+                description
                    "The port number to use for the connection";
                 type int32;
             }
             leaf serialization-type {
-                description 
+                description
                     "The serialization to use for this connection.";
                 type serialization;
             }
@@ -136,7 +136,7 @@ module opflex {
     }
 
     grouping endpoint-location {
-        description 
+        description
             "The location for this endpoint in the overlay network";
 
         leaf location-type {
@@ -144,8 +144,8 @@ module opflex {
 
             type enumeration {
                 enum internal {
-                    description 
-                    "The endpoint is located on a port that is part of 
+                    description
+                    "The endpoint is located on a port that is part of
                      the overlay network.  You must include the node
                      ID and port number for this endpoint.";
                 }
@@ -155,14 +155,14 @@ module opflex {
             }
         }
         leaf agent-id {
-            description 
-                "The OpFlex agent where the endpoing is located. Must be included 
+            description
+                "The OpFlex agent where the endpoing is located. Must be included
                  for all internal endpoints.  The format is the agent identifier,
                  which is an IP address or DNS name ':' port number.";
             type string;
         }
         leaf agent-ep-location {
-            description 
+            description
                 "The location of the endpoint on the OpFlex agent. The format of
                  this is dependent on the renderer used by the agent.";
             type string;

@@ -49,14 +49,12 @@ import java.util.concurrent.ScheduledExecutorService;
 /**
  * Manage all things SFC
  *
- * This is a bit of a place-holder for functionality
- * that we'll need to add for SFC integration. This
- * will likely change a lot.
+ * This is a bit of a place-holder for functionality that we'll need to add for
+ * SFC integration. This will likely change a lot.
  *
- * TODO Move SfcManager out of ofoverlay renderer -- should be something
- *       that's shared by renderers, not specific to ofoverlay
+ * TODO Move SfcManager out of ofoverlay renderer -- should be something that's
+ * shared by renderers, not specific to ofoverlay
  *
- * @author tbachman
  */
 public class SfcManager implements AutoCloseable, DataChangeListener {
     private static final Logger LOG =
@@ -77,9 +75,9 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
     private final String SFC_RSP_NAME = "rsp-sfc-gbp";
 
     public SfcManager(DataBroker dataBroker,
-                      PolicyResolver policyResolver,
-                      RpcProviderRegistry rpcRegistry,
-                      ScheduledExecutorService executor) {
+            PolicyResolver policyResolver,
+            RpcProviderRegistry rpcRegistry,
+            ScheduledExecutorService executor) {
         this.dataBroker = dataBroker;
         this.policyResolver = policyResolver;
         this.rpcRegistry = rpcRegistry;
@@ -90,11 +88,11 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
          */
         allActionInstancesIid =
                 InstanceIdentifier.builder(Tenants.class)
-                    .child(Tenant.class)
-                    .child(SubjectFeatureInstances.class)
-                    .child(ActionInstance.class)
-                    .build();
-        actionListener = dataBroker.registerDataChangeListener(LogicalDatastoreType.CONFIGURATION, 
+                        .child(Tenant.class)
+                        .child(SubjectFeatureInstances.class)
+                        .child(ActionInstance.class)
+                        .build();
+        actionListener = dataBroker.registerDataChangeListener(LogicalDatastoreType.CONFIGURATION,
                 allActionInstancesIid, this, DataChangeScope.ONE);
         LOG.debug("SfcManager: Started");
     }
@@ -105,41 +103,39 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
 
         for (DataObject dao : change.getCreatedData().values()) {
             if (dao instanceof ActionInstance) {
-                ActionInstance ai = (ActionInstance)dao;
+                ActionInstance ai = (ActionInstance) dao;
                 LOG.debug("New ActionInstance created");
                 executor.execute(new MatchActionDefTask(ai));
             }
         }
 
         // TODO: how to handle deletes (comment out for now)
-//        for (InstanceIdentifier<?> iid : change.getRemovedPaths()) {
-//            DataObject old = change.getOriginalData().get(iid);
-//            if (old != null && old instanceof ActionInstance) {
-//
-//            }
-//        }
+        // for (InstanceIdentifier<?> iid : change.getRemovedPaths()) {
+        // DataObject old = change.getOriginalData().get(iid);
+        // if (old != null && old instanceof ActionInstance) {
+        //
+        // }
+        // }
 
         for (DataObject dao : change.getUpdatedData().values()) {
             if (dao instanceof ActionInstance) {
-                ActionInstance ai = (ActionInstance)dao;
+                ActionInstance ai = (ActionInstance) dao;
                 executor.execute(new MatchActionDefTask(ai));
             }
         }
     }
 
     /**
-     * Private internal class that gets the action definition
-     * referenced by the instance. If the definition has an
-     * action of "chain" (or whatever we decide to use
-     * here), then we need to invoke the SFC API to go
-     * get the chain information, which we'll eventually
-     * use during policy resolution.
+     * Private internal class that gets the action definition referenced by the
+     * instance. If the definition has an action of "chain" (or whatever we
+     * decide to use here), then we need to invoke the SFC API to go get the
+     * chain information, which we'll eventually use during policy resolution.
      *
      * @author tbachman
      *
      */
     private class MatchActionDefTask implements Runnable,
-                     FutureCallback<Optional<ActionDefinition>> {
+            FutureCallback<Optional<ActionDefinition>> {
         private final ActionInstance actionInstance;
         private final InstanceIdentifier<ActionDefinition> adIid;
         private final ActionDefinitionId id;
@@ -149,9 +145,9 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
             this.id = actionInstance.getActionDefinitionId();
 
             adIid = InstanceIdentifier.builder(SubjectFeatureDefinitions.class)
-                                      .child(ActionDefinition.class,
-                                             new ActionDefinitionKey(this.id))
-                                      .build();
+                    .child(ActionDefinition.class,
+                            new ActionDefinitionKey(this.id))
+                    .build();
 
         }
 
@@ -176,12 +172,11 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
         public void onSuccess(Optional<ActionDefinition> dao) {
             LOG.debug("Found ActionDefinition {}", id.getValue());
             if (dao instanceof ActionDefinition) {
-                ActionDefinition ad = (ActionDefinition)dao;
+                ActionDefinition ad = (ActionDefinition) dao;
                 if (ad.getName().getValue().equals(SFC_CHAIN_ACTION)) {
                     /*
-                     * We have the state we need:
-                     *  1) it's a "CHAIN" action
-                     *  2) the name is defined in the ActionInstance
+                     * We have the state we need: 1) it's a "CHAIN" action 2)
+                     * the name is defined in the ActionInstance
                      */
                     if (actionInstance.getParameterValue() != null) {
                         getSfcRsp();
@@ -193,43 +188,42 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
         /**
          * Go get the RenderedServicePath from SFC
          *
-         * TBD: what to do with this once we have it - who to
-         * give it to
+         * TBD: what to do with this once we have it - who to give it to
          */
         private void getSfcRsp() {
-            for (ParameterValue pv: actionInstance.getParameterValue()) {
+            for (ParameterValue pv : actionInstance.getParameterValue()) {
                 if (pv.getName().getValue().equals(SFC_CHAIN_NAME)) {
                     // TODO: check for rspFirstHop.getTransportType()
                     ReadRenderedServicePathFirstHopInputBuilder builder =
-                        new ReadRenderedServicePathFirstHopInputBuilder();
+                            new ReadRenderedServicePathFirstHopInputBuilder();
                     builder.setName(SFC_CHAIN_NAME);
                     Future<RpcResult<ReadRenderedServicePathFirstHopOutput>> result =
-                        SfcProviderRpc.getSfcProviderRpc().readRenderedServicePathFirstHop(builder.build());
+                            SfcProviderRpc.getSfcProviderRpc().readRenderedServicePathFirstHop(builder.build());
                     try {
                         RpcResult<ReadRenderedServicePathFirstHopOutput> output = result.get();
                         if (output.isSuccessful()) {
                             RenderedServicePathFirstHop rspFirstHop =
-                                output.getResult().getRenderedServicePathFirstHop();
+                                    output.getResult().getRenderedServicePathFirstHop();
                             IpAddress ip = rspFirstHop.getIp();
                             PortNumber pn = rspFirstHop.getPort();
                             // TODO: use NSI, NSP, SPI
-                            //Short nsi = rspFirstHop.getStartingIndex();
-                            //Long nsp = rspFirstHop.getPathId();
-                            //Long spi = rspFirstHop.getSymmetricPathId();
+                            // Short nsi = rspFirstHop.getStartingIndex();
+                            // Long nsp = rspFirstHop.getPathId();
+                            // Long spi = rspFirstHop.getSymmetricPathId();
                         }
                     } catch (Exception e) {
-                    	// TODO: proper exception handling
+                        // TODO: proper exception handling
                     }
                 }
             }
         }
 
-
     }
 
     @Override
     public void close() throws Exception {
-        if (actionListener != null) actionListener.close();
+        if (actionListener != null)
+            actionListener.close();
 
     }
 }

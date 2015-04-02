@@ -17,7 +17,7 @@ module endpoint {
     import ietf-yang-types {
         prefix yang;
         revision-date 2010-09-24;
-    } 
+    }
 
     revision "2014-04-21" {
         description
@@ -25,50 +25,50 @@ module endpoint {
     }
 
     grouping l2-key {
-        description 
+        description
             "The fields that identify an endpoint by a layer 2 address";
         leaf l2-context {
             type gbp-common:l2-bridge-domain-id;
-            description 
+            description
                 "The bridge domain for the layer 2 address for this endpoint";
         }
         leaf mac-address {
             type yang:mac-address;
-            description 
+            description
                 "The MAC address for the endpoint";
         }
     }
 
     grouping l3-key {
-        description 
+        description
             "The fields that identify an endpoint by a layer 3 address";
         leaf l3-context {
             type gbp-common:l3-context-id;
             mandatory true;
-            description 
+            description
                 "The context for this layer 3 address";
         }
         leaf ip-address {
             type inet:ip-address;
             mandatory true;
-            description 
+            description
                 "The actual IP address for the endpoint";
         }
     }
 
     grouping l3-prefix-key {
-        description 
+        description
             "The fields that identify an endpoint by a layer 3 prefix";
         leaf l3-context {
             type gbp-common:l3-context-id;
             mandatory true;
-            description 
+            description
                 "The context for this layer 3 prefix";
         }
         leaf ip-prefix {
             type inet:ip-prefix;
             mandatory true;
-            description 
+            description
                 "The IP prefix for the endpoint";
         }
     }
@@ -79,15 +79,15 @@ module endpoint {
         leaf tenant {
             type gbp-common:tenant-id;
             mandatory true;
-            description 
+            description
                 "The tenant with which this endpoint is associated";
         }
 
         uses l2-key;
-        
+
         leaf network-containment {
-            description 
-                "The network domain associated with this endpoint's fowarding 
+            description
+                "The network domain associated with this endpoint's fowarding
                 context.";
             type gbp-common:network-domain-id;
         }
@@ -99,34 +99,34 @@ module endpoint {
         }
         leaf endpoint-group {
             type gbp-common:endpoint-group-id;
-            description 
+            description
                 "The group associated with this endpoint";
         }
         leaf-list endpoint-groups {
             type gbp-common:endpoint-group-id;
-            description 
+            description
                 "The groups associated with this endpoint";
             ordered-by user;
         }
         leaf-list condition {
             type gbp-common:condition-name;
-            description 
+            description
                 "The conditions associated with this endpoint";
         }
         // This was a mistake and now it's an abomination.
         leaf port-name {
             type gbp-common:name;
-            description 
+            description
                 "Port name";
         } // end the abomination.
         leaf timestamp {
             type int64;
             description
-                "The last timestamp associated with this endpoint record.  
+                "The last timestamp associated with this endpoint record.
                  This will be used for aging data in the registry.";
         }
     }
-    
+
     //  L3 Prefix EndPointFields
     grouping endpoint-l3-prefix-fields {
         description "An l3 prefix endpoint and its associated metadata";
@@ -134,23 +134,23 @@ module endpoint {
         leaf tenant {
             type gbp-common:tenant-id;
             mandatory true;
-            description 
+            description
                 "The tenant with which this endpoint is associated";
         }
         leaf endpoint-group {
             type gbp-common:endpoint-group-id;
-            description 
+            description
                 "The group associated with this endpoint";
         }
         leaf-list endpoint-groups {
             type gbp-common:endpoint-group-id;
-            description 
+            description
                 "The groups associated with this endpoint";
             ordered-by user;
         }
         leaf-list condition {
             type gbp-common:condition-name;
-            description 
+            description
                 "The conditions associated with this endpoint";
         }
         list endpoint-l2-gateways {
@@ -164,14 +164,14 @@ module endpoint {
         leaf timestamp {
             type int64;
             description
-                "The last timestamp associated with this endpoint record.  
+                "The last timestamp associated with this endpoint record.
                  This will be used for aging data in the registry.";
         }
     }
 
     grouping has-endpoint-group-conditions {
-        description 
-            "Base type for object with endpoint group to condition 
+        description
+            "Base type for object with endpoint group to condition
              mappings.";
 
         leaf endpoint-group {
@@ -179,8 +179,8 @@ module endpoint {
             type gbp-common:endpoint-group-id;
         }
         list endpoint-group-condition {
-            description 
-                "The conditions associated with this endpoint 
+            description
+                "The conditions associated with this endpoint
                  group";
             key "condition";
             leaf condition {
@@ -191,13 +191,13 @@ module endpoint {
     }
 
     container endpoints {
-        description 
+        description
             "Repository for operational state data about endpoints needed for
              policy resolution.";
         config false;
 
         list endpoint {
-            description 
+            description
                 "Endpoints indexed by layer 2 addreses.  When modifying
                  data here, you must also modify data in the
                  endpoints-l3 list as well.";
@@ -206,8 +206,8 @@ module endpoint {
         }
 
         list endpoint-l3 {
-            description 
-                "Endpoints indexed by layer 3 addreses.  When modifying 
+            description
+                "Endpoints indexed by layer 3 addreses.  When modifying
                  data here, you must also modify data in the endpoints
                  list as well.";
             key "l3-context ip-address";
@@ -219,9 +219,9 @@ module endpoint {
             key "l3-context ip-prefix";
             uses endpoint-l3-prefix-fields;
         }
-        
+
         list condition-mapping {
-            description 
+            description
                 "A list mapping conditions to entire endpoint groups.
                  This offers a quickly way to set a condition on many
                  endpoints at once.";
@@ -234,7 +234,7 @@ module endpoint {
     rpc register-endpoint {
         description
             "Register a new endpoint into the registry.  If there
-             is already an existing endpoint with the same keys, they 
+             is already an existing endpoint with the same keys, they
              will be overwritten with the new information.";
 
         input {
@@ -274,9 +274,9 @@ module endpoint {
 
     rpc set-endpoint-group-conditions {
         description
-            "Set a list of conditions for a particular endpoint group.  
+            "Set a list of conditions for a particular endpoint group.
              These conditions will apply to all endpoints in the
-             endpoint group.  These conditions will be added to the 
+             endpoint group.  These conditions will be added to the
              existing list of conditions.";
 
         input {

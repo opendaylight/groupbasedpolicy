@@ -12,7 +12,7 @@ module gbp-common {
     namespace "urn:opendaylight:groupbasedpolicy:common";
     prefix "gbp-common";
 
-    description 
+    description
         "Common types and definitions for group-based policy models";
 
     revision "2014-04-21" {
@@ -31,8 +31,8 @@ module gbp-common {
     }
 
     typedef name {
-        description 
-            "A generic string name type. 
+        description
+            "A generic string name type.
              Must start with a letter";
         type string {
             pattern '[a-zA-Z]([a-zA-Z0-9\-_.])*';
@@ -47,7 +47,7 @@ module gbp-common {
                 + '[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
         }
         description
-            "A Universally Unique IDentifier in the string representation 
+            "A Universally Unique IDentifier in the string representation
              defined in RFC 4122.  The canonical representation uses
              lowercase characters.
 
@@ -90,7 +90,7 @@ module gbp-common {
         type unique-id;
         description "A unique ID for a network domain";
     }
-    
+
     typedef subnet-id {
         type network-domain-id;
         description "A unique ID for a subnet";
