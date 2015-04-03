@@ -46,6 +46,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.ta
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
@@ -307,6 +308,8 @@ public class PolicyEnforcer extends FlowTable {
             abl = act.updateAction(abl, new HashMap<String, Object>(), 0);
         }
 
+        Map<String, ParameterValue> paramsFromClassifier = new HashMap<>();
+        Set<ClassifierDefinitionId> classifiers = new HashSet<>();
         for (ClassifierRef cr : rule.getClassifierRef()) {
             if (cr.getDirection() != null &&
                     !cr.getDirection().equals(Direction.Bidirectional) &&
@@ -314,44 +317,9 @@ public class PolicyEnforcer extends FlowTable {
                 continue;
             }
 
-            StringBuilder idb = new StringBuilder();
             // XXX - TODO - implement connection tracking (requires openflow
             // extension and data plane support - in 2.4. Will need to handle
             // case where we are working with mix of nodes.
-
-            MatchBuilder baseMatch = new MatchBuilder();
-
-            if (direction.equals(Direction.In)) {
-                idb.append(cgPair.sepg)
-                        .append("|")
-                        .append(cgPair.scgId)
-                        .append("|")
-                        .append(cgPair.depg)
-                        .append("|")
-                        .append(cgPair.dcgId)
-                        .append("|")
-                        .append(priority);
-                addNxRegMatch(baseMatch,
-                        RegMatch.of(NxmNxReg0.class, Long.valueOf(cgPair.sepg)),
-                        RegMatch.of(NxmNxReg1.class, Long.valueOf(cgPair.scgId)),
-                        RegMatch.of(NxmNxReg2.class, Long.valueOf(cgPair.depg)),
-                        RegMatch.of(NxmNxReg3.class, Long.valueOf(cgPair.dcgId)));
-            } else {
-                idb.append(cgPair.depg)
-                        .append("|")
-                        .append(cgPair.dcgId)
-                        .append("|")
-                        .append(cgPair.sepg)
-                        .append("|")
-                        .append(cgPair.scgId)
-                        .append("|")
-                        .append(priority);
-                addNxRegMatch(baseMatch,
-                        RegMatch.of(NxmNxReg0.class, Long.valueOf(cgPair.depg)),
-                        RegMatch.of(NxmNxReg1.class, Long.valueOf(cgPair.dcgId)),
-                        RegMatch.of(NxmNxReg2.class, Long.valueOf(cgPair.sepg)),
-                        RegMatch.of(NxmNxReg3.class, Long.valueOf(cgPair.scgId)));
-            }
 
             ClassifierInstance ci = contractTenant.getClassifier(cr.getName());
             if (ci == null) {
@@ -368,24 +336,67 @@ public class PolicyEnforcer extends FlowTable {
                         ci.getClassifierDefinitionId().getValue());
                 return;
             }
-
-            Map<String,ParameterValue> params = new HashMap<>();
+            classifiers.add(new ClassifierDefinitionId(ci.getClassifierDefinitionId()));
             for (ParameterValue v : ci.getParameterValue()) {
 
                 if (v.getIntValue() != null) {
-                    params.put(v.getName().getValue(), v);
+                    paramsFromClassifier.put(v.getName().getValue(), v);
                 } else if (v.getStringValue() != null) {
-                    params.put(v.getName().getValue(), v);
+                    paramsFromClassifier.put(v.getName().getValue(), v);
                 } else if (v.getRangeValue() != null) {
-                    params.put(v.getName().getValue(), v);
+                    paramsFromClassifier.put(v.getName().getValue(), v);
                 }
             }
-            List<Map<String, ParameterValue>> derivedParams = ParamDerivator.ETHER_TYPE_DERIVATOR.deriveParameter(params);
-            for (Map<String, ParameterValue> flowParams : derivedParams) {
-                List<MatchBuilder> matches = Collections.singletonList(new MatchBuilder(baseMatch.build()));
-                ClassificationResult result = cfier.updateMatch(matches, flowParams);
-                if(!result.isSuccessfull()) {
-                    //TODO consider different handling.
+        }
+        List<Map<String, ParameterValue>> derivedParamsByName = ParamDerivator.ETHER_TYPE_DERIVATOR.deriveParameter(paramsFromClassifier);
+
+        for (Map<String, ParameterValue> params : derivedParamsByName) {
+            for (ClassifierDefinitionId clDefId : classifiers) {
+                Classifier classifier = SubjectFeatures.getClassifier(clDefId);
+                StringBuilder idb = new StringBuilder();
+                // XXX - TODO - implement connection tracking (requires openflow
+                // extension and data plane support - in 2.4. Will need to handle
+                // case where we are working with mix of nodes.
+
+                MatchBuilder baseMatch = new MatchBuilder();
+                if (direction.equals(Direction.In)) {
+                    idb.append(cgPair.sepg)
+                            .append("|")
+                            .append(cgPair.scgId)
+                            .append("|")
+                            .append(cgPair.depg)
+                            .append("|")
+                            .append(cgPair.dcgId)
+                            .append("|")
+                            .append(priority);
+                    addNxRegMatch(baseMatch,
+                            RegMatch.of(NxmNxReg0.class, Long.valueOf(cgPair.sepg)),
+                            RegMatch.of(NxmNxReg1.class, Long.valueOf(cgPair.scgId)),
+                            RegMatch.of(NxmNxReg2.class, Long.valueOf(cgPair.depg)),
+                            RegMatch.of(NxmNxReg3.class, Long.valueOf(cgPair.dcgId)));
+                } else {
+                    idb.append(cgPair.depg)
+                            .append("|")
+                            .append(cgPair.dcgId)
+                            .append("|")
+                            .append(cgPair.sepg)
+                            .append("|")
+                            .append(cgPair.scgId)
+                            .append("|")
+                            .append(priority);
+                    addNxRegMatch(baseMatch,
+                            RegMatch.of(NxmNxReg0.class, Long.valueOf(cgPair.depg)),
+                            RegMatch.of(NxmNxReg1.class, Long.valueOf(cgPair.dcgId)),
+                            RegMatch.of(NxmNxReg2.class, Long.valueOf(cgPair.sepg)),
+                            RegMatch.of(NxmNxReg3.class, Long.valueOf(cgPair.scgId)));
+                }
+
+                List<MatchBuilder> matches = new ArrayList<>();
+                matches.add(baseMatch);
+
+                ClassificationResult result = classifier.updateMatch(matches, params);
+                if (!result.isSuccessfull()) {
+                    // TODO consider different handling.
                     throw new IllegalArgumentException(result.getErrorMessage());
                 }
                 String baseId = idb.toString();
@@ -398,8 +409,6 @@ public class PolicyEnforcer extends FlowTable {
                         .setPriority(Integer.valueOf(priority))
                         .setInstructions(instructions(applyActionIns(abl)));
                 flowMap.writeFlow(nodeId, TABLE_ID, flow.build());
-
-
                 }
             }
         }

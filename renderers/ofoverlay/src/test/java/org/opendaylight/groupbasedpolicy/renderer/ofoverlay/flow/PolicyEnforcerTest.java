@@ -25,6 +25,7 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClauseName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionMatcherName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
@@ -33,16 +34,22 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfigBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.Matcher.MatchType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRefBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.condition.matchers.ConditionMatcherBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.conditions.Condition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.conditions.ConditionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.TenantBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ContractBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.ClauseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Subject;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.ConsumerMatchersBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.ProviderMatchersBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.Rule;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.RuleBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._4.match.TcpMatch;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.PortNumber;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg0;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg1;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg2;
@@ -53,6 +60,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import static org.junit.Assert.*;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.*;
@@ -88,7 +96,8 @@ public class PolicyEnforcerTest extends FlowTableTest {
             .setMacAddress(new MacAddress("00:00:00:00:00:02"))
             .build();
         endpointManager.addEndpoint(ep2);
-        policyResolver.addTenant(baseTenant().build());
+        policyResolver.addTenant(baseTenant().setContract(
+                ImmutableList.<Contract>of(baseContract(null).build())).build());
 
         FlowMap fm = dosync(null);
         assertNotEquals(0, fm.getTableForNode(nodeId, (short) 3).getFlow().size());
@@ -107,13 +116,41 @@ public class PolicyEnforcerTest extends FlowTableTest {
 
     @Test
     public void testDifferentEg() throws Exception {
-        doTestDifferentEg(null);
-        doTestDifferentEg(Direction.Bidirectional);
-        doTestDifferentEg(Direction.In);
-        doTestDifferentEg(Direction.Out);
+        assertEquals(7, doTestDifferentEg(ImmutableList.<Subject>of(baseSubject(null).build())));
+        assertEquals(7, doTestDifferentEg(ImmutableList.<Subject>of(baseSubject(Direction.Bidirectional).build())));
+        assertEquals(5, doTestDifferentEg(ImmutableList.<Subject>of(baseSubject(Direction.In).build())));
+        assertEquals(5, doTestDifferentEg(ImmutableList.<Subject>of(baseSubject(Direction.Out).build())));
     }
 
-    public void doTestDifferentEg(Direction direction) throws Exception {
+    @Test
+    public void doTestRule() throws Exception {
+        Rule rule1 = new RuleBuilder().setActionRef(
+                ImmutableList.of(new ActionRefBuilder().setName(new ActionName("allow")).build()))
+            .setClassifierRef(
+                    createClassifierRefs(ImmutableMap.<String, Direction>of("tcp_dst_80", Direction.In, "tcp_src_80",
+                            Direction.In)))
+            .build();
+        Rule rule2 = new RuleBuilder().setActionRef(
+                ImmutableList.of(new ActionRefBuilder().setName(new ActionName("allow")).build()))
+            .setClassifierRef(
+                    createClassifierRefs(ImmutableMap.<String, Direction>of("tcp_dst_80", Direction.In, "tcp_src_80",
+                            Direction.Out)))
+            .build();
+        Rule rule3 = new RuleBuilder().setActionRef(
+                ImmutableList.of(new ActionRefBuilder().setName(new ActionName("allow")).build()))
+            .setClassifierRef(
+                    createClassifierRefs(ImmutableMap.<String, Direction>of("tcp_dst_80", Direction.In, "tcp_src_80",
+                            Direction.Out, "ether_type", Direction.In)))
+            .build();
+        assertEquals(5,
+                doTestDifferentEg(ImmutableList.<Subject>of(createSubject("s1", ImmutableList.<Rule>of(rule1)))));
+        assertEquals(7,
+                doTestDifferentEg(ImmutableList.<Subject>of(createSubject("s2", ImmutableList.<Rule>of(rule2)))));
+        assertEquals(6,
+                doTestDifferentEg(ImmutableList.<Subject>of(createSubject("s3", ImmutableList.<Rule>of(rule3)))));
+    }
+
+    private int doTestDifferentEg(List<Subject> subjects) throws Exception {
         Endpoint ep1 = localEP().build();
         endpointManager.addEndpoint(ep1);
         Endpoint ep2 = localEP()
@@ -121,7 +158,8 @@ public class PolicyEnforcerTest extends FlowTableTest {
             .setEndpointGroup(eg2)
             .build();
         endpointManager.addEndpoint(ep2);
-        policyResolver.addTenant(baseTenant(direction).build());
+        policyResolver.addTenant(baseTenant().setContract(
+                ImmutableList.<Contract>of(baseContract(subjects).build())).build());
 
         FlowMap fm = dosync(null);
         assertNotEquals(0, fm.getTableForNode(nodeId, (short) 3).getFlow().size());
@@ -144,9 +182,16 @@ public class PolicyEnforcerTest extends FlowTableTest {
                        f.getMatch().getIpMatch() != null &&
                        Objects.equals(Short.valueOf((short)6),
                                       f.getMatch().getIpMatch().getIpProtocol()) &&
-                       Objects.equals(Integer.valueOf(80),
-                                      ((TcpMatch)f.getMatch().getLayer4Match())
-                                          .getTcpDestinationPort().getValue())) {
+                       f.getMatch().getLayer4Match() != null &&
+                       (
+                        Objects.equals(new PortNumber(Integer.valueOf(80)),
+                               ((TcpMatch)f.getMatch().getLayer4Match())
+                                .getTcpSourcePort())
+                                ||
+                        Objects.equals(new PortNumber(Integer.valueOf(80)),
+                               ((TcpMatch)f.getMatch().getLayer4Match())
+                                .getTcpDestinationPort())
+                        )) {
                 count += 1;
             } else if (f.getMatch() != null &&
                        f.getMatch().getEthernetMatch() != null &&
@@ -156,19 +201,20 @@ public class PolicyEnforcerTest extends FlowTableTest {
                        f.getMatch().getIpMatch() != null &&
                        Objects.equals(Short.valueOf((short)6),
                                       f.getMatch().getIpMatch().getIpProtocol()) &&
-                       Objects.equals(Integer.valueOf(80),
-                                      ((TcpMatch)f.getMatch().getLayer4Match())
-                                          .getTcpDestinationPort().getValue())) {
+                       f.getMatch().getLayer4Match() != null &&
+                        (
+                        Objects.equals(new PortNumber(Integer.valueOf(80)),
+                                ((TcpMatch)f.getMatch().getLayer4Match())
+                                .getTcpSourcePort())
+                                ||
+                        Objects.equals(new PortNumber(Integer.valueOf(80)),
+                                ((TcpMatch)f.getMatch().getLayer4Match())
+                                .getTcpDestinationPort())
+                        )) {
                 count += 1;
             } 
         }
-        if (direction == null || direction.equals(Direction.Bidirectional))
-            assertEquals(7, count);
-        else
-            assertEquals(5, count);
-        int numberOfFlows = fm.getTableForNode(nodeId, (short) 3).getFlow().size();
-        fm = dosync(flowMap);
-        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, (short) 3).getFlow().size());
+        return count;
     }
 
     @Test

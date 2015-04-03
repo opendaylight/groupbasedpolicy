@@ -34,6 +34,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev14
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
+
 import static org.junit.Assert.*;
 
 public class SourceMapperTest extends FlowTableTest {

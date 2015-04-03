@@ -23,11 +23,13 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.GroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfigBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
 
 public class GroupTableTest extends OfTableTest {
     protected static final Logger LOG =
@@ -64,7 +66,8 @@ public class GroupTableTest extends OfTableTest {
                                     .setTunnelIp(new IpAddress(new Ipv4Address("1.2.3.5")))
                                     .build());
 
-        policyResolver.addTenant(baseTenant().build());
+        policyResolver.addTenant(baseTenant().setContract(
+                ImmutableList.<Contract>of(baseContract(null).build())).build());
 
         HashMap<GroupId, GroupCtx> groupMap = new HashMap<>();
         table.sync(nodeId, ctx.getPolicyResolver().getCurrentPolicy(), groupMap);

@@ -8,11 +8,16 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockEndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockPolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockSwitchManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.AllowAction;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Classifier;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.L4Classifier;
 import org.opendaylight.groupbasedpolicy.resolver.MockPolicyResolver;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
@@ -38,6 +43,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRefBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRefBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValueBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.TenantBuilder;
@@ -49,7 +55,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.SubjectFeatureInstancesBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.SubnetBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.ClauseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Subject;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.SubjectBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.Rule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.RuleBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ConsumerNamedSelectorBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderNamedSelectorBuilder;
@@ -101,10 +109,6 @@ public class OfTableTest {
     }
 
     protected TenantBuilder baseTenant() {
-        return baseTenant(null);
-    }
-
-    protected TenantBuilder baseTenant(Direction direction) {
         return new TenantBuilder()
             .setId(tid)
             .setEndpointGroup(ImmutableList.of(new EndpointGroupBuilder()
@@ -154,7 +158,7 @@ public class OfTableTest {
                     .build()))
             .setSubjectFeatureInstances(new SubjectFeatureInstancesBuilder()
                 .setClassifierInstance(ImmutableList.of(new ClassifierInstanceBuilder()
-                     .setName(new ClassifierName("tcp_80"))
+                     .setName(new ClassifierName("tcp_dst_80"))
                      .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
                      .setParameterValue(ImmutableList.of(new ParameterValueBuilder()
                               .setName(new ParameterName("destport"))
@@ -164,20 +168,49 @@ public class OfTableTest {
                              .setName(new ParameterName("proto"))
                              .setIntValue(Long.valueOf(6))
                              .build()))
+                     .build(),
+                     new ClassifierInstanceBuilder()
+                     .setName(new ClassifierName("tcp_src_80"))
+                     .setClassifierDefinitionId(Classifier.L4_CL.getId())
+                     .setParameterValue(ImmutableList.of(new ParameterValueBuilder()
+                              .setName(new ParameterName("sourceport"))
+                              .setIntValue(Long.valueOf(80))
+                              .build(),
+                          new ParameterValueBuilder()
+                             .setName(new ParameterName("proto"))
+                             .setIntValue(Long.valueOf(6))
+                             .build()))
+                     .build(),
+                     new ClassifierInstanceBuilder()
+                     .setName(new ClassifierName("ether_type"))
+                     .setClassifierDefinitionId(Classifier.ETHER_TYPE_CL.getId())
+                     .setParameterValue(ImmutableList.of(new ParameterValueBuilder()
+                              .setName(new ParameterName("ethertype"))
+                              .setIntValue(Long.valueOf(FlowUtils.IPv4))
+                              .build()))
                      .build()))
                 .setActionInstance(ImmutableList.of(new ActionInstanceBuilder()
                     .setName(new ActionName("allow"))
                     .setActionDefinitionId(new AllowAction().getId())
                     .build()))
-                .build())
-            .setContract(ImmutableList.of(new ContractBuilder()
-                .setId(cid)
-                .setSubject(ImmutableList.of(baseSubject(direction).build()))
-                .setClause(ImmutableList.of(new ClauseBuilder()
-                     .setName(new ClauseName("test"))
-                     .setSubjectRefs(ImmutableList.of(new SubjectName("s1")))
-                     .build()))
+                .build());
+    }
+
+    protected ContractBuilder baseContract(List<Subject> subjects) {
+        ContractBuilder contractBuilder = new ContractBuilder().setId(cid).setSubject(subjects);
+        // TODO refactor
+        if (subjects == null) {
+            return contractBuilder.setClause(ImmutableList.of(new ClauseBuilder().setName(new ClauseName("test"))
+                .setSubjectRefs(ImmutableList.<SubjectName>of(new SubjectName("s1")))
                 .build()));
+        }
+        List<SubjectName> subjectNames = new ArrayList<>();
+        for (Subject subject : subjects) {
+            subjectNames.add(subject.getName());
+        }
+        return contractBuilder.setClause(ImmutableList.of(new ClauseBuilder().setName(new ClauseName("test"))
+            .setSubjectRefs(subjectNames)
+            .build()));
     }
 
     protected SubjectBuilder baseSubject(Direction direction) {
@@ -188,10 +221,25 @@ public class OfTableTest {
                     .setName(new ActionName("allow"))
                     .build()))
                 .setClassifierRef(ImmutableList.of(new ClassifierRefBuilder()
-                    .setName(new ClassifierName("tcp_80"))
+                    .setName(new ClassifierName("tcp_dst_80"))
                     .setDirection(direction)
                     .build()))
                 .build()));
+    }
+
+
+    protected Subject createSubject(String name, List<Rule> rules){
+        return new SubjectBuilder().setName(new SubjectName(name)).setRule(rules).build();
+    }
+
+    protected List<ClassifierRef> createClassifierRefs(Map<String, Direction> refNamesAndDirections) {
+        List<ClassifierRef> refs = new ArrayList<>();
+        for (String refName : refNamesAndDirections.keySet()) {
+            refs.add(new ClassifierRefBuilder().setName(new ClassifierName(refName))
+                .setDirection(refNamesAndDirections.get(refName))
+                .build());
+        }
+        return refs;
     }
 
     protected EndpointBuilder baseEP() {
