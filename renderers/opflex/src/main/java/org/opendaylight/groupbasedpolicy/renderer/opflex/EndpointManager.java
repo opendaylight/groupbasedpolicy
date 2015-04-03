@@ -63,6 +63,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.OpflexOverlayContextL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.opflex.rev140528.OpflexOverlayContextL3Builder;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
+import org.opendaylight.yangtools.yang.binding.Augmentation;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
@@ -110,7 +111,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
             OpflexConnectionService connectionService, MitLib opflexLibrary) {
         this.executor = executor;
         this.dataProvider = dataProvider;
-        EndpointRpcRegistry.register(dataProvider, rpcRegistry, executor, endpointRpcAug);
+        EndpointRpcRegistry.register(dataProvider, rpcRegistry, endpointRpcAug);
 
         if (dataProvider != null) {
             listenerReg = dataProvider.registerDataChangeListener(LogicalDatastoreType.OPERATIONAL, endpointsIid, this,
@@ -163,15 +164,19 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
     private class OfEndpointAug implements EpRendererAugmentation {
 
         @Override
-        public void buildEndpointAugmentation(EndpointBuilder eb, RegisterEndpointInput input) {
+        public Augmentation<Endpoint> buildEndpointAugmentation(RegisterEndpointInput input) {
             OpflexOverlayContextInput ictx = input.getAugmentation(OpflexOverlayContextInput.class);
-            eb.addAugmentation(OpflexOverlayContext.class, new OpflexOverlayContextBuilder(ictx).build());
+            if (ictx != null)
+                return new OpflexOverlayContextBuilder(ictx).build();
+            return null;
         }
 
         @Override
-        public void buildEndpointL3Augmentation(EndpointL3Builder eb, RegisterEndpointInput input) {
+        public Augmentation<EndpointL3> buildEndpointL3Augmentation(RegisterEndpointInput input) {
             OpflexOverlayContextInput ictx = input.getAugmentation(OpflexOverlayContextInput.class);
-            eb.addAugmentation(OpflexOverlayContextL3.class, new OpflexOverlayContextL3Builder(ictx).build());
+            if (ictx != null)
+                return new OpflexOverlayContextL3Builder(ictx).build();
+            return null;
         }
 
         @Override

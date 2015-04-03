@@ -11,6 +11,7 @@ package org.opendaylight.groupbasedpolicy.endpoint;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -44,6 +45,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.has.endpoint.group.conditions.EndpointGroupConditionKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L2;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L3;
+import org.opendaylight.yangtools.yang.binding.Augmentation;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcError.ErrorType;
 import org.opendaylight.yangtools.yang.common.RpcResult;
@@ -90,17 +92,21 @@ public class EndpointRpcRegistry implements EndpointService {
      *            NULL
      */
     public static void register(DataBroker dataProvider,
-            RpcProviderRegistry rpcRegistry, ScheduledExecutorService executor,
+            RpcProviderRegistry rpcRegistry,
             EpRendererAugmentation epRendererAugmentation) {
-        if (dataProvider == null || rpcRegistry == null || executor == null) {
+        if (dataProvider == null || rpcRegistry == null) {
             if (epRendererAugmentation != null) {
-                LOG.warn("Couldn't register class {} for endpoint RPC because of missing required info");
+                LOG.warn("Couldn't register class {} for endpoint RPC because of missing required info", epRendererAugmentation);
             }
             return;
         }
         if (endpointRpcRegistry == null) {
             synchronized (EndpointRpcRegistry.class) {
                 if (endpointRpcRegistry == null) {
+                    ScheduledExecutorService executor = Executors
+                            .newScheduledThreadPool(Math
+                                    .max(Runtime.getRuntime()
+                                            .availableProcessors() * 3, 10));
                     endpointRpcRegistry = new EndpointRpcRegistry(dataProvider,
                             rpcRegistry, executor);
                 }
@@ -131,10 +137,33 @@ public class EndpointRpcRegistry implements EndpointService {
                 if (registeredRenderers.isEmpty()
                         && endpointRpcRegistry != null) {
                     endpointRpcRegistry.rpcRegistration.close();
+                    endpointRpcRegistry.executor.shutdown();
                     endpointRpcRegistry = null;
                 }
             }
         }
+    }
+
+    public static Class<?> getAugmentationContextType(
+            final Augmentation<?> augmentation) {
+        if (augmentation == null) {
+            return null;
+        }
+        final Class<?>[] augmentationInterfaces = augmentation.getClass()
+                .getInterfaces();
+        if (augmentationInterfaces.length == 1) {
+            return augmentationInterfaces[0];
+        }
+        /*
+         * if here, then the way YANG tools generate augmentation code has
+         * changed, hence augmentation classes are not implemented by single
+         * interface anymore. This is very unlikely to happen, but if it did, we
+         * need to know about it in order to update this method.
+         */
+        LOG.error(
+                "YANG Generated Code has Changed -- augmentation object {} is NOT implemented by one interface anymore",
+                augmentation);
+        return null;
     }
 
     /**
@@ -195,7 +224,13 @@ public class EndpointRpcRegistry implements EndpointService {
         for (Entry<String, EpRendererAugmentation> entry : registeredRenderers
                 .entrySet()) {
             try {
-                entry.getValue().buildEndpointAugmentation(eb, input);
+                Augmentation<Endpoint> augmentation = entry.getValue()
+                        .buildEndpointAugmentation(input);
+                if (augmentation != null) {
+                    @SuppressWarnings("unchecked")
+                    Class<? extends Augmentation<Endpoint>> augmentationType = (Class<? extends Augmentation<Endpoint>>) getAugmentationContextType(augmentation);
+                    eb.addAugmentation(augmentationType, augmentation);
+                }
             } catch (Throwable t) {
                 LOG.warn("Endpoint Augmentation error while processing "
                         + entry.getKey() + ". Reason: ", t);
@@ -217,7 +252,13 @@ public class EndpointRpcRegistry implements EndpointService {
         for (Entry<String, EpRendererAugmentation> entry : registeredRenderers
                 .entrySet()) {
             try {
-                entry.getValue().buildEndpointL3Augmentation(eb, input);
+                Augmentation<EndpointL3> augmentation = entry.getValue()
+                        .buildEndpointL3Augmentation(input);
+                if (augmentation != null) {
+                    @SuppressWarnings("unchecked")
+                    Class<? extends Augmentation<EndpointL3>> augmentationType = (Class<? extends Augmentation<EndpointL3>>) getAugmentationContextType(augmentation);
+                    eb.addAugmentation(augmentationType, augmentation);
+                }
             } catch (Throwable t) {
                 LOG.warn("L3 endpoint Augmentation error while processing "
                         + entry.getKey() + ". Reason: ", t);

@@ -43,6 +43,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterL3PrefixEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3PrefixBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig.LearningMode;
@@ -55,6 +56,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.node.NodeConnector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
+import org.opendaylight.yangtools.yang.binding.Augmentation;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
@@ -119,7 +121,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
             SwitchManager switchManager) {
         this.executor = executor;
         this.dataProvider = dataProvider;
-        EndpointRpcRegistry.register(dataProvider, rpcRegistry, executor, endpointRpcAug);
+        EndpointRpcRegistry.register(dataProvider, rpcRegistry, endpointRpcAug);
         if (dataProvider != null) {
             listenerReg = dataProvider
                     .registerDataChangeListener(LogicalDatastoreType.OPERATIONAL,
@@ -285,20 +287,19 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
     private class OfEndpointAug implements EpRendererAugmentation {
 
         @Override
-        public void buildEndpointAugmentation(EndpointBuilder eb,
-                RegisterEndpointInput input) {
-            // In order to support both the port-name and the data-path
-            // information, allow
+        public Augmentation<Endpoint> buildEndpointAugmentation(RegisterEndpointInput input) {
+            // In order to support both the port-name and the data-path information, allow
             // an EP to register without the augmentations, and resolve later.
             OfOverlayContextBuilder ictx = checkAugmentation(input);
             if (ictx != null) {
-                eb.addAugmentation(OfOverlayContext.class, ictx.build());
+                return ictx.build();
             }
+            return null;
         }
 
         @Override
-        public void buildEndpointL3Augmentation(EndpointL3Builder eb,
-                RegisterEndpointInput input) {
+        public Augmentation<EndpointL3> buildEndpointL3Augmentation(RegisterEndpointInput input) {
+            return null;
         }
 
         @Override
