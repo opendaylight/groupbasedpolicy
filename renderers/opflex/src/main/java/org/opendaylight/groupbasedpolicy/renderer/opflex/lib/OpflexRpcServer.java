@@ -27,9 +27,9 @@ import org.opendaylight.groupbasedpolicy.jsonrpc.RpcServer;
 public class OpflexRpcServer {
 
     private String identity;
-    private String domain;
-    private List<Role> roles;
-    private RpcServer rpcServer;
+    private final String domain;
+    private final List<Role> roles;
+    private final RpcServer rpcServer;
     private ConnectionService connectionService;
     private RpcBroker rpcBroker;
 

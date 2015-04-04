@@ -11,6 +11,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.opendaylight.groupbasedpolicy.renderer.opflex.mit.PolicyPropertyInfo.PolicyPropertyId;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Uri;
@@ -27,7 +28,7 @@ public class PolicyObjectInstance {
     /**
      * An object used as a key for the property hash map. It
      * consists of the tuple: { {@link PolicyPropertyId}, {@link PolicyPropertyInfo.PropertyType},
-     * {@link PolicyPropertyInfo.Propertycardinality}
+     * {@link PolicyPropertyInfo.PropertyCardinality}
      *
      * @author tbachman
      */
@@ -172,13 +173,13 @@ public class PolicyObjectInstance {
 
     }
 
-    private long classId;
+    private final long classId;
     private Uri uri;
     private Uri parentUri;
     private String parentSubject;
     private String parentRelation;
-    private List<Uri> children;
-    private HashMap<PropertyKey, Value> propertyMap;
+    private final List<Uri> children = new ArrayList<>();
+    private final Map<PropertyKey, Value> propertyMap = new HashMap<>();
 
     private PolicyPropertyInfo.PropertyType normalize(PolicyPropertyInfo.PropertyType type) {
         switch (type) {
@@ -194,8 +195,6 @@ public class PolicyObjectInstance {
 
     public PolicyObjectInstance(long classId) {
         this.classId = classId;
-        this.children = new ArrayList<Uri>();
-        this.propertyMap = new HashMap<PropertyKey, Value>();
     }
 
     /**

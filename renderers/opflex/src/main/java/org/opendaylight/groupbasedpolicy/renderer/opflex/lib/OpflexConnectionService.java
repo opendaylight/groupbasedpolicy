@@ -81,13 +81,13 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker, Rp
     private final ListenerRegistration<DataChangeListener> dataListener;
 
     String domain;
-    private ConcurrentMap<String, OpflexAgent> opflexAgents = null;
-    private ConcurrentMap<String, OpflexRpcServer> opflexServers = null;
+    private final Map<String, OpflexAgent> opflexAgents = new ConcurrentHashMap<>();
+    private final Map<String, OpflexRpcServer> opflexServers = new ConcurrentHashMap<>();
     private ConcurrentMap<String, List<RpcCallback>> brokerMap = null;
 
     private DiscoveryDefinitions currentIdentities;
     private final DataBroker dataProvider;
-    private RpcMessageMap messageMap = null;
+    private final RpcMessageMap messageMap = new RpcMessageMap();
 
     public static final InstanceIdentifier<DiscoveryDefinitions> DISCOVERY_IID = InstanceIdentifier.builder(
             DiscoveryDefinitions.class).build();
@@ -96,12 +96,9 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker, Rp
         this.dataProvider = salDataProvider;
         this.executor = executor;
 
-        this.opflexAgents = new ConcurrentHashMap<String, OpflexAgent>();
-        this.opflexServers = new ConcurrentHashMap<String, OpflexRpcServer>();
         createBroker();
 
         /* Subscribe to Discovery messages */
-        this.messageMap = new RpcMessageMap();
         List<RpcMessage> messages = Role.DISCOVERY.getMessages();
         this.messageMap.addList(messages);
         for (RpcMessage msg : messages) {
@@ -268,20 +265,12 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker, Rp
         brokerMap = new ConcurrentHashMap<String, List<RpcCallback>>();
     }
 
-    public ConcurrentMap<String, OpflexAgent> getOpflexAgents() {
+    public Map<String, OpflexAgent> getOpflexAgents() {
         return opflexAgents;
     }
 
-    public void setOpflexAgents(ConcurrentMap<String, OpflexAgent> opflexAgents) {
-        this.opflexAgents = opflexAgents;
-    }
-
-    public ConcurrentMap<String, OpflexRpcServer> getOpflexServers() {
+    public Map<String, OpflexRpcServer> getOpflexServers() {
         return opflexServers;
-    }
-
-    public void setOpflexServers(ConcurrentMap<String, OpflexRpcServer> opflexServers) {
-        this.opflexServers = opflexServers;
     }
 
     public void removeOpflexAgent(OpflexAgent agent) {

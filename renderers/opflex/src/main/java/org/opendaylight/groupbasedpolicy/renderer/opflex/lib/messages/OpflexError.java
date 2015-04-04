@@ -14,7 +14,7 @@ public class OpflexError {
     public static enum ErrorCode {
         ERROR("ERROR"), EUNSUPPORTED("EUNSUPPORTED"), ESTATE("ESTATE"), EPROTO("EPROTO"), EDOMAIN("EDOMAIN");
 
-        private String errorCode;
+        private final String errorCode;
 
         ErrorCode(String errorCode) {
             this.errorCode = errorCode;

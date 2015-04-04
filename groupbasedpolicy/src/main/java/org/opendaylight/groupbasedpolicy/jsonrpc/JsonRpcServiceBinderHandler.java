@@ -10,8 +10,6 @@
 package org.opendaylight.groupbasedpolicy.jsonrpc;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.collect.Maps;
-import com.google.common.util.concurrent.SettableFuture;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -19,11 +17,8 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
-
 public class JsonRpcServiceBinderHandler extends ChannelInboundHandlerAdapter {
     protected static final Logger logger = LoggerFactory.getLogger(JsonRpcServiceBinderHandler.class);
-    Map<Object, SettableFuture<Object>> waitingForReply = Maps.newHashMap();
     JsonRpcEndpoint endpoint = null;
 
     public JsonRpcServiceBinderHandler(JsonRpcEndpoint endpoint) {

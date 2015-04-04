@@ -47,12 +47,10 @@ public interface EnumInfo {
     public static class EnumInfoBuilder {
 
         private String name;
-        private Map<String, BigInteger> enumValuesByString;
-        private Map<BigInteger, String> enumValuesByInt;
+        private final Map<String, BigInteger> enumValuesByString = new HashMap<>();
+        private final Map<BigInteger, String> enumValuesByInt = new HashMap<>();
 
         public EnumInfoBuilder() {
-            this.enumValuesByString = new HashMap<String, BigInteger>();
-            this.enumValuesByInt = new HashMap<BigInteger, String>();
         }
 
         /**

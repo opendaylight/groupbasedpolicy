@@ -49,20 +49,15 @@ public class RpcServer {
     protected static final Logger logger =
             LoggerFactory.getLogger(RpcServer.class);
 
-    String identity;
-    int listenPort;
+    final String identity;
+    final int listenPort;
     Channel channel;
     Object context;
-    RpcMessageMap messageMap;
+    private final RpcMessageMap messageMap = new RpcMessageMap();
     ConnectionService connectionService;
     RpcBroker broker;
 
-    public RpcServer() {
-        messageMap = new RpcMessageMap();
-    }
-
     public RpcServer(String identity, int port) {
-        messageMap = new RpcMessageMap();
         this.listenPort = port;
         this.identity = identity;
     }

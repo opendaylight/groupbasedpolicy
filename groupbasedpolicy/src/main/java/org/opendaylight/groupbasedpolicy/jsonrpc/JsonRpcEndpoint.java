@@ -45,8 +45,8 @@ public class JsonRpcEndpoint implements ChannelFutureListener {
     protected static final Logger logger = LoggerFactory.getLogger(JsonRpcEndpoint.class);
 
     private static class CallContext {
-        private String method;
-        private SettableFuture<Object> future;
+        private final String method;
+        private final SettableFuture<Object> future;
 
         public CallContext(String method, SettableFuture<Object> future) {
             this.method = method;
@@ -62,21 +62,17 @@ public class JsonRpcEndpoint implements ChannelFutureListener {
         }
     }
 
-    private String identifier;
+    private final String identifier;
     private Object context;
-    private ObjectMapper objectMapper;
-    private Channel nettyChannel;
-    private Map<String, CallContext> methodContext = Maps.newHashMap();
-    private RpcMessageMap messageMap;
-    private RpcBroker broker;
-    private ConnectionService connectionService;
+    private final ObjectMapper objectMapper;
+    private final Channel nettyChannel;
+    private final Map<String, CallContext> methodContext = Maps.newHashMap();
+    private final RpcMessageMap messageMap;
+    private final RpcBroker broker;
+    private final ConnectionService connectionService;
 
     public String getIdentifier() {
         return identifier;
-    }
-
-    public void setIdentifier(String identifier) {
-        this.identifier = identifier;
     }
 
     public Object getContext() {
@@ -85,13 +81,6 @@ public class JsonRpcEndpoint implements ChannelFutureListener {
 
     public void setContext(Object context) {
         this.context = context;
-    }
-
-    public ConnectionService getConnectionService() {
-        return connectionService;
-    }
-    public void setConnectionService(ConnectionService connectionService) {
-        this.connectionService = connectionService;
     }
 
     public Channel getChannel() {

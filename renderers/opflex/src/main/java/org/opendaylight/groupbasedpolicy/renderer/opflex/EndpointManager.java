@@ -97,9 +97,9 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
     private final OpflexConnectionService connectionService;
     private final MitLib mitLibrary;
 
-    final ConcurrentHashMap<EpKey, Endpoint> endpoints;
+    final Map<EpKey, Endpoint> endpoints = new ConcurrentHashMap<>();
 
-    private ConcurrentHashMap<String, Set<String>> epSubscriptions;
+    private final ConcurrentHashMap<String, Set<String>> epSubscriptions = new ConcurrentHashMap<>();
     private RpcMessageMap messageMap = null;
 
     final private OfEndpointAug endpointRpcAug = new OfEndpointAug();
@@ -126,9 +126,6 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
 
         this.connectionService = connectionService;
         this.mitLibrary = opflexLibrary;
-
-        endpoints = new ConcurrentHashMap<EpKey, Endpoint>();
-        epSubscriptions = new ConcurrentHashMap<String, Set<String>>();
 
         /* Subscribe to EPR messages */
         messageMap = new RpcMessageMap();
@@ -298,7 +295,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
         public static enum UpdateType {
             ADD_CHANGE("add_change"), DELETE("delete");
 
-            private String updateType;
+            private final String updateType;
 
             UpdateType(String updateType) {
                 this.updateType = updateType;
@@ -363,7 +360,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
      * Request message.
      *
      * @param agent
-     * @param request
+     * @param message
      * @param dataProvider
      * @param executor
      * @return
@@ -568,7 +565,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
                  * A request is effectively a subscription. Add this agent
                  * to the set of listeners.
                  */
-                Identity id = null;
+                Identity id;
                 if (param.getEndpoint_ident() != null) {
                     id = new Identity(param.getEndpoint_ident().getIdentifier());
                 } else if (param.getEndpoint_uri() != null) {
@@ -631,8 +628,8 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
 
     private class EndpointResponse implements Runnable {
 
-        private EprContext ctx;
-        private RpcMessage resp;
+        private final EprContext ctx;
+        private final RpcMessage resp;
 
         public EndpointResponse(EprContext ctx, RpcMessage resp) {
             this.ctx = ctx;

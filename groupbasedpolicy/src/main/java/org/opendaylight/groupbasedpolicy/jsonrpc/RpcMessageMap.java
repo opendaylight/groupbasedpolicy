@@ -10,20 +10,12 @@
 package org.opendaylight.groupbasedpolicy.jsonrpc;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 
 public class RpcMessageMap {
-    private ConcurrentMap<String, RpcMessage> messageMap;
-
-    public boolean containsMessages (List<RpcMessage> messages) {
-        return messages.containsAll(messageMap.values());
-    }
-
-    public RpcMessageMap() {
-        messageMap = new ConcurrentHashMap<String, RpcMessage>();
-    }
+    private final Map<String, RpcMessage> messageMap = new ConcurrentHashMap<>();
 
     public RpcMessage get(String messageName) {
         return messageMap.get(messageName);

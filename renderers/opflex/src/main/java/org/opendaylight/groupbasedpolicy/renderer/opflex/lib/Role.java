@@ -40,23 +40,23 @@ public enum Role {
     DISCOVERY("discovery"), POLICY_REPOSITORY("policy_repository"), ENDPOINT_REGISTRY("endpoint_registry"), OBSERVER(
             "observer"), POLICY_ELEMENT("policy_element");
 
-    static IdentityRequest idReq = new IdentityRequest();
-    static IdentityResponse idRsp = new IdentityResponse();
-    static EndpointDeclareRequest epDeclReq = new EndpointDeclareRequest();
-    static EndpointDeclareResponse epDeclRsp = new EndpointDeclareResponse();
-    static EndpointUndeclareRequest epUndeclReq = new EndpointUndeclareRequest();
-    static EndpointResolveRequest epReqReq = new EndpointResolveRequest();
-    static EndpointResolveResponse epReqRsp = new EndpointResolveResponse();
-    static EndpointUnresolveRequest epUnreqReq = new EndpointUnresolveRequest();
-    static EndpointUnresolveResponse epUnreqRsp = new EndpointUnresolveResponse();
-    static EndpointUpdateRequest epPolUpdReq = new EndpointUpdateRequest();
-    static EndpointUpdateResponse epPolUpdRsp = new EndpointUpdateResponse();
-    static PolicyResolveRequest polReq = new PolicyResolveRequest();
-    static PolicyResolveResponse polRsp = new PolicyResolveResponse();
-    static PolicyUpdateRequest polUpdReq = new PolicyUpdateRequest();
-    static PolicyUpdateResponse polUpdRsp = new PolicyUpdateResponse();
-    static PolicyUnresolveRequest polUnReq = new PolicyUnresolveRequest();
-    static PolicyUnresolveResponse polUnRsp = new PolicyUnresolveResponse();
+    static final IdentityRequest idReq = new IdentityRequest();
+    static final IdentityResponse idRsp = new IdentityResponse();
+    static final EndpointDeclareRequest epDeclReq = new EndpointDeclareRequest();
+    static final EndpointDeclareResponse epDeclRsp = new EndpointDeclareResponse();
+    static final EndpointUndeclareRequest epUndeclReq = new EndpointUndeclareRequest();
+    static final EndpointResolveRequest epReqReq = new EndpointResolveRequest();
+    static final EndpointResolveResponse epReqRsp = new EndpointResolveResponse();
+    static final EndpointUnresolveRequest epUnreqReq = new EndpointUnresolveRequest();
+    static final EndpointUnresolveResponse epUnreqRsp = new EndpointUnresolveResponse();
+    static final EndpointUpdateRequest epPolUpdReq = new EndpointUpdateRequest();
+    static final EndpointUpdateResponse epPolUpdRsp = new EndpointUpdateResponse();
+    static final PolicyResolveRequest polReq = new PolicyResolveRequest();
+    static final PolicyResolveResponse polRsp = new PolicyResolveResponse();
+    static final PolicyUpdateRequest polUpdReq = new PolicyUpdateRequest();
+    static final PolicyUpdateResponse polUpdRsp = new PolicyUpdateResponse();
+    static final PolicyUnresolveRequest polUnReq = new PolicyUnresolveRequest();
+    static final PolicyUnresolveResponse polUnRsp = new PolicyUnresolveResponse();
 
     private final String role;
 

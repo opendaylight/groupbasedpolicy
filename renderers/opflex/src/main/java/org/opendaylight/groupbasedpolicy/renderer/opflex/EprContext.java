@@ -37,7 +37,7 @@ public class EprContext implements Runnable, EprOperation.EprOpCallback {
     private final ScheduledExecutorService executor;
     private final JsonRpcEndpoint peer;
     private final RpcMessage request;
-    private List<EprOperation> operations;
+    private final List<EprOperation> operations = new ArrayList<>();
     private AtomicReference<Integer> completedOperations;
     private CheckedFuture<Void, TransactionCommitFailedException> f;
 
@@ -47,7 +47,6 @@ public class EprContext implements Runnable, EprOperation.EprOpCallback {
         this.executor = executor;
         this.peer = peer;
         this.request = request;
-        operations = new ArrayList<EprOperation>();
     }
 
     /**
@@ -99,10 +98,8 @@ public class EprContext implements Runnable, EprOperation.EprOpCallback {
         /*
          * Add each of the create/update operations to a single transaction
          */
-        if (operations != null) {
-            for (EprOperation eo : operations) {
-                eo.put(wt);
-            }
+        for (EprOperation eo : operations) {
+            eo.put(wt);
         }
         f = wt.submit();
         f.addListener(this, executor);
@@ -120,10 +117,8 @@ public class EprContext implements Runnable, EprOperation.EprOpCallback {
         /*
          * Add each of the delete operations to a single transaction
          */
-        if (operations != null) {
-            for (EprOperation eo : operations) {
-                eo.delete(wt);
-            }
+        for (EprOperation eo : operations) {
+            eo.delete(wt);
         }
         f = wt.submit();
         f.addListener(this, executor);
@@ -143,13 +138,11 @@ public class EprContext implements Runnable, EprOperation.EprOpCallback {
          * operations have completed.
          */
         this.completedOperations = new AtomicReference<Integer>(Integer.valueOf(0));
-        if (operations != null) {
-            for (EprOperation eo : operations) {
-                ReadOnlyTransaction rot = dataProvider.newReadOnlyTransaction();
+        for (EprOperation eo : operations) {
+            ReadOnlyTransaction rot = dataProvider.newReadOnlyTransaction();
 
-                eo.setCallback(this);
-                eo.read(rot, executor);
-            }
+            eo.setCallback(this);
+            eo.read(rot, executor);
         }
     }
 

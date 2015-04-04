@@ -99,12 +99,10 @@ public interface PolicyClassInfo {
         private int classId;
         private PolicyClassType policyType;
         private String className;
-        private Map<String, PolicyPropertyInfo> properties;
-        private List<PolicyPropertyId> keys;
+        private final Map<String, PolicyPropertyInfo> properties = new HashMap<>();
+        private final List<PolicyPropertyId> keys = new ArrayList<>();
 
         public PolicyClassInfoBuilder() {
-            this.properties = new HashMap<String, PolicyPropertyInfo>();
-            this.keys = new ArrayList<PolicyPropertyId>();
         }
 
         public int getClassId() {
@@ -156,7 +154,7 @@ public interface PolicyClassInfo {
             private final PolicyClassType policyType;
             private final String className;
             private final Map<String, PolicyPropertyInfo> properties;
-            private List<PolicyPropertyId> keys;
+            private final List<PolicyPropertyId> keys;
 
             private PolicyClassInfoImpl(PolicyClassInfoBuilder builder) {
                 this.classId = builder.classId;

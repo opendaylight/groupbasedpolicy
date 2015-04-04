@@ -29,8 +29,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 public class MitLib {
 
     protected static final Logger LOG = LoggerFactory.getLogger(MitLib.class);
-    private ObjectMapper objectMapper;
-    private JsonNodeFactory jnf;
+    private final ObjectMapper objectMapper;
+    private final JsonNodeFactory jnf;
 
     @JsonSerialize
     public static class Reference {
@@ -161,7 +161,7 @@ public class MitLib {
             }
             switch (ppi.getType()) {
                 case STRING:
-                    if (vectored == true) {
+                    if (vectored) {
                         if (!node.isArray())
                             continue;
 
@@ -183,7 +183,7 @@ public class MitLib {
                     break;
 
                 case U64:
-                    if (vectored == true) {
+                    if (vectored) {
                         if (!node.isArray())
                             continue;
 
@@ -206,7 +206,7 @@ public class MitLib {
                     break;
 
                 case S64:
-                    if (vectored == true) {
+                    if (vectored) {
                         if (!node.isArray())
                             continue;
 
@@ -230,7 +230,7 @@ public class MitLib {
                     break;
 
                 case REFERENCE:
-                    if (vectored == true) {
+                    if (vectored) {
                         if (!node.isArray())
                             continue;
 
@@ -258,7 +258,7 @@ public class MitLib {
                 case ENUM16:
                 case ENUM32:
                 case ENUM64:
-                    if (vectored == true) {
+                    if (vectored) {
                         if (!node.isArray())
                             continue;
 
@@ -283,7 +283,7 @@ public class MitLib {
                     break;
 
                 case MAC:
-                    if (vectored == true) {
+                    if (vectored) {
                         if (!node.isArray())
                             continue;
 
@@ -357,7 +357,7 @@ public class MitLib {
                 case STRING:
                     p = new ManagedObject.Property();
                     p.setName(ppi.getPropName());
-                    if (scalar == true) {
+                    if (scalar) {
                         JsonNode jn = jnf.textNode(poi.getString(ppi.getPropId()));
                         p.setData(jn);
                     } else {
@@ -373,7 +373,7 @@ public class MitLib {
                 case S64:
                     p = new ManagedObject.Property();
                     p.setName(ppi.getPropName());
-                    if (scalar == true) {
+                    if (scalar) {
                         JsonNode jn = jnf.numberNode(poi.getInt64(ppi.getPropId()));
                         p.setData(jn);
                     } else {
@@ -392,7 +392,7 @@ public class MitLib {
                 case ENUM64:
                     p = new ManagedObject.Property();
                     p.setName(ppi.getPropName());
-                    if (scalar == true) {
+                    if (scalar) {
                         JsonNode jn = jnf.textNode(serializeMoPropertyEnum(ppi, poi));
                         p.setData(jn);
                     } else {
@@ -408,7 +408,7 @@ public class MitLib {
                 case U64:
                     p = new ManagedObject.Property();
                     p.setName(ppi.getPropName());
-                    if (scalar == true) {
+                    if (scalar) {
                         JsonNode jn = jnf.numberNode(poi.getUint64(ppi.getPropId()));
                         p.setData(jn);
                     } else {
@@ -424,16 +424,16 @@ public class MitLib {
                 case MAC:
                     p = new ManagedObject.Property();
                     p.setName(ppi.getPropName());
-                    if (scalar == true) {
+                    if (scalar) {
                         MacAddress mac = poi.getMacAddress(ppi.getPropId());
-                        JsonNode jn = jnf.textNode(mac.getValue().toString());
+                        JsonNode jn = jnf.textNode(mac.getValue());
                         p.setData(jn);
                     } else {
                         int len = poi.getMacAddressSize(ppi.getPropId());
                         ArrayNode an = jnf.arrayNode();
                         for (int i = 0; i < len; i++) {
                             MacAddress mac = poi.getMacAddress(ppi.getPropId());
-                            an.add(mac.getValue().toString());
+                            an.add(mac.getValue());
                         }
                         p.setData(an);
                     }
@@ -442,7 +442,7 @@ public class MitLib {
                 case REFERENCE:
                     p = new ManagedObject.Property();
                     p.setName(ppi.getPropName());
-                    if (scalar == true) {
+                    if (scalar) {
                         ObjectNode on = serializeMoPropertyRef(poi.getReference(ppi.getPropId()), mit);
                         p.setData(on);
                     } else {

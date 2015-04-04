@@ -41,7 +41,7 @@ import com.google.common.net.InetAddresses;
 public class Identity {
 
     enum IdentityType {
-        UNKNOWN, IP_ADDRESS, MAC_ADDRESS;
+        UNKNOWN, IP_ADDRESS, MAC_ADDRESS
     }
 
     private IdentityType type = IdentityType.UNKNOWN;
@@ -193,9 +193,9 @@ public class Identity {
     public String contextAsString() {
         switch (type) {
             case MAC_ADDRESS:
-                return l2Context.getValue().toString();
+                return l2Context.getValue();
             case IP_ADDRESS:
-                return l3Context.getValue().toString();
+                return l3Context.getValue();
             default:
                 return null;
         }

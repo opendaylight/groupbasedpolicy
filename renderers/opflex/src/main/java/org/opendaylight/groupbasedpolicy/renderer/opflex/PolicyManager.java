@@ -78,7 +78,7 @@ public class PolicyManager implements PolicyListener, RpcBroker.RpcCallback, Aut
     private final MitLib mitLibrary;
     private final PolicyScope policyScope;
 
-    private ConcurrentHashMap<EgKey, Set<String>> epgSubscriptions;
+    private final ConcurrentHashMap<EgKey, Set<String>> epgSubscriptions = new ConcurrentHashMap<>();
     private RpcMessageMap messageMap = null;
 
     public PolicyManager(PolicyResolver policyResolver, OpflexConnectionService connectionService,
@@ -88,8 +88,6 @@ public class PolicyManager implements PolicyListener, RpcBroker.RpcCallback, Aut
         this.policyResolver = policyResolver;
         this.connectionService = connectionService;
         this.mitLibrary = mitLibrary;
-
-        epgSubscriptions = new ConcurrentHashMap<>();
 
         /* Subscribe to PR messages */
         messageMap = new RpcMessageMap();
@@ -173,7 +171,7 @@ public class PolicyManager implements PolicyListener, RpcBroker.RpcCallback, Aut
     }
 
     /**
-     * This implements Runnable, which allows the {@link ScheduledExecutorservice} to execute the
+     * This implements Runnable, which allows the {@link ScheduledExecutorService} to execute the
      * run() method to implement the update
      *
      * @author tbachman
@@ -322,12 +320,11 @@ public class PolicyManager implements PolicyListener, RpcBroker.RpcCallback, Aut
                  * may require merging -- different RuleGroup
                  * objects can refer to the same contract
                  */
-                List<ManagedObject> cmol = new ArrayList<ManagedObject>();
-                List<ManagedObject> mol = null;
+                List<ManagedObject> cmol = new ArrayList<>();
 
                 uri.push(MessageUtils.CONTRACT_RN);
                 uri.push(c.getId().getValue());
-                mol = MessageUtils.getContractAndSubMos(cmol, uri, c, rg, it);
+                List<ManagedObject> mol = MessageUtils.getContractAndSubMos(cmol, uri, c, rg, it);
                 if (mol == null)
                     continue;
 
@@ -402,8 +399,7 @@ public class PolicyManager implements PolicyListener, RpcBroker.RpcCallback, Aut
                 msg.setError(error);
             }
 
-            Uri policyUri = null;
-            List<ManagedObject> mol = new ArrayList<ManagedObject>();
+            List<ManagedObject> mol = new ArrayList<>();
 
             for (PolicyResolveRequest.Params p : req.getParams()) {
 
@@ -415,7 +411,7 @@ public class PolicyManager implements PolicyListener, RpcBroker.RpcCallback, Aut
                  * Only Policy Identity or Policy URI is present.
                  * Convert Policy Identities to a URI that we can use
                  */
-                policyUri = p.getPolicy_uri();
+                Uri policyUri = p.getPolicy_uri();
                 if (policyUri == null) {
                     Uri rn = p.getPolicy_ident().getContext();
                     String name = p.getPolicy_ident().getName();

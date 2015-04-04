@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -396,10 +397,10 @@ public class MessageUtils {
      */
     public static class UriIterator implements Iterator<String> {
 
-        private PolicyUri uri;
+        private final PolicyUri uri;
         private int index;
         private int keyCount;
-        private ConcurrentMap<String, Integer> keyMap;
+        private final Map<String, Integer> keyMap;
 
         public UriIterator(PolicyUri uri, ConcurrentMap<String, Integer> keyMap) {
             this.uri = uri;
@@ -879,10 +880,9 @@ public class MessageUtils {
     }
 
     private static List<BigInteger> getParamList(HashMap<String, List<BigInteger>> hm, String type) {
-        List<BigInteger> pvl = null;
-        pvl = hm.get(type);
+        List<BigInteger> pvl = hm.get(type);
         if (pvl == null) {
-            pvl = new ArrayList<BigInteger>();
+            pvl = new ArrayList<>();
             hm.put(type, pvl);
         }
         return pvl;
@@ -899,8 +899,8 @@ public class MessageUtils {
      * @param cr
      * @return
      */
-    private static HashMap<String, List<BigInteger>> buildParameterValues(ClassifierInstance ci, ClassifierRef cr) {
-        HashMap<String, List<BigInteger>> pmap = new HashMap<String, List<BigInteger>>();
+    private static Map<String, List<BigInteger>> buildParameterValues(ClassifierInstance ci, ClassifierRef cr) {
+        HashMap<String, List<BigInteger>> pmap = new HashMap<>();
         List<BigInteger> pvl = null;
 
         /*
@@ -1051,11 +1051,10 @@ public class MessageUtils {
         // Convert to Genie URI
         PolicyUri convertedUri = odlUriToGenieUri(current);
 
-        HashMap<String, List<BigInteger>> pmap = null;
         if (ci.getParameterValue() == null)
             return null;
 
-        pmap = buildParameterValues(ci, cr);
+        Map<String, List<BigInteger>> pmap = buildParameterValues(ci, cr);
 
         ManagedObject mo = new ManagedObject();
 
@@ -1134,7 +1133,7 @@ public class MessageUtils {
     public static class Ipv4PlusSubnet {
 
         private String prefix;
-        private String mask;
+        private final String mask;
 
         public Ipv4PlusSubnet(String ipAndMask) {
             String[] parts = ipAndMask.split("/");
@@ -1710,7 +1709,7 @@ public class MessageUtils {
      * chase the reference to get any other objects in a network hierarchy.
      *
      * @param current
-     * @param ndi
+     * @param ndid
      * @param t
      * @return
      */
@@ -1919,7 +1918,6 @@ public class MessageUtils {
         EndpointGroupId epgid = null;
         L2BridgeDomainId l2bdid = null;
         L3ContextId l3cid = null;
-        String uuid = null;
         IpAddress ip = null;
         EprOperation op = null;
         TenantId tid = null;
@@ -1972,7 +1970,7 @@ public class MessageUtils {
                         }
                         break;
                     case GENIE_ENDPOINT_UUID:
-                        uuid = poi.getString(ppi.getPropId());
+                        String uuid = poi.getString(ppi.getPropId());
                         tid = new TenantId(uuid);
                         break;
                     case GENIE_ENDPOINT_IP:

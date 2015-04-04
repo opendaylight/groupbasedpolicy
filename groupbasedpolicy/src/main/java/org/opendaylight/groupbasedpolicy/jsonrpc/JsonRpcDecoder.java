@@ -16,7 +16,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 
-import java.io.IOException;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -45,11 +44,11 @@ public class JsonRpcDecoder extends ByteToMessageDecoder {
 
     protected static final Logger logger = LoggerFactory.getLogger(JsonRpcDecoder.class);
 
-    private int maxFrameLength;
+    private final int maxFrameLength;
 
-    private JsonFactory jacksonJsonFactory = new MappingJsonFactory();
+    private final JsonFactory jacksonJsonFactory = new MappingJsonFactory();
 
-    private IOContext jacksonIOContext = new IOContext(new BufferRecycler(), null, false);
+    private final IOContext jacksonIOContext = new IOContext(new BufferRecycler(), null, false);
 
     // context for the previously read incomplete records
     private int lastRecordBytes = 0;
@@ -135,14 +134,14 @@ public class JsonRpcDecoder extends ByteToMessageDecoder {
         return recordsRead;
     }
 
-    private static boolean isEom(int ch) throws IOException {
+    private static boolean isEom(int ch) {
         if (ch == '\0') {
             return true;
         }
         return false;
     }
 
-    private static void skipSpaces(ByteBuf b) throws IOException {
+    private static void skipSpaces(ByteBuf b) {
         while (b.isReadable()) {
             int ch = b.getByte(b.readerIndex()) & 0xFF;
             if (!(ch == ' ' || ch == '\r' || ch == '\n' || ch == '\t' || ch == '\0')) {
