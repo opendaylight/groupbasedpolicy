@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
- * 
+ *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -43,31 +43,47 @@ import com.google.common.collect.ImmutableList;
  */
 public class L4Classifier extends Classifier {
 
-    public static final String SPORT = "sourceport";
-    public static final String SPORT_RANGE = "sourceport_range";
-    public static final String DPORT = "destport";
-    public static final String DPORT_RANGE = "destport_range";
-    public static final ClassifierDefinitionId ID = new ClassifierDefinitionId("4250ab32-e8b8-445a-aebb-e1bd2cdd291f");
-    private static final ClassifierDefinition DEF = new ClassifierDefinitionBuilder().setId(
+    /**
+     * Source port parameter name
+     */
+    public static final String SRC_PORT_PARAM = "sourceport";
+    /**
+     * Source port range parameter name
+     */
+    public static final String SRC_PORT_RANGE_PARAM = "sourceport_range";
+    /**
+     * Destination port parameter name
+     */
+    public static final String DST_PORT_PARAM = "destport";
+    /**
+     * Destination port range parameter name
+     */
+    public static final String DST_PORT_RANGE_PARAM = "destport_range";
+
+    protected static final ClassifierDefinitionId ID = new ClassifierDefinitionId(
+            "4250ab32-e8b8-445a-aebb-e1bd2cdd291f");
+    /**
+     * Layer 4 classifier-definition
+     */
+    public static final ClassifierDefinition DEFINITION = new ClassifierDefinitionBuilder().setId(
             new ClassifierDefinitionId("4250ab32-e8b8-445a-aebb-e1bd2cdd291f"))
         .setParent(IpProtoClassifier.ID)
         .setName(new ClassifierName("l4"))
         .setDescription(new Description("Match on the port number of UDP or TCP traffic"))
         .setParameter(
                 ImmutableList.of(
-                        new ParameterBuilder().setName(new ParameterName(SPORT))
+                        new ParameterBuilder().setName(new ParameterName(SRC_PORT_PARAM))
                             .setDescription(new Description("The source port number to match against"))
                             .setType(Type.Int)
                             .build(),
-                        new ParameterBuilder().setName(new ParameterName(SPORT_RANGE))
+                        new ParameterBuilder().setName(new ParameterName(SRC_PORT_RANGE_PARAM))
                             .setDescription(new Description("The source port range to match against"))
                             .setType(Type.Range)
                             .build(),
-                        new ParameterBuilder().setName(new ParameterName(DPORT))
+                        new ParameterBuilder().setName(new ParameterName(DST_PORT_PARAM))
                             .setDescription(new Description("The destination port number to match against"))
                             .setType(Type.Int)
-                            .build(),
-                        new ParameterBuilder().setName(new ParameterName(DPORT_RANGE))
+                            .build(), new ParameterBuilder().setName(new ParameterName(DST_PORT_RANGE_PARAM))
                             .setDescription(new Description("The destination port range to match against"))
                             .setType(Type.Range)
                             .build()))
@@ -84,40 +100,40 @@ public class L4Classifier extends Classifier {
 
     @Override
     public ClassifierDefinition getClassDef() {
-        return DEF;
+        return DEFINITION;
     }
 
     @Override
     protected void checkPresenceOfRequiredParams(Map<String, ParameterValue> params) {
-        if (params.get(SPORT) != null && params.get(SPORT_RANGE) != null) {
+        if (params.get(SRC_PORT_PARAM) != null && params.get(SRC_PORT_RANGE_PARAM) != null) {
             throw new IllegalArgumentException("Classifier: {" + this.getClassDef().getName()
                     + "}+. Illegal source port parameters: 'int' and 'range' values are mutually exclusive.");
         }
-        if (params.get(DPORT) != null && params.get(DPORT_RANGE) != null) {
+        if (params.get(DST_PORT_PARAM) != null && params.get(DST_PORT_RANGE_PARAM) != null) {
             throw new IllegalArgumentException("Classifier: {" + this.getClassDef().getName()
                     + "}+. Illegal destination port parameters: 'int' and 'range' values are mutually exclusive.");
         }
-        if (params.get(SPORT) != null) {
-            if (params.get(SPORT).getIntValue() == null) {
+        if (params.get(SRC_PORT_PARAM) != null) {
+            if (params.get(SRC_PORT_PARAM).getIntValue() == null) {
                 throw new IllegalArgumentException("Classifier: {" + this.getClassDef().getName()
                         + "}+ Value of sourceport parameter is not present.");
             }
         }
-        if (params.get(SPORT_RANGE) != null) {
-            if (params.get(SPORT_RANGE) != null) {
-                validateRangeValue(params.get(SPORT_RANGE).getRangeValue());
+        if (params.get(SRC_PORT_RANGE_PARAM) != null) {
+            if (params.get(SRC_PORT_RANGE_PARAM) != null) {
+                validateRangeValue(params.get(SRC_PORT_RANGE_PARAM).getRangeValue());
             }
         }
 
-        if (params.get(DPORT) != null) {
-            if (params.get(DPORT).getIntValue() == null) {
+        if (params.get(DST_PORT_PARAM) != null) {
+            if (params.get(DST_PORT_PARAM).getIntValue() == null) {
                 throw new IllegalArgumentException("Classifier: {" + this.getClassDef().getName()
                         + "}+ Value of destport parameter is not present.");
             }
         }
-        if (params.get(DPORT_RANGE) != null) {
-            if (params.get(DPORT_RANGE) != null) {
-                validateRangeValue(params.get(DPORT_RANGE).getRangeValue());
+        if (params.get(DST_PORT_RANGE_PARAM) != null) {
+            if (params.get(DST_PORT_RANGE_PARAM) != null) {
+                validateRangeValue(params.get(DST_PORT_RANGE_PARAM).getRangeValue());
             }
         }
     }
@@ -139,15 +155,15 @@ public class L4Classifier extends Classifier {
     public List<MatchBuilder> update(List<MatchBuilder> matches, Map<String, ParameterValue> params) {
         Set<Long> sPorts = new HashSet<>();
         Set<Long> dPorts = new HashSet<>();
-        if (params.get(SPORT) != null) {
-            sPorts.add(params.get(SPORT).getIntValue());
-        } else if (params.get(SPORT_RANGE) != null) {
-            sPorts.addAll(createSetFromRange(params.get(SPORT_RANGE).getRangeValue()));
+        if (params.get(SRC_PORT_PARAM) != null) {
+            sPorts.add(params.get(SRC_PORT_PARAM).getIntValue());
+        } else if (params.get(SRC_PORT_RANGE_PARAM) != null) {
+            sPorts.addAll(createSetFromRange(params.get(SRC_PORT_RANGE_PARAM).getRangeValue()));
         }
-        if (params.get(DPORT) != null) {
-            dPorts.add(params.get(DPORT).getIntValue());
-        } else if (params.get(DPORT_RANGE) != null) {
-            dPorts.addAll(createSetFromRange(params.get(DPORT_RANGE).getRangeValue()));
+        if (params.get(DST_PORT_PARAM) != null) {
+            dPorts.add(params.get(DST_PORT_PARAM).getIntValue());
+        } else if (params.get(DST_PORT_RANGE_PARAM) != null) {
+            dPorts.addAll(createSetFromRange(params.get(DST_PORT_RANGE_PARAM).getRangeValue()));
         }
 
         List<MatchBuilder> newMatches = new ArrayList<>();
@@ -177,11 +193,11 @@ public class L4Classifier extends Classifier {
             throw new IllegalArgumentException("Classifier-instance " + this.getClassDef().getName()
                     + ": L4 protocol is null.");
         }
-        if (IpProtoClassifier.UDP.equals(ipProto)) {
+        if (IpProtoClassifier.UDP_VALUE.equals(ipProto)) {
             return new UdpMatchBuilder().build();
-        } else if (IpProtoClassifier.TCP.equals(ipProto)) {
+        } else if (IpProtoClassifier.TCP_VALUE.equals(ipProto)) {
             return new TcpMatchBuilder().build();
-        } else if (IpProtoClassifier.SCTP.equals(ipProto)) {
+        } else if (IpProtoClassifier.SCTP_VALUE.equals(ipProto)) {
             return new SctpMatchBuilder().build();
         }
         throw new IllegalArgumentException("Unsupported L4 protocol.");
@@ -300,8 +316,8 @@ public class L4Classifier extends Classifier {
             } catch (NullPointerException e) {
                 throw new IllegalArgumentException("Ip proto match is missing.");
             }
-            if (!IpProtoClassifier.TCP.equals(proto) && !IpProtoClassifier.UDP.equals(proto)
-                    && !IpProtoClassifier.SCTP.equals(proto)) {
+            if (!IpProtoClassifier.TCP_VALUE.equals(proto) && !IpProtoClassifier.UDP_VALUE.equals(proto)
+                    && !IpProtoClassifier.SCTP_VALUE.equals(proto)) {
                 throw new IllegalArgumentException("Unsupported proto value.\n" + "Classifier: "
                         + this.getClass().getName() + ", proto set: " + proto);
             }

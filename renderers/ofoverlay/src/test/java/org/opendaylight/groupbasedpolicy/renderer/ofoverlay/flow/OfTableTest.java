@@ -157,7 +157,7 @@ public class OfTableTest {
             .setSubjectFeatureInstances(new SubjectFeatureInstancesBuilder()
                 .setClassifierInstance(ImmutableList.of(new ClassifierInstanceBuilder()
                      .setName(new ClassifierName("tcp_80"))
-                     .setClassifierDefinitionId(L4Classifier.ID)
+                     .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
                      .setParameterValue(ImmutableList.of(new ParameterValueBuilder()
                               .setName(new ParameterName("destport"))
                               .setIntValue(Long.valueOf(80))
@@ -195,7 +195,7 @@ public class OfTableTest {
                     .build()))
                 .build()));
     }
-    
+
     protected EndpointBuilder baseEP() {
         return new EndpointBuilder()
             .setL2Context(bd)
@@ -222,5 +222,5 @@ public class OfTableTest {
             .setMacAddress(new MacAddress("00:00:00:00:00:02"))
             .addAugmentation(OfOverlayContext.class, ofc);
     }
-    
+
 }

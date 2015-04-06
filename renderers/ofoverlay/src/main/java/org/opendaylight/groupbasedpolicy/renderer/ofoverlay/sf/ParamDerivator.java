@@ -39,12 +39,12 @@ public abstract class ParamDerivator {
         @Override
         public List<Map<String, ParameterValue>> deriveParameter(Map<String, ParameterValue> params) {
 
-            if (!params.containsKey(EtherTypeClassifier.ETHER_TYPE)) {
+            if (!params.containsKey(EtherTypeClassifier.ETHERTYPE_PARAM)) {
                 Map<String, ParameterValue> ipv4Params = new HashMap<>(params);
                 Map<String, ParameterValue> ipv6Params = new HashMap<>(params);
-                ipv4Params.put(EtherTypeClassifier.ETHER_TYPE, new ParameterValueBuilder().setIntValue(FlowUtils.IPv4)
+                ipv4Params.put(EtherTypeClassifier.ETHERTYPE_PARAM, new ParameterValueBuilder().setIntValue(FlowUtils.IPv4)
                     .build());
-                ipv6Params.put(EtherTypeClassifier.ETHER_TYPE, new ParameterValueBuilder().setIntValue(FlowUtils.IPv6)
+                ipv6Params.put(EtherTypeClassifier.ETHERTYPE_PARAM, new ParameterValueBuilder().setIntValue(FlowUtils.IPv6)
                     .build());
                 List<Map<String, ParameterValue>> derivedParams = new ArrayList<>();
                 derivedParams.add(ipv4Params);

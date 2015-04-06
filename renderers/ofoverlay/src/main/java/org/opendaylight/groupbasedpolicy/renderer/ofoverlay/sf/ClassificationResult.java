@@ -16,22 +16,32 @@ import com.google.common.base.Preconditions;
 
 public class ClassificationResult {
 
-    private final String message;
+    private final String errorMessage;
     private final boolean isSuccessful;
     private final List<MatchBuilder> matchBuilders;
 
+    /**
+     * @param errorMessage cannot be {@code null}
+     */
     public ClassificationResult(String errorMessage) {
-        this.message = Preconditions.checkNotNull(errorMessage);
+        this.errorMessage = Preconditions.checkNotNull(errorMessage);
         this.isSuccessful = false;
         matchBuilders = null;
     }
 
+    /**
+     * @param matches cannot be {@code null}
+     */
     public ClassificationResult(List<MatchBuilder> matches) {
-        message = "";
+        errorMessage = "";
         this.matchBuilders = Preconditions.checkNotNull(matches);
         this.isSuccessful = true;
     }
 
+    /**
+     * @return list of {@link MatchBuilder}
+     * @throws IllegalStateException if this method is called and {@link #isSuccessfull()} == {@code false}
+     */
     public List<MatchBuilder> getMatchBuilders() {
         if (isSuccessful == false) {
             throw new IllegalStateException("Classification was not successfull.");
@@ -39,10 +49,16 @@ public class ClassificationResult {
         return matchBuilders;
     }
 
-    public String getMessage() {
-        return message;
+    /**
+     * @return contains error message if {@link #isSuccessfull()} == {@code false}
+     */
+    public String getErrorMessage() {
+        return errorMessage;
     }
 
+    /**
+     * @return {@code true} if {@link ClassificationResult} contains result. {@code false} if {@link ClassificationResult} contains error message.
+     */
     public boolean isSuccessfull() {
         return isSuccessful;
     }

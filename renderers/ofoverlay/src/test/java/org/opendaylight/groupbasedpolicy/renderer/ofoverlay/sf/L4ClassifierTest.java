@@ -45,8 +45,8 @@ public class L4ClassifierTest {
         matches.add(new MatchBuilder()
                 .setEthernetMatch(ClassifierTestUtils.createEthernetMatch(ClassifierTestUtils.IPV4_ETH_TYPE)));
         Long sPort = Long.valueOf(80);
-        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO, ClassifierTestUtils.TCP));
-        params.putAll(ClassifierTestUtils.createIntValueParam(L4Classifier.SPORT, sPort));
+        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, ClassifierTestUtils.TCP));
+        params.putAll(ClassifierTestUtils.createIntValueParam(L4Classifier.SRC_PORT_PARAM, sPort));
         matches = Classifier.L4_CL.update(matches, params);
         assertEquals(true, ClassifierTestUtils.IPV4_ETH_TYPE.equals(matches.get(0).getEthernetMatch().getEthernetType()));
         TcpMatch match = new TcpMatchBuilder((TcpMatch) matches.get(0).getLayer4Match()).build();
@@ -59,8 +59,8 @@ public class L4ClassifierTest {
         Long dPort = Long.valueOf(80);
         matches.add(new MatchBuilder()
                 .setEthernetMatch(ClassifierTestUtils.createEthernetMatch(ClassifierTestUtils.IPV6_ETH_TYPE)));
-        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO, ClassifierTestUtils.TCP));
-        params.putAll(ClassifierTestUtils.createIntValueParam(L4Classifier.DPORT, dPort));
+        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, ClassifierTestUtils.TCP));
+        params.putAll(ClassifierTestUtils.createIntValueParam(L4Classifier.DST_PORT_PARAM, dPort));
         matches = Classifier.L4_CL.update(matches, params);
         assertEquals(true, ClassifierTestUtils.IPV6_ETH_TYPE.equals(matches.get(0).getEthernetMatch().getEthernetType()));
         TcpMatch match = new TcpMatchBuilder((TcpMatch) matches.get(0).getLayer4Match()).build();
@@ -75,9 +75,9 @@ public class L4ClassifierTest {
         Long dstRangeStart = Long.valueOf(8079);
         Long dstRangeEnd = Long.valueOf(8081);
         Long srcPort = Long.valueOf(80);
-        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO, ClassifierTestUtils.TCP));
-        params.putAll(ClassifierTestUtils.createIntValueParam(L4Classifier.SPORT, srcPort));
-        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DPORT_RANGE, dstRangeStart, dstRangeEnd));
+        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, ClassifierTestUtils.TCP));
+        params.putAll(ClassifierTestUtils.createIntValueParam(L4Classifier.SRC_PORT_PARAM, srcPort));
+        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DST_PORT_RANGE_PARAM, dstRangeStart, dstRangeEnd));
         Classifier.L4_CL.checkPresenceOfRequiredParams(params);
         matches = Classifier.L4_CL.update(matches, params);
         Set<Long> dstPorts = new HashSet<>();
@@ -100,8 +100,8 @@ public class L4ClassifierTest {
         matches.add(new MatchBuilder()
                 .setLayer4Match(ClassifierTestUtils.createUdpDstPort(80))
                 .setEthernetMatch(ClassifierTestUtils.createEthernetMatch(ClassifierTestUtils.IPV6_ETH_TYPE)));
-        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO, ClassifierTestUtils.UDP));
-        params.putAll(ClassifierTestUtils.createIntValueParam(L4Classifier.DPORT, dPort));
+        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, ClassifierTestUtils.UDP));
+        params.putAll(ClassifierTestUtils.createIntValueParam(L4Classifier.DST_PORT_PARAM, dPort));
         matches = Classifier.L4_CL.update(matches, params);
         assertEquals(true, ClassifierTestUtils.IPV6_ETH_TYPE.equals(matches.get(0).getEthernetMatch().getEthernetType()));
         UdpMatch match = new UdpMatchBuilder((UdpMatch) matches.get(0).getLayer4Match()).build();
@@ -116,8 +116,8 @@ public class L4ClassifierTest {
                 .setEthernetMatch(ClassifierTestUtils.createEthernetMatch(ClassifierTestUtils.IPV4_ETH_TYPE)));
         Long srcRangeStart = Long.valueOf(8079);
         Long srcRangeEnd = Long.valueOf(8081);
-        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO, ClassifierTestUtils.UDP));
-        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.SPORT_RANGE, srcRangeStart, srcRangeEnd));
+        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, ClassifierTestUtils.UDP));
+        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.SRC_PORT_RANGE_PARAM, srcRangeStart, srcRangeEnd));
         matches = Classifier.L4_CL.update(matches, params);
         Set<Long> srcPorts = new HashSet<>();
         for (MatchBuilder match : matches) {
@@ -143,9 +143,9 @@ public class L4ClassifierTest {
         Long dPort = Long.valueOf(80);
         Long srcRangeStart = Long.valueOf(8079);
         Long srcRangeEnd = Long.valueOf(8081);
-        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO, ClassifierTestUtils.UDP));
-        params.putAll(ClassifierTestUtils.createIntValueParam(L4Classifier.DPORT, dPort));
-        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.SPORT_RANGE, srcRangeStart, srcRangeEnd));
+        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, ClassifierTestUtils.UDP));
+        params.putAll(ClassifierTestUtils.createIntValueParam(L4Classifier.DST_PORT_PARAM, dPort));
+        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.SRC_PORT_RANGE_PARAM, srcRangeStart, srcRangeEnd));
         Classifier.L4_CL.checkPresenceOfRequiredParams(params);
         matches = Classifier.L4_CL.update(matches, params);
         Set<Long> srcPorts = new HashSet<>();
@@ -169,8 +169,8 @@ public class L4ClassifierTest {
         matches.add(new MatchBuilder()
                 .setLayer4Match(ClassifierTestUtils.createSctpSrcPort(sPort.intValue()))
                 .setEthernetMatch(ClassifierTestUtils.createEthernetMatch(ClassifierTestUtils.IPV4_ETH_TYPE)));
-        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO, ClassifierTestUtils.SCTP));
-        params.putAll(ClassifierTestUtils.createIntValueParam(L4Classifier.SPORT, sPort));
+        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, ClassifierTestUtils.SCTP));
+        params.putAll(ClassifierTestUtils.createIntValueParam(L4Classifier.SRC_PORT_PARAM, sPort));
         matches = Classifier.L4_CL.update(matches, params);
         assertEquals(true, ClassifierTestUtils.IPV4_ETH_TYPE.equals(matches.get(0).getEthernetMatch().getEthernetType()));
         SctpMatch match = new SctpMatchBuilder((SctpMatch) matches.get(0).getLayer4Match()).build();
@@ -185,8 +185,8 @@ public class L4ClassifierTest {
                 .setEthernetMatch(ClassifierTestUtils.createEthernetMatch(ClassifierTestUtils.IPV4_ETH_TYPE)));
         Long dstRangeStart = Long.valueOf(8079);
         Long dstRangeEnd = Long.valueOf(8081);
-        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO, ClassifierTestUtils.SCTP));
-        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DPORT_RANGE, dstRangeStart, dstRangeEnd));
+        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, ClassifierTestUtils.SCTP));
+        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DST_PORT_RANGE_PARAM, dstRangeStart, dstRangeEnd));
         matches = Classifier.L4_CL.update(matches, params);
         Set<Long> dstPorts = new HashSet<>();
         for (MatchBuilder match : matches) {
@@ -209,9 +209,9 @@ public class L4ClassifierTest {
         Long srcRangeEnd = Long.valueOf(81);
         Long dstRangeStart = Long.valueOf(8079);
         Long dstRangeEnd = Long.valueOf(8081);
-        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO, ClassifierTestUtils.SCTP));
-        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.SPORT_RANGE, srcRangeStart, srcRangeEnd));
-        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DPORT_RANGE, dstRangeStart, dstRangeEnd));
+        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, ClassifierTestUtils.SCTP));
+        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.SRC_PORT_RANGE_PARAM, srcRangeStart, srcRangeEnd));
+        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DST_PORT_RANGE_PARAM, dstRangeStart, dstRangeEnd));
         Classifier.L4_CL.checkPresenceOfRequiredParams(params);
         matches = Classifier.L4_CL.update(matches, params);
         Set<Pair<Long, Long>> set = new HashSet<>();
@@ -235,9 +235,9 @@ public class L4ClassifierTest {
         Long srcRangeStart = Long.valueOf(8079);
         Long srcRangeEnd = Long.valueOf(8081);
         Long srcPort = Long.valueOf(80);
-        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO, ClassifierTestUtils.SCTP));
-        params.putAll(ClassifierTestUtils.createIntValueParam(L4Classifier.SPORT, srcPort));
-        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.SPORT_RANGE, srcRangeStart, srcRangeEnd));
+        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, ClassifierTestUtils.SCTP));
+        params.putAll(ClassifierTestUtils.createIntValueParam(L4Classifier.SRC_PORT_PARAM, srcPort));
+        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.SRC_PORT_RANGE_PARAM, srcRangeStart, srcRangeEnd));
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("Illegal source port parameters");
         Classifier.L4_CL.checkPresenceOfRequiredParams(params);
@@ -249,9 +249,9 @@ public class L4ClassifierTest {
         Long dstRangeStart = Long.valueOf(8079);
         Long dstRangeEnd = Long.valueOf(8081);
         Long dstPort = Long.valueOf(80);
-        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO, ClassifierTestUtils.UDP));
-        params.putAll(ClassifierTestUtils.createIntValueParam(L4Classifier.DPORT, dstPort));
-        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DPORT_RANGE, dstRangeStart, dstRangeEnd));
+        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, ClassifierTestUtils.UDP));
+        params.putAll(ClassifierTestUtils.createIntValueParam(L4Classifier.DST_PORT_PARAM, dstPort));
+        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DST_PORT_RANGE_PARAM, dstRangeStart, dstRangeEnd));
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("Illegal destination port parameters");
         Classifier.L4_CL.checkPresenceOfRequiredParams(params);
@@ -262,8 +262,8 @@ public class L4ClassifierTest {
         matches.add(new MatchBuilder());
         Long dstRangeStart = Long.valueOf(8081);
         Long dstRangeEnd = Long.valueOf(8079);
-        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO, ClassifierTestUtils.TCP));
-        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DPORT_RANGE, dstRangeStart, dstRangeEnd));
+        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, ClassifierTestUtils.TCP));
+        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DST_PORT_RANGE_PARAM, dstRangeStart, dstRangeEnd));
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("Range value mismatch");
         Classifier.L4_CL.checkPresenceOfRequiredParams(params);
@@ -274,8 +274,8 @@ public class L4ClassifierTest {
         matches.add(new MatchBuilder());
         Long dstRangeStart = Long.valueOf(8079);
         Long dstRangeEnd = Long.valueOf(8081);
-        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO, 136));
-        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DPORT_RANGE, dstRangeStart, dstRangeEnd));
+        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, 136));
+        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DST_PORT_RANGE_PARAM, dstRangeStart, dstRangeEnd));
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("Unsupported L4 protocol.");
         matches = Classifier.L4_CL.update(matches, params);
@@ -287,8 +287,8 @@ public class L4ClassifierTest {
                 .setLayer4Match(ClassifierTestUtils.createSctpDstPort(80)));
         Long dstRangeStart = Long.valueOf(8079);
         Long dstRangeEnd = Long.valueOf(8081);
-        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO, ClassifierTestUtils.UDP));
-        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DPORT_RANGE, dstRangeStart, dstRangeEnd));
+        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, ClassifierTestUtils.UDP));
+        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DST_PORT_RANGE_PARAM, dstRangeStart, dstRangeEnd));
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("Classification conflict");
         matches = Classifier.L4_CL.update(matches, params);
@@ -299,7 +299,7 @@ public class L4ClassifierTest {
         matches.add(new MatchBuilder());
         Long dstRangeStart = Long.valueOf(8079);
         Long dstRangeEnd = Long.valueOf(8081);
-        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DPORT_RANGE, dstRangeStart, dstRangeEnd));
+        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DST_PORT_RANGE_PARAM, dstRangeStart, dstRangeEnd));
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("L4 protocol is null.");
         matches = Classifier.L4_CL.update(matches, params);
@@ -307,7 +307,7 @@ public class L4ClassifierTest {
 
     @Test
     public void checkPresenceOfRequiredParameters1Test() {
-        params.putAll(ImmutableMap.<String, ParameterValue> of(L4Classifier.SPORT,
+        params.putAll(ImmutableMap.<String, ParameterValue> of(L4Classifier.SRC_PORT_PARAM,
                 new ParameterValueBuilder().build()));
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("Value of sourceport parameter is not present");
@@ -316,7 +316,7 @@ public class L4ClassifierTest {
 
     @Test
     public void checkPresenceOfRequiredParameters2Test() {
-        params.putAll(ImmutableMap.<String, ParameterValue> of(L4Classifier.DPORT,
+        params.putAll(ImmutableMap.<String, ParameterValue> of(L4Classifier.DST_PORT_PARAM,
                 new ParameterValueBuilder().build()));
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("Value of destport parameter is not present");
@@ -325,7 +325,7 @@ public class L4ClassifierTest {
 
     @Test
     public void checkPresenceOfRequiredParameters3Test() {
-        params.putAll(ImmutableMap.<String, ParameterValue> of(L4Classifier.SPORT_RANGE,
+        params.putAll(ImmutableMap.<String, ParameterValue> of(L4Classifier.SRC_PORT_RANGE_PARAM,
                 new ParameterValueBuilder().build()));
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("Range value is not present");
@@ -334,7 +334,7 @@ public class L4ClassifierTest {
 
     @Test
     public void checkPresenceOfRequiredParameters4Test() {
-        params.putAll(ImmutableMap.<String, ParameterValue> of(L4Classifier.DPORT_RANGE,
+        params.putAll(ImmutableMap.<String, ParameterValue> of(L4Classifier.DST_PORT_RANGE_PARAM,
                 new ParameterValueBuilder().build()));
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("Range value is not present");

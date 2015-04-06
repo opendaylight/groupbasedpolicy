@@ -47,7 +47,7 @@ public class SubjectFeatures {
             ImmutableMap.<ActionDefinitionId, Action>
                 of(AllowAction.ID, new AllowAction());
 
-    public static final List<ActionDefinition> actionDefs =
+    private static final List<ActionDefinition> actionDefs =
             ImmutableList.copyOf(Collections2.transform(actions.values(),
                 new Function<Action, ActionDefinition>() {
                     @Override

@@ -36,7 +36,7 @@ public class IpProtoClassifierTest {
     public void setValueTest() {
         matches.add(new MatchBuilder()
                 .setEthernetMatch(ClassifierTestUtils.createEthernetMatch(ClassifierTestUtils.IPV4_ETH_TYPE)));
-        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO, ClassifierTestUtils.TCP));
+        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, ClassifierTestUtils.TCP));
         matches = Classifier.IP_PROTO_CL.update(matches, params);
         assertEquals(true, ClassifierTestUtils.IPV4_ETH_TYPE.equals(matches.get(0).getEthernetMatch().getEthernetType()));
         assertEquals(true, ClassifierTestUtils.TCP.equals(matches.get(0).getIpMatch().getIpProtocol().longValue()));
@@ -47,7 +47,7 @@ public class IpProtoClassifierTest {
         matches.add(new MatchBuilder()
                 .setEthernetMatch(ClassifierTestUtils.createEthernetMatch(ClassifierTestUtils.IPV6_ETH_TYPE))
                 .setIpMatch(ClassifierTestUtils.createIpMatch(ClassifierTestUtils.UDP.shortValue())));
-        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO, ClassifierTestUtils.UDP));
+        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, ClassifierTestUtils.UDP));
         matches = Classifier.IP_PROTO_CL.update(matches, params);
         assertEquals(true, ClassifierTestUtils.IPV6_ETH_TYPE.equals(matches.get(0).getEthernetMatch().getEthernetType()));
         assertEquals(true, ClassifierTestUtils.UDP.equals(matches.get(0).getIpMatch().getIpProtocol().longValue()));
@@ -58,7 +58,7 @@ public class IpProtoClassifierTest {
         matches.add(new MatchBuilder()
                 .setEthernetMatch(ClassifierTestUtils.createEthernetMatch(ClassifierTestUtils.IPV4_ETH_TYPE))
                 .setIpMatch(ClassifierTestUtils.createIpMatch(ClassifierTestUtils.SCTP.shortValue())));
-        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO, ClassifierTestUtils.TCP));
+        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, ClassifierTestUtils.TCP));
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("Trying to override proto value");
         matches = Classifier.IP_PROTO_CL.update(matches, params);
@@ -66,7 +66,7 @@ public class IpProtoClassifierTest {
 
     @Test
     public void checkPresenceOfRequiredParameters1Test() {
-        params.putAll(ClassifierTestUtils.createIntValueParam(EtherTypeClassifier.ETHER_TYPE, FlowUtils.IPv4));
+        params.putAll(ClassifierTestUtils.createIntValueParam(EtherTypeClassifier.ETHERTYPE_PARAM, FlowUtils.IPv4));
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("Parameter proto not present");
         Classifier.IP_PROTO_CL.checkPresenceOfRequiredParams(params);
@@ -74,7 +74,7 @@ public class IpProtoClassifierTest {
 
     @Test
     public void checkPresenceOfRequiredParameters2Test() {
-        params.putAll(ImmutableMap.<String, ParameterValue> of(IpProtoClassifier.PROTO,
+        params.putAll(ImmutableMap.<String, ParameterValue> of(IpProtoClassifier.PROTO_PARAM,
                 new ParameterValueBuilder().build()));
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("Value of proto parameter is not present");

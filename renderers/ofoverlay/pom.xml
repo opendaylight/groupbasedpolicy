@@ -65,12 +65,13 @@
         <configuration>
           <instructions>
             <Import-Package>
-             org.apache.http.*;version="4.3.2",
-	     *;resolution:=optional
+              org.apache.http.*;version="4.3.2",
+              *;resolution:=optional
             </Import-Package>
             <Embed-Dependency>httpclient,httpcore,commons-lang,commons-exec;type=!pom;inline=false</Embed-Dependency>
             <Export-Package>
-	    </Export-Package>
+              org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf
+            </Export-Package>
           </instructions>
           <manifestLocation>${project.basedir}/META-INF</manifestLocation>
         </configuration>

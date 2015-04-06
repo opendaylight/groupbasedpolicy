@@ -8,6 +8,11 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.addNxRegMatch;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.applyActionIns;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.instructions;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxOutputRegAction;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -23,10 +28,10 @@ import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.Dirty;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Action;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.AllowAction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ClassificationResult;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Classifier;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Action;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ParamDerivator;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
 import org.opendaylight.groupbasedpolicy.resolver.ConditionGroup;
@@ -66,8 +71,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
-
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.*;
 
 /**
  * Manage the table that enforces policy on the traffic.  Traffic is denied
@@ -305,7 +308,7 @@ public class PolicyEnforcer extends FlowTable {
             }
         }
         else {
-            Action act = SubjectFeatures.getAction(AllowAction.ID);
+            Action act = SubjectFeatures.getAction(AllowAction.DEFINITION.getId());
             abl = act.updateAction(abl, new HashMap<String,Object>(),  0);
         }
 
@@ -386,7 +389,7 @@ public class PolicyEnforcer extends FlowTable {
                 ClassificationResult result = cfier.updateMatch(matches, flowParams);
                 if(!result.isSuccessfull()) {
                     //TODO consider different handling.
-                    throw new IllegalArgumentException(result.getMessage());
+                    throw new IllegalArgumentException(result.getErrorMessage());
                 }
                 String baseId = idb.toString();
                 FlowBuilder flow = base().setPriority(Integer.valueOf(priority));

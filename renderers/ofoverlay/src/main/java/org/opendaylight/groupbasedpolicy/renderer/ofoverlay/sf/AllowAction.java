@@ -26,19 +26,18 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev14
  * Allow action
  */
 public class AllowAction extends Action {
-    public static final ActionDefinitionId ID =
-            new ActionDefinitionId("f942e8fd-e957-42b7-bd18-f73d11266d17");
-    protected static final String TYPE = "type";
-    protected static final ActionDefinition DEF =
-            new ActionDefinitionBuilder()
-                .setId(ID)
-                .setName(new ActionName("allow"))
-                .setDescription(new Description("Allow the specified traffic to pass"))
-                .build();
+
+    protected static final ActionDefinitionId ID = new ActionDefinitionId("f942e8fd-e957-42b7-bd18-f73d11266d17");
+    /**
+     * Access control - allow action-definition
+     */
+    public static final ActionDefinition DEFINITION = new ActionDefinitionBuilder().setId(ID)
+        .setName(new ActionName("allow"))
+        .setDescription(new Description("Allow the specified traffic to pass"))
+        .build();
 
     // How allow is implemented in the PolicyEnforcer table
-	private final org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action allow = 
-			nxOutputRegAction(NxmNxReg7.class);
+    private final org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action allow = nxOutputRegAction(NxmNxReg7.class);
 
     @Override
     public ActionDefinitionId getId() {
@@ -47,7 +46,7 @@ public class AllowAction extends Action {
 
     @Override
     public ActionDefinition getActionDef() {
-        return DEF;
+        return DEFINITION;
     }
 
     @Override

@@ -43,10 +43,10 @@ public class ClassifierTest {
 
         Long dstRangeStart = Long.valueOf(8079);
         Long dstRangeEnd = Long.valueOf(8081);
-        params.putAll(ClassifierTestUtils.createIntValueParam(EtherTypeClassifier.ETHER_TYPE, FlowUtils.IPv4));
-        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO, ClassifierTestUtils.TCP));
-        params.putAll(ClassifierTestUtils.createIntValueParam(L4Classifier.SPORT, 80));
-        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DPORT_RANGE, dstRangeStart, dstRangeEnd));
+        params.putAll(ClassifierTestUtils.createIntValueParam(EtherTypeClassifier.ETHERTYPE_PARAM, FlowUtils.IPv4));
+        params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, ClassifierTestUtils.TCP));
+        params.putAll(ClassifierTestUtils.createIntValueParam(L4Classifier.SRC_PORT_PARAM, 80));
+        params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DST_PORT_RANGE_PARAM, dstRangeStart, dstRangeEnd));
         ClassificationResult result = Classifier.L4_CL.updateMatch(matches, params);
         assertEquals(true, result.isSuccessfull());
         assertEquals(3, result.getMatchBuilders().size());
