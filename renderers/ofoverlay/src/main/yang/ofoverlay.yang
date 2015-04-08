@@ -47,12 +47,12 @@ module ofoverlay {
         }
 
         leaf learning-mode {
-            description 
+            description
                 "Selects how and whether we learn endpoints";
             type enumeration {
                 enum orchestrated {
-                    description 
-                        "An external orchestration system will provide 
+                    description
+                        "An external orchestration system will provide
                          information about all endpoints, and no
                          direct learning will occur.";
                 }
@@ -61,13 +61,13 @@ module ofoverlay {
     }
     /*
     container of-overlay-operational {
-        description 
+        description
             "Operational parameters for the OpenFlow overlay renderer";
 
         config false;
 
         list data-plane-ordinal {
-            description 
+            description
                 "Map elements of the policy to the id used on the network";
             key "tenant id";
             leaf tenant {
@@ -86,7 +86,7 @@ module ofoverlay {
     }
     */
     grouping endpoint-location {
-        description 
+        description
             "The location for this endpoint in the overlay network";
 
         leaf location-type {
@@ -94,8 +94,8 @@ module ofoverlay {
 
             type enumeration {
                 enum internal {
-                    description 
-                    "The endpoint is located on a port that is part of 
+                    description
+                    "The endpoint is located on a port that is part of
                      the overlay network.  You must include the node
                      ID and port number for this endpoint.";
                 }
@@ -106,8 +106,8 @@ module ofoverlay {
         }
 
         leaf node-id {
-            description 
-                "The OpenFlow switch for the endpoint. Must be included 
+            description
+                "The OpenFlow switch for the endpoint. Must be included
                  for all internal endpoints.  The format is
                  openflow:[dpid] where the dpid is the value of the
                  switch DPID cast to a long.";
@@ -115,8 +115,8 @@ module ofoverlay {
         }
 
         leaf node-connector-id {
-            description 
-                "The node connector for the endpoint's OpenFlow port. The 
+            description
+                "The node connector for the endpoint's OpenFlow port. The
                  format is openflow:[dpid]:[port] where the dpid is
                  the value of the switch DPID cast to a long, and port
                  is the openflow port number of the interface where
@@ -139,27 +139,27 @@ module ofoverlay {
         ext:augment-identifier "of-overlay-node-config";
 
         leaf tunnel-ip {
-            description 
+            description
                 "The IP address used for tunnel termination on this switch";
             type inet:ip-address;
         }
         container ovsdb-config {
             leaf ip {
-                description 
+                description
                     "The IP address used to connect to OVSDB on this switch";
                 type inet:ip-address;
             }
             leaf port {
-                description 
+                description
                     "The port number used to connect to OVSDB on this switch";
                 type inet:port-number;
                 default 6640;
             }
         }
         leaf-list external-interfaces {
-            description 
-                "The names of the OpenFlow interfaces that are external and 
-                 lead to the underlay network.  Can be specified as a 
+            description
+                "The names of the OpenFlow interfaces that are external and
+                 lead to the underlay network.  Can be specified as a
                  regular expression.";
             type string;
         }

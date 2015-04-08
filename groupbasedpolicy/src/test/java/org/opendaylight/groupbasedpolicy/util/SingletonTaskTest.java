@@ -1,5 +1,5 @@
 /*
- * Copyright 2011, Big Switch Networks, Inc. 
+ * Copyright 2011, Big Switch Networks, Inc.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -8,7 +8,9 @@
 
 package org.opendaylight.groupbasedpolicy.util;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -16,7 +18,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.opendaylight.groupbasedpolicy.util.SingletonTask;
 
 public class SingletonTaskTest {
 

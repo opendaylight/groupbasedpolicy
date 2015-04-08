@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
- * 
+ *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -69,15 +69,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Keep track of endpoints on the system. Maintain an index of endpoints
- * and their locations for queries from agents. The endpoint manager will maintain
+ * Keep track of endpoints on the system. Maintain an index of endpoints and
+ * their locations for queries from agents. The endpoint manager will maintain
  * appropriate indexes only for agents that are attached to the current
- * controller node.
- * In order to render the policy, we need to be able to efficiently enumerate
- * all endpoints on a particular agent and also all the agents containing
- * each particular endpoint group
- * 
- * @author tbachman
+ * controller node. In order to render the policy, we need to be able to
+ * efficiently enumerate all endpoints on a particular agent and also all the
+ * agents containing each particular endpoint group
+ *
  */
 public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBroker.RpcCallback,
         EprContext.EprCtxCallback {
@@ -85,11 +83,11 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
     protected static final Logger LOG = LoggerFactory.getLogger(EndpointManager.class);
 
     private static final InstanceIdentifier<Endpoint> endpointsIid = InstanceIdentifier.builder(Endpoints.class)
-        .child(Endpoint.class)
-        .build();
+            .child(Endpoint.class)
+            .build();
     private static final InstanceIdentifier<EndpointL3> endpointsL3Iid = InstanceIdentifier.builder(Endpoints.class)
-        .child(EndpointL3.class)
-        .build();
+            .child(EndpointL3.class)
+            .build();
 
     final ListenerRegistration<DataChangeListener> listenerReg;
     final ListenerRegistration<DataChangeListener> listenerL3Reg;
@@ -150,8 +148,9 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
 
     /**
      * Get the endpoint object for the given key
-     * 
-     * @param epKey the key
+     *
+     * @param epKey
+     *            the key
      * @return the {@link Endpoint} corresponding to the key
      */
     public Endpoint getEndpoint(EpKey epKey) {
@@ -177,8 +176,9 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
 
         @Override
         public void buildL3PrefixEndpointAugmentation(EndpointL3PrefixBuilder eb, RegisterL3PrefixEndpointInput input) {
-            // TODO These methods will be replaced by getAugmentation and augmentation applied at caller.
-            
+            // TODO These methods will be replaced by getAugmentation and
+            // augmentation applied at caller.
+
         }
     }
 
@@ -256,9 +256,9 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
         Identity oldId = getIdentity(oldEp);
         Identity newId = getIdentity(newEp);
         /*
-         * If an endpoint has changed, we need to provide notifications
-         * to agents that have subscribed to that endpoint. Batch up
-         * the notifications to be sent to the agents.
+         * If an endpoint has changed, we need to provide notifications to
+         * agents that have subscribed to that endpoint. Batch up the
+         * notifications to be sent to the agents.
          */
         Queue<EndpointUpdate> updateQ = new ConcurrentLinkedQueue<EndpointUpdate>();
 
@@ -356,8 +356,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
     }
 
     /**
-     * Create an Endpoint Registry Context for an OpFlex
-     * Request message.
+     * Create an Endpoint Registry Context for an OpFlex Request message.
      *
      * @param agent
      * @param message
@@ -373,8 +372,8 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
         if (message instanceof EndpointDeclareRequest) {
             EndpointDeclareRequest request = (EndpointDeclareRequest) message;
             /*
-             * There theoretically could be a list of parameters,
-             * but we'll likely only ever see one element.
+             * There theoretically could be a list of parameters, but we'll
+             * likely only ever see one element.
              */
             ec = new EprContext(agent, request, dataProvider, executor);
             for (EndpointDeclareRequest.Params params : request.getParams()) {
@@ -382,9 +381,9 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
                 int prr = params.getPrr();
 
                 /*
-                 * We have a list of endpoints, so iterate through the
-                 * list and register each one, extracting the identities
-                 * for registration.
+                 * We have a list of endpoints, so iterate through the list and
+                 * register each one, extracting the identities for
+                 * registration.
                  */
                 List<ManagedObject> endpoints = params.getEndpoint();
                 if (endpoints != null) {
@@ -414,9 +413,9 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
             ec = new EprContext(agent, request, dataProvider, executor);
             for (EndpointResolveRequest.Params params : request.getParams()) {
                 /*
-                 * The resolve message contains either the URI
-                 * or a context/URI and an identifier. There is only
-                 * one of these per param array entry.
+                 * The resolve message contains either the URI or a context/URI
+                 * and an identifier. There is only one of these per param array
+                 * entry.
                  */
                 EndpointIdentity eid = params.getEndpoint_ident();
 
@@ -429,8 +428,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
 
                 } else {
                     /*
-                     * Extract the list to add the EP to from
-                     * the URI
+                     * Extract the list to add the EP to from the URI
                      */
                     Uri uri = params.getEndpoint_uri();
                     if (uri != null) {
@@ -463,13 +461,14 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
     }
 
     /**
-     * This notification handles the OpFlex Endpoint messages.
-     * We should only receive request messages. Responses are
-     * sent in a different context, as all requests result
-     * in a Future to access the data store.
+     * This notification handles the OpFlex Endpoint messages. We should only
+     * receive request messages. Responses are sent in a different context, as
+     * all requests result in a Future to access the data store.
      *
-     * @param agent The JsonRpcEndpoint that received the request
-     * @param request The request message from the endpoint
+     * @param agent
+     *            The JsonRpcEndpoint that received the request
+     * @param request
+     *            The request message from the endpoint
      */
     @Override
     public void callback(JsonRpcEndpoint agent, RpcMessage request) {
@@ -480,9 +479,9 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
         }
 
         /*
-         * For declaration requests, we need to make sure that this
-         * EP is in our registry. Since we can have multiple identifiers,
-         * we create a Set of endpoints.
+         * For declaration requests, we need to make sure that this EP is in our
+         * registry. Since we can have multiple identifiers, we create a Set of
+         * endpoints.
          */
 
         if (request instanceof EndpointDeclareRequest) {
@@ -499,16 +498,15 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
             }
 
             /*
-             * OpFlex EP declaration/registration is different from
-             * REST EP declaration/registration -- REST only allows
-             * a single EP to be registered at a time. Since each MO
-             * represents an Endpoint that's being declared, we need
-             * add each one up separately,yet provide a single response.
-             * We also want to know the result of the registration so
-             * we can provide the appropriate response. We create a
-             * context for the Endpoint Registry interaction, where
-             * we can track the status of all the EP registrations,
-             * and provide a response when all have completed.
+             * OpFlex EP declaration/registration is different from REST EP
+             * declaration/registration -- REST only allows a single EP to be
+             * registered at a time. Since each MO represents an Endpoint that's
+             * being declared, we need add each one up separately,yet provide a
+             * single response. We also want to know the result of the
+             * registration so we can provide the appropriate response. We
+             * create a context for the Endpoint Registry interaction, where we
+             * can track the status of all the EP registrations, and provide a
+             * response when all have completed.
              */
             EprContext ctx = create(agent, req, dataProvider, executor);
             ctx.setCallback(this);
@@ -527,16 +525,15 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
             }
 
             /*
-             * OpFlex EP undeclaration/unregistration is different from
-             * REST EP declaration/registration -- REST only allows
-             * a single EP to be unregistered at a time. Since each MO
-             * represents an Endpoint that's being undeclared, we need
-             * add each one up separately,yet provide a single response.
-             * We also want to know the result of the unregistration so
-             * we can provide the appropriate response. We create a
-             * context for the Endpoint Registry interaction, where
-             * we can track the status of all the EP unregistrations,
-             * and provide a response when all have completed.
+             * OpFlex EP undeclaration/unregistration is different from REST EP
+             * declaration/registration -- REST only allows a single EP to be
+             * unregistered at a time. Since each MO represents an Endpoint
+             * that's being undeclared, we need add each one up separately,yet
+             * provide a single response. We also want to know the result of the
+             * unregistration so we can provide the appropriate response. We
+             * create a context for the Endpoint Registry interaction, where we
+             * can track the status of all the EP unregistrations, and provide a
+             * response when all have completed.
              */
             EprContext ctx = create(agent, req, dataProvider, executor);
             ctx.setCallback(this);
@@ -562,8 +559,8 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
                 ctx.lookupEndpoint();
 
                 /*
-                 * A request is effectively a subscription. Add this agent
-                 * to the set of listeners.
+                 * A request is effectively a subscription. Add this agent to
+                 * the set of listeners.
                  */
                 Identity id;
                 if (param.getEndpoint_ident() != null) {
@@ -590,8 +587,8 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
 
             for (EndpointUnresolveRequest.Params param : params) {
                 /*
-                 * No interaction with the Data Store is required -- just
-                 * cancel the notification subscription for this EP..
+                 * No interaction with the Data Store is required -- just cancel
+                 * the notification subscription for this EP..
                  */
                 Identity id = null;
                 if (param.getEndpoint_ident() != null) {
@@ -607,8 +604,8 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
             }
 
             /*
-             * No EprContext is used in unresolve -- so
-             * just send the response directly
+             * No EprContext is used in unresolve -- so just send the response
+             * directly
              */
             EndpointUnresolveResponse resp = new EndpointUnresolveResponse();
             EndpointUnresolveResponse.Result result = new EndpointUnresolveResponse.Result();
@@ -649,11 +646,10 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
     }
 
     /**
-     * This notification handles the callback from an interaction
-     * with the Endpoint Registry. The context for the callback
-     * is a notification from the data store, so so the code
-     * has to ensure that it won't block. Responses are sent
-     * using an executor
+     * This notification handles the callback from an interaction with the
+     * Endpoint Registry. The context for the callback is a notification from
+     * the data store, so so the code has to ensure that it won't block.
+     * Responses are sent using an executor
      */
     @Override
     public void callback(EprContext ctx) {
@@ -693,11 +689,10 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
             if (ctx.getOperations().size() > 0) {
 
                 /*
-                 * If we get any EP, then we can
-                 * provide a response to the original request
-                 * Note that we could potentially have multiple
-                 * requests outstanding for the same EP, and
-                 * even using different context types (L2 or L3).
+                 * If we get any EP, then we can provide a response to the
+                 * original request Note that we could potentially have multiple
+                 * requests outstanding for the same EP, and even using
+                 * different context types (L2 or L3).
                  */
                 for (EprOperation op : ctx.getOperations()) {
 
@@ -706,10 +701,10 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
                         epList.add(mo);
                     }
                     /*
-                     * For EPs on a different agent, we need to look up the
-                     * VTEP information. For now, we're only supporting
-                     * VXLAN VTEPs, so we look up the destination tunnel IP,
-                     * and provide that in the data field of the response
+                     * For EPs on a different agent, we need to look up the VTEP
+                     * information. For now, we're only supporting VXLAN VTEPs,
+                     * so we look up the destination tunnel IP, and provide that
+                     * in the data field of the response
                      */
                     // TODO: Need to look this up in op store
                     // endpoint.setData();

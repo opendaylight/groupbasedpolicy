@@ -83,22 +83,24 @@ import com.google.common.util.concurrent.ListenableFuture;
  * The policy resolver is a utility for renderers to help in resolving
  * group-based policy into a form that is easier to apply to the actual network.
  *
- * <p>For any pair of endpoint groups, there is a set of rules that could apply
- * to the endpoints on that group based on the policy configuration.  The exact
- * list of rules that apply to a given pair of endpoints depends on the
- * conditions that are active on the endpoints.
+ * <p>
+ * For any pair of endpoint groups, there is a set of rules that could apply to
+ * the endpoints on that group based on the policy configuration. The exact list
+ * of rules that apply to a given pair of endpoints depends on the conditions
+ * that are active on the endpoints.
  *
- * <p>We need to be able to query against this policy model, enumerate the
- * relevant classes of traffic and endpoints, and notify renderers when there
- * are changes to policy as it applies to active sets of endpoints and
- * endpoint groups.
+ * <p>
+ * We need to be able to query against this policy model, enumerate the relevant
+ * classes of traffic and endpoints, and notify renderers when there are changes
+ * to policy as it applies to active sets of endpoints and endpoint groups.
  *
- * <p>The policy resolver will maintain the necessary state for all tenants
- * in its control domain, which is the set of tenants for which
- * policy listeners have been registered.
+ * <p>
+ * The policy resolver will maintain the necessary state for all tenants in its
+ * control domain, which is the set of tenants for which policy listeners have
+ * been registered.
  *
- * @author readams
  */
+
 public class PolicyResolver implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(PolicyResolver.class);
 
@@ -106,22 +108,21 @@ public class PolicyResolver implements AutoCloseable {
     private final ScheduledExecutorService executor;
 
     /**
-     *  Keep track of the current relevant policy scopes.
+     * Keep track of the current relevant policy scopes.
      */
     protected CopyOnWriteArrayList<PolicyScope> policyListenerScopes;
 
     protected ConcurrentMap<TenantId, TenantContext> resolvedTenants;
 
     /**
-     * Store a policy object for each endpoint group pair.  The table
-     * is stored with the key as (consumer, provider).  Two endpoints could
-     * appear in both roles at the same time, in which case both policies would
-     * apply.
+     * Store a policy object for each endpoint group pair. The table is stored
+     * with the key as (consumer, provider). Two endpoints could appear in both
+     * roles at the same time, in which case both policies would apply.
      */
     AtomicReference<PolicyInfo> policy = new AtomicReference<>();
 
     public PolicyResolver(DataBroker dataProvider,
-                          ScheduledExecutorService executor) {
+            ScheduledExecutorService executor) {
         super();
         this.dataProvider = dataProvider;
         this.executor = executor;
@@ -148,8 +149,9 @@ public class PolicyResolver implements AutoCloseable {
 
     /**
      * Get a snapshot of the current policy
-     * @return the {@link PolicyInfo} object representing an immutable
-     * snapshot of the policy state
+     *
+     * @return the {@link PolicyInfo} object representing an immutable snapshot
+     *         of the policy state
      */
     public PolicyInfo getCurrentPolicy() {
         return policy.get();
@@ -157,19 +159,23 @@ public class PolicyResolver implements AutoCloseable {
 
     /**
      * Get the normalized tenant for the given ID
-     * @param tenant the tenant ID
+     *
+     * @param tenant
+     *            the tenant ID
      * @return the {@link Tenant}
      */
     public IndexedTenant getTenant(TenantId tenant) {
         TenantContext tc = resolvedTenants.get(tenant);
-        if (tc == null) return null;
+        if (tc == null)
+            return null;
         return tc.tenant.get();
     }
 
     /**
      * Register a listener to receive update events.
-     * @param listener the {@link PolicyListener} object to receive the update
-     * events
+     *
+     * @param listener
+     *            the {@link PolicyListener} object to receive the update events
      */
     public PolicyScope registerListener(PolicyListener listener) {
         PolicyScope ps = new PolicyScope(this, listener);
@@ -180,7 +186,9 @@ public class PolicyResolver implements AutoCloseable {
 
     /**
      * Remove the listener registered for the given {@link PolicyScope}.
-     * @param scope the scope to remove
+     *
+     * @param scope
+     *            the scope to remove
      * @see PolicyResolver#registerListener(PolicyListener)
      */
     public void removeListener(PolicyScope scope) {
@@ -192,26 +200,29 @@ public class PolicyResolver implements AutoCloseable {
     // **************
 
     /**
-     * Atomically update the active policy and notify policy listeners 
-     * of relevant changes
-     * @param policyMap the new policy to set
-     * @param egConditions the map of endpoint groups to relevant condition sets
+     * Atomically update the active policy and notify policy listeners of
+     * relevant changes
+     *
+     * @param policyMap
+     *            the new policy to set
+     * @param egConditions
+     *            the map of endpoint groups to relevant condition sets
      * @return the set of groups with updated policy
      */
     protected Set<EgKey> updatePolicy(Table<EgKey, EgKey, Policy> policyMap,
-                                      Map<EgKey, Set<ConditionSet>> egConditions,
-                                      List<PolicyScope> policyListenerScopes) {
+            Map<EgKey, Set<ConditionSet>> egConditions,
+            List<PolicyScope> policyListenerScopes) {
         PolicyInfo newPolicy = new PolicyInfo(policyMap, egConditions);
         PolicyInfo oldPolicy = policy.getAndSet(newPolicy);
-        
-        HashSet<EgKey> notifySet = new HashSet<>(); 
-        
+
+        HashSet<EgKey> notifySet = new HashSet<>();
+
         for (Cell<EgKey, EgKey, Policy> cell : newPolicy.getPolicyMap().cellSet()) {
             Policy newp = cell.getValue();
             Policy oldp = null;
             if (oldPolicy != null)
                 oldp = oldPolicy.getPolicyMap().get(cell.getRowKey(),
-                                                    cell.getColumnKey());
+                        cell.getColumnKey());
             if (oldp == null || !newp.equals(oldp)) {
                 notifySet.add(cell.getRowKey());
                 notifySet.add(cell.getColumnKey());
@@ -220,7 +231,7 @@ public class PolicyResolver implements AutoCloseable {
         if (oldPolicy != null) {
             for (Cell<EgKey, EgKey, Policy> cell : oldPolicy.getPolicyMap().cellSet()) {
                 if (!newPolicy.getPolicyMap().contains(cell.getRowKey(),
-                                                       cell.getColumnKey())) {
+                        cell.getColumnKey())) {
                     notifySet.add(cell.getRowKey());
                     notifySet.add(cell.getColumnKey());
                 }
@@ -228,7 +239,7 @@ public class PolicyResolver implements AutoCloseable {
         }
         return notifySet;
     }
-    
+
     /**
      * Notify the policy listeners about a set of updated groups
      */
@@ -239,7 +250,7 @@ public class PolicyResolver implements AutoCloseable {
                         @Override
                         public boolean apply(EgKey input) {
                             return scope.contains(input.getTenantId(),
-                                                  input.getEgId());
+                                    input.getEgId());
                         }
                     });
             if (!filtered.isEmpty()) {
@@ -249,9 +260,11 @@ public class PolicyResolver implements AutoCloseable {
     }
 
     /**
-     * Subscribe the resolver to updates related to a particular tenant
-     * Make sure that this can't be called concurrently with subscribe
-     * @param tenantId the tenant ID to subscribe to
+     * Subscribe the resolver to updates related to a particular tenant Make
+     * sure that this can't be called concurrently with subscribe
+     *
+     * @param tenantId
+     *            the tenant ID to subscribe to
      */
     protected void subscribeTenant(TenantId tenantId) {
         if (!resolvedTenants.containsKey(tenantId))
@@ -259,9 +272,11 @@ public class PolicyResolver implements AutoCloseable {
     }
 
     /**
-     * Unsubscribe the resolver from updates related to a particular tenant
-     * Make sure that this can't be called concurrently with subscribe
-     * @param tenantId the tenant ID to subscribe to
+     * Unsubscribe the resolver from updates related to a particular tenant Make
+     * sure that this can't be called concurrently with subscribe
+     *
+     * @param tenantId
+     *            the tenant ID to subscribe to
      */
     protected void unsubscribeTenant(TenantId tenantId) {
         TenantContext context = resolvedTenants.get(tenantId);
@@ -272,16 +287,17 @@ public class PolicyResolver implements AutoCloseable {
     }
 
     private void updateTenant(final TenantId tenantId) {
-        if (dataProvider == null) return;
+        if (dataProvider == null)
+            return;
 
         TenantContext context = resolvedTenants.get(tenantId);
         if (context == null) {
             ListenerRegistration<DataChangeListener> registration = null;
             registration = dataProvider
                     .registerDataChangeListener(LogicalDatastoreType.CONFIGURATION,
-                                                TenantUtils.tenantIid(tenantId),
-                                                new PolicyChangeListener(tenantId),
-                                                DataChangeScope.SUBTREE);
+                            TenantUtils.tenantIid(tenantId),
+                            new PolicyChangeListener(tenantId),
+                            DataChangeScope.SUBTREE);
 
             context = new TenantContext(registration);
             TenantContext oldContext =
@@ -313,10 +329,10 @@ public class PolicyResolver implements AutoCloseable {
                     LOG.warn("Tenant {} not found", tenantId);
                 }
 
-                Tenant t = InheritanceUtils.resolveTenant((Tenant)result.get());
+                Tenant t = InheritanceUtils.resolveTenant(result.get());
                 IndexedTenant it = new IndexedTenant(t);
                 if (!tenantRef.compareAndSet(ot, it)) {
-                    // concurrent update of tenant policy.  Retry
+                    // concurrent update of tenant policy. Retry
                     updateTenant(tenantId);
                 } else {
                     // Update the policy cache and notify listeners
@@ -337,82 +353,83 @@ public class PolicyResolver implements AutoCloseable {
     protected void updatePolicy() {
         try {
             Map<EgKey, Set<ConditionSet>> egConditions = new HashMap<>();
-            Table<EgKey, EgKey, Policy> policyMap = 
-                    resolvePolicy(resolvedTenants.values(), 
-                                  egConditions);
+            Table<EgKey, EgKey, Policy> policyMap =
+                    resolvePolicy(resolvedTenants.values(),
+                            egConditions);
             Set<EgKey> updatedGroups =
                     updatePolicy(policyMap,
-                                 egConditions, 
-                                 policyListenerScopes);
+                            egConditions,
+                            policyListenerScopes);
 
             notifyListeners(updatedGroups);
         } catch (Exception e) {
             LOG.error("Failed to update policy", e);
         }
     }
-    
+
     /**
-     * Resolve the policy in three phases:
-     * (1) select contracts that in scope based on contract selectors.
-     * (2) select subjects that are in scope for each contract based on
-     * matchers in clauses
-     * (3) resolve the set of in-scope contracts into a list of subjects that
-     * apply for each pair of endpoint groups and the conditions that can
-     * apply for for each endpoint in those groups.
+     * Resolve the policy in three phases: (1) select contracts that in scope
+     * based on contract selectors. (2) select subjects that are in scope for
+     * each contract based on matchers in clauses (3) resolve the set of
+     * in-scope contracts into a list of subjects that apply for each pair of
+     * endpoint groups and the conditions that can apply for for each endpoint
+     * in those groups.
      */
-    protected Table<EgKey, EgKey, Policy> 
+    protected Table<EgKey, EgKey, Policy>
             resolvePolicy(Collection<TenantContext> tenants,
-                          Map<EgKey, Set<ConditionSet>> egConditions) {
+                    Map<EgKey, Set<ConditionSet>> egConditions) {
         // select contracts that apply for the given tenant
         Table<EgKey, EgKey, List<ContractMatch>> contractMatches =
                 selectContracts(tenants);
 
         // select subjects for the matching contracts and resolve the policy
-        // for endpoint group pairs.  This does phase (2) and (3) as one step
+        // for endpoint group pairs. This does phase (2) and (3) as one step
         return selectSubjects(contractMatches, egConditions);
     }
 
     /**
-     * Choose the contracts that are in scope for each pair of endpoint
-     * groups, then perform subject selection for the pair
+     * Choose the contracts that are in scope for each pair of endpoint groups,
+     * then perform subject selection for the pair
      */
     protected Table<EgKey, EgKey, List<ContractMatch>>
-        selectContracts(Collection<TenantContext> tenants) {
-        Table<TenantId, ContractId, 
-              List<ConsumerContractMatch>> consumerMatches =
+            selectContracts(Collection<TenantContext> tenants) {
+        Table<TenantId, ContractId, List<ConsumerContractMatch>> consumerMatches =
                 HashBasedTable.create();
         Table<EgKey, EgKey, List<ContractMatch>> contractMatches =
                 HashBasedTable.create();
 
         for (TenantContext tenant : tenants) {
             IndexedTenant t = tenant.tenant.get();
-            if (t == null) continue;
-            selectContracts(consumerMatches, 
-                            contractMatches, 
-                            t.getTenant());
+            if (t == null)
+                continue;
+            selectContracts(consumerMatches,
+                    contractMatches,
+                    t.getTenant());
         }
         return contractMatches;
     }
-    protected void selectContracts(Table<TenantId, 
-                                         ContractId, 
-                                         List<ConsumerContractMatch>> consumerMatches,
-                                   Table<EgKey, EgKey, 
-                                         List<ContractMatch>> contractMatches,
-                                   Tenant tenant) {
+
+    protected void selectContracts(Table<TenantId,
+            ContractId,
+            List<ConsumerContractMatch>> consumerMatches,
+            Table<EgKey, EgKey,
+            List<ContractMatch>> contractMatches,
+            Tenant tenant) {
         // For each endpoint group, match consumer selectors
         // against contracts to get a set of matching consumer selectors
-        if (tenant.getEndpointGroup() == null) return;
+        if (tenant.getEndpointGroup() == null)
+            return;
         for (EndpointGroup group : tenant.getEndpointGroup()) {
             List<ConsumerContractMatch> r =
                     matchConsumerContracts(tenant, group);
             for (ConsumerContractMatch ccm : r) {
                 List<ConsumerContractMatch> cms =
                         consumerMatches.get(tenant.getId(),
-                                            ccm.contract.getId());
+                                ccm.contract.getId());
                 if (cms == null) {
                     cms = new ArrayList<>();
                     consumerMatches.put(tenant.getId(),
-                                        ccm.contract.getId(), cms);
+                            ccm.contract.getId(), cms);
                 }
                 cms.add(ccm);
             }
@@ -425,15 +442,15 @@ public class PolicyResolver implements AutoCloseable {
                     matchProviderContracts(tenant, group, consumerMatches);
             for (ContractMatch cm : matches) {
                 EgKey consumerKey = new EgKey(cm.consumerTenant.getId(),
-                                              cm.consumer.getId());
+                        cm.consumer.getId());
                 EgKey providerKey = new EgKey(cm.providerTenant.getId(),
-                                              cm.provider.getId());
+                        cm.provider.getId());
                 List<ContractMatch> egPairMatches =
                         contractMatches.get(consumerKey, providerKey);
                 if (egPairMatches == null) {
                     egPairMatches = new ArrayList<>();
                     contractMatches.put(consumerKey, providerKey,
-                                        egPairMatches);
+                            egPairMatches);
                 }
 
                 egPairMatches.add(cm);
@@ -479,7 +496,8 @@ public class PolicyResolver implements AutoCloseable {
     }
 
     private ConditionSet buildConditionSet(List<ConditionMatcher> condMatchers) {
-        if (condMatchers == null) return ConditionSet.EMPTY;
+        if (condMatchers == null)
+            return ConditionSet.EMPTY;
 
         ImmutableSet.Builder<ConditionName> allb = ImmutableSet.builder();
         ImmutableSet.Builder<ConditionName> noneb = ImmutableSet.builder();
@@ -489,7 +507,8 @@ public class PolicyResolver implements AutoCloseable {
             if (condMatcher.getCondition() == null)
                 continue;
             MatchType type = condMatcher.getMatchType();
-            if (type == null) type = MatchType.All;
+            if (type == null)
+                type = MatchType.All;
             if (type.equals(MatchType.Any)) {
                 ImmutableSet.Builder<ConditionName> a =
                         ImmutableSet.builder();
@@ -535,18 +554,17 @@ public class PolicyResolver implements AutoCloseable {
     }
 
     private Policy resolvePolicy(Tenant contractTenant,
-                                 Contract contract,
-                                 boolean reverse,
-                                 Policy merge,
-                                 Table<ConditionSet, ConditionSet,
-                                       List<Subject>> subjectMap) {
+            Contract contract,
+            boolean reverse,
+            Policy merge,
+            Table<ConditionSet, ConditionSet,
+            List<Subject>> subjectMap) {
         Table<ConditionSet, ConditionSet, List<RuleGroup>> ruleMap =
                 HashBasedTable.create();
         if (merge != null) {
             ruleMap.putAll(merge.ruleMap);
         }
-        for (Cell<ConditionSet, ConditionSet, List<Subject>> entry :
-                subjectMap.cellSet()) {
+        for (Cell<ConditionSet, ConditionSet, List<Subject>> entry : subjectMap.cellSet()) {
             List<RuleGroup> rules = new ArrayList<>();
             ConditionSet rowKey = entry.getRowKey();
             ConditionSet columnKey = entry.getColumnKey();
@@ -560,7 +578,8 @@ public class PolicyResolver implements AutoCloseable {
                 rules.addAll(oldrules);
             }
             for (Subject s : entry.getValue()) {
-                if (s.getRule() == null) continue;
+                if (s.getRule() == null)
+                    continue;
                 List<Rule> srules;
                 if (reverse)
                     srules = reverseRules(s.getRule());
@@ -570,22 +589,22 @@ public class PolicyResolver implements AutoCloseable {
                             .immutableSortedCopy(s.getRule());
 
                 RuleGroup rg = new RuleGroup(srules, s.getOrder(),
-                                             contractTenant, contract,
-                                             s.getName());
+                        contractTenant, contract,
+                        s.getName());
                 rules.add(rg);
             }
             Collections.sort(rules);
             ruleMap.put(rowKey, columnKey,
-                        Collections.unmodifiableList(rules));
+                    Collections.unmodifiableList(rules));
         }
         return new Policy(ruleMap);
     }
-    
+
     private List<Rule> reverseRules(List<Rule> rules) {
         ArrayList<Rule> nrules = new ArrayList<>();
         for (Rule input : rules) {
             if (input.getClassifierRef() == null ||
-                input.getClassifierRef().size() == 0) {
+                    input.getClassifierRef().size() == 0) {
                 nrules.add(input);
                 continue;
             }
@@ -607,21 +626,24 @@ public class PolicyResolver implements AutoCloseable {
                     }
                 }
                 classifiers.add(new ClassifierRefBuilder(clr)
-                    .setDirection(nd).build());
+                        .setDirection(nd).build());
             }
             nrules.add(new RuleBuilder(input)
-                .setClassifierRef(Collections.unmodifiableList(classifiers))
-                .build());
+                    .setClassifierRef(Collections.unmodifiableList(classifiers))
+                    .build());
         }
         Collections.sort(nrules, TenantUtils.RULE_COMPARATOR);
         return Collections.unmodifiableList(nrules);
     }
 
     /**
-     * Get the "natural" direction for the policy for the given pair of 
-     * endpoint groups.
-     * @param one The first endpoint group
-     * @param two The second endpoint group
+     * Get the "natural" direction for the policy for the given pair of endpoint
+     * groups.
+     *
+     * @param one
+     *            The first endpoint group
+     * @param two
+     *            The second endpoint group
      * @return true if the order should be reversed in the index
      */
     protected static boolean shouldReverse(EgKey one, EgKey two) {
@@ -630,43 +652,46 @@ public class PolicyResolver implements AutoCloseable {
         }
         return false;
     }
-    
-    private void addConditionSet(EgKey eg, ConditionSet cs, 
-                                 Map<EgKey, Set<ConditionSet>> egConditions) {
-        if (egConditions == null) return;
+
+    private void addConditionSet(EgKey eg, ConditionSet cs,
+            Map<EgKey, Set<ConditionSet>> egConditions) {
+        if (egConditions == null)
+            return;
         Set<ConditionSet> cset = egConditions.get(eg);
         if (cset == null) {
             egConditions.put(eg, cset = new HashSet<>());
         }
         cset.add(cs);
     }
-    
+
     /**
      * Choose the set of subjects that in scope for each possible set of
      * endpoint conditions
      */
     protected Table<EgKey, EgKey, Policy>
             selectSubjects(Table<EgKey, EgKey,
-                                 List<ContractMatch>> contractMatches,
-                           Map<EgKey, Set<ConditionSet>> egConditions) {
+                    List<ContractMatch>> contractMatches,
+                    Map<EgKey, Set<ConditionSet>> egConditions) {
         // Note that it's possible to further simplify the resulting policy
         // in the case of things like repeated rules, condition sets that
-        // cover other condition sets, etc.  This would be a good thing to do
+        // cover other condition sets, etc. This would be a good thing to do
         // at some point
         Table<EgKey, EgKey, Policy> policy = HashBasedTable.create();
 
         for (List<ContractMatch> matches : contractMatches.values()) {
             for (ContractMatch match : matches) {
                 List<Clause> clauses = match.contract.getClause();
-                if (clauses == null) continue;
+                if (clauses == null)
+                    continue;
 
                 List<Subject> subjectList = match.contract.getSubject();
-                if (subjectList == null) continue;
+                if (subjectList == null)
+                    continue;
 
                 EgKey ckey = new EgKey(match.consumerTenant.getId(),
-                                       match.consumer.getId());
+                        match.consumer.getId());
                 EgKey pkey = new EgKey(match.providerTenant.getId(),
-                                       match.provider.getId());
+                        match.provider.getId());
                 EgKey one = ckey;
                 EgKey two = pkey;
                 boolean reverse = shouldReverse(ckey, pkey);
@@ -686,7 +711,7 @@ public class PolicyResolver implements AutoCloseable {
 
                 for (Clause clause : clauses) {
                     if (clause.getSubjectRefs() != null &&
-                        clauseMatches(clause, match)) {
+                            clauseMatches(clause, match)) {
                         ConditionSet consCSet = buildConsConditionSet(clause);
                         addConditionSet(ckey, consCSet, egConditions);
                         ConditionSet provCSet = buildProvConditionSet(clause);
@@ -699,17 +724,18 @@ public class PolicyResolver implements AutoCloseable {
                         }
                         for (SubjectName sn : clause.getSubjectRefs()) {
                             Subject s = subjects.get(sn);
-                            if (s != null) clauseSubjects.add(s);
+                            if (s != null)
+                                clauseSubjects.add(s);
                         }
                     }
                 }
 
                 policy.put(one, two,
-                           resolvePolicy(match.contractTenant,
-                                         match.contract,
-                                         reverse,
-                                         existing,
-                                         subjectMap));
+                        resolvePolicy(match.contractTenant,
+                                match.contract,
+                                reverse,
+                                existing,
+                                subjectMap));
             }
         }
 
@@ -717,26 +743,30 @@ public class PolicyResolver implements AutoCloseable {
     }
 
     private List<ConsumerContractMatch> matchConsumerContracts(Tenant tenant,
-                                                               EndpointGroup consumer) {
+            EndpointGroup consumer) {
         List<ConsumerContractMatch> matches = new ArrayList<>();
         if (consumer.getConsumerNamedSelector() != null) {
             for (ConsumerNamedSelector cns : consumer.getConsumerNamedSelector()) {
-                if (cns.getContract() == null) continue;
+                if (cns.getContract() == null)
+                    continue;
                 for (ContractId contractId : cns.getContract()) {
                     Contract contract =
                             TenantUtils.findContract(tenant, contractId);
-                    if (contract == null) continue;
+                    if (contract == null)
+                        continue;
                     matches.add(new ConsumerContractMatch(tenant, contract,
-                                                          tenant, consumer,
-                                                          cns));
+                            tenant, consumer,
+                            cns));
                 }
             }
         }
         if (consumer.getConsumerTargetSelector() != null) {
             for (ConsumerTargetSelector cts : consumer.getConsumerTargetSelector()) {
-                if (tenant.getContract() == null) continue;
+                if (tenant.getContract() == null)
+                    continue;
                 for (Contract contract : tenant.getContract()) {
-                    if (contract.getTarget() == null) continue;
+                    if (contract.getTarget() == null)
+                        continue;
                     for (Target t : contract.getTarget()) {
                         boolean match = true;
                         if (cts.getQualityMatcher() != null) {
@@ -749,47 +779,51 @@ public class PolicyResolver implements AutoCloseable {
                         }
                         if (match) {
                             matches.add(new ConsumerContractMatch(tenant,
-                                                                  contract,
-                                                                  tenant,
-                                                                  consumer,
-                                                                  cts));
+                                    contract,
+                                    tenant,
+                                    consumer,
+                                    cts));
                         }
                     }
                 }
             }
         }
         // TODO match selectors also against contract references
-//        for (ConsumerTargetSelector cts : consumer.getConsumerTargetSelector()) {
-//            if (tenant.getContractRef() == null) continue;
-//            for (ContractRef c : tenant.getContractRef()) {
-//
-//            }
-//        }
+        // for (ConsumerTargetSelector cts :
+        // consumer.getConsumerTargetSelector()) {
+        // if (tenant.getContractRef() == null) continue;
+        // for (ContractRef c : tenant.getContractRef()) {
+        //
+        // }
+        // }
         return matches;
     }
 
     private void amendContractMatches(List<ContractMatch> matches,
-                                      List<ConsumerContractMatch> cMatches,
-                                      Tenant tenant, EndpointGroup provider,
-                                      ProviderSelectionRelator relator) {
-        if (cMatches == null) return;
+            List<ConsumerContractMatch> cMatches,
+            Tenant tenant, EndpointGroup provider,
+            ProviderSelectionRelator relator) {
+        if (cMatches == null)
+            return;
         for (ConsumerContractMatch cMatch : cMatches) {
             matches.add(new ContractMatch(cMatch, tenant, provider, relator));
         }
     }
 
     private List<ContractMatch>
-        matchProviderContracts(Tenant tenant, EndpointGroup provider,
-                               Table<TenantId,
-                                     ContractId,
-                                     List<ConsumerContractMatch>> consumerMatches) {
+            matchProviderContracts(Tenant tenant, EndpointGroup provider,
+                    Table<TenantId,
+                    ContractId,
+                    List<ConsumerContractMatch>> consumerMatches) {
         List<ContractMatch> matches = new ArrayList<>();
         if (provider.getProviderNamedSelector() != null) {
             for (ProviderNamedSelector pns : provider.getProviderNamedSelector()) {
-                if (pns.getContract() == null) continue;
+                if (pns.getContract() == null)
+                    continue;
                 for (ContractId contractId : pns.getContract()) {
                     Contract c = TenantUtils.findContract(tenant, contractId);
-                    if (c == null) continue;
+                    if (c == null)
+                        continue;
                     List<ConsumerContractMatch> cMatches =
                             consumerMatches.get(tenant.getId(), c.getId());
                     amendContractMatches(matches, cMatches, tenant, provider, pns);
@@ -798,9 +832,11 @@ public class PolicyResolver implements AutoCloseable {
         }
         if (provider.getProviderTargetSelector() != null) {
             for (ProviderTargetSelector pts : provider.getProviderTargetSelector()) {
-                if (tenant.getContract() == null) continue;
+                if (tenant.getContract() == null)
+                    continue;
                 for (Contract c : tenant.getContract()) {
-                    if (c.getTarget() == null) continue;
+                    if (c.getTarget() == null)
+                        continue;
                     for (Target t : c.getTarget()) {
                         boolean match = true;
                         if (pts.getQualityMatcher() != null) {
@@ -814,9 +850,9 @@ public class PolicyResolver implements AutoCloseable {
                         if (match) {
                             List<ConsumerContractMatch> cMatches =
                                     consumerMatches.get(tenant.getId(),
-                                                        c.getId());
+                                            c.getId());
                             amendContractMatches(matches, cMatches, tenant,
-                                                 provider, pts);
+                                    provider, pts);
 
                         }
                     }
@@ -838,9 +874,9 @@ public class PolicyResolver implements AutoCloseable {
     }
 
     /**
-     * Represents a selected contract made by endpoint groups matching it
-     * using selection relators.  This is the result of the contract selection
-     * phase.
+     * Represents a selected contract made by endpoint groups matching it using
+     * selection relators. This is the result of the contract selection phase.
+     *
      * @author readams
      *
      */
@@ -862,13 +898,13 @@ public class PolicyResolver implements AutoCloseable {
         final ProviderSelectionRelator providerRelator;
 
         public ContractMatch(ConsumerContractMatch consumerMatch,
-                             Tenant providerTenant, EndpointGroup provider,
-                             ProviderSelectionRelator providerRelator) {
+                Tenant providerTenant, EndpointGroup provider,
+                ProviderSelectionRelator providerRelator) {
             super(consumerMatch.contractTenant,
-                  consumerMatch.contract,
-                  consumerMatch.consumerTenant,
-                  consumerMatch.consumer,
-                  consumerMatch.consumerRelator);
+                    consumerMatch.contract,
+                    consumerMatch.consumerTenant,
+                    consumerMatch.consumer,
+                    consumerMatch.consumerRelator);
             this.providerTenant = providerTenant;
             this.provider = provider;
             this.providerRelator = providerRelator;
@@ -902,12 +938,11 @@ public class PolicyResolver implements AutoCloseable {
          */
         final ConsumerSelectionRelator consumerRelator;
 
-
         public ConsumerContractMatch(Tenant contractTenant,
-                                     Contract contract,
-                                     Tenant consumerTenant,
-                                     EndpointGroup consumer,
-                                     ConsumerSelectionRelator consumerRelator) {
+                Contract contract,
+                Tenant consumerTenant,
+                EndpointGroup consumer,
+                ConsumerSelectionRelator consumerRelator) {
             super();
             this.contractTenant = contractTenant;
             this.contract = contract;

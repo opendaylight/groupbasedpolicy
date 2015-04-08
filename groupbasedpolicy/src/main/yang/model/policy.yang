@@ -15,8 +15,8 @@ module policy {
     import gbp-common {prefix gbp-common;}
     import ietf-inet-types {prefix inet;}
 
-    description 
-        "This module defines the group-based policy configuration 
+    description
+        "This module defines the group-based policy configuration
          model.";
 
     revision "2014-04-21" {
@@ -30,7 +30,7 @@ module policy {
 
     grouping label {
         description
-            "Labels are used for matching contracts to endpoint groups 
+            "Labels are used for matching contracts to endpoint groups
              through selectors and targets, as well as determining how
              those contracts will be applied.  See more detailed
              documentation for qualities, conditions, requirements,
@@ -46,13 +46,13 @@ module policy {
 
             type enumeration {
                 enum include {
-                    description 
-                        "This label will be included normally in the 
+                    description
+                        "This label will be included normally in the
                          matching.";
                 }
                 enum exclude {
-                    description 
-                        "This label will be excluded from the 
+                    description
+                        "This label will be excluded from the
                          matching.  This allows removing labels that
                          would have otherwise been included because of
                          inheritence rules.";
@@ -70,12 +70,12 @@ module policy {
         }
         uses label;
     }
-    
+
     grouping has-qualities {
         description "An object with a list of qualities";
         list quality {
-            description 
-                "A quality is a label which selects which selects the 
+            description
+                "A quality is a label which selects which selects the
                  contracts that are in scope.  Another name for
                  'quality' could be 'attribute' or 'characteristic.'
                  Qualities can be scoped to either a specific contract
@@ -110,8 +110,8 @@ module policy {
 
     grouping has-requirements {
         list requirement {
-            description 
-                "A requirement is a label that, along with capabilities, 
+            description
+                "A requirement is a label that, along with capabilities,
                  selects how contracts are applied by selecting the
                  applicable subjects within that contract.
                  Requirements represent the fact that an endpoint
@@ -127,7 +127,7 @@ module policy {
                  Note that requirements play no role in choosing which
                  contracts apply; they only affect how the contracts
                  that are chosen will be interpreted.";
-        
+
             key name;
             uses requirement-base;
         }
@@ -145,8 +145,8 @@ module policy {
 
     grouping has-capabilities {
         list capability {
-            description 
-                "A capability is a label that, along with requirements, 
+            description
+                "A capability is a label that, along with requirements,
                  selects how contracts are applied by selecting the
                  applicable subjects within that contract.
                  Capabilities are specific pieces of functionality
@@ -171,8 +171,8 @@ module policy {
 
     grouping has-conditions {
         list condition {
-            description 
-                "A condition is a state label for endpoints that can 
+            description
+                "A condition is a state label for endpoints that can
                  change over time.  As conditions change for certain
                  endpoints, this can affect which subjects are in
                  scope as determined by how the clauses in the
@@ -191,28 +191,28 @@ module policy {
     }
 
     grouping matcher {
-        description 
-            "A matcher allows matching against labels.  This is used 
+        description
+            "A matcher allows matching against labels.  This is used
              to both to match contracts to endpoint groups by matching
              on qualities, and then to match against subjects in the
              contract by matching on requirements, capabilities, and
              conditions.";
 
         leaf match-type {
-            description 
-                "Specify how many of the labels must match.  If not 
+            description
+                "Specify how many of the labels must match.  If not
                  specified, defaults to 'all'.";
             type enumeration {
                 enum all {
-                    description 
+                    description
                         "All specified labels must match.";
                 }
                 enum any {
-                    description 
+                    description
                         "At least one of the specified labels must match.";
                 }
                 enum none {
-                    description 
+                    description
                         "None of the specified labels can match.";
                 }
             }
@@ -223,15 +223,15 @@ module policy {
         description "Objects with condition matchers";
         list condition-matcher {
             description "Match against conditions on endpoints.";
-                
+
             key "name";
             leaf name {
-                description 
+                description
                     "A name for the condition matcher";
                 type gbp-common:condition-matcher-name;
                 mandatory true;
             }
-                
+
             uses matcher;
             uses has-conditions;
         }
@@ -243,16 +243,16 @@ module policy {
 
     grouping network-domain {
         description
-            "A base type for network domains.  Network domains 
+            "A base type for network domains.  Network domains
              represent some logical grouping or namespace of
              network addresses.";
         leaf name {
-            description 
+            description
                 "A human-readable name for the network domain.";
             type gbp-common:name;
         }
         leaf description {
-            description 
+            description
                 "A human-readable description for the context.";
             type gbp-common:description;
         }
@@ -264,7 +264,7 @@ module policy {
     }
 
     grouping l2-context {
-        description 
+        description
             "A base type for layer 2 contexts.  Layer 2 contexts
              represent a namespace or logical grouping of layer 2
              addresses.";
@@ -277,7 +277,7 @@ module policy {
     // ************************
 
     grouping relator {
-        description 
+        description
             "Relators allow contracts and endpoint groups to be related
              to each other through a matching process.  See target,
              selection-relator, target-selector, and named-selector
@@ -285,8 +285,8 @@ module policy {
     }
 
     grouping selection-relator {
-        description 
-            "Selection relators allow endpoint groups to select 
+        description
+            "Selection relators allow endpoint groups to select
              contracts based on their name or on their qualities.";
         uses relator;
 
@@ -339,7 +339,7 @@ module policy {
     }
 
     grouping target-selector {
-        description 
+        description
             "Target selectors select contracts for the endpoint group.
              First, the quality matchers are used to select the
              contracts.  Then, the requirements and capabilities are
@@ -355,7 +355,7 @@ module policy {
              groups.";
 
         list quality-matcher {
-            description 
+            description
                 "A quality matcher is used in a target selector to
                  match against the qualities in a contract target.
                  You can specify a list of qualities to match against.
@@ -408,15 +408,15 @@ module policy {
             default bidirectional;
             type enumeration {
                 enum in {
-                    description 
+                    description
                         "Applies to traffic into provider endpoint group";
                 }
                 enum out {
-                    description 
+                    description
                         "Applies to traffic out of provider endpoint group";
                 }
                 enum bidirectional {
-                    description 
+                    description
                         "Applies to traffic in both directions";
                 }
             }
@@ -425,7 +425,7 @@ module policy {
 
     grouping subject-feature-instance {
         description
-            "Specific instances of subject features with 
+            "Specific instances of subject features with
              parameters filled in.";
         list parameter-value {
             key "name";
@@ -455,8 +455,8 @@ module policy {
     grouping has-order {
         description "Objects containing an order parameter";
         leaf order {
-            description 
-                "Specify the ordering of an ordered list 
+            description
+                "Specify the ordering of an ordered list
                  of elements.";
             type int32 {
                 range "0..max";
@@ -469,8 +469,8 @@ module policy {
 
         list classifier-ref {
             key "name";
-            description 
-                "A reference to classifier instance that is used to match 
+            description
+                "A reference to classifier instance that is used to match
                  traffic traveling between the endpoint groups that
                  form the contract.";
 
@@ -489,24 +489,24 @@ module policy {
             }
 
             leaf connection-tracking {
-                description 
-                    "Set up connection tracking for this classifier, 
+                description
+                    "Set up connection tracking for this classifier,
                      which allows the traffic in the reverse direction
-                     as connections are established.  This enables 
-                     rules that allow connections to be initiated only 
-                     from one side, but once initiated the two sides 
+                     as connections are established.  This enables
+                     rules that allow connections to be initiated only
+                     from one side, but once initiated the two sides
                      can communicate for that connection.";
 
                 default normal;
                 type enumeration {
                     enum normal {
-                        description 
-                            "Match only traffic matching the classifier 
+                        description
+                            "Match only traffic matching the classifier
                              strictly";
                     }
                     enum reflexive {
-                        description 
-                            "Additionally match reverse traffic for 
+                        description
+                            "Additionally match reverse traffic for
                              connections";
                     }
                 }
@@ -520,8 +520,8 @@ module policy {
         description "Objects containing lists of action references";
 
         list action-ref {
-            description 
-                "A reference to an action defined in the subject 
+            description
+                "A reference to an action defined in the subject
                  feature instances for the tenant.";
 
             key name;
@@ -546,8 +546,8 @@ module policy {
         }
 
         list parameter {
-            description 
-                "A parameter for the feature that can be 
+            description
+                "A parameter for the feature that can be
                  passed in.";
             key "name";
             leaf name {
@@ -556,8 +556,8 @@ module policy {
                 mandatory true;
             }
             leaf description {
-                description 
-                    "A user-visible description of the meaning of 
+                description
+                    "A user-visible description of the meaning of
                      the parameter.";
                 type gbp-common:description;
             }
@@ -592,18 +592,18 @@ module policy {
         }
 
         leaf fallback-behavior {
-            description 
+            description
                 "Set the behavior when the underlying infrastructure
                  is unable to support a particular feature.";
             type enumeration {
                 enum strict {
-                    description 
+                    description
                         "A fatal exception MUST be raised which will
                          render the enclosing subject inactive.";
                 }
                 enum allow-fallback {
-                    description 
-                        "The infrastructure MAY fall back to using 
+                    description
+                        "The infrastructure MAY fall back to using
                          a parent definition of this feature, and
                          instread raise a nonfatal exception.";
                 }
@@ -639,7 +639,7 @@ module policy {
 
         list classifier-definition {
             description
-                "A classifier is used to match traffic traveling between 
+                "A classifier is used to match traffic traveling between
                  the endpoint groups that form the contract.
                  Classifier definitions can define parameters that
                  will need to be filled in when a particular rule
@@ -655,14 +655,14 @@ module policy {
             }
 
             leaf name {
-                description 
+                description
                     "A user-visible name for the classifier definition";
                 type gbp-common:classifier-name;
             }
 
             leaf parent {
-                description 
-                    "Parent classifier definition from which we inherit"; 
+                description
+                    "Parent classifier definition from which we inherit";
                 type leafref {
                     path "/subject-feature-definitions/classifier-definition/id";
                 }
@@ -671,7 +671,7 @@ module policy {
 
         list action-definition {
             description
-                "A action to be applied to traffic across endpoint 
+                "A action to be applied to traffic across endpoint
                  groups.  Action definitions can define parameters
                  that will need to be filled in when a particular rule
                  references it.";
@@ -691,8 +691,8 @@ module policy {
             }
 
             leaf parent {
-                description 
-                    "Parent action definition from which we inherit"; 
+                description
+                    "Parent action definition from which we inherit";
                 type leafref {
                     path "/subject-feature-definitions/action-definition/id";
                 }
@@ -710,8 +710,8 @@ module policy {
         config true;
 
         list tenant {
-            description 
-                "A tenant is a domain of administration which is 
+            description
+                "A tenant is a domain of administration which is
                  logically separate from other tenants.  Most policy
                  is defined in the context of a particular tenant";
 
@@ -744,15 +744,15 @@ module policy {
                 uses forwarding-context;
 
                 leaf id {
-                    description 
+                    description
                         "A unique ID for the layer 3 context";
                     type gbp-common:l3-context-id;
                 }
             }
-            
+
             list l2-bridge-domain {
-                description 
-                    "A layer 2 bridge domain represents a domain in which 
+                description
+                    "A layer 2 bridge domain represents a domain in which
                      layer 2 communication is possible when allowed by policy.";
                 key "id";
                 uses l2-context;
@@ -763,7 +763,7 @@ module policy {
                 }
 
                 leaf parent {
-                    description 
+                    description
                         "The layer 3 context that contains this bridge domain";
                     type leafref {
                         path "/tenants/tenant/l3-context/id";
@@ -772,8 +772,8 @@ module policy {
             }
 
             list l2-flood-domain {
-                description 
-                    "A layer 2 flood domain represents a domain in which 
+                description
+                    "A layer 2 flood domain represents a domain in which
                      layer 2 broadcast and multicast is allowed.";
                 key "id";
                 uses l2-context;
@@ -784,7 +784,7 @@ module policy {
                 }
 
                 leaf parent {
-                    description 
+                    description
                         "The bridge domain that contains this flood domain";
                     type leafref {
                         path "/tenants/tenant/l2-bridge-domain/id";
@@ -794,18 +794,18 @@ module policy {
 
             list subnet {
                 description
-                    "An IP subnet associated with a layer 2 or layer 3 
+                    "An IP subnet associated with a layer 2 or layer 3
                      context.";
                 key "id";
                 uses network-domain;
-                
+
                 leaf id {
                     description "A unique ID for the subnet";
                     type gbp-common:subnet-id;
                 }
 
                 leaf parent {
-                    description 
+                    description
                         "The forwarding context that contains this subnet";
                     type gbp-common:context-id;
                 }
@@ -828,12 +828,12 @@ module policy {
 
             list endpoint-group {
                 description
-                    "Endpoint groups are sets of endpoints that share a 
+                    "Endpoint groups are sets of endpoints that share a
                      common set of policies.  Endpoint groups are
                      matched to contracts using selectors, contracts
                      determine which endpoints can communicate and in
                      what way.
-                     
+
                      Endpoint groups have both requirements and
                      capabilities, which represent specific pieces of
                      functionality that are exposed at the boundary of
@@ -843,7 +843,7 @@ module policy {
                      Correspondingly, capabilities are pieces of
                      functionality that the endpoints in the endpoint
                      group can provide to other endpoints.
-                     
+
                      Contracts can be selected through either a named
                      selector, which matches specific contracts by
                      name, or by a target selector which will match
@@ -854,7 +854,7 @@ module policy {
                      and capabilities are not used when choosing which
                      contracts are in scope; these are used to
                      determine how a contract will be interpreted.
-                     
+
                      There are two broad category of selectors:
                      provider selectors and consumer selectors.  The
                      provider selectors allow selecting contracts that
@@ -864,19 +864,19 @@ module policy {
                      group to meet its requirements.";
 
                 key "id";
-            
+
                 leaf id {
                     mandatory true;
                     type gbp-common:endpoint-group-id;
                 }
-                
+
                 leaf name {
-                    description 
+                    description
                         "A user-visible name for the endpoint group";
                     type gbp-common:name;
                 }
                 leaf description {
-                    description 
+                    description
                         "A human-readable description for the endpoint
                          group.";
                     type gbp-common:description;
@@ -885,20 +885,20 @@ module policy {
                 uses has-capabilities;
 
                 leaf intra-group-policy {
-                    description 
-                        "Governs how traffic within the endpoint group 
+                    description
+                        "Governs how traffic within the endpoint group
                          should be handled.";
                     default allow;
                     type enumeration {
                         enum allow {
-                            description 
+                            description
                                 "Traffic between two endpoints in the group
                                  is always allowed";
                         }
                         enum require-contract {
                             description
                                 "Traffic between two endpoints in the group
-                                 is allowed only when a contract exists to 
+                                 is allowed only when a contract exists to
                                  allow it explicitly";
                         }
                     }
@@ -906,10 +906,10 @@ module policy {
 
                 list consumer-named-selector {
                     description
-                        "Consumer named selectors are named selectors 
+                        "Consumer named selectors are named selectors
                          that select contracts to meet the
                          requirements of the endpoint group.
-                         
+
                          The consumer named selector selects a
                          contract based on the name of the contract.
                          Once the contract is selected, the
@@ -922,11 +922,11 @@ module policy {
                 }
 
                 list provider-named-selector {
-                    description 
-                        "Provider named selectors are named selectors 
+                    description
+                        "Provider named selectors are named selectors
                          that select contracts to provide capabilties
                          to other endpoint group.
-                         
+
                          The provider named selector selects a
                          contract based on the name of the contract.
                          Once the contract is selected, the capabilies
@@ -939,11 +939,11 @@ module policy {
                 }
 
                 list consumer-target-selector {
-                    description 
-                        "Consumer target selectors are target selectors 
-                         that select contracts to meet the requirements 
+                    description
+                        "Consumer target selectors are target selectors
+                         that select contracts to meet the requirements
                          of the endpoint group.
-                         
+
                          The consumer target selector selects a
                          contract using the quality matchers to match
                          against the qualities specified on the
@@ -958,10 +958,10 @@ module policy {
 
                 list provider-target-selector {
                     description
-                        "Provider target selectors are target selectors 
+                        "Provider target selectors are target selectors
                          that select contracts to provide capabilties
                          to other endpoint group.
-                         
+
                          The provider target selector selects a
                          contract using the quality matchers to match
                          against the qualities specified on the
@@ -975,16 +975,16 @@ module policy {
                 }
 
                 leaf network-domain {
-                    description 
+                    description
                         "The network domain associated with this endpoint
-                         group.  The network domain controls which endpoints 
+                         group.  The network domain controls which endpoints
                          are addressible by the endpoints in the group.";
                     type gbp-common:network-domain-id;
                 }
 
                 leaf parent {
-                    description 
-                        "Parent endpoint group from which we inherit"; 
+                    description
+                        "Parent endpoint group from which we inherit";
 
                     type leafref {
                         path "/tenants/tenant/endpoint-group/id";
@@ -997,12 +997,12 @@ module policy {
                     ".";
 
                 key "id";
-            
+
                 leaf id {
                     mandatory true;
                     type gbp-common:endpoint-group-id;
                 }
-                // Fields to be determined and completed before Code Freeze                
+                // Fields to be determined and completed before Code Freeze
 
             }
             // *************************
@@ -1010,8 +1010,8 @@ module policy {
             // *************************
 
             container subject-feature-instances {
-                description 
-                    "Contains instances of subject features.  Subject 
+                description
+                    "Contains instances of subject features.  Subject
                      feature instances reference a subject feature
                      definition but fill in the required parameters so
                      that they can be easily references elsewhere.";
@@ -1061,52 +1061,52 @@ module policy {
                      the communication allowed between endpoints in
                      endpoint groups.  Contracts are matched to endpoint
                      groups by selectors.";
-                
+
                 key "id";
                 leaf id {
                     description "A unique ID for the contract";
                     type gbp-common:contract-id;
                     mandatory true;
                 }
-                
+
                 leaf description {
-                    description 
+                    description
                         "A human-readable description for the contract.";
                     type gbp-common:description;
                 }
-                                
+
                 // *******
                 // Relator
                 // *******
-                
+
                 uses has-qualities;
-                
+
                 list target {
-                    description 
+                    description
                         "Targets on a contract allow grouping sets of qualities
                          together, as well as providing a namespace for
                          the qualities that are matched.";
-                
+
                     key "name";
                     leaf name {
-                        description 
-                            "The name for this target.  This can also be used 
+                        description
+                            "The name for this target.  This can also be used
                              by quality matchers as a namespace for qualities.";
                         type gbp-common:target-name;
                         mandatory true;
                     }
-                
+
                     uses relator;
                     uses has-qualities;
                 }
-                
+
                 // ********************
                 // Clauses and subjects
                 // ********************
-                
+
                 list subject {
                     description
-                        "Subjects define rules to allow traffic to flow 
+                        "Subjects define rules to allow traffic to flow
                          between endpoints in different endpoint
                          groups.  No communication is allowed unless a
                          subject allows that communication.
@@ -1118,7 +1118,7 @@ module policy {
                          groups that are participating in the
                          contract.  Clauses that match each point to a
                          subject which then becomes active.
-                         
+
                          An active subject can then apply its rules to
                          the traffic between the endpoints.";
 
@@ -1130,8 +1130,8 @@ module policy {
                     }
 
                     list rule {
-                        description 
-                            "A rule is applied to traffic between 
+                        description
+                            "A rule is applied to traffic between
                              endpoints in different endpoint groups.
                              Rules match against the traffic using
                              classifiers, and then apply actions to
@@ -1165,60 +1165,60 @@ module policy {
                 }
 
                 list clause {
-                    description 
-                        "Clauses are used to determine which subjects are 
+                    description
+                        "Clauses are used to determine which subjects are
                          active once a contract is selected using the
                          contract selectors.
-                
+
                          Clauses are activated by matching against
                          requirements on the consumer endpoint group,
                          capabilities on the provider endpoint group, and
                          conditions on the individual endpoints in the
-                         endpoint group.";             
+                         endpoint group.";
                     key "name";
                     leaf name {
                         type gbp-common:clause-name;
                         mandatory true;
-                    }               
+                    }
                     // ********
                     // Matchers
                     // ********
-                
+
                     container consumer-matchers {
-                        description 
-                            "Matchers that apply to the consumer endpoint 
+                        description
+                            "Matchers that apply to the consumer endpoint
                              group.";
-                        
+
                         // GIC mutually OR'd within role
                         choice group-identification-constraints {
                             description "Returns Groups which match, MUTALLY OR within role. Must be Either/Or";
 
-                            case group-name-constraint-case {                                
+                            case group-name-constraint-case {
                                 list group-name-constraint {
                                     key endpoint-group-name;
                                     leaf endpoint-group-name {
                                         type gbp-common:name;
                                     }
-                                } 
+                                }
                             }
                             case group-requirement-constraint-case {
                                 list requirement-matcher {
-                                    description 
-                                        "Match against requirements in the consumer 
+                                    description
+                                        "Match against requirements in the consumer
                                          endpoint group.";
-                        
+
                                     key "name";
                                     leaf name {
-                                        description 
+                                        description
                                             "A name for the requirement matcher";
                                         type gbp-common:requirement-matcher-name;
                                         mandatory true;
                                     }
-                        
+
                                     uses matcher;
                                     list matcher-requirement {
-                                        description 
-                                            "A matcher requirement is a 
+                                        description
+                                            "A matcher requirement is a
                                              requirement with a selector name
                                              field used in requirement
                                              matchers.  The name of the
@@ -1230,8 +1230,8 @@ module policy {
                                         uses requirement-base;
 
                                         leaf selector-namespace {
-                                            description 
-                                                "The name of the selector to  
+                                            description
+                                                "The name of the selector to
                                                  match.  This allows us to
                                                  specify that we want to match
                                                  only requirements scoped to a
@@ -1242,33 +1242,33 @@ module policy {
                                                  inherited selector namespace
                                                  if it exists, or match
                                                  against any selector name.";
-                        
+
                                             type gbp-common:selector-name;
                                         }
                                     }
                                 }
                             }
-                            
+
                             case group-any-case {
                                 container group-any {
 
-                                    description 
+                                    description
                                         "A presence container stating that, if this exists,
                                         the role matcher will match on any group.";
                                     presence "This matches any group";
                                 }
                             }
                         }
-                        
 
-                        
+
+
                         uses has-condition-matchers;
 
                         container endpoint-identification-constraints {
                             description
                                 "Identify endpoints via other attributes other than conditions.
                                 These can be things such as ip-prefix, vlan, mpls label etc. These
-                                things are intended to be explicity stated, and should not contain 
+                                things are intended to be explicity stated, and should not contain
                                 references to other objects like endpointsIDs.";
                             container l3-endpoint-identification-constraints {
                                 list prefix-constraint {
@@ -1285,7 +1285,7 @@ module policy {
                         description
                             "Matchers that apply to the provider endpoint
                              group";
-                                      
+
                         // GIC mutually OR'd within role
                         choice group-identification-constraints {
                             description "Returns Groups which match, MUTALLY OR within role. Must be Either/Or";
@@ -1300,13 +1300,13 @@ module policy {
                             }
                             case group-capability-constraint-case {
                                 list capability-matcher {
-                                    description 
+                                    description
                                         "Match against capabilities in the provider
                                          endpoint group.";
 
                                     key "name";
                                     leaf name {
-                                        description 
+                                        description
                                             "A name for the capability matcher";
                                         type gbp-common:capability-matcher-name;
                                         mandatory true;
@@ -1352,14 +1352,14 @@ module policy {
                                 }
                             }
                         }
-         
+
                         uses has-condition-matchers;
-                        
+
                         container endpoint-identification-constraints {
                             description
                                 "Identify endpoints via other attributes other than conditions.
                                 These can be things such as ip-prefix, vlan, mpls label etc. These
-                                things are intended to be explicity stated, and should not contain 
+                                things are intended to be explicity stated, and should not contain
                                 references to other objects like endpointsIDs.";
                             container l3-endpoint-identification-constraints {
                                 list prefix-constraint {
@@ -1371,7 +1371,7 @@ module policy {
                             }
                         }
                     }
-                
+
                     container any-matchers {
                         description
                             "Matchers that apply to either provider endpoint group or consumer endpoint group.";
@@ -1384,7 +1384,7 @@ module policy {
 
                     leaf-list subject-refs {
                         description
-                            "The subjects that will be activated if this 
+                            "The subjects that will be activated if this
                              clause matches.";
 
                         type leafref {
@@ -1396,18 +1396,18 @@ module policy {
                 // ***********
                 // Inheritance
                 // ***********
-                
+
                 leaf parent {
-                    description "Parent contract from which we inherit"; 
-                
+                    description "Parent contract from which we inherit";
+
                     type leafref {
                         path "/tenants/tenant/contract/id";
                     }
-                } 
+                }
             }
-                
+
             list contract-ref {
-                description 
+                description
                     "Contract references allow forming contracts
                      between endpoint groups in different tenants.
                      Once the contract reference is created, it is
@@ -1426,7 +1426,7 @@ module policy {
 
                 leaf tenant-id {
                     description
-                        "The tenant ID of the tenant containing the 
+                        "The tenant ID of the tenant containing the
                          contract.";
                     type leafref {
                         path "/tenants/tenant/id";
