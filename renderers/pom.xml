@@ -13,7 +13,6 @@
   <packaging>pom</packaging>
 
   <modules>
-    <module>oc</module>
     <module>opflex</module>
     <module>ofoverlay</module>
   </modules>

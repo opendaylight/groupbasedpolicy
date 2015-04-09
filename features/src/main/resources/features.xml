@@ -76,14 +76,5 @@
         <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.openstackendpointconfigfile}">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-openstackendpoint-config/${project.version}/xml/config</configfile>
     </feature>
 
-    <!--
-         The OpenContrail renderer
-    -->
-    <feature name='odl-groupbasedpolicy-oc' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Opencontrail'>
-        <feature version="${mdsal.version}">odl-mdsal-broker</feature>
-        <bundle>mvn:org.opendaylight.groupbasedpolicy/oc-renderer/${project.version}</bundle>
-        <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.occonfigfile}">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-oc-config/${project.version}/xml/config
-       </configfile>
-    </feature>
 </features>
 

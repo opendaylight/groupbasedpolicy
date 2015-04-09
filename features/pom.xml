@@ -61,11 +61,6 @@
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
-      <artifactId>oc-renderer</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>opflex-renderer</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -90,13 +85,6 @@
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>groupbasedpolicy-ofoverlay-config</artifactId>
-      <version>${project.version}</version>
-      <type>xml</type>
-      <classifier>config</classifier>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.groupbasedpolicy</groupId>
-      <artifactId>groupbasedpolicy-oc-config</artifactId>
       <version>${project.version}</version>
       <type>xml</type>
       <classifier>config</classifier>
