@@ -42,6 +42,7 @@
         -->
         <feature version="${openflowplugin.distribution.version}">odl-openflowplugin-flow-services</feature>
         <feature version='${openflowplugin.distribution.version}'>odl-openflowplugin-nxm-extensions</feature>
+        <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/ofoverlay-renderer/${project.version}</bundle>
         <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.ofoverlayconfigfile}">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-ofoverlay-config/${project.version}/xml/config</configfile>
     </feature>
@@ -56,6 +57,7 @@
         <!--
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         -->
+        <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/opflex-renderer/${project.version}</bundle>
         <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.opflexconfigfile}">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-opflex-config/${project.version}/xml/config</configfile>
     </feature>
@@ -69,7 +71,7 @@
          things in.
     -->
     <feature name='odl-groupbasedpolicy-openstackgbp' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Support OpenStack GBP Endpoints '>
-        <!--
+        <!-- DEPRECATED SOON.
         <feature version="${project.version}">odl-groupbasedpolicy-ofoverlay</feature>
         -->
         <feature version="${mdsal.version}">odl-mdsal-broker</feature>
