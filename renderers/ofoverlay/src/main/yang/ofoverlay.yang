@@ -123,6 +123,17 @@ module ofoverlay {
                  the endpoint is connected.";
             type inv:node-connector-id;
         }
+        leaf port-name {
+            type gbp-common:name;
+            description
+                "Port name";
+        }
+        leaf interface-id {
+            type gbp-common:unique-id;
+            description
+                "Unique identifier for interface";
+        }
+
     }
 
     augment "/endpoint:endpoints/endpoint:endpoint" {

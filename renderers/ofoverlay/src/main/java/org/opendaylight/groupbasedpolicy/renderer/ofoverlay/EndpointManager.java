@@ -36,6 +36,7 @@ import org.opendaylight.groupbasedpolicy.util.SetUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNodeConnector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Name;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
@@ -422,16 +423,19 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
                         for (Endpoint ep : endpoints.getEndpoint()) {
                             // 2. Search for portname
                             OfOverlayContext currentAugmentation = ep.getAugmentation(OfOverlayContext.class);
-                            if (ep.getPortName() != null && fcnc.getName() != null
-                                    && ep.getPortName().getValue().equals(fcnc.getName())) {
+                            if (currentAugmentation.getPortName() != null && fcnc.getName() != null
+                                    && currentAugmentation.getPortName().getValue().equals(fcnc.getName())) {
                                 NodeId nodeId;
                                 NodeConnectorId nodeConnectorId;
+                                Name name;
                                 try {
                                     nodeId = currentAugmentation.getNodeId();
                                     nodeConnectorId = currentAugmentation.getNodeConnectorId();
+                                    name = currentAugmentation.getPortName();
                                 } catch (Exception e) {
                                     nodeId = null;
                                     nodeConnectorId = null;
+                                    name = null;
                                 }
                                 Boolean process = false;
                                 if (nodeId == null && nodeConnectorId == null) {
@@ -451,6 +455,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
                                     OfOverlayContextBuilder ofOverlayAugmentation = new OfOverlayContextBuilder();
                                     ofOverlayAugmentation.setNodeId(node.getId());
                                     ofOverlayAugmentation.setNodeConnectorId(nc.getId());
+                                    ofOverlayAugmentation.setPortName(name);
                                     epBuilder.addAugmentation(OfOverlayContext.class, ofOverlayAugmentation.build());
                                     epBuilder.setL3Address(ep.getL3Address());
                                     InstanceIdentifier<Endpoint> iidEp = InstanceIdentifier.builder(Endpoints.class)
@@ -824,13 +829,24 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
 
         ictx = input.getAugmentation(OfOverlayContextInput.class);
         if (ictx != null) {
-            ictxBuilder.setNodeConnectorId(ictx.getNodeConnectorId());
-            ictxBuilder.setNodeId(ictx.getNodeId());
-        } else if (input.getPortName() != null) {
-            NodeInfo augmentation = fetchAugmentation(input.getPortName().getValue());
-            if (augmentation != null) {
-                ictxBuilder.setNodeId(augmentation.getNode().getId());
-                ictxBuilder.setNodeConnectorId(augmentation.getNodeConnector().getId());
+            /*
+             * In the case where they've provided just the port name,
+             * go see if we can find the NodeId and NodeConnectorId
+             * from inventory.
+             */
+            if (ictx.getPortName() != null &&
+               (ictx.getNodeId() == null &&
+                ictx.getNodeConnectorId() == null)) {
+                NodeInfo augmentation = fetchAugmentation(ictx.getPortName().getValue());
+                if (augmentation != null) {
+                    ictxBuilder.setNodeId(augmentation.getNode().getId());
+                    ictxBuilder.setNodeConnectorId(augmentation.getNodeConnector().getId());
+                    ictxBuilder.setPortName(ictx.getPortName());
+                }
+            } else {
+                ictxBuilder.setNodeConnectorId(ictx.getNodeConnectorId());
+                ictxBuilder.setNodeId(ictx.getNodeId());
+                ictxBuilder.setPortName(ictx.getPortName());
             }
         } else {
             ictxBuilder = null;

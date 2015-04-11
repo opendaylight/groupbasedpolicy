@@ -113,12 +113,6 @@ module endpoint {
             description
                 "The conditions associated with this endpoint";
         }
-        // This was a mistake and now it's an abomination.
-        leaf port-name {
-            type gbp-common:name;
-            description
-                "Port name";
-        } // end the abomination.
         leaf timestamp {
             type int64;
             description
