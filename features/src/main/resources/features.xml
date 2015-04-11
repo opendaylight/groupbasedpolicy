@@ -40,12 +40,9 @@
         Network Virtualization behavior using OpenFlow
     -->
     <feature name='odl-groupbasedpolicy-ofoverlay' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: OpenFlow Overlay Renderer'>
-        <!--
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
-        -->
         <feature version="${openflowplugin.distribution.version}">odl-openflowplugin-flow-services</feature>
         <feature version='${openflowplugin.distribution.version}'>odl-openflowplugin-nxm-extensions</feature>
-        <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/ofoverlay-renderer/${project.version}</bundle>
         <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.ofoverlayconfigfile}">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-ofoverlay-config/${project.version}/xml/config</configfile>
     </feature>
@@ -57,9 +54,6 @@
         OpFlex renderer in the controller
     -->
     <feature name='odl-groupbasedpolicy-opflex' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: OpFlex Renderer'>
-        <!--
-        <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
-        -->
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/opflex-renderer/${project.version}</bundle>
         <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.opflexconfigfile}">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-opflex-config/${project.version}/xml/config</configfile>
