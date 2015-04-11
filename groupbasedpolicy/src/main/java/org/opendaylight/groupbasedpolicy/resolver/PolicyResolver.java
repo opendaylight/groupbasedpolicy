@@ -29,8 +29,14 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Subject;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.Rule;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstance;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -77,12 +83,20 @@ public class PolicyResolver implements AutoCloseable {
 
     protected ConcurrentMap<TenantId, TenantContext> resolvedTenants;
 
+
     /**
      * Store a policy object for each endpoint group pair. The table is stored
      * with the key as (consumer, provider). Two endpoints could appear in both
      * roles at the same time, in which case both policies would apply.
      */
     AtomicReference<PolicyInfo> policy = new AtomicReference<>();
+
+    /*
+     * Store validators for ActionDefinitions from Renderers
+     *
+     */
+
+    protected ConcurrentMap<ActionDefinitionId, ActionInstanceValidator> registeredActions = new ConcurrentHashMap<>();
 
     public PolicyResolver(DataBroker dataProvider,
             ScheduledExecutorService executor) {
@@ -134,6 +148,9 @@ public class PolicyResolver implements AutoCloseable {
         return tc.tenant.get();
     }
 
+    public void registerActionDefinitions(ActionDefinitionId actionDefinitionId, ActionInstanceValidator validator) {
+        registeredActions.putIfAbsent(actionDefinitionId, validator);
+    }
     /**
      * Register a listener to receive update events.
      *
@@ -293,18 +310,24 @@ public class PolicyResolver implements AutoCloseable {
                 }
 
                 Tenant t = InheritanceUtils.resolveTenant(result.get());
-                IndexedTenant it = new IndexedTenant(t);
-                if (!tenantRef.compareAndSet(ot, it)) {
-                    // concurrent update of tenant policy. Retry
-                    updateTenant(tenantId);
-                } else {
-                    // Update the policy cache and notify listeners
-                    WriteTransaction wt = dataProvider.newWriteOnlyTransaction();
-                    wt.put(LogicalDatastoreType.OPERATIONAL, tiid, t, true);
-                    wt.submit();
-                    updatePolicy();
+                if (isValidTenant(t)) {
+                    IndexedTenant it = new IndexedTenant(t);
+                    if (!tenantRef.compareAndSet(ot, it)) {
+                        // concurrent update of tenant policy. Retry
+                        updateTenant(tenantId);
+                    } else {
+                        // Update the policy cache and notify listeners
+                        WriteTransaction wt = dataProvider.newWriteOnlyTransaction();
+                        wt.put(LogicalDatastoreType.OPERATIONAL, tiid, t, true);
+                        wt.submit();
+                        updatePolicy();
+                    }
                 }
             }
+
+
+
+
 
             @Override
             public void onFailure(Throwable t) {
@@ -360,6 +383,44 @@ public class PolicyResolver implements AutoCloseable {
         public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> arg0) {
             updateTenant(tenantId);
         }
+
+    }
+
+    private boolean isValidTenant(Tenant t) {
+        if(validActionInstances(t.getSubjectFeatureInstances().getActionInstance())) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean validActionInstances(List<ActionInstance> actionInstances) {
+        for(ActionInstance actionInstance : actionInstances) {
+            if(!(registeredActions.get(actionInstance.getActionDefinitionId()).isValid(actionInstance))) {
+                return false;
+            };
+        }
+        return true;
+    }
+
+    private boolean validContracts(List<Contract> contracts) {
+        for (Contract contract: contracts) {
+            validateSubjects(contract.getSubject());
+        }
+        return false;
+    }
+
+    private void validateSubjects(List<Subject> subjects) {
+        for(Subject subject: subjects) {
+            validateRules(subject.getRule());
+        }
+
+    }
+
+    private void validateRules(List<Rule> rules) {
+
+    }
+
+    private void validateActionRefs(List<ActionRef> actionRefs) {
 
     }
 }

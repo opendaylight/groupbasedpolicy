@@ -49,12 +49,36 @@ public class SourceMapperTest extends FlowTableTest {
 
     protected static final Logger LOG = LoggerFactory.getLogger(SourceMapperTest.class);
 
+    NodeConnectorId remoteTunnelId =
+            new NodeConnectorId(remoteNodeId.getValue() + ":101");
+
     @Override
     @Before
     public void setup() throws Exception {
         initCtx();
         table = new SourceMapper(ctx);
         super.setup();
+    }
+
+    private void addSwitches() {
+        switchManager.addSwitch(
+                nodeId,
+                tunnelId,
+                Collections.<NodeConnectorId>emptySet(),
+                new OfOverlayNodeConfigBuilder().setTunnel(
+                        ImmutableList.of(new TunnelBuilder().setIp(new IpAddress(new Ipv4Address("1.2.3.4")))
+                            .setTunnelType(TunnelTypeVxlan.class)
+                            .setNodeConnectorId(tunnelId)
+                            .build())).build());
+        switchManager.addSwitch(
+                remoteNodeId,
+                remoteTunnelId,
+                Collections.<NodeConnectorId>emptySet(),
+                new OfOverlayNodeConfigBuilder().setTunnel(
+                        ImmutableList.of(new TunnelBuilder().setIp(new IpAddress(new Ipv4Address("1.2.3.5")))
+                            .setTunnelType(TunnelTypeVxlan.class)
+                            .setNodeConnectorId(tunnelId)
+                            .build())).build());
     }
 
     @Test
@@ -76,17 +100,20 @@ public class SourceMapperTest extends FlowTableTest {
                             .setNodeConnectorId(tunnelId)
                             .build())).build());
         Endpoint ep = localEP().build();
+        switchManager.addSwitch(nodeId, null,
+                Collections.<NodeConnectorId> emptySet(),
+                null);
         endpointManager.addEndpoint(ep);
         policyResolver.addTenant(baseTenant().build());
 
         FlowMap fm = dosync(null);
-        assertEquals(4, fm.getTableForNode(nodeId, (short) 1).getFlow().size());
+        assertEquals(2, fm.getTableForNode(nodeId, (short) 1).getFlow().size());
 
         int count = 0;
         HashMap<String, Flow> flowMap = new HashMap<>();
         for (Flow f : fm.getTableForNode(nodeId, (short) 1).getFlow()) {
             flowMap.put(f.getId().getValue(), f);
-            if (f.getMatch() == null) {
+            if (f.getMatch() == null || f.getMatch().getEthernetMatch() == null) {
                 assertEquals(FlowUtils.dropInstructions(), f.getInstructions());
                 count += 1;
             } else if ((f.getMatch() !=null && f.getMatch().getEthernetMatch() != null)

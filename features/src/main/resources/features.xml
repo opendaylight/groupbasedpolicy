@@ -20,12 +20,18 @@
     <repository>mvn:org.opendaylight.openflowplugin/features-openflowplugin-extension/${openflowplugin.version}/xml/features</repository>
     <repository>mvn:org.opendaylight.ovsdb/southbound-features/${ovsdb.southbound.version}/xml/features</repository>
 
+
     <!-- Repos needed by the Neutron Mapper -->
     <repository>mvn:org.opendaylight.neutron/features-neutron/${neutron.version}/xml/features</repository>
-
+   <!-- Repos needed by ofoverlay for SFC -->
+    <repository>mvn:org.opendaylight.sfc/features-sfc/${sfc.version}/xml/features</repository>
+    <repository>mvn:org.opendaylight.sfc/features-sfc-sb-rest/${sfc.version}/xml/features</repository>
+    <repository>mvn:org.opendaylight.sfc/features-sfc-netconf/${sfc.version}/xml/features</repository>
     <!-- Repos needed by the UI Backend -->
     <repository>mvn:org.opendaylight.controller/features-restconf/${restconf.version}/xml/features</repository>
 
+    <repository>mvn:org.opendaylight.sfc/features-sfc-ovs/${sfc.version}/xml/features</repository>
+    <repository>mvn:org.opendaylight.sfc/features-sfcofl2/${sfc.version}/xml/features</repository>
     <!-- The common GBP components -->
     <feature name='odl-groupbasedpolicy-base' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Base Copmonents'>
         <feature version="${mdsal.version}">odl-mdsal-broker</feature>
@@ -45,6 +51,13 @@
         <feature version="${openflowplugin.version}">odl-openflowplugin-flow-services</feature>
         <feature version='${openflowplugin.version}'>odl-openflowplugin-nxm-extensions</feature>
         <feature version='${ovsdb.southbound.version}'>odl-ovsdb-southbound-impl</feature>
+        <feature version='${sfc.version}'>odl-sfc-core</feature>
+        <feature version='${sfc.version}'>odl-sfc-test-consumer</feature>
+        <feature version='${sfc.version}'>odl-sfc-sb-rest</feature>
+        <feature version='${sfc.version}'>odl-sfcofl2</feature>
+        <feature version='${sfc.version}'>odl-sfc-ovs</feature>
+        <feature version='${sfc.version}'>odl-sfc-netconf</feature>
+        <feature version='${sfc.version}'>odl-sfc-ui</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/ofoverlay-renderer/${project.version}</bundle>
         <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.ofoverlayconfigfile}">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-ofoverlay-config/${project.version}/xml/config</configfile>
     </feature>

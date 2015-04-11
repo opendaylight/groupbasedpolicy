@@ -32,6 +32,7 @@ public class MockSwitchManager extends SwitchManager {
         SwitchState state = new SwitchState(node, tunnelPort,
                                             externalPorts, nodeConfig);
         state.status = SwitchStatus.READY;
+        state.setHasEndpoints(true);
         switches.put(node, state);
         for (SwitchListener listener : listeners) {
             listener.switchReady(node);

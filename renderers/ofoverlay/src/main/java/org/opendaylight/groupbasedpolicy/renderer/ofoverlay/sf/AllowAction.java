@@ -13,12 +13,16 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import java.util.List;
 import java.util.Map;
 
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.NetworkElements;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ActionDefinition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ActionDefinitionBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
 
 
@@ -52,7 +56,8 @@ public class AllowAction extends Action {
     @Override
     public List<ActionBuilder> updateAction(List<ActionBuilder> actions,
                                             Map<String, Object> params,
-                                            Integer order) {
+                                            Integer order,
+                                            NetworkElements netElements) {
         /*
          * Allow action doesn't use parameters
          * TODO: check to make sure ActionBuilder w/allow isn't already present
@@ -62,6 +67,12 @@ public class AllowAction extends Action {
           .setOrder(order);
         actions.add(ab);
         return actions;
+    }
+
+    @Override
+    public boolean isValid(ActionInstance actionInstance) {
+        // TODO Auto-generated method stub
+        return true;
     }
 
 }

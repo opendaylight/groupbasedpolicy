@@ -33,7 +33,17 @@
       <groupId>org.opendaylight.openflowplugin</groupId>
       <artifactId>openflowplugin-extension-nicira</artifactId>
     </dependency>
-
+    <!-- SFC -->
+    <dependency>
+      <groupId>org.opendaylight.sfc</groupId>
+      <artifactId>sfc-model</artifactId>
+      <version>${sfc.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.sfc</groupId>
+      <artifactId>sfc-provider</artifactId>
+      <version>${sfc.version}</version>
+    </dependency>
     <!-- testing dependencies -->
     <dependency>
       <groupId>junit</groupId>

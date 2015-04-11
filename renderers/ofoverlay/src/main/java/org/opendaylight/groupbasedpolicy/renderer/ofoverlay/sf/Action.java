@@ -11,16 +11,20 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf;
 import java.util.List;
 import java.util.Map;
 
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.NetworkElements;
+import org.opendaylight.groupbasedpolicy.resolver.ActionInstanceValidator;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ActionDefinition;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 
 /**
  * Represent an action definition, and provide tools for generating
  * flow instructions based on the action
  * @author tbachman
  */
-public abstract class Action {
+public abstract class Action implements ActionInstanceValidator{
     /**
      * Get the action definition for this action
      * @return the {@link ActionDefinition} for this action
@@ -43,5 +47,6 @@ public abstract class Action {
      */
     public abstract List<ActionBuilder> updateAction(List<ActionBuilder> actions,
                                                      Map<String, Object> params,
-                                                     Integer i);
+                                                     Integer order,
+                                                     NetworkElements netElements);
 }

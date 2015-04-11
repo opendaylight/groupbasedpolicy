@@ -190,6 +190,7 @@ public class SourceMapper extends FlowTable {
 
         MatchBuilder mb = new MatchBuilder().setInPort(tunPort);
         addNxTunIdMatch(mb, tunnelId);
+
         Action segReg = nxLoadRegAction(NxmNxReg0.class, BigInteger.valueOf(egId));
         // set condition group register to all ones to
         // bypass

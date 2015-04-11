@@ -1,3 +1,4 @@
+package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf;
 /*
  * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
  *
@@ -6,7 +7,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf;
+
 
 import java.util.List;
 import java.util.Map;
@@ -45,7 +46,8 @@ public class SubjectFeatures {
 
     private static final Map<ActionDefinitionId, Action> actions =
             ImmutableMap.<ActionDefinitionId, Action>
-                of(AllowAction.ID, new AllowAction());
+                of(AllowAction.ID, new AllowAction(),
+                   ChainAction.ID, new ChainAction());
 
     private static final List<ActionDefinition> actionDefs =
             ImmutableList.copyOf(Collections2.transform(actions.values(),
@@ -72,6 +74,10 @@ public class SubjectFeatures {
      */
     public static Classifier getClassifier(ClassifierDefinitionId id) {
         return classifiers.get(id);
+    }
+
+    public static Map<ActionDefinitionId, Action> getActions() {
+        return actions;
     }
 
     /**

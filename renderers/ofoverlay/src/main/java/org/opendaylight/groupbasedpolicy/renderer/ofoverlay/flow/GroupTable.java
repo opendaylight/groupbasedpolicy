@@ -205,11 +205,10 @@ public class GroupTable extends OfTable {
                                     destNode);
                             continue;
                         }
+                    BucketBuilder bb = new BucketBuilder().setBucketId(new BucketId(Long.valueOf(bucketId))).setAction(actionList(tundstAction, outputAction(tunPort)));
 
-                        BucketBuilder bb = new BucketBuilder()
-                                .setBucketId(new BucketId(Long.valueOf(bucketId)))
-                                .setAction(actionList(tundstAction,
-                                        outputAction(tunPort)));
+
+
                         updateBucket(gctx, bb);
                     }
                 OfOverlayContext ofc =
