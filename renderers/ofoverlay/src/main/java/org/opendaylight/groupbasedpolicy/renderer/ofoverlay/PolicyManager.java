@@ -51,6 +51,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.FutureCallback;
@@ -241,7 +242,7 @@ public class PolicyManager
         public void writeFlow(NodeId nodeId,short tableId, Flow flow) {
             TableBuilder tableBuilder = this.getTableForNode(nodeId, tableId);
             if (!tableBuilder.getFlow().contains(flow)) {
-                tableBuilder.getFlow().add(flow);
+                tableBuilder.getFlow().add(Preconditions.checkNotNull(flow));
             }
         }
 
