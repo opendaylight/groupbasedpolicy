@@ -70,7 +70,8 @@
             </Import-Package>
             <Embed-Dependency>httpclient,httpcore,commons-lang,commons-exec;type=!pom;inline=false</Embed-Dependency>
             <Export-Package>
-              org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf
+              org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf,
+              org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528
             </Export-Package>
           </instructions>
           <manifestLocation>${project.basedir}/META-INF</manifestLocation>

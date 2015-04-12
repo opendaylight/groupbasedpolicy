@@ -336,6 +336,71 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
             // TODO Auto-generated method stub
 
         }
+
+        private OfOverlayContextBuilder checkAugmentation(RegisterEndpointInput input) {
+            OfOverlayContextInput ictx = input.getAugmentation(OfOverlayContextInput.class);
+            if (ictx == null) {
+                return null;
+            }
+
+            OfOverlayContextBuilder ictxBuilder = new OfOverlayContextBuilder(ictx);
+            if (ictx.getPortName() != null && ictx.getNodeId() != null && ictx.getNodeConnectorId() != null) {
+                return ictxBuilder;
+            }
+
+            /*
+             * In the case where they've provided just the port name,
+             * go see if we can find the NodeId and NodeConnectorId
+             * from inventory.
+             */
+            if (ictx.getPortName() != null) {
+                NodeInfo augmentation = fetchAugmentation(ictx.getPortName().getValue());
+                if (augmentation != null) {
+                    ictxBuilder.setNodeId(augmentation.getNode().getId());
+                    ictxBuilder.setNodeConnectorId(augmentation.getNodeConnector().getId());
+                }
+            }
+            return ictxBuilder;
+        }
+
+        private NodeInfo fetchAugmentation(String portName) {
+            NodeInfo nodeInfo = null;
+
+            if (dataProvider != null) {
+
+                Optional<Nodes> result;
+                try {
+                    result = dataProvider
+                            .newReadOnlyTransaction().read(
+                                    LogicalDatastoreType.OPERATIONAL, nodesIid).get();
+                    if (result.isPresent()) {
+                        Nodes nodes = result.get();
+                        for (Node node : nodes.getNode()) {
+                            if (node.getNodeConnector() != null) {
+                                boolean found = false;
+                                for (NodeConnector nc : node.getNodeConnector()) {
+                                    FlowCapableNodeConnector fcnc = nc
+                                            .getAugmentation(FlowCapableNodeConnector.class);
+                                    if (fcnc.getName().equals(portName)) {
+                                        nodeInfo = new NodeInfo();
+                                        nodeInfo.setNode(node);
+                                        nodeInfo.setNodeConnector(nc);
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                                if (found)
+                                    break;
+                            }
+                        }
+                    }
+                } catch (InterruptedException | ExecutionException e) {
+                    LOG.error("Caught exception in fetchAugmentation portName", e);
+                }
+
+            }
+            return nodeInfo;
+        }
     }
 
     // *************
@@ -823,37 +888,6 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
         }
     }
 
-    private OfOverlayContextBuilder checkAugmentation(RegisterEndpointInput input) {
-        OfOverlayContextBuilder ictxBuilder = new OfOverlayContextBuilder();
-        OfOverlayContextInput ictx = null;
-
-        ictx = input.getAugmentation(OfOverlayContextInput.class);
-        if (ictx != null) {
-            /*
-             * In the case where they've provided just the port name,
-             * go see if we can find the NodeId and NodeConnectorId
-             * from inventory.
-             */
-            if (ictx.getPortName() != null &&
-               (ictx.getNodeId() == null &&
-                ictx.getNodeConnectorId() == null)) {
-                NodeInfo augmentation = fetchAugmentation(ictx.getPortName().getValue());
-                if (augmentation != null) {
-                    ictxBuilder.setNodeId(augmentation.getNode().getId());
-                    ictxBuilder.setNodeConnectorId(augmentation.getNodeConnector().getId());
-                    ictxBuilder.setPortName(ictx.getPortName());
-                }
-            } else {
-                ictxBuilder.setNodeConnectorId(ictx.getNodeConnectorId());
-                ictxBuilder.setNodeId(ictx.getNodeId());
-                ictxBuilder.setPortName(ictx.getPortName());
-            }
-        } else {
-            ictxBuilder = null;
-        }
-        return ictxBuilder;
-    }
-
     // A wrapper class around node, nodeConnector info so we can pass a final
     // object inside OnSuccess anonymous inner class
     private static class NodeInfo {
@@ -886,42 +920,4 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
         }
     }
 
-    private NodeInfo fetchAugmentation(String portName) {
-        NodeInfo nodeInfo = null;
-
-        if (dataProvider != null) {
-
-            Optional<Nodes> result;
-            try {
-                result = dataProvider
-                        .newReadOnlyTransaction().read(
-                                LogicalDatastoreType.OPERATIONAL, nodesIid).get();
-                if (result.isPresent()) {
-                    Nodes nodes = result.get();
-                    for (Node node : nodes.getNode()) {
-                        if (node.getNodeConnector() != null) {
-                            boolean found = false;
-                            for (NodeConnector nc : node.getNodeConnector()) {
-                                FlowCapableNodeConnector fcnc = nc
-                                        .getAugmentation(FlowCapableNodeConnector.class);
-                                if (fcnc.getName().equals(portName)) {
-                                    nodeInfo = new NodeInfo();
-                                    nodeInfo.setNode(node);
-                                    nodeInfo.setNodeConnector(nc);
-                                    found = true;
-                                    break;
-                                }
-                            }
-                            if (found)
-                                break;
-                        }
-                    }
-                }
-            } catch (InterruptedException | ExecutionException e) {
-                LOG.error("Caught exception in fetchAugmentation portName", e);
-            }
-
-        }
-        return nodeInfo;
-    }
 }
