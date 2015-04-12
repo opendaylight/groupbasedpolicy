@@ -248,6 +248,27 @@ public class PolicyManager
 
         public void commitToDataStore() {
             if (dataBroker != null) {
+                // TODO: tbachman: Remove for Lithium -- this is a workaround
+                //       where some flow-mods aren't getting installed
+                //       on vSwitches when changing L3 contexts
+                WriteTransaction d = dataBroker.newWriteOnlyTransaction();
+
+                for( Entry<InstanceIdentifier<Table>, TableBuilder> entry : flowMap.entrySet()) {
+                    d.delete(LogicalDatastoreType.CONFIGURATION, entry.getKey());
+                }
+
+                CheckedFuture<Void, TransactionCommitFailedException> fu = d.submit();
+                Futures.addCallback(fu, new FutureCallback<Void>() {
+                    @Override
+                    public void onFailure(Throwable th) {
+                        LOG.error("Could not write flow table.", th);
+                    }
+
+                    @Override
+                    public void onSuccess(Void result) {
+                        LOG.debug("Flow table updated.");
+                    }
+                });
                 WriteTransaction t = dataBroker.newWriteOnlyTransaction();
 
                 for( Entry<InstanceIdentifier<Table>, TableBuilder> entry : flowMap.entrySet()) {
