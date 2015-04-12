@@ -155,7 +155,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
      *            the nodeId of the switch to get endpoints for
      * @return a collection of {@link Endpoint} objects.
      */
-    public Set<EgKey> getGroupsForNode(NodeId nodeId) {
+    public synchronized Set<EgKey> getGroupsForNode(NodeId nodeId) {
         Map<EgKey, Set<EpKey>> nodeEps = endpointsByGroupByNode.get(nodeId);
         if (nodeEps == null)
             return Collections.emptySet();
@@ -169,7 +169,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
      *            the egKey of the endpointgroup to get nodes for
      * @return a collection of {@link NodeId} objects.
      */
-    public Set<NodeId> getNodesForGroup(final EgKey egKey) {
+    public synchronized Set<NodeId> getNodesForGroup(final EgKey egKey) {
         return Collections.unmodifiableSet(Sets.filter(endpointsByGroupByNode.keySet(),
                 new Predicate<NodeId>() {
                     @Override
@@ -192,7 +192,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
      *            the group to look up
      * @return the endpoints
      */
-    public Collection<Endpoint> getEndpointsForNode(NodeId nodeId, EgKey eg) {
+    public synchronized Collection<Endpoint> getEndpointsForNode(NodeId nodeId, EgKey eg) {
         // TODO: alagalah Create method findEndpointsByNode() that uses
         // datastore
 
@@ -214,7 +214,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
      *            the node ID to look up
      * @return the endpoints
      */
-    public Collection<Endpoint> getEndpointsForNode(final NodeId nodeId) {
+    public synchronized Collection<Endpoint> getEndpointsForNode(final NodeId nodeId) {
         // TODO: alagalah Create method findEndpointsByNode() that uses
         // datastore. See commented code below.
 
@@ -283,7 +283,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
      *            the nodeId of the switch to get endpoints for
      * @return a collection of {@link Endpoint} objects.
      */
-    public Collection<Endpoint> getEndpointsForGroup(EgKey eg) {
+    public synchronized Collection<Endpoint> getEndpointsForGroup(EgKey eg) {
         Collection<EpKey> ebg = endpointsByGroup.get(eg);
         if (ebg == null)
             return Collections.emptyList();
@@ -578,7 +578,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
     /**
      * Update the endpoint indexes. Set newEp to null to remove.
      */
-    protected void updateEndpoint(Endpoint oldEp, Endpoint newEp) {
+    protected synchronized void updateEndpoint(Endpoint oldEp, Endpoint newEp) {
         // TODO Be alagalah From Helium only keep track of endpoints that are
         // attached
         // to switches that are actually connected to us
