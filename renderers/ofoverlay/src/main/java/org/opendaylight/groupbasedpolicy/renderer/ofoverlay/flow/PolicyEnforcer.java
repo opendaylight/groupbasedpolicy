@@ -95,7 +95,10 @@ public class PolicyEnforcer extends FlowTable {
 
         flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null));
 
-        flowMap.writeFlow(nodeId, TABLE_ID, allowFromTunnel(nodeId));
+        NodeConnectorId tunPort = ctx.getSwitchManager().getTunnelPort(nodeId);
+        if (tunPort != null) {
+            flowMap.writeFlow(nodeId, TABLE_ID, allowFromTunnel(tunPort));
+        }
 
         HashSet<CgPair> visitedPairs = new HashSet<>();
 
@@ -182,11 +185,8 @@ public class PolicyEnforcer extends FlowTable {
             return flow.build();
     }
 
-    private Flow allowFromTunnel(NodeId nodeId) {
-        NodeConnectorId tunPort =
-                ctx.getSwitchManager().getTunnelPort(nodeId);
-        if (tunPort == null)
-            return null;
+    private Flow allowFromTunnel(NodeConnectorId tunPort) {
+
 
         FlowId flowId = new FlowId("tunnelallow");
         MatchBuilder mb = new MatchBuilder()
