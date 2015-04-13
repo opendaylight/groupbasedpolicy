@@ -393,7 +393,10 @@ public class DestinationMapper extends FlowTable {
             // this endpoint is on a different switch; send to the
             // appropriate tunnel
 
-             flowMap.writeFlow(nodeId, TABLE_ID, createRemoteL2Flow(epPeer, nodeId, epFwdCtxOrds, ofc));
+            Flow remoteL2Flow = createRemoteL2Flow(epPeer, nodeId, epFwdCtxOrds, ofc);
+            if (remoteL2Flow != null) {
+                flowMap.writeFlow(nodeId, TABLE_ID, remoteL2Flow);
+            }
 
             if (epPeer.getL3Address() == null)
                 return;
@@ -402,7 +405,10 @@ public class DestinationMapper extends FlowTable {
                     LOG.error("Endpoint with L3Address but either IPAddress or L3Context is null. {}",epPeer.getL3Address().toString());
                     continue;
                 } else {
-                    flowMap.writeFlow(nodeId, TABLE_ID, createRemoteL3Flow(l3a, nodeId,epFwdCtxOrds, ofc));
+                    Flow remoteL3Flow = createRemoteL3Flow(l3a, nodeId,epFwdCtxOrds, ofc);
+                    if (remoteL3Flow != null) {
+                        flowMap.writeFlow(nodeId, TABLE_ID, remoteL3Flow);
+                    }
                 }
             }
         } // remote (tunnel)
@@ -548,10 +554,14 @@ public class DestinationMapper extends FlowTable {
                 ctx.getSwitchManager().getTunnelIP(ofc.getNodeId());
         NodeConnectorId tunPort =
                 ctx.getSwitchManager().getTunnelPort(nodeId);
-        if (tunDst == null)
+        if (tunDst == null) {
+            LOG.warn("Failed to get Tunnel IP for NodeId {} with EP {}", nodeId, ep);
             return null;
-        if (tunPort == null)
+        }
+        if (tunPort == null) {
+            LOG.warn("Failed to get Tunnel Port for NodeId {} with EP {}", nodeId, ep);
             return null;
+        }
 
         Action tundstAction;
 
@@ -663,10 +673,14 @@ public class DestinationMapper extends FlowTable {
                 ctx.getSwitchManager().getTunnelIP(ofc.getNodeId());
         NodeConnectorId tunPort =
                 ctx.getSwitchManager().getTunnelPort(nodeId);
-        if (tunDst == null)
+        if (tunDst == null) {
+            LOG.warn("Failed to get Tunnel IP for NodeId {} with L3Address {}", nodeId, l3a);
             return null;
-        if (tunPort == null)
+        }
+        if (tunPort == null) {
+            LOG.warn("Failed to get Tunnel port for NodeId {} with L3Address {}", nodeId, l3a);
             return null;
+        }
 
         Action tundstAction;
 
