@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2015 Cisco Systems, Inc. and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -17,10 +17,12 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronNetworkAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronPortAware;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronRouterAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronSecurityGroupAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronSubnetAware;
 import org.opendaylight.neutron.spi.INeutronNetworkAware;
 import org.opendaylight.neutron.spi.INeutronPortAware;
+import org.opendaylight.neutron.spi.INeutronRouterAware;
 import org.opendaylight.neutron.spi.INeutronSecurityGroupAware;
 import org.opendaylight.neutron.spi.INeutronSubnetAware;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService;
@@ -42,20 +44,24 @@ public class NeutronMapper implements AutoCloseable {
 
     private void registerAwareProviders(DataBroker dataProvider, EndpointService epService, BundleContext context) {
         ServiceRegistration<INeutronNetworkAware> neutronNetworkAwareRegistration = context.registerService(
-            INeutronNetworkAware.class, new NeutronNetworkAware(dataProvider), null);
+                INeutronNetworkAware.class, new NeutronNetworkAware(dataProvider), null);
         registrations.add(neutronNetworkAwareRegistration);
 
         ServiceRegistration<INeutronSubnetAware> neutronSubnetAwareRegistration = context.registerService(
-            INeutronSubnetAware.class, new NeutronSubnetAware(dataProvider), null);
+                INeutronSubnetAware.class, new NeutronSubnetAware(dataProvider), null);
         registrations.add(neutronSubnetAwareRegistration);
 
         ServiceRegistration<INeutronPortAware> neutronPortAwareRegistration = context.registerService(
-            INeutronPortAware.class, new NeutronPortAware(dataProvider, epService), null);
+                INeutronPortAware.class, new NeutronPortAware(dataProvider, epService), null);
         registrations.add(neutronPortAwareRegistration);
 
         ServiceRegistration<INeutronSecurityGroupAware> neutronSecurityGroupAwareRegistration = context.registerService(
-            INeutronSecurityGroupAware.class, new NeutronSecurityGroupAware(dataProvider), null);
+                INeutronSecurityGroupAware.class, new NeutronSecurityGroupAware(dataProvider), null);
         registrations.add(neutronSecurityGroupAwareRegistration);
+
+        ServiceRegistration<INeutronRouterAware> neutronRouterAwareRegistration = context.registerService(
+                INeutronRouterAware.class, new NeutronRouterAware(dataProvider, epService), null);
+        registrations.add(neutronRouterAwareRegistration);
     }
 
     /**
