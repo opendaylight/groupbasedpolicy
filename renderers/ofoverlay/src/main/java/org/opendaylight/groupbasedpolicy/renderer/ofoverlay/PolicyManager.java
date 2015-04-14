@@ -9,6 +9,7 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -22,6 +23,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
@@ -51,8 +53,10 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -248,47 +252,83 @@ public class PolicyManager
 
         public void commitToDataStore() {
             if (dataBroker != null) {
-                // TODO: tbachman: Remove for Lithium -- this is a workaround
-                //       where some flow-mods aren't getting installed
-                //       on vSwitches when changing L3 contexts
-                WriteTransaction d = dataBroker.newWriteOnlyTransaction();
-
                 for( Entry<InstanceIdentifier<Table>, TableBuilder> entry : flowMap.entrySet()) {
-                    d.delete(LogicalDatastoreType.CONFIGURATION, entry.getKey());
+                    try {
+                        /*
+                         * Get the currently configured flows for
+                         * this table.
+                         */
+                        updateFlowTable(entry);
+                    } catch (Exception e) {
+                        LOG.warn("Couldn't read flow table {}", entry.getKey());
+                    }
                 }
-
-                CheckedFuture<Void, TransactionCommitFailedException> fu = d.submit();
-                Futures.addCallback(fu, new FutureCallback<Void>() {
-                    @Override
-                    public void onFailure(Throwable th) {
-                        LOG.error("Could not write flow table.", th);
-                    }
-
-                    @Override
-                    public void onSuccess(Void result) {
-                        LOG.debug("Flow table updated.");
-                    }
-                });
-                WriteTransaction t = dataBroker.newWriteOnlyTransaction();
-
-                for( Entry<InstanceIdentifier<Table>, TableBuilder> entry : flowMap.entrySet()) {
-                    t.put(LogicalDatastoreType.CONFIGURATION,
-                          entry.getKey(), entry.getValue().build(),true);
-                }
-
-                CheckedFuture<Void, TransactionCommitFailedException> f = t.submit();
-                Futures.addCallback(f, new FutureCallback<Void>() {
-                    @Override
-                    public void onFailure(Throwable t) {
-                        LOG.error("Could not write flow table.", t);
-                    }
-
-                    @Override
-                    public void onSuccess(Void result) {
-                        LOG.debug("Flow table updated.");
-                    }
-                });
             }
+        }
+
+        private void updateFlowTable(Entry<InstanceIdentifier<Table>,
+                                     TableBuilder> entry)  throws Exception {
+            Set<Flow> update = new HashSet<Flow>(entry.getValue().getFlow());
+            Set<Flow> curr = new HashSet<Flow>();
+
+            ReadWriteTransaction t = dataBroker.newReadWriteTransaction();
+            Optional<Table> r =
+                   t.read(LogicalDatastoreType.CONFIGURATION, entry.getKey()).get();
+
+            if (r.isPresent()) {
+                Table curTable = (Table)r.get();
+                curr = new HashSet<Flow>(curTable.getFlow());
+            }
+            Sets.SetView<Flow> deletions = Sets.difference(curr, update);
+            Sets.SetView<Flow> additions = Sets.difference(update, curr);
+            if (!deletions.isEmpty()) {
+                for (Flow f: deletions) {
+                    t.delete(LogicalDatastoreType.CONFIGURATION,
+                             FlowUtils.createFlowPath(entry.getKey(), f.getId()));
+                }
+            }
+            if (!additions.isEmpty()) {
+                for (Flow f: additions) {
+                    t.put(LogicalDatastoreType.CONFIGURATION,
+                          FlowUtils.createFlowPath(entry.getKey(), f.getId()), f, true);
+                }
+            }
+            CheckedFuture<Void, TransactionCommitFailedException> f = t.submit();
+            Futures.addCallback(f, new FutureCallback<Void>() {
+                @Override
+                public void onFailure(Throwable t) {
+                    LOG.error("Could not write flow table {}", t);
+                }
+
+                @Override
+                public void onSuccess(Void result) {
+                    LOG.debug("Flow table updated.");
+                }
+            });
+        }
+
+        private void purgeFromDataStore() {
+            // TODO: tbachman: Remove for Lithium -- this is a workaround
+            //       where some flow-mods aren't getting installed
+            //       on vSwitches when changing L3 contexts
+            WriteTransaction d = dataBroker.newWriteOnlyTransaction();
+
+            for( Entry<InstanceIdentifier<Table>, TableBuilder> entry : flowMap.entrySet()) {
+                d.delete(LogicalDatastoreType.CONFIGURATION, entry.getKey());
+            }
+
+            CheckedFuture<Void, TransactionCommitFailedException> fu = d.submit();
+            Futures.addCallback(fu, new FutureCallback<Void>() {
+                @Override
+                public void onFailure(Throwable th) {
+                    LOG.error("Could not write flow table.", th);
+                }
+
+                @Override
+                public void onSuccess(Void result) {
+                    LOG.debug("Flow table updated.");
+                }
+            });
         }
 
      }
