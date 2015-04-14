@@ -87,12 +87,10 @@ public class IpProtoClassifier extends Classifier {
     @Override
     protected void checkPresenceOfRequiredParams(Map<String, ParameterValue> params) {
         if (params.get(PROTO_PARAM) == null) {
-            throw new IllegalArgumentException("Classifier: {" + this.getClassDef().getName()
-                    + "}+ Parameter proto not present.");
+            throw new IllegalArgumentException("Parameter " + PROTO_PARAM + " not specified.");
         }
         if (params.get(PROTO_PARAM).getIntValue() == null) {
-            throw new IllegalArgumentException("Classifier: {" + this.getClassDef().getName()
-                    + "}+ Value of proto parameter is not present.");
+            throw new IllegalArgumentException("Value of " + PROTO_PARAM + " parameter is not present.");
         }
     }
 
@@ -116,8 +114,10 @@ public class IpProtoClassifier extends Classifier {
     private void equalOrNotSetValidation(Short protoInMatch, long paramValue) {
         if (protoInMatch != null) {
             if (paramValue != protoInMatch.longValue()) {
-                throw new IllegalArgumentException("Classification conflict at " + this.getClassDef().getName()
-                        + ": Trying to override proto value: " + protoInMatch.shortValue() + " by value " + paramValue);
+                throw new IllegalArgumentException("Classification conflict detected at " + PROTO_PARAM
+                        + " parameter for values " + protoInMatch.shortValue() + " and " + paramValue
+                        + ". It is not allowed "
+                        + "to assign different values to the same parameter among all the classifiers within one rule.");
             }
         }
     }
@@ -129,11 +129,11 @@ public class IpProtoClassifier extends Classifier {
             try {
                 readEthType = match.getEthernetMatch().getEthernetType().getType().getValue();
             } catch (NullPointerException e) {
-                throw new IllegalArgumentException("Ether-type match is missing.");
+                throw new IllegalArgumentException("Parameter " + EtherTypeClassifier.ETHERTYPE_PARAM + " is missing.");
             }
             if (!FlowUtils.IPv4.equals(readEthType) && !FlowUtils.IPv6.equals(readEthType)) {
-                throw new IllegalArgumentException("Ether-type value should be " + FlowUtils.IPv4 + " or "
-                        + FlowUtils.IPv6 + ".");
+                throw new IllegalArgumentException("Parameter " + EtherTypeClassifier.ETHERTYPE_PARAM + " must have value "
+                        + FlowUtils.IPv4 + " or " + FlowUtils.IPv6 + ".");
             }
         }
     }

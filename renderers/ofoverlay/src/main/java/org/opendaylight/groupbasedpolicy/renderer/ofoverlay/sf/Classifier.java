@@ -66,7 +66,8 @@ public abstract class Classifier {
      */
     public final ClassificationResult updateMatch(List<MatchBuilder> matches, Map<String, ParameterValue> params) {
         if (params == null) {
-            return new ClassificationResult("Classifier: {" + this.getClassDef().getName() + "} No parameters present.");
+            return new ClassificationResult("Classifier-instance with classifier-definition-id: " + this.getId()
+                    + ". No parameters present.");
         }
         List<MatchBuilder> matchBuilders = matches;
         try {
@@ -95,8 +96,8 @@ public abstract class Classifier {
             if (!Strings.isNullOrEmpty(e.getMessage())) {
                 return new ClassificationResult(e.getMessage());
             } else
-                return new ClassificationResult("Error while processing data of " + this.getClassDef().getName()
-                        + " classifier. Classification was not successful.");
+                return new ClassificationResult("Classifier-instance with classifier-definition-id: " + this.getId()
+                        + ". Classification was not successful.");
         }
         return new ClassificationResult(matchBuilders);
     }

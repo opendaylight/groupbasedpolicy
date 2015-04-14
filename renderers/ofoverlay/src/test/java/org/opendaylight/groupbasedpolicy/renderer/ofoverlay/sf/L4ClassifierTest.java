@@ -239,7 +239,7 @@ public class L4ClassifierTest {
         params.putAll(ClassifierTestUtils.createIntValueParam(L4Classifier.SRC_PORT_PARAM, srcPort));
         params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.SRC_PORT_RANGE_PARAM, srcRangeStart, srcRangeEnd));
         thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("Illegal source port parameters");
+        thrown.expectMessage("mutually exclusive");
         Classifier.L4_CL.checkPresenceOfRequiredParams(params);
     }
 
@@ -253,7 +253,7 @@ public class L4ClassifierTest {
         params.putAll(ClassifierTestUtils.createIntValueParam(L4Classifier.DST_PORT_PARAM, dstPort));
         params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DST_PORT_RANGE_PARAM, dstRangeStart, dstRangeEnd));
         thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("Illegal destination port parameters");
+        thrown.expectMessage("mutually exclusive");
         Classifier.L4_CL.checkPresenceOfRequiredParams(params);
     }
 
@@ -277,7 +277,7 @@ public class L4ClassifierTest {
         params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, 136));
         params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DST_PORT_RANGE_PARAM, dstRangeStart, dstRangeEnd));
         thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("Unsupported L4 protocol.");
+        thrown.expectMessage("not supported");
         matches = Classifier.L4_CL.update(matches, params);
     }
 
@@ -301,7 +301,7 @@ public class L4ClassifierTest {
         Long dstRangeEnd = Long.valueOf(8081);
         params.putAll(ClassifierTestUtils.createRangeValueParam(L4Classifier.DST_PORT_RANGE_PARAM, dstRangeStart, dstRangeEnd));
         thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("L4 protocol is null.");
+        thrown.expectMessage(IpProtoClassifier.PROTO_PARAM + " is missing");
         matches = Classifier.L4_CL.update(matches, params);
     }
 
@@ -310,7 +310,7 @@ public class L4ClassifierTest {
         params.putAll(ImmutableMap.<String, ParameterValue> of(L4Classifier.SRC_PORT_PARAM,
                 new ParameterValueBuilder().build()));
         thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("Value of sourceport parameter is not present");
+        thrown.expectMessage("not specified");
         Classifier.L4_CL.checkPresenceOfRequiredParams(params);
     }
 
@@ -319,7 +319,7 @@ public class L4ClassifierTest {
         params.putAll(ImmutableMap.<String, ParameterValue> of(L4Classifier.DST_PORT_PARAM,
                 new ParameterValueBuilder().build()));
         thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("Value of destport parameter is not present");
+        thrown.expectMessage("not specified");
         Classifier.L4_CL.checkPresenceOfRequiredParams(params);
     }
 
@@ -328,7 +328,7 @@ public class L4ClassifierTest {
         params.putAll(ImmutableMap.<String, ParameterValue> of(L4Classifier.SRC_PORT_RANGE_PARAM,
                 new ParameterValueBuilder().build()));
         thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("Range value is not present");
+        thrown.expectMessage("not present");
         Classifier.L4_CL.checkPresenceOfRequiredParams(params);
     }
 
@@ -337,7 +337,7 @@ public class L4ClassifierTest {
         params.putAll(ImmutableMap.<String, ParameterValue> of(L4Classifier.DST_PORT_RANGE_PARAM,
                 new ParameterValueBuilder().build()));
         thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("Range value is not present");
+        thrown.expectMessage("not present");
         Classifier.L4_CL.checkPresenceOfRequiredParams(params);
     }
 

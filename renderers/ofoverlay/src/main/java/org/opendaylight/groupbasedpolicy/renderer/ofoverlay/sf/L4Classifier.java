@@ -106,17 +106,16 @@ public class L4Classifier extends Classifier {
     @Override
     protected void checkPresenceOfRequiredParams(Map<String, ParameterValue> params) {
         if (params.get(SRC_PORT_PARAM) != null && params.get(SRC_PORT_RANGE_PARAM) != null) {
-            throw new IllegalArgumentException("Classifier: {" + this.getClassDef().getName()
-                    + "}+. Illegal source port parameters: 'int' and 'range' values are mutually exclusive.");
+            throw new IllegalArgumentException("Source port parameters " + SRC_PORT_PARAM + " and " + SRC_PORT_RANGE_PARAM
+                    + " are mutually exclusive.");
         }
         if (params.get(DST_PORT_PARAM) != null && params.get(DST_PORT_RANGE_PARAM) != null) {
-            throw new IllegalArgumentException("Classifier: {" + this.getClassDef().getName()
-                    + "}+. Illegal destination port parameters: 'int' and 'range' values are mutually exclusive.");
+            throw new IllegalArgumentException("Destination port parameters " + DST_PORT_PARAM + " and " + DST_PORT_RANGE_PARAM
+                    + " are mutually exclusive.");
         }
         if (params.get(SRC_PORT_PARAM) != null) {
             if (params.get(SRC_PORT_PARAM).getIntValue() == null) {
-                throw new IllegalArgumentException("Classifier: {" + this.getClassDef().getName()
-                        + "}+ Value of sourceport parameter is not present.");
+                throw new IllegalArgumentException("Value of " + SRC_PORT_PARAM + " parameter is not specified.");
             }
         }
         if (params.get(SRC_PORT_RANGE_PARAM) != null) {
@@ -127,8 +126,7 @@ public class L4Classifier extends Classifier {
 
         if (params.get(DST_PORT_PARAM) != null) {
             if (params.get(DST_PORT_PARAM).getIntValue() == null) {
-                throw new IllegalArgumentException("Classifier: {" + this.getClassDef().getName()
-                        + "}+ Value of destport parameter is not present.");
+                throw new IllegalArgumentException("Value of " + DST_PORT_PARAM + " parameter is not specified.");
             }
         }
         if (params.get(DST_PORT_RANGE_PARAM) != null) {
@@ -140,14 +138,12 @@ public class L4Classifier extends Classifier {
 
     private void validateRangeValue(RangeValue rangeValueParam) {
         if (rangeValueParam == null) {
-            throw new IllegalArgumentException("Classifier: {" + this.getClassDef().getName()
-                    + "}+ Range value is not present.");
+            throw new IllegalArgumentException("Range parameter is specifiet but value is not present.");
         }
         final Long min = rangeValueParam.getMin();
         final Long max = rangeValueParam.getMax();
         if (min > max) {
-            throw new IllegalArgumentException("Range value mismatch. MIN {" + min + "} is greater than MAX {" + max
-                    + "}.");
+            throw new IllegalArgumentException("Range value mismatch. " + min + " is greater than MAX " + max + ".");
         }
     }
 
@@ -190,8 +186,7 @@ public class L4Classifier extends Classifier {
     private Layer4Match resolveL4Match(Map<String, ParameterValue> params) {
         Long ipProto = IpProtoClassifier.getIpProtoValue(params);
         if (ipProto == null) {
-            throw new IllegalArgumentException("Classifier-instance " + this.getClassDef().getName()
-                    + ": L4 protocol is null.");
+            throw new IllegalArgumentException("Parameter " + IpProtoClassifier.PROTO_PARAM + " is missing.");
         }
         if (IpProtoClassifier.UDP_VALUE.equals(ipProto)) {
             return new UdpMatchBuilder().build();
@@ -200,7 +195,8 @@ public class L4Classifier extends Classifier {
         } else if (IpProtoClassifier.SCTP_VALUE.equals(ipProto)) {
             return new SctpMatchBuilder().build();
         }
-        throw new IllegalArgumentException("Unsupported L4 protocol.");
+        throw new IllegalArgumentException("Parameter " + IpProtoClassifier.PROTO_PARAM + ": value " + ipProto
+                + " is not supported.");
     }
 
     private Set<Long> createSetFromRange(RangeValue rangeValueParam) {
@@ -300,9 +296,9 @@ public class L4Classifier extends Classifier {
     private void equalOrNotSetValidation(PortNumber portInMatch, long paramValue) {
         if (portInMatch != null) {
             if (paramValue != portInMatch.getValue().longValue()) {
-                throw new IllegalArgumentException("Classification conflict at " + this.getClassDef().getName()
-                        + ": Trying to override port value: " + portInMatch.getValue().longValue() + " by value "
-                        + paramValue);
+                throw new IllegalArgumentException("Classification conflict detected for port values "
+                        + portInMatch.getValue().longValue() + " and " + paramValue + ". It is not allowed "
+                        + "to assign different values to the same parameter among all the classifiers within one rule.");
             }
         }
     }
@@ -314,12 +310,12 @@ public class L4Classifier extends Classifier {
             try {
                 proto = Long.valueOf(match.getIpMatch().getIpProtocol().longValue());
             } catch (NullPointerException e) {
-                throw new IllegalArgumentException("Ip proto match is missing.");
+                throw new IllegalArgumentException("Parameter " + IpProtoClassifier.PROTO_PARAM + " is missing.");
             }
             if (!IpProtoClassifier.TCP_VALUE.equals(proto) && !IpProtoClassifier.UDP_VALUE.equals(proto)
                     && !IpProtoClassifier.SCTP_VALUE.equals(proto)) {
-                throw new IllegalArgumentException("Unsupported proto value.\n" + "Classifier: "
-                        + this.getClass().getName() + ", proto set: " + proto);
+                throw new IllegalArgumentException("Value of parameter " + IpProtoClassifier.PROTO_PARAM
+                        + " is not supported.");
             }
         }
     }
