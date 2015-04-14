@@ -299,7 +299,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
                 mb.getAugmentation(GeneralAugMatchNodesNodeTableFlow.class);
         int count = 0;
         FlowMap fm = dosync(null);
-        assertEquals(6, fm.getTableForNode(nodeId, (short) 3).getFlow().size());
+        assertEquals(7, fm.getTableForNode(nodeId, (short) 3).getFlow().size());
         HashMap<String, Flow> flowMap = new HashMap<>();
         for (Flow f : fm.getTableForNode(nodeId, (short) 3).getFlow()) {
             flowMap.put(f.getId().getValue(), f);
@@ -308,7 +308,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
                 count++;
             }
         }
-        assertEquals(2, count);
+        assertEquals(3, count);
         fm = dosync(flowMap);
         int numberOfFlows = fm.getTableForNode(nodeId, (short) 3).getFlow().size();
         fm = dosync(flowMap);
