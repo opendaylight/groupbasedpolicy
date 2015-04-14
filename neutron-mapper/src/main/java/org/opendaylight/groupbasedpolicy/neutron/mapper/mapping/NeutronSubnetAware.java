@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 
 public class NeutronSubnetAware implements INeutronSubnetAware {
 
@@ -66,7 +67,7 @@ public class NeutronSubnetAware implements INeutronSubnetAware {
         SubnetBuilder subnetBuilder = new SubnetBuilder();
         subnetBuilder.setId(new SubnetId(neutronSubnet.getID()));
         subnetBuilder.setParent(new ContextId(neutronSubnet.getNetworkUUID()));
-        if (neutronSubnet.getName() != null) {
+        if (!Strings.isNullOrEmpty(neutronSubnet.getName())) {
             subnetBuilder.setName(new Name(neutronSubnet.getName()));
         }
         subnetBuilder.setIpPrefix(Utils.createIpPrefix(neutronSubnet.getCidr()));
