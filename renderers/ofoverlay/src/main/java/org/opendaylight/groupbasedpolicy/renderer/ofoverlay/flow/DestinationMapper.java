@@ -153,8 +153,14 @@ public class DestinationMapper extends FlowTable {
         }
         // Write subnet flows
         for (Integer subnetKey : subnetsByL3c.keySet()) {
-            for(Subnet sn:subnetsByL3c.get(subnetKey)) {
-                flowMap.writeFlow(nodeId, TABLE_ID, createRouterArpFlow(nodeId, sn, subnetKey));
+            for (Subnet sn : subnetsByL3c.get(subnetKey)) {
+                Flow arpFlow = createRouterArpFlow(nodeId, sn, subnetKey);
+                if (arpFlow != null) {
+                    flowMap.writeFlow(nodeId, TABLE_ID, arpFlow);
+                } else {
+                    LOG.debug("ARP flow is not created, because virtual router IP has not been set for subnet "
+                            + sn.getIpPrefix().getValue() + ".");
+                }
             }
         }
         // Write broadcast flows per flood domain.
