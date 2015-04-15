@@ -24,11 +24,13 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.IidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils.ForwardingCtx;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils.ForwardingCtx;
 import org.opendaylight.neutron.spi.INeutronPortAware;
 import org.opendaylight.neutron.spi.NeutronPort;
+import org.opendaylight.neutron.spi.NeutronRouter;
+import org.opendaylight.neutron.spi.NeutronRouter_Interface;
 import org.opendaylight.neutron.spi.NeutronSecurityGroup;
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.neutron.spi.Neutron_IPs;
@@ -69,7 +71,7 @@ import com.google.common.collect.ImmutableList;
 
 public class NeutronPortAware implements INeutronPortAware {
 
-    private static final Logger LOG = LoggerFactory.getLogger(NeutronPortAware.class);
+    public static final Logger LOG = LoggerFactory.getLogger(NeutronPortAware.class);
     private static final String DEVICE_OWNER_DHCP = "network:dhcp";
     private static final String DEVICE_OWNER_ROUTER_IFACE = "network:router_interface";
     private static final int DHCP_CLIENT_PORT = 68;
@@ -104,13 +106,21 @@ public class NeutronPortAware implements INeutronPortAware {
     public void neutronPortCreated(NeutronPort port) {
         LOG.trace("neutronPortCreated - {}", port);
         if (isRouterInterfacePort(port)) {
-            LOG.trace("Port is router interface - do nothing - NeutronRouterAware handles router iface");
+            LOG.trace("Port is router interface.");
+            NeutronRouter neutronRouter = createRouter(port);
+            NeutronRouter_Interface routerIface = createRouterInterface(port);
+            int canAttachInterface = NeutronRouterAware.getInstance().canAttachInterface(neutronRouter, routerIface);
+            if (canAttachInterface == StatusCode.OK) {
+                NeutronRouterAware.getInstance().neutronRouterInterfaceAttached(neutronRouter, routerIface);
+            }
             return;
         }
+
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         TenantId tenantId = new TenantId(Utils.normalizeUuid(port.getTenantID()));
 
         if (isDhcpPort(port)) {
+            LOG.trace("Port is DHCP port.");
             List<NeutronSecurityRule> dhcpSecRules = createDhcpSecRules(port, null, rwTx);
             if (dhcpSecRules == null) {
                 rwTx.cancel();
@@ -170,6 +180,24 @@ public class NeutronPortAware implements INeutronPortAware {
         DataStoreHelper.submitToDs(rwTx);
     }
 
+    private static NeutronRouter createRouter(NeutronPort port) {
+        NeutronRouter neutronRouter = new NeutronRouter();
+        neutronRouter.setRouterUUID(port.getDeviceID());
+        neutronRouter.setTenantID(port.getTenantID());
+        neutronRouter.setName("Router_port__" + Strings.nullToEmpty(port.getName()));
+        return neutronRouter;
+    }
+
+    private static NeutronRouter_Interface createRouterInterface(NeutronPort port) {
+        Neutron_IPs firstIp = MappingUtils.getFirstIp(port.getFixedIPs());
+        if (firstIp == null) {
+            throw new IllegalStateException("Illegal state - Port " + port.getID() + " representing router interface does not have an IP.");
+        }
+        NeutronRouter_Interface routerIface = new NeutronRouter_Interface(firstIp.getSubnetUUID(), port.getID());
+        routerIface.setTenantID(port.getTenantID());
+        return routerIface;
+    }
+
     public static boolean addNeutronPort(NeutronPort port, ReadWriteTransaction rwTx, EndpointService epService) {
         TenantId tenantId = new TenantId(Utils.normalizeUuid(port.getTenantID()));
         L2FloodDomainId l2FdId = new L2FloodDomainId(port.getNetworkUUID());
@@ -211,7 +239,7 @@ public class NeutronPortAware implements INeutronPortAware {
 
     private List<NeutronSecurityRule> createDhcpSecRules(NeutronPort port, EndpointGroupId consumerEpgId, ReadTransaction rTx) {
         TenantId tenantId = new TenantId(Utils.normalizeUuid(port.getTenantID()));
-        Neutron_IPs firstIp = getFirstIp(port.getFixedIPs());
+        Neutron_IPs firstIp = MappingUtils.getFirstIp(port.getFixedIPs());
         if (firstIp == null) {
             LOG.warn("Illegal state - DHCP port does not have an IP address.");
             return null;
@@ -452,7 +480,7 @@ public class NeutronPortAware implements INeutronPortAware {
         List<Neutron_IPs> fixedIPs = port.getFixedIPs();
         // TODO Li msunal this getting of just first IP has to be rewrite when OFOverlay renderer
         // will support l3-endpoints. Then we will register L2 and L3 endpoints separately.
-        Neutron_IPs firstIp = getFirstIp(fixedIPs);
+        Neutron_IPs firstIp = MappingUtils.getFirstIp(fixedIPs);
         if (firstIp != null) {
             inputBuilder.setNetworkContainment(new SubnetId(firstIp.getSubnetUUID()));
             L3Address l3Address = new L3AddressBuilder().setIpAddress(Utils.createIpAddress(firstIp.getIpAddress()))
@@ -494,18 +522,6 @@ public class NeutronPortAware implements INeutronPortAware {
 
     private static Name createTapPortName(NeutronPort port) {
         return new Name("tap" + port.getID().substring(0, 11));
-    }
-
-    private static Neutron_IPs getFirstIp(List<Neutron_IPs> fixedIPs) {
-        if (fixedIPs == null || fixedIPs.isEmpty()) {
-            return null;
-        }
-        Neutron_IPs neutron_Ip = fixedIPs.get(0);
-        if (fixedIPs.size() > 1) {
-            LOG.warn("Neutron mapper does not support multiple IPs on the same port. Only first IP is selected {}",
-                    neutron_Ip);
-        }
-        return neutron_Ip;
     }
 
     private static boolean isDhcpPort(NeutronPort port) {

@@ -125,7 +125,7 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
     private void addEpgRouterIfMissing(TenantId tenantId, ReadWriteTransaction rwTx) {
         Optional<EndpointGroup> potentialEpgRouter = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.endpointGroupIid(tenantId, MappingUtils.EPG_ROUTER_ID), rwTx);
-        if (potentialEpgRouter.isPresent()) {
+        if (!potentialEpgRouter.isPresent()) {
             EndpointGroup epgRouter = new EndpointGroupBuilder().setId(MappingUtils.EPG_ROUTER_ID)
                 .setDescription(new Description(MappingUtils.NEUTRON_ROUTER__ + "epg_routers"))
                 .setIntraGroupPolicy(IntraGroupPolicy.RequireContract)

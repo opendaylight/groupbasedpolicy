@@ -1,8 +1,12 @@
 package org.opendaylight.groupbasedpolicy.neutron.mapper.util;
 
+import java.util.List;
+
 import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronPortAware;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.AllowAction;
+import org.opendaylight.neutron.spi.Neutron_IPs;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
@@ -86,5 +90,17 @@ public final class MappingUtils {
             return l3Context;
         }
 
+    }
+
+    public static Neutron_IPs getFirstIp(List<Neutron_IPs> fixedIPs) {
+        if (fixedIPs == null || fixedIPs.isEmpty()) {
+            return null;
+        }
+        Neutron_IPs neutron_Ip = fixedIPs.get(0);
+        if (fixedIPs.size() > 1) {
+            NeutronPortAware.LOG.warn("Neutron mapper does not support multiple IPs on the same port. Only first IP is selected {}",
+                    neutron_Ip);
+        }
+        return neutron_Ip;
     }
 }
