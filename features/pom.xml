@@ -76,6 +76,11 @@
       <artifactId>ofoverlay-renderer</artifactId>
       <version>${project.version}</version>
     </dependency>
+        <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>neutron-mapper</artifactId>
+      <version>${project.version}</version>
+    </dependency>
     <dependency>
        <groupId>org.opendaylight.controller</groupId>
        <artifactId>features-base</artifactId>
