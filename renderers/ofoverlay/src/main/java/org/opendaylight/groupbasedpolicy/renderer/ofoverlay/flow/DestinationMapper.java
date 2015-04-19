@@ -35,14 +35,20 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
+import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
@@ -50,6 +56,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMa
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
+import org.opendaylight.groupbasedpolicy.resolver.TenantUtils;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Prefix;
@@ -64,10 +71,17 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.M
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.Instruction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.InstructionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.groups.Group;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L3Context;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
@@ -85,14 +99,14 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev14
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg5;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg6;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
+import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.CheckedFuture;
 
 /**
  * Manage the table that maps the destination address to the next hop for the
@@ -103,9 +117,9 @@ public class DestinationMapper extends FlowTable {
     protected static final Logger LOG =
             LoggerFactory.getLogger(DestinationMapper.class);
 
-    //TODO Li alagalah: Improve UT coverage for this class.
+    // TODO Li alagalah: Improve UT coverage for this class.
 
-    //TODO Li alagalah: Use EndpointL3 for L3 flows, Endpoint for L2 flows
+    // TODO Li alagalah: Use EndpointL3 for L3 flows, Endpoint for L2 flows
     // This ensures we have the appropriate network-containment'
 
     public static final short TABLE_ID = 2;
@@ -121,6 +135,8 @@ public class DestinationMapper extends FlowTable {
         super(ctx);
     }
 
+    Map<TenantId, HashSet<Subnet>> subnetsByTenant = new HashMap<TenantId, HashSet<Subnet>>();
+
     @Override
     public short getTableId() {
         return TABLE_ID;
@@ -130,39 +146,47 @@ public class DestinationMapper extends FlowTable {
     public void sync(NodeId nodeId, PolicyInfo policyInfo, FlowMap flowMap)
             throws Exception {
 
-        flowMap.writeFlow(nodeId,TABLE_ID,dropFlow(Integer.valueOf(1), null));
+        TenantId currentTenant;
+
+        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null));
 
         Set<EpKey> visitedEps = new HashSet<>();
-        Multimap<Integer,Subnet> subnetsByL3c = HashMultimap.create();
         Set<Integer> fdIds = new HashSet<>();
 
         for (EgKey epg : ctx.getEndpointManager().getGroupsForNode(nodeId)) {
             Set<EgKey> peers = Sets.union(Collections.singleton(epg),
                     policyInfo.getPeers(epg));
             for (EgKey peer : peers) {
-                for(Endpoint epPeer : ctx.getEndpointManager().getEndpointsForGroup(peer)) {
+                for (Endpoint epPeer : ctx.getEndpointManager().getEndpointsForGroup(peer)) {
+                    currentTenant = epPeer.getTenant();
+                    subnetsByTenant.put(currentTenant, getSubnets(currentTenant));
                     syncEP(flowMap, nodeId, policyInfo, epPeer, visitedEps);
-
-                    //Process subnets and flood-domains for epPeer
+                    // Process subnets and flood-domains for epPeer
                     EndpointFwdCtxOrdinals epOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, epPeer);
-
-                    subnetsByL3c.putAll(epOrds.getL3Id(),ctx.getPolicyResolver().getTenant(peer.getTenantId()).resolveSubnets(epOrds.getNetworkContainment()));
                     fdIds.add(epOrds.getFdId());
                 }
             }
         }
-        // Write subnet flows
-        for (Integer subnetKey : subnetsByL3c.keySet()) {
-            for (Subnet sn : subnetsByL3c.get(subnetKey)) {
-                Flow arpFlow = createRouterArpFlow(nodeId, sn, subnetKey);
+
+        for (Entry<TenantId, HashSet<Subnet>> subnetEntry : subnetsByTenant.entrySet()) {
+            if(subnetEntry.getValue() == null ) {
+                LOG.trace("Tenant: {} has empty subnet entry.",subnetEntry.getKey());
+                continue;
+            }
+            currentTenant=subnetEntry.getKey();
+            for (Subnet sn : subnetEntry.getValue()) {
+                L3Context l3c = getL3ContextForSubnet(currentTenant,sn);
+                Flow arpFlow = createRouterArpFlow(currentTenant, nodeId, sn,
+                        OrdinalFactory.getContextOrdinal(currentTenant, l3c.getId()));
                 if (arpFlow != null) {
                     flowMap.writeFlow(nodeId, TABLE_ID, arpFlow);
                 } else {
-                    LOG.debug("ARP flow is not created, because virtual router IP has not been set for subnet "
-                            + sn.getIpPrefix().getValue() + ".");
+                    LOG.debug("ARP flow is not created, because virtual router IP has not been set for subnet {} .",
+                            sn.getIpPrefix().getValue());
                 }
             }
         }
+
         // Write broadcast flows per flood domain.
         for (Integer fdId : fdIds) {
             if (groupExists(nodeId, fdId)) {
@@ -170,9 +194,9 @@ public class DestinationMapper extends FlowTable {
             }
         }
     }
+
     // set up next-hop destinations for all the endpoints in the endpoint
     // group on the node
-
 
     private Flow createBroadcastFlow(int fdId) {
         FlowId flowId = new FlowId(new StringBuilder()
@@ -196,11 +220,9 @@ public class DestinationMapper extends FlowTable {
         return flowb.build();
     }
 
-
-
     private boolean groupExists(NodeId nodeId, Integer fdId) throws Exception {
         // Fetch existing GroupTables
-        if(ctx.getDataBroker()==null) {
+        if (ctx.getDataBroker() == null) {
             return false;
         }
 
@@ -225,57 +247,108 @@ public class DestinationMapper extends FlowTable {
         return false;
     }
 
+    private MacAddress routerPortMac(L3Context l3c, IpAddress ipAddress) {
 
-    private Flow createRouterArpFlow(NodeId nodeId,
-            Subnet sn,
-            int l3Id) {
-        if (sn != null && sn.getVirtualRouterIp() != null) {
-            if (sn.getVirtualRouterIp().getIpv4Address() != null) {
-                String ikey = sn.getVirtualRouterIp().getIpv4Address().getValue();
-                FlowId flowId = new FlowId(new StringBuffer()
-                        .append("routerarp|")
-                        .append(sn.getId().getValue())
-                        .append("|")
-                        .append(ikey)
-                        .append("|")
-                        .append(l3Id)
-                        .toString());
-                    MatchBuilder mb = new MatchBuilder()
-                            .setEthernetMatch(ethernetMatch(null, null, ARP))
-                            .setLayer3Match(new ArpMatchBuilder()
-                                    .setArpOp(Integer.valueOf(1))
-                                    .setArpTargetTransportAddress(new Ipv4Prefix(ikey + "/32"))
-                                    .build());
-                    addNxRegMatch(mb, RegMatch.of(NxmNxReg6.class,
-                            Long.valueOf(l3Id)));
-                    BigInteger routerMac =
-                            new BigInteger(1, bytesFromHexString(ROUTER_MAC
-                                    .getValue()));
-                    FlowBuilder flowb = base()
-                            .setPriority(150)
-                            .setId(flowId)
-                            .setMatch(mb.build())
-                            .setInstructions(instructions(applyActionIns(nxMoveEthSrcToEthDstAction(),
-                                    setDlSrcAction(ROUTER_MAC),
-                                    nxLoadArpOpAction(BigInteger.valueOf(2L)),
-                                    nxMoveArpShaToArpThaAction(),
-                                    nxLoadArpShaAction(routerMac),
-                                    nxMoveArpSpaToArpTpaAction(),
-                                    nxLoadArpSpaAction(ikey),
-                                    outputAction(new NodeConnectorId(nodeId.getValue() + ":INPORT")))));
-                    return flowb.build();
-            } else {
-                LOG.warn("IPv6 virtual router {} for subnet {} not supported",
-                        sn.getVirtualRouterIp(), sn.getId().getValue());
-            }
+        if (ctx.getDataBroker() == null) {
+            return null;
         }
-        return null;
+
+        MacAddress defaultMacAddress = ROUTER_MAC;
+
+        EndpointL3Key l3Key = new EndpointL3Key(ipAddress, l3c.getId());
+        InstanceIdentifier<EndpointL3> endpointsIid =
+                InstanceIdentifier.builder(Endpoints.class)
+                        .child(EndpointL3.class, l3Key).build();
+        ReadOnlyTransaction t = ctx.getDataBroker().newReadOnlyTransaction();
+
+        Optional<EndpointL3> r;
+        try {
+            r = t.read(LogicalDatastoreType.OPERATIONAL, endpointsIid).get();
+            if (!r.isPresent())
+                return defaultMacAddress;
+            EndpointL3 epL3 = r.get();
+            if (epL3.getMacAddress() == null) {
+                return defaultMacAddress;
+            } else {
+                return epL3.getMacAddress();
+            }
+        } catch (Exception e) {
+            LOG.error("Error reading EndpointL3 {}.{}", l3c, ipAddress, e);
+            return null;
+        }
     }
 
+    private L3Context getL3ContextForSubnet(TenantId tenantId, Subnet sn) {
+        L3Context l3c = ctx.getPolicyResolver().getTenant(tenantId).resolveL3Context(sn.getId());
+        return l3c;
+    }
+
+    private Flow createRouterArpFlow(TenantId tenantId, NodeId nodeId, Subnet sn, int l3Id) {
+        if (sn == null || sn.getVirtualRouterIp() == null) {
+            LOG.trace("Didn't create routerArpFlow since either subnet or subnet virtual router was null");
+            return null;
+        }
+        /*
+         * TODO: Li alagalah: This should be new Yang "gateways" list as well,
+         * that expresses the gateway and prefixes it is interface for. Should
+         * also check for external.
+         */
+        if (sn.getVirtualRouterIp().getIpv4Address() != null) {
+            String ikey = sn.getVirtualRouterIp().getIpv4Address().getValue();
+
+            L3Context l3c = getL3ContextForSubnet(tenantId, sn);
+            if (l3c == null) {
+                LOG.error("No L3 Context found associated with subnet {}", sn.getId());
+            }
+
+            MacAddress routerMac = routerPortMac(l3c, sn.getVirtualRouterIp());
+            if (routerMac == null) {
+                return null;
+            }
+
+            BigInteger intRouterMac = new BigInteger(1, bytesFromHexString(routerMac.getValue()));
+
+            FlowId flowId = new FlowId(new StringBuffer()
+                    .append("routerarp|")
+                    .append(sn.getId().getValue())
+                    .append("|")
+                    .append(ikey)
+                    .append("|")
+                    .append(l3Id)
+                    .toString());
+            MatchBuilder mb = new MatchBuilder()
+                    .setEthernetMatch(ethernetMatch(null, null, ARP))
+                    .setLayer3Match(new ArpMatchBuilder()
+                            .setArpOp(Integer.valueOf(1))
+                            .setArpTargetTransportAddress(new Ipv4Prefix(ikey + "/32"))
+                            .build());
+            addNxRegMatch(mb, RegMatch.of(NxmNxReg6.class,
+                    Long.valueOf(l3Id)));
+
+            FlowBuilder flowb = base()
+                    .setPriority(150)
+                    .setId(flowId)
+                    .setMatch(mb.build())
+                    .setInstructions(instructions(applyActionIns(nxMoveEthSrcToEthDstAction(),
+                            setDlSrcAction(routerMac),
+                            nxLoadArpOpAction(BigInteger.valueOf(2L)),
+                            nxMoveArpShaToArpThaAction(),
+                            nxLoadArpShaAction(intRouterMac),
+                            nxMoveArpSpaToArpTpaAction(),
+                            nxLoadArpSpaAction(ikey),
+                            outputAction(new NodeConnectorId(nodeId.getValue() + ":INPORT")))));
+            return flowb.build();
+        } else {
+            LOG.warn("IPv6 virtual router {} for subnet {} not supported",
+                    sn.getVirtualRouterIp(), sn.getId().getValue());
+            return null;
+        }
+
+    }
 
     private Flow createLocalL2Flow(Endpoint ep, EndpointFwdCtxOrdinals epFwdCtxOrds, OfOverlayContext ofc) {
 
-        //TODO Li alagalah - refactor common code but keep simple method
+        // TODO Li alagalah - refactor common code but keep simple method
         ArrayList<Instruction> instructions = new ArrayList<>();
         List<Action> applyActions = new ArrayList<>();
 
@@ -287,8 +360,6 @@ public class DestinationMapper extends FlowTable {
                 BigInteger.valueOf(epFwdCtxOrds.getCgId()));
         Action setNextHop;
         String nextHop;
-
-
 
         // BEGIN L2 LOCAL
         nextHop = ofc.getNodeConnectorId().getValue();
@@ -305,7 +376,7 @@ public class DestinationMapper extends FlowTable {
         setNextHop = nxLoadRegAction(NxmNxReg7.class,
                 BigInteger.valueOf(portNum));
 
-        //END L2 LOCAL
+        // END L2 LOCAL
 
         order += 1;
         applyActions.add(setdEPG);
@@ -322,7 +393,6 @@ public class DestinationMapper extends FlowTable {
                 .setInstruction(gotoTableIns((short) (getTableId() + 1)))
                 .build();
         instructions.add(gotoTable);
-
 
         FlowId flowid = new FlowId(new StringBuilder()
                 .append(epFwdCtxOrds.getBdId())
@@ -346,29 +416,29 @@ public class DestinationMapper extends FlowTable {
         return flowb.build();
     }
 
-
     private void syncEP(FlowMap flowMap,
             NodeId nodeId, PolicyInfo policyInfo,
             Endpoint epPeer, Set<EpKey> visitedEps)
             throws Exception {
 
-        EpKey epPeerKey = new EpKey(epPeer.getL2Context(),epPeer.getMacAddress());
+        EpKey epPeerKey = new EpKey(epPeer.getL2Context(), epPeer.getMacAddress());
 
         if (visitedEps.contains(epPeerKey)) {
             return;
         }
         visitedEps.add(epPeerKey);
 
-        // TODO: Conditions messed up, but for now, send policyInfo until this is fixed.
+        // TODO: Conditions messed up, but for now, send policyInfo until this
+        // is fixed.
         EndpointFwdCtxOrdinals epFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, epPeer);
 
-        if (epPeer.getTenant() == null || (epPeer.getEndpointGroup() == null && epPeer.getEndpointGroups() == null))
+        if (epPeer.getTenant() == null || (epPeer.getEndpointGroup() == null && epPeer.getEndpointGroups() == null)) {
+            LOG.trace("Didn't process endpoint due to either tenant, or EPG(s) being null", epPeer.getKey());
             return;
+        }
         OfOverlayContext ofc = epPeer.getAugmentation(OfOverlayContext.class);
 
-
-
-        //////////////////////////////////////////////////////////////////////////////////////////
+        // ////////////////////////////////////////////////////////////////////////////////////////
         /*
          * NOT HANDLING EXTERNALS
          */
@@ -379,20 +449,46 @@ public class DestinationMapper extends FlowTable {
             return;
         }
 
+        /*
+         * Only care about subnets for L3, but fetch them before loop. We need
+         * the local subnets for setting SRC MAC for routing. All Routing is now
+         * done locally! YAY! Instead of being shovelled L2 style across network
+         * ala Helium.
+         */
+        List<Subnet> localSubnets = getLocalSubnets(nodeId);
+        if (localSubnets == null) {
+            LOG.error("No subnets could be found locally for node: {}", nodeId);
+            return;
+        }
+
         if (Objects.equals(ofc.getNodeId(), nodeId)) {
             // this is a local endpoint; send to the approppriate local
             // port
 
-            flowMap.writeFlow(nodeId, TABLE_ID, createLocalL2Flow(epPeer,epFwdCtxOrds,ofc));
+            flowMap.writeFlow(nodeId, TABLE_ID, createLocalL2Flow(epPeer, epFwdCtxOrds, ofc));
 
-            if (epPeer.getL3Address() == null)
+            // TODO Li alagalah: Need to move to EndpointL3 for L3 processing.
+            // The Endpoint conflation must end!
+            if (epPeer.getL3Address() == null) {
+                LOG.trace("Endpoint {} didn't have L3 Address so was not processed for L3 flows.", epPeer.getKey());
                 return;
+            }
+
             for (L3Address l3a : epPeer.getL3Address()) {
                 if (l3a.getIpAddress() == null || l3a.getL3Context() == null) {
-                    LOG.error("Endpoint with L3Address but either IPAddress or L3Context is null. {}",epPeer.getL3Address().toString());
+                    LOG.error("Endpoint with L3Address but either IPAddress or L3Context is null. {}",
+                            epPeer.getL3Address());
                     continue;
                 } else {
-                    flowMap.writeFlow(nodeId, TABLE_ID, createLocalL3Flow(epPeer,l3a, epFwdCtxOrds,ofc));
+                    for (Subnet localSubnet : localSubnets) {
+                        Flow flow = createLocalL3Flow(epPeer, l3a, epFwdCtxOrds, ofc, localSubnet);
+                        if (flow != null) {
+                            flowMap.writeFlow(nodeId, TABLE_ID, flow);
+                        } else {
+                            LOG.trace("Did not write remote L3 flow for endpoint {} and subnet {}", l3a.getIpAddress(),
+                                    localSubnet.getIpPrefix().getValue());
+                        }
+                    }
                 }
             }
         } else {
@@ -404,34 +500,100 @@ public class DestinationMapper extends FlowTable {
                 flowMap.writeFlow(nodeId, TABLE_ID, remoteL2Flow);
             }
 
-            if (epPeer.getL3Address() == null)
+            // TODO Li alagalah: Need to move to EndpointL3 for L3 processing.
+            // The Endpoint conflation must end!
+            if (epPeer.getL3Address() == null) {
+                LOG.trace("Endpoint {} didn't have L3 Address so was not processed for L3 flows.", epPeer.getKey());
                 return;
+            }
             for (L3Address l3a : epPeer.getL3Address()) {
                 if (l3a.getIpAddress() == null || l3a.getL3Context() == null) {
-                    LOG.error("Endpoint with L3Address but either IPAddress or L3Context is null. {}",epPeer.getL3Address().toString());
+                    LOG.error("Endpoint with L3Address but either IPAddress or L3Context is null. {}",
+                            epPeer.getL3Address());
                     continue;
                 } else {
-                    Flow remoteL3Flow = createRemoteL3Flow(l3a, nodeId,epFwdCtxOrds, ofc);
-                    if (remoteL3Flow != null) {
-                        flowMap.writeFlow(nodeId, TABLE_ID, remoteL3Flow);
+                    for (Subnet localSubnet : localSubnets) {
+                        Flow remoteL3Flow = createRemoteL3Flow(epPeer, l3a, nodeId, epFwdCtxOrds, ofc, localSubnet);
+                        if (remoteL3Flow != null) {
+                            flowMap.writeFlow(nodeId, TABLE_ID, remoteL3Flow);
+                        } else {
+                            LOG.trace("Did not write remote L3 flow for endpoint {} and subnet {}", l3a.getIpAddress(),
+                                    localSubnet.getIpPrefix().getValue());
+                        }
                     }
                 }
             }
         } // remote (tunnel)
 
-
-
         // }
 
     }
 
-    /* ##################################
-     * DestMapper Flow methods
+    /*
+     * ################################## DestMapper Flow methods
      * ##################################
      */
-    private Flow createLocalL3Flow(Endpoint ep,L3Address l3a, EndpointFwdCtxOrdinals epFwdCtxOrds,OfOverlayContext ofc) {
+    private Flow createLocalL3Flow(Endpoint destEp, L3Address destL3Address, EndpointFwdCtxOrdinals epFwdCtxOrds,
+            OfOverlayContext ofc, Subnet srcSubnet) {
 
-        //TODO Li alagalah - refactor common code but keep simple method
+        // TODO Li alagalah - refactor common code but keep simple method
+
+        Subnet destSubnet = null;
+        HashSet<Subnet> subnets = getSubnets(destEp.getTenant());
+        if (subnets == null) {
+            LOG.trace("No subnets in tenant {}", destL3Address.getIpAddress());
+            return null;
+        }
+        NetworkDomainId epNetworkContainment= getEPNetworkContainment(destEp);
+        for (Subnet subnet : subnets) {
+            // TODO Li alagalah add IPv6 support
+            if (subnet.getId().getValue().equals(epNetworkContainment.getValue())) {
+                destSubnet = subnet;
+                break;
+            }
+        }
+        if (destSubnet == null) {
+            LOG.trace("Destination IP address does not match any subnet in tenant {}", destL3Address.getIpAddress());
+            return null;
+        }
+
+        if (destSubnet.getVirtualRouterIp() == null) {
+            LOG.trace("Destination subnet {} for Endpoint {}.{} has no gateway IP", destSubnet.getIpPrefix(),
+                    destL3Address.getKey());
+            return null;
+        }
+
+        if (srcSubnet.getVirtualRouterIp() == null) {
+            LOG.trace("Local subnet {} has no gateway IP", srcSubnet.getIpPrefix());
+            return null;
+        }
+        L3Context destL3c = getL3ContextForSubnet(destEp.getTenant(), destSubnet);
+        if (destL3c == null || destL3c.getId() == null) {
+            LOG.error("No L3 Context found associated with subnet {}", destSubnet.getId());
+            return null;
+        }
+        L3Context srcL3c = getL3ContextForSubnet(destEp.getTenant(), srcSubnet);
+        if (srcL3c == null || srcL3c.getId() == null) {
+            LOG.error("No L3 Context found associated with subnet {}", srcSubnet.getId());
+            return null;
+        }
+
+        if (!(srcL3c.getId().getValue().equals(destL3c.getId().getValue()))) {
+            LOG.trace("Trying to route between two L3Contexts {} and {}. Not currently supported.", srcL3c.getId()
+                    .getValue(), destL3c.getId().getValue());
+            return null;
+        }
+
+        MacAddress destMacAddress = routerPortMac(destL3c, destSubnet.getVirtualRouterIp());
+        MacAddress srcMacAddress = routerPortMac(destL3c, srcSubnet.getVirtualRouterIp());
+
+        // TODO Li alagalah: using gateway field instead of overloading
+        // virtual-router-ip will remove need for the && check.
+        if (srcMacAddress.getValue().equals(destMacAddress.getValue()) &&
+                !(srcMacAddress.getValue().equals(ROUTER_MAC.getValue()))) {
+            LOG.trace("Same source and destination MacAddress in createL3 Flow, this flow not needed as handled by ARP");
+            return null;
+        }
 
         ArrayList<Instruction> l3instructions = new ArrayList<>();
         List<Action> applyActions = new ArrayList<>();
@@ -446,7 +608,7 @@ public class DestinationMapper extends FlowTable {
         Action setNextHop;
         String nextHop;
 
-        Action setDlSrc = setDlSrcAction(ROUTER_MAC);
+        Action setDlSrc = setDlSrcAction(destMacAddress);
         Action decTtl = decNwTtlAction();
 
         // BEGIN L3 LOCAL
@@ -464,9 +626,9 @@ public class DestinationMapper extends FlowTable {
         setNextHop = nxLoadRegAction(NxmNxReg7.class,
                 BigInteger.valueOf(portNum));
 
-        Action setDlDst = setDlDstAction(ep.getMacAddress());
+        Action setDlDst = setDlDstAction(destEp.getMacAddress());
         l3ApplyActions.add(setDlDst);
-        //END L3 LOCAL
+        // END L3 LOCAL
 
         l3ApplyActions.add(setDlSrc);
         l3ApplyActions.add(decTtl);
@@ -483,27 +645,27 @@ public class DestinationMapper extends FlowTable {
 
         l3instructions.add(applyActionsIns);
         Instruction gotoTable = new InstructionBuilder()
-        .setOrder(order++)
-        .setInstruction(gotoTableIns((short) (getTableId() + 1)))
-        .build();
+                .setOrder(order++)
+                .setInstruction(gotoTableIns((short) (getTableId() + 1)))
+                .build();
         l3instructions.add(gotoTable);
         Layer3Match m = null;
         Long etherType = null;
         String ikey = null;
-        if (l3a.getIpAddress().getIpv4Address() != null) {
-            ikey = l3a.getIpAddress().getIpv4Address().getValue() + "/32";
+        if (destL3Address.getIpAddress().getIpv4Address() != null) {
+            ikey = destL3Address.getIpAddress().getIpv4Address().getValue() + "/32";
             etherType = IPv4;
             m = new Ipv4MatchBuilder()
                     .setIpv4Destination(new Ipv4Prefix(ikey))
                     .build();
-        } else if (l3a.getIpAddress().getIpv6Address() != null) {
-            ikey = l3a.getIpAddress().getIpv6Address().getValue() + "/128";
+        } else if (destL3Address.getIpAddress().getIpv6Address() != null) {
+            ikey = destL3Address.getIpAddress().getIpv6Address().getValue() + "/128";
             etherType = IPv6;
             m = new Ipv6MatchBuilder()
                     .setIpv6Destination(new Ipv6Prefix(ikey))
                     .build();
         } else {
-            LOG.error("Endpoint has IPAddress that is not recognised as either IPv4 or IPv6.",l3a.toString());
+            LOG.error("Endpoint has IPAddress that is not recognised as either IPv4 or IPv6.", destL3Address.toString());
             return null;
         }
 
@@ -513,14 +675,18 @@ public class DestinationMapper extends FlowTable {
                 .append(ikey)
                 .append("|")
                 .append(Integer.toString(epFwdCtxOrds.getEpgId()))
-                .append(" ")
+                .append("|")
                 .append(Integer.toString(epFwdCtxOrds.getCgId()))
+                .append("|")
+                .append(srcMacAddress)
+                .append("|")
+                .append(destMacAddress)
                 .append("|")
                 .append(nextHop)
                 .toString());
         MatchBuilder mb = new MatchBuilder()
                 .setEthernetMatch(ethernetMatch(null,
-                        ROUTER_MAC,
+                        srcMacAddress,
                         etherType))
                 .setLayer3Match(m);
         addNxRegMatch(mb, RegMatch.of(NxmNxReg6.class,
@@ -535,16 +701,16 @@ public class DestinationMapper extends FlowTable {
         return flowb.build();
     }
 
-    private Flow createRemoteL2Flow(Endpoint ep, NodeId nodeId, EndpointFwdCtxOrdinals epFwdCtxOrds, OfOverlayContext ofc) {
+    private Flow createRemoteL2Flow(Endpoint ep, NodeId nodeId, EndpointFwdCtxOrdinals epFwdCtxOrds,
+            OfOverlayContext ofc) {
 
-        //TODO Li alagalah - refactor common code but keep simple method
+        // TODO Li alagalah - refactor common code but keep simple method
 
         // this endpoint is on a different switch; send to the
         // appropriate tunnel
 
         ArrayList<Instruction> instructions = new ArrayList<>();
         List<Action> applyActions = new ArrayList<>();
-
 
         int order = 0;
 
@@ -648,19 +814,73 @@ public class DestinationMapper extends FlowTable {
         return flowb.build();
     }
 
+    private Flow createRemoteL3Flow(Endpoint destEp, L3Address destL3Address, NodeId nodeId,
+            EndpointFwdCtxOrdinals epFwdCtxOrds, OfOverlayContext ofc, Subnet srcSubnet) {
 
-    private Flow createRemoteL3Flow(L3Address l3a, NodeId nodeId, EndpointFwdCtxOrdinals epFwdCtxOrds,OfOverlayContext ofc) {
-
-        //TODO Li alagalah - refactor common code but keep simple method
-
+        // TODO Li alagalah - refactor common code but keep simple method
 
         // this endpoint is on a different switch; send to the
         // appropriate tunnel
+        Subnet destSubnet = null;
+        HashSet<Subnet> subnets = getSubnets(destEp.getTenant());
+        if (subnets == null) {
+            LOG.trace("No subnets in tenant {}", destL3Address.getIpAddress());
+            return null;
+        }
+        NetworkDomainId epNetworkContainment= getEPNetworkContainment(destEp);
+        for (Subnet subnet : subnets) {
+            // TODO Li alagalah add IPv6 support
+            if (subnet.getId().getValue().equals(epNetworkContainment.getValue())) {
+                destSubnet = subnet;
+                break;
+            }
+        }
+        if (destSubnet == null) {
+            LOG.info("Destination IP address does not match any subnet in tenant {}", destL3Address.getIpAddress());
+            return null;
+        }
+
+        if (destSubnet.getVirtualRouterIp() == null) {
+            LOG.trace("Destination subnet {} for Endpoint {}.{} has no gateway IP", destSubnet.getIpPrefix(),
+                    destL3Address.getKey());
+            return null;
+        }
+
+        if (srcSubnet.getVirtualRouterIp() == null) {
+            LOG.trace("Local subnet {} has no gateway IP", srcSubnet.getIpPrefix());
+            return null;
+        }
+        L3Context destL3c = getL3ContextForSubnet(destEp.getTenant(),destSubnet);
+        if (destL3c == null || destL3c.getId() == null) {
+            LOG.error("No L3 Context found associated with subnet {}", destSubnet.getId());
+            return null;
+        }
+        L3Context srcL3c = getL3ContextForSubnet(destEp.getTenant(),srcSubnet);
+        if (srcL3c == null || srcL3c.getId() == null) {
+            LOG.error("No L3 Context found associated with subnet {}", srcSubnet.getId());
+            return null;
+        }
+
+        if (!(srcL3c.getId().getValue().equals(destL3c.getId().getValue()))) {
+            LOG.info("Trying to route between two L3Contexts {} and {}. Not currently supported.", srcL3c.getId()
+                    .getValue(), destL3c.getId().getValue());
+            return null;
+        }
+
+        MacAddress destMacAddress = routerPortMac(destL3c, destSubnet.getVirtualRouterIp());
+        MacAddress srcMacAddress = routerPortMac(destL3c, srcSubnet.getVirtualRouterIp());
+
+        // TODO Li alagalah: using gateway field instead of overloading
+        // virtual-router-ip will remove need for the && check.
+        if (srcMacAddress.getValue().equals(destMacAddress.getValue()) &&
+                !(srcMacAddress.getValue().equals(ROUTER_MAC.getValue()))) {
+            LOG.trace("Same source and destination MacAddress in createL3 Flow, this flow not needed as handled by ARP");
+            return null;
+        }
 
         ArrayList<Instruction> l3instructions = new ArrayList<>();
         List<Action> applyActions = new ArrayList<>();
         List<Action> l3ApplyActions = new ArrayList<>();
-
 
         int order = 0;
 
@@ -671,7 +891,7 @@ public class DestinationMapper extends FlowTable {
         Action setNextHop;
         String nextHop;
 
-        Action setDlSrc = setDlSrcAction(ROUTER_MAC);
+        Action setDlSrc = setDlSrcAction(srcMacAddress);
         Action decTtl = decNwTtlAction();
 
         // BEGIN TUNNEL HANDLING
@@ -680,11 +900,11 @@ public class DestinationMapper extends FlowTable {
         NodeConnectorId tunPort =
                 ctx.getSwitchManager().getTunnelPort(nodeId);
         if (tunDst == null) {
-            LOG.warn("Failed to get Tunnel IP for NodeId {} with L3Address {}", nodeId, l3a);
+            LOG.warn("Failed to get Tunnel IP for NodeId {} with L3Address {}", nodeId, destL3Address);
             return null;
         }
         if (tunPort == null) {
-            LOG.warn("Failed to get Tunnel port for NodeId {} with L3Address {}", nodeId, l3a);
+            LOG.warn("Failed to get Tunnel port for NodeId {} with L3Address {}", nodeId, destL3Address);
             return null;
         }
 
@@ -723,7 +943,6 @@ public class DestinationMapper extends FlowTable {
         applyActions.add(tundstAction);
         // END TUNNEL
 
-
         l3ApplyActions.add(setDlSrc);
         l3ApplyActions.add(decTtl);
         order += 1;
@@ -741,27 +960,27 @@ public class DestinationMapper extends FlowTable {
 
         l3instructions.add(applyActionsIns);
         Instruction gotoTable = new InstructionBuilder()
-        .setOrder(order++)
-        .setInstruction(gotoTableIns((short) (getTableId() + 1)))
-        .build();
+                .setOrder(order++)
+                .setInstruction(gotoTableIns((short) (getTableId() + 1)))
+                .build();
         l3instructions.add(gotoTable);
         Layer3Match m = null;
         Long etherType = null;
         String ikey = null;
-        if (l3a.getIpAddress().getIpv4Address() != null) {
-            ikey = l3a.getIpAddress().getIpv4Address().getValue() + "/32";
+        if (destL3Address.getIpAddress().getIpv4Address() != null) {
+            ikey = destL3Address.getIpAddress().getIpv4Address().getValue() + "/32";
             etherType = IPv4;
             m = new Ipv4MatchBuilder()
                     .setIpv4Destination(new Ipv4Prefix(ikey))
                     .build();
-        } else if (l3a.getIpAddress().getIpv6Address() != null) {
-            ikey = l3a.getIpAddress().getIpv6Address().getValue() + "/128";
+        } else if (destL3Address.getIpAddress().getIpv6Address() != null) {
+            ikey = destL3Address.getIpAddress().getIpv6Address().getValue() + "/128";
             etherType = IPv6;
             m = new Ipv6MatchBuilder()
                     .setIpv6Destination(new Ipv6Prefix(ikey))
                     .build();
         } else {
-            LOG.error("Endpoint has IPAddress that is not recognised as either IPv4 or IPv6.",l3a.toString());
+            LOG.error("Endpoint has IPAddress that is not recognised as either IPv4 or IPv6.", destL3Address.toString());
             return null;
         }
 
@@ -771,14 +990,18 @@ public class DestinationMapper extends FlowTable {
                 .append(ikey)
                 .append("|")
                 .append(Integer.toString(epFwdCtxOrds.getEpgId()))
-                .append(" ")
+                .append("|")
                 .append(Integer.toString(epFwdCtxOrds.getCgId()))
+                .append("|")
+                .append(srcMacAddress)
+                .append("|")
+                .append(destMacAddress)
                 .append("|")
                 .append(nextHop)
                 .toString());
         MatchBuilder mb = new MatchBuilder()
                 .setEthernetMatch(ethernetMatch(null,
-                        ROUTER_MAC,
+                        destMacAddress,
                         etherType))
                 .setLayer3Match(m);
         addNxRegMatch(mb, RegMatch.of(NxmNxReg6.class,
@@ -793,6 +1016,92 @@ public class DestinationMapper extends FlowTable {
         return flowb.build();
     }
 
+    private NetworkDomainId getEPNetworkContainment(Endpoint endpoint) {
+        if (endpoint.getNetworkContainment() != null) {
+            return endpoint.getNetworkContainment();
+        } else {
+            /*
+             * TODO: Be alagalah: Endpoint Refactor: This should be set on input
+             * which we can't do because of the backwards way endpoints were
+             * "architected".
+             */
+            return ctx.getPolicyResolver().getTenant(endpoint.getTenant())
+                    .getEndpointGroup(endpoint.getEndpointGroup()).getNetworkDomain();
+        }
+    }
+
+    private HashSet<Subnet> getSubnets(final TenantId tenantId) {
+
+        // if (subnetsByTenant.get(tenantId) != null) {
+        // return subnetsByTenant.get(tenantId);
+        // }
+
+        if (ctx.getDataBroker() == null) {
+            return null;
+        }
+
+        ReadOnlyTransaction t = ctx.getDataBroker().newReadOnlyTransaction();
+        InstanceIdentifier<Tenant> tiid = TenantUtils.tenantIid(tenantId);
+        Optional<Tenant> tenantInfo;
+        try {
+            tenantInfo = t.read(LogicalDatastoreType.CONFIGURATION, tiid).get();
+        } catch (Exception e) {
+            LOG.error("Could not read Tenant {}", tenantId, e);
+            return null;
+        }
+
+        HashSet<Subnet> subnets = new HashSet<Subnet>();
+
+        if (!tenantInfo.isPresent()) {
+            LOG.warn("Tenant {} not found", tenantId);
+            return null;
+        }
+
+        subnets.addAll(tenantInfo.get().getSubnet());
+        // subnetsByTenant.put(tenantId, subnets);
+        return subnets;
+    }
+
+    // Need a method to get subnets for EPs attached to the node locally
+    // to set the source Mac address for the router interface.
+    private List<Subnet> getLocalSubnets(NodeId nodeId) {
+        Collection<Endpoint> endpointsForNode = ctx.getEndpointManager().getEndpointsForNode(nodeId);
+
+        List<Subnet> localSubnets = new ArrayList<Subnet>();
+
+        for (Endpoint endpoint : endpointsForNode) {
+            HashSet<Subnet> subnets = getSubnets(endpoint.getTenant());
+            if (subnets == null) {
+                LOG.error("No local subnets.");
+                return null;
+            }
+            NetworkDomainId epNetworkContainment= getEPNetworkContainment(endpoint);
+            for (Subnet subnet : subnets) {
+                if (epNetworkContainment.getValue().equals(subnet.getId().getValue())) {
+                    localSubnets.add(subnet);
+                }
+            }
+        }
+        return localSubnets;
+    }
+
+    /**
+     * Reads data from datastore as synchronous call.
+     *
+     * @return {@link Optional#isPresent()} is {@code true} if reading was
+     *         successful and data exists in datastore;
+     *         {@link Optional#isPresent()} is {@code false} otherwise
+     */
+    public static <T extends DataObject> Optional<T> readFromDs(LogicalDatastoreType store, InstanceIdentifier<T> path,
+            ReadTransaction rTx) {
+        CheckedFuture<Optional<T>, ReadFailedException> resultFuture = rTx.read(store, path);
+        try {
+            return resultFuture.checkedGet();
+        } catch (ReadFailedException e) {
+            LOG.warn("Read failed from DS.", e);
+            return Optional.absent();
+        }
+    }
 
     static byte[] bytesFromHexString(String values) {
         String target = "";

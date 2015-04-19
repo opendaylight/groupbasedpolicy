@@ -349,9 +349,8 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
             }
 
             /*
-             * In the case where they've provided just the port name,
-             * go see if we can find the NodeId and NodeConnectorId
-             * from inventory.
+             * In the case where they've provided just the port name, go see if
+             * we can find the NodeId and NodeConnectorId from inventory.
              */
             if (ictx.getPortName() != null) {
                 NodeInfo augmentation = fetchAugmentation(ictx.getPortName().getValue());
@@ -662,86 +661,138 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
         boolean notifyNewEg = false;
 
         // When newLoc and oldLoc are null there is nothing to do
-        if (!(newLoc == null && oldLoc == null)) {
+        if (newLoc == null && oldLoc == null) {
+            return;
+        }
 
-            Set<EndpointGroupId> newEpgIds = new HashSet<EndpointGroupId>();
-            TenantId tenantId = null;
-            if (newEp != null) {
-                if (newEp.getEndpointGroups() != null) {
-                    newEpgIds.addAll(newEp.getEndpointGroups());
-                }
-                if (newEp.getEndpointGroup() != null) {
-                    newEpgIds.add(newEp.getEndpointGroup());
-                }
-                tenantId = newEp.getTenant();
+        Set<EndpointGroupId> newEpgIds = new HashSet<EndpointGroupId>();
+        TenantId tenantId = null;
+        if (newEp != null) {
+            if (newEp.getEndpointGroups() != null) {
+                newEpgIds.addAll(newEp.getEndpointGroups());
             }
-
-            Set<EndpointGroupId> oldEpgIds = new HashSet<EndpointGroupId>();
-            if (oldEp != null) {
-                if (oldEp.getEndpointGroups() != null) {
-                    oldEpgIds.addAll(oldEp.getEndpointGroups());
-                }
-                if (oldEp.getEndpointGroup() != null) {
-                    oldEpgIds.add(oldEp.getEndpointGroup());
-                }
+            if (newEp.getEndpointGroup() != null) {
+                newEpgIds.add(newEp.getEndpointGroup());
             }
+            tenantId = newEp.getTenant();
+        }
 
-            /*
-             * maintainIndex(endpointsByNode,oldEp,newEp) Maintain following
-             * maps endpoints - <EpKey, Endpoint> endpointsByGroupByNode -
-             * <NodeId, ConcurrentMap<EgKey, Set<EpKey>>> endpointsByNode -
-             * <NodeId,Set<EpKey>> endpointsByGroup ConcurrentHashMap<EgKey,
-             * Set<EpKey>>
-             */
+        Set<EndpointGroupId> oldEpgIds = new HashSet<EndpointGroupId>();
+        if (oldEp != null) {
+            if (oldEp.getEndpointGroups() != null) {
+                oldEpgIds.addAll(oldEp.getEndpointGroups());
+            }
+            if (oldEp.getEndpointGroup() != null) {
+                oldEpgIds.add(oldEp.getEndpointGroup());
+            }
+        }
 
-            // Maintain "endpoints" map
-            if (newEp != null) {
-                endpoints.put(newEpKey, newEp);
+        /*
+         * maintainIndex(endpointsByNode,oldEp,newEp) Maintain following maps
+         * endpoints - <EpKey, Endpoint> endpointsByGroupByNode - <NodeId,
+         * ConcurrentMap<EgKey, Set<EpKey>>> endpointsByNode -
+         * <NodeId,Set<EpKey>> endpointsByGroup ConcurrentHashMap<EgKey,
+         * Set<EpKey>>
+         */
+
+        // Maintain "endpoints" map
+        if (newEp != null) {
+            endpoints.put(newEpKey, newEp);
+        } else {
+            endpoints.remove(oldEpKey);
+        }
+
+        /*
+         * New endpoint with location information
+         */
+        if (oldEp == null && newEp != null && newLoc != null) {
+            // Update endpointsByNode
+            if (endpointsByNode.get(newLoc) == null) {
+                // TODO: alagalah cleaner way with checking epsNode
+                // then do this.
+                Set<EpKey> epsNode = new HashSet<EpKey>();
+                epsNode.add(newEpKey);
+                endpointsByNode.put(newLoc, epsNode);
             } else {
-                endpoints.remove(oldEpKey);
+                Set<EpKey> epsNode = endpointsByNode.get(newLoc);
+                epsNode.add(newEpKey);
+            }
+            // Update endpointsByGroupByNode and endpointsByGroup
+            for (EndpointGroupId newEpgId : newEpgIds) {
+                // endpointsByGroupByNode
+                EgKey newEgKey = new EgKey(tenantId, newEpgId);
+                Set<EpKey> eps = getEpNGSet(newLoc, newEgKey);
+                eps.add(newEpKey);
+                // endpointsByGroup
+                Set<EpKey> geps = endpointsByGroup.get(newEgKey);
+                if (geps == null) {
+                    geps = new HashSet<>();
+                }
+                geps.add(newEpKey);
+                endpointsByGroup.put(newEgKey, geps);
+                LOG.debug("Endpoint {} added to node {}", newEpKey, newLoc);
+
             }
 
-            /*
-             * New endpoint with location information
-             */
-            if (oldEp == null && newEp != null && newLoc != null) {
-                // Update endpointsByNode
-                if (endpointsByNode.get(newLoc) == null) {
-                    // TODO: alagalah cleaner way with checking epsNode
-                    // then do this.
-                    Set<EpKey> epsNode = new HashSet<EpKey>();
-                    epsNode.add(newEpKey);
-                    endpointsByNode.put(newLoc, epsNode);
-                } else {
-                    Set<EpKey> epsNode = endpointsByNode.get(newLoc);
-                    epsNode.add(newEpKey);
-                }
-                // Update endpointsByGroupByNode and endpointsByGroup
-                for (EndpointGroupId newEpgId : newEpgIds) {
-                    // endpointsByGroupByNode
-                    EgKey newEgKey = new EgKey(tenantId, newEpgId);
-                    Set<EpKey> eps = getEpNGSet(newLoc, newEgKey);
-                    eps.add(newEpKey);
-                    // endpointsByGroup
-                    Set<EpKey> geps = endpointsByGroup.get(newEgKey);
-                    if (geps == null) {
-                        geps = new HashSet<>();
-                    }
-                    geps.add(newEpKey);
-                    endpointsByGroup.put(newEgKey, geps);
-                    LOG.debug("Endpoint {} added to node {}", newEpKey, newLoc);
+            notifyNewLoc = true;
+            notifyNewEg = true;
+        }
 
-                }
-
-                notifyNewLoc = true;
-                notifyNewEg = true;
+        /*
+         * Removed endpoint
+         */
+        if (oldEp != null && newEp == null) {
+            // Update endpointsByNode
+            Set<EpKey> epsNode = endpointsByNode.get(oldLoc);
+            if (epsNode != null) {
+                epsNode.remove(oldEpKey);
+                if (epsNode.isEmpty())
+                    endpointsByNode.remove(oldLoc);
             }
+            // Update endpointsByGroupByNode
+            // Update endpointsByGroup
+            // Get map of EPGs and their Endpoints for Node
+            ConcurrentMap<EgKey, Set<EpKey>> map =
+                    endpointsByGroupByNode.get(oldLoc);
+            // For each EPG in the removed endpoint...
+            for (EndpointGroupId oldEpgId : newEpgIds) {
+                EgKey oldEgKey = new EgKey(oldEp.getTenant(), oldEpgId);
+                // Get list of endpoints for EPG
+                Set<EpKey> eps = map.get(oldEgKey);
+                // Remove the endpoint from the map
+                if (eps != null) {
+                    eps.remove(oldEpKey);
+                    if (eps.isEmpty())
+                        map.remove(oldEgKey, Collections.emptySet());
+                }
+                // endpointsByGroup
+                Set<EpKey> geps = endpointsByGroup.get(oldEgKey);
+                if (geps != null) {
+                    geps.remove(oldEpKey);
+                    if (geps.isEmpty())
+                        endpointsByGroup.remove(oldEgKey);
+                }
+            }
+            // If map is empty, no more EPGs on this node, remove node from
+            // map
+            if (map.isEmpty())
+                endpointsByGroupByNode.remove(oldLoc, EMPTY_MAP);
+            notifyOldLoc = true;
+            notifyOldEg = true;
+        }
+
+        /*
+         * Moved endpoint (from node to node or from NULL to node)
+         */
+        if ((oldEp != null && newEp != null && oldEpKey != null && newEpKey != null) &&
+                (oldEpKey.toString().equals(newEpKey.toString()))) {
+            // old and new Endpoints have same key. (same endpoint)
 
             /*
-             * Removed endpoint
+             * Remove old endpoint if moved.
              */
-            if (oldEp != null && newEp == null) {
-                // Update endpointsByNode
+            if (oldLoc != null && !(oldLoc.getValue().equals(newLoc.getValue()))) {
+                // This is an endpoint that has moved, remove from old node
                 Set<EpKey> epsNode = endpointsByNode.get(oldLoc);
                 if (epsNode != null) {
                     epsNode.remove(oldEpKey);
@@ -749,12 +800,11 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
                         endpointsByNode.remove(oldLoc);
                 }
                 // Update endpointsByGroupByNode
-                // Update endpointsByGroup
                 // Get map of EPGs and their Endpoints for Node
                 ConcurrentMap<EgKey, Set<EpKey>> map =
                         endpointsByGroupByNode.get(oldLoc);
                 // For each EPG in the removed endpoint...
-                for (EndpointGroupId oldEpgId : newEpgIds) {
+                for (EndpointGroupId oldEpgId : oldEpgIds) {
                     EgKey oldEgKey = new EgKey(oldEp.getTenant(), oldEpgId);
                     // Get list of endpoints for EPG
                     Set<EpKey> eps = map.get(oldEgKey);
@@ -766,14 +816,15 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
                     }
                     // endpointsByGroup
                     Set<EpKey> geps = endpointsByGroup.get(oldEgKey);
-                    if (geps != null) {
+                    if (geps != null)
+                    {
                         geps.remove(oldEpKey);
                         if (geps.isEmpty())
                             endpointsByGroup.remove(oldEgKey);
                     }
                 }
-                // If map is empty, no more EPGs on this node, remove node from
-                // map
+                // If map is empty, no more EPGs on this node, remove node
+                // from map
                 if (map.isEmpty())
                     endpointsByGroupByNode.remove(oldLoc, EMPTY_MAP);
                 notifyOldLoc = true;
@@ -781,111 +832,59 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
             }
 
             /*
-             * Moved endpoint (from node to node or from NULL to node)
+             * Add new endpoint
              */
-            if ((oldEp != null && newEp != null && oldEpKey != null && newEpKey != null) &&
-                    (oldEpKey.toString().equals(newEpKey.toString()))) {
-                // old and new Endpoints have same key. (same endpoint)
+            // Update endpointsByNode
+            if (endpointsByNode.get(newLoc) == null) {
+                Set<EpKey> newEpsNode = new HashSet<EpKey>();
+                newEpsNode.add(newEpKey);
+                endpointsByNode.put(newLoc, newEpsNode);
+            } else {
+                Set<EpKey> newEpsNode = endpointsByNode.get(newLoc);
+                newEpsNode.add(newEpKey);
+            }
+            notifyNewLoc = true;
 
-                /*
-                 * Remove old endpoint if moved.
-                 */
-                if (oldLoc != null && !(oldLoc.getValue().equals(newLoc.getValue()))) {
-                    // This is an endpoint that has moved, remove from old node
-                    Set<EpKey> epsNode = endpointsByNode.get(oldLoc);
-                    if (epsNode != null) {
-                        epsNode.remove(oldEpKey);
-                        if (epsNode.isEmpty())
-                            endpointsByNode.remove(oldLoc);
-                    }
-                    // Update endpointsByGroupByNode
-                    // Get map of EPGs and their Endpoints for Node
-                    ConcurrentMap<EgKey, Set<EpKey>> map =
-                            endpointsByGroupByNode.get(oldLoc);
-                    // For each EPG in the removed endpoint...
-                    for (EndpointGroupId oldEpgId : oldEpgIds) {
-                        EgKey oldEgKey = new EgKey(oldEp.getTenant(), oldEpgId);
-                        // Get list of endpoints for EPG
-                        Set<EpKey> eps = map.get(oldEgKey);
-                        // Remove the endpoint from the map
-                        if (eps != null) {
-                            eps.remove(oldEpKey);
-                            if (eps.isEmpty())
-                                map.remove(oldEgKey, Collections.emptySet());
-                        }
-                        // endpointsByGroup
-                        Set<EpKey> geps = endpointsByGroup.get(oldEgKey);
-                        if (geps != null)
-                        {
-                            geps.remove(oldEpKey);
-                            if (geps.isEmpty())
-                                endpointsByGroup.remove(oldEgKey);
-                        }
-                    }
-                    // If map is empty, no more EPGs on this node, remove node
-                    // from map
-                    if (map.isEmpty())
-                        endpointsByGroupByNode.remove(oldLoc, EMPTY_MAP);
-                    notifyOldLoc = true;
-                    notifyOldEg = true;
+            // Update endpointsByGroupByNode
+            // Update endpointsByGroup
+            for (EndpointGroupId newEpgId : newEpgIds) {
+                EgKey newEgKey = new EgKey(tenantId, newEpgId);
+                Set<EpKey> eps = getEpNGSet(newLoc, newEgKey);
+                eps.add(newEpKey);
+                // endpointsByGroup
+                Set<EpKey> geps = endpointsByGroup.get(newEgKey);
+                if (geps == null) {
+                    geps = new HashSet<>();
                 }
+                geps.add(newEpKey);
+                endpointsByGroup.put(newEgKey, geps);
+                notifyNewEg = true;
 
-                /*
-                 * Add new endpoint
-                 */
-                // Update endpointsByNode
-                if (endpointsByNode.get(newLoc) == null) {
-                    Set<EpKey> newEpsNode = new HashSet<EpKey>();
-                    newEpsNode.add(newEpKey);
-                    endpointsByNode.put(newLoc, newEpsNode);
-                } else {
-                    Set<EpKey> newEpsNode = endpointsByNode.get(newLoc);
-                    newEpsNode.add(newEpKey);
-                }
-                notifyNewLoc = true;
-
-                // Update endpointsByGroupByNode
-                // Update endpointsByGroup
-                for (EndpointGroupId newEpgId : newEpgIds) {
-                    EgKey newEgKey = new EgKey(tenantId, newEpgId);
-                    Set<EpKey> eps = getEpNGSet(newLoc, newEgKey);
-                    eps.add(newEpKey);
-                    // endpointsByGroup
-                    Set<EpKey> geps = endpointsByGroup.get(newEgKey);
-                    if (geps == null) {
-                        geps = new HashSet<>();
-                    }
-                    geps.add(newEpKey);
-                    endpointsByGroup.put(newEgKey, geps);
-                    notifyNewEg = true;
-
-                    LOG.debug("Endpoint {} added to node {}", newEpKey, newLoc);
-                }
-
+                LOG.debug("Endpoint {} added to node {}", newEpKey, newLoc);
             }
 
-            if (newEp != null)
-                notifyEndpointUpdated(newEpKey);
-            else
-                notifyEndpointUpdated(oldEpKey);
-
-            // TODO alagalah NEXt: ensure right notification flags are set.
-            if (notifyOldLoc)
-                notifyNodeEndpointUpdated(oldLoc, oldEpKey);
-            if (notifyNewLoc)
-                notifyNodeEndpointUpdated(newLoc, newEpKey);
-            if (notifyOldEg)
-                for (EndpointGroupId oldEpgId : oldEpgIds) {
-                    EgKey oldEgKey = new EgKey(oldEp.getTenant(), oldEpgId);
-                    notifyGroupEndpointUpdated(oldEgKey, oldEpKey);
-                }
-            if (notifyNewEg)
-                for (EndpointGroupId newEpgId : newEpgIds) {
-                    EgKey newEgKey = new EgKey(newEp.getTenant(), newEpgId);
-                    notifyGroupEndpointUpdated(newEgKey, newEpKey);
-                }
-
         }
+
+        if (newEp != null)
+            notifyEndpointUpdated(newEpKey);
+        else
+            notifyEndpointUpdated(oldEpKey);
+
+        // TODO alagalah NEXt: ensure right notification flags are set.
+        if (notifyOldLoc)
+            notifyNodeEndpointUpdated(oldLoc, oldEpKey);
+        if (notifyNewLoc)
+            notifyNodeEndpointUpdated(newLoc, newEpKey);
+        if (notifyOldEg)
+            for (EndpointGroupId oldEpgId : oldEpgIds) {
+                EgKey oldEgKey = new EgKey(oldEp.getTenant(), oldEpgId);
+                notifyGroupEndpointUpdated(oldEgKey, oldEpKey);
+            }
+        if (notifyNewEg)
+            for (EndpointGroupId newEpgId : newEpgIds) {
+                EgKey newEgKey = new EgKey(newEp.getTenant(), newEpgId);
+                notifyGroupEndpointUpdated(newEgKey, newEpKey);
+            }
     }
 
     // A wrapper class around node, nodeConnector info so we can pass a final

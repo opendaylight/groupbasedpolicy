@@ -85,6 +85,10 @@
       <artifactId>org.osgi.core</artifactId>
     </dependency>
     <dependency>
+      <groupId>commons-net</groupId>
+      <artifactId>commons-net</artifactId>
+    </dependency>
+    <dependency>
       <groupId>commons-lang</groupId>
       <artifactId>commons-lang</artifactId>
       <version>2.6</version>
@@ -120,7 +124,7 @@
              org.apache.http.*;version="4.3.2",
 	     *;resolution:=optional
             </Import-Package>
-            <Embed-Dependency>httpclient,httpcore,commons-lang,commons-exec;type=!pom;inline=false</Embed-Dependency>
+            <Embed-Dependency>httpclient,httpcore,commons-net,commons-lang,commons-exec;type=!pom;inline=false</Embed-Dependency>
             <Export-Package>
 	    </Export-Package>
           </instructions>

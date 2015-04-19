@@ -178,9 +178,9 @@ public class NeutronRouterAware implements INeutronRouterAware {
                 l3ContextName = new Name(router.getName());
             }
             L3Context l3Context = new L3ContextBuilder().setId(l3ContextIdFromRouterId)
-                .setName(l3ContextName)
-                .setDescription(new Description(MappingUtils.NEUTRON_ROUTER__ + router.getID()))
-                .build();
+                    .setName(l3ContextName)
+                    .setDescription(new Description(MappingUtils.NEUTRON_ROUTER__ + router.getID()))
+                    .build();
             rwTx.put(LogicalDatastoreType.CONFIGURATION, l3ContextIidForRouterId, l3Context);
         }
 
@@ -193,9 +193,12 @@ public class NeutronRouterAware implements INeutronRouterAware {
             return;
         }
 
-        // Based on Neutron Northbound - Port representing router interface contains exactly on
+        // Based on Neutron Northbound - Port representing router interface
+        // contains exactly on
         // fixed IP
         NeutronPort routerPort = portInterface.getPort(routerInterface.getPortUUID());
+        // TODO: Li alagalah: Add gateways and prefixes instead of
+        // VirtualRouterID
         Subnet subnet = new SubnetBuilder(potentialSubnet.get()).setVirtualRouterIp(
                 Utils.createIpAddress(routerPort.getFixedIPs().get(0).getIpAddress())).build();
         rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.subnetIid(tenantId, subnetId), subnet);
@@ -242,12 +245,13 @@ public class NeutronRouterAware implements INeutronRouterAware {
                 rwTx.cancel();
                 return;
             }
-            // TODO Li msunal this has to be rewrite when OFOverlay renderer will support l3-endpoints.
+            // TODO Li msunal this has to be rewrite when OFOverlay renderer
+            // will support l3-endpoints.
             Neutron_IPs firstIp = MappingUtils.getFirstIp(port.getFixedIPs());
             if (firstIp != null) {
                 l3Eps.add(new L3Builder().setL3Context(oldL3ContextId)
-                    .setIpAddress(Utils.createIpAddress(firstIp.getIpAddress()))
-                    .build());
+                        .setIpAddress(Utils.createIpAddress(firstIp.getIpAddress()))
+                        .build());
             }
         }
 

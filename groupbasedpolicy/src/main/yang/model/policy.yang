@@ -820,6 +820,22 @@ module policy {
                          for the subnet, if desired.";
                     type inet:ip-address;
                 }
+                list gateways {
+                    description
+                        "External gateways for subnets we serve, 
+                        includes prefixes for static routing";
+                    key "gateway";
+                    leaf gateway {
+                        type inet:ip-address;
+                    }
+                    list prefixes {
+                        key "prefix";
+                        leaf prefix {
+                            type inet:ip-prefix;
+                        }
+                    }
+                    
+                }
             }
 
             // ***************

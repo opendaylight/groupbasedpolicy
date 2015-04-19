@@ -107,6 +107,10 @@ public class NeutronPortAware implements INeutronPortAware {
         LOG.trace("neutronPortCreated - {}", port);
         if (isRouterInterfacePort(port)) {
             LOG.trace("Port is router interface.");
+            /*
+             * TODO: Li alagalah: Should only create router if NB API receives NeutronRouterAware:neutonRouterCreated() message.
+             * i.e. The deviceID (L3Context) should already exist in datastore, and should have been created by the RouterCreated.
+             */
             NeutronRouter neutronRouter = createRouter(port);
             NeutronRouter_Interface routerIface = createRouterInterface(port);
             int canAttachInterface = NeutronRouterAware.getInstance().canAttachInterface(neutronRouter, routerIface);
