@@ -90,8 +90,8 @@ public class NeutronPortAware implements INeutronPortAware {
     private static final String DEVICE_OWNER_ROUTER_IFACE = "network:router_interface";
     private static final String DEVICE_OWNER_ROUTER_GATEWAY = "network:router_gateway";
     private static final String DEVICE_OWNER_FLOATING_IP = "network:floatingip";
-    private static final int DHCP_CLIENT_PORT = 68;
     private static final int DHCP_SERVER_PORT = 67;
+    private static final int DNS_SERVER_PORT = 53;
     private final DataBroker dataProvider;
     private final EndpointService epService;
 
@@ -318,13 +318,16 @@ public class NeutronPortAware implements INeutronPortAware {
             return null;
         }
         IpPrefix ipSubnet = potentialSubnet.get().getIpPrefix();
-        NeutronSecurityRule dhcpRuleEgress = createDhcpSecRule(port.getID(), tenantId, ipSubnet, consumerEpgId, true);
-        NeutronSecurityRule dhcpRuleIngress = createDhcpSecRule(port.getID(), tenantId, ipSubnet, consumerEpgId, false);
-        return ImmutableList.of(dhcpRuleEgress, dhcpRuleIngress);
+        List<NeutronSecurityRule> rules = new ArrayList<>();
+        rules.add(createDhcpIngressSecRule(port.getID(), tenantId, ipSubnet, consumerEpgId));
+        rules.add(createDnsSecRule(port.getID(), tenantId, ipSubnet, consumerEpgId));
+        rules.add(createUdpEgressSecRule(port.getID(), tenantId, ipSubnet, consumerEpgId));
+        rules.add(createIcmpSecRule(port.getID(), tenantId, ipSubnet, consumerEpgId, true));
+        rules.add(createIcmpSecRule(port.getID(), tenantId, ipSubnet, consumerEpgId, false));
+        return rules;
     }
 
-    private NeutronSecurityRule createDhcpSecRule(String ruleUuid, TenantId tenantId, IpPrefix ipSubnet, EndpointGroupId consumerEpgId,
-            boolean isEgress) {
+    private NeutronSecurityRule createDhcpIngressSecRule(String ruleUuid, TenantId tenantId, IpPrefix ipSubnet, EndpointGroupId consumerEpgId) {
         NeutronSecurityRule dhcpSecRule = new NeutronSecurityRule();
         dhcpSecRule.setSecurityRuleGroupID(MappingUtils.EPG_DHCP_ID.getValue());
         dhcpSecRule.setSecurityRuleTenantID(tenantId.getValue());
@@ -332,17 +335,10 @@ public class NeutronPortAware implements INeutronPortAware {
         if (consumerEpgId != null) {
             dhcpSecRule.setSecurityRemoteGroupID(consumerEpgId.getValue());
         }
-        if (isEgress) {
-            dhcpSecRule.setSecurityRuleUUID(NeutronUtils.EGRESS + "__" + ruleUuid);
-            dhcpSecRule.setSecurityRuleDirection(NeutronUtils.EGRESS);
-            dhcpSecRule.setSecurityRulePortMin(DHCP_CLIENT_PORT);
-            dhcpSecRule.setSecurityRulePortMax(DHCP_CLIENT_PORT);
-        } else {
-            dhcpSecRule.setSecurityRuleUUID(NeutronUtils.INGRESS + "__" + ruleUuid);
-            dhcpSecRule.setSecurityRuleDirection(NeutronUtils.INGRESS);
-            dhcpSecRule.setSecurityRulePortMin(DHCP_SERVER_PORT);
-            dhcpSecRule.setSecurityRulePortMax(DHCP_SERVER_PORT);
-        }
+        dhcpSecRule.setSecurityRuleUUID(NeutronUtils.INGRESS + "_dhcp__" + ruleUuid);
+        dhcpSecRule.setSecurityRuleDirection(NeutronUtils.INGRESS);
+        dhcpSecRule.setSecurityRulePortMin(DHCP_SERVER_PORT);
+        dhcpSecRule.setSecurityRulePortMax(DHCP_SERVER_PORT);
         dhcpSecRule.setSecurityRuleProtocol(NeutronUtils.UDP);
         if (ipSubnet.getIpv4Prefix() != null) {
             dhcpSecRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
@@ -350,6 +346,71 @@ public class NeutronPortAware implements INeutronPortAware {
             dhcpSecRule.setSecurityRuleEthertype(NeutronUtils.IPv6);
         }
         return dhcpSecRule;
+    }
+
+    private NeutronSecurityRule createUdpEgressSecRule(String ruleUuid, TenantId tenantId, IpPrefix ipSubnet, EndpointGroupId consumerEpgId) {
+        NeutronSecurityRule dhcpSecRule = new NeutronSecurityRule();
+        dhcpSecRule.setSecurityRuleGroupID(MappingUtils.EPG_DHCP_ID.getValue());
+        dhcpSecRule.setSecurityRuleTenantID(tenantId.getValue());
+        dhcpSecRule.setSecurityRuleRemoteIpPrefix(Utils.getStringIpPrefix(ipSubnet));
+        if (consumerEpgId != null) {
+            dhcpSecRule.setSecurityRemoteGroupID(consumerEpgId.getValue());
+        }
+        dhcpSecRule.setSecurityRuleUUID(NeutronUtils.EGRESS + "_udp__" + ruleUuid);
+        dhcpSecRule.setSecurityRuleDirection(NeutronUtils.EGRESS);
+        dhcpSecRule.setSecurityRuleProtocol(NeutronUtils.UDP);
+        if (ipSubnet.getIpv4Prefix() != null) {
+            dhcpSecRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
+        } else {
+            dhcpSecRule.setSecurityRuleEthertype(NeutronUtils.IPv6);
+        }
+        return dhcpSecRule;
+    }
+
+    private NeutronSecurityRule createDnsSecRule(String ruleUuid, TenantId tenantId, IpPrefix ipSubnet, EndpointGroupId consumerEpgId) {
+        NeutronSecurityRule dnsSecRule = new NeutronSecurityRule();
+        dnsSecRule.setSecurityRuleGroupID(MappingUtils.EPG_DHCP_ID.getValue());
+        dnsSecRule.setSecurityRuleTenantID(tenantId.getValue());
+        dnsSecRule.setSecurityRuleRemoteIpPrefix(Utils.getStringIpPrefix(ipSubnet));
+        if (consumerEpgId != null) {
+            dnsSecRule.setSecurityRemoteGroupID(consumerEpgId.getValue());
+        }
+        dnsSecRule.setSecurityRuleUUID(NeutronUtils.INGRESS + "_dns__" + ruleUuid);
+        dnsSecRule.setSecurityRuleDirection(NeutronUtils.INGRESS);
+        dnsSecRule.setSecurityRulePortMin(DNS_SERVER_PORT);
+        dnsSecRule.setSecurityRulePortMax(DNS_SERVER_PORT);
+        dnsSecRule.setSecurityRuleProtocol(NeutronUtils.UDP);
+        if (ipSubnet.getIpv4Prefix() != null) {
+            dnsSecRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
+        } else {
+            dnsSecRule.setSecurityRuleEthertype(NeutronUtils.IPv6);
+        }
+        return dnsSecRule;
+    }
+
+    private NeutronSecurityRule createIcmpSecRule(String ruleUuid, TenantId tenantId, IpPrefix ipSubnet, EndpointGroupId consumerEpgId,
+            boolean isEgress) {
+        NeutronSecurityRule icmpSecRule = new NeutronSecurityRule();
+        icmpSecRule.setSecurityRuleGroupID(MappingUtils.EPG_DHCP_ID.getValue());
+        icmpSecRule.setSecurityRuleTenantID(tenantId.getValue());
+        icmpSecRule.setSecurityRuleRemoteIpPrefix(Utils.getStringIpPrefix(ipSubnet));
+        if (consumerEpgId != null) {
+            icmpSecRule.setSecurityRemoteGroupID(consumerEpgId.getValue());
+        }
+        if (isEgress) {
+            icmpSecRule.setSecurityRuleUUID(NeutronUtils.EGRESS + "_icmp__" + ruleUuid);
+            icmpSecRule.setSecurityRuleDirection(NeutronUtils.EGRESS);
+        } else {
+            icmpSecRule.setSecurityRuleUUID(NeutronUtils.INGRESS + "_icmp__" + ruleUuid);
+            icmpSecRule.setSecurityRuleDirection(NeutronUtils.INGRESS);
+        }
+        icmpSecRule.setSecurityRuleProtocol(NeutronUtils.ICMP);
+        if (ipSubnet.getIpv4Prefix() != null) {
+            icmpSecRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
+        } else {
+            icmpSecRule.setSecurityRuleEthertype(NeutronUtils.IPv6);
+        }
+        return icmpSecRule;
     }
 
     /**
