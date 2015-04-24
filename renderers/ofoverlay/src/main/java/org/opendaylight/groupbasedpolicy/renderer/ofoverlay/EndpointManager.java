@@ -64,6 +64,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
 /**
@@ -159,7 +161,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
         Map<EgKey, Set<EpKey>> nodeEps = endpointsByGroupByNode.get(nodeId);
         if (nodeEps == null)
             return Collections.emptySet();
-        return Collections.unmodifiableSet(nodeEps.keySet());
+        return ImmutableSet.copyOf(nodeEps.keySet());
     }
 
     /**
@@ -170,7 +172,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
      * @return a collection of {@link NodeId} objects.
      */
     public synchronized Set<NodeId> getNodesForGroup(final EgKey egKey) {
-        return Collections.unmodifiableSet(Sets.filter(endpointsByGroupByNode.keySet(),
+        return ImmutableSet.copyOf(Sets.filter(endpointsByGroupByNode.keySet(),
                 new Predicate<NodeId>() {
                     @Override
                     public boolean apply(NodeId input) {
@@ -202,9 +204,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
         Collection<EpKey> ebn = nodeEps.get(eg);
         if (ebn == null)
             return Collections.emptyList();
-        return Collections.unmodifiableCollection(Collections2
-                .transform(ebn,
-                        indexTransform));
+        return ImmutableList.copyOf(Collections2.transform(ebn,indexTransform));
     }
 
     /**
@@ -218,40 +218,10 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
         // TODO: alagalah Create method findEndpointsByNode() that uses
         // datastore. See commented code below.
 
-        Collection<Endpoint> epsByNode = Collections.emptyList();
-        // Blocking for test.
-        // // Predicate for filtering only the endpoints we need for this nodeID
-        // //TODO: This pulls from datastore. Will be more performant to update
-        // // endpointByNode in updateEndpoint.
-        // Predicate<Endpoint> predicate = new Predicate<Endpoint>() {
-        // @Override
-        // public boolean apply(Endpoint ep) {
-        // return
-        // ep.getAugmentation(OfOverlayContext.class).getNodeId().getValue().equals(nodeId.getValue());
-        // }
-        // };
-        //
-        // Optional<Endpoints> epResult;
-        // final InstanceIdentifier<Endpoints> endpointsIid =
-        // InstanceIdentifier.builder(Endpoints.class).build();
-        // try {
-        // epResult =
-        // dataProvider.newReadOnlyTransaction().read(LogicalDatastoreType.OPERATIONAL,
-        // endpointsIid).get();
-        // if(epResult.isPresent()) {
-        // Endpoints endpoints = epResult.get();
-        // epsByNode =
-        // Collections2.filter((Collection<Endpoint>)endpoints.getEndpoint(),predicate);
-        // }
-        // } catch (InterruptedException | ExecutionException e) {
-        // LOG.error("Caught exception in getEPsForNode");
-        // }
         Collection<EpKey> ebn = endpointsByNode.get(nodeId);
         if (ebn == null)
             return Collections.emptyList();
-        return Collections.unmodifiableCollection(Collections2
-                .transform(ebn,
-                        indexTransform));
+        return ImmutableList.copyOf(Collections2.transform(ebn, indexTransform));
 
     }
 
@@ -287,7 +257,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
         Collection<EpKey> ebg = endpointsByGroup.get(eg);
         if (ebg == null)
             return Collections.emptyList();
-        return Collections2.transform(ebg, indexTransform);
+        return ImmutableList.copyOf(Collections2.transform(ebg, indexTransform));
     }
 
     /**
