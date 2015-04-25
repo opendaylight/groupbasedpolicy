@@ -181,7 +181,7 @@ public class DestinationMapper extends FlowTable {
                 if (arpFlow != null) {
                     flowMap.writeFlow(nodeId, TABLE_ID, arpFlow);
                 } else {
-                    LOG.debug("ARP flow is not created, because virtual router IP has not been set for subnet {} .",
+                    LOG.debug("Gateway ARP flow is not created, because virtual router IP has not been set for subnet {} .",
                             sn.getIpPrefix().getValue());
                 }
             }
@@ -481,7 +481,7 @@ public class DestinationMapper extends FlowTable {
                     continue;
                 } else {
                     for (Subnet localSubnet : localSubnets) {
-                        Flow flow = createLocalL3Flow(epPeer, l3a, epFwdCtxOrds, ofc, localSubnet);
+                        Flow flow = createLocalL3RoutedFlow(epPeer, l3a, epFwdCtxOrds, ofc, localSubnet);
                         if (flow != null) {
                             flowMap.writeFlow(nodeId, TABLE_ID, flow);
                         } else {
@@ -513,7 +513,7 @@ public class DestinationMapper extends FlowTable {
                     continue;
                 } else {
                     for (Subnet localSubnet : localSubnets) {
-                        Flow remoteL3Flow = createRemoteL3Flow(epPeer, l3a, nodeId, epFwdCtxOrds, ofc, localSubnet);
+                        Flow remoteL3Flow = createRemoteL3RoutedFlow(epPeer, l3a, nodeId, epFwdCtxOrds, ofc, localSubnet);
                         if (remoteL3Flow != null) {
                             flowMap.writeFlow(nodeId, TABLE_ID, remoteL3Flow);
                         } else {
@@ -533,7 +533,7 @@ public class DestinationMapper extends FlowTable {
      * ################################## DestMapper Flow methods
      * ##################################
      */
-    private Flow createLocalL3Flow(Endpoint destEp, L3Address destL3Address, EndpointFwdCtxOrdinals epFwdCtxOrds,
+    private Flow createLocalL3RoutedFlow(Endpoint destEp, L3Address destL3Address, EndpointFwdCtxOrdinals epFwdCtxOrds,
             OfOverlayContext ofc, Subnet srcSubnet) {
 
         // TODO Li alagalah - refactor common code but keep simple method
@@ -584,15 +584,13 @@ public class DestinationMapper extends FlowTable {
             return null;
         }
 
-        MacAddress destMacAddress = routerPortMac(destL3c, destSubnet.getVirtualRouterIp());
-        MacAddress srcMacAddress = routerPortMac(destL3c, srcSubnet.getVirtualRouterIp());
+        MacAddress matcherMac = routerPortMac(destL3c,srcSubnet.getVirtualRouterIp());
+        MacAddress epDestMac = destEp.getMacAddress();
+        MacAddress destSubnetGatewayMac = routerPortMac(destL3c, destSubnet.getVirtualRouterIp());
 
-        // TODO Li alagalah: using gateway field instead of overloading
-        // virtual-router-ip will remove need for the && check.
-        if (srcMacAddress.getValue().equals(destMacAddress.getValue()) &&
-                !(srcMacAddress.getValue().equals(ROUTER_MAC.getValue()))) {
-            LOG.trace("Same source and destination MacAddress in createL3 Flow, this flow not needed as handled by ARP");
-            return null;
+        if (srcSubnet.getId().getValue().equals(destSubnet.getId().getValue())){
+            // This is our final destination, so match on actual EP mac.
+            matcherMac=epDestMac;
         }
 
         ArrayList<Instruction> l3instructions = new ArrayList<>();
@@ -608,9 +606,6 @@ public class DestinationMapper extends FlowTable {
         Action setNextHop;
         String nextHop;
 
-        Action setDlSrc = setDlSrcAction(destMacAddress);
-        Action decTtl = decNwTtlAction();
-
         // BEGIN L3 LOCAL
         nextHop = ofc.getNodeConnectorId().getValue();
 
@@ -625,13 +620,17 @@ public class DestinationMapper extends FlowTable {
 
         setNextHop = nxLoadRegAction(NxmNxReg7.class,
                 BigInteger.valueOf(portNum));
-
-        Action setDlDst = setDlDstAction(destEp.getMacAddress());
-        l3ApplyActions.add(setDlDst);
         // END L3 LOCAL
 
+        Action setDlSrc = setDlSrcAction(destSubnetGatewayMac);
         l3ApplyActions.add(setDlSrc);
+
+        Action setDlDst = setDlDstAction(epDestMac);
+        l3ApplyActions.add(setDlDst);
+
+        Action decTtl = decNwTtlAction();
         l3ApplyActions.add(decTtl);
+
         order += 1;
         applyActions.add(setdEPG);
         applyActions.add(setdCG);
@@ -678,15 +677,15 @@ public class DestinationMapper extends FlowTable {
                 .append("|")
                 .append(Integer.toString(epFwdCtxOrds.getCgId()))
                 .append("|")
-                .append(srcMacAddress)
+                .append(matcherMac)
                 .append("|")
-                .append(destMacAddress)
+                .append(destSubnetGatewayMac)
                 .append("|")
                 .append(nextHop)
                 .toString());
         MatchBuilder mb = new MatchBuilder()
                 .setEthernetMatch(ethernetMatch(null,
-                        srcMacAddress,
+                        matcherMac,
                         etherType))
                 .setLayer3Match(m);
         addNxRegMatch(mb, RegMatch.of(NxmNxReg6.class,
@@ -814,7 +813,7 @@ public class DestinationMapper extends FlowTable {
         return flowb.build();
     }
 
-    private Flow createRemoteL3Flow(Endpoint destEp, L3Address destL3Address, NodeId nodeId,
+    private Flow createRemoteL3RoutedFlow(Endpoint destEp, L3Address destL3Address, NodeId nodeId,
             EndpointFwdCtxOrdinals epFwdCtxOrds, OfOverlayContext ofc, Subnet srcSubnet) {
 
         // TODO Li alagalah - refactor common code but keep simple method
@@ -862,21 +861,14 @@ public class DestinationMapper extends FlowTable {
         }
 
         if (!(srcL3c.getId().getValue().equals(destL3c.getId().getValue()))) {
-            LOG.info("Trying to route between two L3Contexts {} and {}. Not currently supported.", srcL3c.getId()
+            LOG.trace("Trying to route between two L3Contexts {} and {}. Not currently supported.", srcL3c.getId()
                     .getValue(), destL3c.getId().getValue());
             return null;
         }
 
-        MacAddress destMacAddress = routerPortMac(destL3c, destSubnet.getVirtualRouterIp());
-        MacAddress srcMacAddress = routerPortMac(destL3c, srcSubnet.getVirtualRouterIp());
-
-        // TODO Li alagalah: using gateway field instead of overloading
-        // virtual-router-ip will remove need for the && check.
-        if (srcMacAddress.getValue().equals(destMacAddress.getValue()) &&
-                !(srcMacAddress.getValue().equals(ROUTER_MAC.getValue()))) {
-            LOG.trace("Same source and destination MacAddress in createL3 Flow, this flow not needed as handled by ARP");
-            return null;
-        }
+        MacAddress matcherMac = routerPortMac(destL3c,srcSubnet.getVirtualRouterIp());
+        MacAddress epDestMac = destEp.getMacAddress();
+        MacAddress destSubnetGatewayMac = routerPortMac(destL3c, destSubnet.getVirtualRouterIp());
 
         ArrayList<Instruction> l3instructions = new ArrayList<>();
         List<Action> applyActions = new ArrayList<>();
@@ -890,9 +882,6 @@ public class DestinationMapper extends FlowTable {
                 BigInteger.valueOf(epFwdCtxOrds.getCgId()));
         Action setNextHop;
         String nextHop;
-
-        Action setDlSrc = setDlSrcAction(srcMacAddress);
-        Action decTtl = decNwTtlAction();
 
         // BEGIN TUNNEL HANDLING
         IpAddress tunDst =
@@ -943,13 +932,19 @@ public class DestinationMapper extends FlowTable {
         applyActions.add(tundstAction);
         // END TUNNEL
 
-        l3ApplyActions.add(setDlSrc);
-        l3ApplyActions.add(decTtl);
+
         order += 1;
         applyActions.add(setdEPG);
         applyActions.add(setdCG);
         applyActions.add(setNextHop);
+
+        Action setDlSrc = setDlSrcAction(destSubnetGatewayMac);
         l3ApplyActions.add(setDlSrc);
+
+        Action setDlDst = setDlDstAction(epDestMac);
+        l3ApplyActions.add(setDlDst);
+
+        Action decTtl = decNwTtlAction();
         l3ApplyActions.add(decTtl);
 
         applyActions.addAll(l3ApplyActions);
@@ -993,15 +988,15 @@ public class DestinationMapper extends FlowTable {
                 .append("|")
                 .append(Integer.toString(epFwdCtxOrds.getCgId()))
                 .append("|")
-                .append(srcMacAddress)
+                .append(matcherMac)
                 .append("|")
-                .append(destMacAddress)
+                .append(destSubnetGatewayMac)
                 .append("|")
                 .append(nextHop)
                 .toString());
         MatchBuilder mb = new MatchBuilder()
                 .setEthernetMatch(ethernetMatch(null,
-                        destMacAddress,
+                        matcherMac,
                         etherType))
                 .setLayer3Match(m);
         addNxRegMatch(mb, RegMatch.of(NxmNxReg6.class,
