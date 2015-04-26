@@ -117,6 +117,7 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
             EndpointGroup epgDhcp = new EndpointGroupBuilder().setId(MappingUtils.EPG_DHCP_ID)
                 .setName(new Name("DHCP_group"))
                 .setDescription(new Description("Group where are all DHCP endpoints."))
+                .setIntraGroupPolicy(IntraGroupPolicy.RequireContract)
                 .build();
             rwTx.put(LogicalDatastoreType.CONFIGURATION, epgDhcpIid, epgDhcp);
         }

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
- * 
+ *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -42,6 +42,7 @@ public class SourceMapperTest extends FlowTableTest {
 
     protected static final Logger LOG = LoggerFactory.getLogger(SourceMapperTest.class);
 
+    @Override
     @Before
     public void setup() throws Exception {
         initCtx();
@@ -83,10 +84,7 @@ public class SourceMapperTest extends FlowTableTest {
                 Instruction ins = f.getInstructions().getInstruction().get(0);
                 assertTrue(ins.getInstruction() instanceof ApplyActionsCase);
                 List<Action> actions = ((ApplyActionsCase) ins.getInstruction()).getApplyActions().getAction();
-                NetworkDomainId networkContainement = policyResolver.getTenant(tid)
-                    .getEndpointGroup(eg)
-                    .getNetworkDomain();
-                int v = OrdinalFactory.getContextOrdinal(ep, networkContainement);
+                int v = OrdinalFactory.getContextOrdinal(ep);
                 assertEquals(FlowUtils.nxLoadRegAction(NxmNxReg0.class, BigInteger.valueOf(v)), actions.get(0)
                     .getAction());
                 v = OrdinalFactory.getCondGroupOrdinal(cg);

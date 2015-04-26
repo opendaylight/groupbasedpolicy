@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -89,21 +89,21 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.ni
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nodes.node.group.buckets.bucket.action.action.NxActionRegMoveNodesNodeGroupBucketsBucketActionsCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nodes.node.table.flow.instructions.instruction.instruction.apply.actions._case.apply.actions.action.action.NxActionOutputRegNodesNodeTableFlowApplyActionsCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nodes.node.table.flow.instructions.instruction.instruction.apply.actions._case.apply.actions.action.action.NxActionRegLoadNodesNodeTableFlowApplyActionsCaseBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nodes.node.table.flow.instructions.instruction.instruction.apply.actions._case.apply.actions.action.action.NxActionSetNsiNodesNodeTableFlowApplyActionsCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nodes.node.table.flow.instructions.instruction.instruction.apply.actions._case.apply.actions.action.action.NxActionRegMoveNodesNodeTableFlowApplyActionsCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nodes.node.table.flow.instructions.instruction.instruction.apply.actions._case.apply.actions.action.action.NxActionSetNsiNodesNodeTableFlowApplyActionsCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nodes.node.table.flow.instructions.instruction.instruction.apply.actions._case.apply.actions.action.action.NxActionSetNspNodesNodeTableFlowApplyActionsCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.output.reg.grouping.NxOutputReg;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.output.reg.grouping.NxOutputRegBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.set.nsi.grouping.NxSetNsi;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.set.nsi.grouping.NxSetNsiBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.set.nsp.grouping.NxSetNsp;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.set.nsp.grouping.NxSetNspBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.reg.load.grouping.NxRegLoad;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.reg.load.grouping.NxRegLoadBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.reg.load.grouping.nx.reg.load.DstBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.reg.move.grouping.NxRegMove;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.reg.move.grouping.NxRegMoveBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.reg.move.grouping.nx.reg.move.SrcBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.set.nsi.grouping.NxSetNsi;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.set.nsi.grouping.NxSetNsiBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.set.nsp.grouping.NxSetNsp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.set.nsp.grouping.NxSetNspBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.src.choice.grouping.SrcChoice;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.src.choice.grouping.src.choice.SrcNxArpShaCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.src.choice.grouping.src.choice.SrcNxRegCaseBuilder;
@@ -111,6 +111,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.ni
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.src.choice.grouping.src.choice.SrcOfEthSrcCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxAugMatchNodesNodeTableFlow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxAugMatchNodesNodeTableFlowBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxmNxNsiKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxmNxNspKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxmNxReg0Key;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxmNxReg1Key;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxmNxReg2Key;
@@ -120,8 +122,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.ni
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxmNxReg6Key;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxmNxReg7Key;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxmNxTunIdKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxmNxNsiKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxmNxNspKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.nxm.nx.nsi.grouping.NxmNxNsiBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.nxm.nx.nsp.grouping.NxmNxNspBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.nxm.nx.reg.grouping.NxmNxRegBuilder;
@@ -135,6 +135,7 @@ import com.google.common.net.InetAddresses;
  * Utilities for constructing OpenFlow flows
  */
 public final class FlowUtils {
+
     /**
      * ARP ethertype
      */
@@ -147,18 +148,15 @@ public final class FlowUtils {
      * IPv6 ethertype
      */
     public static final Long IPv6 = Long.valueOf(0x86DD);
-    
+
     /**
      * Creates an Instance Identifier (path) for node with specified id
      *
      * @param nodeId
      * @return
      */
-    public static final InstanceIdentifier<Node> 
-        createNodePath(final NodeId nodeId) {
-        return InstanceIdentifier.builder(Nodes.class)
-                .child(Node.class, new NodeKey(nodeId))
-                .build();
+    public static final InstanceIdentifier<Node> createNodePath(final NodeId nodeId) {
+        return InstanceIdentifier.builder(Nodes.class).child(Node.class, new NodeKey(nodeId)).build();
     }
 
     /**
@@ -168,15 +166,13 @@ public final class FlowUtils {
      * @param tableId the ID of the table
      * @return the {@link InstanceIdentifier<Table>}
      */
-    public static final InstanceIdentifier<Table> 
-        createTablePath(final NodeId nodeId, 
-                        final short tableId) {
+    public static final InstanceIdentifier<Table> createTablePath(final NodeId nodeId, final short tableId) {
         return createNodePath(nodeId).builder()
-                .augmentation(FlowCapableNode.class)
-                .child(Table.class, new TableKey(tableId))
-                .build();
+            .augmentation(FlowCapableNode.class)
+            .child(Table.class, new TableKey(tableId))
+            .build();
     }
-    
+
     /**
      * Creates a group path from a node ID and group ID
      *
@@ -184,14 +180,13 @@ public final class FlowUtils {
      * @param groupId the ID of the group table
      * @return the {@link InstanceIdentifier<Group>}
      */
-    public static final InstanceIdentifier<Group> 
-        createGroupPath(final NodeId nodeId, 
-                        final GroupId groupId) {
+    public static final InstanceIdentifier<Group> createGroupPath(final NodeId nodeId, final GroupId groupId) {
         return createNodePath(nodeId).builder()
-                .augmentation(FlowCapableNode.class)
-                .child(Group.class, new GroupKey(groupId))
-                .build();
+            .augmentation(FlowCapableNode.class)
+            .child(Group.class, new GroupKey(groupId))
+            .build();
     }
+
     /**
      * Creates a group path from a node ID and group ID
      *
@@ -200,18 +195,16 @@ public final class FlowUtils {
      * @param bucketId the ID of the bucket in the group table
      * @return the {@link InstanceIdentifier<Bucket>}
      */
-    public static final InstanceIdentifier<Bucket> 
-        createBucketPath(final NodeId nodeId, 
-                         final GroupId groupId,
-                         final BucketId bucketId) {
+    public static final InstanceIdentifier<Bucket> createBucketPath(final NodeId nodeId, final GroupId groupId,
+            final BucketId bucketId) {
         return createNodePath(nodeId).builder()
-                .augmentation(FlowCapableNode.class)
-                .child(Group.class, new GroupKey(groupId))
-                .child(Buckets.class)
-                .child(Bucket.class, new BucketKey(bucketId))
-                .build();
+            .augmentation(FlowCapableNode.class)
+            .child(Group.class, new GroupKey(groupId))
+            .child(Buckets.class)
+            .child(Bucket.class, new BucketKey(bucketId))
+            .build();
     }
-    
+
     /**
      * Creates a path for particular flow, by appending flow-specific information
      * to table path.
@@ -220,12 +213,10 @@ public final class FlowUtils {
      * @param flowKey
      * @return
      */
-    public static InstanceIdentifier<Flow> 
-            createFlowPath(final InstanceIdentifier<Table> table, 
-                           final FlowKey flowKey) {
+    public static InstanceIdentifier<Flow> createFlowPath(final InstanceIdentifier<Table> table, final FlowKey flowKey) {
         return table.child(Flow.class, flowKey);
     }
-    
+
     /**
      * Creates a path for particular flow, by appending flow-specific information
      * to table path.
@@ -234,75 +225,56 @@ public final class FlowUtils {
      * @param flowId
      * @return
      */
-    public static InstanceIdentifier<Flow> 
-            createFlowPath(final InstanceIdentifier<Table> table, 
-                           final FlowId flowId) {
+    public static InstanceIdentifier<Flow> createFlowPath(final InstanceIdentifier<Table> table, final FlowId flowId) {
         return createFlowPath(table, new FlowKey(flowId));
     }
 
     public static Instructions gotoTableInstructions(short tableId) {
-        return new InstructionsBuilder()
-        .setInstruction(ImmutableList.of(new InstructionBuilder()
-            .setOrder(Integer.valueOf(0))
-            .setInstruction(gotoTableIns(tableId))
-            .build()))
-        .build();
-    }
-    
-    public static Instruction gotoTableIns(short tableId) {
-        return new GoToTableCaseBuilder()
-            .setGoToTable(new GoToTableBuilder()
-                .setTableId(tableId)
-                .build())
-            .build();
+        return new InstructionsBuilder().setInstruction(
+                ImmutableList.of(new InstructionBuilder().setOrder(Integer.valueOf(0))
+                    .setInstruction(gotoTableIns(tableId))
+                    .build())).build();
     }
 
-    public static ArrayList<org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.Action> actionList(Action... actions) {
-        ArrayList<org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.Action> alist
-            = new ArrayList<>();
+    public static Instruction gotoTableIns(short tableId) {
+        return new GoToTableCaseBuilder().setGoToTable(new GoToTableBuilder().setTableId(tableId).build()).build();
+    }
+
+    public static ArrayList<org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.Action> actionList(
+            Action... actions) {
+        ArrayList<org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.Action> alist = new ArrayList<>();
         int count = 0;
         for (Action action : actions) {
-            alist.add(new ActionBuilder()
-            .setOrder(Integer.valueOf(count++))
-            .setAction(action)
-            .build());
+            alist.add(new ActionBuilder().setOrder(Integer.valueOf(count++)).setAction(action).build());
         }
         return alist;
     }
-    public static ArrayList<org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.Action> actionList(List<ActionBuilder> actions) {
-        ArrayList<org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.Action> alist
-            = new ArrayList<>();
+
+    public static ArrayList<org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.Action> actionList(
+            List<ActionBuilder> actions) {
+        ArrayList<org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.Action> alist = new ArrayList<>();
         int count = 0;
         for (ActionBuilder action : actions) {
-            alist.add(action
-            .setOrder(Integer.valueOf(count++))
-            .build());
+            alist.add(action.setOrder(Integer.valueOf(count++)).build());
         }
         return alist;
     }
+
     public static Instruction applyActionIns(Action... actions) {
-        return new ApplyActionsCaseBuilder()
-            .setApplyActions(new ApplyActionsBuilder()
-                .setAction(actionList(actions))
-                .build())
-            .build();
+        return new ApplyActionsCaseBuilder().setApplyActions(
+                new ApplyActionsBuilder().setAction(actionList(actions)).build()).build();
     }
+
     public static Instruction applyActionIns(List<ActionBuilder> actions) {
-        return new ApplyActionsCaseBuilder()
-            .setApplyActions(new ApplyActionsBuilder()
-                .setAction(actionList(actions))
-                .build())
-            .build();
+        return new ApplyActionsCaseBuilder().setApplyActions(
+                new ApplyActionsBuilder().setAction(actionList(actions)).build()).build();
     }
+
     public static Instructions instructions(Instruction... instructions) {
-        ArrayList<org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.Instruction> ins
-            = new ArrayList<>();
+        ArrayList<org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.Instruction> ins = new ArrayList<>();
         int order = 0;
         for (Instruction i : instructions) {
-            ins.add(new InstructionBuilder()
-                .setOrder(order++)
-                .setInstruction(i)
-                .build());
+            ins.add(new InstructionBuilder().setOrder(order++).setInstruction(i).build());
         }
         return new InstructionsBuilder().setInstruction(ins).build();
     }
@@ -310,126 +282,84 @@ public final class FlowUtils {
     public static Instructions dropInstructions() {
         return instructions(applyActionIns(dropAction()));
     }
-    
+
     public static Action dropAction() {
-        return new DropActionCaseBuilder()
-            .setDropAction(new DropActionBuilder()
-                .build())
-            .build();
+        return new DropActionCaseBuilder().setDropAction(new DropActionBuilder().build()).build();
     }
-    
+
     public static Action outputAction(NodeConnectorId id) {
-        return new OutputActionCaseBuilder()
-            .setOutputAction(new OutputActionBuilder()
-                .setOutputNodeConnector(new Uri(id.getValue()))
-                .build())
-            .build();
+        return new OutputActionCaseBuilder().setOutputAction(
+                new OutputActionBuilder().setOutputNodeConnector(new Uri(id.getValue())).build()).build();
     }
 
     public static Action groupAction(Long id) {
-        return new GroupActionCaseBuilder()
-            .setGroupAction(new GroupActionBuilder()
-                .setGroupId(id)
-                .build())
-            .build();
+        return new GroupActionCaseBuilder().setGroupAction(new GroupActionBuilder().setGroupId(id).build()).build();
     }
-    
+
     public static Action setDlSrcAction(MacAddress mac) {
-        return new SetDlSrcActionCaseBuilder()
-            .setSetDlSrcAction(new SetDlSrcActionBuilder()
-                .setAddress(mac)
-                .build())
+        return new SetDlSrcActionCaseBuilder().setSetDlSrcAction(new SetDlSrcActionBuilder().setAddress(mac).build())
             .build();
     }
 
     public static Action setDlDstAction(MacAddress mac) {
-        return new SetDlDstActionCaseBuilder()
-            .setSetDlDstAction(new SetDlDstActionBuilder()
-                .setAddress(mac)
-                .build())
+        return new SetDlDstActionCaseBuilder().setSetDlDstAction(new SetDlDstActionBuilder().setAddress(mac).build())
             .build();
     }
 
     public static Action decNwTtlAction() {
-        return new DecNwTtlCaseBuilder()
-            .setDecNwTtl(new DecNwTtlBuilder()
-                .build())
-            .build();
+        return new DecNwTtlCaseBuilder().setDecNwTtl(new DecNwTtlBuilder().build()).build();
     }
 
-    public static Action nxLoadRegAction(DstChoice dstChoice,
-                                         BigInteger value,
-                                         int endOffset,
-                                         boolean groupBucket) {
-        NxRegLoad r = new NxRegLoadBuilder()
-            .setDst(new DstBuilder()
-                .setDstChoice(dstChoice)
-                .setStart(Integer.valueOf(0))
-                .setEnd(Integer.valueOf(endOffset))
-                .build())
+    public static Action nxLoadRegAction(DstChoice dstChoice, BigInteger value, int endOffset, boolean groupBucket) {
+        NxRegLoad r = new NxRegLoadBuilder().setDst(
+                new DstBuilder().setDstChoice(dstChoice)
+                    .setStart(Integer.valueOf(0))
+                    .setEnd(Integer.valueOf(endOffset))
+                    .build())
             .setValue(value)
             .build();
         if (groupBucket) {
-            return new NxActionRegLoadNodesNodeGroupBucketsBucketActionsCaseBuilder()
-                .setNxRegLoad(r).build();
+            return new NxActionRegLoadNodesNodeGroupBucketsBucketActionsCaseBuilder().setNxRegLoad(r).build();
         } else {
-            return new NxActionRegLoadNodesNodeTableFlowApplyActionsCaseBuilder()
-                .setNxRegLoad(r).build();
+            return new NxActionRegLoadNodesNodeTableFlowApplyActionsCaseBuilder().setNxRegLoad(r).build();
         }
     }
 
     public static Action nxSetNsiAction(Short nsi) {
-        NxSetNsi newNsi = new NxSetNsiBuilder()
-                                  .setNsi(nsi)
-                                  .build();
-        return new NxActionSetNsiNodesNodeTableFlowApplyActionsCaseBuilder()
-                       .setNxSetNsi(newNsi)
-                       .build();
+        NxSetNsi newNsi = new NxSetNsiBuilder().setNsi(nsi).build();
+        return new NxActionSetNsiNodesNodeTableFlowApplyActionsCaseBuilder().setNxSetNsi(newNsi).build();
     }
 
     public static Action nxSetNspAction(Long nsp) {
-        NxSetNsp newNsp = new NxSetNspBuilder()
-                                  .setNsp(nsp)
-                                  .build();
-        return new NxActionSetNspNodesNodeTableFlowApplyActionsCaseBuilder()
-                       .setNxSetNsp(newNsp)
-                       .build();
+        NxSetNsp newNsp = new NxSetNspBuilder().setNsp(nsp).build();
+        return new NxActionSetNspNodesNodeTableFlowApplyActionsCaseBuilder().setNxSetNsp(newNsp).build();
     }
 
-    public static Action nxLoadRegAction(DstChoice dstChoice,
-                                         BigInteger value) {
+    public static Action nxLoadRegAction(DstChoice dstChoice, BigInteger value) {
         return nxLoadRegAction(dstChoice, value, 31, false);
     }
 
-    public static Action nxLoadRegAction(Class<? extends NxmNxReg> reg,
-                                         BigInteger value) {
-        return nxLoadRegAction(new DstNxRegCaseBuilder().setNxReg(reg).build(),
-                               value);
+    public static Action nxLoadRegAction(Class<? extends NxmNxReg> reg, BigInteger value) {
+        return nxLoadRegAction(new DstNxRegCaseBuilder().setNxReg(reg).build(), value);
     }
-    public static Action nxLoadTunIPv4Action(String ipAddress, 
-                                             boolean groupBucket) {
+
+    public static Action nxLoadTunIPv4Action(String ipAddress, boolean groupBucket) {
         int ip = InetAddresses.coerceToInteger(InetAddresses.forString(ipAddress));
         long ipl = ip & 0xffffffffL;
-        return nxLoadRegAction(new DstNxTunIpv4DstCaseBuilder()
-                                    .setNxTunIpv4Dst(Boolean.TRUE).build(),
-                               BigInteger.valueOf(ipl),
-                               31,
-                               groupBucket);
+        return nxLoadRegAction(new DstNxTunIpv4DstCaseBuilder().setNxTunIpv4Dst(Boolean.TRUE).build(),
+                BigInteger.valueOf(ipl), 31, groupBucket);
     }
 
     public static Action nxLoadArpOpAction(BigInteger value) {
-        return nxLoadRegAction(new DstOfArpOpCaseBuilder()
-            .setOfArpOp(Boolean.TRUE).build(), value, 15, false);
+        return nxLoadRegAction(new DstOfArpOpCaseBuilder().setOfArpOp(Boolean.TRUE).build(), value, 15, false);
     }
 
     public static Action nxLoadArpShaAction(BigInteger value) {
-        return nxLoadRegAction(new DstNxArpShaCaseBuilder()
-            .setNxArpSha(Boolean.TRUE).build(), value, 47, false);
+        return nxLoadRegAction(new DstNxArpShaCaseBuilder().setNxArpSha(Boolean.TRUE).build(), value, 47, false);
     }
 
     public static Action nxLoadArpSpaAction(BigInteger value) {
-        return nxLoadRegAction(new DstOfArpSpaCaseBuilder()
-            .setOfArpSpa(Boolean.TRUE).build(), value);
+        return nxLoadRegAction(new DstOfArpSpaCaseBuilder().setOfArpSpa(Boolean.TRUE).build(), value);
     }
 
     public static Action nxLoadArpSpaAction(String ipAddress) {
@@ -438,79 +368,62 @@ public final class FlowUtils {
         return nxLoadArpSpaAction(BigInteger.valueOf(ipl));
     }
 
-    public static Action nxMoveRegAction(SrcChoice srcChoice,
-                                         DstChoice dstChoice,
-                                         int endOffset,
-                                         boolean groupBucket) {
-        NxRegMove r = new NxRegMoveBuilder()
-            .setSrc(new SrcBuilder()
-                .setSrcChoice(srcChoice)
-                .setStart(Integer.valueOf(0))
-                .setEnd(Integer.valueOf(endOffset))
-                .build())
-            .setDst(new org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.reg.move.grouping.nx.reg.move.DstBuilder()
-                .setDstChoice(dstChoice)
+    public static Action nxMoveRegAction(SrcChoice srcChoice, DstChoice dstChoice, int endOffset, boolean groupBucket) {
+        NxRegMove r = new NxRegMoveBuilder().setSrc(
+                new SrcBuilder().setSrcChoice(srcChoice)
+                    .setStart(Integer.valueOf(0))
+                    .setEnd(Integer.valueOf(endOffset))
+                    .build())
+            .setDst(new org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.reg.move.grouping.nx.reg.move.DstBuilder().setDstChoice(
+                    dstChoice)
                 .setStart(Integer.valueOf(0))
                 .setEnd(Integer.valueOf(endOffset))
                 .build())
             .build();
         if (groupBucket) {
-            return new NxActionRegMoveNodesNodeGroupBucketsBucketActionsCaseBuilder()
-                .setNxRegMove(r).build();
+            return new NxActionRegMoveNodesNodeGroupBucketsBucketActionsCaseBuilder().setNxRegMove(r).build();
         } else {
-            return new NxActionRegMoveNodesNodeTableFlowApplyActionsCaseBuilder()
-                .setNxRegMove(r).build();
+            return new NxActionRegMoveNodesNodeTableFlowApplyActionsCaseBuilder().setNxRegMove(r).build();
         }
     }
-    
-    public static Action nxMoveRegAction(SrcChoice srcChoice,
-                                         DstChoice dstChoice) {
+
+    public static Action nxMoveRegAction(SrcChoice srcChoice, DstChoice dstChoice) {
         return nxMoveRegAction(srcChoice, dstChoice, 31, false);
     }
 
-    public static Action nxMoveRegTunIdAction(Class<? extends NxmNxReg> src,
-                                              boolean groupBucket) {
-        return nxMoveRegAction(new SrcNxRegCaseBuilder()
-                                    .setNxReg(src).build(), 
-                               new DstNxTunIdCaseBuilder()
-                                   .setNxTunId(Boolean.TRUE).build(),
-                               31, 
-                               groupBucket);
+    public static Action nxMoveRegTunIdAction(Class<? extends NxmNxReg> src, boolean groupBucket) {
+        return nxMoveRegAction(new SrcNxRegCaseBuilder().setNxReg(src).build(),
+                new DstNxTunIdCaseBuilder().setNxTunId(Boolean.TRUE).build(), 31, groupBucket);
+    }
+
+    public static Action nxLoadTunIdAction(BigInteger tunnelId, boolean groupBucket) {
+        return nxLoadRegAction(new DstNxTunIdCaseBuilder().setNxTunId(Boolean.TRUE).build(), tunnelId, 31, groupBucket);
     }
 
     public static Action nxMoveArpShaToArpThaAction() {
-        return nxMoveRegAction(new SrcNxArpShaCaseBuilder()
-                                   .setNxArpSha(Boolean.TRUE).build(),
-                               new DstNxArpThaCaseBuilder()
-                                   .setNxArpTha(Boolean.TRUE).build(),
-                               47, false);
+        return nxMoveRegAction(new SrcNxArpShaCaseBuilder().setNxArpSha(Boolean.TRUE).build(),
+                new DstNxArpThaCaseBuilder().setNxArpTha(Boolean.TRUE).build(), 47, false);
     }
 
     public static Action nxMoveEthSrcToEthDstAction() {
-        return nxMoveRegAction(new SrcOfEthSrcCaseBuilder()
-                                   .setOfEthSrc(Boolean.TRUE).build(),
-                               new DstOfEthDstCaseBuilder()
-                                   .setOfEthDst(Boolean.TRUE).build(),
-                               47, false);
+        return nxMoveRegAction(new SrcOfEthSrcCaseBuilder().setOfEthSrc(Boolean.TRUE).build(),
+                new DstOfEthDstCaseBuilder().setOfEthDst(Boolean.TRUE).build(), 47, false);
     }
 
     public static Action nxMoveArpSpaToArpTpaAction() {
-        return nxMoveRegAction(new SrcOfArpSpaCaseBuilder()
-                                   .setOfArpSpa(Boolean.TRUE).build(),
-                               new DstOfArpTpaCaseBuilder()
-                                   .setOfArpTpa(Boolean.TRUE).build());
+        return nxMoveRegAction(new SrcOfArpSpaCaseBuilder().setOfArpSpa(Boolean.TRUE).build(),
+                new DstOfArpTpaCaseBuilder().setOfArpTpa(Boolean.TRUE).build());
     }
 
     public static Action nxOutputRegAction(SrcChoice srcChoice) {
-        NxOutputReg r = new NxOutputRegBuilder()
-            .setSrc(new org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.output.reg.grouping.nx.output.reg.SrcBuilder()
-                .setSrcChoice(srcChoice)
-                .setOfsNbits(Integer.valueOf(31))
-                .build())
+        NxOutputReg r = new NxOutputRegBuilder().setSrc(
+                new org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.output.reg.grouping.nx.output.reg.SrcBuilder().setSrcChoice(
+                        srcChoice)
+                    .setOfsNbits(Integer.valueOf(31))
+                    .build())
             .setMaxLen(Integer.valueOf(0xffff))
             .build();
-        return new NxActionOutputRegNodesNodeTableFlowApplyActionsCaseBuilder()
-            .setNxOutputReg(r).build();
+        return new NxActionOutputRegNodesNodeTableFlowApplyActionsCaseBuilder().setNxOutputReg(r).build();
     }
 
     public static Action nxOutputRegAction(Class<? extends NxmNxReg> reg) {
@@ -518,20 +431,22 @@ public final class FlowUtils {
     }
 
     public static class RegMatch {
+
         final Class<? extends NxmNxReg> reg;
         final Long value;
+
         public RegMatch(Class<? extends NxmNxReg> reg, Long value) {
             super();
             this.reg = reg;
             this.value = value;
         }
+
         public static RegMatch of(Class<? extends NxmNxReg> reg, Long value) {
             return new RegMatch(reg, value);
         }
     }
-    
-    public static void addNxRegMatch(MatchBuilder match,
-                                     RegMatch... matches) {
+
+    public static void addNxRegMatch(MatchBuilder match, RegMatch... matches) {
         ArrayList<ExtensionList> extensions = new ArrayList<>();
         for (RegMatch rm : matches) {
             Class<? extends ExtensionKey> key;
@@ -552,117 +467,72 @@ public final class FlowUtils {
             } else {
                 key = NxmNxReg7Key.class;
             }
-            NxAugMatchNodesNodeTableFlow am = 
-                    new NxAugMatchNodesNodeTableFlowBuilder()
-                .setNxmNxReg(new NxmNxRegBuilder()
-                    .setReg(rm.reg)
-                    .setValue(rm.value)
-                    .build())
-                .build();
-            extensions.add(new ExtensionListBuilder()
-                .setExtensionKey(key)
-                .setExtension(new ExtensionBuilder()
-                     .addAugmentation(NxAugMatchNodesNodeTableFlow.class, am)
-                     .build())
+            NxAugMatchNodesNodeTableFlow am = new NxAugMatchNodesNodeTableFlowBuilder().setNxmNxReg(
+                    new NxmNxRegBuilder().setReg(rm.reg).setValue(rm.value).build()).build();
+            extensions.add(new ExtensionListBuilder().setExtensionKey(key)
+                .setExtension(new ExtensionBuilder().addAugmentation(NxAugMatchNodesNodeTableFlow.class, am).build())
                 .build());
         }
-        GeneralAugMatchNodesNodeTableFlow m = 
-                new GeneralAugMatchNodesNodeTableFlowBuilder()
-            .setExtensionList(extensions)
-            .build();
+        GeneralAugMatchNodesNodeTableFlow m = new GeneralAugMatchNodesNodeTableFlowBuilder().setExtensionList(
+                extensions).build();
         match.addAugmentation(GeneralAugMatchNodesNodeTableFlow.class, m);
     }
 
-    public static void addNxTunIdMatch(MatchBuilder match,
-                                       int tunId) {
-        NxAugMatchNodesNodeTableFlow am = 
-               new NxAugMatchNodesNodeTableFlowBuilder()
-                   .setNxmNxTunId(new NxmNxTunIdBuilder()
-                       .setValue(BigInteger.valueOf(tunId))
-                       .build())
-                   .build();
-        GeneralAugMatchNodesNodeTableFlow m = 
-                new GeneralAugMatchNodesNodeTableFlowBuilder()
-            .setExtensionList(ImmutableList.of(new ExtensionListBuilder()
-                .setExtensionKey(NxmNxTunIdKey.class)
-                .setExtension(new ExtensionBuilder()
-                    .addAugmentation(NxAugMatchNodesNodeTableFlow.class, am)
-                    .build())
-                .build()))
-            .build();
+    public static void addNxTunIdMatch(MatchBuilder match, int tunId) {
+        NxAugMatchNodesNodeTableFlow am = new NxAugMatchNodesNodeTableFlowBuilder().setNxmNxTunId(
+                new NxmNxTunIdBuilder().setValue(BigInteger.valueOf(tunId)).build()).build();
+        GeneralAugMatchNodesNodeTableFlow m = new GeneralAugMatchNodesNodeTableFlowBuilder().setExtensionList(
+                ImmutableList.of(new ExtensionListBuilder().setExtensionKey(NxmNxTunIdKey.class)
+                    .setExtension(
+                            new ExtensionBuilder().addAugmentation(NxAugMatchNodesNodeTableFlow.class, am).build())
+                    .build())).build();
         match.addAugmentation(GeneralAugMatchNodesNodeTableFlow.class, m);
     }
 
-    public static void addNxNsiMatch(MatchBuilder match,
-                                     short nsi) {
-        NxAugMatchNodesNodeTableFlow am =
-                new NxAugMatchNodesNodeTableFlowBuilder()
-                    .setNxmNxNsi(new NxmNxNsiBuilder()
-                        .setNsi(nsi)
-                        .build())
-                    .build();
-        GeneralAugMatchNodesNodeTableFlow m =
-                new GeneralAugMatchNodesNodeTableFlowBuilder()
-            .setExtensionList(ImmutableList.of(new ExtensionListBuilder()
-                .setExtensionKey(NxmNxNsiKey.class)
-                .setExtension(new ExtensionBuilder()
-                    .addAugmentation(NxAugMatchNodesNodeTableFlow.class, am)
-                    .build())
-                .build()))
-             .build();
+    public static void addNxNsiMatch(MatchBuilder match, short nsi) {
+        NxAugMatchNodesNodeTableFlow am = new NxAugMatchNodesNodeTableFlowBuilder().setNxmNxNsi(
+                new NxmNxNsiBuilder().setNsi(nsi).build()).build();
+        GeneralAugMatchNodesNodeTableFlow m = new GeneralAugMatchNodesNodeTableFlowBuilder().setExtensionList(
+                ImmutableList.of(new ExtensionListBuilder().setExtensionKey(NxmNxNsiKey.class)
+                    .setExtension(
+                            new ExtensionBuilder().addAugmentation(NxAugMatchNodesNodeTableFlow.class, am).build())
+                    .build())).build();
         match.addAugmentation(GeneralAugMatchNodesNodeTableFlow.class, m);
     }
 
-    public static void addNxNspMatch(MatchBuilder match,
-                                     Long nsp) {
-        NxAugMatchNodesNodeTableFlow am =
-                new NxAugMatchNodesNodeTableFlowBuilder()
-                    .setNxmNxNsp(new NxmNxNspBuilder()
-                        .setValue(nsp)
-                        .build())
-                    .build();
-        GeneralAugMatchNodesNodeTableFlow m =
-                new GeneralAugMatchNodesNodeTableFlowBuilder()
-            .setExtensionList(ImmutableList.of(new ExtensionListBuilder()
-                .setExtensionKey(NxmNxNspKey.class)
-                .setExtension(new ExtensionBuilder()
-                    .addAugmentation(NxAugMatchNodesNodeTableFlow.class, am)
-                    .build())
-                .build()))
-            .build();
+    public static void addNxNspMatch(MatchBuilder match, Long nsp) {
+        NxAugMatchNodesNodeTableFlow am = new NxAugMatchNodesNodeTableFlowBuilder().setNxmNxNsp(
+                new NxmNxNspBuilder().setValue(nsp).build()).build();
+        GeneralAugMatchNodesNodeTableFlow m = new GeneralAugMatchNodesNodeTableFlowBuilder().setExtensionList(
+                ImmutableList.of(new ExtensionListBuilder().setExtensionKey(NxmNxNspKey.class)
+                    .setExtension(
+                            new ExtensionBuilder().addAugmentation(NxAugMatchNodesNodeTableFlow.class, am).build())
+                    .build())).build();
         match.addAugmentation(GeneralAugMatchNodesNodeTableFlow.class, m);
     }
 
-    public static EthernetMatch ethernetMatch(MacAddress srcMac, 
-                                              MacAddress dstMac,
-                                              Long etherType) {
-        EthernetMatchBuilder emb = new  EthernetMatchBuilder();
+    public static EthernetMatch ethernetMatch(MacAddress srcMac, MacAddress dstMac, Long etherType) {
+        EthernetMatchBuilder emb = new EthernetMatchBuilder();
         if (srcMac != null)
-            emb.setEthernetSource(new EthernetSourceBuilder()
-                .setAddress(srcMac)
-                .build());
+            emb.setEthernetSource(new EthernetSourceBuilder().setAddress(srcMac).build());
         if (dstMac != null)
-            emb.setEthernetDestination(new EthernetDestinationBuilder()
-                .setAddress(dstMac)
-                .build());
+            emb.setEthernetDestination(new EthernetDestinationBuilder().setAddress(dstMac).build());
         if (etherType != null)
-            emb.setEthernetType(new EthernetTypeBuilder()
-                .setType(new EtherType(etherType))
-                .build());
+            emb.setEthernetType(new EthernetTypeBuilder().setType(new EtherType(etherType)).build());
         return emb.build();
     }
 
     /**
      * Parse an OF port number from a node connector ID
+     *
      * @param id the ID
      * @return the port number
      */
     public static long getOfPortNum(NodeConnectorId id) {
         String cnid = id.getValue();
         int ci = cnid.lastIndexOf(':');
-        if (ci < 0 || (ci+1 >= cnid.length()))
+        if (ci < 0 || (ci + 1 >= cnid.length()))
             throw new NumberFormatException("Invalid node connector ID " + cnid);
-        return Long.parseLong(cnid.substring(ci+1));
+        return Long.parseLong(cnid.substring(ci + 1));
     }
 }
-

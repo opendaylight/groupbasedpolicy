@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -43,14 +43,12 @@ public class OrdinalFactory {
      */
     private final static AtomicInteger policyOrdinal = new AtomicInteger(1);
 
-    private final static ConcurrentMap<String, Integer> ordinals =
-            new ConcurrentHashMap<>();
-    // XXX - need to garbage collect
-    private final static ConcurrentMap<ConditionGroup, Integer> cgOrdinals =
-            new ConcurrentHashMap<>();
+    private final static ConcurrentMap<String, Integer> ordinals = new ConcurrentHashMap<>();
 
-    public static int getContextOrdinal(final TenantId tenantId,
-            final UniqueId id) throws Exception {
+    // XXX - need to garbage collect
+    private final static ConcurrentMap<ConditionGroup, Integer> cgOrdinals = new ConcurrentHashMap<>();
+
+    public static int getContextOrdinal(final TenantId tenantId, final UniqueId id) throws Exception {
         if (tenantId == null || id == null)
             return 0;
         return getContextOrdinalFromString(tenantId.getValue() + "|" + id.getValue());
@@ -61,7 +59,7 @@ public class OrdinalFactory {
      * the data plane. This is unique only for this node, and not globally.
      *
      * @param cg
-     *            the {@link ConditionGroup}
+     *        the {@link ConditionGroup}
      * @return the unique ID
      */
     public static int getCondGroupOrdinal(final ConditionGroup cg) {
@@ -82,9 +80,9 @@ public class OrdinalFactory {
      * the given policy item.
      *
      * @param tenantId
-     *            the tenant ID of the element
+     *        the tenant ID of the element
      * @param id
-     *            the unique ID for the element
+     *        the unique ID for the element
      * @return the 32-bit ordinal value
      * @throws Exception
      */
@@ -94,9 +92,6 @@ public class OrdinalFactory {
     }
 
     public static int getContextOrdinal(Endpoint ep, NetworkDomainId networkContainment) throws Exception {
-        // TODO: Define private static final Comparator<EndpointGroupId>
-        // COMPARATOR = new Comparator<EndpointGroupId>() { ... }
-        // pass to constructor: new TreeSet<>(COMPARATOR);
 
         Set<String> epgs = new TreeSet<>();
 
@@ -117,8 +112,32 @@ public class OrdinalFactory {
             key.append(epg);
         }
 
-        key.append("|")
-                .append(networkContainment);
+        key.append("|").append(networkContainment);
+
+        return getContextOrdinalFromString(key.toString());
+
+    }
+
+    public static int getContextOrdinal(Endpoint ep) throws Exception {
+
+        Set<String> epgs = new TreeSet<>();
+
+        // Get EPGs and add to ordered Set
+        if (ep.getEndpointGroup() != null) {
+            epgs.add(ep.getEndpointGroup().getValue());
+        }
+        if (ep.getEndpointGroups() != null) {
+            for (EndpointGroupId epgId : ep.getEndpointGroups()) {
+                epgs.add(epgId.getValue());
+            }
+        }
+
+        StringBuilder key = new StringBuilder(ep.getTenant().getValue());
+
+        for (String epg : epgs) {
+            key.append('|');
+            key.append(epg);
+        }
 
         return getContextOrdinalFromString(key.toString());
 
@@ -129,7 +148,7 @@ public class OrdinalFactory {
      * the given policy item.
      *
      * @param id
-     *            the unique ID for the element
+     *        the unique ID for the element
      * @return the 32-bit ordinal value
      */
     private static int getContextOrdinalFromString(final String id) throws Exception {
@@ -154,7 +173,7 @@ public class OrdinalFactory {
 
         private NetworkDomainId networkContainment;
         private EpKey ep;
-        private int epgId = 0, bdId = 0, fdId = 0, l3Id = 0, cgId = 0;
+        private int epgId = 0, bdId = 0, fdId = 0, l3Id = 0, cgId = 0, tunnelId = 0;
 
         private EndpointFwdCtxOrdinals(Endpoint ep, PolicyInfo policyInfo, OfContext ctx) throws Exception {
             this.ep = new EpKey(ep.getL2Context(), ep.getMacAddress());
@@ -168,9 +187,8 @@ public class OrdinalFactory {
                 if (epg.getNetworkDomain() != null) {
                     this.networkContainment = epg.getNetworkDomain();
                 } else {
-                    LOG.info(
-                            "endPoint ordinals for {} not processed in SourceMapper. Must be able to resolve network containment either directly, or from primary EPG",
-                            ep.getKey());
+                    LOG.info("endPoint ordinals for {} not processed in SourceMapper. Must be able to resolve "
+                            + "network containment either directly, or from primary EPG", ep.getKey());
                     return;
                 }
             }
@@ -179,8 +197,7 @@ public class OrdinalFactory {
             // conditions, but
             // out of scope until broader bugs with conditions are fixed.
             List<ConditionName> conds = ctx.getEndpointManager().getCondsForEndpoint(ep);
-            ConditionGroup cg =
-                    policyInfo.getEgCondGroup(new EgKey(ep.getTenant(), ep.getEndpointGroup()), conds);
+            ConditionGroup cg = policyInfo.getEgCondGroup(new EgKey(ep.getTenant(), ep.getEndpointGroup()), conds);
             this.cgId = getCondGroupOrdinal(cg);
 
             // Based on network containment, determine components of
@@ -192,17 +209,21 @@ public class OrdinalFactory {
             // Set ordinal id's for use in flows for each forwarding context
             // component
 
-            this.epgId = getContextOrdinal(ep, networkContainment);
-            if (bd != null)
-                this.bdId = getContextOrdinal(ep.getTenant(),
-                        bd.getId());
-            if (fd != null)
-                this.fdId = getContextOrdinal(ep.getTenant(),
-                        fd.getId());
-            if (l3c != null)
-                this.l3Id = getContextOrdinal(ep.getTenant(),
-                        l3c.getId());
+            this.epgId = getContextOrdinal(ep);
 
+            // TODO: alagalah Li/Be: This idea can be extended to include conditions.
+            this.tunnelId = getContextOrdinal(ep, networkContainment);
+            if (bd != null)
+                this.bdId = getContextOrdinal(ep.getTenant(), bd.getId());
+            if (fd != null)
+                this.fdId = getContextOrdinal(ep.getTenant(), fd.getId());
+            if (l3c != null)
+                this.l3Id = getContextOrdinal(ep.getTenant(), l3c.getId());
+
+        }
+
+        public int getTunnelId() {
+            return tunnelId;
         }
 
         public int getEpgId() {
