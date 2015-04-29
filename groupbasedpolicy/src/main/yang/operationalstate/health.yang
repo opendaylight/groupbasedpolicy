@@ -1,0 +1,93 @@
+module health {
+    namespace "urn:opendaylight:health";
+    prefix "health";
+
+    import gbp-common {prefix gbp-common;}
+    import ietf-inet-types {prefix inet;}
+    import ietf-yang-types {prefix yang;}
+    import fault-rule {prefix fault-rule;}
+
+    revision 2015-04-28 {
+        description "Initial revision";
+    }
+
+    typedef severity {
+            type enumeration {
+                enum emergency {
+                    description
+                                        "A panic condition";
+                }
+                enum alert {
+                    description
+                                        "Should be corrected immediately";
+                }
+                enum critical {
+                    description
+                                        "Should be corrected immediately";
+                }
+                enum error {
+                    description
+                                        "Non-urgent failure";
+                }
+                enum warning {
+                    description
+                                        "Indication that an error will occur if action is not taken";
+                }
+                enum informational {
+                    description
+                                        "Normal operational events";
+                }
+                enum trace {
+                    description
+                                        "System debug";
+                }
+            }
+    }
+
+    container faults {
+
+        list fault {
+            key "id";
+            leaf id {
+                description "A unique ID for the fault";
+                type gbp-common:unique-id;
+                mandatory true;
+
+            }
+            leaf cause {
+                description "A user-visible name for the tenant";
+                type gbp-common:description;
+            }
+            leaf description {
+                description "A user-readable description for the tenant";
+                type gbp-common:description;
+            }
+            leaf counter {
+                description "Occurences of this fault";
+                type yang:counter32;
+            }
+            leaf trigger {
+                type fault-rule:rule;
+            }
+            leaf created {
+                type yang:timestamp;
+            }
+            leaf modified {
+                type yang:timestamp;
+            }
+            leaf component {
+                type gbp-common:description;
+            }
+            leaf highest-severity {
+                type severity;
+            }
+            leaf current-severity {
+                type severity;
+            }
+            leaf previos-severity {
+                type severity;
+            }
+
+        }
+    }
+}

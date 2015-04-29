@@ -1,0 +1,16 @@
+// Contents of "fault-rule"
+module fault-rule {
+    namespace "urn:opendaylight:fault-rule";
+    prefix "fault-rule";
+
+    revision 2015-04-28 {
+        description "Initial revision";
+    }
+
+    typedef rule {type string;}
+
+    container fault-rules {
+        description "stuff";
+
+    }
+}

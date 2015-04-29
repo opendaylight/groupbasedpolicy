@@ -1,0 +1,24 @@
+// Contents of "fault-rule"
+module health-rule {
+    namespace "urn:opendaylight:health-rule";
+    prefix "health-rule";
+
+    revision 2015-04-28 {
+        description "Initial revision";
+    }
+
+    typedef rule {type string;}
+
+    container health-rules {
+        description "Objective rule contructs for health score formula";
+
+    }
+
+    container health-score-faults {
+
+    }
+
+    container health-score {
+
+    }
+}
