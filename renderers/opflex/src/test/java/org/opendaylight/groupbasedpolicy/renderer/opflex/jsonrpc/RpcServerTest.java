@@ -8,7 +8,7 @@
  *  Authors : Thomas Bachman
  */
 
-package org.opendaylight.groupbasedpolicy.jsonrpc;
+package org.opendaylight.groupbasedpolicy.renderer.opflex.jsonrpc;
 
 
 import org.junit.Before;

@@ -11,9 +11,9 @@ package org.opendaylight.groupbasedpolicy.renderer.opflex.lib;
 
 import java.util.List;
 
-import org.opendaylight.groupbasedpolicy.jsonrpc.ConnectionService;
-import org.opendaylight.groupbasedpolicy.jsonrpc.RpcBroker;
-import org.opendaylight.groupbasedpolicy.jsonrpc.RpcServer;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.jsonrpc.ConnectionService;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.jsonrpc.RpcBroker;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.jsonrpc.RpcServer;
 
 /**
  * The {@link OpflexRpcServer}s respond to OpFlex clients

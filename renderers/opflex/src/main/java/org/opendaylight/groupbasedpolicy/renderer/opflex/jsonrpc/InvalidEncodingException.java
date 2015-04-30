@@ -7,7 +7,7 @@
  *
  * Authors : Ashwin Raveendran, Madhu Venugopal
  */
-package org.opendaylight.groupbasedpolicy.jsonrpc;
+package org.opendaylight.groupbasedpolicy.renderer.opflex.jsonrpc;
 
 public class InvalidEncodingException extends RuntimeException {
 

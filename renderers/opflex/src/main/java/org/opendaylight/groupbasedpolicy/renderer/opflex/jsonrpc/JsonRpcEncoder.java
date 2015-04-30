@@ -8,7 +8,7 @@
  *
  * Authors : Ashwin Raveendran, Madhu Venugopal, Thomas Bachman
  */
-package org.opendaylight.groupbasedpolicy.jsonrpc;
+package org.opendaylight.groupbasedpolicy.renderer.opflex.jsonrpc;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;

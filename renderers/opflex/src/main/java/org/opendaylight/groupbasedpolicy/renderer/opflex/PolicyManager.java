@@ -18,10 +18,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 
-import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcEndpoint;
-import org.opendaylight.groupbasedpolicy.jsonrpc.RpcBroker;
-import org.opendaylight.groupbasedpolicy.jsonrpc.RpcMessage;
-import org.opendaylight.groupbasedpolicy.jsonrpc.RpcMessageMap;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.jsonrpc.JsonRpcEndpoint;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.jsonrpc.RpcBroker;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.jsonrpc.RpcMessage;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.jsonrpc.RpcMessageMap;
 import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.OpflexAgent;
 import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.OpflexConnectionService;
 import org.opendaylight.groupbasedpolicy.renderer.opflex.lib.Role;

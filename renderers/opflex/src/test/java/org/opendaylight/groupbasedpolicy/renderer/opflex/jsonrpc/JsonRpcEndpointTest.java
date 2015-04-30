@@ -8,7 +8,7 @@
  *  Authors : Thomas Bachman
  */
 
-package org.opendaylight.groupbasedpolicy.jsonrpc;
+package org.opendaylight.groupbasedpolicy.renderer.opflex.jsonrpc;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static org.junit.Assert.assertFalse;

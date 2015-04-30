@@ -7,7 +7,7 @@
  *
  * Authors : Thomas Bachman
  */
-package org.opendaylight.groupbasedpolicy.jsonrpc;
+package org.opendaylight.groupbasedpolicy.renderer.opflex.jsonrpc;
 
 import java.util.List;
 import java.util.Map;
