@@ -1,124 +1,71 @@
 <?xml version="1.0"?>
-<!--
- Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
-
- This program and the accompanying materials are made available under the
- terms of the Eclipse Public License v1.0 which accompanies this distribution,
- and is available at http://www.eclipse.org/legal/epl-v10.html
--->
+<!-- Copyright (c) 2015 Cisco Systems, Inc. and others. All rights reserved. 
+  This program and the accompanying materials are made available under the 
+  terms of the Eclipse Public License v1.0 which accompanies this distribution, 
+  and is available at http://www.eclipse.org/legal/epl-v10.html -->
 <project
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
-    xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-    <modelVersion>4.0.0</modelVersion>
-    <parent>
-        <groupId>org.opendaylight.groupbasedpolicy</groupId>
-        <artifactId>groupbasedpolicy.project</artifactId>
-        <version>0.2.0-SNAPSHOT</version>
-        <relativePath>../</relativePath>
-    </parent>
-    <artifactId>neutron-mapper</artifactId>
-    <packaging>bundle</packaging>
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+  xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
 
-    <dependencies>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>groupbasedpolicy</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>ofoverlay-renderer</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.opendaylight.neutron</groupId>
-            <artifactId>neutron-spi</artifactId>
-            <version>0.5.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>org.opendaylight.controller</groupId>
-            <artifactId>config-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.opendaylight.controller</groupId>
-            <artifactId>sal-binding-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.opendaylight.controller</groupId>
-            <artifactId>sal-binding-config</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>org.osgi.core</artifactId>
-        </dependency>
-    </dependencies>
+  <parent>
+    <groupId>org.opendaylight.groupbasedpolicy</groupId>
+    <artifactId>groupbasedpolicy.project</artifactId>
+    <version>0.2.0-SNAPSHOT</version>
+    <relativePath>../</relativePath>
+  </parent>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <configuration>
-                    <instructions>
-                        <Export-Package></Export-Package>
-                        <Import-Package>*</Import-Package>
-                    </instructions>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.opendaylight.yangtools</groupId>
-                <artifactId>yang-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>config</id>
-                        <goals>
-                            <goal>generate-sources</goal>
-                        </goals>
-                        <configuration>
-                            <codeGenerators>
-                                <generator>
-                                    <codeGeneratorClass>org.opendaylight.controller.config.yangjmxgenerator.plugin.JMXGenerator</codeGeneratorClass>
-                                    <outputBaseDir>${project.build.directory}/generated-sources/config</outputBaseDir>
-                                    <additionalConfiguration>
-                                        <namespaceToPackage1>urn:opendaylight:params:xml:ns:yang:controller==org.opendaylight.controller.config.yang</namespaceToPackage1>
-                                    </additionalConfiguration>
-                                </generator>
-                                <generator>
-                                    <codeGeneratorClass>org.opendaylight.yangtools.maven.sal.api.gen.plugin.CodeGeneratorImpl</codeGeneratorClass>
-                                    <outputBaseDir>${project.build.directory}/generated-sources/sal</outputBaseDir>
-                                </generator>
-                            </codeGenerators>
-                            <inspectDependencies>true</inspectDependencies>
-                        </configuration>
-                    </execution>
-                </executions>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.opendaylight.controller</groupId>
-                        <artifactId>yang-jmx-generator-plugin</artifactId>
-                        <version>0.3.0-SNAPSHOT</version>
-                    </dependency>
-                </dependencies>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>add-source</goal>
-                        </goals>
-                        <phase>generate-sources</phase>
-                        <configuration>
-                            <sources>
-                                <source>target/generated-sources/sal</source>
-                                <source>target/generated-sources/config</source>
-                                <source>target/generated-resources/</source>
-                            </sources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
+  <artifactId>neutron-mapper</artifactId>
+  <packaging>bundle</packaging>
+
+  <dependencies>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>groupbasedpolicy</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>ofoverlay-renderer</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.neutron</groupId>
+      <artifactId>neutron-spi</artifactId>
+      <version>${neutron.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.controller</groupId>
+      <artifactId>config-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.controller</groupId>
+      <artifactId>sal-binding-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.controller</groupId>
+      <artifactId>sal-binding-config</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.osgi</groupId>
+      <artifactId>org.osgi.core</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <configuration>
+          <instructions>
+            <Export-Package></Export-Package>
+            <Import-Package>*</Import-Package>
+          </instructions>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.opendaylight.yangtools</groupId>
+        <artifactId>yang-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
 </project>

@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<!-- Copyright (c) 2015 Cisco Systems, Inc. and others. All rights reserved. 
+  This program and the accompanying materials are made available under the 
+  terms of the Eclipse Public License v1.0 which accompanies this distribution, 
+  and is available at http://www.eclipse.org/legal/epl-v10.html -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
   <parent>
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>groupbasedpolicy.project</artifactId>
@@ -10,40 +16,20 @@
 
   <artifactId>groupbasedpolicy</artifactId>
   <packaging>bundle</packaging>
-
-  <properties>
-  </properties>
+  <name>groupbasedpolicy-base</name> 
 
   <dependencies>
+    <!-- model dependencies -->
     <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
+      <groupId>org.opendaylight.yangtools.model</groupId>
+      <artifactId>ietf-inet-types</artifactId>
     </dependency>
     <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-core</artifactId>
+      <groupId>org.opendaylight.yangtools.model</groupId>
+      <artifactId>ietf-yang-types</artifactId>
     </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-annotations</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-all</artifactId>
-      <version>${netty.version}</version>
-    </dependency>
+
+    <!-- controller dependencies -->
     <dependency>
       <groupId>org.opendaylight.controller</groupId>
       <artifactId>config-api</artifactId>
@@ -52,49 +38,17 @@
       <groupId>org.opendaylight.controller</groupId>
       <artifactId>sal-binding-api</artifactId>
     </dependency>
+
+    <!-- project specific dependencies -->
     <dependency>
-      <groupId>org.opendaylight.controller</groupId>
-      <artifactId>sal-binding-config</artifactId>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.opendaylight.controller</groupId>
-      <artifactId>sal-common-util</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.controller.model</groupId>
-      <artifactId>model-inventory</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.yangtools</groupId>
-      <artifactId>yang-binding</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.yangtools</groupId>
-      <artifactId>yang-common</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.osgi</groupId>
-      <artifactId>org.osgi.core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>commons-lang</groupId>
-      <artifactId>commons-lang</artifactId>
-      <version>2.6</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-exec</artifactId>
-      <version>1.1</version>
-    </dependency>
+
+    <!-- testing dependencies -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
-      <version>1.9.5</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -108,83 +62,20 @@
         <extensions>true</extensions>
         <configuration>
           <instructions>
-            <Import-Package>
-             org.apache.http.*;version="4.3.2",
-             *;resolution:=optional</Import-Package>
-             <Embed-Dependency>httpclient,httpcore,commons-lang,commons-exec;type=!pom;inline=false</Embed-Dependency>
             <Export-Package>
-	      org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.*,
-	      org.opendaylight.controller.config.yang.config.endpoint_provider,
-	      org.opendaylight.groupbasedpolicy.endpoint,
-	      org.opendaylight.groupbasedpolicy.resolver,
-	      org.opendaylight.groupbasedpolicy.util,
-	    </Export-Package>
+              org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.*,
+              org.opendaylight.controller.config.yang.config.endpoint_provider,
+              org.opendaylight.groupbasedpolicy.endpoint,
+              org.opendaylight.groupbasedpolicy.resolver,
+              org.opendaylight.groupbasedpolicy.util,
+            </Export-Package>
           </instructions>
           <manifestLocation>${project.basedir}/META-INF</manifestLocation>
         </configuration>
       </plugin>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>add-source</goal>
-            </goals>
-            <phase>generate-sources</phase>
-            <configuration>
-              <sources>
-                <source>target/generated-sources/sal</source>
-                <source>target/generated-sources/config</source>
-                <source>target/generated-resources/</source>
-              </sources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <groupId>org.opendaylight.yangtools</groupId>
         <artifactId>yang-maven-plugin</artifactId>
-        <dependencies>
-          <dependency>
-            <groupId>org.opendaylight.controller</groupId>
-            <artifactId>yang-jmx-generator-plugin</artifactId>
-            <version>0.3.0-SNAPSHOT</version>
-          </dependency>
-          <dependency>
-            <groupId>org.opendaylight.yangtools</groupId>
-            <artifactId>maven-sal-api-gen-plugin</artifactId>
-            <version>${yangtools.version}</version>
-            <type>jar</type>
-          </dependency>
-        </dependencies>
-        <executions>
-          <execution>
-            <goals>
-              <goal>generate-sources</goal>
-            </goals>
-            <configuration>
-              <codeGenerators>
-                <generator>
-                  <codeGeneratorClass>org.opendaylight.controller.config.yangjmxgenerator.plugin.JMXGenerator</codeGeneratorClass>
-                  <outputBaseDir>${project.build.directory}/generated-sources/config</outputBaseDir>
-                  <additionalConfiguration>
-                    <namespaceToPackage1>urn:opendaylight:params:xml:ns:yang:controller==org.opendaylight.controller.config.yang</namespaceToPackage1>
-                  </additionalConfiguration>
-                </generator>
-                <generator>
-                  <codeGeneratorClass>org.opendaylight.yangtools.maven.sal.api.gen.plugin.CodeGeneratorImpl</codeGeneratorClass>
-                  <outputBaseDir>${project.build.directory}/generated-sources/sal</outputBaseDir>
-                </generator>
-                <generator>
-                  <codeGeneratorClass>org.opendaylight.yangtools.yang.unified.doc.generator.maven.DocumentationGeneratorImpl</codeGeneratorClass>
-                  <outputBaseDir>${project.build.directory}/site/models</outputBaseDir>
-                </generator>
-              </codeGenerators>
-              <inspectDependencies>true</inspectDependencies>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -192,31 +83,6 @@
         <configuration>
           <redirectTestOutputToFile>true</redirectTestOutputToFile>
         </configuration>
-      </plugin>
-      <plugin>
-	<groupId>org.jacoco</groupId>
-	<artifactId>jacoco-maven-plugin</artifactId>
-	<executions>
-          <execution>
-            <id>pre-unit-test</id>
-            <goals>
-              <goal>prepare-agent</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>post-unit-test</id>
-            <phase>test</phase>
-            <goals>
-              <goal>report</goal>
-            </goals>
-            <configuration>
-              <dataFile>${sonar.jacoco.reportPath}</dataFile>
-	      <includes>
-		<include>org/opendaylight/groupbasedpolicy/**/*.class</include>
-	      </includes>
-            </configuration>
-          </execution>
-	</executions>
       </plugin>
     </plugins>
   </build>

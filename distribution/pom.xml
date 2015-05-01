@@ -15,6 +15,11 @@ see https://git.opendaylight.org/gerrit/#/c/390/
   <packaging>pom</packaging>
   <name>Opendaylight Group-based Policy</name>
 
+  <properties>
+    <controller.distribution.version>0.2.0-SNAPSHOT</controller.distribution.version>
+    <openflowjava.version>0.6.0-SNAPSHOT</openflowjava.version>
+  </properties>
+
   <dependencies>
 
     <!-- base distribution -->
@@ -31,54 +36,54 @@ see https://git.opendaylight.org/gerrit/#/c/390/
     <dependency>
       <groupId>org.opendaylight.openflowplugin</groupId>
       <artifactId>openflowplugin-api</artifactId>
-      <version>${openflowplugin.distribution.version}</version>
+      <version>${openflowplugin.version}</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.openflowplugin</groupId>
       <artifactId>openflowplugin-extension-api</artifactId>
-      <version>${openflowplugin.distribution.version}</version>
+      <version>${openflowplugin.version}</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.openflowplugin</groupId>
       <artifactId>openflowplugin-extension-nicira</artifactId>
-      <version>${openflowplugin.distribution.version}</version>
+      <version>${openflowplugin.version}</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.openflowplugin</groupId>
       <artifactId>openflowjava-extension-nicira-api</artifactId>
-      <version>${openflowplugin.distribution.version}</version>
+      <version>${openflowplugin.version}</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.openflowplugin</groupId>
       <artifactId>openflowjava-extension-nicira</artifactId>
-      <version>${openflowplugin.distribution.version}</version>
+      <version>${openflowplugin.version}</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.openflowplugin</groupId>
       <artifactId>openflowplugin</artifactId>
-      <version>${openflowplugin.distribution.version}</version>
+      <version>${openflowplugin.version}</version>
     </dependency>
 
     <!-- openflowjava -->
     <dependency>
       <groupId>org.opendaylight.openflowjava</groupId>
       <artifactId>openflow-protocol-impl</artifactId>
-      <version>${openflowjava.distribution.version}</version>
+      <version>${openflowjava.version}</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.openflowjava</groupId>
       <artifactId>openflow-protocol-api</artifactId>
-      <version>${openflowjava.distribution.version}</version>
+      <version>${openflowjava.version}</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.openflowjava</groupId>
       <artifactId>openflow-protocol-spi</artifactId>
-      <version>${openflowjava.distribution.version}</version>
+      <version>${openflowjava.version}</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.openflowjava</groupId>
       <artifactId>util</artifactId>
-      <version>${openflowjava.distribution.version}</version>
+      <version>${openflowjava.version}</version>
     </dependency>
 
     <!-- groupbasedpolicy -->

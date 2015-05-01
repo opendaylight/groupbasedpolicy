@@ -1,60 +1,71 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
- Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
-
- This program and the accompanying materials are made available under the
- terms of the Eclipse Public License v1.0 which accompanies this distribution,
- and is available at http://www.eclipse.org/legal/epl-v10.html
---><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<!-- Copyright (c) 2015 Cisco Systems, Inc. and others. All rights reserved. 
+  This program and the accompanying materials are made available under the 
+  terms of the Eclipse Public License v1.0 which accompanies this distribution, 
+  and is available at http://www.eclipse.org/legal/epl-v10.html -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
   <parent>
     <artifactId>commons.groupbasedpolicy</artifactId>
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <version>0.2.0-SNAPSHOT</version>
     <relativePath>../commons/parent</relativePath>
   </parent>
+
   <artifactId>features-groupbasedpolicy</artifactId>
-  <groupId>org.opendaylight.groupbasedpolicy</groupId>
   <packaging>jar</packaging>
+
   <properties>
-    <features.file>features.xml</features.file>
-    <branding.version>1.1.0-SNAPSHOT</branding.version>
-    <karaf.resources.version>1.5.0-SNAPSHOT</karaf.resources.version>
-    <feature.test.version>0.7.0-SNAPSHOT</feature.test.version>
     <karaf.empty.version>1.5.0-SNAPSHOT</karaf.empty.version>
-    <surefire.version>2.16</surefire.version>
-    <yangtools.version>0.7.0-SNAPSHOT</yangtools.version>
+    <features.file>features.xml</features.file>
+    <config.configfile.directory>etc/opendaylight/karaf</config.configfile.directory>
+    <config.groupbasedpolicy.ofoverlayconfigfile>15-groupbasedpolicy-ofoverlay.xml</config.groupbasedpolicy.ofoverlayconfigfile>
+    <config.groupbasedpolicy.opflexconfigfile>15-groupbasedpolicy-opflex.xml</config.groupbasedpolicy.opflexconfigfile>
+    <config.groupbasedpolicy.openstackendpointconfigfile>15-groupbasedpolicy-openstackendpoint.xml</config.groupbasedpolicy.openstackendpointconfigfile>
+    <config.groupbasedpolicy.neutronmapperconfigfile>15-neutron-mapper.xml</config.groupbasedpolicy.neutronmapperconfigfile>
   </properties>
+
   <dependencies>
-    <dependency>
-      <groupId>commons-net</groupId>
-      <artifactId>commons-net</artifactId>
-      </dependency>
+    <!-- configuration dependencies -->
     <dependency>
       <groupId>org.opendaylight.yangtools</groupId>
       <artifactId>features-yangtools</artifactId>
-      <version>${yangtools.version}</version>
       <classifier>features</classifier>
       <type>xml</type>
     </dependency>
-     <dependency>
-       <groupId>org.opendaylight.controller</groupId>
-       <artifactId>features-nsf</artifactId>
-       <version>0.5.0-SNAPSHOT</version>
-       <classifier>features</classifier>
-       <type>xml</type>
+    <dependency>
+      <groupId>org.opendaylight.controller</groupId>
+      <artifactId>features-nsf</artifactId>
+      <version>0.5.0-SNAPSHOT</version>
+      <classifier>features</classifier>
+      <type>xml</type>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.controller</groupId>
       <artifactId>features-mdsal</artifactId>
-      <version>${mdsal.version}</version>
+      <classifier>features</classifier>
+      <type>xml</type>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.controller</groupId>
+      <artifactId>features-base</artifactId>
+      <version>1.5.0-SNAPSHOT</version>
       <classifier>features</classifier>
       <type>xml</type>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.openflowplugin</groupId>
       <artifactId>features-openflowplugin</artifactId>
-      <version>${openflowplugin.distribution.version}</version>
+      <version>${openflowplugin.version}</version>
+      <classifier>features</classifier>
+      <type>xml</type>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.openflowplugin</groupId>
+      <artifactId>features-openflowplugin-extension</artifactId>
+      <version>${openflowplugin.version}</version>
       <classifier>features</classifier>
       <type>xml</type>
     </dependency>
@@ -65,42 +76,36 @@
       <version>${neutron.version}</version>
       <type>xml</type>
     </dependency>
+
+    <!-- gbp dependencies -->
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>groupbasedpolicy</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>opflex-renderer</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>ofoverlay-renderer</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>neutron-mapper</artifactId>
-      <version>${project.version}</version>
     </dependency>
-    <dependency>
-       <groupId>org.opendaylight.controller</groupId>
-       <artifactId>features-base</artifactId>
-       <version>1.5.0-SNAPSHOT</version>
-       <classifier>features</classifier>
-       <type>xml</type>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.odlparent</groupId>
-      <artifactId>features-test</artifactId>
-      <version>${odlparent.features-test.version}</version>
-      <scope>test</scope>
-    </dependency>
+
+    <!-- gbp configuration dependencies -->
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>groupbasedpolicy-ofoverlay-config</artifactId>
+      <version>${project.version}</version>
+      <type>xml</type>
+      <classifier>config</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>groupbasedpolicy-opflex-config</artifactId>
       <version>${project.version}</version>
       <type>xml</type>
       <classifier>config</classifier>
@@ -112,50 +117,36 @@
       <type>xml</type>
       <classifier>config</classifier>
     </dependency>
-   <!-- dependency for opendaylight-karaf-empty for use by testing -->
+
+    <!-- testing dependencies -->
+    <dependency>
+      <groupId>org.opendaylight.odlparent</groupId>
+      <artifactId>features-test</artifactId>
+      <version>1.5.0-SNAPSHOT</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- dependency for opendaylight-karaf-empty for use by testing -->
     <dependency>
       <groupId>org.opendaylight.controller</groupId>
       <artifactId>opendaylight-karaf-empty</artifactId>
       <version>${karaf.empty.version}</version>
       <type>zip</type>
     </dependency>
-    <dependency>
-      <groupId>org.opendaylight.openflowplugin</groupId>
-      <artifactId>features-openflowplugin-extension</artifactId>
-      <version>${openflowplugin.distribution.version}</version>
-      <classifier>features</classifier>
-      <type>xml</type>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.openflowplugin</groupId>
-      <artifactId>features-openflowplugin</artifactId>
-      <version>${openflowplugin.distribution.version}</version>
-      <classifier>features</classifier>
-      <type>xml</type>
-    </dependency>
-<!--
-    <dependency>
-      <groupId>org.opendaylight.ovsdb</groupId>
-      <artifactId>features-openflow-nxm</artifactId>
-      <version>${openflowplugin.distribution.version}</version>
-      <classifier>features</classifier>
-      <type>xml</type>
-    </dependency>
--->
-      <!-- Add Pax Exam -->
+
+    <!-- Add Pax Exam -->
     <dependency>
       <groupId>org.ops4j.pax.exam</groupId>
       <artifactId>pax-exam</artifactId>
-      <version>${exam.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.ops4j.pax.exam</groupId>
       <artifactId>pax-exam-container-karaf</artifactId>
-      <version>${exam.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
+
   <build>
     <resources>
       <resource>
@@ -174,8 +165,8 @@
             <goals>
               <goal>resources</goal>
             </goals>
-            </execution>
-          </executions>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -202,7 +193,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>${surefire.version}</version>
         <configuration>
           <systemPropertyVariables>
             <karaf.distro.groupId>org.opendaylight.controller</karaf.distro.groupId>

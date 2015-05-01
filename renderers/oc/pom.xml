@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<!-- Copyright (c) 2015 Cisco Systems, Inc. and others. All rights reserved. 
+  This program and the accompanying materials are made available under the 
+  terms of the Eclipse Public License v1.0 which accompanies this distribution, 
+  and is available at http://www.eclipse.org/legal/epl-v10.html -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
   <parent>
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>groupbasedpolicy-renderers</artifactId>
@@ -14,7 +20,7 @@
     <repository>
       <id>juniper-contrail</id>
       <url>https://github.com/Juniper/contrail-maven/raw/master/releases</url>
-     </repository>
+    </repository>
   </repositories>
 
   <properties>
@@ -33,7 +39,7 @@
       <version>4.3.2</version>
     </dependency>
     <dependency>
-     <groupId>org.apache.httpcomponents</groupId>
+      <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
       <version>4.3.2</version>
     </dependency>
@@ -61,79 +67,20 @@
         <configuration>
           <instructions>
             <Import-Package>
-             org.apache.http.*;version="4.3.2",
-	     *;resolution:=optional
+              org.apache.http.*;version="4.3.2",
+              *;resolution:=optional
             </Import-Package>
             <Embed-Dependency>httpclient,httpcore,commons-lang,commons-exec;type=!pom;inline=false</Embed-Dependency>
             <Export-Package>
-	      net.juniper.contrail.api.*;version="1.2"
-	    </Export-Package>
+              net.juniper.contrail.api.*;version="1.2"
+            </Export-Package>
           </instructions>
           <manifestLocation>${project.basedir}/META-INF</manifestLocation>
         </configuration>
       </plugin>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>add-source</goal>
-            </goals>
-            <phase>generate-sources</phase>
-            <configuration>
-              <sources>
-                <source>target/generated-sources/sal</source>
-                <source>target/generated-sources/config</source>
-                <source>target/generated-resources/</source>
-              </sources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <groupId>org.opendaylight.yangtools</groupId>
         <artifactId>yang-maven-plugin</artifactId>
-        <dependencies>
-          <dependency>
-            <groupId>org.opendaylight.controller</groupId>
-            <artifactId>yang-jmx-generator-plugin</artifactId>
-            <version>0.3.0-SNAPSHOT</version>
-          </dependency>
-          <dependency>
-            <groupId>org.opendaylight.yangtools</groupId>
-            <artifactId>maven-sal-api-gen-plugin</artifactId>
-            <version>${yangtools.version}</version>
-            <type>jar</type>
-          </dependency>
-        </dependencies>
-        <executions>
-          <execution>
-            <goals>
-              <goal>generate-sources</goal>
-            </goals>
-            <configuration>
-              <codeGenerators>
-                <generator>
-                  <codeGeneratorClass>org.opendaylight.controller.config.yangjmxgenerator.plugin.JMXGenerator</codeGeneratorClass>
-                  <outputBaseDir>${project.build.directory}/generated-sources/config</outputBaseDir>
-                  <additionalConfiguration>
-                    <namespaceToPackage1>urn:opendaylight:params:xml:ns:yang:controller==org.opendaylight.controller.config.yang</namespaceToPackage1>
-                  </additionalConfiguration>
-                </generator>
-                <generator>
-                  <codeGeneratorClass>org.opendaylight.yangtools.maven.sal.api.gen.plugin.CodeGeneratorImpl</codeGeneratorClass>
-                  <outputBaseDir>${project.build.directory}/generated-sources/sal</outputBaseDir>
-                </generator>
-                <generator>
-                  <codeGeneratorClass>org.opendaylight.yangtools.yang.unified.doc.generator.maven.DocumentationGeneratorImpl</codeGeneratorClass>
-                  <outputBaseDir>${project.build.directory}/site/models</outputBaseDir>
-                </generator>
-              </codeGenerators>
-              <inspectDependencies>true</inspectDependencies>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -141,31 +88,6 @@
         <configuration>
           <redirectTestOutputToFile>true</redirectTestOutputToFile>
         </configuration>
-      </plugin>
-      <plugin>
-	<groupId>org.jacoco</groupId>
-	<artifactId>jacoco-maven-plugin</artifactId>
-	<executions>
-          <execution>
-            <id>pre-unit-test</id>
-            <goals>
-              <goal>prepare-agent</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>post-unit-test</id>
-            <phase>test</phase>
-            <goals>
-              <goal>report</goal>
-            </goals>
-            <configuration>
-              <dataFile>${sonar.jacoco.reportPath}</dataFile>
-	      <includes>
-		<include>org/opendaylight/groupbasedpolicy/**/*.class</include>
-	      </includes>
-            </configuration>
-          </execution>
-	</executions>
       </plugin>
     </plugins>
   </build>
