@@ -73,16 +73,6 @@
       <artifactId>yang-common</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.opendaylight.sfc</groupId>
-      <artifactId>sfc-model</artifactId>
-      <version>${sfc.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.sfc</groupId>
-      <artifactId>sfc-provider</artifactId>
-      <version>${sfc.version}</version>
-    </dependency>
-    <dependency>
       <groupId>org.osgi</groupId>
       <artifactId>org.osgi.core</artifactId>
     </dependency>
