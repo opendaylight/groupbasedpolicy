@@ -32,6 +32,7 @@
             </Import-Package>
             <Embed-Dependency>httpclient,httpcore,commons-lang,commons-exec;type=!pom;inline=false</Embed-Dependency>
             <Export-Package>
+	      org.opendaylight.groupbasedpolicy.renderers.opflex.jsonrpc,
 	    </Export-Package>
           </instructions>
           <manifestLocation>${project.basedir}/META-INF</manifestLocation>

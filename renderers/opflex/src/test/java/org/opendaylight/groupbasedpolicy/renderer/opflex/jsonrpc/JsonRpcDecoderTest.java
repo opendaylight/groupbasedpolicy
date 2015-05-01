@@ -8,7 +8,7 @@
  *  Authors : Dave Tucker
  */
 
-package org.opendaylight.groupbasedpolicy.jsonrpc;
+package org.opendaylight.groupbasedpolicy.renderer.opflex.jsonrpc;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
 
@@ -26,7 +26,7 @@ import java.net.URL;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcDecoder;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.jsonrpc.JsonRpcDecoder;
 
 public class JsonRpcDecoderTest {
     static int testJson_BYTES = 179;

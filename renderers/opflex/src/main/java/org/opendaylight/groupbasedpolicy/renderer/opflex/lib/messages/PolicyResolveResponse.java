@@ -11,7 +11,7 @@ package org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages;
 
 import java.util.List;
 
-import org.opendaylight.groupbasedpolicy.jsonrpc.RpcMessage;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.jsonrpc.RpcMessage;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;

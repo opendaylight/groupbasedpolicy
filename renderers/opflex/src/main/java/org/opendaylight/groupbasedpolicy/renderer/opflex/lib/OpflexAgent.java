@@ -11,7 +11,7 @@ package org.opendaylight.groupbasedpolicy.renderer.opflex.lib;
 
 import java.util.List;
 
-import org.opendaylight.groupbasedpolicy.jsonrpc.JsonRpcEndpoint;
+import org.opendaylight.groupbasedpolicy.renderer.opflex.jsonrpc.JsonRpcEndpoint;
 
 /**
  * Represents a participant in an OpFlex domain. It
