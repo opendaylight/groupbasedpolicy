@@ -50,8 +50,7 @@ public abstract class Classifier {
     public abstract ClassifierDefinition getClassDef();
 
     /**
-     * @return parent classifier
-     * @see {@link ClassifierDefinition}
+     * @return parent classifier, see {@link Classifier}
      */
     public final Classifier getParent() {
         return parent;
@@ -63,8 +62,7 @@ public abstract class Classifier {
      * @param matches list of builders containing {@code matches} to update
      * @param params parameters of classifier-instance inserted by user
      * @return result, which indicates if all the matching fields were updated successfully and
-     *         contain updated {@code matches}
-     * @see {@link ClassificationResult}
+     *         contain updated {@code matches}, see {@link ClassificationResult}
      */
     public final ClassificationResult updateMatch(List<MatchBuilder> matches, Map<String, ParameterValue> params) {
         if (params == null) {
@@ -103,13 +101,11 @@ public abstract class Classifier {
         return new ClassificationResult(matchBuilders);
     }
 
-/**
+    /**
      * Checks presence of required {@code params} in order to decide if classifier can update {@code matches} properly
-     * in  method {@link #update(List, Map)
+     * in  method {@link #update(List, Map)}
      * @param  params  inserted parameters, not null
-     * @return  true, if required parameters are present
-     * @throws  IllegalArgumentException when any of required {@code params} is not present
-     * @see  {@link #updateMatch(List, Map)}
+     * @throws  IllegalArgumentException when any of required {@code params} is not present, see {@link #updateMatch(List, Map)}
      */
     protected abstract void checkPresenceOfRequiredParams(Map<String, ParameterValue> params);
 

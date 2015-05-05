@@ -85,8 +85,6 @@ public class EndpointRpcRegistry implements EndpointService {
      *            - the dataProvider
      * @param rpcRegistry
      *            - the rpcRegistry
-     * @param executor
-     *            - thread pool executor
      * @param epRendererAugmentation
      *            - specific implementation RPC augmentation, if any. Otherwise
      *            NULL

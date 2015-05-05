@@ -20,7 +20,7 @@ public interface PolicyListener {
     /**
      * Indicates that the policy related to the set of endpoint groups
      * has changed
-     * @param updatedConsumers the set of endpoint groups involved
+     * @param updatedGroups the set of endpoint groups involved
      * in a contract whose policy has changed
      */
     public void policyUpdated(Set<EgKey> updatedGroups);

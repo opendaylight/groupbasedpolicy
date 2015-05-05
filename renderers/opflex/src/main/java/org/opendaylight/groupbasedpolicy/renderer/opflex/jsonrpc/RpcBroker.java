@@ -33,7 +33,7 @@ public interface RpcBroker {
          * request message is received
          *
          * @param endpoint The endpoint that received the messgae
-         * @param message The concrete {@RpcMessage} received
+         * @param message The concrete {@link RpcMessage} received
          */
         public void callback(JsonRpcEndpoint endpoint, RpcMessage message);
 
@@ -41,7 +41,7 @@ public interface RpcBroker {
 
     /**
      *
-     * Subscribe to a concrete {@RpcMessage}
+     * Subscribe to a concrete {@link RpcMessage}
      *
      * @param message The concrete {@link RpcMessage} message to subscribe to
      * @param callback The callback to invoke when the message is published
@@ -54,7 +54,7 @@ public interface RpcBroker {
      * is received
      *
      * @param endpoint The endpoint that received this message
-     * @param message the concrete {@RpcMessage}
+     * @param message the concrete {@link RpcMessage}
      */
     public void publish(JsonRpcEndpoint endpoint, RpcMessage message);
 

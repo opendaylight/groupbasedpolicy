@@ -244,8 +244,8 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
     /**
      * Get a collection of endpoints in a particular endpoint group
      *
-     * @param nodeId
-     *            the nodeId of the switch to get endpoints for
+     * @param eg
+     *            endpoint group ID
      * @return a collection of {@link Endpoint} objects.
      */
     public synchronized Collection<Endpoint> getEndpointsForGroup(EgKey eg) {

@@ -164,7 +164,7 @@ public final class FlowUtils {
      *
      * @param nodeId the ID of the node
      * @param tableId the ID of the table
-     * @return the {@link InstanceIdentifier<Table>}
+     * @return the {@link InstanceIdentifier}
      */
     public static final InstanceIdentifier<Table> createTablePath(final NodeId nodeId, final short tableId) {
         return createNodePath(nodeId).builder()
@@ -178,7 +178,7 @@ public final class FlowUtils {
      *
      * @param nodeId the Id of the node
      * @param groupId the ID of the group table
-     * @return the {@link InstanceIdentifier<Group>}
+     * @return the {@link InstanceIdentifier}
      */
     public static final InstanceIdentifier<Group> createGroupPath(final NodeId nodeId, final GroupId groupId) {
         return createNodePath(nodeId).builder()
@@ -193,7 +193,7 @@ public final class FlowUtils {
      * @param nodeId the Id of the node
      * @param groupId the ID of the group table
      * @param bucketId the ID of the bucket in the group table
-     * @return the {@link InstanceIdentifier<Bucket>}
+     * @return the {@link InstanceIdentifier}
      */
     public static final InstanceIdentifier<Bucket> createBucketPath(final NodeId nodeId, final GroupId groupId,
             final BucketId bucketId) {

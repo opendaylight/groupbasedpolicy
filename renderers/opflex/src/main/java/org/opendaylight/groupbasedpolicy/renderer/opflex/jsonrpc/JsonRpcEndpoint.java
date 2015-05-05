@@ -103,7 +103,7 @@ public class JsonRpcEndpoint implements ChannelFutureListener {
      * Send a concrete {@link RpcMessage} to the RPC endpoint.
      *
      * @param message The concrete {@link RpcMessage} to send
-     * @return SettableFuture<Object> The caller can use the returned
+     * @return SettableFuture&lt;Object&gt; The caller can use the returned
      * object to wait for the response (currently no timeout)
      * @throws Throwable The concrete message couldn't be serialized and sent
      */

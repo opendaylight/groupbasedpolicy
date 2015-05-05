@@ -148,8 +148,6 @@ public class OpenstackGbpEndpoint implements AutoCloseable,
      *
      * @param input
      *            the input object
-     * @param timestamp
-     *            the current timestamp
      */
     protected EndpointBuilder buildEndpoint(RegisterEndpointInput input) {
         return new EndpointBuilder(input);
@@ -161,8 +159,6 @@ public class OpenstackGbpEndpoint implements AutoCloseable,
      *
      * @param input
      *            the input object
-     * @param timestamp
-     *            the current timestamp
      */
     protected EndpointL3Builder buildEndpointL3(RegisterEndpointInput input) {
         return new EndpointL3Builder(input);

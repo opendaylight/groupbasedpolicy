@@ -13,8 +13,8 @@ package org.opendaylight.groupbasedpolicy.renderer.opflex.jsonrpc;
 /**
  * An interface to provide notifications when connections are
  * established or closed. The connection notifications
- * use{@link RpcEncpoint} objects; as connections come and go,
- * the {@link RpcEndpoint} objects associated with the connections
+ * use {@link JsonRpcEndpoint} objects; as connections come and go,
+ * the {@link JsonRpcEndpoint} objects associated with the connections
  * can be long-lived
  *
  * @author tbachman

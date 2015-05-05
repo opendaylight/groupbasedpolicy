@@ -40,7 +40,6 @@ public abstract class OfTable {
     /**
      * Update the relevant flow table for the node
      * @param nodeId the node to update
-     * @param dirty the dirty set
      * @param policyInfo
      * @param flowMap
      * @throws Exception

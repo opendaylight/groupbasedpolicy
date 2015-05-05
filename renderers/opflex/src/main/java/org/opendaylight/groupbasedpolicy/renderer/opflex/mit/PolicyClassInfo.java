@@ -18,7 +18,7 @@ import org.opendaylight.groupbasedpolicy.renderer.opflex.mit.PolicyPropertyInfo.
 /**
  * Class that provides Managed Object metadata. The {@link PolicyClassInfo} object contains metadata
  * about
- * the Managed Object, while the {@link PropertyInfo} list
+ * the Managed Object, while the {@link PolicyPropertyInfo} list
  * contained by this object provides the metadata about the
  * Managed Object properties.
  * This data must be kept consistent with the agents.

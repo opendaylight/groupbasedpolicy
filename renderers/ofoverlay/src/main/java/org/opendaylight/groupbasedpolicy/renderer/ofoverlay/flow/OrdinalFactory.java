@@ -79,10 +79,8 @@ public class OrdinalFactory {
      * Get a 32-bit context ordinal suitable for use in the OF data plane for
      * the given policy item.
      *
-     * @param tenantId
-     *        the tenant ID of the element
-     * @param id
-     *        the unique ID for the element
+     * @param destNode
+     *        destination node ID
      * @return the 32-bit ordinal value
      * @throws Exception
      */

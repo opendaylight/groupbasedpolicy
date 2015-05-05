@@ -104,8 +104,8 @@ public class TenantUtils {
 
     /**
      * Find a clause with a specified name within a contract
-     * @param tenant the {@link Contract} to search
-     * @param contractId the {@link ClauseName} to search for
+     * @param contract the {@link Contract} to search
+     * @param clauseName the {@link ClauseName} to search for
      * @return the {@link Clause} if it exists, null otherwise
      */
     public static Clause findClause(Contract contract, 
@@ -122,7 +122,7 @@ public class TenantUtils {
 
     /**
      * Find a subject with a specified name within a contract
-     * @param tenant the {@link Contract} to search
+     * @param contract the {@link Contract} to search
      * @param subjectName the {@link SubjectName} to search for
      * @return the {@link Subject} if it exists, null otherwise
      */
@@ -177,7 +177,7 @@ public class TenantUtils {
     /**
      * Find a consumer named selector in an endpoint group
      * @param eg the {@link EndpointGroup} to search
-     * @param name the {@link NamedSelectorName} to search for
+     * @param name the {@link SelectorName} to search for
      * @return the {@link ConsumerNamedSelector} if it exists, null otherwise
      */
     public static ConsumerNamedSelector findCns(EndpointGroup eg,
@@ -211,7 +211,7 @@ public class TenantUtils {
     /**
      * Find a provider named selector in an endpoint group
      * @param eg the {@link EndpointGroup} to search
-     * @param name the {@link NamedSelectorName} to search for
+     * @param name the {@link SelectorName} to search for
      * @return the {@link ProviderNamedSelector} if it exists, null otherwise
      */
     public static ProviderNamedSelector findPns(EndpointGroup eg,
@@ -228,7 +228,7 @@ public class TenantUtils {
     /**
      * Find a provider target selector in an endpoint group
      * @param eg the {@link EndpointGroup} to search
-     * @param name the {@link TargetSelectorName} to search for
+     * @param name the {@link SelectorName} to search for
      * @return the {@link ProviderNamedSelector} if it exists, null otherwise
      */
     public static ProviderTargetSelector findPts(EndpointGroup eg,

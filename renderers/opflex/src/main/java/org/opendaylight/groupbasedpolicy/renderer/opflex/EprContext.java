@@ -89,7 +89,7 @@ public class EprContext implements Runnable, EprOperation.EprOpCallback {
 
     /**
      * Create an Endpoint in the Endopint Registry. This can only be called in
-     * response to an {@link EndpointDeclareRequest} message
+     * response to an {@link org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages.EndpointDeclareRequest} message
      */
     public void createEp() {
 
@@ -108,7 +108,7 @@ public class EprContext implements Runnable, EprOperation.EprOpCallback {
 
     /**
      * Delete an Endpoint in the Endpoint Registry. This can only be called in
-     * response to an {@link EndpointUndeclareRequest} message
+     * response to an {@link org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages.EndpointUndeclareRequest} message
      */
     public void deleteEp() {
 
@@ -126,7 +126,7 @@ public class EprContext implements Runnable, EprOperation.EprOpCallback {
 
     /**
      * Look up an endpoint in the Endpoint Registry. This can only be called in
-     * response to an {@link EndpointResolveRequest} message. It initiates all
+     * response to an {@link org.opendaylight.groupbasedpolicy.renderer.opflex.lib.messages.EndpointResolveRequest} message. It initiates all
      * of the reads, one by one, and invokes the callback when all of them have
      * completed.
      */

@@ -76,7 +76,7 @@ public class MatcherUtils {
      *
      * @param matcher
      *            the {@link RequirementMatcher} to apply
-     * @param target
+     * @param relator
      *            the {@link ConsumerSelectionRelator} to match against
      * @return <code>true</code> if the matcher matches the target
      */
@@ -102,7 +102,7 @@ public class MatcherUtils {
      *
      * @param matcher
      *            the {@link RequirementMatcher} to apply
-     * @param target
+     * @param relator
      *            the {@link ProviderSelectionRelator} to match against
      * @return <code>true</code> if the matcher matches the target
      */
