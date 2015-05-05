@@ -8,20 +8,15 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletionService;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
+import com.google.common.base.Equivalence;
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
@@ -29,6 +24,7 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.equivalence.EquivalenceFabric;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.DestinationMapper;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.GroupTable;
@@ -37,8 +33,8 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PortSecurity;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.SourceMapper;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchListener;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Action;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Action;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
@@ -57,13 +53,19 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.CheckedFuture;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Manage policies on switches by subscribing to updates from the
@@ -94,8 +96,6 @@ public class PolicyManager
      * event in milliseconds.
      */
     private final static int FLOW_UPDATE_DELAY = 250;
-
-
 
     public PolicyManager(DataBroker dataBroker,
                          PolicyResolver policyResolver,
@@ -226,9 +226,16 @@ public class PolicyManager
             return this.flowMap.get(tableIid);
         }
 
-        public void writeFlow(NodeId nodeId,short tableId, Flow flow) {
+        public void writeFlow(NodeId nodeId, short tableId, Flow flow) {
             TableBuilder tableBuilder = this.getTableForNode(nodeId, tableId);
-            if (!tableBuilder.getFlow().contains(flow)) {
+            // transforming List<Flow> to Set (with customized equals/hashCode) to eliminate duplicate entries
+            List<Flow> flows = tableBuilder.getFlow();
+            Set<Equivalence.Wrapper<Flow>> wrappedFlows =
+                    new HashSet<>(Collections2.transform(flows, EquivalenceFabric.FLOW_WRAPPER_FUNCTION));
+
+            Equivalence.Wrapper<Flow> wFlow = EquivalenceFabric.FLOW_EQUIVALENCE.wrap(flow);
+
+            if (!wrappedFlows.contains(wFlow)) {
                 tableBuilder.getFlow().add(Preconditions.checkNotNull(flow));
             }
         }
@@ -251,29 +258,49 @@ public class PolicyManager
 
         private void updateFlowTable(Entry<InstanceIdentifier<Table>,
                                      TableBuilder> entry)  throws Exception {
-            Set<Flow> update = new HashSet<Flow>(entry.getValue().getFlow());
-            Set<Flow> curr = new HashSet<Flow>();
+            // flows to update
+            Set<Flow> update = new HashSet<>(entry.getValue().getFlow());
+            // flows currently in the table
+            Set<Flow> curr = new HashSet<>();
 
             ReadWriteTransaction t = dataBroker.newReadWriteTransaction();
             Optional<Table> r =
                    t.read(LogicalDatastoreType.CONFIGURATION, entry.getKey()).get();
 
             if (r.isPresent()) {
-                Table curTable = r.get();
-                curr = new HashSet<Flow>(curTable.getFlow());
+                Table currentTable = r.get();
+                curr = new HashSet<>(currentTable.getFlow());
             }
-            Sets.SetView<Flow> deletions = Sets.difference(curr, update);
-            Sets.SetView<Flow> additions = Sets.difference(update, curr);
+
+            // Sets with custom equivalence rules
+            Set<Equivalence.Wrapper<Flow>> oldFlows =
+                    new HashSet<>(Collections2.transform(curr, EquivalenceFabric.FLOW_WRAPPER_FUNCTION));
+            Set<Equivalence.Wrapper<Flow>> updatedFlows =
+                    new HashSet<>(Collections2.transform(update, EquivalenceFabric.FLOW_WRAPPER_FUNCTION));
+
+            // what is still there but was not updated, needs to be deleted
+            Sets.SetView<Equivalence.Wrapper<Flow>> deletions =
+                    Sets.difference(oldFlows, updatedFlows);
+            // new flows (they were not there before)
+            Sets.SetView<Equivalence.Wrapper<Flow>> additions =
+                    Sets.difference(updatedFlows, oldFlows);
+
             if (!deletions.isEmpty()) {
-                for (Flow f: deletions) {
-                    t.delete(LogicalDatastoreType.CONFIGURATION,
-                             FlowUtils.createFlowPath(entry.getKey(), f.getId()));
+                for (Equivalence.Wrapper<Flow> wf: deletions) {
+                    Flow f = wf.get();
+                    if (f != null) {
+                        t.delete(LogicalDatastoreType.CONFIGURATION,
+                                FlowUtils.createFlowPath(entry.getKey(), f.getId()));
+                    }
                 }
             }
             if (!additions.isEmpty()) {
-                for (Flow f: additions) {
-                    t.put(LogicalDatastoreType.CONFIGURATION,
-                          FlowUtils.createFlowPath(entry.getKey(), f.getId()), f, true);
+                for (Equivalence.Wrapper<Flow> wf: additions) {
+                    Flow f = wf.get();
+                    if (f != null) {
+                        t.put(LogicalDatastoreType.CONFIGURATION,
+                                FlowUtils.createFlowPath(entry.getKey(), f.getId()), f, true);
+                    }
                 }
             }
             CheckedFuture<Void, TransactionCommitFailedException> f = t.submit();
@@ -314,7 +341,7 @@ public class PolicyManager
             });
         }
 
-     }
+    }
 
     private void scheduleUpdate() {
         if (switchManager != null) {
@@ -363,7 +390,7 @@ public class PolicyManager
             LOG.debug("Beginning flow update task");
 
             CompletionService<Void> ecs
-                = new ExecutorCompletionService<Void>(executor);
+                = new ExecutorCompletionService<>(executor);
             int n = 0;
 
             FlowMap flowMap = new FlowMap();
