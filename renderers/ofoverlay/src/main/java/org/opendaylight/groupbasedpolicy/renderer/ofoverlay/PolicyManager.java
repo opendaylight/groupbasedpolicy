@@ -36,6 +36,8 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OfTable;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PortSecurity;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.SourceMapper;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchListener;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
@@ -142,32 +144,7 @@ public class PolicyManager
 
     @Override
     public void switchReady(final NodeId nodeId) {
-        //TODO Apr15 alagalah : OVSDB CRUD tunnels may go here.
-//        WriteTransaction t = dataBroker.newWriteOnlyTransaction();
-//
-//        NodeBuilder nb = new NodeBuilder()
-//            .setId(nodeId)
-//            .addAugmentation(FlowCapableNode.class,
-//                             new FlowCapableNodeBuilder()
-//                                .build());
-//        t.merge(LogicalDatastoreType.CONFIGURATION,
-//                FlowUtils.createNodePath(nodeId),
-//                nb.build(), true);
-//        ListenableFuture<Void> result = t.submit();
-//        Futures.addCallback(result,
-//                            new FutureCallback<Void>() {
-//            @Override
-//            public void onSuccess(Void result) {
-//                dirty.get().addNode(nodeId);
-//                scheduleUpdate();
-//            }
-//
-//            @Override
-//            public void onFailure(Throwable t) {
-//                LOG.error("Could not add switch {}", nodeId, t);
-//            }
-//        });
-
+        scheduleUpdate();
     }
 
     @Override
@@ -276,7 +253,7 @@ public class PolicyManager
                    t.read(LogicalDatastoreType.CONFIGURATION, entry.getKey()).get();
 
             if (r.isPresent()) {
-                Table curTable = (Table)r.get();
+                Table curTable = r.get();
                 curr = new HashSet<Flow>(curTable.getFlow());
             }
             Sets.SetView<Flow> deletions = Sets.difference(curr, update);
@@ -354,8 +331,6 @@ public class PolicyManager
         @Override
         public Void call() throws Exception {
             for (NodeId node : switchManager.getReadySwitches()) {
-                if (!switchManager.isSwitchReady(node))
-                    return null;
                 PolicyInfo info = policyResolver.getCurrentPolicy();
                 if (info == null)
                     return null;

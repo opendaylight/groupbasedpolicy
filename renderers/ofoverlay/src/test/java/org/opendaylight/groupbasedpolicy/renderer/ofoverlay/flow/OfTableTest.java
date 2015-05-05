@@ -14,8 +14,8 @@ import java.util.Map;
 
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockEndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockPolicyManager;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockSwitchManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.MockSwitchManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.AllowAction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Classifier;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.L4Classifier;
