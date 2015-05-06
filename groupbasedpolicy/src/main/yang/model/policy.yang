@@ -237,6 +237,24 @@ module policy {
         }
     }
 
+    grouping has-endpoint-identification-constraints {
+        container endpoint-identification-constraints {
+            description
+                "Identify endpoints via other attributes other than conditions.
+                These can be things such as ip-prefix, vlan, mpls label etc. These
+                things are intended to be explicity stated, and should not contain
+                references to other objects like endpointsIDs.";
+            container l3-endpoint-identification-constraints {
+                list prefix-constraint {
+                    key ip-prefix;
+                    leaf ip-prefix {
+                        type inet:ip-prefix;
+                    }
+                }
+            }
+        }
+    }
+
     // ************************
     // Network domains grouping
     // ************************
@@ -1280,21 +1298,7 @@ module policy {
 
                         uses has-condition-matchers;
 
-                        container endpoint-identification-constraints {
-                            description
-                                "Identify endpoints via other attributes other than conditions.
-                                These can be things such as ip-prefix, vlan, mpls label etc. These
-                                things are intended to be explicity stated, and should not contain
-                                references to other objects like endpointsIDs.";
-                            container l3-endpoint-identification-constraints {
-                                list prefix-constraint {
-                                    key ip-prefix;
-                                    leaf ip-prefix {
-                                        type inet:ip-prefix;
-                                    }
-                                }
-                            }
-                        }
+                        uses has-endpoint-identification-constraints;
                     }
 
                     container provider-matchers {
@@ -1371,21 +1375,7 @@ module policy {
 
                         uses has-condition-matchers;
 
-                        container endpoint-identification-constraints {
-                            description
-                                "Identify endpoints via other attributes other than conditions.
-                                These can be things such as ip-prefix, vlan, mpls label etc. These
-                                things are intended to be explicity stated, and should not contain
-                                references to other objects like endpointsIDs.";
-                            container l3-endpoint-identification-constraints {
-                                list prefix-constraint {
-                                    key ip-prefix;
-                                    leaf ip-prefix {
-                                        type inet:ip-prefix;
-                                    }
-                                }
-                            }
-                        }
+                        uses has-endpoint-identification-constraints;
                     }
 
                     container any-matchers {
