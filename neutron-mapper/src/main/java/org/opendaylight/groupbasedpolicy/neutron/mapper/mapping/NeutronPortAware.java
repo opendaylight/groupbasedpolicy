@@ -29,8 +29,6 @@ import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.neutron.spi.INeutronPortAware;
 import org.opendaylight.neutron.spi.NeutronPort;
-import org.opendaylight.neutron.spi.NeutronRouter;
-import org.opendaylight.neutron.spi.NeutronRouter_Interface;
 import org.opendaylight.neutron.spi.NeutronSecurityGroup;
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.neutron.spi.Neutron_IPs;
@@ -106,23 +104,12 @@ public class NeutronPortAware implements INeutronPortAware {
     public void neutronPortCreated(NeutronPort port) {
         LOG.trace("neutronPortCreated - {}", port);
         if (isRouterInterfacePort(port)) {
-            LOG.trace("Port is router interface.");
-            /*
-             * TODO: Li alagalah: Should only create router if NB API receives NeutronRouterAware:neutonRouterCreated() message.
-             * i.e. The deviceID (L3Context) should already exist in datastore, and should have been created by the RouterCreated.
-             */
-            NeutronRouter neutronRouter = createRouter(port);
-            NeutronRouter_Interface routerIface = createRouterInterface(port);
-            int canAttachInterface = NeutronRouterAware.getInstance().canAttachInterface(neutronRouter, routerIface);
-            if (canAttachInterface == StatusCode.OK) {
-                NeutronRouterAware.getInstance().neutronRouterInterfaceAttached(neutronRouter, routerIface);
-            }
+            LOG.trace("Port is router interface - {} does nothing. {} handles router iface.",
+                    NeutronPortAware.class.getSimpleName(), NeutronRouterAware.class.getSimpleName());
             return;
         }
-
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         TenantId tenantId = new TenantId(Utils.normalizeUuid(port.getTenantID()));
-
         if (isDhcpPort(port)) {
             LOG.trace("Port is DHCP port.");
             List<NeutronSecurityRule> dhcpSecRules = createDhcpSecRules(port, null, rwTx);
@@ -182,24 +169,6 @@ public class NeutronPortAware implements INeutronPortAware {
         }
 
         DataStoreHelper.submitToDs(rwTx);
-    }
-
-    private static NeutronRouter createRouter(NeutronPort port) {
-        NeutronRouter neutronRouter = new NeutronRouter();
-        neutronRouter.setRouterUUID(port.getDeviceID());
-        neutronRouter.setTenantID(port.getTenantID());
-        neutronRouter.setName("Router_port__" + Strings.nullToEmpty(port.getName()));
-        return neutronRouter;
-    }
-
-    private static NeutronRouter_Interface createRouterInterface(NeutronPort port) {
-        Neutron_IPs firstIp = MappingUtils.getFirstIp(port.getFixedIPs());
-        if (firstIp == null) {
-            throw new IllegalStateException("Illegal state - Port " + port.getID() + " representing router interface does not have an IP.");
-        }
-        NeutronRouter_Interface routerIface = new NeutronRouter_Interface(firstIp.getSubnetUUID(), port.getID());
-        routerIface.setTenantID(port.getTenantID());
-        return routerIface;
     }
 
     public static boolean addNeutronPort(NeutronPort port, ReadWriteTransaction rwTx, EndpointService epService) {
@@ -316,7 +285,8 @@ public class NeutronPortAware implements INeutronPortAware {
     public void neutronPortUpdated(NeutronPort port) {
         LOG.trace("neutronPortUpdated - {}", port);
         if (isRouterInterfacePort(port)) {
-            LOG.trace("Port is router interface - do nothing - NeutronRouterAware handles router iface");
+            LOG.trace("Port is router interface - {} does nothing. {} handles router iface.",
+                    NeutronPortAware.class.getSimpleName(), NeutronRouterAware.class.getSimpleName());
             return;
         }
         ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
@@ -424,7 +394,8 @@ public class NeutronPortAware implements INeutronPortAware {
     public void neutronPortDeleted(NeutronPort port) {
         LOG.trace("neutronPortDeleted - {}", port);
         if (isRouterInterfacePort(port)) {
-            LOG.trace("Port is router interface - do nothing - NeutronRouterAware handles router iface");
+            LOG.trace("Port is router interface - {} does nothing. {} handles router iface.",
+                    NeutronPortAware.class.getSimpleName(), NeutronRouterAware.class.getSimpleName());
             return;
         }
         ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
@@ -455,15 +426,13 @@ public class NeutronPortAware implements INeutronPortAware {
         // each EP has to be in EPG ANY, except dhcp and router
         if (isDhcpPort(port)) {
             epgIds.add(MappingUtils.EPG_DHCP_ID);
-        } else if (isRouterInterfacePort(port)) {
-            epgIds.add(MappingUtils.EPG_ROUTER_ID);
         } else if (!containsSecRuleWithRemoteSecGroup(port.getSecurityGroups())) {
             epgIds.add(MappingUtils.EPG_ANY_ID);
         }
 
         List<NeutronSecurityGroup> securityGroups = port.getSecurityGroups();
         if ((securityGroups == null || securityGroups.isEmpty())) {
-            if (!isDhcpPort(port) && !isRouterInterfacePort(port)) {
+            if (!isDhcpPort(port)) {
                 LOG.warn(
                         "Port {} does not contain any security group. The port should belong to 'default' security group at least.",
                         port.getPortUUID());
