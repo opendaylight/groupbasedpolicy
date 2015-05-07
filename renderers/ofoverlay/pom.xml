@@ -41,16 +41,6 @@
       <artifactId>mockito-all</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.opendaylight.ovsdb</groupId>
-      <artifactId>southbound-api</artifactId>
-      <version>${ovsdb.southbound.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.ovsdb</groupId>
-      <artifactId>southbound-impl</artifactId>
-      <version>${ovsdb.southbound.version}</version>
-    </dependency>
   </dependencies>
 
   <!-- project build -->

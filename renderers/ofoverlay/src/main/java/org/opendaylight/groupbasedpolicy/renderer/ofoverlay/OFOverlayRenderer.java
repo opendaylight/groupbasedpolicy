@@ -18,7 +18,6 @@ import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.ovsdb.OfOverlayOvsdbBridgeDataChangeListener;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
@@ -45,7 +44,6 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     private final SwitchManager switchManager;
     private final EndpointManager endpointManager;
     private final PolicyManager policyManager;
-    private final OfOverlayOvsdbBridgeDataChangeListener ovsdbListener;
 
     private final ScheduledExecutorService executor;
 
@@ -58,7 +56,6 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     public OFOverlayRenderer(DataBroker dataProvider,
                              RpcProviderRegistry rpcRegistry) {
         super();
-        ovsdbListener = new OfOverlayOvsdbBridgeDataChangeListener(dataProvider);
         this.dataBroker = dataProvider;
 
         int numCPU = Runtime.getRuntime().availableProcessors();
@@ -98,7 +95,6 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
         if (policyResolver != null) policyResolver.close();
         if (switchManager != null) switchManager.close();
         if (endpointManager != null) endpointManager.close();
-        if (ovsdbListener != null) ovsdbListener.close();
     }
 
     // ******************
