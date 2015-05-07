@@ -129,18 +129,22 @@ public class PolicyEnforcer extends FlowTable {
                         conds = ctx.getEndpointManager().getCondsForEndpoint(dstEp);
                         ConditionGroup dcg = policyInfo.getEgCondGroup(dstEpgKey, conds);
 
+                        Policy policy = policyInfo.getPolicy(dstEpgKey, srcEpgKey);
+                        List<RuleGroup> rgs = policy.getRules(dcg, scg);
                         CgPair p = new CgPair(depgId, sepgId, dcgId, scgId);
                         if (visitedPairs.contains(p))
                             continue;
                         visitedPairs.add(p);
-                        syncPolicy(flowMap, nodeId, policyInfo, p, dstEpgKey, srcEpgKey, dcg, scg);
+                        syncPolicy(flowMap, nodeId, rgs, p);
 
                         // Reverse
+                        policy = policyInfo.getPolicy(srcEpgKey, dstEpgKey);
+                        rgs = policy.getRules(scg, dcg);
                         p = new CgPair(sepgId, depgId, scgId, dcgId);
                         if (visitedPairs.contains(p))
                             continue;
                         visitedPairs.add(p);
-                        syncPolicy(flowMap, nodeId, policyInfo, p, srcEpgKey, dstEpgKey, scg, dcg);
+                        syncPolicy(flowMap, nodeId, rgs, p);
                     }
                 }
             }
@@ -232,13 +236,7 @@ public class PolicyEnforcer extends FlowTable {
 
     }
 
-    private void syncPolicy(FlowMap flowMap, NodeId nodeId, PolicyInfo policyInfo, CgPair p, EgKey sepg, EgKey depg,
-            ConditionGroup scg, ConditionGroup dcg) throws Exception {
-        // XXX - TODO raise an exception for rules between the same
-        // endpoint group that are asymmetric
-        Policy policy = policyInfo.getPolicy(sepg, depg);
-        List<RuleGroup> rgs = policy.getRules(scg, dcg);
-
+    private void syncPolicy(FlowMap flowMap, NodeId nodeId, List<RuleGroup> rgs, CgPair p) {
         int priority = 65000;
         for (RuleGroup rg : rgs) {
             TenantId tenantId = rg.getContractTenant().getId();

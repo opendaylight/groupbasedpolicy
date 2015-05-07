@@ -21,12 +21,12 @@ import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
 
 /**
- * Represent a group of rules that could apply to a given pair of endpoints.  
- * Includes references back to the normalized policy that resulted in the rule 
+ * Represent a group of rules that could apply to a given pair of endpoints.
+ * Includes references back to the normalized policy that resulted in the rule
  * group.
  * @author readams
  */
-@Immutable 
+@Immutable
 public class RuleGroup implements Comparable<RuleGroup> {
     final List<Rule> rules;
     final Integer order;
@@ -38,13 +38,16 @@ public class RuleGroup implements Comparable<RuleGroup> {
                      Tenant contractTenant, Contract contract,
                      SubjectName subject) {
         super();
-        this.rules = rules;
+        this.rules = Ordering.from(TenantUtils.RULE_COMPARATOR).immutableSortedCopy(rules);
         this.order = order;
         this.contractTenant = contractTenant;
         this.relatedContract = contract;
         this.relatedSubject = subject;
     }
 
+    /**
+     * @return sorted {@link Rule} list
+     */
     public List<Rule> getRules() {
         return rules;
     }
@@ -106,7 +109,7 @@ public class RuleGroup implements Comparable<RuleGroup> {
     @Override
     public int compareTo(RuleGroup o) {
         return ComparisonChain.start()
-            .compare(order, o.order, 
+            .compare(order, o.order,
                      Ordering.natural().nullsLast())
             .compare(relatedSubject.getValue(), o.relatedSubject.getValue(),
                      Ordering.natural().nullsLast())
@@ -116,8 +119,8 @@ public class RuleGroup implements Comparable<RuleGroup> {
     @Override
     public String toString() {
         return "RuleGroup [rules=" + rules + ", order=" + order +
-               ", contractTenant=" + contractTenant.getId() + 
-               ", relatedContract=" + relatedContract.getId() + 
+               ", contractTenant=" + contractTenant.getId() +
+               ", relatedContract=" + relatedContract.getId() +
                ", relatedSubject=" + relatedSubject + "]";
     }
 

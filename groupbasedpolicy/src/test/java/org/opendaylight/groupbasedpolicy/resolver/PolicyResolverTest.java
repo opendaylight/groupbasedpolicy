@@ -137,7 +137,7 @@ public class PolicyResolverTest {
     Target t0 = new TargetBuilder()
         .setName(new TargetName("t1"))
         .build();
-    
+
     Rule rule1 = new RuleBuilder()
         .setName(new RuleName("r1"))
         .setOrder(Integer.valueOf(5))
@@ -212,7 +212,7 @@ public class PolicyResolverTest {
         .setConsumerMatchers(new ConsumerMatchersBuilder().build())
         .setProviderMatchers(new ProviderMatchersBuilder().build())
         .build();
-    
+
     Contract contract1 = new ContractBuilder()
         .setId(new ContractId("c9eea992-ba51-4e11-b797-986853832ad9"))
         .setTarget(ImmutableList.of(t1))
@@ -232,7 +232,7 @@ public class PolicyResolverTest {
         .setId(new ContractId("79de88e8-b37f-4764-a1a3-7f3b37b15433"))
         .setTarget(ImmutableList.of(t0))
         .build();
-    
+
     ConsumerNamedSelector cns1 = new ConsumerNamedSelectorBuilder()
         .setName(new SelectorName("cns1"))
         .setContract(ImmutableList.of(contract1.getId()))
@@ -248,7 +248,7 @@ public class PolicyResolverTest {
         .setContract(ImmutableList.of(contract1.getId(), contract2.getId()))
         .setCapability(ImmutableList.of(cap1, cap3))
         .build();
-    
+
     QualityMatcher qm1 = new QualityMatcherBuilder()
         .setName(new QualityMatcherName("qm1"))
         .setMatcherQuality(ImmutableList.of(new MatcherQualityBuilder(q1).build()))
@@ -265,7 +265,7 @@ public class PolicyResolverTest {
         .setName(new SelectorName("pts1"))
         .setQualityMatcher(ImmutableList.of(qm3))
         .build();
-    
+
     EndpointGroup eg1 = new EndpointGroupBuilder()
         .setId(new EndpointGroupId("12802e21-8602-40ec-91d3-a75a296881ab"))
         .setConsumerNamedSelector(ImmutableList.of(cns1))
@@ -312,12 +312,12 @@ public class PolicyResolverTest {
         .build();
 
     PolicyResolver resolver;
-    
+
     @Before
     public void setup() throws Exception {
         resolver = new PolicyResolver(null, null);
     }
-    
+
     public void verifyMatches(List<ContractId> contrids,
                               List<TenantId> contrtids,
                               List<ContractMatch> matches) {
@@ -327,31 +327,31 @@ public class PolicyResolverTest {
         }
         assertEquals(contrids.size(), matches.size());
         for (ContractMatch m : matches) {
-            ContractMatchKey k = 
-                    new ContractMatchKey(m.contractTenant.getId(), 
+            ContractMatchKey k =
+                    new ContractMatchKey(m.contractTenant.getId(),
                                          m.contract.getId());
             assertTrue(v.contains(k));
         }
     }
-    
+
     @Test
     public void testContractSelection() throws Exception {
         // named selectors
         TenantContext tc = new TenantContext(null);
         Collection<TenantContext> tCol = Collections.singleton(tc);
-        
+
         tc.tenant.set(new IndexedTenant(tenant1));
         Table<EgKey, EgKey, List<ContractMatch>> contractMatches =
                 resolver.selectContracts(tCol);
         assertEquals(1, contractMatches.size());
-        List<ContractMatch> matches = 
+        List<ContractMatch> matches =
                 contractMatches.get(new EgKey(tenant1.getId(), eg1.getId()),
                                     new EgKey(tenant1.getId(), eg2.getId()));
         verifyMatches(ImmutableList.of(contract1.getId()),
                       ImmutableList.of(tenant1.getId()),
                       matches);
 
-        
+
         tc.tenant.set(new IndexedTenant(tenant2));
         contractMatches = resolver.selectContracts(tCol);
         assertEquals(2, contractMatches.size());
@@ -360,13 +360,13 @@ public class PolicyResolverTest {
         verifyMatches(ImmutableList.of(contract1.getId()),
                       ImmutableList.of(tenant2.getId()),
                       matches);
-        
+
         matches = contractMatches.get(new EgKey(tenant2.getId(), eg3.getId()),
                                       new EgKey(tenant2.getId(), eg2.getId()));
         verifyMatches(ImmutableList.of(contract2.getId(), contract1.getId()),
                       ImmutableList.of(tenant2.getId(), tenant2.getId()),
                       matches);
-        
+
         // target selectors
         tc.tenant.set(new IndexedTenant(tenant3));
         contractMatches = resolver.selectContracts(tCol);
@@ -376,7 +376,7 @@ public class PolicyResolverTest {
         verifyMatches(ImmutableList.of(contract2.getId()),
                       ImmutableList.of(tenant3.getId()),
                       matches);
-        
+
         // empty matches
         tc.tenant.set(new IndexedTenant(tenant0));
         contractMatches = resolver.selectContracts(tCol);
@@ -389,24 +389,23 @@ public class PolicyResolverTest {
 
     @Test
     public void testSubjectSelection() throws Exception {
-        ConditionSet cs = 
-                new ConditionSet(ImmutableSet.of(cond1.getName()), 
+        ConditionSet cs =
+                new ConditionSet(ImmutableSet.of(cond1.getName()),
                                  ImmutableSet.of(cond3.getName()),
-                                 ImmutableSet.of(ImmutableSet.of(cond1.getName(), 
+                                 ImmutableSet.of(ImmutableSet.of(cond1.getName(),
                                                                  cond2.getName())));
         TenantContext tc = new TenantContext(null);
         Collection<TenantContext> tCol = Collections.singleton(tc);
-        
+
         tc.tenant.set(new IndexedTenant(tenant1));
         Table<EgKey, EgKey, List<ContractMatch>> contractMatches =
                 resolver.selectContracts(tCol);
         Map<EgKey, Set<ConditionSet>> egConditions = new HashMap<>();
-        Table<EgKey, EgKey, Policy> policy = 
+        Table<EgKey, EgKey, Policy> policy =
                 resolver.selectSubjects(contractMatches, egConditions);
         assertEquals(1, policy.size());
-        Policy p = policy.get(new EgKey(tenant1.getId(), eg2.getId()),
-                              new EgKey(tenant1.getId(), eg1.getId()));
-        List<RuleGroup> rules = p.ruleMap.get(ConditionSet.EMPTY, cs);
+        Policy p = policy.get(new EgKey(tenant1.getId(), eg1.getId()), new EgKey(tenant1.getId(), eg2.getId()));
+        List<RuleGroup> rules = p.getRuleMap().get(cs, ConditionSet.EMPTY);
         assertNotNull(rules);
         assertEquals(1, rules.size());
         RuleGroup rg = rules.get(0);
@@ -422,9 +421,9 @@ public class PolicyResolverTest {
         policy = resolver.selectSubjects(contractMatches, egConditions);
 
         assertEquals(2, policy.size());
-        p = policy.get(new EgKey(tenant2.getId(), eg2.getId()),
-                       new EgKey(tenant2.getId(), eg3.getId()));
-        rules = p.ruleMap.get(ConditionSet.EMPTY, cs);
+        p = policy.get(new EgKey(tenant2.getId(), eg3.getId()),
+                       new EgKey(tenant2.getId(), eg2.getId()));
+        rules = p.getRuleMap().get(cs, ConditionSet.EMPTY);
         assertNotNull(rules);
         assertEquals(1, rules.size());
         rg = rules.get(0);
@@ -434,7 +433,7 @@ public class PolicyResolverTest {
         assertEquals(1, rg.rules.size());
         assertEquals(rule1.getName(), rg.rules.get(0).getName());
 
-        rules = p.ruleMap.get(ConditionSet.EMPTY, ConditionSet.EMPTY);
+        rules = p.getRuleMap().get(ConditionSet.EMPTY, ConditionSet.EMPTY);
         assertNotNull(rules);
         assertEquals(1, rules.size());
         rg = rules.get(0);
@@ -443,10 +442,10 @@ public class PolicyResolverTest {
         assertEquals(s2.getName(), rg.relatedSubject);
         assertEquals(1, rg.rules.size());
         assertEquals(rule2.getName(), rg.rules.get(0).getName());
-        
-        p = policy.get(new EgKey(tenant2.getId(), eg2.getId()),
-                       new EgKey(tenant2.getId(), eg1.getId()));
-        rules = p.ruleMap.get(ConditionSet.EMPTY, cs);
+
+        p = policy.get(new EgKey(tenant2.getId(), eg1.getId()),
+                       new EgKey(tenant2.getId(), eg2.getId()));
+        rules = p.getRuleMap().get(cs, ConditionSet.EMPTY);
         assertNotNull(rules);
         assertEquals(1, rules.size());
         rg = rules.get(0);
@@ -462,9 +461,9 @@ public class PolicyResolverTest {
         policy = resolver.selectSubjects(contractMatches, egConditions);
 
         assertEquals(1, policy.size());
-        p = policy.get(new EgKey(tenant3.getId(), eg5.getId()),
-                       new EgKey(tenant3.getId(), eg4.getId()));
-        rules = p.ruleMap.get(ConditionSet.EMPTY, ConditionSet.EMPTY);
+        p = policy.get(new EgKey(tenant3.getId(), eg4.getId()),
+                       new EgKey(tenant3.getId(), eg5.getId()));
+        rules = p.getRuleMap().get(ConditionSet.EMPTY, ConditionSet.EMPTY);
         assertNotNull(rules);
         assertEquals(1, rules.size());
         rg = rules.get(0);

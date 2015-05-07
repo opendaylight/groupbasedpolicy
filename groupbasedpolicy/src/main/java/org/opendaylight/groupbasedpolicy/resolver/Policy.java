@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
@@ -24,55 +26,83 @@ import com.google.common.collect.Table.Cell;
 
 /**
  * Represent the policy that applies to a single pair of endpoint groups
- * The policy is represented as a list of {@link RuleGroup} objects.  A 
- * {@link RuleGroup} references ordered lists of rules from the policy,
- * along with the associated {@link Tenant}, {@link Contract}, and 
- * {@link SubjectName}.
- * 
+ * The policy is represented as a list of {@link RuleGroup} objects. A {@link RuleGroup} references
+ * ordered lists of rules from the policy,
+ * along with the associated {@link Tenant}, {@link Contract}, and {@link SubjectName}.
  * A {@link RuleGroup} applies to a particular endpoint based on the set of
- * conditions that are active for that endpoint.  All rule groups associated
+ * conditions that are active for that endpoint. All rule groups associated
  * with matching {@link ConditionSet}s apply.
- * @author readams
  */
 @Immutable
 public class Policy {
-    public static final Policy EMPTY = 
-            new Policy(ImmutableTable.<ConditionSet, ConditionSet, 
-                                       List<RuleGroup>>of());
-    
-    final Table<ConditionSet, ConditionSet, List<RuleGroup>> ruleMap;
-    final boolean reversed;
-    public Policy(Table<ConditionSet, ConditionSet, List<RuleGroup>> ruleMap) {
-        super();
-        this.ruleMap = ruleMap;
-        this.reversed = false;
+
+    /**
+     * Policy where {@link #getRuleMap()} returns empty table
+     */
+    public static final Policy EMPTY = new Policy(ImmutableTable.<ConditionSet, ConditionSet, List<RuleGroup>>of());
+
+    private final Table<ConditionSet, ConditionSet, List<RuleGroup>> ruleMap;
+
+    /**
+     * @param ruleMap {@code null} means that created {@link Policy} equals {@link Policy#EMPTY}
+     */
+    public Policy(@Nullable Table<ConditionSet, ConditionSet, List<RuleGroup>> ruleMap) {
+        if (ruleMap == null) {
+            this.ruleMap = EMPTY.getRuleMap();
+        } else {
+            this.ruleMap = ImmutableTable.copyOf(ruleMap);
+        }
     }
-    public Policy(Policy existing, boolean reversed) {
-        super();
-        this.ruleMap = existing.ruleMap;
-        this.reversed = existing.reversed != reversed;
+
+    public @Nonnull Table<ConditionSet, ConditionSet, List<RuleGroup>> getRuleMap() {
+        return ruleMap;
     }
-    
-    @Override
-    public String toString() {
-        return "Policy [ruleMap=" + ruleMap + "]";
-    }
-    
+
     /**
      * Get the rules that apply to a particular pair of condition groups
+     *
      * @param fromCg the condition group that applies to the origin endpoint
      * @param toCg the condition group that applies to the destination endpoint
-     * @return
+     * @return sorted {@link RuleGroup} list
      */
-    public List<RuleGroup> getRules(ConditionGroup fromCg,
-                                    ConditionGroup toCg) {
-        ArrayList<RuleGroup> rules = new ArrayList<>();
+    public List<RuleGroup> getRules(ConditionGroup fromCg, ConditionGroup toCg) {
+        List<RuleGroup> rules = new ArrayList<>();
         for (Cell<ConditionSet, ConditionSet, List<RuleGroup>> cell : ruleMap.cellSet()) {
-            if (fromCg.contains(cell.getRowKey()) &&
-                    toCg.contains(cell.getColumnKey()))
+            if (fromCg.contains(cell.getRowKey()) && toCg.contains(cell.getColumnKey()))
                 rules.addAll(cell.getValue());
         }
         Collections.sort(rules);
         return rules;
     }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((ruleMap == null) ? 0 : ruleMap.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        Policy other = (Policy) obj;
+        if (ruleMap == null) {
+            if (other.ruleMap != null)
+                return false;
+        } else if (!ruleMap.equals(other.ruleMap))
+            return false;
+        return true;
+    }
+
+    @Override
+    public String toString() {
+        return "Policy [ruleMap=" + ruleMap + "]";
+    }
+
 }

@@ -36,11 +36,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.ConsumerSelectionRelator;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.Matcher.MatchType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.ProviderSelectionRelator;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRefBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.condition.matchers.ConditionMatcher;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.conditions.Condition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.target.selector.QualityMatcher;
@@ -56,7 +53,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.group.identification.constraints.GroupCapabilityConstraintCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.provider.matchers.group.identification.constraints.group.capability.constraint._case.CapabilityMatcher;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.Rule;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.RuleBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ConsumerNamedSelector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ConsumerTargetSelector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderNamedSelector;
@@ -454,7 +450,7 @@ public class PolicyResolver implements AutoCloseable {
         }
     }
 
-    private boolean clauseMatches(Clause clause, ContractMatch match) {
+    private boolean clauseMatchesByGroupReqAndCapConstraints(Clause clause, ContractMatch match) {
         if (clause.getConsumerMatchers() != null) {
             GroupIdentificationConstraints groupIdentificationConstraintsConsumer = clause.getConsumerMatchers()
                     .getGroupIdentificationConstraints();
@@ -551,85 +547,35 @@ public class PolicyResolver implements AutoCloseable {
 
     private Policy resolvePolicy(Tenant contractTenant,
             Contract contract,
-            boolean reverse,
             Policy merge,
             Table<ConditionSet, ConditionSet,
             List<Subject>> subjectMap) {
         Table<ConditionSet, ConditionSet, List<RuleGroup>> ruleMap =
                 HashBasedTable.create();
         if (merge != null) {
-            ruleMap.putAll(merge.ruleMap);
+            ruleMap.putAll(merge.getRuleMap());
         }
         for (Cell<ConditionSet, ConditionSet, List<Subject>> entry : subjectMap.cellSet()) {
             List<RuleGroup> rules = new ArrayList<>();
-            ConditionSet rowKey = entry.getRowKey();
-            ConditionSet columnKey = entry.getColumnKey();
-            if (reverse) {
-                rowKey = columnKey;
-                columnKey = entry.getRowKey();
-            }
-            List<RuleGroup> oldrules =
-                    ruleMap.get(rowKey, columnKey);
+            ConditionSet consConds = entry.getRowKey();
+            ConditionSet provConds = entry.getColumnKey();
+            List<RuleGroup> oldrules = ruleMap.get(consConds, provConds);
             if (oldrules != null) {
                 rules.addAll(oldrules);
             }
             for (Subject s : entry.getValue()) {
                 if (s.getRule() == null)
                     continue;
-                List<Rule> srules;
-                if (reverse)
-                    srules = reverseRules(s.getRule());
-                else
-                    srules = Ordering
-                            .from(TenantUtils.RULE_COMPARATOR)
-                            .immutableSortedCopy(s.getRule());
 
-                RuleGroup rg = new RuleGroup(srules, s.getOrder(),
+                RuleGroup rg = new RuleGroup(s.getRule(), s.getOrder(),
                         contractTenant, contract,
                         s.getName());
                 rules.add(rg);
             }
             Collections.sort(rules);
-            ruleMap.put(rowKey, columnKey,
-                    Collections.unmodifiableList(rules));
+            ruleMap.put(consConds, provConds, Collections.unmodifiableList(rules));
         }
         return new Policy(ruleMap);
-    }
-
-    private List<Rule> reverseRules(List<Rule> rules) {
-        ArrayList<Rule> nrules = new ArrayList<>();
-        for (Rule input : rules) {
-            if (input.getClassifierRef() == null ||
-                    input.getClassifierRef().size() == 0) {
-                nrules.add(input);
-                continue;
-            }
-
-            List<ClassifierRef> classifiers = new ArrayList<>();
-            for (ClassifierRef clr : input.getClassifierRef()) {
-                Direction nd = Direction.Bidirectional;
-                if (clr.getDirection() != null) {
-                    switch (clr.getDirection()) {
-                    case In:
-                        nd = Direction.Out;
-                        break;
-                    case Out:
-                        nd = Direction.In;
-                        break;
-                    case Bidirectional:
-                    default:
-                        nd = Direction.Bidirectional;
-                    }
-                }
-                classifiers.add(new ClassifierRefBuilder(clr)
-                        .setDirection(nd).build());
-            }
-            nrules.add(new RuleBuilder(input)
-                    .setClassifierRef(Collections.unmodifiableList(classifiers))
-                    .build());
-        }
-        Collections.sort(nrules, TenantUtils.RULE_COMPARATOR);
-        return Collections.unmodifiableList(nrules);
     }
 
     /**
@@ -664,6 +610,8 @@ public class PolicyResolver implements AutoCloseable {
      * Choose the set of subjects that in scope for each possible set of
      * endpoint conditions
      */
+    // TODO Li msunal do we really need contractMatches to be a type Table<EgKey, EgKey, List<ContractMatch>>
+    // it should be sufficient to be just List<ContractMatch>
     protected Table<EgKey, EgKey, Policy>
             selectSubjects(Table<EgKey, EgKey,
                     List<ContractMatch>> contractMatches,
@@ -689,14 +637,7 @@ public class PolicyResolver implements AutoCloseable {
                         match.consumer.getId());
                 EgKey pkey = new EgKey(match.providerTenant.getId(),
                         match.provider.getId());
-                EgKey one = ckey;
-                EgKey two = pkey;
-                boolean reverse = shouldReverse(ckey, pkey);
-                if (reverse) {
-                    one = pkey;
-                    two = ckey;
-                }
-                Policy existing = policy.get(one, two);
+                Policy existing = policy.get(ckey, pkey);
 
                 HashMap<SubjectName, Subject> subjects = new HashMap<>();
                 for (Subject s : subjectList) {
@@ -708,7 +649,7 @@ public class PolicyResolver implements AutoCloseable {
 
                 for (Clause clause : clauses) {
                     if (clause.getSubjectRefs() != null &&
-                            clauseMatches(clause, match)) {
+                            clauseMatchesByGroupReqAndCapConstraints(clause, match)) {
                         ConditionSet consCSet = buildConsConditionSet(clause);
                         addConditionSet(ckey, consCSet, egConditions);
                         ConditionSet provCSet = buildProvConditionSet(clause);
@@ -727,10 +668,9 @@ public class PolicyResolver implements AutoCloseable {
                     }
                 }
 
-                policy.put(one, two,
+                policy.put(ckey, pkey,
                         resolvePolicy(match.contractTenant,
                                 match.contract,
-                                reverse,
                                 existing,
                                 subjectMap));
             }

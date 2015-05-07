@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
@@ -40,20 +41,19 @@ public class PolicyInfo {
     public Table<EgKey, EgKey, Policy> getPolicyMap() {
         return policyMap;
     }
-    
+
     /**
-     * Get the policy that currently applies to traffic flowing out of 
-     * the specified originating endpoint group into the specified destination
-     * endpoint group.  Note that there will be policy only for one of the two
-     * possible directions.
-     * 
-     * @param fromGroup the endpoint group for the originating endpoint
-     * @param toGroup the endpoint group for the destination endpoint
-     * @return the {@link Policy} that applies.  Cannot be null
+     * Get the policy that currently applies between consumer endpoint group and provider endpoint
+     * group.
+     *
+     * @param consEgKey the consumer endpoint group
+     * @param provEgKey the provider endpoint group
+     * @return the {@link Policy} that applies. Cannot be null
      */
-    public Policy getPolicy(EgKey fromGroup, EgKey toGroup) {
-        Policy p = policyMap.get(fromGroup, toGroup);
-        if (p == null) return Policy.EMPTY;
+    public @Nonnull Policy getPolicy(EgKey consEgKey, EgKey provEgKey) {
+        Policy p = policyMap.get(consEgKey, provEgKey);
+        if (p == null)
+            return Policy.EMPTY;
         return p;
     }
 
@@ -66,14 +66,14 @@ public class PolicyInfo {
     public Set<ConditionSet> getEgConditions(EgKey eg) {
         return Collections.unmodifiableSet(egConditions.get(eg));
     }
-    
+
     /**
      * Get the condition group as it applies to the given list of conditions
      * @param eg
      * @param conditions
      * @return
      */
-    public ConditionGroup getEgCondGroup(EgKey eg, 
+    public ConditionGroup getEgCondGroup(EgKey eg,
                                          List<ConditionName> conditions) {
         Set<ConditionSet> egconds = egConditions.get(eg);
         if (egconds == null) return ConditionGroup.EMPTY;
@@ -95,7 +95,7 @@ public class PolicyInfo {
      * @return the set of endpoint groups
      */
     public Set<EgKey> getPeers(EgKey eg) {
-        return Sets.union(policyMap.row(eg).keySet(), 
+        return Sets.union(policyMap.row(eg).keySet(),
                           policyMap.column(eg).keySet());
     }
 }
