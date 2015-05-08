@@ -25,6 +25,7 @@
     <config.groupbasedpolicy.opflexconfigfile>15-groupbasedpolicy-opflex.xml</config.groupbasedpolicy.opflexconfigfile>
     <config.groupbasedpolicy.openstackendpointconfigfile>15-groupbasedpolicy-openstackendpoint.xml</config.groupbasedpolicy.openstackendpointconfigfile>
     <config.groupbasedpolicy.neutronmapperconfigfile>15-neutron-mapper.xml</config.groupbasedpolicy.neutronmapperconfigfile>
+    <config.groupbasedpolicy.uibackendconfigfile>15-ui-backend.xml</config.groupbasedpolicy.uibackendconfigfile>
   </properties>
 
   <dependencies>
@@ -94,6 +95,10 @@
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>neutron-mapper</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>ui-backend</artifactId>
+    </dependency>
 
     <!-- gbp configuration dependencies -->
     <dependency>
@@ -113,6 +118,13 @@
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>neutron-mapper-config</artifactId>
+      <version>${project.version}</version>
+      <type>xml</type>
+      <classifier>config</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>ui-backend-config</artifactId>
       <version>${project.version}</version>
       <type>xml</type>
       <classifier>config</classifier>

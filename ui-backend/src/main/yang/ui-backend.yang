@@ -1,0 +1,105 @@
+module ui-backend {
+    namespace "urn:opendaylight:params:xml:ns:yang:controller:config:ui-backend";
+    prefix "ui-backend";
+
+    import policy {prefix gbp-policy;}
+    import gbp-common {prefix gbp-common;}
+    import endpoint {prefix endpoint;}
+
+    description
+        "Module contains RPC definitions for more easier interaction of the GUI with the GBP APIs.";
+
+    revision "2015-05-11" {
+        description "Initial revision of ui-backend model";
+    }
+
+    grouping endpoint-group-identifier-fields {
+        leaf tenant-id {
+            type gbp-common:tenant-id;
+        }
+        leaf endpoint-group-id {
+            type gbp-common:endpoint-group-id;
+        }
+    }
+
+    grouping consumer-endpoint-group-ref {
+        leaf consumer-tenant-id {
+            type leafref {
+                path "/gbp-policy:tenants/gbp-policy:tenant/gbp-policy:id";
+            }
+        }
+        leaf consumer-endpoint-group-id {
+            type leafref {
+                path "/gbp-policy:tenants/gbp-policy:tenant/gbp-policy:endpoint-group/gbp-policy:id";
+            }
+        }
+    }
+
+    grouping provider-endpoint-group-ref {
+        leaf provider-tenant-id {
+            type leafref {
+                path "/gbp-policy:tenants/gbp-policy:tenant/gbp-policy:id";
+            }
+        }
+        leaf provider-endpoint-group-id {
+            type leafref {
+                path "/gbp-policy:tenants/gbp-policy:tenant/gbp-policy:endpoint-group/gbp-policy:id";
+            }
+        }
+    }
+
+    rpc get-endpoints-from-endpoint-group {
+        description "Returns endpoints which are in the given endpoint group.";
+        input {
+            uses endpoint-group-identifier-fields;
+        }
+        output {
+            list ui-endpoint {
+                description
+                    "Endpoints indexed by layer 2 addreses.";
+                key "l2-context mac-address";
+                uses endpoint:endpoint-fields;
+            }
+        }
+    }
+
+    rpc get-subjects-between-endpoint-groups {
+        description "Returns subjects between endpoint group pairs where endpoint groups are from the given tenant.";
+        input {
+            leaf tenant-id {
+                description "Tenant ID of the tenant.";
+                type gbp-common:tenant-id;
+                mandatory true;
+            }
+            container from-oper-data {
+                presence "Resolve subjects for endpoint gorup pairs based on operational data.";
+            }
+        }
+        output {
+            list endpoint-group-pair-with-subject {
+                key "consumer-endpoint-group-id consumer-tenant-id provider-endpoint-group-id provider-tenant-id";
+                uses consumer-endpoint-group-ref;
+                uses provider-endpoint-group-ref;
+                list ui-subject {
+                    key "name";
+                    leaf name {
+                        description "A name for the subject";
+                        type gbp-common:subject-name;
+                    }
+                    list ui-rule {
+                        key "name";
+                        leaf name {
+                            description "A name for the rule";
+                            type gbp-common:rule-name;
+                        }
+                        uses gbp-policy:has-classifier-refs;
+                        uses gbp-policy:has-action-refs;
+                        uses gbp-policy:has-order;
+                    }
+                    uses gbp-policy:has-order;
+                }
+            }
+        }
+    }
+
+}
