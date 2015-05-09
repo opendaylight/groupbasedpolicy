@@ -76,13 +76,6 @@
       <version>${neutron.version}</version>
       <type>xml</type>
     </dependency>
-    <dependency>
-      <groupId>org.opendaylight.ovsdb</groupId>
-      <artifactId>southbound-features</artifactId>
-      <version>${ovsdb.southbound.version}</version>
-      <classifier>features</classifier>
-      <type>xml</type>
-    </dependency>
 
     <!-- gbp dependencies -->
     <dependency>
@@ -220,3 +213,4 @@
     <url>https://git.opendaylight.org/gerrit/gitweb?p=groupbasedpolicy.git;a=summary</url>
   </scm>
 </project>
+

@@ -33,7 +33,6 @@
     <yangtools.version>0.7.0-SNAPSHOT</yangtools.version>
     <openflowplugin.version>0.1.0-SNAPSHOT</openflowplugin.version>
     <neutron.version>0.5.0-SNAPSHOT</neutron.version>
-    <ovsdb.southbound.version>1.1.0-SNAPSHOT</ovsdb.southbound.version>
   </properties>
 
   <dependencyManagement>
@@ -260,3 +259,4 @@
     <tag>HEAD</tag>
   </scm>
 </project>
+
