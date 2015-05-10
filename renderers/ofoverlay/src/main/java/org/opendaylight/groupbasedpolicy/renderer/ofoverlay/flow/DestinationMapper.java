@@ -93,7 +93,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.ArpMatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv4MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv6MatchBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg0;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg2;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg4;
@@ -216,9 +215,16 @@ public class DestinationMapper extends FlowTable {
     // group on the node
 
     private Flow createBroadcastFlow(EndpointFwdCtxOrdinals epOrd) {
-        FlowId flowId = new FlowId(new StringBuilder().append("broadcast|").append(epOrd.getFdId()).toString());
-        MatchBuilder mb = new MatchBuilder().setEthernetMatch(new EthernetMatchBuilder().setEthernetDestination(
-                new EthernetDestinationBuilder().setAddress(MULTICAST_MAC).setMask(MULTICAST_MAC).build()).build());
+        FlowId flowId = new FlowId(new StringBuilder().
+                                    append("broadcast|").
+                                    append(epOrd.getFdId()).
+                                    toString());
+        MatchBuilder mb = new MatchBuilder()
+                            .setEthernetMatch(new EthernetMatchBuilder()
+                            .setEthernetDestination(new EthernetDestinationBuilder().
+                                                        setAddress(MULTICAST_MAC)
+                                                        .setMask(MULTICAST_MAC).build())
+                            .build());
         addNxRegMatch(mb, RegMatch.of(NxmNxReg5.class, Long.valueOf(epOrd.getFdId())));
 
         FlowBuilder flowb = base().setPriority(Integer.valueOf(140))
@@ -728,9 +734,6 @@ public class DestinationMapper extends FlowTable {
         }
 
         setNextHop = nxLoadRegAction(NxmNxReg7.class, BigInteger.valueOf(portNum));
-        Action tunIdAction = nxLoadTunIdAction(BigInteger.valueOf(srcEpFwdCtxOrds.getTunnelId()), false);
-
-        applyActions.add(tunIdAction);
         applyActions.add(tundstAction);
         // END TUNNEL
 
@@ -756,7 +759,7 @@ public class DestinationMapper extends FlowTable {
             .append("|l2|")
             .append(ep.getMacAddress().getValue())
             .append("|")
-            .append(srcEpFwdCtxOrds.getTunnelId())
+            .append(srcEpFwdCtxOrds.getBdId())
             .append("|")
             .append(nextHop)
             .toString());
@@ -876,9 +879,6 @@ public class DestinationMapper extends FlowTable {
         }
 
         setNextHop = nxLoadRegAction(NxmNxReg7.class, BigInteger.valueOf(portNum));
-        Action tunIdAction = nxLoadTunIdAction(BigInteger.valueOf(srcEpFwdCtxOrds.getTunnelId()), false);
-
-        applyActions.add(tunIdAction);
         applyActions.add(tundstAction);
         // END TUNNEL
 
@@ -926,25 +926,17 @@ public class DestinationMapper extends FlowTable {
             .append("|l3|")
             .append(ikey)
             .append("|")
-            .append(destEpFwdCtxOrds.getEpgId())
-            .append("|")
-            .append(destEpFwdCtxOrds.getCgId())
-            .append("|")
             .append(matcherMac)
             .append("|")
             .append(destSubnetGatewayMac)
             .append("|")
-            .append(srcEpFwdCtxOrds.getEpgId())
-            .append("|")
-            .append(srcEpFwdCtxOrds.getFdId())
+            .append(srcEpFwdCtxOrds.getL3Id())
             .append("|")
             .append(nextHop)
             .toString());
         MatchBuilder mb = new MatchBuilder().setEthernetMatch(ethernetMatch(null, matcherMac, etherType))
             .setLayer3Match(m);
-        addNxRegMatch(mb, RegMatch.of(NxmNxReg0.class, Long.valueOf(srcEpFwdCtxOrds.getEpgId())),
-                RegMatch.of(NxmNxReg5.class, Long.valueOf(srcEpFwdCtxOrds.getFdId())),
-                RegMatch.of(NxmNxReg6.class, Long.valueOf(destEpFwdCtxOrds.getL3Id())));
+        addNxRegMatch(mb, RegMatch.of(NxmNxReg6.class, Long.valueOf(destEpFwdCtxOrds.getL3Id())));
 
         FlowBuilder flowb = base().setId(flowid)
             .setPriority(Integer.valueOf(132))

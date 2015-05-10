@@ -14,6 +14,7 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.gotoTableIns;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.instructions;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadRegAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadTunIdAction;
 
 import java.math.BigInteger;
 import java.util.Collections;
@@ -116,10 +117,8 @@ public class SourceMapper extends FlowTable {
             for (EgKey peer : peers) {
                 for (NodeId remoteNodeId : ctx.getEndpointManager().getNodesForGroup(peer)) {
 
-                    // Only put tunnels on destination nodes
-                    if (remoteNodeId.getValue().equals(nodeId.getValue())) {
-                        continue;
-                    }
+                    // Please do not check for remote v local nodeID, we need local to local tunnels
+                    // in the case of chaining - The Great Dr Sunal.
                     NodeConnectorId tunPort = ctx.getSwitchManager().getTunnelPort(remoteNodeId);
                     if (tunPort == null) {
                         LOG.trace("No tunnel port for tunnel in SourceMapper between local:{} and remote:{}",
@@ -225,6 +224,7 @@ public class SourceMapper extends FlowTable {
         int fdId = epFwdCtxOrds.getFdId();
         int l3Id = epFwdCtxOrds.getL3Id();
         int cgId = epFwdCtxOrds.getCgId();
+        int tunnelId = epFwdCtxOrds.getTunnelId();
 
         FlowId flowid = new FlowId(new StringBuilder().append(ofc.getNodeConnectorId().getValue())
             .append("|")
@@ -245,6 +245,8 @@ public class SourceMapper extends FlowTable {
         Action bdReg = nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(bdId));
         Action fdReg = nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(fdId));
         Action vrfReg = nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(l3Id));
+        Action tunIdAction = nxLoadTunIdAction(BigInteger.valueOf(tunnelId), false);
+
         FlowBuilder flowb = base().setPriority(Integer.valueOf(100))
             .setId(flowid)
             .setMatch(
@@ -252,7 +254,7 @@ public class SourceMapper extends FlowTable {
                         .setInPort(ofc.getNodeConnectorId())
                         .build())
             .setInstructions(
-                    instructions(applyActionIns(segReg, scgReg, bdReg, fdReg, vrfReg),
+                    instructions(applyActionIns(segReg, scgReg, bdReg, fdReg, vrfReg,tunIdAction),
                             gotoTableIns((short) (TABLE_ID + 1))));
         flowMap.writeFlow(nodeId, TABLE_ID, flowb.build());
     }
