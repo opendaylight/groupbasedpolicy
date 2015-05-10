@@ -17,6 +17,7 @@ import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataCh
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
@@ -62,7 +63,7 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
         //TODO: Consider moving to groupbasedpolicy-ofoverlay-config so as to be user configurable in distribution.
         executor = Executors.newScheduledThreadPool(numCPU * 2);
 
-        switchManager = new SwitchManager(dataProvider, executor);
+        switchManager = new SwitchManager(dataProvider);
         endpointManager = new EndpointManager(dataProvider, rpcRegistry,
                                               executor, switchManager);
         policyResolver = new PolicyResolver(dataProvider, executor);
@@ -120,7 +121,7 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
             public void onSuccess(final Optional<OfOverlayConfig> result) {
                 if (!result.isPresent()) return;
                 if (result.get() instanceof OfOverlayConfig) {
-                    config = (OfOverlayConfig)result.get();
+                    config = result.get();
                     applyConfig();
                 }
             }

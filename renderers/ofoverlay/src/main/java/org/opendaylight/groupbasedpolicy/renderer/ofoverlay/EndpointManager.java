@@ -31,6 +31,7 @@ import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
 import org.opendaylight.groupbasedpolicy.endpoint.EpRendererAugmentation;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.util.SetUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNodeConnector;
@@ -88,10 +89,6 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
             LoggerFactory.getLogger(EndpointManager.class);
     private final static InstanceIdentifier<Nodes> nodesIid = InstanceIdentifier
             .builder(Nodes.class).build();
-    private final static InstanceIdentifier<Node> nodeIid = InstanceIdentifier
-            .builder(Nodes.class).child(Node.class).build();
-    private ListenerRegistration<DataChangeListener> nodesReg;
-
     private static final InstanceIdentifier<Endpoint> endpointsIid =
             InstanceIdentifier.builder(Endpoints.class)
                     .child(Endpoint.class).build();
@@ -128,10 +125,6 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
                             endpointsIid,
                             this,
                             DataChangeScope.ONE);
-            nodesReg = dataProvider.registerDataChangeListener(
-                    LogicalDatastoreType.OPERATIONAL, nodeIid,
-                    new NodesListener(), DataChangeScope.SUBTREE);
-
         } else
             listenerReg = null;
 
@@ -408,113 +401,6 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
             if (old != null && old instanceof Endpoint)
                 oldEp = (Endpoint) old;
             updateEndpoint(oldEp, (Endpoint) entry.getValue());
-        }
-    }
-
-    // TODO: alagalah Investigate using the internal project listener structure
-    // for this. ie Endpoint should listen to
-    // SwitchManager updates and update the EP maps accordingly (update
-    // Endpoint). Removal should include the overloaded
-    // method updateEndpoint(Node node)
-    private class NodesListener implements DataChangeListener {
-        @Override
-        public void onDataChanged(
-                AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
-            for (DataObject dao : change.getCreatedData().values()) {
-                if (!(dao instanceof Node))
-                    continue;
-                Node node = (Node) dao;
-                if (node.getNodeConnector() != null) {
-                    updateEndpoint(node);
-                }
-            }
-            for (DataObject dao : change.getUpdatedData().values()) {
-                if (!(dao instanceof Node))
-                    continue;
-                Node node = (Node) dao;
-                if (node.getNodeConnector() != null) {
-                    updateEndpoint(node);
-                }
-            }
-        }
-    }
-
-    // TODO Li alagalah move this near to other updateEndpoint()
-    private void updateEndpoint(Node node) {
-        final InstanceIdentifier<Endpoints> endpointsIid = InstanceIdentifier.builder(Endpoints.class).build();
-
-        Optional<Endpoints> epResult;
-        EpKey epKey = null;
-        for (NodeConnector nc : node.getNodeConnector()) {
-            FlowCapableNodeConnector fcnc = nc
-                    .getAugmentation(FlowCapableNodeConnector.class);
-            try {
-                epResult = dataProvider.newReadOnlyTransaction().read(LogicalDatastoreType.OPERATIONAL, endpointsIid)
-                        .get();
-                if (epResult.isPresent()) {
-                    Endpoints endpoints = epResult.get();
-                    if (endpoints.getEndpoint() != null) {
-                        Boolean isEmpty = true;
-                        for (Endpoint ep : endpoints.getEndpoint()) {
-                            // 2. Search for portname
-                            OfOverlayContext currentAugmentation = ep.getAugmentation(OfOverlayContext.class);
-                            if (currentAugmentation.getPortName() != null && fcnc.getName() != null
-                                    && currentAugmentation.getPortName().getValue().equals(fcnc.getName())) {
-                                NodeId nodeId;
-                                NodeConnectorId nodeConnectorId;
-                                Name name;
-                                try {
-                                    nodeId = currentAugmentation.getNodeId();
-                                    nodeConnectorId = currentAugmentation.getNodeConnectorId();
-                                    name = currentAugmentation.getPortName();
-                                } catch (Exception e) {
-                                    nodeId = null;
-                                    nodeConnectorId = null;
-                                    name = null;
-                                }
-                                Boolean process = false;
-                                if (nodeId == null && nodeConnectorId == null) {
-                                    LOG.debug("ep NodeID and NC ID Both null");
-                                    process = true;
-                                }
-                                if (nodeId != null && nodeConnectorId != null) {
-                                    if (!(nodeConnectorId.getValue().equals(nc.getId().getValue()))) {
-                                        LOG.debug("ep NodeID and NC ID Both NOT null but epNCID !=nodeNCID");
-                                        process = true;
-                                    }
-                                }
-                                if (process) {
-                                    WriteTransaction tx = dataProvider.newWriteOnlyTransaction();
-                                    // 3. Update endpoint
-                                    EndpointBuilder epBuilder = new EndpointBuilder(ep);
-                                    OfOverlayContextBuilder ofOverlayAugmentation = new OfOverlayContextBuilder();
-                                    ofOverlayAugmentation.setNodeId(node.getId());
-                                    ofOverlayAugmentation.setNodeConnectorId(nc.getId());
-                                    ofOverlayAugmentation.setPortName(name);
-                                    epBuilder.addAugmentation(OfOverlayContext.class, ofOverlayAugmentation.build());
-                                    epBuilder.setL3Address(ep.getL3Address());
-                                    InstanceIdentifier<Endpoint> iidEp = InstanceIdentifier.builder(Endpoints.class)
-                                            .child(Endpoint.class, ep.getKey()).build();
-                                    tx.put(LogicalDatastoreType.OPERATIONAL, iidEp, epBuilder.build());
-                                    tx.submit().get();
-                                    epKey = new EpKey(ep.getKey().getL2Context(), ep.getKey().getMacAddress());
-                                    notifyEndpointUpdated(epKey);
-                                    LOG.debug("Values:");
-                                    LOG.debug("node: Node ID:" + node.getId().getValue());
-                                    LOG.debug("node: NodeConnectorID: " + nc.getId().getValue());
-                                    if (nodeId != null && nodeConnectorId != null) {
-                                        LOG.debug("ep: nodeID:" + nodeId.getValue());
-                                        LOG.debug("ep: nodeConnectorID:" + nodeConnectorId.getValue());
-                                    }
-                                    isEmpty = false;
-                                }
-                            }
-                        }
-                    }
-                }
-            } catch (InterruptedException | ExecutionException e) {
-                LOG.error("Exception in UpdateEndpoint", e);
-            }
         }
     }
 
