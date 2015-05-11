@@ -18,6 +18,7 @@
     <!-- Repos needed by the OpenFlow Overlay renderer -->
     <repository>mvn:org.opendaylight.openflowplugin/features-openflowplugin/${openflowplugin.version}/xml/features</repository>
     <repository>mvn:org.opendaylight.openflowplugin/features-openflowplugin-extension/${openflowplugin.version}/xml/features</repository>
+    <repository>mvn:org.opendaylight.ovsdb/southbound-features/${ovsdb.southbound.version}/xml/features</repository>
 
     <!-- Repos needed by the Neutron Mapper -->
     <repository>mvn:org.opendaylight.neutron/features-neutron/${neutron.version}/xml/features</repository>
@@ -40,6 +41,7 @@
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <feature version="${openflowplugin.version}">odl-openflowplugin-flow-services</feature>
         <feature version='${openflowplugin.version}'>odl-openflowplugin-nxm-extensions</feature>
+        <feature version='${ovsdb.southbound.version}'>odl-ovsdb-southbound-impl</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/ofoverlay-renderer/${project.version}</bundle>
         <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.ofoverlayconfigfile}">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-ofoverlay-config/${project.version}/xml/config</configfile>
     </feature>
@@ -88,4 +90,3 @@
         <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.neutronmapperconfigfile}">mvn:org.opendaylight.groupbasedpolicy/neutron-mapper-config/${project.version}/xml/config</configfile>
     </feature>
 </features>
-
