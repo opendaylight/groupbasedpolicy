@@ -15,11 +15,13 @@ import java.util.List;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronFloatingIpAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronNetworkAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronPortAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronRouterAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronSecurityGroupAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronSubnetAware;
+import org.opendaylight.neutron.spi.INeutronFloatingIPAware;
 import org.opendaylight.neutron.spi.INeutronNetworkAware;
 import org.opendaylight.neutron.spi.INeutronPortAware;
 import org.opendaylight.neutron.spi.INeutronRouterAware;
@@ -63,6 +65,10 @@ public class NeutronMapper implements AutoCloseable {
         ServiceRegistration<INeutronRouterAware> neutronRouterAwareRegistration = context.registerService(
                 INeutronRouterAware.class, NeutronRouterAware.getInstance(), null);
         registrations.add(neutronRouterAwareRegistration);
+
+        ServiceRegistration<INeutronFloatingIPAware> neutronFloatingIpAwareRegistration = context.registerService(
+                INeutronFloatingIPAware.class, new NeutronFloatingIpAware(dataProvider), null);
+        registrations.add(neutronFloatingIpAwareRegistration);
     }
 
     /**

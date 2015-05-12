@@ -77,6 +77,8 @@ public class NeutronPortAware implements INeutronPortAware {
     public static final Logger LOG = LoggerFactory.getLogger(NeutronPortAware.class);
     private static final String DEVICE_OWNER_DHCP = "network:dhcp";
     private static final String DEVICE_OWNER_ROUTER_IFACE = "network:router_interface";
+    private static final String DEVICE_OWNER_ROUTER_GATEWAY = "network:router_gateway";
+    private static final String DEVICE_OWNER_FLOATING_IP = "network:floatingip";
     private static final int DHCP_CLIENT_PORT = 68;
     private static final int DHCP_SERVER_PORT = 67;
     private final DataBroker dataProvider;
@@ -113,10 +115,22 @@ public class NeutronPortAware implements INeutronPortAware {
                     NeutronPortAware.class.getSimpleName(), NeutronRouterAware.class.getSimpleName());
             return;
         }
+        if (isRouterGatewayPort(port)) {
+            LOG.trace("Port is router gateway - {}", port.getID());
+            return;
+        }
+        if (isFloatingIp(port)) {
+            LOG.trace("Port is floating ip - {}", port.getID());
+            return;
+        }
+        if (Strings.isNullOrEmpty(port.getTenantID())) {
+            LOG.trace("REMOVE ME: Tenant is null - {}", port.getID());
+            return;
+        }
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         TenantId tenantId = new TenantId(Utils.normalizeUuid(port.getTenantID()));
         if (isDhcpPort(port)) {
-            LOG.trace("Port is DHCP port.");
+            LOG.trace("Port is DHCP port. - {}", port.getID());
             List<NeutronSecurityRule> dhcpSecRules = createDhcpSecRules(port, null, rwTx);
             if (dhcpSecRules == null) {
                 rwTx.cancel();
@@ -316,6 +330,19 @@ public class NeutronPortAware implements INeutronPortAware {
                     NeutronPortAware.class.getSimpleName(), NeutronRouterAware.class.getSimpleName());
             return;
         }
+        if (isRouterGatewayPort(port)) {
+            LOG.trace("Port is router gateway - {}", port.getID());
+            return;
+        }
+        if (isFloatingIp(port)) {
+            LOG.trace("Port is floating ip - {}", port.getID());
+            return;
+        }
+        if (Strings.isNullOrEmpty(port.getTenantID())) {
+            LOG.trace("REMOVE ME: Tenant is null - {}", port.getID());
+            return;
+        }
+
         ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
         TenantId tenantId = new TenantId(Utils.normalizeUuid(port.getTenantID()));
         MacAddress macAddress = new MacAddress(port.getMacAddress());
@@ -530,6 +557,14 @@ public class NeutronPortAware implements INeutronPortAware {
 
     private static boolean isRouterInterfacePort(NeutronPort port) {
         return DEVICE_OWNER_ROUTER_IFACE.equals(port.getDeviceOwner());
+    }
+
+    private static boolean isRouterGatewayPort(NeutronPort port) {
+        return DEVICE_OWNER_ROUTER_GATEWAY.equals(port.getDeviceOwner());
+    }
+
+    private static boolean isFloatingIp(NeutronPort port) {
+        return DEVICE_OWNER_FLOATING_IP.equals(port.getDeviceOwner());
     }
 
     private UnregisterEndpointInput createUnregisterEndpointInput(Endpoint ep) {
