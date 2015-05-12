@@ -12,8 +12,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -22,7 +20,7 @@ import java.util.Set;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver.ContractMatch;
+import org.opendaylight.groupbasedpolicy.resolver.ContractResolverUtils.ContractMatch;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver.TenantContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.CapabilityMatcherName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.CapabilityName;
@@ -338,11 +336,10 @@ public class PolicyResolverTest {
     public void testContractSelection() throws Exception {
         // named selectors
         TenantContext tc = new TenantContext(null);
-        Collection<TenantContext> tCol = Collections.singleton(tc);
 
         tc.tenant.set(new IndexedTenant(tenant1));
         Table<EgKey, EgKey, List<ContractMatch>> contractMatches =
-                resolver.selectContracts(tCol);
+                ContractResolverUtils.selectContracts(ImmutableSet.of(tc.tenant.get()));
         assertEquals(1, contractMatches.size());
         List<ContractMatch> matches =
                 contractMatches.get(new EgKey(tenant1.getId(), eg1.getId()),
@@ -353,7 +350,7 @@ public class PolicyResolverTest {
 
 
         tc.tenant.set(new IndexedTenant(tenant2));
-        contractMatches = resolver.selectContracts(tCol);
+        contractMatches = ContractResolverUtils.selectContracts(ImmutableSet.of(tc.tenant.get()));
         assertEquals(2, contractMatches.size());
         matches = contractMatches.get(new EgKey(tenant2.getId(), eg1.getId()),
                                       new EgKey(tenant2.getId(), eg2.getId()));
@@ -369,7 +366,7 @@ public class PolicyResolverTest {
 
         // target selectors
         tc.tenant.set(new IndexedTenant(tenant3));
-        contractMatches = resolver.selectContracts(tCol);
+        contractMatches = ContractResolverUtils.selectContracts(ImmutableSet.of(tc.tenant.get()));
         assertEquals(1, contractMatches.size());
         matches = contractMatches.get(new EgKey(tenant3.getId(), eg4.getId()),
                                       new EgKey(tenant3.getId(), eg5.getId()));
@@ -379,11 +376,11 @@ public class PolicyResolverTest {
 
         // empty matches
         tc.tenant.set(new IndexedTenant(tenant0));
-        contractMatches = resolver.selectContracts(tCol);
+        contractMatches = ContractResolverUtils.selectContracts(ImmutableSet.of(tc.tenant.get()));
         assertEquals(0, contractMatches.size());
 
         tc.tenant.set(new IndexedTenant(tenant00));
-        contractMatches = resolver.selectContracts(tCol);
+        contractMatches = ContractResolverUtils.selectContracts(ImmutableSet.of(tc.tenant.get()));
         assertEquals(0, contractMatches.size());
     }
 
@@ -395,14 +392,13 @@ public class PolicyResolverTest {
                                  ImmutableSet.of(ImmutableSet.of(cond1.getName(),
                                                                  cond2.getName())));
         TenantContext tc = new TenantContext(null);
-        Collection<TenantContext> tCol = Collections.singleton(tc);
 
         tc.tenant.set(new IndexedTenant(tenant1));
         Table<EgKey, EgKey, List<ContractMatch>> contractMatches =
-                resolver.selectContracts(tCol);
+                ContractResolverUtils.selectContracts(ImmutableSet.of(tc.tenant.get()));
         Map<EgKey, Set<ConditionSet>> egConditions = new HashMap<>();
         Table<EgKey, EgKey, Policy> policy =
-                resolver.selectSubjects(contractMatches, egConditions);
+                SubjectResolverUtils.selectSubjects(contractMatches, egConditions);
         assertEquals(1, policy.size());
         Policy p = policy.get(new EgKey(tenant1.getId(), eg1.getId()), new EgKey(tenant1.getId(), eg2.getId()));
         List<RuleGroup> rules = p.getRuleMap().get(cs, ConditionSet.EMPTY);
@@ -416,9 +412,9 @@ public class PolicyResolverTest {
         assertEquals(rule1.getName(), rg.rules.get(0).getName());
 
         tc.tenant.set(new IndexedTenant(tenant2));
-        contractMatches = resolver.selectContracts(tCol);
+        contractMatches = ContractResolverUtils.selectContracts(ImmutableSet.of(tc.tenant.get()));
         egConditions = new HashMap<>();
-        policy = resolver.selectSubjects(contractMatches, egConditions);
+        policy = SubjectResolverUtils.selectSubjects(contractMatches, egConditions);
 
         assertEquals(2, policy.size());
         p = policy.get(new EgKey(tenant2.getId(), eg3.getId()),
@@ -456,9 +452,9 @@ public class PolicyResolverTest {
         assertEquals(rule1.getName(), rg.rules.get(0).getName());
 
         tc.tenant.set(new IndexedTenant(tenant3));
-        contractMatches = resolver.selectContracts(tCol);
+        contractMatches = ContractResolverUtils.selectContracts(ImmutableSet.of(tc.tenant.get()));
         egConditions = new HashMap<>();
-        policy = resolver.selectSubjects(contractMatches, egConditions);
+        policy = SubjectResolverUtils.selectSubjects(contractMatches, egConditions);
 
         assertEquals(1, policy.size());
         p = policy.get(new EgKey(tenant3.getId(), eg4.getId()),

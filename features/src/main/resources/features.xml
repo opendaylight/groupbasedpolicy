@@ -23,6 +23,9 @@
     <!-- Repos needed by the Neutron Mapper -->
     <repository>mvn:org.opendaylight.neutron/features-neutron/${neutron.version}/xml/features</repository>
 
+    <!-- Repos needed by the UI Backend -->
+    <repository>mvn:org.opendaylight.controller/features-restconf/${restconf.version}/xml/features</repository>
+
     <!-- The common GBP components -->
     <feature name='odl-groupbasedpolicy-base' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Base Copmonents'>
         <feature version="${mdsal.version}">odl-mdsal-broker</feature>
@@ -77,7 +80,6 @@
         <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.openstackendpointconfigfile}">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-openstackendpoint-config/${project.version}/xml/config</configfile>
     </feature>
 
-
     <!--
          The Neutron provider
     -->
@@ -88,5 +90,16 @@
         <feature version="${project.version}">odl-groupbasedpolicy-ofoverlay</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/neutron-mapper/${project.version}</bundle>
         <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.neutronmapperconfigfile}">mvn:org.opendaylight.groupbasedpolicy/neutron-mapper-config/${project.version}/xml/config</configfile>
+    </feature>
+
+    <!--
+         The UI Backend
+    -->
+    <feature name='odl-groupbasedpolicy-uibackend' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: UI Backend provides APIs for UI '>
+        <feature version="${mdsal.version}">odl-mdsal-broker</feature>
+        <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
+        <feature version="${restconf.version}">odl-restconf</feature>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/ui-backend/${project.version}</bundle>
+        <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.uibackendconfigfile}">mvn:org.opendaylight.groupbasedpolicy/ui-backend-config/${project.version}/xml/config</configfile>
     </feature>
 </features>

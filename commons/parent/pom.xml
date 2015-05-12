@@ -30,6 +30,7 @@
     <generated.yang.docs>${project.build.directory}/site/models</generated.yang.docs>
     <config.version>0.3.0-SNAPSHOT</config.version>
     <mdsal.version>1.2.0-SNAPSHOT</mdsal.version>
+    <restconf.version>1.2.0-SNAPSHOT</restconf.version>
     <yangtools.version>0.7.0-SNAPSHOT</yangtools.version>
     <openflowplugin.version>0.1.0-SNAPSHOT</openflowplugin.version>
     <neutron.version>0.5.0-SNAPSHOT</neutron.version>
@@ -57,6 +58,11 @@
       <dependency>
         <groupId>org.opendaylight.groupbasedpolicy</groupId>
         <artifactId>neutron-mapper</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.opendaylight.groupbasedpolicy</groupId>
+        <artifactId>ui-backend</artifactId>
         <version>${project.version}</version>
       </dependency>
 
