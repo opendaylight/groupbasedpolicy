@@ -9,7 +9,8 @@ module neutron-mapper {
     import ietf-inet-types {prefix inet;}
 
     description 
-        "This module defines the mapping model between Neutron IDs and GBP IDs.";
+        "This module defines the mapping model between Neutron IDs and GBP IDs. 
+        These mappings are used just internaly and are NOT EXPORTED.";
 
     revision "2015-02-23" {
         description

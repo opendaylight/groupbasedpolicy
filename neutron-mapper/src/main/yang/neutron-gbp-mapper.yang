@@ -1,0 +1,56 @@
+module neutron-gbp-mapper {
+    yang-version 1;
+
+    namespace "urn:opendaylight:groupbasedpolicy:neutron-gbp-mapper";
+    prefix "neutron-gbp-mapper";
+
+    import gbp-common {prefix gbp-common;}
+    import endpoint {prefix gbp-endpoint;}
+    import ietf-inet-types {prefix inet;}
+
+    description 
+        "This module defines the mapping model between Neutron entities and GBP entities.";
+
+    revision "2015-05-13" {
+        description
+            "Initial revision.";
+    }
+
+    grouping neutron-port-key {
+        leaf port-id {
+            description "A unique ID for the neutron port";
+            type gbp-common:unique-id;
+        }
+    }
+
+    container mappings {
+        description "Mapping of neutron entities by groupbasedpolicy entities and vice versa.";
+        config false;
+        container neutron-by-gbp-mappings {
+            description "Neutron entities by groupbasedpolicy entities";
+            container ports-by-endpoints {
+                description "Neutron ports by groupbasedpolicy endpoint";
+                list port-by-endpoint {
+                    description "Neutron port key by groupbasedpolicy endpoint key";
+                    key "l2-context mac-address";
+                    uses gbp-endpoint:l2-key;
+                    uses neutron-port-key;
+                }
+            }
+        }
+
+        container gbp-by-neutron-mappings {
+            description "Groupbasedpolicy entities by neutron entities";
+            container endpoints-by-ports {
+                description "Groupbasedpolicy endpoints by neutron ports";
+                list endpoint-by-port {
+                    description "Groupbasedpolicy endpoint key by neutron port key";
+                    key port-id;
+                    uses neutron-port-key;
+                    uses gbp-endpoint:l2-key;
+                }
+            }
+        }
+    }
+
+}

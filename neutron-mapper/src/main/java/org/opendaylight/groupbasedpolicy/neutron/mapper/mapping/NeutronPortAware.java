@@ -40,6 +40,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Name;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubnetId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.UniqueId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInputBuilder;
@@ -53,6 +54,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L2Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L3Builder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.endpoints.by.ports.EndpointByPort;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.endpoints.by.ports.EndpointByPortBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.ports.by.endpoints.PortByEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.ports.by.endpoints.PortByEndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextInputBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup;
@@ -179,9 +184,17 @@ public class NeutronPortAware implements INeutronPortAware {
         if (!isFwCtxValid) {
             return false;
         }
+        EndpointKey epKey = new EndpointKey(fwCtx.getL2BridgeDomain().getId(), new MacAddress(port.getMacAddress()));
+        UniqueId portId = new UniqueId(port.getID());
+        EndpointByPort endpointByPort = createEndpointByPort(epKey, portId);
+        rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointByPortIid(portId), endpointByPort);
+        PortByEndpoint portByEndpoint = createPortByEndpoint(portId, epKey);
+        rwTx.put(LogicalDatastoreType.OPERATIONAL,
+                IidFactory.portByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()), portByEndpoint);
 
         try {
             RegisterEndpointInput registerEpRpcInput = createRegisterEndpointInput(port, fwCtx);
+
             RpcResult<Void> rpcResult = epService.registerEndpoint(registerEpRpcInput).get();
             if (!rpcResult.isSuccessful()) {
                 LOG.warn("Illegal state - RPC registerEndpoint failed. Input of RPC: {}", registerEpRpcInput);
@@ -208,6 +221,20 @@ public class NeutronPortAware implements INeutronPortAware {
             return false;
         }
         return true;
+    }
+
+    private static EndpointByPort createEndpointByPort(EndpointKey epKey, UniqueId portId) {
+        return new EndpointByPortBuilder().setPortId(portId)
+            .setL2Context(epKey.getL2Context())
+            .setMacAddress(epKey.getMacAddress())
+            .build();
+    }
+
+    private static PortByEndpoint createPortByEndpoint(UniqueId portId, EndpointKey epKey) {
+        return new PortByEndpointBuilder().setPortId(portId)
+            .setL2Context(epKey.getL2Context())
+            .setMacAddress(epKey.getMacAddress())
+            .build();
     }
 
     private List<NeutronSecurityRule> createDhcpSecRules(NeutronPort port, EndpointGroupId consumerEpgId, ReadTransaction rTx) {
