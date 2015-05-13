@@ -65,6 +65,11 @@
       </dependency>
       <dependency>
         <groupId>org.opendaylight.groupbasedpolicy</groupId>
+        <artifactId>neutron-ovsdb</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.opendaylight.groupbasedpolicy</groupId>
         <artifactId>ui-backend</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -106,6 +111,11 @@
         <version>${ovsdb.southbound.version}</version>
       </dependency>
       
+      <dependency>
+        <groupId>org.opendaylight.ovsdb</groupId>
+        <artifactId>southbound-impl</artifactId>
+        <version>${ovsdb.southbound.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 

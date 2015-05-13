@@ -29,6 +29,8 @@
     <module>groupbasedpolicy-openstackendpoint-config</module>
     <module>neutron-mapper</module>
     <module>neutron-mapper-config</module>
+    <module>neutron-ovsdb</module>
+    <module>neutron-ovsdb-config</module>
     <module>ui-backend</module>
     <module>ui-backend-config</module>
     <module>groupbasedpolicy-ui</module>
