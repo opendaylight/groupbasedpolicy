@@ -30,6 +30,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.ArpMatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv4MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv6MatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,7 +57,7 @@ public class PortSecurity extends FlowTable {
     public void sync(NodeId nodeId, PolicyInfo policyInfo, FlowMap flowMap) {
 
         // Allow traffic from tunnel and external ports
-        NodeConnectorId tunnelIf = ctx.getSwitchManager().getTunnelPort(nodeId);
+        NodeConnectorId tunnelIf = ctx.getSwitchManager().getTunnelPort(nodeId, TunnelTypeVxlan.class);
         if (tunnelIf != null)
             flowMap.writeFlow(nodeId, TABLE_ID, allowFromPort(tunnelIf));
         Set<NodeConnectorId> external =

@@ -29,6 +29,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfigBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.TunnelBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
@@ -36,6 +37,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv6Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg0;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -241,16 +243,24 @@ public class DestinationMapperTest extends FlowTableTest {
     }
 
     private void addSwitches() {
-        switchManager.addSwitch(nodeId, tunnelId,
-                Collections.<NodeConnectorId> emptySet(),
-                new OfOverlayNodeConfigBuilder()
-                        .setTunnelIp(new IpAddress(new Ipv4Address("1.2.3.4")))
-                        .build());
-        switchManager.addSwitch(remoteNodeId, remoteTunnelId,
-                Collections.<NodeConnectorId> emptySet(),
-                new OfOverlayNodeConfigBuilder()
-                        .setTunnelIp(new IpAddress(new Ipv4Address("1.2.3.5")))
-                        .build());
+        switchManager.addSwitch(
+                nodeId,
+                tunnelId,
+                Collections.<NodeConnectorId>emptySet(),
+                new OfOverlayNodeConfigBuilder().setTunnel(
+                        ImmutableList.of(new TunnelBuilder().setIp(new IpAddress(new Ipv4Address("1.2.3.4")))
+                            .setTunnelType(TunnelTypeVxlan.class)
+                            .setNodeConnectorId(tunnelId)
+                            .build())).build());
+        switchManager.addSwitch(
+                remoteNodeId,
+                remoteTunnelId,
+                Collections.<NodeConnectorId>emptySet(),
+                new OfOverlayNodeConfigBuilder().setTunnel(
+                        ImmutableList.of(new TunnelBuilder().setIp(new IpAddress(new Ipv4Address("1.2.3.5")))
+                            .setTunnelType(TunnelTypeVxlan.class)
+                            .setNodeConnectorId(tunnelId)
+                            .build())).build());
     }
 
     @Test

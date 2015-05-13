@@ -95,6 +95,14 @@
         <artifactId>openflowplugin-extension-nicira</artifactId>
         <version>${openflowplugin.version}</version>
       </dependency>
+      
+      <!-- OVSDB -->
+      <dependency>
+        <groupId>org.opendaylight.ovsdb</groupId>
+        <artifactId>southbound-api</artifactId>
+        <version>${ovsdb.southbound.version}</version>
+      </dependency>
+      
     </dependencies>
   </dependencyManagement>
 

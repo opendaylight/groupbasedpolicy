@@ -28,12 +28,16 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.Fl
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNodeConnector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig.EncapsulationFormat;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfig;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.Tunnel;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.TunnelBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.node.NodeConnector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.node.NodeConnectorKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.NodeKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeBase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +47,7 @@ import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 
 /**
@@ -107,21 +112,31 @@ public class SwitchManager implements AutoCloseable {
         SwitchState state = switches.get(nodeId);
         if (state == null)
             return Collections.emptySet();
-        return state.externalPorts;
+        return ImmutableSet.copyOf(state.externalPorts);
     }
 
-    public synchronized NodeConnectorId getTunnelPort(NodeId nodeId) {
+    public synchronized NodeConnectorId getTunnelPort(NodeId nodeId, Class<? extends TunnelTypeBase> tunnelType) {
         SwitchState state = switches.get(nodeId);
-        if (state == null)
+        if (state == null) {
             return null;
-        return state.tunnelPort;
+        }
+        TunnelBuilder tunnel = state.tunnelBuilderByType.get(tunnelType);
+        if (tunnel == null) {
+            return null;
+        }
+        return tunnel.getNodeConnectorId();
     }
 
-    public synchronized IpAddress getTunnelIP(NodeId nodeId) {
+    public synchronized IpAddress getTunnelIP(NodeId nodeId, Class<? extends TunnelTypeBase> tunnelType) {
         SwitchState state = switches.get(nodeId);
-        if (state == null || state.nodeConfig == null)
+        if (state == null) {
             return null;
-        return state.nodeConfig.getTunnelIp();
+        }
+        TunnelBuilder tunnel = state.tunnelBuilderByType.get(tunnelType);
+        if (tunnel == null) {
+            return null;
+        }
+        return tunnel.getIp();
     }
 
     /**
@@ -228,7 +243,7 @@ public class SwitchManager implements AutoCloseable {
         private OfOverlayNodeConfig nodeConfig;
         private Map<InstanceIdentifier<NodeConnector>, FlowCapableNodeConnector> fcncByNcIid = Maps.newHashMap();
 
-        NodeConnectorId tunnelPort;
+        Map<Class<? extends TunnelTypeBase>, TunnelBuilder> tunnelBuilderByType = new HashMap<>();
         Set<NodeConnectorId> externalPorts = new HashSet<>();
 
         SwitchStatus status;
@@ -244,14 +259,14 @@ public class SwitchManager implements AutoCloseable {
         public SwitchState(NodeId node, NodeConnectorId tunnelPort, Set<NodeConnectorId> externalPorts,
                 OfOverlayNodeConfig nodeConfig) {
             this.nodeId = node;
-            this.tunnelPort = tunnelPort;
-            this.externalPorts = externalPorts;
             this.nodeConfig = nodeConfig;
+            update();
+            this.externalPorts = externalPorts;
         }
 
         private void update() {
-            HashSet<NodeConnectorId> externalPorts = new HashSet<>();
-            NodeConnectorId tunnelPort = null;
+            tunnelBuilderByType = new HashMap<>();
+            externalPorts = new HashSet<>();
             for (Entry<InstanceIdentifier<NodeConnector>, FlowCapableNodeConnector> fcncByNcIidEntry : fcncByNcIid.entrySet()) {
                 FlowCapableNodeConnector fcnc = fcncByNcIidEntry.getValue();
                 if (fcnc.getName() == null) {
@@ -259,8 +274,13 @@ public class SwitchManager implements AutoCloseable {
                 }
                 InstanceIdentifier<NodeConnector> ncIid = fcncByNcIidEntry.getKey();
                 NodeConnectorId ncId = ncIid.firstKeyOf(NodeConnector.class, NodeConnectorKey.class).getId();
-                if (fcnc.getName().matches(".*(vxlan|tun).*")) {
-                    tunnelPort = ncId;
+                if (fcnc.getName().matches(".*(vxlan).*")) {
+                    TunnelBuilder tunnelBuilder = tunnelBuilderByType.get(TunnelTypeVxlan.class);
+                    if (tunnelBuilder == null) {
+                        tunnelBuilder = new TunnelBuilder().setTunnelType(TunnelTypeVxlan.class);
+                        tunnelBuilderByType.put(TunnelTypeVxlan.class, tunnelBuilder);
+                    }
+                    tunnelBuilder.setNodeConnectorId(ncId);
                 }
                 if (nodeConfig != null && nodeConfig.getExternalInterfaces() != null) {
                     for (String pattern : nodeConfig.getExternalInterfaces()) {
@@ -271,14 +291,30 @@ public class SwitchManager implements AutoCloseable {
                     }
                 }
             }
-            this.tunnelPort = tunnelPort;
-            this.externalPorts = Collections.unmodifiableSet(externalPorts);
+            if (nodeConfig != null && nodeConfig.getTunnel() != null) {
+                for (Tunnel tunnel : nodeConfig.getTunnel()) {
+                    TunnelBuilder tunnelBuilder = tunnelBuilderByType.get(tunnel.getTunnelType());
+                    if (tunnelBuilder == null) {
+                        tunnelBuilder = new TunnelBuilder();
+                        tunnelBuilderByType.put(tunnel.getTunnelType(), tunnelBuilder);
+                    }
+                    if (tunnel.getIp() != null) {
+                        tunnelBuilder.setIp(tunnel.getIp());
+                    }
+                    if (tunnel.getNodeConnectorId() != null) {
+                        tunnelBuilder.setNodeConnectorId(tunnel.getNodeConnectorId());
+                    }
+                    if (tunnel.getPort() != null) {
+                        tunnelBuilder.setPort(tunnel.getPort());
+                    }
+                }
+            }
         }
 
         private void updateStatus() {
-            boolean tunnelPortWithIpExists = tunnelPortWithIpExists();
+            boolean tunnelWithIpAndNcExists = tunnelWithIpAndNcExists();
             if (fcNode != null) {
-                if (tunnelPortWithIpExists) {
+                if (tunnelWithIpAndNcExists) {
                     setStatus(SwitchStatus.READY);
                 } else {
                     setStatus(SwitchStatus.PREPARING);
@@ -296,15 +332,23 @@ public class SwitchManager implements AutoCloseable {
             this.status = newStatus;
         }
 
-        private boolean tunnelPortWithIpExists() {
-            boolean tunnelPortWithIpExists = false;
-            if (tunnelPort != null && nodeConfig != null && nodeConfig.getTunnelIp() != null) {
-                tunnelPortWithIpExists = true;
+        private boolean tunnelWithIpAndNcExists() {
+            if (tunnelBuilderByType.isEmpty()) {
+                LOG.trace("No tunnel on switch {}", nodeId.getValue());
+                return false;
             }
-            LOG.trace("Status of tunnel on switch {} - tunnelPort: {} tunnelIp: {}", nodeId.getValue(),
-                    tunnelPort == null ? null : tunnelPort.getValue(),
-                    nodeConfig == null ? null : nodeConfig.getTunnelIp());
-            return tunnelPortWithIpExists;
+            LOG.trace("Iterating over tunnel till tunnel with IP and node-connector is not found.");
+            for (TunnelBuilder tb : tunnelBuilderByType.values()) {
+                if (tb.getIp() != null && tb.getNodeConnectorId() != null) {
+                    LOG.trace("Tunnel found. Type: {} IP: {} Port: {} Node-connector: {}", tb.getTunnelType()
+                        .getSimpleName(), tb.getIp(), tb.getPort(), tb.getNodeConnectorId());
+                    return true;
+                } else {
+                    LOG.trace("Tunnel which is not completed: Type: {} IP: {} Port: {} Node-connector: {}",
+                            tb.getTunnelType().getSimpleName(), tb.getIp(), tb.getPort(), tb.getNodeConnectorId());
+                }
+            }
+            return false;
         }
 
         public boolean isConfigurationEmpty() {

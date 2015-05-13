@@ -67,6 +67,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev14
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg5;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,7 +98,7 @@ public class PolicyEnforcer extends FlowTable {
 
         flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null));
 
-        NodeConnectorId tunPort = ctx.getSwitchManager().getTunnelPort(nodeId);
+        NodeConnectorId tunPort = ctx.getSwitchManager().getTunnelPort(nodeId, TunnelTypeVxlan.class);
         if (tunPort != null) {
             flowMap.writeFlow(nodeId, TABLE_ID, allowFromTunnel(tunPort));
         }
