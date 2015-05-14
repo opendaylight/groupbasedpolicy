@@ -124,7 +124,16 @@
       <classifier>features</classifier>
       <type>xml</type>
     </dependency>
-
+	
+    <!-- DLUX dependency for the UI -->
+    <dependency>
+      <groupId>org.opendaylight.dlux</groupId>
+      <artifactId>features-dlux</artifactId>
+	  <version>${dlux.version}</version>
+      <classifier>features</classifier>
+      <type>xml</type>
+    </dependency>
+	
     <!-- gbp dependencies -->
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
@@ -145,6 +154,13 @@
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>ui-backend</artifactId>
+    </dependency>
+	
+    <!-- gbp ui dependencies -->
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>groupbasedpolicy-ui-bundle</artifactId>
+      <version>${project.version}</version>
     </dependency>
 
     <!-- gbp configuration dependencies -->

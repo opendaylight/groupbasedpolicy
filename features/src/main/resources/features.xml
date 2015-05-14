@@ -29,6 +29,9 @@
     <repository>mvn:org.opendaylight.sfc/features-sfc-netconf/${sfc.version}/xml/features</repository>
     <!-- Repos needed by the UI Backend -->
     <repository>mvn:org.opendaylight.controller/features-restconf/${restconf.version}/xml/features</repository>
+	
+	<!-- Repos needed by the UI -->
+    <repository>mvn:org.opendaylight.dlux/features-dlux/${dlux.version}/xml/features</repository>
 
     <repository>mvn:org.opendaylight.sfc/features-sfc-ovs/${sfc.version}/xml/features</repository>
     <repository>mvn:org.opendaylight.sfc/features-sfcofl2/${sfc.version}/xml/features</repository>
@@ -114,5 +117,14 @@
         <feature version="${restconf.version}">odl-restconf</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/ui-backend/${project.version}</bundle>
         <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.uibackendconfigfile}">mvn:org.opendaylight.groupbasedpolicy/ui-backend-config/${project.version}/xml/config</configfile>
+    </feature>
+	
+    <!--
+         UI
+    -->
+    <feature name='odl-groupbasedpolicy-ui' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: DLUX UI '>
+        <feature version="${dlux.version}">odl-dlux-core</feature>
+        <feature version="${dlux.version}">odl-dlux-yangvisualizer</feature>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-ui-bundle/${project.version}</bundle>
     </feature>
 </features>
