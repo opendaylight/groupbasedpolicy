@@ -46,6 +46,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -189,9 +190,9 @@ public class GroupTable extends OfTable {
                         bucketId |= 1L << 31;
 
                         IpAddress tunDst =
-                                ctx.getSwitchManager().getTunnelIP(destNode);
+                                ctx.getSwitchManager().getTunnelIP(destNode, TunnelTypeVxlan.class);
                         NodeConnectorId tunPort =
-                                ctx.getSwitchManager().getTunnelPort(nodeId);
+                                ctx.getSwitchManager().getTunnelPort(nodeId, TunnelTypeVxlan.class);
                         if (tunDst == null || tunPort == null)
                             continue;
                         Action tundstAction = null;

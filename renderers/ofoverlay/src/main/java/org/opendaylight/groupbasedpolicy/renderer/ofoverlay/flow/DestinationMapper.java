@@ -99,6 +99,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev14
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg5;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg6;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
@@ -698,8 +699,8 @@ public class DestinationMapper extends FlowTable {
         String nextHop;
 
         // BEGIN TUNNEL HANDLING
-        IpAddress tunDst = ctx.getSwitchManager().getTunnelIP(ofc.getNodeId());
-        NodeConnectorId tunPort = ctx.getSwitchManager().getTunnelPort(nodeId);
+        IpAddress tunDst = ctx.getSwitchManager().getTunnelIP(ofc.getNodeId(), TunnelTypeVxlan.class);
+        NodeConnectorId tunPort = ctx.getSwitchManager().getTunnelPort(nodeId, TunnelTypeVxlan.class);
         if (tunDst == null) {
             LOG.warn("Failed to get Tunnel IP for NodeId {} with EP {}", nodeId, ep);
             return null;
@@ -843,8 +844,8 @@ public class DestinationMapper extends FlowTable {
         String nextHop;
 
         // BEGIN TUNNEL HANDLING
-        IpAddress tunDst = ctx.getSwitchManager().getTunnelIP(ofc.getNodeId());
-        NodeConnectorId tunPort = ctx.getSwitchManager().getTunnelPort(nodeId);
+        IpAddress tunDst = ctx.getSwitchManager().getTunnelIP(ofc.getNodeId(), TunnelTypeVxlan.class);
+        NodeConnectorId tunPort = ctx.getSwitchManager().getTunnelPort(nodeId, TunnelTypeVxlan.class);
         if (tunDst == null) {
             LOG.warn("Failed to get Tunnel IP for NodeId {} with L3Address {}", nodeId, destL3Address);
             return null;

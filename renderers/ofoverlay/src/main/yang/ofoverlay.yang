@@ -15,7 +15,8 @@ module ofoverlay {
     import ietf-inet-types { prefix "inet"; revision-date 2010-09-24; }
 
     import yang-ext {prefix ext; revision-date "2013-07-09";}
-    import opendaylight-inventory {prefix inv;revision-date "2013-08-19";}
+    import opendaylight-inventory {prefix inv; revision-date "2013-08-19";}
+    import overlay {prefix ovsdb-overlay; revision-date 2015-01-05;}
 
     import gbp-common {prefix gbp-common;}
     import endpoint {prefix endpoint;}
@@ -148,11 +149,19 @@ module ofoverlay {
 
     augment "/inv:nodes/inv:node" {
         ext:augment-identifier "of-overlay-node-config";
-
-        leaf tunnel-ip {
-            description
-                "The IP address used for tunnel termination on this switch";
-            type inet:ip-address;
+        list tunnel {
+            key "tunnel-type";
+            uses ovsdb-overlay:tunnel-type-attributes;
+            uses ovsdb-overlay:ip-port-locator;
+            leaf node-connector-id {
+                description
+                    "The node connector where is the tunnel located. The
+                     format is openflow:[dpid]:[port] where the dpid is
+                     the value of the switch DPID cast to a long, and port
+                     is the openflow port number of the interface where
+                     the endpoint is connected.";
+                type inv:node-connector-id;
+            }
         }
         container ovsdb-config {
             leaf ip {

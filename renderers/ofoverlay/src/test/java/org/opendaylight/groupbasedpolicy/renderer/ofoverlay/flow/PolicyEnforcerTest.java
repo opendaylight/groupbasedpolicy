@@ -32,6 +32,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfigBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.TunnelBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.Matcher.MatchType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRefBuilder;
@@ -56,6 +57,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev14
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.general.rev140714.GeneralAugMatchNodesNodeTableFlow;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,20 +68,25 @@ import static org.junit.Assert.*;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.*;
 
 public class PolicyEnforcerTest extends FlowTableTest {
-    protected static final Logger LOG = 
+    protected static final Logger LOG =
             LoggerFactory.getLogger(PolicyEnforcerTest.class);
 
+    @Override
     @Before
     public void setup() throws Exception {
         initCtx();
         table = new PolicyEnforcer(ctx);
         super.setup();
-        
-        switchManager.addSwitch(nodeId, tunnelId, 
-                                Collections.<NodeConnectorId>emptySet(),
-                                new OfOverlayNodeConfigBuilder()
-                                    .setTunnelIp(new IpAddress(new Ipv4Address("1.2.3.4")))
-                                    .build());
+
+        switchManager.addSwitch(
+                nodeId,
+                tunnelId,
+                Collections.<NodeConnectorId>emptySet(),
+                new OfOverlayNodeConfigBuilder().setTunnel(
+                        ImmutableList.of(new TunnelBuilder().setIp(new IpAddress(new Ipv4Address("1.2.3.4")))
+                            .setTunnelType(TunnelTypeVxlan.class)
+                            .setNodeConnectorId(tunnelId)
+                            .build())).build());
     }
 
     @Test
@@ -212,7 +219,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
                                 .getTcpDestinationPort())
                         )) {
                 count += 1;
-            } 
+            }
         }
         return count;
     }
@@ -235,7 +242,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
             .setCondition(ImmutableList.of(cond1.getName(), cond2.getName()))
             .setEndpointGroup(eg2)
             .build();
-        endpointManager.addEndpoint(ep2);        
+        endpointManager.addEndpoint(ep2);
 
         TenantBuilder tb = baseTenant()
             .setContract(ImmutableList.of(new ContractBuilder()
@@ -264,13 +271,13 @@ public class PolicyEnforcerTest extends FlowTableTest {
 
         PolicyInfo policy = policyResolver.getCurrentPolicy();
         List<ConditionName> ep1c = endpointManager.getCondsForEndpoint(ep1);
-        ConditionGroup cg1 = 
-                policy.getEgCondGroup(new EgKey(tb.getId(), 
+        ConditionGroup cg1 =
+                policy.getEgCondGroup(new EgKey(tb.getId(),
                                                 ep1.getEndpointGroup()),
                                       ep1c);
         List<ConditionName> ep2c = endpointManager.getCondsForEndpoint(ep2);
-        ConditionGroup cg2 = 
-                policy.getEgCondGroup(new EgKey(tb.getId(), 
+        ConditionGroup cg2 =
+                policy.getEgCondGroup(new EgKey(tb.getId(),
                                                 ep2.getEndpointGroup()),
                                       ep2c);
         int cg1Id = OrdinalFactory.getCondGroupOrdinal(cg1);
@@ -283,14 +290,14 @@ public class PolicyEnforcerTest extends FlowTableTest {
         assertNotEquals(cg1Id, cg2Id);
 
         MatchBuilder mb = new MatchBuilder();
-        FlowUtils.addNxRegMatch(mb, 
+        FlowUtils.addNxRegMatch(mb,
                                 RegMatch.of(NxmNxReg0.class, Long.valueOf(eg1Id)),
                                 RegMatch.of(NxmNxReg1.class, Long.valueOf(cg1Id)),
                                 RegMatch.of(NxmNxReg2.class, Long.valueOf(eg2Id)),
                                 RegMatch.of(NxmNxReg3.class, Long.valueOf(cg2Id)));
         GeneralAugMatchNodesNodeTableFlow m1 =
                 mb.getAugmentation(GeneralAugMatchNodesNodeTableFlow.class);
-        FlowUtils.addNxRegMatch(mb, 
+        FlowUtils.addNxRegMatch(mb,
                                 RegMatch.of(NxmNxReg0.class, Long.valueOf(eg2Id)),
                                 RegMatch.of(NxmNxReg1.class, Long.valueOf(cg2Id)),
                                 RegMatch.of(NxmNxReg2.class, Long.valueOf(eg1Id)),

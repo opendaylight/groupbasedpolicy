@@ -26,11 +26,14 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3AddressBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfigBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.TunnelBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.ArpMatch;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv4Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv6Match;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,7 +83,11 @@ public class PortSecurityTest extends FlowTableTest {
             .addSwitch(new NodeId("openflow:1"),
                        new NodeConnectorId("openflow:1:1"),
                        ImmutableSet.of(new NodeConnectorId("openflow:1:2")),
-                       null);
+                       new OfOverlayNodeConfigBuilder().setTunnel(
+                               ImmutableList.of(new TunnelBuilder()
+                                   .setTunnelType(TunnelTypeVxlan.class)
+                                   .setNodeConnectorId(new NodeConnectorId("openflow:1:1"))
+                                   .build())).build());
         FlowMap fm = dosync(null);
         assertNotEquals(0 ,fm.getTableForNode(nodeId, (short) 0).getFlow().size());
 

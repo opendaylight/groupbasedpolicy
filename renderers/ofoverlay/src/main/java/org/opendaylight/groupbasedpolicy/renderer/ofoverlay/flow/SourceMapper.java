@@ -43,6 +43,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev14
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg4;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg5;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg6;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,7 +120,7 @@ public class SourceMapper extends FlowTable {
 
                     // Please do not check for remote v local nodeID, we need local to local tunnels
                     // in the case of chaining - The Great Dr Sunal.
-                    NodeConnectorId tunPort = ctx.getSwitchManager().getTunnelPort(remoteNodeId);
+                    NodeConnectorId tunPort = ctx.getSwitchManager().getTunnelPort(remoteNodeId, TunnelTypeVxlan.class);
                     if (tunPort == null) {
                         LOG.trace("No tunnel port for tunnel in SourceMapper between local:{} and remote:{}",
                                 nodeId.getValue(), remoteNodeId.getValue());
