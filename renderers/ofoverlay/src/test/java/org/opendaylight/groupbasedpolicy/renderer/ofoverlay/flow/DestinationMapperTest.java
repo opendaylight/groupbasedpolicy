@@ -265,11 +265,12 @@ public class DestinationMapperTest extends FlowTableTest {
 
     @Test
     public void testSame() throws Exception {
+        addSwitches();
         Endpoint localEp = localEP().build();
         endpointManager.addEndpoint(localEp);
         Endpoint remoteEp = remoteEP(remoteNodeId).build();
         endpointManager.addEndpoint(remoteEp);
-        addSwitches();
+
 
         policyResolver.addTenant(baseTenant().setContract(
                 ImmutableList.<Contract> of(baseContract(null).build())).build());
@@ -278,13 +279,13 @@ public class DestinationMapperTest extends FlowTableTest {
 
     @Test
     public void testDiff() throws Exception {
+        addSwitches();
         Endpoint localEp = localEP().build();
         endpointManager.addEndpoint(localEp);
         Endpoint remoteEp = remoteEP(remoteNodeId)
                 .setEndpointGroup(eg2)
                 .build();
         endpointManager.addEndpoint(remoteEp);
-        addSwitches();
 
         policyResolver.addTenant(baseTenant().setContract(
                 ImmutableList.<Contract> of(baseContract(null).build())).build());

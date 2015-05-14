@@ -58,7 +58,7 @@ public class SwitchManager implements AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(SwitchManager.class);
 
-    protected Map<NodeId, SwitchState> switches = new HashMap<>();
+    protected static Map<NodeId, SwitchState> switches = new HashMap<>();
     protected List<SwitchListener> listeners = new CopyOnWriteArrayList<>();
 
     private final FlowCapableNodeListener nodeListener;
@@ -79,6 +79,18 @@ public class SwitchManager implements AutoCloseable {
             nodeConnectorListener = new FlowCapableNodeConnectorListener(dataProvider, this);
         }
         LOG.debug("Initialized OFOverlay switch manager");
+    }
+
+    // When first endpoint is attached to switch, it can be ready
+    public static void activateEndpoint(NodeId nodeId) {
+        switches.get(nodeId).hasEndpoints=true;
+        switches.get(nodeId).updateStatus();
+    }
+
+    // When last endpoint is removed from switch, it is no longer ready
+    public static void deactivateEndpoint(NodeId nodeId) {
+        switches.get(nodeId).hasEndpoints=false;
+        switches.get(nodeId).updateStatus();
     }
 
     /**
@@ -115,7 +127,7 @@ public class SwitchManager implements AutoCloseable {
         return ImmutableSet.copyOf(state.externalPorts);
     }
 
-    public synchronized NodeConnectorId getTunnelPort(NodeId nodeId, Class<? extends TunnelTypeBase> tunnelType) {
+    public static synchronized NodeConnectorId getTunnelPort(NodeId nodeId, Class<? extends TunnelTypeBase> tunnelType) {
         SwitchState state = switches.get(nodeId);
         if (state == null) {
             return null;
@@ -127,7 +139,7 @@ public class SwitchManager implements AutoCloseable {
         return tunnel.getNodeConnectorId();
     }
 
-    public synchronized IpAddress getTunnelIP(NodeId nodeId, Class<? extends TunnelTypeBase> tunnelType) {
+    public static synchronized IpAddress getTunnelIP(NodeId nodeId, Class<? extends TunnelTypeBase> tunnelType) {
         SwitchState state = switches.get(nodeId);
         if (state == null) {
             return null;
@@ -242,6 +254,7 @@ public class SwitchManager implements AutoCloseable {
         private FlowCapableNode fcNode;
         private OfOverlayNodeConfig nodeConfig;
         private Map<InstanceIdentifier<NodeConnector>, FlowCapableNodeConnector> fcncByNcIid = Maps.newHashMap();
+        private boolean hasEndpoints=false;
 
         Map<Class<? extends TunnelTypeBase>, TunnelBuilder> tunnelBuilderByType = new HashMap<>();
         Set<NodeConnectorId> externalPorts = new HashSet<>();
@@ -314,7 +327,7 @@ public class SwitchManager implements AutoCloseable {
         private void updateStatus() {
             boolean tunnelWithIpAndNcExists = tunnelWithIpAndNcExists();
             if (fcNode != null) {
-                if (tunnelWithIpAndNcExists) {
+                if (tunnelWithIpAndNcExists && hasEndpoints) {
                     setStatus(SwitchStatus.READY);
                 } else {
                     setStatus(SwitchStatus.PREPARING);
@@ -340,12 +353,14 @@ public class SwitchManager implements AutoCloseable {
             LOG.trace("Iterating over tunnel till tunnel with IP and node-connector is not found.");
             for (TunnelBuilder tb : tunnelBuilderByType.values()) {
                 if (tb.getIp() != null && tb.getNodeConnectorId() != null) {
-                    LOG.trace("Tunnel found. Type: {} IP: {} Port: {} Node-connector: {}", tb.getTunnelType()
-                        .getSimpleName(), tb.getIp(), tb.getPort(), tb.getNodeConnectorId());
+//                    LOG.trace("Tunnel found. Type: {} IP: {} Port: {} Node-connector: {}", tb.getTunnelType()
+//                        .getSimpleName(), tb.getIp(), tb.getPort(), tb.getNodeConnectorId());
+                    LOG.trace("Tunnel found.");
                     return true;
                 } else {
-                    LOG.trace("Tunnel which is not completed: Type: {} IP: {} Port: {} Node-connector: {}",
-                            tb.getTunnelType().getSimpleName(), tb.getIp(), tb.getPort(), tb.getNodeConnectorId());
+//                    LOG.trace("Tunnel which is not completed: Type: {} IP: {} Port: {} Node-connector: {}",
+//                            tb.getTunnelType().getSimpleName(), tb.getIp(), tb.getPort(), tb.getNodeConnectorId());
+                    LOG.trace("Tunnel which is not completed");
                 }
             }
             return false;

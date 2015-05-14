@@ -20,6 +20,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.GroupTable.Buck
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.GroupTable.GroupCtx;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.PortNumber;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.GroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfigBuilder;
@@ -43,6 +44,7 @@ public class GroupTableTest extends OfTableTest {
             new NodeConnectorId(nodeId.getValue() + ":42");
     NodeConnectorId remoteTunnelId =
             new NodeConnectorId(remoteNodeId.getValue() + ":101");
+    PortNumber portNumber = new PortNumber(4789);
 
     @Before
     public void setup() throws Exception {
@@ -52,19 +54,17 @@ public class GroupTableTest extends OfTableTest {
 
     @Test
     public void testGroup() throws Exception {
-        Endpoint localEp = localEP().build();
-        endpointManager.addEndpoint(localEp);
-        Endpoint remoteEp = remoteEP(remoteNodeId).build();
-        endpointManager.addEndpoint(remoteEp);
         switchManager.addSwitch(
                 nodeId,
                 tunnelId,
                 Collections.<NodeConnectorId>emptySet(),
                 new OfOverlayNodeConfigBuilder().setTunnel(
-                        ImmutableList.of(new TunnelBuilder().setIp(new IpAddress(new Ipv4Address("1.2.3.4")))
-                            .setTunnelType(TunnelTypeVxlan.class)
-                            .setNodeConnectorId(tunnelId)
-                            .build())).build());
+                        ImmutableList.of(new TunnelBuilder()
+                                            .setIp(new IpAddress(new Ipv4Address("1.2.3.4")))
+                                            .setTunnelType(TunnelTypeVxlan.class)
+                                            .setNodeConnectorId(tunnelId)
+                                            .setPort(portNumber)
+                                            .build())).build());
         switchManager.addSwitch(
                 remoteNodeId,
                 remoteTunnelId,
@@ -73,7 +73,13 @@ public class GroupTableTest extends OfTableTest {
                         ImmutableList.of(new TunnelBuilder().setIp(new IpAddress(new Ipv4Address("1.2.3.5")))
                             .setTunnelType(TunnelTypeVxlan.class)
                             .setNodeConnectorId(tunnelId)
+                            .setPort(portNumber)
                             .build())).build());
+        Endpoint localEp = localEP().build();
+        endpointManager.addEndpoint(localEp);
+        Endpoint remoteEp = remoteEP(remoteNodeId).build();
+        endpointManager.addEndpoint(remoteEp);
+
 
         policyResolver.addTenant(baseTenant().setContract(
                 ImmutableList.<Contract>of(baseContract(null).build())).build());

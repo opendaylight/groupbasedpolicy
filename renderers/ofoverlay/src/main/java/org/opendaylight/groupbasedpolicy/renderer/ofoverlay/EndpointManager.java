@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -76,33 +76,26 @@ import com.google.common.collect.Sets;
  * their locations for renderering. The endpoint manager will maintain
  * appropriate indexes only for switches that are attached to the current
  * controller node.
- *
  * In order to render the policy, we need to be able to efficiently enumerate
  * all endpoints on a particular switch and also all the switches containing
  * each particular endpoint group
  *
  * @author readams
  */
-public class EndpointManager implements AutoCloseable, DataChangeListener
-{
-    private static final Logger LOG =
-            LoggerFactory.getLogger(EndpointManager.class);
-    private final static InstanceIdentifier<Nodes> nodesIid = InstanceIdentifier
-            .builder(Nodes.class).build();
-    private static final InstanceIdentifier<Endpoint> endpointsIid =
-            InstanceIdentifier.builder(Endpoints.class)
-                    .child(Endpoint.class).build();
+public class EndpointManager implements AutoCloseable, DataChangeListener {
+
+    private static final Logger LOG = LoggerFactory.getLogger(EndpointManager.class);
+    private final static InstanceIdentifier<Nodes> nodesIid = InstanceIdentifier.builder(Nodes.class).build();
+    private static final InstanceIdentifier<Endpoint> endpointsIid = InstanceIdentifier.builder(Endpoints.class)
+        .child(Endpoint.class)
+        .build();
     final ListenerRegistration<DataChangeListener> listenerReg;
 
-    private final ConcurrentHashMap<EpKey, Endpoint> endpoints =
-            new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<NodeId, ConcurrentMap<EgKey, Set<EpKey>>> endpointsByGroupByNode =
-            new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<NodeId, Set<EpKey>> endpointsByNode =
-            new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<EpKey, Endpoint> endpoints = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<NodeId, ConcurrentMap<EgKey, Set<EpKey>>> endpointsByGroupByNode = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<NodeId, Set<EpKey>> endpointsByNode = new ConcurrentHashMap<>();
 
-    private final ConcurrentHashMap<EgKey, Set<EpKey>> endpointsByGroup =
-            new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<EgKey, Set<EpKey>> endpointsByGroup = new ConcurrentHashMap<>();
 
     private List<EndpointListener> listeners = new CopyOnWriteArrayList<>();
 
@@ -112,19 +105,14 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
 
     final private DataBroker dataProvider;
 
-    public EndpointManager(DataBroker dataProvider,
-            RpcProviderRegistry rpcRegistry,
-            ScheduledExecutorService executor,
+    public EndpointManager(DataBroker dataProvider, RpcProviderRegistry rpcRegistry, ScheduledExecutorService executor,
             SwitchManager switchManager) {
         this.executor = executor;
         this.dataProvider = dataProvider;
         EndpointRpcRegistry.register(dataProvider, rpcRegistry, endpointRpcAug);
         if (dataProvider != null) {
-            listenerReg = dataProvider
-                    .registerDataChangeListener(LogicalDatastoreType.OPERATIONAL,
-                            endpointsIid,
-                            this,
-                            DataChangeScope.ONE);
+            listenerReg = dataProvider.registerDataChangeListener(LogicalDatastoreType.OPERATIONAL, endpointsIid, this,
+                    DataChangeScope.ONE);
         } else
             listenerReg = null;
 
@@ -139,7 +127,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
      * Add a {@link EndpointListener} to get notifications of switch events
      *
      * @param listener
-     *            the {@link EndpointListener} to add
+     *        the {@link EndpointListener} to add
      */
     public void registerListener(EndpointListener listener) {
         listeners.add(listener);
@@ -149,7 +137,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
      * Get a collection of endpoints attached to a particular switch
      *
      * @param nodeId
-     *            the nodeId of the switch to get endpoints for
+     *        the nodeId of the switch to get endpoints for
      * @return a collection of {@link Endpoint} objects.
      */
     public synchronized Set<EgKey> getGroupsForNode(NodeId nodeId) {
@@ -163,30 +151,28 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
      * Get the set of nodes
      *
      * @param egKey
-     *            the egKey of the endpointgroup to get nodes for
+     *        the egKey of the endpointgroup to get nodes for
      * @return a collection of {@link NodeId} objects.
      */
     public synchronized Set<NodeId> getNodesForGroup(final EgKey egKey) {
-        return ImmutableSet.copyOf(Sets.filter(endpointsByGroupByNode.keySet(),
-                new Predicate<NodeId>() {
-                    @Override
-                    public boolean apply(NodeId input) {
-                        Map<EgKey, Set<EpKey>> nodeEps =
-                                endpointsByGroupByNode.get(input);
-                        return (nodeEps != null &&
-                        nodeEps.containsKey(egKey));
-                    }
+        return ImmutableSet.copyOf(Sets.filter(endpointsByGroupByNode.keySet(), new Predicate<NodeId>() {
 
-                }));
+            @Override
+            public boolean apply(NodeId input) {
+                Map<EgKey, Set<EpKey>> nodeEps = endpointsByGroupByNode.get(input);
+                return (nodeEps != null && nodeEps.containsKey(egKey));
+            }
+
+        }));
     }
 
     /**
      * Get the endpoints in a particular group on a particular node
      *
      * @param nodeId
-     *            the node ID to look up
+     *        the node ID to look up
      * @param eg
-     *            the group to look up
+     *        the group to look up
      * @return the endpoints
      */
     public synchronized Collection<Endpoint> getEndpointsForNode(NodeId nodeId, EgKey eg) {
@@ -199,14 +185,14 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
         Collection<EpKey> ebn = nodeEps.get(eg);
         if (ebn == null)
             return Collections.emptyList();
-        return ImmutableList.copyOf(Collections2.transform(ebn,indexTransform));
+        return ImmutableList.copyOf(Collections2.transform(ebn, indexTransform));
     }
 
     /**
      * Get the endpoints on a particular node
      *
      * @param nodeId
-     *            the node ID to look up
+     *        the node ID to look up
      * @return the endpoints
      */
     public synchronized Collection<Endpoint> getEndpointsForNode(final NodeId nodeId) {
@@ -224,7 +210,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
      * Get the endpoint object for the given key
      *
      * @param epKey
-     *            the key
+     *        the key
      * @return the {@link Endpoint} corresponding to the key
      */
     public Endpoint getEndpoint(EpKey epKey) {
@@ -235,7 +221,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
      * Set the learning mode to the specified value
      *
      * @param learningMode
-     *            the learning mode to set
+     *        the learning mode to set
      */
     public void setLearningMode(LearningMode learningMode) {
         // No-op for now
@@ -245,7 +231,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
      * Get a collection of endpoints in a particular endpoint group
      *
      * @param eg
-     *            endpoint group ID
+     *        endpoint group ID
      * @return a collection of {@link Endpoint} objects.
      */
     public synchronized Collection<Endpoint> getEndpointsForGroup(EgKey eg) {
@@ -261,7 +247,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
      * directly represented in the endpoint object
      *
      * @param endpoint
-     *            the {@link Endpoint} to resolve
+     *        the {@link Endpoint} to resolve
      * @return the list of {@link ConditionName}
      */
     public List<ConditionName> getCondsForEndpoint(Endpoint endpoint) {
@@ -333,17 +319,16 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
 
                 Optional<Nodes> result;
                 try {
-                    result = dataProvider
-                            .newReadOnlyTransaction().read(
-                                    LogicalDatastoreType.OPERATIONAL, nodesIid).get();
+                    result = dataProvider.newReadOnlyTransaction()
+                        .read(LogicalDatastoreType.OPERATIONAL, nodesIid)
+                        .get();
                     if (result.isPresent()) {
                         Nodes nodes = result.get();
                         for (Node node : nodes.getNode()) {
                             if (node.getNodeConnector() != null) {
                                 boolean found = false;
                                 for (NodeConnector nc : node.getNodeConnector()) {
-                                    FlowCapableNodeConnector fcnc = nc
-                                            .getAugmentation(FlowCapableNodeConnector.class);
+                                    FlowCapableNodeConnector fcnc = nc.getAugmentation(FlowCapableNodeConnector.class);
                                     if (fcnc.getName().equals(portName)) {
                                         nodeInfo = new NodeInfo();
                                         nodeInfo.setNode(node);
@@ -426,25 +411,24 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
         }
     }
 
-    private Function<EpKey, Endpoint> indexTransform =
-            new Function<EpKey, Endpoint>() {
-                @Override
-                public Endpoint apply(EpKey input) {
-                    return endpoints.get(input);
-                }
-            };
+    private Function<EpKey, Endpoint> indexTransform = new Function<EpKey, Endpoint>() {
+
+        @Override
+        public Endpoint apply(EpKey input) {
+            return endpoints.get(input);
+        }
+    };
 
     private boolean validEp(Endpoint endpoint) {
-        return (endpoint != null && endpoint.getTenant() != null &&
-                (endpoint.getEndpointGroup() != null || endpoint.getEndpointGroups() != null) &&
-                endpoint.getL2Context() != null && endpoint.getMacAddress() != null);
+        return (endpoint != null && endpoint.getTenant() != null
+                && (endpoint.getEndpointGroup() != null || endpoint.getEndpointGroups() != null)
+                && endpoint.getL2Context() != null && endpoint.getMacAddress() != null);
     }
 
     private NodeId getLocation(Endpoint endpoint) {
         if (!validEp(endpoint))
             return null;
-        OfOverlayContext context =
-                endpoint.getAugmentation(OfOverlayContext.class);
+        OfOverlayContext context = endpoint.getAugmentation(OfOverlayContext.class);
         if (context != null)
             return context.getNodeId();
 
@@ -481,16 +465,14 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
         ConcurrentMap<EgKey, Set<EpKey>> map = endpointsByGroupByNode.get(location);
         if (map == null) {
             map = new ConcurrentHashMap<>();
-            ConcurrentMap<EgKey, Set<EpKey>> old =
-                    endpointsByGroupByNode.putIfAbsent(location, map);
+            ConcurrentMap<EgKey, Set<EpKey>> old = endpointsByGroupByNode.putIfAbsent(location, map);
             if (old != null)
                 map = old;
         }
         return SetUtils.getNestedSet(eg, map);
     }
 
-    private static final ConcurrentMap<EgKey, Set<EpKey>> EMPTY_MAP =
-            new ConcurrentHashMap<>();
+    private static final ConcurrentMap<EgKey, Set<EpKey>> EMPTY_MAP = new ConcurrentHashMap<>();
 
     private Set<EpKey> getEpGSet(EgKey eg) {
         return SetUtils.getNestedSet(eg, endpointsByGroup);
@@ -570,6 +552,8 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
                 Set<EpKey> epsNode = new HashSet<EpKey>();
                 epsNode.add(newEpKey);
                 endpointsByNode.put(newLoc, epsNode);
+                SwitchManager.activateEndpoint(newLoc);
+
             } else {
                 Set<EpKey> epsNode = endpointsByNode.get(newLoc);
                 epsNode.add(newEpKey);
@@ -603,14 +587,15 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
             Set<EpKey> epsNode = endpointsByNode.get(oldLoc);
             if (epsNode != null) {
                 epsNode.remove(oldEpKey);
-                if (epsNode.isEmpty())
+                if (epsNode.isEmpty()) {
                     endpointsByNode.remove(oldLoc);
+                    SwitchManager.deactivateEndpoint(oldLoc);
+                }
             }
             // Update endpointsByGroupByNode
             // Update endpointsByGroup
             // Get map of EPGs and their Endpoints for Node
-            ConcurrentMap<EgKey, Set<EpKey>> map =
-                    endpointsByGroupByNode.get(oldLoc);
+            ConcurrentMap<EgKey, Set<EpKey>> map = endpointsByGroupByNode.get(oldLoc);
             // For each EPG in the removed endpoint...
             for (EndpointGroupId oldEpgId : newEpgIds) {
                 EgKey oldEgKey = new EgKey(oldEp.getTenant(), oldEpgId);
@@ -641,8 +626,8 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
         /*
          * Moved endpoint (from node to node or from NULL to node)
          */
-        if ((oldEp != null && newEp != null && oldEpKey != null && newEpKey != null) &&
-                (oldEpKey.toString().equals(newEpKey.toString()))) {
+        if ((oldEp != null && newEp != null && oldEpKey != null && newEpKey != null)
+                && (oldEpKey.toString().equals(newEpKey.toString()))) {
             // old and new Endpoints have same key. (same endpoint)
 
             /*
@@ -653,13 +638,14 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
                 Set<EpKey> epsNode = endpointsByNode.get(oldLoc);
                 if (epsNode != null) {
                     epsNode.remove(oldEpKey);
-                    if (epsNode.isEmpty())
+                    if (epsNode.isEmpty()) {
                         endpointsByNode.remove(oldLoc);
+                        SwitchManager.deactivateEndpoint(oldLoc);
+                    }
                 }
                 // Update endpointsByGroupByNode
                 // Get map of EPGs and their Endpoints for Node
-                ConcurrentMap<EgKey, Set<EpKey>> map =
-                        endpointsByGroupByNode.get(oldLoc);
+                ConcurrentMap<EgKey, Set<EpKey>> map = endpointsByGroupByNode.get(oldLoc);
                 // For each EPG in the removed endpoint...
                 for (EndpointGroupId oldEpgId : oldEpgIds) {
                     EgKey oldEgKey = new EgKey(oldEp.getTenant(), oldEpgId);
@@ -673,8 +659,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
                     }
                     // endpointsByGroup
                     Set<EpKey> geps = endpointsByGroup.get(oldEgKey);
-                    if (geps != null)
-                    {
+                    if (geps != null) {
                         geps.remove(oldEpKey);
                         if (geps.isEmpty())
                             endpointsByGroup.remove(oldEgKey);
@@ -696,6 +681,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
                 Set<EpKey> newEpsNode = new HashSet<EpKey>();
                 newEpsNode.add(newEpKey);
                 endpointsByNode.put(newLoc, newEpsNode);
+                SwitchManager.activateEndpoint(newLoc);
             } else {
                 Set<EpKey> newEpsNode = endpointsByNode.get(newLoc);
                 newEpsNode.add(newEpKey);
@@ -747,6 +733,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener
     // A wrapper class around node, nodeConnector info so we can pass a final
     // object inside OnSuccess anonymous inner class
     private static class NodeInfo {
+
         NodeConnector nodeConnector;
         Node node;
 

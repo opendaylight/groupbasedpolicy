@@ -62,7 +62,7 @@ public class PortSecurityTest extends FlowTableTest {
         for (Flow f : fm.getTableForNode(nodeId, (short) 0).getFlow()) {
             flowMap.put(f.getId().getValue(), f);
             Long etherType = null;
-            if (f.getMatch() != null) {
+            if (f.getMatch() != null && f.getMatch().getEthernetMatch() !=null) {
                 etherType = f.getMatch().getEthernetMatch().getEthernetType().getType().getValue();
             }
             if (f.getMatch() == null || FlowUtils.ARP.equals(etherType) || FlowUtils.IPv4.equals(etherType)
