@@ -201,10 +201,10 @@ public class NeutronPortAware implements INeutronPortAware {
         EndpointKey epKey = new EndpointKey(fwCtx.getL2BridgeDomain().getId(), new MacAddress(port.getMacAddress()));
         UniqueId portId = new UniqueId(port.getID());
         EndpointByPort endpointByPort = createEndpointByPort(epKey, portId);
-        rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointByPortIid(portId), endpointByPort);
+        rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointByPortIid(portId), endpointByPort, true);
         PortByEndpoint portByEndpoint = createPortByEndpoint(portId, epKey);
         rwTx.put(LogicalDatastoreType.OPERATIONAL,
-                IidFactory.portByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()), portByEndpoint);
+                IidFactory.portByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()), portByEndpoint, true);
 
         try {
             RegisterEndpointInput registerEpRpcInput = createRegisterEndpointInput(port, fwCtx);
