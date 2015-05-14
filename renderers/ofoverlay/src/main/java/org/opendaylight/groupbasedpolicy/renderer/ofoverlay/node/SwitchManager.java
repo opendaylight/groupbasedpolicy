@@ -82,14 +82,14 @@ public class SwitchManager implements AutoCloseable {
     }
 
     // When first endpoint is attached to switch, it can be ready
-    public static void activateEndpoint(NodeId nodeId) {
-        switches.get(nodeId).hasEndpoints=true;
+    public static void activatingSwitch(NodeId nodeId) {
+        switches.get(nodeId).setHasEndpoints(true);
         switches.get(nodeId).updateStatus();
     }
 
     // When last endpoint is removed from switch, it is no longer ready
-    public static void deactivateEndpoint(NodeId nodeId) {
-        switches.get(nodeId).hasEndpoints=false;
+    public static void deactivatingSwitch(NodeId nodeId) {
+        switches.get(nodeId).setHasEndpoints(false);;
         switches.get(nodeId).updateStatus();
     }
 
@@ -256,6 +256,16 @@ public class SwitchManager implements AutoCloseable {
         private Map<InstanceIdentifier<NodeConnector>, FlowCapableNodeConnector> fcncByNcIid = Maps.newHashMap();
         private boolean hasEndpoints=false;
 
+
+        public boolean isHasEndpoints() {
+            return hasEndpoints;
+        }
+
+
+        public void setHasEndpoints(boolean hasEndpoints) {
+            this.hasEndpoints = hasEndpoints;
+        }
+
         Map<Class<? extends TunnelTypeBase>, TunnelBuilder> tunnelBuilderByType = new HashMap<>();
         Set<NodeConnectorId> externalPorts = new HashSet<>();
 
@@ -327,7 +337,7 @@ public class SwitchManager implements AutoCloseable {
         private void updateStatus() {
             boolean tunnelWithIpAndNcExists = tunnelWithIpAndNcExists();
             if (fcNode != null) {
-                if (tunnelWithIpAndNcExists && hasEndpoints) {
+                if (tunnelWithIpAndNcExists && isHasEndpoints()) {
                     setStatus(SwitchStatus.READY);
                 } else {
                     setStatus(SwitchStatus.PREPARING);

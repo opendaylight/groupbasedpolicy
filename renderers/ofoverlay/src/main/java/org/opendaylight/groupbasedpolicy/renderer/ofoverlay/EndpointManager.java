@@ -552,7 +552,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener {
                 Set<EpKey> epsNode = new HashSet<EpKey>();
                 epsNode.add(newEpKey);
                 endpointsByNode.put(newLoc, epsNode);
-                SwitchManager.activateEndpoint(newLoc);
+                SwitchManager.activatingSwitch(newLoc);
 
             } else {
                 Set<EpKey> epsNode = endpointsByNode.get(newLoc);
@@ -589,7 +589,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener {
                 epsNode.remove(oldEpKey);
                 if (epsNode.isEmpty()) {
                     endpointsByNode.remove(oldLoc);
-                    SwitchManager.deactivateEndpoint(oldLoc);
+                    SwitchManager.deactivatingSwitch(oldLoc);
                 }
             }
             // Update endpointsByGroupByNode
@@ -640,7 +640,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener {
                     epsNode.remove(oldEpKey);
                     if (epsNode.isEmpty()) {
                         endpointsByNode.remove(oldLoc);
-                        SwitchManager.deactivateEndpoint(oldLoc);
+                        SwitchManager.deactivatingSwitch(oldLoc);
                     }
                 }
                 // Update endpointsByGroupByNode
@@ -681,7 +681,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener {
                 Set<EpKey> newEpsNode = new HashSet<EpKey>();
                 newEpsNode.add(newEpKey);
                 endpointsByNode.put(newLoc, newEpsNode);
-                SwitchManager.activateEndpoint(newLoc);
+                SwitchManager.activatingSwitch(newLoc);
             } else {
                 Set<EpKey> newEpsNode = endpointsByNode.get(newLoc);
                 newEpsNode.add(newEpKey);
