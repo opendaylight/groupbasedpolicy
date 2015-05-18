@@ -49,6 +49,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlanGpe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -170,7 +171,7 @@ public class ChainAction extends Action {
             return null;
         }
 
-        NodeConnectorId tunOpenFlowPort = SwitchManager.getTunnelPort(netElements.getNodeId(), TunnelTypeVxlan.class);
+        NodeConnectorId tunOpenFlowPort = SwitchManager.getTunnelPort(netElements.getNodeId(), TunnelTypeVxlanGpe.class);
 
         /*
          * Setting NSH Network Context Headers for post-SFC encapsulation
@@ -183,9 +184,9 @@ public class ChainAction extends Action {
 
         if (netElements.getDst().getAugmentation(OfOverlayContext.class).getNodeId().equals(netElements.getNodeId())) {
             // Return destination is here
-            tunnelDest=SwitchManager.getTunnelIP(netElements.getNodeId(), TunnelTypeVxlan.class);
+            tunnelDest=SwitchManager.getTunnelIP(netElements.getNodeId(), TunnelTypeVxlanGpe.class);
         } else {
-            tunnelDest=SwitchManager.getTunnelIP(netElements.getDst().getAugmentation(OfOverlayContext.class).getNodeId(), TunnelTypeVxlan.class);
+            tunnelDest=SwitchManager.getTunnelIP(netElements.getDst().getAugmentation(OfOverlayContext.class).getNodeId(), TunnelTypeVxlanGpe.class);
         }
         postSfcTunnelDst = (InetAddresses.coerceToInteger(InetAddresses.forString(tunnelDest.getIpv4Address().getValue()))) & 0xFFFFFFFFL;
 
