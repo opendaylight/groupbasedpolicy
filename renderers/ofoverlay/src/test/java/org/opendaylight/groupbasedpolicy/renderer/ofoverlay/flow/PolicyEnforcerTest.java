@@ -8,11 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Objects;
-
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
@@ -22,8 +19,10 @@ import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.PortNumber;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClauseName;
@@ -51,22 +50,32 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.RuleBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._4.match.TcpMatch;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.PortNumber;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg0;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg1;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg2;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.general.rev140714.ExtensionKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.general.rev140714.GeneralAugMatchNodesNodeTableFlow;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.general.rev140714.general.extension.grouping.Extension;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.general.rev140714.general.extension.list.grouping.ExtensionList;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxAugMatchNodesNodeTableFlow;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxmNxReg0Key;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxmNxReg2Key;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Objects;
 
-import static org.junit.Assert.*;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.applyActionIns;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.instructions;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxOutputRegAction;
 
 public class PolicyEnforcerTest extends FlowTableTest {
     protected static final Logger LOG =
@@ -113,8 +122,9 @@ public class PolicyEnforcerTest extends FlowTableTest {
         HashMap<String, Flow> flowMap = new HashMap<>();
         for (Flow f : fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow()) {
             flowMap.put(f.getId().getValue(), f);
-            if (f.getId().getValue().indexOf("intraallow") == 0)
+            if (isAllowSameEpg(f)) {
                 count += 1;
+            }
         }
         assertEquals(1, count);
         assertEquals(3, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow().size());
@@ -185,7 +195,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
         HashMap<String, Flow> flowMap = new HashMap<>();
         for (Flow f : fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow()) {
             flowMap.put(f.getId().getValue(), f);
-            if (f.getId().getValue().indexOf("intraallow") == 0) {
+            if (isAllowSameEpg(f)) {
                 count += 1;
             } else if (f.getMatch() != null &&
                        Objects.equals(tunnelId, f.getMatch().getInPort())) {
@@ -331,5 +341,41 @@ public class PolicyEnforcerTest extends FlowTableTest {
         int numberOfFlows = fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow().size();
         fm = dosync(flowMap);
         assertEquals(numberOfFlows, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow().size());
+    }
+
+    private boolean isAllowSameEpg(Flow flow) {
+        // flow has to have exactly 2 registers set, namely NxmNxReg0 and NxmNxReg2
+        // (these register values don't have to be equal)
+        boolean res = false;
+        if (flow != null && flow.getMatch() != null) {
+            GeneralAugMatchNodesNodeTableFlow genAug =
+                    flow.getMatch().getAugmentation(GeneralAugMatchNodesNodeTableFlow.class);
+            if (genAug != null) {
+                List<ExtensionList> extensions = genAug.getExtensionList();
+                if (extensions != null && extensions.size() == 2) {
+                    Long reg0 = null;
+                    Long reg2 = null;
+                    for (ExtensionList extensionList : extensions) {
+                        Class<? extends ExtensionKey> extensionKey = extensionList.getExtensionKey();
+                        Extension extension = extensionList.getExtension();
+                        if (extensionKey != null && extension != null) {
+                            NxAugMatchNodesNodeTableFlow nxAugMatch =
+                                    extension.getAugmentation(NxAugMatchNodesNodeTableFlow.class);
+                            if (nxAugMatch != null && nxAugMatch.getNxmNxReg() != null) {
+                                if (extensionKey.equals(NxmNxReg0Key.class)) {
+                                    reg0 = nxAugMatch.getNxmNxReg().getValue();
+                                } else if (extensionKey.equals(NxmNxReg2Key.class)) {
+                                    reg2 = nxAugMatch.getNxmNxReg().getValue();
+                                }
+                            }
+                        }
+                    }
+                    if (reg0 != null && reg2 != null) {
+                        res = true;
+                    }
+                }
+            }
+        }
+        return res;
     }
 }

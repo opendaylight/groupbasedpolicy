@@ -14,6 +14,7 @@ import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.slf4j.Logger;
@@ -77,21 +78,22 @@ public abstract class FlowTable extends OfTable {
      * Write a drop flow for the given ethertype at the given priority.
      * If the ethertype is null, then drop all traffic
      */
-    public Flow dropFlow(Integer priority, Long etherType) {
-        FlowId flowid = new FlowId(new StringBuilder()
-                .append("drop|")
-                .append(etherType)
-                .toString());
-
+    public Flow dropFlow(Integer priority, Long etherType, Short tableId) {
+        FlowId flowid;
         FlowBuilder flowb = base()
-                .setId(flowid)
                 .setPriority(priority)
                 .setInstructions(FlowUtils.dropInstructions());
-        if (etherType != null)
-            flowb.setMatch(new MatchBuilder()
-                    .setEthernetMatch(FlowUtils.ethernetMatch(null, null,
-                            etherType))
-                    .build());
+        if (etherType != null) {
+            MatchBuilder mb = new MatchBuilder()
+                    .setEthernetMatch(
+                            FlowUtils.ethernetMatch(null, null, etherType));
+            Match match = mb.build();
+            flowid = FlowIdUtils.newFlowId(tableId, "drop", match);
+            flowb.setMatch(match);
+        } else {
+            flowid = FlowIdUtils.newFlowId("dropAll");
+        }
+        flowb.setId(flowid);
         return flowb.build();
     }
 
