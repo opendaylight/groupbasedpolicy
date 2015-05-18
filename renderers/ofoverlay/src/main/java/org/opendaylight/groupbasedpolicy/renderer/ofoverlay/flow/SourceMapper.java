@@ -32,6 +32,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.acti
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
@@ -65,7 +66,7 @@ public class SourceMapper extends FlowTable {
 
     public SourceMapper(OfContext ctx, short tableId) {
         super(ctx);
-        this.TABLE_ID=tableId;
+        TABLE_ID = tableId;
     }
 
     @Override
@@ -76,7 +77,7 @@ public class SourceMapper extends FlowTable {
     @Override
     public void sync(NodeId nodeId, PolicyInfo policyInfo, FlowMap flowMap) throws Exception {
 
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null));
+        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
         // Handle case where packets from from External
         Map<EndpointKey, EndpointL3> l3EpWithNatByL2Key = ctx.getEndpointManager().getL3EpWithNatByL2Key();
@@ -154,12 +155,6 @@ public class SourceMapper extends FlowTable {
 
         int fdId = epFwdCtxOrds.getFdId();
 
-        FlowId flowid = new FlowId(new StringBuilder().append(tunPort.getValue())
-            .append("|tunnel|")
-            .append("|")
-            .append(fdId)
-            .toString());
-
         MatchBuilder mb = new MatchBuilder().setInPort(tunPort);
         addNxTunIdMatch(mb, fdId);
 
@@ -176,9 +171,11 @@ public class SourceMapper extends FlowTable {
 
         Action fdReg = nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(fdId));
 
+        Match match = mb.build();
+        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "tunnelFdId", match);
         FlowBuilder flowb = base().setId(flowid)
             .setPriority(Integer.valueOf(150))
-            .setMatch(mb.build())
+            .setMatch(match)
             .setInstructions(instructions(applyActionIns(fdReg), gotoTableIns(ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER())));
         return flowb.build();
     }
@@ -191,19 +188,6 @@ public class SourceMapper extends FlowTable {
         int fdId = epFwdCtxOrds.getFdId();
         int l3Id = epFwdCtxOrds.getL3Id();
         int tunnelId = epFwdCtxOrds.getTunnelId();
-
-        FlowId flowid = new FlowId(new StringBuilder().append(tunPort.getValue())
-            .append("|tunnel|")
-            .append(egId)
-            .append("|")
-            .append(bdId)
-            .append("|")
-            .append(fdId)
-            .append("|")
-            .append(l3Id)
-            .append("|")
-            .append(tunnelId)
-            .toString());
 
         MatchBuilder mb = new MatchBuilder().setInPort(tunPort);
         addNxTunIdMatch(mb, tunnelId);
@@ -223,9 +207,11 @@ public class SourceMapper extends FlowTable {
         Action bdReg = nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(bdId));
         Action fdReg = nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(fdId));
         Action vrfReg = nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(l3Id));
+        Match match = mb.build();
+        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "tunnel", match);
         FlowBuilder flowb = base().setId(flowid)
             .setPriority(Integer.valueOf(150))
-            .setMatch(mb.build())
+            .setMatch(match)
             .setInstructions(
                     instructions(applyActionIns(segReg, scgReg, bdReg, fdReg, vrfReg),
                             gotoTableIns(ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER())));
@@ -244,20 +230,6 @@ public class SourceMapper extends FlowTable {
         int cgId = epFwdCtxOrds.getCgId();
         int tunnelId = epFwdCtxOrds.getTunnelId();
 
-        FlowId flowid = new FlowId(new StringBuilder().append(ncId.getValue())
-            .append("|")
-            .append(ep.getMacAddress().getValue())
-            .append("|")
-            .append(egId)
-            .append("|")
-            .append(bdId)
-            .append("|")
-            .append(fdId)
-            .append("|")
-            .append(l3Id)
-            .append("|")
-            .append(cgId)
-            .toString());
         Action segReg = nxLoadRegAction(NxmNxReg0.class, BigInteger.valueOf(egId));
         Action scgReg = nxLoadRegAction(NxmNxReg1.class, BigInteger.valueOf(cgId));
         Action bdReg = nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(bdId));
@@ -265,12 +237,13 @@ public class SourceMapper extends FlowTable {
         Action vrfReg = nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(l3Id));
         Action tunIdAction = nxLoadTunIdAction(BigInteger.valueOf(tunnelId), false);
 
+        Match match = new MatchBuilder().setEthernetMatch(ethernetMatch(ep.getMacAddress(), null, null))
+                .setInPort(ncId)
+                .build();
+        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "ep", match);
         FlowBuilder flowb = base().setPriority(Integer.valueOf(100))
             .setId(flowid)
-            .setMatch(
-                    new MatchBuilder().setEthernetMatch(ethernetMatch(ep.getMacAddress(), null, null))
-                        .setInPort(ncId)
-                        .build())
+            .setMatch(match)
             .setInstructions(
                     instructions(applyActionIns(segReg, scgReg, bdReg, fdReg, vrfReg,tunIdAction),
                             gotoTableIns(ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER())));

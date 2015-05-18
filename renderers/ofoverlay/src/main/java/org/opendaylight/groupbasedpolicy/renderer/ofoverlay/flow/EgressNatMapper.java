@@ -56,7 +56,7 @@ public class EgressNatMapper extends FlowTable {
 
     public EgressNatMapper(OfContext ctx, short tableId) {
         super(ctx);
-        this.TABLE_ID=tableId;
+        TABLE_ID=tableId;
     }
 
     @Override
@@ -66,7 +66,7 @@ public class EgressNatMapper extends FlowTable {
 
     @Override
     public void sync(NodeId nodeId, PolicyInfo policyInfo, FlowMap flowMap) throws Exception {
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null));
+        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
         Collection<EndpointL3> l3Endpoints = ctx.getEndpointManager().getL3EndpointsWithNat();
         for (EndpointL3 l3Ep : l3Endpoints) {

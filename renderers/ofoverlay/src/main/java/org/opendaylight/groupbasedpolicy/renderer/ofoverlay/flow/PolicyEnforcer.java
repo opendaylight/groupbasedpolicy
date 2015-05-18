@@ -120,7 +120,7 @@ public class PolicyEnforcer extends FlowTable {
     @Override
     public void sync(NodeId nodeId, PolicyInfo policyInfo, FlowMap flowMap) throws Exception {
 
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null));
+        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
         NodeConnectorId tunPort = SwitchManager.getTunnelPort(nodeId, TunnelTypeVxlan.class);
         if (tunPort != null) {
@@ -224,20 +224,16 @@ public class PolicyEnforcer extends FlowTable {
         Long etherType = FlowUtils.ARP;
         // L2 Classifier so 20,000 for now
         Integer priority = 20000;
-        FlowId flowid = new FlowId(new StringBuilder().append("arp")
-            .append("|")
-            .append(etherType)
-            .append("|")
-            .append(fdId)
-            .toString());
 
         MatchBuilder mb = new MatchBuilder().setEthernetMatch(FlowUtils.ethernetMatch(null, null, etherType));
 
         addNxRegMatch(mb, RegMatch.of(NxmNxReg5.class, Long.valueOf(fdId)));
 
+        Match match = mb.build();
+        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "arp", match);
         Flow flow = base().setPriority(priority)
             .setId(flowid)
-            .setMatch(mb.build())
+            .setMatch(match)
             .setInstructions(instructions(applyActionIns(nxOutputRegAction(NxmNxReg7.class))))
             .build();
         return flow;
@@ -245,12 +241,13 @@ public class PolicyEnforcer extends FlowTable {
 
     private Flow allowSameEpg(int sepgId, int depgId) {
 
-        FlowId flowId = new FlowId(new StringBuilder().append("intraallow|").append(sepgId).toString());
         MatchBuilder mb = new MatchBuilder();
         addNxRegMatch(mb, RegMatch.of(NxmNxReg0.class, Long.valueOf(sepgId)),
                 RegMatch.of(NxmNxReg2.class, Long.valueOf(depgId)));
+        Match match = mb.build();
+        FlowId flowId = FlowIdUtils.newFlowId(TABLE_ID, "intraallow", match);
         FlowBuilder flow = base().setId(flowId)
-            .setMatch(mb.build())
+            .setMatch(match)
             .setPriority(65000)
             .setInstructions(instructions(applyActionIns(nxOutputRegAction(NxmNxReg7.class))));
         return flow.build();
@@ -258,11 +255,12 @@ public class PolicyEnforcer extends FlowTable {
 
     private Flow allowFromTunnel(NodeConnectorId tunPort) {
 
-        FlowId flowId = new FlowId("tunnelallow");
         MatchBuilder mb = new MatchBuilder().setInPort(tunPort);
         addNxRegMatch(mb, RegMatch.of(NxmNxReg1.class, Long.valueOf(0xffffff)));
+        Match match = mb.build();
+        FlowId flowId = FlowIdUtils.newFlowId(TABLE_ID, "tunnelallow", match);
         FlowBuilder flow = base().setId(flowId)
-            .setMatch(mb.build())
+            .setMatch(match)
             .setPriority(65000)
             .setInstructions(instructions(applyActionIns(nxOutputRegAction(NxmNxReg7.class))));
         return flow.build();
@@ -437,13 +435,11 @@ public class PolicyEnforcer extends FlowTable {
             flowMatchBuilders.addAll(matchBuildersToResolve);
         }
 
-
-
         FlowBuilder flow = base().setPriority(Integer.valueOf(priority));
-        for (MatchBuilder match : flowMatchBuilders) {
-            Match m = match.build();
-            FlowId flowId = new FlowId(baseId + "|" + m.toString());
-            flow.setMatch(m)
+        for (MatchBuilder mb : flowMatchBuilders) {
+            Match match = mb.build();
+            FlowId flowId = FlowIdUtils.newFlowId(TABLE_ID, "cg", match);
+            flow.setMatch(match)
                 .setId(flowId)
                 .setPriority(Integer.valueOf(priority));
                         // If destination is External, the last Action ALLOW must be changed to goto NAT/External table.

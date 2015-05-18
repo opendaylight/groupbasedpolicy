@@ -24,6 +24,7 @@ import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer3Match;
@@ -42,7 +43,7 @@ public class ExternalMapper extends FlowTable {
 
     public ExternalMapper(OfContext ctx, short tableId) {
         super(ctx);
-        this.TABLE_ID=tableId;
+        TABLE_ID = tableId;
     }
 
     @Override
@@ -58,12 +59,12 @@ public class ExternalMapper extends FlowTable {
             return;
         }
         // Default drop all
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null));
+        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
         // Drop IP traffic that doesn't match a source IP rule
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(2), FlowUtils.ARP));
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(2), FlowUtils.IPv4));
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(2), FlowUtils.IPv6));
+        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(2), FlowUtils.ARP, TABLE_ID));
+        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(2), FlowUtils.IPv4, TABLE_ID));
+        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(2), FlowUtils.IPv6, TABLE_ID));
         l3flow(flowMap,nodeId, 100, true);
         l3flow(flowMap,nodeId, 200, false);
     }
@@ -84,16 +85,13 @@ public class ExternalMapper extends FlowTable {
             etherType = FlowUtils.IPv4;
         }
 
-        FlowId flowid = new FlowId(new StringBuilder().append("ExternalMapper")
-            .append("|")
-            .append(etherType)
-            .toString());
+        Match match = new MatchBuilder().setEthernetMatch(FlowUtils.ethernetMatch(null, null, etherType))
+                .setLayer3Match(m)
+                .build();
+        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "ExternalMapper", match);
         Flow flow = base().setPriority(priority)
             .setId(flowid)
-            .setMatch(
-                    new MatchBuilder().setEthernetMatch(FlowUtils.ethernetMatch(null, null, etherType))
-                        .setLayer3Match(m)
-                        .build())
+            .setMatch(match)
             .setInstructions(instructions(applyActionIns(actionBuilderList)))
             .build();
 

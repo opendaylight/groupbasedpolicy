@@ -8,45 +8,11 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.ARP;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.IPv4;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.IPv6;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.addNxRegMatch;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.applyActionIns;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.createNodePath;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.decNwTtlAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.ethernetMatch;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.getOfPortNum;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.gotoTableIns;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.groupAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.instructions;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadArpOpAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadArpShaAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadArpSpaAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadRegAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadTunIPv4Action;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadTunIdAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxMoveArpShaToArpThaAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxMoveArpSpaToArpTpaAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxMoveEthSrcToEthDstAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.outputAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.setDlDstAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.setDlSrcAction;
-import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.readFromDs;
-
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Set;
-
+import com.google.common.base.Optional;
+import com.google.common.base.Strings;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
@@ -68,6 +34,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.Fl
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.InstructionsBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.Instruction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.InstructionBuilder;
@@ -107,11 +74,44 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Strings;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Set;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.ARP;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.IPv4;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.IPv6;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.addNxRegMatch;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.applyActionIns;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.createNodePath;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.decNwTtlAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.ethernetMatch;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.getOfPortNum;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.gotoTableIns;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.groupAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.instructions;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadArpOpAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadArpShaAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadArpSpaAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadRegAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadTunIPv4Action;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadTunIdAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxMoveArpShaToArpThaAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxMoveArpSpaToArpTpaAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxMoveEthSrcToEthDstAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.outputAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.setDlDstAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.setDlSrcAction;
+import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.readFromDs;
 
 /**
  * Manage the table that maps the destination address to the next hop for the
@@ -151,7 +151,7 @@ public class DestinationMapper extends FlowTable {
 
         TenantId currentTenant = null;
 
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null));
+        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
         SetMultimap<EpKey, EpKey> visitedEps = HashMultimap.create();
         Set<EndpointFwdCtxOrdinals> epOrdSet = new HashSet<>();
@@ -378,6 +378,8 @@ public class DestinationMapper extends FlowTable {
             return null;
         }
 
+        /*
+        // commented out because of the new FlowId implementation
         FlowId flowid = new FlowId(new StringBuilder().append(Integer.toString(epFwdCtxOrds.getL3Id()))
             .append("|l3prefix|")
             .append(ikey)
@@ -386,25 +388,33 @@ public class DestinationMapper extends FlowTable {
             .append("|")
             .append(nextHop)
             .toString());
+        */
         MatchBuilder mb = new MatchBuilder().setEthernetMatch(ethernetMatch(null, null, etherType));
 //        MatchBuilder mb = new MatchBuilder();//.setLayer3Match(m);
         addNxRegMatch(mb, RegMatch.of(NxmNxReg6.class, Long.valueOf(epFwdCtxOrds.getL3Id())));
+        Match match = mb.build();
+        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "L3prefix", match);
         FlowBuilder flowb = base().setId(flowid)
             .setPriority(Integer.valueOf(BASE_L3_PRIORITY+prefixLength))
-            .setMatch(mb.build())
+            .setMatch(match)
             .setInstructions(new InstructionsBuilder().setInstruction(l3instructions).build());
         return flowb.build();
     }
 
     private Flow createBroadcastFlow(EndpointFwdCtxOrdinals epOrd) {
-        FlowId flowId = new FlowId("broadcast|" + epOrd.getFdId());
-        MatchBuilder mb = new MatchBuilder().setEthernetMatch(new EthernetMatchBuilder().setEthernetDestination(
-                new EthernetDestinationBuilder().setAddress(MULTICAST_MAC).setMask(MULTICAST_MAC).build()).build());
+        MatchBuilder mb = new MatchBuilder()
+                            .setEthernetMatch(new EthernetMatchBuilder()
+                            .setEthernetDestination(new EthernetDestinationBuilder().
+                                                        setAddress(MULTICAST_MAC)
+                                                        .setMask(MULTICAST_MAC).build())
+                            .build());
         addNxRegMatch(mb, RegMatch.of(NxmNxReg5.class, Long.valueOf(epOrd.getFdId())));
 
+        Match match = mb.build();
+        FlowId flowId = FlowIdUtils.newFlowId(TABLE_ID, "broadcast", match);
         FlowBuilder flowb = base().setPriority(Integer.valueOf(140))
             .setId(flowId)
-            .setMatch(mb.build())
+            .setMatch(match)
             .setInstructions(
                     instructions(applyActionIns(nxLoadTunIdAction(BigInteger.valueOf(epOrd.getFdId()), false),
                             groupAction(Long.valueOf(epOrd.getFdId())))));
@@ -499,22 +509,17 @@ public class DestinationMapper extends FlowTable {
 
             BigInteger intRouterMac = new BigInteger(1, bytesFromHexString(routerMac.getValue()));
 
-            FlowId flowId = new FlowId(new StringBuffer().append("routerarp|")
-                .append(sn.getId().getValue())
-                .append("|")
-                .append(ikey)
-                .append("|")
-                .append(l3Id)
-                .toString());
             MatchBuilder mb = new MatchBuilder().setEthernetMatch(ethernetMatch(null, null, ARP)).setLayer3Match(
                     new ArpMatchBuilder().setArpOp(Integer.valueOf(1))
                         .setArpTargetTransportAddress(new Ipv4Prefix(ikey + "/32"))
                         .build());
             addNxRegMatch(mb, RegMatch.of(NxmNxReg6.class, Long.valueOf(l3Id)));
 
+            Match match = mb.build();
+            FlowId flowId = FlowIdUtils.newFlowId(TABLE_ID, "routerarp", match);
             FlowBuilder flowb = base().setPriority(150)
                 .setId(flowId)
-                .setMatch(mb.build())
+                .setMatch(match)
                 .setInstructions(
                         instructions(applyActionIns(nxMoveEthSrcToEthDstAction(), setDlSrcAction(routerMac),
                                 nxLoadArpOpAction(BigInteger.valueOf(2L)), nxMoveArpShaToArpThaAction(),
@@ -572,17 +577,13 @@ public class DestinationMapper extends FlowTable {
             .build();
         instructions.add(gotoTable);
 
-        FlowId flowid = new FlowId(new StringBuilder().append(epFwdCtxOrds.getBdId())
-            .append("|l2|")
-            .append(ep.getMacAddress().getValue())
-            .append("|")
-            .append(nextHop)
-            .toString());
         MatchBuilder mb = new MatchBuilder().setEthernetMatch(ethernetMatch(null, ep.getMacAddress(), null));
         addNxRegMatch(mb, RegMatch.of(NxmNxReg4.class, Long.valueOf(epFwdCtxOrds.getBdId())));
+        Match match = mb.build();
+        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "localL2", match);
         FlowBuilder flowb = base().setId(flowid)
             .setPriority(Integer.valueOf(50))
-            .setMatch(mb.build())
+            .setMatch(match)
             .setInstructions(new InstructionsBuilder().setInstruction(instructions).build());
         return flowb.build();
     }
@@ -831,26 +832,14 @@ public class DestinationMapper extends FlowTable {
             return null;
         }
 
-        FlowId flowid = new FlowId(new StringBuilder().append(Integer.toString(epFwdCtxOrds.getL3Id()))
-            .append("|l3|")
-            .append(ikey)
-            .append("|")
-            .append(Integer.toString(epFwdCtxOrds.getEpgId()))
-            .append("|")
-            .append(Integer.toString(epFwdCtxOrds.getCgId()))
-            .append("|")
-            .append(matcherMac)
-            .append("|")
-            .append(destSubnetGatewayMac)
-            .append("|")
-            .append(nextHop)
-            .toString());
         MatchBuilder mb = new MatchBuilder().setEthernetMatch(ethernetMatch(null, matcherMac, etherType))
             .setLayer3Match(m);
         addNxRegMatch(mb, RegMatch.of(NxmNxReg6.class, Long.valueOf(epFwdCtxOrds.getL3Id())));
+        Match match = mb.build();
+        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "localL3", match);
         FlowBuilder flowb = base().setId(flowid)
             .setPriority(Integer.valueOf(132))
-            .setMatch(mb.build())
+            .setMatch(match)
             .setInstructions(new InstructionsBuilder().setInstruction(l3instructions).build());
         return flowb.build();
     }
@@ -931,19 +920,13 @@ public class DestinationMapper extends FlowTable {
             .build();
         instructions.add(gotoTable);
 
-        FlowId flowid = new FlowId(new StringBuilder().append(destEpFwdCtxOrds.getBdId())
-            .append("|l2|")
-            .append(ep.getMacAddress().getValue())
-            .append("|")
-            .append(srcEpFwdCtxOrds.getBdId())
-            .append("|")
-            .append(nextHop)
-            .toString());
         MatchBuilder mb = new MatchBuilder().setEthernetMatch(ethernetMatch(null, ep.getMacAddress(), null));
         addNxRegMatch(mb, RegMatch.of(NxmNxReg4.class, Long.valueOf(destEpFwdCtxOrds.getBdId())));
+        Match match = mb.build();
+        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "remoteL2", match);
         FlowBuilder flowb = base().setId(flowid)
             .setPriority(Integer.valueOf(50))
-            .setMatch(mb.build())
+            .setMatch(match)
             .setInstructions(new InstructionsBuilder().setInstruction(instructions).build());
 
         return flowb.build();
@@ -1098,25 +1081,14 @@ public class DestinationMapper extends FlowTable {
             return null;
         }
 
-        FlowId flowid = new FlowId(new StringBuilder().append(Integer.toString(destEpFwdCtxOrds.getL3Id()))
-            .append("|l3|")
-            .append(ikey)
-            .append("|")
-            .append(matcherMac)
-            .append("|")
-            .append(destSubnetGatewayMac)
-            .append("|")
-            .append(srcEpFwdCtxOrds.getL3Id())
-            .append("|")
-            .append(nextHop)
-            .toString());
         MatchBuilder mb = new MatchBuilder().setEthernetMatch(ethernetMatch(null, matcherMac, etherType))
             .setLayer3Match(m);
         addNxRegMatch(mb, RegMatch.of(NxmNxReg6.class, Long.valueOf(destEpFwdCtxOrds.getL3Id())));
-
+        Match match = mb.build();
+        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "remoteL3", match);
         FlowBuilder flowb = base().setId(flowid)
             .setPriority(Integer.valueOf(132))
-            .setMatch(mb.build())
+            .setMatch(match)
             .setInstructions(new InstructionsBuilder().setInstruction(l3instructions).build());
         return flowb.build();
     }
