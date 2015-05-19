@@ -11,15 +11,25 @@ package org.opendaylight.groupbasedpolicy.resolver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ScheduledExecutorService;
 
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
+import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
+import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.resolver.ContractResolverUtils.ContractMatch;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver.TenantContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.CapabilityMatcherName;
@@ -84,10 +94,13 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderNamedSelectorBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderTargetSelector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderTargetSelectorBuilder;
+import org.opendaylight.yangtools.concepts.ListenerRegistration;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Table;
+import com.google.common.util.concurrent.CheckedFuture;
 
 public class PolicyResolverTest {
     Quality q1 = new QualityBuilder()
@@ -314,6 +327,47 @@ public class PolicyResolverTest {
     @Before
     public void setup() throws Exception {
         resolver = new PolicyResolver(null, null);
+    }
+
+    @Test
+    public void listenerTest() {
+        PolicyScope policyScope;
+        PolicyListener policyListener = mock(PolicyListener.class);
+        Assert.assertTrue(resolver.policyListenerScopes.isEmpty());
+
+        policyScope = resolver.registerListener(policyListener);
+        Assert.assertNotNull(policyScope);
+        Assert.assertFalse(resolver.policyListenerScopes.isEmpty());
+
+        resolver.removeListener(policyScope);
+        Assert.assertTrue(resolver.policyListenerScopes.isEmpty());
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    @Test
+    public void tenantTest() {
+        DataBroker dataProvider = mock(DataBroker.class);
+        ScheduledExecutorService executor = mock(ScheduledExecutorService.class);
+        resolver = new PolicyResolver(dataProvider, executor);
+
+        TenantId tenantId = mock(TenantId.class);
+        Assert.assertTrue(resolver.resolvedTenants.isEmpty());
+
+        ListenerRegistration<DataChangeListener> registration = mock(ListenerRegistration.class);
+        when(
+                dataProvider.registerDataChangeListener(any(LogicalDatastoreType.class), any(InstanceIdentifier.class),
+                        any(DataChangeListener.class), any(DataChangeScope.class))).thenReturn(registration);
+
+        ReadOnlyTransaction transaction = mock(ReadOnlyTransaction.class);
+        when(dataProvider.newReadOnlyTransaction()).thenReturn(transaction);
+        CheckedFuture unresolved = mock(CheckedFuture.class);
+        when(transaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(unresolved);
+
+        resolver.subscribeTenant(tenantId);
+        Assert.assertFalse(resolver.resolvedTenants.isEmpty());
+
+        resolver.unsubscribeTenant(tenantId);
+        Assert.assertTrue(resolver.resolvedTenants.isEmpty());
     }
 
     public void verifyMatches(List<ContractId> contrids,

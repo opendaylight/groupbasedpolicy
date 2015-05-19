@@ -59,7 +59,7 @@ public class EgKey implements Comparable<EgKey> {
         String otid = null;
         if (o.tenantId != null) otid = o.tenantId.getValue();
         String egid = null;
-        if (egId != null) tid = egId.getValue();
+        if (egId != null) egid = egId.getValue();
         String oegid = null;
         if (o.egId != null) oegid = o.egId.getValue();
         return ComparisonChain.start()
