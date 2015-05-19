@@ -227,7 +227,7 @@ public class PolicyUri {
     public String toString() {
         if (uri.size() == 0)
             return "";
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
 
         for (String s : uri) {
             sb.append(s);

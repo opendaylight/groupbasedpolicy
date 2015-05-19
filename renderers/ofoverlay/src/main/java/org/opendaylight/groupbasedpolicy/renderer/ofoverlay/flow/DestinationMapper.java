@@ -216,10 +216,7 @@ public class DestinationMapper extends FlowTable {
     // group on the node
 
     private Flow createBroadcastFlow(EndpointFwdCtxOrdinals epOrd) {
-        FlowId flowId = new FlowId(new StringBuilder().
-                                    append("broadcast|").
-                                    append(epOrd.getFdId()).
-                                    toString());
+        FlowId flowId = new FlowId("broadcast|" + epOrd.getFdId());
         MatchBuilder mb = new MatchBuilder()
                             .setEthernetMatch(new EthernetMatchBuilder()
                             .setEthernetDestination(new EthernetDestinationBuilder().
