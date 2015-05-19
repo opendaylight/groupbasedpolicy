@@ -238,7 +238,7 @@ public class DestinationMapperTest extends FlowTableTest {
         return super.remoteEP(remoteNodeId)
                 .setL3Address(ImmutableList.of(new L3AddressBuilder()
                         .setL3Context(l3c)
-                        .setIpAddress(new IpAddress(new Ipv6Address("::ffff:0:0::10.0.0.2")))
+                        .setIpAddress(new IpAddress(new Ipv6Address("::ffff:0:0:0:10.0.0.2")))
                         .build()));
     }
 
