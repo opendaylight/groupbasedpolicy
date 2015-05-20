@@ -94,7 +94,7 @@
           <instructions>
             <Export-Package>
               org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf,
-              org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528
+              org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.*
             </Export-Package>
           </instructions>
           <manifestLocation>${project.basedir}/META-INF</manifestLocation>

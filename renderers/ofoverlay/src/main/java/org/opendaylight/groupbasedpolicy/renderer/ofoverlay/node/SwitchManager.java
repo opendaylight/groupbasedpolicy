@@ -84,14 +84,24 @@ public class SwitchManager implements AutoCloseable {
 
     // When first endpoint is attached to switch, it can be ready
     public static void activatingSwitch(NodeId nodeId) {
-        switches.get(nodeId).setHasEndpoints(true);
-        switches.get(nodeId).updateStatus();
+        SwitchState state = switches.get(nodeId);
+        if (state == null) {
+            state = new SwitchState(nodeId);
+            switches.put(nodeId, state);
+        }
+        state.setHasEndpoints(true);
+        state.updateStatus();
     }
 
     // When last endpoint is removed from switch, it is no longer ready
     public static void deactivatingSwitch(NodeId nodeId) {
-        switches.get(nodeId).setHasEndpoints(false);;
-        switches.get(nodeId).updateStatus();
+        SwitchState state = switches.get(nodeId);
+        if (state == null) {
+            LOG.error("No SwitchState for {} in deactivatingSwitch. This should not happen.",nodeId);
+            return;
+        }
+        state.setHasEndpoints(false);;
+        state.updateStatus();
     }
 
     /**

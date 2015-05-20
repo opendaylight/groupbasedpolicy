@@ -105,7 +105,9 @@
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <feature version="${project.version}">odl-groupbasedpolicy-ofoverlay</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/neutron-mapper/${project.version}</bundle>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/neutron-ovsdb/${project.version}</bundle>
         <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.neutronmapperconfigfile}">mvn:org.opendaylight.groupbasedpolicy/neutron-mapper-config/${project.version}/xml/config</configfile>
+        <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.neutronovsdbconfigfile}">mvn:org.opendaylight.groupbasedpolicy/neutron-ovsdb-config/${project.version}/xml/config</configfile>
     </feature>
 
     <!--
