@@ -5,7 +5,6 @@
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
-
 package org.opendaylight.groupbasedpolicy.resolver;
 
 import java.util.Collection;
@@ -36,7 +35,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Subject;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.Rule;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstance;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -51,6 +49,8 @@ import com.google.common.collect.Table.Cell;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.opendaylight.groupbasedpolicy.resolver.validator.PolicyValidator;
+import org.opendaylight.groupbasedpolicy.resolver.validator.ValidationResult;
 
 /**
  * The policy resolver is a utility for renderers to help in resolving
@@ -71,6 +71,7 @@ import com.google.common.util.concurrent.ListenableFuture;
  *
  */
 public class PolicyResolver implements AutoCloseable {
+
     private static final Logger LOG = LoggerFactory.getLogger(PolicyResolver.class);
 
     private final DataBroker dataProvider;
@@ -83,7 +84,6 @@ public class PolicyResolver implements AutoCloseable {
 
     protected ConcurrentMap<TenantId, TenantContext> resolvedTenants;
 
-
     /**
      * Store a policy object for each endpoint group pair. The table is stored
      * with the key as (consumer, provider). Two endpoints could appear in both
@@ -95,7 +95,6 @@ public class PolicyResolver implements AutoCloseable {
      * Store validators for ActionDefinitions from Renderers
      *
      */
-
     protected ConcurrentMap<ActionDefinitionId, ActionInstanceValidator> registeredActions = new ConcurrentHashMap<>();
 
     public PolicyResolver(DataBroker dataProvider,
@@ -111,24 +110,23 @@ public class PolicyResolver implements AutoCloseable {
     // *************
     // AutoCloseable
     // *************
-
     @Override
     public void close() throws Exception {
         for (TenantContext ctx : resolvedTenants.values()) {
-            if (ctx.registration != null)
+            if (ctx.registration != null) {
                 ctx.registration.close();
+            }
         }
     }
 
     // *************************
     // PolicyResolver public API
     // *************************
-
     /**
      * Get a snapshot of the current policy
      *
      * @return the {@link PolicyInfo} object representing an immutable snapshot
-     *         of the policy state
+     * of the policy state
      */
     public PolicyInfo getCurrentPolicy() {
         return policy.get();
@@ -137,25 +135,26 @@ public class PolicyResolver implements AutoCloseable {
     /**
      * Get the normalized tenant for the given ID
      *
-     * @param tenant
-     *            the tenant ID
+     * @param tenant the tenant ID
      * @return the {@link Tenant}
      */
     public IndexedTenant getTenant(TenantId tenant) {
         TenantContext tc = resolvedTenants.get(tenant);
-        if (tc == null)
+        if (tc == null) {
             return null;
+        }
         return tc.tenant.get();
     }
 
     public void registerActionDefinitions(ActionDefinitionId actionDefinitionId, ActionInstanceValidator validator) {
         registeredActions.putIfAbsent(actionDefinitionId, validator);
     }
+
     /**
      * Register a listener to receive update events.
      *
-     * @param listener
-     *            the {@link PolicyListener} object to receive the update events
+     * @param listener the {@link PolicyListener} object to receive the update
+     * events
      */
     public PolicyScope registerListener(PolicyListener listener) {
         PolicyScope ps = new PolicyScope(this, listener);
@@ -167,8 +166,7 @@ public class PolicyResolver implements AutoCloseable {
     /**
      * Remove the listener registered for the given {@link PolicyScope}.
      *
-     * @param scope
-     *            the scope to remove
+     * @param scope the scope to remove
      * @see PolicyResolver#registerListener(PolicyListener)
      */
     public void removeListener(PolicyScope scope) {
@@ -178,15 +176,12 @@ public class PolicyResolver implements AutoCloseable {
     // **************
     // Implementation
     // **************
-
     /**
      * Atomically update the active policy and notify policy listeners of
      * relevant changes
      *
-     * @param policyMap
-     *            the new policy to set
-     * @param egConditions
-     *            the map of endpoint groups to relevant condition sets
+     * @param policyMap the new policy to set
+     * @param egConditions the map of endpoint groups to relevant condition sets
      * @return the set of groups with updated policy
      */
     protected Set<EgKey> updatePolicy(Table<EgKey, EgKey, Policy> policyMap,
@@ -200,9 +195,10 @@ public class PolicyResolver implements AutoCloseable {
         for (Cell<EgKey, EgKey, Policy> cell : newPolicy.getPolicyMap().cellSet()) {
             Policy newp = cell.getValue();
             Policy oldp = null;
-            if (oldPolicy != null)
+            if (oldPolicy != null) {
                 oldp = oldPolicy.getPolicyMap().get(cell.getRowKey(),
                         cell.getColumnKey());
+            }
             if (oldp == null || !newp.equals(oldp)) {
                 notifySet.add(cell.getRowKey());
                 notifySet.add(cell.getColumnKey());
@@ -225,8 +221,8 @@ public class PolicyResolver implements AutoCloseable {
      */
     private void notifyListeners(Set<EgKey> updatedGroups) {
         for (final PolicyScope scope : policyListenerScopes) {
-            Set<EgKey> filtered =
-                    Sets.filter(updatedGroups, new Predicate<EgKey>() {
+            Set<EgKey> filtered
+                    = Sets.filter(updatedGroups, new Predicate<EgKey>() {
                         @Override
                         public boolean apply(EgKey input) {
                             return scope.contains(input.getTenantId(),
@@ -243,20 +239,19 @@ public class PolicyResolver implements AutoCloseable {
      * Subscribe the resolver to updates related to a particular tenant Make
      * sure that this can't be called concurrently with subscribe
      *
-     * @param tenantId
-     *            the tenant ID to subscribe to
+     * @param tenantId the tenant ID to subscribe to
      */
     protected void subscribeTenant(TenantId tenantId) {
-        if (!resolvedTenants.containsKey(tenantId))
+        if (!resolvedTenants.containsKey(tenantId)) {
             updateTenant(tenantId);
+        }
     }
 
     /**
      * Unsubscribe the resolver from updates related to a particular tenant Make
      * sure that this can't be called concurrently with subscribe
      *
-     * @param tenantId
-     *            the tenant ID to subscribe to
+     * @param tenantId the tenant ID to subscribe to
      */
     protected void unsubscribeTenant(TenantId tenantId) {
         TenantContext context = resolvedTenants.get(tenantId);
@@ -267,8 +262,9 @@ public class PolicyResolver implements AutoCloseable {
     }
 
     private void updateTenant(final TenantId tenantId) {
-        if (dataProvider == null)
+        if (dataProvider == null) {
             return;
+        }
 
         TenantContext context = resolvedTenants.get(tenantId);
         if (context == null) {
@@ -280,8 +276,8 @@ public class PolicyResolver implements AutoCloseable {
                             DataChangeScope.SUBTREE);
 
             context = new TenantContext(registration);
-            TenantContext oldContext =
-                    resolvedTenants.putIfAbsent(tenantId, context);
+            TenantContext oldContext
+                    = resolvedTenants.putIfAbsent(tenantId, context);
             if (oldContext != null) {
                 // already registered in a different thread; just use the other
                 // context
@@ -295,8 +291,8 @@ public class PolicyResolver implements AutoCloseable {
         // Resolve the new tenant and update atomically
         final AtomicReference<IndexedTenant> tenantRef = context.tenant;
         final IndexedTenant ot = tenantRef.get();
-        ReadOnlyTransaction transaction =
-                dataProvider.newReadOnlyTransaction();
+        ReadOnlyTransaction transaction
+                = dataProvider.newReadOnlyTransaction();
         final InstanceIdentifier<Tenant> tiid = TenantUtils.tenantIid(tenantId);
         ListenableFuture<Optional<Tenant>> unresolved;
 
@@ -325,10 +321,6 @@ public class PolicyResolver implements AutoCloseable {
                 }
             }
 
-
-
-
-
             @Override
             public void onFailure(Throwable t) {
                 LOG.error("Count not get tenant {}", tenantId, t);
@@ -353,13 +345,15 @@ public class PolicyResolver implements AutoCloseable {
         Set<IndexedTenant> result = new HashSet<>();
         for (TenantContext tenant : tenantCtxs) {
             IndexedTenant t = tenant.tenant.get();
-            if (t != null)
+            if (t != null) {
                 result.add(t);
+            }
         }
         return result;
     }
 
     protected static class TenantContext {
+
         ListenerRegistration<DataChangeListener> registration;
 
         AtomicReference<IndexedTenant> tenant = new AtomicReference<>();
@@ -372,6 +366,7 @@ public class PolicyResolver implements AutoCloseable {
 
     @Immutable
     private class PolicyChangeListener implements DataChangeListener {
+
         final TenantId tenantId;
 
         public PolicyChangeListener(TenantId tenantId) {
@@ -387,40 +382,19 @@ public class PolicyResolver implements AutoCloseable {
     }
 
     private boolean isValidTenant(Tenant t) {
-        if(validActionInstances(t.getSubjectFeatureInstances().getActionInstance())) {
+        ValidationResult validationResult = PolicyValidator.validate(t, this);
+        if (validationResult == null) {
             return true;
         }
-        return false;
+        return validationResult.getResult().getValue();
     }
 
-    private boolean validActionInstances(List<ActionInstance> actionInstances) {
-        for(ActionInstance actionInstance : actionInstances) {
-            if(!(registeredActions.get(actionInstance.getActionDefinitionId()).isValid(actionInstance))) {
-                return false;
-            };
+    public ActionInstanceValidator getActionInstanceValidator(ActionDefinitionId actionDefinitionId) {
+        if (registeredActions == null) {
+            return null;
         }
-        return true;
-    }
-
-    private boolean validContracts(List<Contract> contracts) {
-        for (Contract contract: contracts) {
-            validateSubjects(contract.getSubject());
-        }
-        return false;
-    }
-
-    private void validateSubjects(List<Subject> subjects) {
-        for(Subject subject: subjects) {
-            validateRules(subject.getRule());
-        }
+        return registeredActions.get(actionDefinitionId);
 
     }
 
-    private void validateRules(List<Rule> rules) {
-
-    }
-
-    private void validateActionRefs(List<ActionRef> actionRefs) {
-
-    }
 }
