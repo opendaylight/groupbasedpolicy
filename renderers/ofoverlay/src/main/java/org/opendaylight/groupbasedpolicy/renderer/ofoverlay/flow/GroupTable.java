@@ -79,7 +79,7 @@ public class GroupTable extends OfTable {
         ReadOnlyTransaction t = ctx.getDataBroker().newReadOnlyTransaction();
         InstanceIdentifier<Node> niid = createNodePath(nodeId);
         Optional<Node> r =
-                t.read(LogicalDatastoreType.CONFIGURATION, niid).get();
+                t.read(LogicalDatastoreType.OPERATIONAL, niid).get();
         if (!r.isPresent())
             return;
         FlowCapableNode fcn = r.get().getAugmentation(FlowCapableNode.class);
@@ -158,7 +158,7 @@ public class GroupTable extends OfTable {
                                     .build());
                     wrote = true;
                     wt.merge(LogicalDatastoreType.CONFIGURATION,
-                            giid, gb.build());
+                            giid, gb.build(), true);
                 }
             }
         }
