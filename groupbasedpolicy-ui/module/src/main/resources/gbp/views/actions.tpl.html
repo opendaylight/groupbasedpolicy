@@ -6,19 +6,19 @@
      <section class="formWrapper clearfix" ng-show="actionsView">
         <form name="actionsForm" novalidate="novalidate">
             <i class="icon-remove align-right" ng-click="close()"></i>
-            <label class="block"><span>Add actions</span></label>
+            <label class="block">Add actions</label>
 
             <div class="rowWrapper">
-                <label class="block basicLabel"><span>Name</span>
+                <label class="block basicLabel">Name
                     <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="actionsForm.name.$error.required"></i>
                 </label>
-                <input class="form-control" type="text" name="name" ng-required="true" ng-model="newActionObj.name" ng-disabled="edit" />
+                <input class="form-control" type="text" name="name" ng-required="true" ng-model="newActionObj.name" ng-disabled="edit !== 'add'" />
             </div>
 
-            <div class="rowWrapper">
-                <label class="block basicLabel"><span>Definition</span></label>
-                <select class="form-control" ng-model="newActionObj['action-definition-id']" ng-options="d.id as getDisplayLabel(d, actionDefinitions.labels) for d in actionDefinitions.options">
-                    <option>--</option>
+            <div class="rowWrapper" ng-hide="edit === 'view' && !newActionObj['action-definition-id']">
+                <label class="block basicLabel">Definition</label>
+                <select class="form-control" ng-model="newActionObj['action-definition-id']" ng-options="d.id as getDisplayLabel(d, actionDefinitions.labels) for d in actionDefinitions.options" ng-disabled="edit === 'view'" ng-change="reloadDefs()">
+                    <option value="">Select option</option>
                 </select>
             </div>
 
@@ -26,21 +26,25 @@
                 <div ng-repeat="param in defs">
                     <div class="row-param" ng-controller="paramCtrl" ng-init="init(param, newActionObj['parameter-value'])">
                         <div ng-show="param.type !== 'range'">
-                            <label><span>{{ parameter.name + ' (' + parameter.type + ')' }}:</span></label>
-                            <input class="form-control" type="text" ng-model="value"></input>
+                            <label>{{ parameter.name + ' (' + parameter.type + ')' }}:</label>
+                            <input class="form-control" type="text" ng-model="value" ng-disabled="edit === 'view'"></input>
                         </div>
                         <div ng-show="param.type === 'range'">
-                            <label class="param-label"><span>{{ parameter.name + ' (' + parameter.type + ')' }}:</span></label>
+                            <label class="param-label">{{ parameter.name + ' (' + parameter.type + ')' }}:</label>
 
-                            <input class="form-control narrow-input-left" type="text" ng-model="value.min"></input>
-                            <input class="form-control narrow-input-right" type="text" ng-model="value.max"></input>
+                            <input class="form-control narrow-input-left" type="text" ng-model="value.min" ng-disabled="edit === 'view'"></input>
+                            <input class="form-control narrow-input-right" type="text" ng-model="value.max" ng-disabled="edit === 'view'"></input>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <button class="btn btn-primary col-md-12" ng-click="save()" ng-hide="edit === 'view'">Save</button>
         </form>
     </section>
 
-    <button class="btn btn-primary col-md-12" ng-click="save()" ng-show="actionsView && selectedTenant.id">Save</button>
-    <button class="btn btn-primary col-md-12" ng-click="toggleExpanded('renderers')">Back</button>
+    
+
+    <button class="btn btn-primary col-md-12 bottom-buttons home" ng-click="toggleExpanded('basic')">Home</button>
+    <button class="btn btn-primary col-md-12 bottom-buttons back" ng-click="toggleExpanded('renderers')">Back</button>
 </div>

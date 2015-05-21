@@ -6,19 +6,19 @@
      <section class="formWrapper clearfix" ng-show="classifiersView">
         <form name="classifierForm" novalidate="novalidate">
             <i class="icon-remove align-right" ng-click="close()"></i>
-            <label class="block"><span>Add classifiers</label>
+            <label class="block">Add classifiers</label>
 
             <div class="rowWrapper">
-                <label class="block basicLabel"><span>Name</span>
+                <label class="block basicLabel">Name
                     <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="classifierForm.name.$error.required"></i>
                 </label>
-                <input class="form-control" type="text" name="name" ng-required="true" ng-model="newClassifierObj.name" ng-disabled="edit" />
+                <input class="form-control" type="text" name="name" ng-required="true" ng-model="newClassifierObj.name" ng-disabled="edit !== 'add'" />
             </div>
 
-            <div class="rowWrapper">
-                <label class="block basicLabel"><span>Definition</span></label>
-                <select class="form-control" ng-model="newClassifierObj['classifier-definition-id']" ng-options="d.id as getDisplayLabel(d, classifierDefinitions.labels) for d in classifierDefinitions.options" ng-change="reloadDefs()">
-                    <option>--</option>
+            <div class="rowWrapper" ng-hide="edit === 'view' && !newClassifierObj['classifier-definition-id']">
+                <label class="block basicLabel">Definition</label>
+                <select class="form-control" ng-model="newClassifierObj['classifier-definition-id']" ng-options="d.id as getDisplayLabel(d, classifierDefinitions.labels) for d in classifierDefinitions.options" ng-change="reloadDefs()" ng-disabled="edit === 'view'">
+                    <option value="">Select option</option>
                 </select>
             </div>
 
@@ -27,25 +27,27 @@
                 <div class="rowWrapper" ng-controller="paramCtrl" ng-init="init(param, newClassifierObj['parameter-value'])">
                         <div ng-show="param.type !== 'range'">
                         <label class="block basicLabel">{{ parameter.name + ' (' + parameter.type + ')' }}:</label>
-                            <input class="form-control" type="text" ng-model="value"></input>
+                            <input class="form-control" type="text" ng-model="value" ng-disabled="edit === 'view'"></input>
                         </div>
                         <div ng-show="param.type === 'range'">
                         <label class="block basicLabel">{{ parameter.name + ' (' + parameter.type + ')' }}:</label>
 
                         <div class="col-md-6 inputWrapper leftInput">
-                            <input class="form-control" type="text" ng-model="value.min"></input>
+                            <input class="form-control" type="text" ng-model="value.min" ng-disabled="edit === 'view'"></input>
                         </div>
                         <div class="col-md-6 inputWrapper rightInput">
-                            <input class="form-control col-md-6" type="text" ng-model="value.max"></input>
+                            <input class="form-control col-md-6" type="text" ng-model="value.max" ng-disabled="edit === 'view'"></input>
                         </div>
 
                         </div>
                     </div>
                 </div>
             </div>
+
+            <button class="btn btn-primary col-md-12" ng-click="save()" ng-hide="edit === 'view'">Save</button>
         </form>
     </section>
-
-    <button class="btn btn-primary col-md-12" ng-click="save()" ng-show="classifiersView && selectedTenant.id">Save</button>
-    <button class="btn btn-primary col-md-12" ng-click="toggleExpanded('renderers')">Back</button>
+    
+    <button class="btn btn-primary col-md-12 bottom-buttons home" ng-click="toggleExpanded('basic')">Home</button>
+    <button class="btn btn-primary col-md-12 bottom-buttons back" ng-click="toggleExpanded('renderers')">Back</button>
 </div>
