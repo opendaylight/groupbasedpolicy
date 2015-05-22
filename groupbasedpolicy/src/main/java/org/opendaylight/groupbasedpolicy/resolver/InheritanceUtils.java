@@ -695,7 +695,7 @@ public class InheritanceUtils {
         HashSet<ContractId> visited = new HashSet<>();
 
         // TODO: Add GIC choices GroupNameConstraint and GroupAny
-        // TODO: Add EIC (ie L3Prefix) constraint.
+        // TODO: Add Inheritance for EIC (ie L3Prefix) constraint.
 
         resolveClauseAttr(unresolvedTenant, unresolvedContract,
                 unresolvedClause.getName(), subjectRefs,
@@ -709,11 +709,17 @@ public class InheritanceUtils {
                         .setGroupIdentificationConstraints(new GroupCapabilityConstraintCaseBuilder()
                                 .setCapabilityMatcher(ImmutableList.copyOf(capMatchers.values())).build())
                         .setConditionMatcher(ImmutableList.copyOf(provCondMatchers.values()))
+                        .setEndpointIdentificationConstraints(
+                                unresolvedClause.getProviderMatchers() == null ? null :
+                                    unresolvedClause.getProviderMatchers().getEndpointIdentificationConstraints())
                         .build())
                 .setConsumerMatchers(new ConsumerMatchersBuilder()
                         .setGroupIdentificationConstraints(new GroupRequirementConstraintCaseBuilder()
                                 .setRequirementMatcher(ImmutableList.copyOf(reqMatchers.values())).build())
                         .setConditionMatcher(ImmutableList.copyOf(consCondMatchers.values()))
+                        .setEndpointIdentificationConstraints(
+                                unresolvedClause.getConsumerMatchers() == null ? null :
+                                    unresolvedClause.getConsumerMatchers().getEndpointIdentificationConstraints())
                         .build())
                 .build();
         resolvedClauses.put(resolved.getName(), resolved);

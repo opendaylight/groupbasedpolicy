@@ -37,10 +37,12 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ParamDerivator;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
 import org.opendaylight.groupbasedpolicy.resolver.ConditionGroup;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
+import org.opendaylight.groupbasedpolicy.resolver.EndpointConstraint;
 import org.opendaylight.groupbasedpolicy.resolver.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.resolver.Policy;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.groupbasedpolicy.resolver.RuleGroup;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
@@ -62,6 +64,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ClassifierInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer3Match;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv4MatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv6MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg0;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg1;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg2;
@@ -74,6 +79,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Table.Cell;
 
 /**
  * Manage the table that enforces policy on the traffic. Traffic is denied
@@ -126,27 +132,32 @@ public class PolicyEnforcer extends FlowTable {
                         NetworkElements netElements = new NetworkElements(srcEp, dstEp, nodeId, ctx, policyInfo);
                         fdIds.add(srcEpFwdCxtOrds.getFdId());
 
-                        List<ConditionName> conds = ctx.getEndpointManager().getCondsForEndpoint(srcEp);
-                        ConditionGroup scg = policyInfo.getEgCondGroup(srcEpgKey, conds);
-                        conds = ctx.getEndpointManager().getCondsForEndpoint(dstEp);
-                        ConditionGroup dcg = policyInfo.getEgCondGroup(dstEpgKey, conds);
-
                         Policy policy = policyInfo.getPolicy(dstEpgKey, srcEpgKey);
-                        List<RuleGroup> rgs = policy.getRules(dcg, scg);
-                        CgPair p = new CgPair(depgId, sepgId, dcgId, scgId);
-                        if (visitedPairs.contains(p))
-                            continue;
-                        visitedPairs.add(p);
-                        syncPolicy(flowMap, netElements, rgs, p);
+                        for (Cell<EndpointConstraint, EndpointConstraint, List<RuleGroup>> activeRulesByConstraints: getActiveRulesBetweenEps(policy, dstEp, srcEp)) {
+                            Set<IpPrefix> sIpPrefixes = Policy.getIpPrefixesFrom(activeRulesByConstraints.getRowKey()
+                                .getL3EpPrefixes());
+                            Set<IpPrefix> dIpPrefixes = Policy.getIpPrefixesFrom(activeRulesByConstraints.getColumnKey()
+                                .getL3EpPrefixes());
+                            CgPair p = new CgPair(depgId, sepgId, dcgId, scgId, dIpPrefixes, sIpPrefixes);
+                            if (visitedPairs.contains(p))
+                                continue;
+                            visitedPairs.add(p);
+                            syncPolicy(flowMap, netElements, activeRulesByConstraints.getValue(), p);
+                        }
 
                         // Reverse
                         policy = policyInfo.getPolicy(srcEpgKey, dstEpgKey);
-                        rgs = policy.getRules(scg, dcg);
-                        p = new CgPair(sepgId, depgId, scgId, dcgId);
-                        if (visitedPairs.contains(p))
-                            continue;
-                        visitedPairs.add(p);
-                        syncPolicy(flowMap, netElements, rgs, p);
+                        for (Cell<EndpointConstraint, EndpointConstraint, List<RuleGroup>> activeRulesByConstraints : getActiveRulesBetweenEps(policy, srcEp, dstEp)) {
+                            Set<IpPrefix> sIpPrefixes = Policy.getIpPrefixesFrom(activeRulesByConstraints.getRowKey()
+                                .getL3EpPrefixes());
+                            Set<IpPrefix> dIpPrefixes = Policy.getIpPrefixesFrom(activeRulesByConstraints.getColumnKey()
+                                .getL3EpPrefixes());
+                            CgPair p = new CgPair(sepgId, depgId, scgId, dcgId, sIpPrefixes, dIpPrefixes);
+                            if (visitedPairs.contains(p))
+                                continue;
+                            visitedPairs.add(p);
+                            syncPolicy(flowMap, netElements, activeRulesByConstraints.getValue(), p);
+                        }
                     }
                 }
             }
@@ -368,52 +379,36 @@ public class PolicyEnforcer extends FlowTable {
 
         for (Map<String, ParameterValue> params : derivedParamsByName) {
             for (ClassifierDefinitionId clDefId : classifiers) {
-                Classifier classifier = SubjectFeatures.getClassifier(clDefId);
-                StringBuilder idb = new StringBuilder();
                 // XXX - TODO - implement connection tracking (requires openflow
                 // extension and data plane support - in 2.4. Will need to handle
                 // case where we are working with mix of nodes.
 
-                MatchBuilder baseMatch = new MatchBuilder();
-                if (direction.equals(Direction.In)) {
-                    idb.append(cgPair.sepg)
-                        .append("|")
-                        .append(cgPair.scgId)
-                        .append("|")
-                        .append(cgPair.depg)
-                        .append("|")
-                        .append(cgPair.dcgId)
-                        .append("|")
-                        .append(priority);
-                    addNxRegMatch(baseMatch, RegMatch.of(NxmNxReg0.class, Long.valueOf(cgPair.sepg)),
-                            RegMatch.of(NxmNxReg1.class, Long.valueOf(cgPair.scgId)),
-                            RegMatch.of(NxmNxReg2.class, Long.valueOf(cgPair.depg)),
-                            RegMatch.of(NxmNxReg3.class, Long.valueOf(cgPair.dcgId)));
+                List<MatchBuilder> matches = new ArrayList<>();
+                if (cgPair.sIpPrefixes.isEmpty() && cgPair.dIpPrefixes.isEmpty()) {
+                    matches.add(createBaseMatch(direction, cgPair, null, null));
+                } else if (!cgPair.sIpPrefixes.isEmpty() && cgPair.dIpPrefixes.isEmpty()) {
+                    for (IpPrefix sIpPrefix : cgPair.sIpPrefixes) {
+                        matches.add(createBaseMatch(direction, cgPair, sIpPrefix, null));
+                    }
+                } else if (cgPair.sIpPrefixes.isEmpty() && !cgPair.dIpPrefixes.isEmpty()) {
+                    for (IpPrefix dIpPrefix : cgPair.sIpPrefixes) {
+                        matches.add(createBaseMatch(direction, cgPair, null, dIpPrefix));
+                    }
                 } else {
-                    idb.append(cgPair.depg)
-                        .append("|")
-                        .append(cgPair.dcgId)
-                        .append("|")
-                        .append(cgPair.sepg)
-                        .append("|")
-                        .append(cgPair.scgId)
-                        .append("|")
-                        .append(priority);
-                    addNxRegMatch(baseMatch, RegMatch.of(NxmNxReg0.class, Long.valueOf(cgPair.depg)),
-                            RegMatch.of(NxmNxReg1.class, Long.valueOf(cgPair.dcgId)),
-                            RegMatch.of(NxmNxReg2.class, Long.valueOf(cgPair.sepg)),
-                            RegMatch.of(NxmNxReg3.class, Long.valueOf(cgPair.scgId)));
+                    for (IpPrefix sIpPrefix : cgPair.sIpPrefixes) {
+                        for (IpPrefix dIpPrefix : cgPair.sIpPrefixes) {
+                            matches.add(createBaseMatch(direction, cgPair, sIpPrefix, dIpPrefix));
+                        }
+                    }
                 }
 
-                List<MatchBuilder> matches = new ArrayList<>();
-                matches.add(baseMatch);
-
+                Classifier classifier = SubjectFeatures.getClassifier(clDefId);
                 ClassificationResult result = classifier.updateMatch(matches, params);
                 if (!result.isSuccessfull()) {
                     // TODO consider different handling.
                     throw new IllegalArgumentException(result.getErrorMessage());
                 }
-                String baseId = idb.toString();
+                String baseId = createBaseFlowId(direction, cgPair, priority);
                 FlowBuilder flow = base().setPriority(Integer.valueOf(priority));
                 for (MatchBuilder match : result.getMatchBuilders()) {
                     Match m = match.build();
@@ -428,6 +423,102 @@ public class PolicyEnforcer extends FlowTable {
         }
     }
 
+    private String createBaseFlowId(Direction direction, CgPair cgPair, int priority) {
+        StringBuilder idb = new StringBuilder();
+        if (direction.equals(Direction.In)) {
+            idb.append(cgPair.sepg)
+                    .append("|")
+                    .append(cgPair.scgId)
+                    .append("|")
+                    .append(cgPair.depg)
+                    .append("|")
+                    .append(cgPair.dcgId)
+                    .append("|")
+                    .append(priority);
+        } else {
+            idb.append(cgPair.depg)
+                    .append("|")
+                    .append(cgPair.dcgId)
+                    .append("|")
+                    .append(cgPair.sepg)
+                    .append("|")
+                    .append(cgPair.scgId)
+                    .append("|")
+                    .append(priority);
+        }
+        return idb.toString();
+    }
+
+    private MatchBuilder createBaseMatch(Direction direction, CgPair cgPair, IpPrefix sIpPrefix, IpPrefix dIpPrefix) {
+        MatchBuilder baseMatch = new MatchBuilder();
+        if (direction.equals(Direction.In)) {
+            addNxRegMatch(baseMatch,
+                    RegMatch.of(NxmNxReg0.class, Long.valueOf(cgPair.sepg)),
+                    RegMatch.of(NxmNxReg1.class, Long.valueOf(cgPair.scgId)),
+                    RegMatch.of(NxmNxReg2.class, Long.valueOf(cgPair.depg)),
+                    RegMatch.of(NxmNxReg3.class, Long.valueOf(cgPair.dcgId)));
+            if (sIpPrefix != null) {
+                baseMatch.setLayer3Match(createLayer3Match(sIpPrefix, true));
+            }
+            if (dIpPrefix != null) {
+                baseMatch.setLayer3Match(createLayer3Match(dIpPrefix, true));
+            }
+        } else {
+            addNxRegMatch(baseMatch,
+                    RegMatch.of(NxmNxReg0.class, Long.valueOf(cgPair.depg)),
+                    RegMatch.of(NxmNxReg1.class, Long.valueOf(cgPair.dcgId)),
+                    RegMatch.of(NxmNxReg2.class, Long.valueOf(cgPair.sepg)),
+                    RegMatch.of(NxmNxReg3.class, Long.valueOf(cgPair.scgId)));
+            if (sIpPrefix != null) {
+                baseMatch.setLayer3Match(createLayer3Match(sIpPrefix, false));
+            }
+            if (dIpPrefix != null) {
+                baseMatch.setLayer3Match(createLayer3Match(dIpPrefix, false));
+            }
+        }
+        return baseMatch;
+    }
+
+    private Layer3Match createLayer3Match(IpPrefix ipPrefix, boolean isSrc) {
+        if (ipPrefix.getIpv4Prefix() != null) {
+            if (isSrc) {
+                return new Ipv4MatchBuilder().setIpv4Source(ipPrefix.getIpv4Prefix()).build();
+            } else {
+                return new Ipv4MatchBuilder().setIpv4Destination(ipPrefix.getIpv4Prefix()).build();
+            }
+        } else {
+            if (isSrc) {
+                return new Ipv6MatchBuilder().setIpv6Source(ipPrefix.getIpv6Prefix()).build();
+            } else {
+                return new Ipv6MatchBuilder().setIpv6Destination(ipPrefix.getIpv6Prefix()).build();
+            }
+        }
+    }
+
+    // TODO: move to a common utils for all renderers
+    public List<Cell<EndpointConstraint, EndpointConstraint, List<RuleGroup>>>
+                getActiveRulesBetweenEps(Policy policy, Endpoint consEp, Endpoint provEp) {
+        List<Cell<EndpointConstraint, EndpointConstraint, List<RuleGroup>>> rulesWithEpConstraints = new ArrayList<>();
+        if (policy.getRuleMap() != null) {
+            for (Cell<EndpointConstraint, EndpointConstraint, List<RuleGroup>> cell : policy.getRuleMap().cellSet()) {
+                EndpointConstraint consEpConstraint = cell.getRowKey();
+                EndpointConstraint provEpConstraint = cell.getColumnKey();
+                if (epMatchesConstraint(consEp, consEpConstraint) && epMatchesConstraint(provEp, provEpConstraint)) {
+                    rulesWithEpConstraints.add(cell);
+                }
+            }
+        }
+        return rulesWithEpConstraints;
+    }
+
+    private boolean epMatchesConstraint(Endpoint ep, EndpointConstraint constraint) {
+        List<ConditionName> epConditions = Collections.emptyList();
+        if (ep.getCondition() != null) {
+            epConditions = ep.getCondition();
+        }
+        return constraint.getConditionSet().matches(epConditions);
+    }
+
     @Immutable
     private static class CgPair {
 
@@ -435,21 +526,27 @@ public class PolicyEnforcer extends FlowTable {
         private final int depg;
         private final int scgId;
         private final int dcgId;
+        private final Set<IpPrefix> sIpPrefixes;
+        private final Set<IpPrefix> dIpPrefixes;
 
-        public CgPair(int sepg, int depg, int scgId, int dcgId) {
+        public CgPair(int sepg, int depg, int scgId, int dcgId, Set<IpPrefix> sIpPrefixes, Set<IpPrefix> dIpPrefixes) {
             super();
             this.sepg = sepg;
             this.depg = depg;
             this.scgId = scgId;
             this.dcgId = dcgId;
+            this.sIpPrefixes = sIpPrefixes;
+            this.dIpPrefixes = dIpPrefixes;
         }
 
         @Override
         public int hashCode() {
             final int prime = 31;
             int result = 1;
+            result = prime * result + ((dIpPrefixes == null) ? 0 : dIpPrefixes.hashCode());
             result = prime * result + dcgId;
             result = prime * result + depg;
+            result = prime * result + ((sIpPrefixes == null) ? 0 : sIpPrefixes.hashCode());
             result = prime * result + scgId;
             result = prime * result + sepg;
             return result;
@@ -464,7 +561,17 @@ public class PolicyEnforcer extends FlowTable {
             if (getClass() != obj.getClass())
                 return false;
             CgPair other = (CgPair) obj;
+            if (dIpPrefixes == null) {
+                if (other.dIpPrefixes != null)
+                    return false;
+            } else if (!dIpPrefixes.equals(other.dIpPrefixes))
+                return false;
             if (dcgId != other.dcgId)
+                return false;
+            if (sIpPrefixes == null) {
+                if (other.sIpPrefixes != null)
+                    return false;
+            } else if (!sIpPrefixes.equals(other.sIpPrefixes))
                 return false;
             if (depg != other.depg)
                 return false;

@@ -72,7 +72,7 @@ public class SubjectResolverUtils {
                     subjects.put(s.getName(), s);
                 }
 
-                Table<ConditionSet, ConditionSet, List<Subject>> subjectMap =
+                Table<EndpointConstraint, EndpointConstraint, List<Subject>> subjectMap =
                         HashBasedTable.create();
 
                 for (Clause clause : clauses) {
@@ -80,13 +80,18 @@ public class SubjectResolverUtils {
                             clauseMatchesByGroupReqAndCapConstraints(clause, match)) {
                         ConditionSet consCSet = buildConsConditionSet(clause);
                         addConditionSet(ckey, consCSet, egConditions);
+                        EndpointConstraint consEpConstraint = new EndpointConstraint(consCSet,
+                                clause.getConsumerMatchers() == null ? null : clause.getConsumerMatchers()
+                                    .getEndpointIdentificationConstraints());
                         ConditionSet provCSet = buildProvConditionSet(clause);
                         addConditionSet(pkey, provCSet, egConditions);
-                        List<Subject> clauseSubjects =
-                                subjectMap.get(consCSet, provCSet);
+                        EndpointConstraint provEpConstraint = new EndpointConstraint(provCSet,
+                                clause.getProviderMatchers() == null ? null : clause.getProviderMatchers()
+                                    .getEndpointIdentificationConstraints());
+                        List<Subject> clauseSubjects = subjectMap.get(consEpConstraint, provEpConstraint);
                         if (clauseSubjects == null) {
                             clauseSubjects = new ArrayList<>();
-                            subjectMap.put(consCSet, provCSet, clauseSubjects);
+                            subjectMap.put(consEpConstraint, provEpConstraint, clauseSubjects);
                         }
                         for (SubjectName sn : clause.getSubjectRefs()) {
                             Subject s = subjects.get(sn);
@@ -216,18 +221,18 @@ public class SubjectResolverUtils {
     private static Policy resolvePolicy(Tenant contractTenant,
             Contract contract,
             Policy merge,
-            Table<ConditionSet, ConditionSet,
+            Table<EndpointConstraint, EndpointConstraint,
             List<Subject>> subjectMap) {
-        Table<ConditionSet, ConditionSet, List<RuleGroup>> ruleMap =
+        Table<EndpointConstraint, EndpointConstraint, List<RuleGroup>> ruleMap =
                 HashBasedTable.create();
         if (merge != null) {
             ruleMap.putAll(merge.getRuleMap());
         }
-        for (Cell<ConditionSet, ConditionSet, List<Subject>> entry : subjectMap.cellSet()) {
+        for (Cell<EndpointConstraint, EndpointConstraint, List<Subject>> entry : subjectMap.cellSet()) {
             List<RuleGroup> rules = new ArrayList<>();
-            ConditionSet consConds = entry.getRowKey();
-            ConditionSet provConds = entry.getColumnKey();
-            List<RuleGroup> oldrules = ruleMap.get(consConds, provConds);
+            EndpointConstraint consEpConstraint = entry.getRowKey();
+            EndpointConstraint provEpConstraint = entry.getColumnKey();
+            List<RuleGroup> oldrules = ruleMap.get(consEpConstraint, provEpConstraint);
             if (oldrules != null) {
                 rules.addAll(oldrules);
             }
@@ -241,7 +246,7 @@ public class SubjectResolverUtils {
                 rules.add(rg);
             }
             Collections.sort(rules);
-            ruleMap.put(consConds, provConds, Collections.unmodifiableList(rules));
+            ruleMap.put(consEpConstraint, provEpConstraint, Collections.unmodifiableList(rules));
         }
         return new Policy(ruleMap);
     }
