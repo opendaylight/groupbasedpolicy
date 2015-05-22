@@ -1,8 +1,13 @@
 package org.opendaylight.controller.config.yang.config.ofoverlay_provider.impl;
 
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OFOverlayRenderer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class OFOverlayProviderModule extends org.opendaylight.controller.config.yang.config.ofoverlay_provider.impl.AbstractOFOverlayProviderModule {
+    private static final Logger LOG = LoggerFactory
+            .getLogger(OFOverlayProviderModule.class);
+
     public OFOverlayProviderModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {
         super(identifier, dependencyResolver);
     }
@@ -18,6 +23,8 @@ public class OFOverlayProviderModule extends org.opendaylight.controller.config.
 
     @Override
     public java.lang.AutoCloseable createInstance() {
+        LOG.info("OFoffset: {}",getOfOffset());
+        LOG.info("RouterMac: {}",getRouterMac());
         return new OFOverlayRenderer(getDataBrokerDependency(),
                                      getRpcRegistryDependency());
     }

@@ -13,6 +13,7 @@ module ofoverlay-provider-impl {
 
     import config { prefix config; revision-date 2013-04-05; }
     import opendaylight-md-sal-binding { prefix mdsal; revision-date 2013-10-28; }
+    import ietf-yang-types { prefix "yang"; revision-date 2010-09-24; }
 
     description
         "This module contains the base YANG definitions for 
@@ -51,6 +52,14 @@ module ofoverlay-provider-impl {
                         config:required-identity mdsal:binding-rpc-registry;
                     }
                 }
+            }
+
+            leaf of-offset {
+                type uint32;
+            }
+
+            leaf router-mac {
+                type yang:mac-address;
             }
         }
     }

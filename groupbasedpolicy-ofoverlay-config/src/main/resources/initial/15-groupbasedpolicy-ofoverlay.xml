@@ -26,6 +26,8 @@
                       <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
                       <name>binding-data-broker</name>
                     </data-broker>
+                    <of-offset>2</of-offset>
+                    <router-mac>01:02:03:04:05:06</router-mac>
                 </module>
             </modules>
         </data>
@@ -37,4 +39,3 @@
     </required-capabilities>
 
 </snapshot>
-
