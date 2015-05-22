@@ -7,9 +7,8 @@
  */
 package org.opendaylight.groupbasedpolicy.neutron.ovsdb.util;
 
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.DataStore.getLongFromDpid;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.DataStore.readFromDs;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.DataStore.submitToDs;
+import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.readFromDs;
+import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.submitToDs;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getOvsdbBridgeFromTerminationPoint;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getOvsdbTerminationPoint;
 
@@ -46,6 +45,25 @@ import com.google.common.base.Optional;
 
 public class InventoryHelper {
     private static final Logger LOG = LoggerFactory.getLogger(InventoryHelper.class);
+    private static final String HEX = "0x";
+
+    /**
+     * Convert an OpenFlow Datapath ID to a Long
+     *
+     * @param dpid The OpenFlow Datapath ID
+     * @return The Long representation of the DPID
+     */
+    public static Long getLongFromDpid(String dpid) {
+        String[] addressInBytes = dpid.split(":");
+        Long address =
+                (Long.decode(HEX + addressInBytes[2]) << 40) |
+                (Long.decode(HEX + addressInBytes[3]) << 32) |
+                (Long.decode(HEX + addressInBytes[4]) << 24) |
+                (Long.decode(HEX + addressInBytes[5]) << 16) |
+                (Long.decode(HEX + addressInBytes[6]) << 8 ) |
+                (Long.decode(HEX + addressInBytes[7]));
+        return address;
+    }
 
     private static final Long MAX_OF_PORT=65534L;
     /**

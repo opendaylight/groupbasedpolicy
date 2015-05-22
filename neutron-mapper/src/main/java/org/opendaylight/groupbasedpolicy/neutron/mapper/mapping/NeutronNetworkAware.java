@@ -74,6 +74,10 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
         TenantId tenantId = new TenantId(Utils.normalizeUuid(network.getTenantID()));
         addEpgDhcpIfMissing(tenantId, rwTx);
         addEpgRouterIfMissing(tenantId, rwTx);
+        // Note that Router External doesn't mean the router exists yet, it simply means it will connect to one.
+        if(network.getRouterExternal()) {
+            addEpgExternalIfMissing(tenantId, rwTx);
+        }
         Description domainDescription = new Description(MappingUtils.NEUTRON_NETWORK__ + network.getID());
         Name name = null;
         if (network.getNetworkName() != null) {
@@ -108,6 +112,19 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
         rwTx.put(LogicalDatastoreType.OPERATIONAL, NeutronMapperIidFactory.networkMappingIid(l2FdId), networkMapping, true);
 
         DataStoreHelper.submitToDs(rwTx);
+    }
+
+    private void addEpgExternalIfMissing(TenantId tenantId, ReadWriteTransaction rwTx) {
+        Optional<EndpointGroup> potentialEpgExternal = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
+                IidFactory.endpointGroupIid(tenantId, MappingUtils.EPG_EXTERNAL_ID), rwTx);
+        if (!potentialEpgExternal.isPresent()) {
+            EndpointGroup epgExternal = new EndpointGroupBuilder().setId(MappingUtils.EPG_EXTERNAL_ID)
+                .setDescription(new Description(MappingUtils.NEUTRON_EXTERNAL__ + "epg_external_networks"))
+                .setIntraGroupPolicy(IntraGroupPolicy.RequireContract)
+                .build();
+            rwTx.put(LogicalDatastoreType.CONFIGURATION,
+                    IidFactory.endpointGroupIid(tenantId, MappingUtils.EPG_EXTERNAL_ID), epgExternal);
+        }
     }
 
     private void addEpgDhcpIfMissing(TenantId tenantId, ReadWriteTransaction rwTx) {

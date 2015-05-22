@@ -37,6 +37,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2FloodDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Name;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubnetId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService;
@@ -138,10 +139,13 @@ public class NeutronRouterAware implements INeutronRouterAware {
         NeutronSubnet defaultSubnet = subnetInterface.getSubnet(router.getExternalGatewayInfo()
             .getExternalFixedIPs()
             .get(0)
-            .getSubnetUUID());;
+            .getSubnetUUID());
         IpAddress defaultGateway = null;
         if (defaultSubnet != null) {
             defaultGateway = Utils.createIpAddress(defaultSubnet.getGatewayIP());
+            //Create L3Endpoint for defaultGateway and write to externalGateways to L3Endpoints in neutron-gbp datastore
+            NetworkDomainId containment = new NetworkDomainId(defaultSubnet.getID());
+            NeutronPortAware.addL3EndpointForExternalGateway(tenantId, l3Context.getId(), defaultGateway, containment ,rwTx);
         }
         // Create L3Prefix Endpoints for all routes
         if (router.getRoutes().isEmpty()) {

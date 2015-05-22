@@ -71,6 +71,8 @@ public class IidFactory {
         throw new UnsupportedOperationException();
     }
 
+    private static final InstanceIdentifier<Endpoints> ENDPOINTS_IID = InstanceIdentifier.builder(Endpoints.class).build();
+
     public static InstanceIdentifier<Tenant> tenantIid(TenantId id) {
         return InstanceIdentifier.builder(Tenants.class).child(Tenant.class, new TenantKey(id)).build();
     }
@@ -200,6 +202,10 @@ public class IidFactory {
         return InstanceIdentifier.builder(Endpoints.class)
             .child(EndpointL3Prefix.class, new EndpointL3PrefixKey(ipPrefix, l3Context))
             .build();
+    }
+
+    public static InstanceIdentifier<Endpoints> endpointsIid() {
+        return ENDPOINTS_IID;
     }
 
     public static InstanceIdentifier<Subnet> subnetIid(TenantId tenantId, SubnetId subnetId) {

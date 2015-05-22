@@ -308,7 +308,7 @@ public class EndpointRpcRegistry implements EndpointService {
                     InstanceIdentifier.builder(Endpoints.class)
                             .child(Endpoint.class, key)
                             .build();
-            t.put(LogicalDatastoreType.OPERATIONAL, iid, ep);
+            t.put(LogicalDatastoreType.OPERATIONAL, iid, ep, true);
         }
         if (input.getL3Address() != null) {
             for (L3Address l3addr : input.getL3Address()) {
@@ -323,7 +323,7 @@ public class EndpointRpcRegistry implements EndpointService {
                         InstanceIdentifier.builder(Endpoints.class)
                                 .child(EndpointL3.class, key3)
                                 .build();
-                t.put(LogicalDatastoreType.OPERATIONAL, iid_l3, ep3);
+                t.put(LogicalDatastoreType.OPERATIONAL, iid_l3, ep3, true);
             }
         }
         ListenableFuture<Void> r = t.submit();

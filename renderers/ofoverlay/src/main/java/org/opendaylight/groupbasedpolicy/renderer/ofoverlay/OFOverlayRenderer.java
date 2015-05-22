@@ -19,6 +19,7 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
@@ -41,12 +42,14 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     private static final Logger LOG =
             LoggerFactory.getLogger(OFOverlayRenderer.class);
 
-    private final Uuid ID = new Uuid("934cd993-7bcc-46cf-b150-64fabc92b4e0");
     private final DataBroker dataBroker;
     private final PolicyResolver policyResolver;
     private final SwitchManager switchManager;
     private final EndpointManager endpointManager;
     private final PolicyManager policyManager;
+
+    private final short tableOffset;
+    private final MacAddress externalRouterMac;
 
     private final ScheduledExecutorService executor;
 
@@ -57,9 +60,13 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     ListenerRegistration<DataChangeListener> configReg;
 
     public OFOverlayRenderer(DataBroker dataProvider,
-                             RpcProviderRegistry rpcRegistry) {
+                             RpcProviderRegistry rpcRegistry,
+                             short tableOffset,
+                             MacAddress externalRouterMac) {
         super();
         this.dataBroker = dataProvider;
+        this.tableOffset=tableOffset;
+        this.externalRouterMac=externalRouterMac;
 
         int numCPU = Runtime.getRuntime().availableProcessors();
         //TODO: Consider moving to groupbasedpolicy-ofoverlay-config so as to be user configurable in distribution.
@@ -75,7 +82,9 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
                                           switchManager,
                                           endpointManager,
                                           rpcRegistry,
-                                          executor);
+                                          executor,
+                                          tableOffset,
+                                          externalRouterMac);
 
         configReg =
                 dataProvider.registerDataChangeListener(LogicalDatastoreType.CONFIGURATION,

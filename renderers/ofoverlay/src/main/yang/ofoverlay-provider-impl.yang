@@ -13,7 +13,7 @@ module ofoverlay-provider-impl {
 
     import config { prefix config; revision-date 2013-04-05; }
     import opendaylight-md-sal-binding { prefix mdsal; revision-date 2013-10-28; }
-    import ietf-yang-types { prefix "yang"; revision-date 2010-09-24; }
+    import ietf-yang-types { prefix "yang"; revision-date 2013-07-15; }
 
     description
         "This module contains the base YANG definitions for 
@@ -54,11 +54,16 @@ module ofoverlay-provider-impl {
                 }
             }
 
-            leaf of-offset {
-                type uint32;
+            leaf gbp-ofoverlay-table-offset {
+                description 
+                    "Used to offset pipeline to start at offset+1. Table0 is required.
+                    This is to allow the enduser to configure where the GBP pipeline starts.";
+                type uint16;
             }
 
-            leaf router-mac {
+            leaf external-router-mac {
+                description
+                    "Used to allow configuraiton of MAC address for external router";
                 type yang:mac-address;
             }
         }

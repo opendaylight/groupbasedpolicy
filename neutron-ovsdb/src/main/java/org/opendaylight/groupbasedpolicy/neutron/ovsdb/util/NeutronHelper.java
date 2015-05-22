@@ -8,7 +8,7 @@
 
 package org.opendaylight.groupbasedpolicy.neutron.ovsdb.util;
 
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.DataStore.readFromDs;
+import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.readFromDs;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;

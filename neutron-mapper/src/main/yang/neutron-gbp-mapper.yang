@@ -85,6 +85,17 @@ module neutron-gbp-mapper {
                     uses neutron-port-key;
                 }
             }
+
+            container external-gateways-as-l3-endpoints {
+                description "L3Endpoints that represent Neutron External Gateways for External Subnets.
+                    Please note these ARE NOT Neutron router ports, they are outside of Neutron.";
+                list external-gateway-as-l3-endpoint {
+                    description "L3Endpoints that represent Neutron External Gateways for External Subnets.
+                        Please note these ARE NOT Neutron router ports, they are outside of Neutron.";
+                    key "l3-context ip-address";
+                    uses gbp-endpoint:l3-key;
+                }
+            }
         }
 
         container gbp-by-neutron-mappings {

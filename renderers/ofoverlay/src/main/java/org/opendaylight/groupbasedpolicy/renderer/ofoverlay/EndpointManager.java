@@ -23,7 +23,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
-import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
+import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -33,25 +33,25 @@ import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
 import org.opendaylight.groupbasedpolicy.endpoint.EpRendererAugmentation;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
+import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.groupbasedpolicy.util.SetUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNodeConnector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Name;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterL3PrefixEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Builder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3PrefixBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig.LearningMode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextInput;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayL3ContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.node.NodeConnector;
@@ -79,8 +79,7 @@ import com.google.common.collect.Sets;
  * In order to render the policy, we need to be able to efficiently enumerate
  * all endpoints on a particular switch and also all the switches containing
  * each particular endpoint group
- *
- * @author readams
+
  */
 public class EndpointManager implements AutoCloseable, DataChangeListener {
 
@@ -217,6 +216,53 @@ public class EndpointManager implements AutoCloseable, DataChangeListener {
         return endpoints.get(epKey);
     }
 
+    public Collection<EndpointL3Prefix> getEndpointsL3PrefixForTenant(final TenantId tenantId) {
+        Collection<EndpointL3Prefix> l3PrefixEndpoints = getEndpointsL3Prefix();
+        if (l3PrefixEndpoints == null) {
+            // Log message already generated in getEndpointsL3Prefix()
+            return null;
+        }
+        return ImmutableSet.copyOf(Collections2.filter(l3PrefixEndpoints, new Predicate<EndpointL3Prefix>() {
+
+            @Override
+            public boolean apply(EndpointL3Prefix input) {
+                return (input.getTenant().equals(tenantId));
+            }
+
+        }));
+    }
+
+    public Collection<EndpointL3Prefix> getEndpointsL3Prefix() {
+        /*
+         * XXX: alagalah I wanted to avoid adding another Map. Due to not being able to
+         * get to the granularity of the L3PrefixEndpoint List within the Endpoints container
+         * in the datastore, we have to pull all the Endpoints. If this causes performance issues
+         * we may have to revisit a Map in updateEndpoint but note, this Endpoint doesn't have a location
+         * and hence we would have to process it outside the null location check.
+         */
+
+        /*
+         * XXX: alagalah See how much nicer it would have been if we could have just called this L3PrefixEndpoint and
+         * refactored Endpoints to be L2Endpoint, L3Endpoint, L3PrefixEndpoint? Plurality reads sanely with
+         * that but not with this. Naming is important, and backwards compatibility sometimes isn't worth it.
+         */
+        if (dataProvider == null) {
+            LOG.error("Null DataProvider in EndpointManager getEndpointsL3Prefix");
+            return null;
+        }
+        ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
+        Optional<Endpoints> endpoints = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
+                IidFactory.endpointsIid(), rTx);
+        if (!endpoints.isPresent()) {
+            LOG.warn("No Endpoints present in datastore.");
+            return null;
+        }
+        if (endpoints.get().getEndpointL3Prefix()==null) {
+            LOG.warn("No L3 Prefix Endpoints present in datastore.");
+            return null;
+        }
+        return endpoints.get().getEndpointL3Prefix();
+    }
     /**
      * Set the learning mode to the specified value
      *
@@ -278,6 +324,10 @@ public class EndpointManager implements AutoCloseable, DataChangeListener {
 
         @Override
         public Augmentation<EndpointL3> buildEndpointL3Augmentation(RegisterEndpointInput input) {
+            OfOverlayContextBuilder ictx = checkAugmentation(input);
+            if (ictx != null) {
+                return new OfOverlayL3ContextBuilder(ictx.build()).build();
+            }
             return null;
         }
 
@@ -369,23 +419,40 @@ public class EndpointManager implements AutoCloseable, DataChangeListener {
     @Override
     public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
         for (DataObject dao : change.getCreatedData().values()) {
-            if (dao instanceof Endpoint)
+            if (dao instanceof Endpoint) {
                 updateEndpoint(null, (Endpoint) dao);
+            } else if (dao instanceof EndpointL3) {
+                updateEndpointL3(null,(EndpointL3)dao);
+            } else if (dao instanceof EndpointL3Prefix) {
+
+            }
         }
         for (InstanceIdentifier<?> iid : change.getRemovedPaths()) {
             DataObject old = change.getOriginalData().get(iid);
-            if (old != null && old instanceof Endpoint)
-                updateEndpoint((Endpoint) old, null);
-        }
-        Map<InstanceIdentifier<?>, DataObject> d = change.getUpdatedData();
-        for (Entry<InstanceIdentifier<?>, DataObject> entry : d.entrySet()) {
-            if (!(entry.getValue() instanceof Endpoint))
+            if (old == null) {
                 continue;
-            DataObject old = change.getOriginalData().get(entry.getKey());
-            Endpoint oldEp = null;
-            if (old != null && old instanceof Endpoint)
-                oldEp = (Endpoint) old;
-            updateEndpoint(oldEp, (Endpoint) entry.getValue());
+            }
+            if(old instanceof Endpoint) {
+                updateEndpoint((Endpoint) old, null);
+            } else if (old instanceof EndpointL3) {
+                continue;
+            } else if (old instanceof EndpointL3Prefix) {
+                continue;
+            }
+        }
+        Map<InstanceIdentifier<?>, DataObject> dao = change.getUpdatedData();
+        for (Entry<InstanceIdentifier<?>, DataObject> entry : dao.entrySet()) {
+            if (entry.getValue() instanceof Endpoint) {
+                DataObject old = change.getOriginalData().get(entry.getKey());
+                Endpoint oldEp = null;
+                if (old != null && old instanceof Endpoint)
+                    oldEp = (Endpoint) old;
+                updateEndpoint(oldEp, (Endpoint) entry.getValue());
+            } else if (entry.getValue() instanceof EndpointL3) {
+                continue;
+            } else if (entry.getValue() instanceof EndpointL3Prefix) {
+                continue;
+            }
         }
     }
 
@@ -478,6 +545,12 @@ public class EndpointManager implements AutoCloseable, DataChangeListener {
         return SetUtils.getNestedSet(eg, endpointsByGroup);
     }
 
+    /**
+     * Update the endpointL3 indexes. Set newEp to null to remove.
+     */
+    protected synchronized void updateEndpointL3(EndpointL3 oldEp, EndpointL3 newEp) {
+
+    }
     /**
      * Update the endpoint indexes. Set newEp to null to remove.
      */

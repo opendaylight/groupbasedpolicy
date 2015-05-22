@@ -8,8 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.neutron.ovsdb.util;
 
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.DataStore.readFromDs;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.DataStore.submitToDs;
+import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.readFromDs;
+import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.submitToDs;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Optional;
 
 public class OvsdbHelper {
-    private static final Logger LOG = LoggerFactory.getLogger(DataStore.class);
+    private static final Logger LOG = LoggerFactory.getLogger(OvsdbHelper.class);
     private static final String OF_PORT = "6653";
 
     /**

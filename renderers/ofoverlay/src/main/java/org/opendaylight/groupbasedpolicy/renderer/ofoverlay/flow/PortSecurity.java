@@ -42,10 +42,11 @@ public class PortSecurity extends FlowTable {
     protected static final Logger LOG =
             LoggerFactory.getLogger(PortSecurity.class);
 
-    public static final short TABLE_ID = 0;
+    public static short TABLE_ID;
 
-    public PortSecurity(OfContext ctx) {
+    public PortSecurity(OfContext ctx, short tableId) {
         super(ctx);
+        this.TABLE_ID=tableId;
     }
 
     @Override
@@ -107,7 +108,7 @@ public class PortSecurity extends FlowTable {
                 .setMatch(new MatchBuilder()
                         .setInPort(port)
                         .build())
-                .setInstructions(FlowUtils.gotoTableInstructions((short) (getTableId() + 1)));
+                .setInstructions(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()));
         return flowb.build();
 
     }
@@ -126,7 +127,7 @@ public class PortSecurity extends FlowTable {
                                 null, null))
                         .setInPort(ofc.getNodeConnectorId())
                         .build())
-                .setInstructions(FlowUtils.gotoTableInstructions((short) (TABLE_ID + 1)));
+                .setInstructions(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()));
 
         return flowb.build();
     }
@@ -156,7 +157,7 @@ public class PortSecurity extends FlowTable {
                         .setLayer3Match(m)
                         .setInPort(ofc.getNodeConnectorId())
                         .build())
-                .setInstructions(FlowUtils.gotoTableInstructions((short) (TABLE_ID + 1)))
+                .setInstructions(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()))
                 .build();
 
         return flow;
@@ -216,7 +217,7 @@ public class PortSecurity extends FlowTable {
                             .setLayer3Match(m)
                             .setInPort(ofc.getNodeConnectorId())
                             .build())
-                    .setInstructions(FlowUtils.gotoTableInstructions((short) (TABLE_ID + 1)))
+                    .setInstructions(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()))
                     .build();
 
             flowMap.writeFlow(nodeId, TABLE_ID,flow);

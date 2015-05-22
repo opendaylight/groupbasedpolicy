@@ -17,6 +17,8 @@ import java.util.Map.Entry;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
+import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -166,7 +168,8 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
                 LOG.debug("TerminationPoint {} with external ID {} is not in Neutron Map", ovsdbTp,externalId);
                 return;
             }
-            ep = lookupEndpoint(epKey, dataBroker);
+            ReadOnlyTransaction transaction = dataBroker.newReadOnlyTransaction();
+            ep = lookupEndpoint(epKey, transaction);
             if (ep == null) {
                 LOG.warn("TerminationPoint {} with external ID {} is in Neutron Map, but corresponding Endpoint {} isn't in Endpoint Repository", ovsdbTp,externalId,epKey);
                 return;

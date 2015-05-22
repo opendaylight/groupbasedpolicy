@@ -50,7 +50,7 @@ public class PortSecurityTest extends FlowTableTest {
     @Before
     public void setup() throws Exception {
         initCtx();
-        table = new PortSecurity(ctx);
+        table = new PortSecurity(ctx,ctx.getPolicyManager().getTABLEID_PORTSECURITY());
         super.setup();
     }
 
@@ -59,7 +59,7 @@ public class PortSecurityTest extends FlowTableTest {
         FlowMap fm = dosync(null);
         int count = 0;
         Map<String, Flow> flowMap = new HashMap<>();
-        for (Flow f : fm.getTableForNode(nodeId, (short) 0).getFlow()) {
+        for (Flow f : fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow()) {
             flowMap.put(f.getId().getValue(), f);
             Long etherType = null;
             if (f.getMatch() != null && f.getMatch().getEthernetMatch() !=null) {
@@ -72,9 +72,9 @@ public class PortSecurityTest extends FlowTableTest {
             }
         }
         assertEquals(4, count);
-        int numberOfFlows = fm.getTableForNode(nodeId, (short) 0).getFlow().size();
+        int numberOfFlows = fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow().size();
         fm = dosync(flowMap);
-        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, (short) 0).getFlow().size());
+        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow().size());
     }
 
     @Test
@@ -89,24 +89,24 @@ public class PortSecurityTest extends FlowTableTest {
                                    .setNodeConnectorId(new NodeConnectorId("openflow:1:1"))
                                    .build())).build());
         FlowMap fm = dosync(null);
-        assertNotEquals(0 ,fm.getTableForNode(nodeId, (short) 0).getFlow().size());
+        assertNotEquals(0 ,fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow().size());
 
         int count = 0;
         HashMap<String, Flow> flowMap = new HashMap<>();
         Set<String> ncs = ImmutableSet.of("openflow:1:1", "openflow:1:2");
-        for (Flow f : fm.getTableForNode(nodeId, (short) 0).getFlow()) {
+        for (Flow f : fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow()) {
             flowMap.put(f.getId().getValue(), f);
             if (f.getMatch() != null && f.getMatch().getInPort() != null &&
                 ncs.contains(f.getMatch().getInPort().getValue())) {
                 assertEquals(f.getInstructions(),
-                             FlowUtils.gotoTableInstructions((short)(table.getTableId()+1)));
+                             FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()));
                 count += 1;
             }
         }
         assertEquals(2, count);
-        int numberOfFlows = fm.getTableForNode(nodeId, (short) 0).getFlow().size();
+        int numberOfFlows = fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow().size();
         fm = dosync(flowMap);
-        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, (short) 0).getFlow().size());
+        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow().size());
     }
 
     @Test
@@ -119,11 +119,11 @@ public class PortSecurityTest extends FlowTableTest {
         endpointManager.addEndpoint(ep);
 
         FlowMap fm = dosync(null);
-        assertNotEquals(0 ,fm.getTableForNode(nodeId, (short) 0).getFlow().size());
+        assertNotEquals(0 ,fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow().size());
 
         int count = 0;
         HashMap<String, Flow> flowMap = new HashMap<>();
-        for (Flow f : fm.getTableForNode(nodeId, (short) 0).getFlow()) {
+        for (Flow f : fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow()) {
             flowMap.put(f.getId().getValue(), f);
             if (f.getMatch() != null &&
                 f.getMatch().getEthernetMatch() != null &&
@@ -134,14 +134,14 @@ public class PortSecurityTest extends FlowTableTest {
                 Objects.equals(ep.getAugmentation(OfOverlayContext.class).getNodeConnectorId(),
                                f.getMatch().getInPort())) {
                 count += 1;
-                assertEquals(FlowUtils.gotoTableInstructions((short)(table.getTableId()+1)),
+                assertEquals(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()),
                              f.getInstructions());
             }
         }
         assertEquals(2, count);
-        int numberOfFlows = fm.getTableForNode(nodeId, (short) 0).getFlow().size();
+        int numberOfFlows = fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow().size();
         fm = dosync(flowMap);
-        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, (short) 0).getFlow().size());
+        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow().size());
     }
 
     @Test
@@ -158,11 +158,11 @@ public class PortSecurityTest extends FlowTableTest {
         endpointManager.addEndpoint(ep);
 
         FlowMap fm = dosync(null);
-        assertNotEquals(0 ,fm.getTableForNode(nodeId, (short) 0).getFlow().size());
+        assertNotEquals(0 ,fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow().size());
 
         int count = 0;
         HashMap<String, Flow> flowMap = new HashMap<>();
-        for (Flow f : fm.getTableForNode(nodeId, (short) 0).getFlow()) {
+        for (Flow f : fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow()) {
             flowMap.put(f.getId().getValue(), f);
             if (f.getMatch() != null &&
                 Objects.equals(ep.getAugmentation(OfOverlayContext.class).getNodeConnectorId(),
@@ -186,13 +186,13 @@ public class PortSecurityTest extends FlowTableTest {
                   Objects.equals(ep.getL3Address().get(1).getIpAddress().getIpv6Address().getValue(),
                                  ((Ipv6Match)f.getMatch().getLayer3Match()).getIpv6Source().getValue().split("/")[0])))) {
                 count += 1;
-                assertEquals(FlowUtils.gotoTableInstructions((short)(table.getTableId()+1)),
+                assertEquals(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()),
                              f.getInstructions());
             }
         }
         assertEquals(4, count);
-        int numberOfFlows = fm.getTableForNode(nodeId, (short) 0).getFlow().size();
+        int numberOfFlows = fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow().size();
         fm = dosync(flowMap);
-        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, (short) 0).getFlow().size());
+        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow().size());
     }
 }

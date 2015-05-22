@@ -60,39 +60,12 @@ module ofoverlay {
             }
         }
     }
-    /*
-    container of-overlay-operational {
-        description
-            "Operational parameters for the OpenFlow overlay renderer";
 
-        config false;
-
-        list data-plane-ordinal {
-            description
-                "Map elements of the policy to the id used on the network";
-            key "tenant id";
-            leaf tenant {
-                description "The tenant for the policy element";
-                type gbp-common:tenant-id;
-            }
-            leaf id {
-                description "The ID of the item";
-                type gbp-common:unique-id;
-            }
-            leaf ordinal {
-                description "The 32-bit ordinal for the item";
-                type uint32;
-            }
-        }
-    }
-    */
     grouping endpoint-location {
         description
             "The location for this endpoint in the overlay network";
-
         leaf location-type {
             default internal;
-
             type enumeration {
                 enum internal {
                     description
@@ -105,7 +78,6 @@ module ofoverlay {
                 }
             }
         }
-
         leaf node-id {
             description
                 "The OpenFlow switch for the endpoint. Must be included
@@ -114,7 +86,6 @@ module ofoverlay {
                  switch DPID cast to a long.";
             type inv:node-id;
         }
-
         leaf node-connector-id {
             description
                 "The node connector for the endpoint's OpenFlow port. The
@@ -134,11 +105,15 @@ module ofoverlay {
             description
                 "Unique identifier for interface";
         }
-
     }
 
     augment "/endpoint:endpoints/endpoint:endpoint" {
         ext:augment-identifier "of-overlay-context";
+        uses endpoint-location;
+    }
+
+    augment "/endpoint:endpoints/endpoint:endpoint-l3" {
+        ext:augment-identifier "of-overlay-l3-context";
         uses endpoint-location;
     }
 

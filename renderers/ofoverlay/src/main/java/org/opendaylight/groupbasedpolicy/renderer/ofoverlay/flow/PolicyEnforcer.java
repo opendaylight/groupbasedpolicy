@@ -89,11 +89,13 @@ public class PolicyEnforcer extends FlowTable {
 
     protected static final Logger LOG = LoggerFactory.getLogger(PolicyEnforcer.class);
 
-    public static final short TABLE_ID = 3;
+    public static short TABLE_ID = 3;
 
-    public PolicyEnforcer(OfContext ctx) {
+    public PolicyEnforcer(OfContext ctx, short tableId) {
         super(ctx);
+        this.TABLE_ID=tableId;
     }
+
 
     @Override
     public short getTableId() {

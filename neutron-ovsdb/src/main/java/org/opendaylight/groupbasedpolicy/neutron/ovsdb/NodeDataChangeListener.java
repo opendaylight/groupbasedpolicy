@@ -9,8 +9,9 @@
 package org.opendaylight.groupbasedpolicy.neutron.ovsdb;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.DataStore.getLongFromDpid;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.InventoryHelper.addOfOverlayExternalPort;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.InventoryHelper.getLongFromDpid;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.NeutronOvsdbIidFactory.ovsdbNodeAugmentationIid;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getNodeFromBridgeRef;
 
 import java.util.List;
@@ -28,9 +29,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.re
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbTerminationPointAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.ovsdb.node.attributes.ManagedNodeEntry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.ovsdb.node.attributes.OpenvswitchOtherConfigs;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.node.TerminationPoint;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
@@ -49,11 +47,7 @@ public class NodeDataChangeListener implements DataChangeListener, AutoCloseable
 
     public NodeDataChangeListener(DataBroker dataBroker) {
         this.dataBroker = checkNotNull(dataBroker);
-        InstanceIdentifier<OvsdbNodeAugmentation> iid = InstanceIdentifier.create(NetworkTopology.class)
-            .child(Topology.class, new TopologyKey(SouthboundConstants.OVSDB_TOPOLOGY_ID))
-            .child(Node.class)
-            .augmentation(OvsdbNodeAugmentation.class);
-        registration = dataBroker.registerDataChangeListener(LogicalDatastoreType.OPERATIONAL, iid, this,
+        registration = dataBroker.registerDataChangeListener(LogicalDatastoreType.OPERATIONAL, ovsdbNodeAugmentationIid(SouthboundConstants.OVSDB_TOPOLOGY_ID), this,
                 DataChangeScope.ONE);
         LOG.trace("NodeDataChangeListener started");
     }

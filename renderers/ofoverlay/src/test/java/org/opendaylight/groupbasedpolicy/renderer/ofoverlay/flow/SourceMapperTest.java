@@ -56,7 +56,7 @@ public class SourceMapperTest extends FlowTableTest {
     @Before
     public void setup() throws Exception {
         initCtx();
-        table = new SourceMapper(ctx);
+        table = new SourceMapper(ctx,ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER());
         super.setup();
     }
 
@@ -85,7 +85,7 @@ public class SourceMapperTest extends FlowTableTest {
     public void testNoPolicy() throws Exception {
         endpointManager.addEndpoint(localEP().build());
         FlowMap fm = dosync(null);
-        assertEquals(1, fm.getTableForNode(nodeId, (short) 1).getFlow().size());
+        assertEquals(1, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()).getFlow().size());
     }
 
     @Test
@@ -107,11 +107,11 @@ public class SourceMapperTest extends FlowTableTest {
         policyResolver.addTenant(baseTenant().build());
 
         FlowMap fm = dosync(null);
-        assertEquals(2, fm.getTableForNode(nodeId, (short) 1).getFlow().size());
+        assertEquals(2, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()).getFlow().size());
 
         int count = 0;
         HashMap<String, Flow> flowMap = new HashMap<>();
-        for (Flow f : fm.getTableForNode(nodeId, (short) 1).getFlow()) {
+        for (Flow f : fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()).getFlow()) {
             flowMap.put(f.getId().getValue(), f);
             if (f.getMatch() == null || f.getMatch().getEthernetMatch() == null) {
                 assertEquals(FlowUtils.dropInstructions(), f.getInstructions());
@@ -147,9 +147,9 @@ public class SourceMapperTest extends FlowTableTest {
             }
         }
         assertEquals(2, count);
-        int numberOfFlows = fm.getTableForNode(nodeId, (short) 1).getFlow().size();
+        int numberOfFlows = fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()).getFlow().size();
         fm = dosync(flowMap);
-        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, (short) 1).getFlow().size());
+        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()).getFlow().size());
     }
 
 }

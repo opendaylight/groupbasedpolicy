@@ -23,10 +23,12 @@ public class OFOverlayProviderModule extends org.opendaylight.controller.config.
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        LOG.info("OFoffset: {}",getOfOffset());
-        LOG.info("RouterMac: {}",getRouterMac());
+        LOG.info("OFoffset: {}",getGbpOfoverlayTableOffset());
+        LOG.info("RouterMac: {}",getExternalRouterMac());
         return new OFOverlayRenderer(getDataBrokerDependency(),
-                                     getRpcRegistryDependency());
+                                     getRpcRegistryDependency(),
+                                     getGbpOfoverlayTableOffset().shortValue(),
+                                     getExternalRouterMac());
     }
 
 }

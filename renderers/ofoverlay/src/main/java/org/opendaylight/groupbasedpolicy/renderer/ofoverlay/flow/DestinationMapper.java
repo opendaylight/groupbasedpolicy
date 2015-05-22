@@ -79,6 +79,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
@@ -124,15 +125,16 @@ public class DestinationMapper extends FlowTable {
     // TODO Li alagalah: Use EndpointL3 for L3 flows, Endpoint for L2 flows
     // This ensures we have the appropriate network-containment'
 
-    public static final short TABLE_ID = 2;
+    public static short TABLE_ID;
     /**
      * This is the MAC address of the magical router in the sky
      */
     public static final MacAddress ROUTER_MAC = new MacAddress("88:f0:31:b5:12:b5");
     public static final MacAddress MULTICAST_MAC = new MacAddress("01:00:00:00:00:00");
 
-    public DestinationMapper(OfContext ctx) {
+    public DestinationMapper(OfContext ctx, short tableId) {
         super(ctx);
+        this.TABLE_ID=tableId;
     }
 
     Map<TenantId, HashSet<Subnet>> subnetsByTenant = new HashMap<TenantId, HashSet<Subnet>>();
@@ -145,7 +147,7 @@ public class DestinationMapper extends FlowTable {
     @Override
     public void sync(NodeId nodeId, PolicyInfo policyInfo, FlowMap flowMap) throws Exception {
 
-        TenantId currentTenant;
+        TenantId currentTenant=null;
 
         flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null));
 
@@ -210,6 +212,13 @@ public class DestinationMapper extends FlowTable {
                 flowMap.writeFlow(nodeId, TABLE_ID, createBroadcastFlow(epOrd));
             }
         }
+
+        // L3 Prefix Endpoint handling
+        Collection<EndpointL3Prefix> prefixEps = ctx.getEndpointManager().getEndpointsL3PrefixForTenant(currentTenant);
+        if (prefixEps != null) {
+            LOG.trace("DestinationMapper - Processing L3PrefixEndpoints");
+        }
+
     }
 
     // set up next-hop destinations for all the endpoints in the endpoint
@@ -391,7 +400,7 @@ public class DestinationMapper extends FlowTable {
         instructions.add(applyActionsIns);
 
         Instruction gotoTable = new InstructionBuilder().setOrder(order++)
-            .setInstruction(gotoTableIns((short) (getTableId() + 1)))
+            .setInstruction(gotoTableIns(ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()))
             .build();
         instructions.add(gotoTable);
 
@@ -635,7 +644,7 @@ public class DestinationMapper extends FlowTable {
 
         l3instructions.add(applyActionsIns);
         Instruction gotoTable = new InstructionBuilder().setOrder(order++)
-            .setInstruction(gotoTableIns((short) (getTableId() + 1)))
+            .setInstruction(gotoTableIns(ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()))
             .build();
         l3instructions.add(gotoTable);
         Layer3Match m = null;
@@ -750,7 +759,7 @@ public class DestinationMapper extends FlowTable {
             .build();
 
         Instruction gotoTable = new InstructionBuilder().setOrder(order++)
-            .setInstruction(gotoTableIns((short) (getTableId() + 1)))
+            .setInstruction(gotoTableIns(ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()))
             .build();
         instructions.add(gotoTable);
 
@@ -902,7 +911,7 @@ public class DestinationMapper extends FlowTable {
 
         l3instructions.add(applyActionsIns);
         Instruction gotoTable = new InstructionBuilder().setOrder(order++)
-            .setInstruction(gotoTableIns((short) (getTableId() + 1)))
+            .setInstruction(gotoTableIns(ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()))
             .build();
         l3instructions.add(gotoTable);
         Layer3Match m = null;

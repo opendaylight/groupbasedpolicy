@@ -26,8 +26,11 @@ import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.equivalence.EquivalenceFabric;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.DestinationMapper;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.ExternalMapper;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.GroupTable;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.EgressNatMapper;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.IngressNatMapper;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OfTable;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PortSecurity;
@@ -42,6 +45,7 @@ import org.opendaylight.groupbasedpolicy.resolver.PolicyListener;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyScope;
 import org.opendaylight.groupbasedpolicy.util.SingletonTask;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.TableBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
@@ -77,6 +81,16 @@ public class PolicyManager
     private static final Logger LOG =
             LoggerFactory.getLogger(PolicyManager.class);
 
+    private short tableOffset;
+    private final short TABLEID_PORTSECURITY = 0;
+    private final short TABLEID_INGRESS_NAT = (short) (tableOffset+1);
+    private final short TABLEID_SOURCE_MAPPER = (short) (tableOffset+2);
+    private final short TABLEID_DESTINATION_MAPPER = (short) (tableOffset+3);
+    private final short TABLEID_POLICY_ENFORCER = (short) (tableOffset+4);
+    private final short TABLEID_EGRESS_NAT = (short) (tableOffset+5);
+    private final short TABLEID_EXTERNAL_MAPPER = (short) (tableOffset+6);
+
+
     private final SwitchManager switchManager;
     private final PolicyResolver policyResolver;
 
@@ -102,12 +116,15 @@ public class PolicyManager
                          SwitchManager switchManager,
                          EndpointManager endpointManager,
                          RpcProviderRegistry rpcRegistry,
-                         ScheduledExecutorService executor) {
+                         ScheduledExecutorService executor,
+                         short tableOffset,
+                         MacAddress exernalRouterMac) {
         super();
         this.switchManager = switchManager;
         this.executor = executor;
         this.policyResolver = policyResolver;
         this.dataBroker = dataBroker;
+        this.tableOffset=tableOffset;
 
 
         if (dataBroker != null) {
@@ -127,11 +144,16 @@ public class PolicyManager
         OfContext ctx = new OfContext(dataBroker, rpcRegistry,
                                         this, policyResolver, switchManager,
                                         endpointManager, executor);
-        flowPipeline = ImmutableList.of(new PortSecurity(ctx),
+
+        flowPipeline = ImmutableList.of(new PortSecurity(ctx,TABLEID_PORTSECURITY),
                                         new GroupTable(ctx),
-                                        new SourceMapper(ctx),
-                                        new DestinationMapper(ctx),
-                                        new PolicyEnforcer(ctx));
+                                        new IngressNatMapper(ctx,TABLEID_INGRESS_NAT),
+                                        new SourceMapper(ctx,TABLEID_SOURCE_MAPPER),
+                                        new DestinationMapper(ctx,TABLEID_DESTINATION_MAPPER),
+                                        new PolicyEnforcer(ctx,TABLEID_POLICY_ENFORCER),
+                                        new EgressNatMapper(ctx,TABLEID_EGRESS_NAT),
+                                        new ExternalMapper(ctx,TABLEID_EXTERNAL_MAPPER)
+                                        );
 
         policyScope = policyResolver.registerListener(this);
         if (switchManager != null)
@@ -147,6 +169,41 @@ public class PolicyManager
     // **************
     // SwitchListener
     // **************
+
+
+    public short getTABLEID_PORTSECURITY() {
+        return TABLEID_PORTSECURITY;
+    }
+
+
+//    public short getTABLEID_INGRESS_NAT() {
+//        return TABLEID_INGRESS_NAT;
+//    }
+
+
+    public short getTABLEID_SOURCE_MAPPER() {
+        return TABLEID_SOURCE_MAPPER;
+    }
+
+
+    public short getTABLEID_DESTINATION_MAPPER() {
+        return TABLEID_DESTINATION_MAPPER;
+    }
+
+
+    public short getTABLEID_POLICY_ENFORCER() {
+        return TABLEID_POLICY_ENFORCER;
+    }
+
+
+//    public short getTABLEID_EGRESS_NAT() {
+//        return TABLEID_EGRESS_NAT;
+//    }
+//
+//
+//    public short getTABLEID_EXTERNAL_MAPPER() {
+//        return TABLEID_EXTERNAL_MAPPER;
+//    }
 
     @Override
     public void switchReady(final NodeId nodeId) {

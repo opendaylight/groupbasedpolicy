@@ -9,7 +9,7 @@
 package org.opendaylight.groupbasedpolicy.neutron.ovsdb.util;
 
 import static org.junit.Assert.assertTrue;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.DataStore.getLongFromDpid;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.InventoryHelper.getLongFromDpid;
 
 import org.junit.Before;
 import org.junit.Test;

@@ -42,6 +42,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2FloodDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Name;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubnetId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.UniqueId;
@@ -58,6 +59,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.l3.prefix.fields.EndpointL3GatewaysBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3PrefixKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L2;
@@ -68,6 +71,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gb
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.endpoints.by.ports.EndpointByPort;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.endpoints.by.router._interface.ports.EndpointByRouterInterfacePort;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.endpoints.by.router.gateway.ports.EndpointByRouterGatewayPort;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.external.gateways.as.l3.endpoints.ExternalGatewayAsL3Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.floating.ip.ports.by.endpoints.FloatingIpPortByEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.ports.by.endpoints.PortByEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.router._interface.ports.by.endpoints.RouterInterfacePortByEndpoint;
@@ -77,6 +81,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextInputBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Subnet;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -216,17 +221,37 @@ public class NeutronPortAware implements INeutronPortAware {
 
         try {
             RegisterEndpointInput registerEpRpcInput = createRegisterEndpointInput(port, fwCtx);
-
             RpcResult<Void> rpcResult = epService.registerEndpoint(registerEpRpcInput).get();
             if (!rpcResult.isSuccessful()) {
                 LOG.warn("Illegal state - RPC registerEndpoint failed. Input of RPC: {}", registerEpRpcInput);
                 return false;
             }
         } catch (InterruptedException | ExecutionException e) {
-            LOG.error("addPort - RPC invocation failed.", e);
+            LOG.error("addNeutronPort failed. {}", port, e);
             return false;
         }
         return true;
+    }
+
+    public static boolean addL3EndpointForExternalGateway(TenantId tenantId, L3ContextId l3ContextId,
+            IpAddress ipAddress, NetworkDomainId networkContainment, ReadWriteTransaction rwTx) {
+
+        EndpointL3Key epL3Key = new EndpointL3Key(ipAddress, l3ContextId);
+        addNeutronExtGwGbpMapping(epL3Key, rwTx);
+        List<EndpointGroupId> epgIds = new ArrayList<>();
+        // each EP has to be in EPG ANY, except dhcp and router
+        epgIds.add(MappingUtils.EPG_EXTERNAL_ID);
+        epgIds.add(MappingUtils.EPG_ANY_ID);
+        EndpointL3 epL3 = createL3Endpoint(tenantId, epL3Key, epgIds, networkContainment);
+        InstanceIdentifier<EndpointL3> iid_l3 = IidFactory.endpointL3Iid(l3ContextId, ipAddress);
+        rwTx.put(LogicalDatastoreType.OPERATIONAL, iid_l3, epL3, true);
+        return true;
+    }
+
+    private static void addNeutronExtGwGbpMapping(EndpointL3Key epL3Key, ReadWriteTransaction rwTx) {
+            ExternalGatewayAsL3Endpoint externalGatewayL3Endpoint = MappingFactory.createExternalGatewayByL3Endpoint(epL3Key);
+            rwTx.put(LogicalDatastoreType.OPERATIONAL, NeutronGbpIidFactory.externalGatewayAsL3Endpoint(epL3Key.getL3Context(), epL3Key.getIpAddress()),
+                    externalGatewayL3Endpoint, true);
     }
 
     private static void addNeutronGbpMapping(NeutronPort port, EndpointKey epKey, ReadWriteTransaction rwTx) {
@@ -660,6 +685,20 @@ public class NeutronPortAware implements INeutronPortAware {
                                                 .setEndpointL3Gateways(l3Gateways)
                                                 .setTimestamp(System.currentTimeMillis());
         return inputBuilder.build();
+    }
+
+    private static EndpointL3 createL3Endpoint(TenantId tenantId, EndpointL3Key epL3Key,
+            List<EndpointGroupId> epgIds, NetworkDomainId containment) {
+
+        EndpointL3Builder epL3Builder = new EndpointL3Builder()
+        .setTenant(tenantId)
+        .setNetworkContainment(containment)
+        .setIpAddress(epL3Key.getIpAddress())
+        .setL3Context(epL3Key.getL3Context())
+        .setEndpointGroups(epgIds)
+        .setTimestamp(System.currentTimeMillis());
+
+        return epL3Builder.build();
     }
 
     private static RegisterEndpointInput createRegisterEndpointInput(NeutronPort port, ForwardingCtx fwCtx) {

@@ -28,6 +28,7 @@ public final class MappingUtils {
     public static final String NEUTRON_RULE__ = "neutron_rule__";
     public static final String NEUTRON_NETWORK__ = "neutron_network__";
     public static final String NEUTRON_ROUTER__ = "neutron_router__";
+    public static final String NEUTRON_EXTERNAL__ = "neutron_external_network__";
     public static final String NEUTRON_GROUP__ = "neutron_group__";
     public static final ActionInstance ACTION_ALLOW = new ActionInstanceBuilder().setName(
             new ActionName(NEUTRON_RULE__ + "allow"))
@@ -36,6 +37,7 @@ public final class MappingUtils {
     public static final EndpointGroupId EPG_ANY_ID = new EndpointGroupId("aaaec0ce-dd5a-11e4-b9d6-1681e6b88ec1");
     public static final EndpointGroupId EPG_DHCP_ID = new EndpointGroupId("ddd6cfe6-dfe5-11e4-8a00-1681e6b88ec1");
     public static final EndpointGroupId EPG_ROUTER_ID = new EndpointGroupId("1118172e-cd84-4933-a35f-749f9a651de9");
+    public static final EndpointGroupId EPG_EXTERNAL_ID = new EndpointGroupId("eeeaa3a2-e9ba-44e0-a462-bea923d30e38");
 
     private MappingUtils() {
         throw new UnsupportedOperationException("Cannot create an instance.");

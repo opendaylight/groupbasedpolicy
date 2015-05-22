@@ -75,7 +75,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
     @Before
     public void setup() throws Exception {
         initCtx();
-        table = new PolicyEnforcer(ctx);
+        table = new PolicyEnforcer(ctx,ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER());
         super.setup();
 
         switchManager.addSwitch(
@@ -92,7 +92,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
     @Test
     public void testNoEps() throws Exception {
         FlowMap fm = dosync(null);
-        assertEquals(2, fm.getTableForNode(nodeId, (short) 3).getFlow().size());
+        assertEquals(2, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow().size());
     }
 
     @Test
@@ -107,18 +107,18 @@ public class PolicyEnforcerTest extends FlowTableTest {
                 ImmutableList.<Contract>of(baseContract(null).build())).build());
 
         FlowMap fm = dosync(null);
-        assertNotEquals(0, fm.getTableForNode(nodeId, (short) 3).getFlow().size());
+        assertNotEquals(0, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow().size());
         int count = 0;
         HashMap<String, Flow> flowMap = new HashMap<>();
-        for (Flow f : fm.getTableForNode(nodeId, (short) 3).getFlow()) {
+        for (Flow f : fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow()) {
             flowMap.put(f.getId().getValue(), f);
             if (f.getId().getValue().indexOf("intraallow") == 0)
                 count += 1;
         }
         assertEquals(1, count);
-        assertEquals(3, fm.getTableForNode(nodeId, (short) 3).getFlow().size());
+        assertEquals(3, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow().size());
         fm = dosync(flowMap);
-        assertEquals(3, fm.getTableForNode(nodeId, (short) 3).getFlow().size());
+        assertEquals(3, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow().size());
     }
 
     @Test
@@ -169,10 +169,10 @@ public class PolicyEnforcerTest extends FlowTableTest {
                 ImmutableList.<Contract>of(baseContract(subjects).build())).build());
 
         FlowMap fm = dosync(null);
-        assertNotEquals(0, fm.getTableForNode(nodeId, (short) 3).getFlow().size());
+        assertNotEquals(0, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow().size());
         int count = 0;
         HashMap<String, Flow> flowMap = new HashMap<>();
-        for (Flow f : fm.getTableForNode(nodeId, (short) 3).getFlow()) {
+        for (Flow f : fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow()) {
             flowMap.put(f.getId().getValue(), f);
             if (f.getId().getValue().indexOf("intraallow") == 0) {
                 count += 1;
@@ -306,9 +306,9 @@ public class PolicyEnforcerTest extends FlowTableTest {
                 mb.getAugmentation(GeneralAugMatchNodesNodeTableFlow.class);
         int count = 0;
         FlowMap fm = dosync(null);
-        assertEquals(7, fm.getTableForNode(nodeId, (short) 3).getFlow().size());
+        assertEquals(7, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow().size());
         HashMap<String, Flow> flowMap = new HashMap<>();
-        for (Flow f : fm.getTableForNode(nodeId, (short) 3).getFlow()) {
+        for (Flow f : fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow()) {
             flowMap.put(f.getId().getValue(), f);
             if (f.getMatch() != null &&
                 f.getMatch().getEthernetMatch() != null) {
@@ -317,8 +317,8 @@ public class PolicyEnforcerTest extends FlowTableTest {
         }
         assertEquals(3, count);
         fm = dosync(flowMap);
-        int numberOfFlows = fm.getTableForNode(nodeId, (short) 3).getFlow().size();
+        int numberOfFlows = fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow().size();
         fm = dosync(flowMap);
-        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, (short) 3).getFlow().size());
+        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow().size());
     }
 }

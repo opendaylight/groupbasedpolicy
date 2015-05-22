@@ -57,25 +57,25 @@ public class DestinationMapperTest extends FlowTableTest {
     @Before
     public void setup() throws Exception {
         initCtx();
-        table = new DestinationMapper(ctx);
+        table = new DestinationMapper(ctx,ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER());
         super.setup();
     }
 
     @Test
     public void testNoEps() throws Exception {
         FlowMap fm = dosync(null);
-        assertEquals(1, fm.getTableForNode(nodeId, (short) 2).getFlow().size());
+        assertEquals(1, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER()).getFlow().size());
     }
 
     private void verifyDMap(Endpoint remoteEp,
             Endpoint localEp) throws Exception {
 
         FlowMap fm = dosync(null);
-        assertNotEquals(0, fm.getTableForNode(nodeId, (short) 2).getFlow().size());
+        assertNotEquals(0, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER()).getFlow().size());
 
         int count = 0;
         HashMap<String, Flow> flowMap = new HashMap<>();
-        for (Flow f : fm.getTableForNode(nodeId, (short) 2).getFlow()) {
+        for (Flow f : fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER()).getFlow()) {
             flowMap.put(f.getId().getValue(), f);
             if (f.getMatch() == null) {
                 assertEquals(dropInstructions(),
@@ -126,7 +126,7 @@ public class DestinationMapperTest extends FlowTableTest {
                                 actions.get(2).getAction());
                         icount += 1;
                     } else if (ins.getInstruction() instanceof GoToTableCase) {
-                        assertEquals(gotoTableIns((short) (table.getTableId() + 1)),
+                        assertEquals(gotoTableIns(ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()),
                                 ins.getInstruction());
                         icount += 1;
                     }

@@ -58,10 +58,11 @@ public class SourceMapper extends FlowTable {
     protected static final Logger LOG = LoggerFactory.getLogger(SourceMapper.class);
 
     // TODO Li alagalah Improve UT coverage for this class.
-    public static final short TABLE_ID = 1;
+    public static short TABLE_ID;
 
-    public SourceMapper(OfContext ctx) {
+    public SourceMapper(OfContext ctx, short tableId) {
         super(ctx);
+        this.TABLE_ID=tableId;
     }
 
     @Override
@@ -162,7 +163,7 @@ public class SourceMapper extends FlowTable {
         FlowBuilder flowb = base().setId(flowid)
             .setPriority(Integer.valueOf(150))
             .setMatch(mb.build())
-            .setInstructions(instructions(applyActionIns(fdReg), gotoTableIns((short) (TABLE_ID + 1))));
+            .setInstructions(instructions(applyActionIns(fdReg), gotoTableIns(ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER())));
         return flowb.build();
     }
 
@@ -211,7 +212,7 @@ public class SourceMapper extends FlowTable {
             .setMatch(mb.build())
             .setInstructions(
                     instructions(applyActionIns(segReg, scgReg, bdReg, fdReg, vrfReg),
-                            gotoTableIns((short) (TABLE_ID + 1))));
+                            gotoTableIns(ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER())));
         return flowb.build();
     }
 
@@ -257,7 +258,7 @@ public class SourceMapper extends FlowTable {
                         .build())
             .setInstructions(
                     instructions(applyActionIns(segReg, scgReg, bdReg, fdReg, vrfReg,tunIdAction),
-                            gotoTableIns((short) (TABLE_ID + 1))));
+                            gotoTableIns(ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER())));
         flowMap.writeFlow(nodeId, TABLE_ID, flowb.build());
     }
 
