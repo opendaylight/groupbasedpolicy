@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getManagerNode;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getTopologyNode;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.createTunnelPort;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getOvsdbBridge;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getOvsdbBridgeFromTerminationPoint;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.EndpointHelper.lookupEndpoint;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.EndpointHelper.updateEndpointWithLocation;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.NeutronHelper.getEpKeyFromNeutronMapper;
@@ -53,16 +53,16 @@ import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.InventoryHelp
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.InventoryHelper.getInventoryNodeConnectorIdString;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.InventoryHelper.updateOfOverlayConfig;
 
-public class OvsdbDataChangeListener implements DataChangeListener, AutoCloseable {
+public class TerminationPointDataChangeListener implements DataChangeListener, AutoCloseable {
 
     private static final String NEUTRON_EXTERNAL_ID_KEY = "iface-id";
     private final ListenerRegistration<DataChangeListener> registration;
     private final DataBroker dataBroker;
     private final EndpointService epService;
-    private static final Logger LOG = LoggerFactory.getLogger(OvsdbDataChangeListener.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TerminationPointDataChangeListener.class);
     private final List<AbstractTunnelType> requiredTunnelTypes;
 
-    public OvsdbDataChangeListener(DataBroker dataBroker, EndpointService epService) {
+    public TerminationPointDataChangeListener(DataBroker dataBroker, EndpointService epService) {
         this.dataBroker = checkNotNull(dataBroker);
         this.epService = checkNotNull(epService);
         InstanceIdentifier<OvsdbTerminationPointAugmentation> iid = InstanceIdentifier
@@ -99,7 +99,7 @@ public class OvsdbDataChangeListener implements DataChangeListener, AutoCloseabl
                 OvsdbTerminationPointAugmentation ovsdbTp = (OvsdbTerminationPointAugmentation)entry.getValue();
                 InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid =
                         (InstanceIdentifier<OvsdbTerminationPointAugmentation>) entry.getKey();
-                OvsdbBridgeAugmentation ovsdbBridge = getOvsdbBridge(ovsdbTpIid, dataBroker);
+                OvsdbBridgeAugmentation ovsdbBridge = getOvsdbBridgeFromTerminationPoint(ovsdbTpIid, dataBroker);
                 processOvsdbBridge(ovsdbBridge, ovsdbTp,ovsdbTpIid);
             }
         }
@@ -112,7 +112,7 @@ public class OvsdbDataChangeListener implements DataChangeListener, AutoCloseabl
                 OvsdbTerminationPointAugmentation ovsdbTp = (OvsdbTerminationPointAugmentation)entry.getValue();
                 InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid =
                         (InstanceIdentifier<OvsdbTerminationPointAugmentation>) entry.getKey();
-                OvsdbBridgeAugmentation ovsdbBridge = getOvsdbBridge(ovsdbTpIid, dataBroker);
+                OvsdbBridgeAugmentation ovsdbBridge = getOvsdbBridgeFromTerminationPoint(ovsdbTpIid, dataBroker);
                 processOvsdbBridge(ovsdbBridge, ovsdbTp,ovsdbTpIid);
             }
         }

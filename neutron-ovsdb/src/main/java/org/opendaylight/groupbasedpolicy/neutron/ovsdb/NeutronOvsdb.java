@@ -14,14 +14,16 @@ import org.osgi.framework.ServiceRegistration;
 public class NeutronOvsdb implements AutoCloseable {
 
     private final List<ServiceRegistration<?>> registrations = new ArrayList<ServiceRegistration<?>>();
-    private final OvsdbDataChangeListener listener;
+    private final TerminationPointDataChangeListener tpListener;
+    private final NodeDataChangeListener nodeListener;
     public NeutronOvsdb(DataBroker dataProvider, RpcProviderRegistry rpcProvider, BundleContext context) {
         checkNotNull(dataProvider);
         checkNotNull(rpcProvider);
         checkNotNull(context);
 
         EndpointService epService = rpcProvider.getRpcService(EndpointService.class);
-        listener = new OvsdbDataChangeListener(dataProvider, epService);
+        tpListener = new TerminationPointDataChangeListener(dataProvider, epService);
+        nodeListener = new NodeDataChangeListener(dataProvider);
     }
 
     /**

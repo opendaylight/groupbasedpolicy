@@ -24,6 +24,7 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.InterfaceTypeVxlan;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbBridgeAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbBridgeAugmentationBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbBridgeRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbNodeAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbNodeRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbTerminationPointAugmentation;
@@ -54,7 +55,7 @@ public class OvsdbHelper {
      * @param tpId The InstanceIdentifier for a child TerminationPoint augmentation
      * @return the {@link OvsdbBridgeAugmentation}, null if the augmentation isn't present
      */
-    public static OvsdbBridgeAugmentation getOvsdbBridge(
+    public static OvsdbBridgeAugmentation getOvsdbBridgeFromTerminationPoint(
             InstanceIdentifier<OvsdbTerminationPointAugmentation> tpIid, DataBroker dataBroker) {
         InstanceIdentifier<OvsdbBridgeAugmentation> ovsdbBridgeIid =
                 tpIid.firstIdentifierOf(Node.class).augmentation(OvsdbBridgeAugmentation.class);
@@ -66,6 +67,19 @@ public class OvsdbHelper {
                 readFromDs(LogicalDatastoreType.OPERATIONAL, ovsdbBridgeIid, transaction );
         if (ovsdbBridge.isPresent()) {
             return ovsdbBridge.get();
+        }
+        return null;
+    }
+
+    public static Node getNodeFromBridgeRef(OvsdbBridgeRef bridgeRef, DataBroker dataBroker) {
+        InstanceIdentifier<Node> nodeIid = bridgeRef.getValue().firstIdentifierOf(Node.class);
+        ReadTransaction transaction = dataBroker.newReadOnlyTransaction();
+        Optional<?> node =
+                readFromDs(LogicalDatastoreType.OPERATIONAL, nodeIid, transaction );
+        if (node.isPresent()) {
+            if (node.get() instanceof Node) {
+                return (Node)node.get();
+            }
         }
         return null;
     }

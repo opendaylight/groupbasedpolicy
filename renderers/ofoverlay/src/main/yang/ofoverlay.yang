@@ -176,12 +176,15 @@ module ofoverlay {
                 default 6640;
             }
         }
-        leaf-list external-interfaces {
+        list external-interfaces {
             description
-                "The names of the OpenFlow interfaces that are external and
-                 lead to the underlay network.  Can be specified as a
-                 regular expression.";
-            type string;
+                "The node connectors for the external interfaces to the underlay.
+                If interface name is required, can be looked up from inventory using
+                this field as a key to FCNC (FlowCapableNodeConnector)";
+            key "node-connector-id";
+            leaf node-connector-id {
+                type inv:node-connector-id;
+            }
         }
     }
 }

@@ -10,7 +10,7 @@ package org.opendaylight.groupbasedpolicy.neutron.ovsdb.util;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.DataStore.getLongFromDpid;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.DataStore.readFromDs;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.DataStore.submitToDs;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getOvsdbBridge;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getOvsdbBridgeFromTerminationPoint;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getOvsdbTerminationPoint;
 
 import java.util.ArrayList;
@@ -25,6 +25,9 @@ import org.opendaylight.groupbasedpolicy.neutron.ovsdb.AbstractTunnelType;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfig;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfigBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.ExternalInterfaces;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.ExternalInterfacesBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.ExternalInterfacesKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.Tunnel;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.TunnelBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
@@ -59,7 +62,7 @@ public class InventoryHelper {
             InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid, DataBroker dataBroker) {
         DatapathId dpid = ovsdbBridge.getDatapathId();
         if (dpid == null) {
-            OvsdbBridgeAugmentation bridgeData = getOvsdbBridge(ovsdbTpIid, dataBroker);
+            OvsdbBridgeAugmentation bridgeData = getOvsdbBridgeFromTerminationPoint(ovsdbTpIid, dataBroker);
             dpid = bridgeData.getDatapathId();
             if (dpid == null) {
                 LOG.error("No Data Path ID for OVSDB Bridge {}", ovsdbBridge);
@@ -148,6 +151,24 @@ public class InventoryHelper {
             }
         }
         return true;
+    }
+
+    public static void addOfOverlayExternalPort(String nodeIdString, NodeConnectorId ncId, DataBroker dataBroker) {
+        InstanceIdentifier<ExternalInterfaces> nodeExternalInterfacesIid = InstanceIdentifier.builder(
+                Nodes.class)
+            .child(Node.class, new NodeKey(new NodeId(nodeIdString)))
+            .augmentation(OfOverlayNodeConfig.class)
+            .child(ExternalInterfaces.class,new ExternalInterfacesKey(ncId))
+            .build();
+
+        ExternalInterfaces externalInterfaces = new ExternalInterfacesBuilder()
+                                                .setKey(new ExternalInterfacesKey(ncId))
+                                                .setNodeConnectorId(ncId)
+                                                .build();
+        WriteTransaction transaction = dataBroker.newReadWriteTransaction();
+        transaction.put(LogicalDatastoreType.CONFIGURATION, nodeExternalInterfacesIid, externalInterfaces, true);
+        submitToDs(transaction);
+        LOG.trace("Added external interface node connector {} to node {}", ncId.getValue(),nodeIdString);
     }
 
     public static OfOverlayNodeConfig getOfOverlayConfig(String nodeIdString, DataBroker dataBroker) {

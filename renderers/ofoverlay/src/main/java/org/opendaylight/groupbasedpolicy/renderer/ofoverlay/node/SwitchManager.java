@@ -29,6 +29,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.Fl
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNodeConnector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig.EncapsulationFormat;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfig;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.ExternalInterfaces;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.Tunnel;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.TunnelBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
@@ -317,8 +318,9 @@ public class SwitchManager implements AutoCloseable {
                     tunnelBuilder.setNodeConnectorId(ncId);
                 }
                 if (nodeConfig != null && nodeConfig.getExternalInterfaces() != null) {
-                    for (String pattern : nodeConfig.getExternalInterfaces()) {
-                        if (fcnc.getName().matches(pattern)) {
+                    for (ExternalInterfaces extIf : nodeConfig.getExternalInterfaces()) {
+                        if (extIf.getNodeConnectorId() != null
+                                && ncId.equals(extIf.getNodeConnectorId())) {
                             externalPorts.add(ncId);
                             break;
                         }
