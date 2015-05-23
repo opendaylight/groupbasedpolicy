@@ -5,6 +5,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
@@ -26,6 +29,7 @@ import org.opendaylight.neutron.spi.NeutronRouter_Interface;
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.neutron.spi.NeutronSubnet;
 import org.opendaylight.neutron.spi.Neutron_IPs;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
@@ -99,7 +103,102 @@ public class NeutronRouterAware implements INeutronRouterAware {
     @Override
     public void neutronRouterUpdated(NeutronRouter router) {
         LOG.trace("neutronRouterUpdated - {}", router);
-        // TODO Li msunal external gateway
+        if (router.getExternalGatewayInfo() == null || router.getExternalGatewayInfo().getExternalFixedIPs() == null) {
+            LOG.trace("neutronRouterUpdated - not an external Gateway");
+            return;
+        }
+
+        INeutronPortCRUD portInterface = NeutronCRUDInterfaces.getINeutronPortCRUD(this);
+        if (portInterface == null) {
+            LOG.warn("Illegal state - No provider for {}", INeutronPortCRUD.class.getName());
+            return;
+        }
+
+        ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
+        TenantId tenantId = new TenantId(Utils.normalizeUuid(router.getTenantID()));
+        L3ContextId l3ContextIdFromRouterId = new L3ContextId(router.getID());
+        InstanceIdentifier<L3Context> l3ContextIidForRouterId = IidFactory.l3ContextIid(tenantId,
+                l3ContextIdFromRouterId);
+        Optional<L3Context> potentialL3ContextForRouter = DataStoreHelper.readFromDs(
+                LogicalDatastoreType.CONFIGURATION, l3ContextIidForRouterId, rwTx);
+        L3Context l3Context = null;
+        if (potentialL3ContextForRouter.isPresent()) {
+            l3Context = potentialL3ContextForRouter.get();
+        } else { // add L3 context if missing
+            l3Context = createL3ContextFromRouter(router);
+            rwTx.put(LogicalDatastoreType.CONFIGURATION, l3ContextIidForRouterId, l3Context);
+        }
+
+        INeutronSubnetCRUD subnetInterface = NeutronCRUDInterfaces.getINeutronSubnetCRUD(this);
+        if (subnetInterface == null) {
+            LOG.warn("Illegal state - No provider for {}", INeutronSubnetCRUD.class.getName());
+            return;
+        }
+        NeutronSubnet defaultSubnet = subnetInterface.getSubnet(router.getExternalGatewayInfo()
+            .getExternalFixedIPs()
+            .get(0)
+            .getSubnetUUID());;
+        IpAddress defaultGateway = null;
+        if (defaultSubnet != null) {
+            defaultGateway = Utils.createIpAddress(defaultSubnet.getGatewayIP());
+        }
+        // Create L3Prefix Endpoints for all routes
+        if (router.getRoutes().isEmpty()) {
+            List<String> defaultRoute = ImmutableList.of("0.0.0.0/0");
+            router.setRoutes(defaultRoute);
+
+        }
+        if (l3ContextIdFromRouterId != null) {
+            for (String route : router.getRoutes()) {
+                IpPrefix ipPrefix = Utils.createIpPrefix(route);
+                boolean addedL3Prefix = NeutronPortAware.addL3PrefixEndpoint(l3ContextIdFromRouterId, ipPrefix,
+                        defaultGateway, tenantId, rwTx, epService);
+                if (!addedL3Prefix) {
+                    LOG.warn("Could not add EndpointL3Prefix for Neutron route {} for router {}", route, router.getID());
+                    rwTx.cancel();
+                    return;
+                }
+            }
+        }
+        for (Neutron_IPs externalFixedIp : router.getExternalGatewayInfo().getExternalFixedIPs()) {
+            NeutronPort routerPort = portInterface.getPort(router.getGatewayPortId());
+            IpAddress ipAddress = Utils.createIpAddress(routerPort.getFixedIPs().get(0).getIpAddress());
+            // External subnet associated with gateway port should use the gateway IP not router IP.
+            NeutronSubnet neutronSubnet = subnetInterface.getSubnet(externalFixedIp.getSubnetUUID());
+            ipAddress = Utils.createIpAddress(neutronSubnet.getGatewayIP());
+            SubnetId subnetId = new SubnetId(externalFixedIp.getSubnetUUID());
+            Subnet subnet = resolveSubnetWithVirtualRouterIp(tenantId, subnetId, ipAddress, rwTx);
+            if (subnet == null) {
+                rwTx.cancel();
+                return;
+            }
+            rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.subnetIid(tenantId, subnet.getId()), subnet);
+
+            if (Strings.isNullOrEmpty(routerPort.getTenantID())) {
+                routerPort.setTenantID(router.getTenantID());
+            }
+            // create security rules for router
+            List<NeutronSecurityRule> routerSecRules = createRouterSecRules(routerPort, null, rwTx);
+            if (routerSecRules == null) {
+                rwTx.cancel();
+                return;
+            }
+            for (NeutronSecurityRule routerSecRule : routerSecRules) {
+                boolean isRouterSecRuleAdded = NeutronSecurityRuleAware.addNeutronSecurityRule(routerSecRule, rwTx);
+                if (!isRouterSecRuleAdded) {
+                    rwTx.cancel();
+                    return;
+                }
+            }
+
+            boolean isSuccessful = setNewL3ContextToEpsFromSubnet(tenantId, l3Context, subnet, rwTx);
+            if (!isSuccessful) {
+                rwTx.cancel();
+                return;
+            }
+        }
+
+        DataStoreHelper.submitToDs(rwTx);
     }
 
     @Override
@@ -140,7 +239,7 @@ public class NeutronRouterAware implements INeutronRouterAware {
             Subnet subnet = potentialSubnet.get();
             L2FloodDomainId l2FdId = new L2FloodDomainId(subnet.getParent().getValue());
             ForwardingCtx fwCtx = MappingUtils.createForwardingContext(tenantId, l2FdId, rTx);
-            if (fwCtx.getL3Context() != null && fwCtx.getL3Context().equals(l3ContextIdFromRouterId)) {
+            if (fwCtx.getL3Context() != null && fwCtx.getL3Context().getId().equals(l3ContextIdFromRouterId)) {
                 // TODO Be msunal
                 LOG.warn("Illegal state - Neutron mapper does not support multiple router interfaces in the same subnet yet.");
                 return StatusCode.FORBIDDEN;
@@ -158,12 +257,6 @@ public class NeutronRouterAware implements INeutronRouterAware {
             return;
         }
 
-        INeutronSubnetCRUD subnetInterface = NeutronCRUDInterfaces.getINeutronSubnetCRUD(this);
-        if (subnetInterface == null) {
-            LOG.warn("Illegal state - No provider for {}", INeutronSubnetCRUD.class.getName());
-            return;
-        }
-
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         TenantId tenantId = new TenantId(Utils.normalizeUuid(router.getTenantID()));
         L3ContextId l3ContextIdFromRouterId = new L3ContextId(router.getID());
@@ -171,55 +264,25 @@ public class NeutronRouterAware implements INeutronRouterAware {
                 l3ContextIdFromRouterId);
         Optional<L3Context> potentialL3ContextForRouter = DataStoreHelper.readFromDs(
                 LogicalDatastoreType.CONFIGURATION, l3ContextIidForRouterId, rwTx);
-        // add L3 context if missing
-        if (!potentialL3ContextForRouter.isPresent()) {
-            Name l3ContextName = null;
-            if (!Strings.isNullOrEmpty(router.getName())) {
-                l3ContextName = new Name(router.getName());
-            }
-            L3Context l3Context = new L3ContextBuilder().setId(l3ContextIdFromRouterId)
-                    .setName(l3ContextName)
-                    .setDescription(new Description(MappingUtils.NEUTRON_ROUTER__ + router.getID()))
-                    .build();
+        L3Context l3Context = null;
+        if (potentialL3ContextForRouter.isPresent()) {
+            l3Context = potentialL3ContextForRouter.get();
+        } else { // add L3 context if missing
+            l3Context = createL3ContextFromRouter(router);
             rwTx.put(LogicalDatastoreType.CONFIGURATION, l3ContextIidForRouterId, l3Context);
         }
 
-        SubnetId subnetId = new SubnetId(routerInterface.getSubnetUUID());
-        Optional<Subnet> potentialSubnet = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.subnetIid(tenantId, subnetId), rwTx);
-        if (!potentialSubnet.isPresent()) {
-            LOG.warn("Illegal state - subnet {} does not exist.", subnetId.getValue());
-            rwTx.cancel();
-            return;
-        }
-
         // Based on Neutron Northbound - Port representing router interface
-        // contains exactly on
-        // fixed IP
+        // contains exactly on fixed IP
         NeutronPort routerPort = portInterface.getPort(routerInterface.getPortUUID());
-        // TODO: Li alagalah: Add gateways and prefixes instead of
-        // VirtualRouterID
-        Subnet subnet = new SubnetBuilder(potentialSubnet.get()).setVirtualRouterIp(
-                Utils.createIpAddress(routerPort.getFixedIPs().get(0).getIpAddress())).build();
-        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.subnetIid(tenantId, subnetId), subnet);
-        if (subnet.getParent() == null) {
-            LOG.warn("Illegal state - subnet {} does not have a parent.", subnetId.getValue());
+        SubnetId subnetId = new SubnetId(routerInterface.getSubnetUUID());
+        IpAddress ipAddress = Utils.createIpAddress(routerPort.getFixedIPs().get(0).getIpAddress());
+        Subnet subnet = resolveSubnetWithVirtualRouterIp(tenantId, subnetId, ipAddress, rwTx);
+        if (subnet == null) {
             rwTx.cancel();
             return;
         }
-
-        L2FloodDomainId l2FdId = new L2FloodDomainId(subnet.getParent().getValue());
-        ForwardingCtx fwCtx = MappingUtils.createForwardingContext(tenantId, l2FdId, rwTx);
-        if (fwCtx.getL2BridgeDomain() == null) {
-            LOG.warn("Illegal state - l2-flood-domain {} does not have a parent.", l2FdId.getValue());
-            rwTx.cancel();
-            return;
-        }
-
-        L2BridgeDomain l2BridgeDomain = new L2BridgeDomainBuilder(fwCtx.getL2BridgeDomain()).setParent(
-                l3ContextIdFromRouterId).build();
-        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l2BridgeDomainIid(tenantId, l2BridgeDomain.getId()),
-                l2BridgeDomain);
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.subnetIid(tenantId, subnet.getId()), subnet);
 
         // create security rules for router
         List<NeutronSecurityRule> routerSecRules = createRouterSecRules(routerPort, null, rwTx);
@@ -235,31 +298,91 @@ public class NeutronRouterAware implements INeutronRouterAware {
             }
         }
 
+        boolean isSuccessful = setNewL3ContextToEpsFromSubnet(tenantId, l3Context, subnet, rwTx);
+        if (!isSuccessful) {
+            rwTx.cancel();
+            return;
+        }
+
+        DataStoreHelper.submitToDs(rwTx);
+    }
+
+    private static @Nonnull L3Context createL3ContextFromRouter(NeutronRouter router) {
+        Name l3ContextName = null;
+        if (!Strings.isNullOrEmpty(router.getName())) {
+            l3ContextName = new Name(router.getName());
+        }
+        return new L3ContextBuilder().setId(new L3ContextId(router.getID()))
+            .setName(l3ContextName)
+            .setDescription(new Description(MappingUtils.NEUTRON_ROUTER__ + router.getID()))
+            .build();
+    }
+
+    private @Nullable Subnet resolveSubnetWithVirtualRouterIp(TenantId tenantId, SubnetId subnetId,
+            IpAddress ipAddress, ReadTransaction rTx) {
+        Optional<Subnet> potentialSubnet = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
+                IidFactory.subnetIid(tenantId, subnetId), rTx);
+        if (!potentialSubnet.isPresent()) {
+            LOG.warn("Illegal state - subnet {} does not exist.", subnetId.getValue());
+            return null;
+        }
+
+        // TODO: Li alagalah: Add gateways and prefixes instead of
+        // VirtualRouterID
+        return new SubnetBuilder(potentialSubnet.get()).setVirtualRouterIp(ipAddress).build();
+    }
+
+    /**
+     * @return {@code false} if illegal state occurred; {@code true} otherwise
+     */
+    public boolean setNewL3ContextToEpsFromSubnet(TenantId tenantId, L3Context l3Context, Subnet subnet,
+            ReadWriteTransaction rwTx) {
+        if (subnet.getParent() == null) {
+            LOG.warn("Illegal state - subnet {} does not have a parent.", subnet.getId().getValue());
+            return false;
+        }
+
+        L2FloodDomainId l2FdId = new L2FloodDomainId(subnet.getParent().getValue());
+        ForwardingCtx fwCtx = MappingUtils.createForwardingContext(tenantId, l2FdId, rwTx);
+        if (fwCtx.getL2BridgeDomain() == null) {
+            LOG.warn("Illegal state - l2-flood-domain {} does not have a parent.", l2FdId.getValue());
+            return false;
+        }
+
+        L2BridgeDomain l2BridgeDomain = new L2BridgeDomainBuilder(fwCtx.getL2BridgeDomain()).setParent(
+                l3Context.getId()).build();
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l2BridgeDomainIid(tenantId, l2BridgeDomain.getId()),
+                l2BridgeDomain);
+
+        INeutronSubnetCRUD subnetInterface = NeutronCRUDInterfaces.getINeutronSubnetCRUD(this);
+        if (subnetInterface == null) {
+            LOG.warn("Illegal state - No provider for {}", INeutronSubnetCRUD.class.getName());
+            return false;
+        }
+
         List<L3> l3Eps = new ArrayList<>();
         L3ContextId oldL3ContextId = fwCtx.getL3Context().getId();
-        NeutronSubnet neutronSubnet = subnetInterface.getSubnet(subnetId.getValue());
+        NeutronSubnet neutronSubnet = subnetInterface.getSubnet(subnet.getId().getValue());
         List<NeutronPort> portsInNeutronSubnet = neutronSubnet.getPortsInSubnet();
         for (NeutronPort port : portsInNeutronSubnet) {
             boolean isPortAdded = NeutronPortAware.addNeutronPort(port, rwTx, epService);
             if (!isPortAdded) {
-                rwTx.cancel();
-                return;
+                return false;
             }
             // TODO Li msunal this has to be rewrite when OFOverlay renderer
             // will support l3-endpoints.
             Neutron_IPs firstIp = MappingUtils.getFirstIp(port.getFixedIPs());
             if (firstIp != null) {
                 l3Eps.add(new L3Builder().setL3Context(oldL3ContextId)
-                        .setIpAddress(Utils.createIpAddress(firstIp.getIpAddress()))
-                        .build());
+                    .setIpAddress(Utils.createIpAddress(firstIp.getIpAddress()))
+                    .build());
             }
         }
 
         if (!l3Eps.isEmpty()) {
             epService.unregisterEndpoint(new UnregisterEndpointInputBuilder().setL3(l3Eps).build());
         }
-
-        DataStoreHelper.submitToDs(rwTx);
+        return true;
     }
 
     public static List<NeutronSecurityRule> createRouterSecRules(NeutronPort port, EndpointGroupId consumerEpgId,

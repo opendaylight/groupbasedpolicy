@@ -59,7 +59,6 @@ public class NeutronSubnetAware implements INeutronSubnetAware {
         TenantId tenantId = new TenantId(Utils.normalizeUuid(neutronSubnet.getTenantID()));
         Subnet subnet = createSubnet(neutronSubnet);
         rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.subnetIid(tenantId, subnetId), subnet, true);
-
         DataStoreHelper.submitToDs(rwTx);
     }
 
@@ -120,8 +119,6 @@ public class NeutronSubnetAware implements INeutronSubnetAware {
             rwTx.cancel();
             return;
         }
-
         DataStoreHelper.submitToDs(rwTx);
     }
-
 }
