@@ -55,6 +55,15 @@ module neutron-gbp-mapper {
                     uses neutron-port-key;
                 }
             }
+            container floating-ip-ports-by-endpoints {
+                description "Neutron floating IP ports by groupbasedpolicy endpoint";
+                list floating-ip-port-by-endpoint {
+                    description "Neutron floating ip port key by groupbasedpolicy endpoint key";
+                    key "l2-context mac-address";
+                    uses gbp-endpoint:l2-key;
+                    uses neutron-port-key;
+                }
+            }
         }
 
         container gbp-by-neutron-mappings {
@@ -84,6 +93,65 @@ module neutron-gbp-mapper {
                     key port-id;
                     uses neutron-port-key;
                     uses gbp-endpoint:l2-key;
+                }
+            }
+            container endpoints-by-floating-ip-ports {
+                description "Groupbasedpolicy endpoints by neutron floating IP ports";
+                list endpoint-by-floating-ip-port {
+                    description "Groupbasedpolicy endpoint key by neutron floating IP port key";
+                    key port-id;
+                    uses neutron-port-key;
+                    uses gbp-endpoint:l2-key;
+                }
+            }
+        }
+
+        container floating-ip-association-mappings {
+            description "Mapping of association between neutron port representing floating IP and internal neutron port";
+            container internal-ports-by-floating-ip-ports {
+                list internal-port-by-floating-ip-port {
+                    key floating-ip-port-id;
+                    leaf floating-ip-port-id {
+                        description "A unique ID for the neutron port";
+                        type gbp-common:unique-id;
+                        mandatory true;
+                    }
+                    leaf floating-ip-port-ip-address {
+                        type inet:ip-address;
+                        mandatory true;
+                    }
+                    leaf internal-port-id {
+                        description "A unique ID for the neutron port";
+                        type gbp-common:unique-id;
+                        mandatory true;
+                    }
+                    leaf internal-port-ip-address {
+                        type inet:ip-address;
+                        mandatory true;
+                    }
+                }
+            }
+            container floating-ip-ports-by-internal-ports {
+                list floating-ip-port-by-internal-port {
+                    key internal-port-id;
+                    leaf internal-port-id {
+                        description "A unique ID for the neutron port";
+                        type gbp-common:unique-id;
+                        mandatory true;
+                    }
+                    leaf internal-port-ip-address {
+                        type inet:ip-address;
+                        mandatory true;
+                    }
+                    leaf floating-ip-port-id {
+                        description "A unique ID for the neutron port";
+                        type gbp-common:unique-id;
+                        mandatory true;
+                    }
+                    leaf floating-ip-port-ip-address {
+                        type inet:ip-address;
+                        mandatory true;
+                    }
                 }
             }
         }
