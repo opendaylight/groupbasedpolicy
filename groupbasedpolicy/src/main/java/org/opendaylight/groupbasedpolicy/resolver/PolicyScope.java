@@ -86,7 +86,7 @@ public class PolicyScope {
     public void removeFromScope(TenantId tenant, 
                                 EndpointGroupId endpointGroup) {
         synchronized (this) {
-            boolean canUnsubscribe = false;
+            boolean canUnsubscribe = true;
             scopeElements.remove(new EgKey(tenant, endpointGroup));
             for (EgKey element : scopeElements) {
                 if (element.getTenantId().equals(tenant)) {
