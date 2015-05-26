@@ -119,6 +119,16 @@
     </dependencies>
   </dependencyManagement>
 
+    <dependencies>
+        <!-- Sonar -->
+        <dependency>
+            <groupId>org.codehaus.sonar-plugins.java</groupId>
+            <artifactId>sonar-jacoco-listeners</artifactId>
+            <version>${sonar-jacoco-listeners.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
   <build>
     <plugins>
       <plugin>
@@ -155,22 +165,23 @@
         <artifactId>jacoco-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>pre-unit-test</id>
+            <id>prepare-ut-agent</id>
+            <phase>process-test-classes</phase>
             <goals>
               <goal>prepare-agent</goal>
             </goals>
+            <configuration>
+              <destFile>${sonar.jacoco.reportPath}</destFile>
+            </configuration>
           </execution>
           <execution>
-            <id>post-unit-test</id>
-            <phase>test</phase>
+            <id>prepare-it-agent</id>
+            <phase>pre-integration-test</phase>
             <goals>
-              <goal>report</goal>
+              <goal>prepare-agent</goal>
             </goals>
             <configuration>
-              <dataFile>${sonar.jacoco.reportPath}</dataFile>
-              <includes>
-                <include>org/opendaylight/groupbasedpolicy/**/*.class</include>
-              </includes>
+              <destFile>${sonar.jacoco.itReportPath}</destFile>
             </configuration>
           </execution>
         </executions>
