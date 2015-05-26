@@ -11,8 +11,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
@@ -55,16 +57,17 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.l3.prefix.fields.EndpointL3GatewaysBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3PrefixKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L2;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L2Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L3Builder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.endpoints.by.floating.ip.ports.EndpointByFloatingIpPort;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.endpoints.by.ports.EndpointByPort;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.endpoints.by.router._interface.ports.EndpointByRouterInterfacePort;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.endpoints.by.router.gateway.ports.EndpointByRouterGatewayPort;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.floating.ip.ports.by.endpoints.FloatingIpPortByEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.ports.by.endpoints.PortByEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.router._interface.ports.by.endpoints.RouterInterfacePortByEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.router.gateway.ports.by.endpoints.RouterGatewayPortByEndpoint;
@@ -94,6 +97,7 @@ public class NeutronPortAware implements INeutronPortAware {
     private static final int DHCP_SERVER_PORT = 67;
     private final DataBroker dataProvider;
     private final EndpointService epService;
+    private final static Map<String, UniqueId> floatingIpPortByDeviceId = new HashMap<>();
 
     public NeutronPortAware(DataBroker dataProvider, EndpointService epService) {
         this.dataProvider = checkNotNull(dataProvider);
@@ -131,8 +135,9 @@ public class NeutronPortAware implements INeutronPortAware {
                     NeutronPortAware.class.getSimpleName(), NeutronRouterAware.class.getSimpleName());
             return;
         }
-        if (isFloatingIp(port)) {
-            LOG.trace("Port is floating ip - {}", port.getID());
+        if (isFloatingIpPort(port)) {
+            LOG.trace("Port is floating ip - {} device id - {}", port.getID(), port.getDeviceID());
+            floatingIpPortByDeviceId.put(port.getDeviceID(), new UniqueId(port.getID()));
             return;
         }
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
@@ -224,9 +229,9 @@ public class NeutronPortAware implements INeutronPortAware {
     }
 
     private static void addNeutronGbpMapping(NeutronPort port, EndpointKey epKey, ReadWriteTransaction rwTx) {
+        UniqueId portId = new UniqueId(port.getID());
         if (isRouterInterfacePort(port)) {
             LOG.trace("Adding RouterInterfacePort-Endpoint mapping for port {} and endpoint {}", port.getID(), epKey);
-            UniqueId portId = new UniqueId(port.getID());
             EndpointByRouterInterfacePort endpointByPort = MappingFactory.createEndpointByRouterInterfacePort(epKey,
                     portId);
             rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointByRouterInterfacePortIid(portId),
@@ -238,7 +243,6 @@ public class NeutronPortAware implements INeutronPortAware {
                     portByEndpoint, true);
         } else if (isRouterGatewayPort(port)) {
             LOG.trace("Adding RouterGatewayPort-Endpoint mapping for port {} and endpoint {}", port.getID(), epKey);
-            UniqueId portId = new UniqueId(port.getID());
             EndpointByRouterGatewayPort endpointByPort = MappingFactory.createEndpointByRouterGatewayPort(epKey, portId);
             rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointByRouterGatewayPortIid(portId),
                     endpointByPort, true);
@@ -246,10 +250,18 @@ public class NeutronPortAware implements INeutronPortAware {
             rwTx.put(LogicalDatastoreType.OPERATIONAL,
                     IidFactory.routerGatewayPortByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()),
                     portByEndpoint, true);
+        } else if (isFloatingIpPort(port)) {
+            LOG.trace("Adding FloatingIpPort-Endpoint mapping for port {} and endpoint {}", port.getID(), epKey);
+            EndpointByFloatingIpPort endpointByPort = MappingFactory.createEndpointByFloatingIpPort(epKey, portId);
+            rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointByFloatingIpPortIid(portId),
+                    endpointByPort, true);
+            FloatingIpPortByEndpoint portByEndpoint = MappingFactory.createFloatingIpPortByEndpoint(portId, epKey);
+            rwTx.put(LogicalDatastoreType.OPERATIONAL,
+                    IidFactory.floatingIpPortByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()),
+                    portByEndpoint, true);
         } else {
             LOG.trace("Adding Port-Endpoint mapping for port {} (device owner {}) and endpoint {}", port.getID(),
                     port.getDeviceOwner(), epKey);
-            UniqueId portId = new UniqueId(port.getID());
             EndpointByPort endpointByPort = MappingFactory.createEndpointByPort(epKey, portId);
             rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointByPortIid(portId), endpointByPort, true);
             PortByEndpoint portByEndpoint = MappingFactory.createPortByEndpoint(portId, epKey);
@@ -386,7 +398,7 @@ public class NeutronPortAware implements INeutronPortAware {
             LOG.trace("Port is router gateway - {}", port.getID());
             return;
         }
-        if (isFloatingIp(port)) {
+        if (isFloatingIpPort(port)) {
             LOG.trace("Port is floating ip - {}", port.getID());
             return;
         }
@@ -504,16 +516,27 @@ public class NeutronPortAware implements INeutronPortAware {
                     NeutronPortAware.class.getSimpleName(), NeutronRouterAware.class.getSimpleName());
             return;
         }
-        ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
+        if (isRouterGatewayPort(port)) {
+            LOG.trace("Port is router gateway - {} does nothing. {} handles router iface.",
+                    NeutronPortAware.class.getSimpleName(), NeutronRouterAware.class.getSimpleName());
+            return;
+        }
+        if (isFloatingIpPort(port)) {
+            LOG.trace("Port is floating ip - {} device id - {}", port.getID(), port.getDeviceID());
+            floatingIpPortByDeviceId.remove(port.getDeviceID());
+        }
+        ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         TenantId tenantId = new TenantId(Utils.normalizeUuid(port.getTenantID()));
         L2FloodDomainId l2FdId = new L2FloodDomainId(port.getNetworkUUID());
-        ForwardingCtx fwCtx = MappingUtils.createForwardingContext(tenantId, l2FdId, rTx);
+        ForwardingCtx fwCtx = MappingUtils.createForwardingContext(tenantId, l2FdId, rwTx);
         boolean isFwCtxValid = validateForwardingCtx(fwCtx);
         if (!isFwCtxValid) {
-            rTx.close();
+            rwTx.cancel();
             return;
         }
 
+        EndpointKey epKey = new EndpointKey(fwCtx.getL2BridgeDomain().getId(), new MacAddress(port.getMacAddress()));
+        deleteNeutronGbpMapping(port, epKey, rwTx);
         UnregisterEndpointInput unregisterEpRpcInput = createUnregisterEndpointInput(port, fwCtx);
         try {
             RpcResult<Void> rpcResult = epService.unregisterEndpoint(unregisterEpRpcInput).get();
@@ -522,8 +545,36 @@ public class NeutronPortAware implements INeutronPortAware {
             }
         } catch (InterruptedException | ExecutionException e) {
             LOG.error("addPort - RPC invocation failed.", e);
-        } finally {
-            rTx.close();
+            rwTx.cancel();
+        }
+    }
+
+    private static void deleteNeutronGbpMapping(NeutronPort port, EndpointKey epKey, ReadWriteTransaction rwTx) {
+        UniqueId portId = new UniqueId(port.getID());
+        if (isRouterInterfacePort(port)) {
+            LOG.trace("Adding RouterInterfacePort-Endpoint mapping for port {} and endpoint {}", port.getID(), epKey);
+            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
+                    IidFactory.endpointByRouterInterfacePortIid(portId), rwTx);
+            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
+                    IidFactory.routerInterfacePortByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()), rwTx);
+        } else if (isRouterGatewayPort(port)) {
+            LOG.trace("Adding RouterGatewayPort-Endpoint mapping for port {} and endpoint {}", port.getID(), epKey);
+            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
+                    IidFactory.endpointByRouterGatewayPortIid(portId), rwTx);
+            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
+                    IidFactory.routerGatewayPortByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()), rwTx);
+        } else if (isFloatingIpPort(port)) {
+            LOG.trace("Adding FloatingIpPort-Endpoint mapping for port {} and endpoint {}", port.getID(), epKey);
+            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
+                    IidFactory.endpointByFloatingIpPortIid(portId), rwTx);
+            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
+                    IidFactory.floatingIpPortByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()), rwTx);
+        } else {
+            LOG.trace("Adding Port-Endpoint mapping for port {} (device owner {}) and endpoint {}", port.getID(),
+                    port.getDeviceOwner(), epKey);
+            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointByPortIid(portId), rwTx);
+            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
+                    IidFactory.portByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()), rwTx);
         }
     }
 
@@ -644,7 +695,7 @@ public class NeutronPortAware implements INeutronPortAware {
         return DEVICE_OWNER_ROUTER_GATEWAY.equals(port.getDeviceOwner());
     }
 
-    private static boolean isFloatingIp(NeutronPort port) {
+    private static boolean isFloatingIpPort(NeutronPort port) {
         return DEVICE_OWNER_FLOATING_IP.equals(port.getDeviceOwner());
     }
 
@@ -690,6 +741,8 @@ public class NeutronPortAware implements INeutronPortAware {
         return l3s;
     }
 
-
+    public static UniqueId getFloatingIpPortIdByDeviceId(String deviceId) {
+        return floatingIpPortByDeviceId.get(deviceId);
+    }
 
 }

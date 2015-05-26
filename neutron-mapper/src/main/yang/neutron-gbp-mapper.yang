@@ -22,6 +22,27 @@ module neutron-gbp-mapper {
             type gbp-common:unique-id;
         }
     }
+    
+    grouping internal-port-floating-ip-port-association-fields {
+        leaf floating-ip-port-id {
+            description "A unique ID for the neutron port";
+            type gbp-common:unique-id;
+            mandatory true;
+        }
+        leaf floating-ip-port-ip-address {
+            type inet:ip-address;
+            mandatory true;
+        }
+        leaf internal-port-id {
+            description "A unique ID for the neutron port";
+            type gbp-common:unique-id;
+            mandatory true;
+        }
+        leaf internal-port-ip-address {
+            type inet:ip-address;
+            mandatory true;
+        }
+    }
 
     container mappings {
         description "Mapping of neutron entities by groupbasedpolicy entities and vice versa.";
@@ -111,47 +132,13 @@ module neutron-gbp-mapper {
             container internal-ports-by-floating-ip-ports {
                 list internal-port-by-floating-ip-port {
                     key floating-ip-port-id;
-                    leaf floating-ip-port-id {
-                        description "A unique ID for the neutron port";
-                        type gbp-common:unique-id;
-                        mandatory true;
-                    }
-                    leaf floating-ip-port-ip-address {
-                        type inet:ip-address;
-                        mandatory true;
-                    }
-                    leaf internal-port-id {
-                        description "A unique ID for the neutron port";
-                        type gbp-common:unique-id;
-                        mandatory true;
-                    }
-                    leaf internal-port-ip-address {
-                        type inet:ip-address;
-                        mandatory true;
-                    }
+                    uses internal-port-floating-ip-port-association-fields;
                 }
             }
             container floating-ip-ports-by-internal-ports {
                 list floating-ip-port-by-internal-port {
                     key internal-port-id;
-                    leaf internal-port-id {
-                        description "A unique ID for the neutron port";
-                        type gbp-common:unique-id;
-                        mandatory true;
-                    }
-                    leaf internal-port-ip-address {
-                        type inet:ip-address;
-                        mandatory true;
-                    }
-                    leaf floating-ip-port-id {
-                        description "A unique ID for the neutron port";
-                        type gbp-common:unique-id;
-                        mandatory true;
-                    }
-                    leaf floating-ip-port-ip-address {
-                        type inet:ip-address;
-                        mandatory true;
-                    }
+                    uses internal-port-floating-ip-port-association-fields;
                 }
             }
         }
