@@ -9,9 +9,10 @@ import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.DataStoreHelper;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.IidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronMapperIidFactory;
+import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.neutron.spi.INeutronSecurityRuleAware;
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
@@ -327,7 +328,7 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
             EndpointGroupId consumerEpgId, ReadTransaction rTx) {
         Optional<EndpointGroupPairToContractMapping> potentialMapping = DataStoreHelper.readFromDs(
                 LogicalDatastoreType.OPERATIONAL,
-                IidFactory.endpointGroupPairToContractMappingIid(providerEpgId, consumerEpgId), rTx);
+                NeutronMapperIidFactory.endpointGroupPairToContractMappingIid(providerEpgId, consumerEpgId), rTx);
         if (potentialMapping.isPresent()) {
             return Optional.of(potentialMapping.get().getContractId());
         }
@@ -341,7 +342,7 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
             .setConsumerEpgId(consumerEpgId)
             .setContractId(contractId)
             .build();
-        wTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointGroupPairToContractMappingIid(
+        wTx.put(LogicalDatastoreType.OPERATIONAL, NeutronMapperIidFactory.endpointGroupPairToContractMappingIid(
                 epgPairToContractMapping.getProviderEpgId(), epgPairToContractMapping.getConsumerEpgId()),
                 epgPairToContractMapping, true);
     }
