@@ -184,7 +184,7 @@ public class OvsdbHelper {
      *
      * @param bridge
      * @param dataBroker
-     * @return The {@link OvsdbBridgAugmentation} for the manager node, null
+     * @return The {@link OvsdbBridgeAugmentation} for the manager node, null
      *         if not found or if it already is the manager node
      */
     public static OvsdbNodeAugmentation getManagerNode(OvsdbBridgeAugmentation bridge, DataBroker dataBroker) {
