@@ -67,7 +67,7 @@ public class NeutronMapper implements AutoCloseable {
         registrations.add(neutronRouterAwareRegistration);
 
         ServiceRegistration<INeutronFloatingIPAware> neutronFloatingIpAwareRegistration = context.registerService(
-                INeutronFloatingIPAware.class, new NeutronFloatingIpAware(dataProvider), null);
+                INeutronFloatingIPAware.class, new NeutronFloatingIpAware(dataProvider, epService), null);
         registrations.add(neutronFloatingIpAwareRegistration);
     }
 
