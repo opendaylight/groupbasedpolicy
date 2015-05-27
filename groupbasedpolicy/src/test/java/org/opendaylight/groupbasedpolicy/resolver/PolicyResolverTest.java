@@ -445,6 +445,10 @@ public class PolicyResolverTest {
                                  ImmutableSet.of(cond3.getName()),
                                  ImmutableSet.of(ImmutableSet.of(cond1.getName(),
                                                                  cond2.getName())));
+        EndpointConstraint ec1 =
+                new EndpointConstraint(cs, null);
+        EndpointConstraint ec2 =
+                new EndpointConstraint(ConditionSet.EMPTY, null);
         TenantContext tc = new TenantContext(null);
 
         tc.tenant.set(new IndexedTenant(tenant1));
@@ -455,7 +459,7 @@ public class PolicyResolverTest {
                 SubjectResolverUtils.selectSubjects(contractMatches, egConditions);
         assertEquals(1, policy.size());
         Policy p = policy.get(new EgKey(tenant1.getId(), eg1.getId()), new EgKey(tenant1.getId(), eg2.getId()));
-        List<RuleGroup> rules = p.getRuleMap().get(cs, ConditionSet.EMPTY);
+        List<RuleGroup> rules = p.getRuleMap().get(ec1, ec2);
         assertNotNull(rules);
         assertEquals(1, rules.size());
         RuleGroup rg = rules.get(0);
@@ -473,7 +477,7 @@ public class PolicyResolverTest {
         assertEquals(2, policy.size());
         p = policy.get(new EgKey(tenant2.getId(), eg3.getId()),
                        new EgKey(tenant2.getId(), eg2.getId()));
-        rules = p.getRuleMap().get(cs, ConditionSet.EMPTY);
+        rules = p.getRuleMap().get(ec1, ec2);
         assertNotNull(rules);
         assertEquals(1, rules.size());
         rg = rules.get(0);
@@ -483,7 +487,7 @@ public class PolicyResolverTest {
         assertEquals(1, rg.rules.size());
         assertEquals(rule1.getName(), rg.rules.get(0).getName());
 
-        rules = p.getRuleMap().get(ConditionSet.EMPTY, ConditionSet.EMPTY);
+        rules = p.getRuleMap().get(ec2, ec2);
         assertNotNull(rules);
         assertEquals(1, rules.size());
         rg = rules.get(0);
@@ -495,7 +499,7 @@ public class PolicyResolverTest {
 
         p = policy.get(new EgKey(tenant2.getId(), eg1.getId()),
                        new EgKey(tenant2.getId(), eg2.getId()));
-        rules = p.getRuleMap().get(cs, ConditionSet.EMPTY);
+        rules = p.getRuleMap().get(ec1, ec2);
         assertNotNull(rules);
         assertEquals(1, rules.size());
         rg = rules.get(0);
@@ -513,7 +517,7 @@ public class PolicyResolverTest {
         assertEquals(1, policy.size());
         p = policy.get(new EgKey(tenant3.getId(), eg4.getId()),
                        new EgKey(tenant3.getId(), eg5.getId()));
-        rules = p.getRuleMap().get(ConditionSet.EMPTY, ConditionSet.EMPTY);
+        rules = p.getRuleMap().get(ec2, ec2);
         assertNotNull(rules);
         assertEquals(1, rules.size());
         rg = rules.get(0);

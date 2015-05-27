@@ -10,13 +10,17 @@ package org.opendaylight.groupbasedpolicy.resolver;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.endpoint.identification.constraints.endpoint.identification.constraints.l3.endpoint.identification.constraints.PrefixConstraint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
 
@@ -30,8 +34,8 @@ import com.google.common.collect.Table.Cell;
  * ordered lists of rules from the policy,
  * along with the associated {@link Tenant}, {@link Contract}, and {@link SubjectName}.
  * A {@link RuleGroup} applies to a particular endpoint based on the set of
- * conditions that are active for that endpoint. All rule groups associated
- * with matching {@link ConditionSet}s apply.
+ * endpoint constraints that are active for that endpoint. All rule groups associated
+ * with matching {@link EndpointConstraint}s apply.
  */
 @Immutable
 public class Policy {
@@ -39,14 +43,14 @@ public class Policy {
     /**
      * Policy where {@link #getRuleMap()} returns empty table
      */
-    public static final Policy EMPTY = new Policy(ImmutableTable.<ConditionSet, ConditionSet, List<RuleGroup>>of());
+    public static final Policy EMPTY = new Policy(ImmutableTable.<EndpointConstraint, EndpointConstraint, List<RuleGroup>>of());
 
-    private final Table<ConditionSet, ConditionSet, List<RuleGroup>> ruleMap;
+    private final Table<EndpointConstraint, EndpointConstraint, List<RuleGroup>> ruleMap;
 
     /**
      * @param ruleMap {@code null} means that created {@link Policy} equals {@link Policy#EMPTY}
      */
-    public Policy(@Nullable Table<ConditionSet, ConditionSet, List<RuleGroup>> ruleMap) {
+    public Policy(@Nullable Table<EndpointConstraint, EndpointConstraint, List<RuleGroup>> ruleMap) {
         if (ruleMap == null) {
             this.ruleMap = EMPTY.getRuleMap();
         } else {
@@ -54,7 +58,7 @@ public class Policy {
         }
     }
 
-    public @Nonnull Table<ConditionSet, ConditionSet, List<RuleGroup>> getRuleMap() {
+    public @Nonnull Table<EndpointConstraint, EndpointConstraint, List<RuleGroup>> getRuleMap() {
         return ruleMap;
     }
 
@@ -67,12 +71,20 @@ public class Policy {
      */
     public List<RuleGroup> getRules(ConditionGroup fromCg, ConditionGroup toCg) {
         List<RuleGroup> rules = new ArrayList<>();
-        for (Cell<ConditionSet, ConditionSet, List<RuleGroup>> cell : ruleMap.cellSet()) {
-            if (fromCg.contains(cell.getRowKey()) && toCg.contains(cell.getColumnKey()))
+        for (Cell<EndpointConstraint, EndpointConstraint, List<RuleGroup>> cell : ruleMap.cellSet()) {
+            if (fromCg.contains(cell.getRowKey().getConditionSet()) && toCg.contains(cell.getColumnKey().getConditionSet()))
                 rules.addAll(cell.getValue());
         }
         Collections.sort(rules);
         return rules;
+    }
+
+    public static Set<IpPrefix> getIpPrefixesFrom(Set<PrefixConstraint> prefixConstraints) {
+        Set<IpPrefix> ipPrefixes = new HashSet<>();
+        for (PrefixConstraint prefixConstraint : prefixConstraints) {
+            ipPrefixes.add(prefixConstraint.getIpPrefix());
+        }
+        return ipPrefixes;
     }
 
     @Override
