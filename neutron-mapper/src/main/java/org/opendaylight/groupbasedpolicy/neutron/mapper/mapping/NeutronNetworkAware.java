@@ -14,10 +14,11 @@ import java.util.UUID;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.DataStoreHelper;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.IidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronMapperIidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
+import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.neutron.spi.INeutronNetworkAware;
 import org.opendaylight.neutron.spi.NeutronNetwork;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
@@ -104,7 +105,7 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
             .setL2BridgeDomainId(l2BdId)
             .setL3ContextId(l3ContextId)
             .build();
-        rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.networkMappingIid(l2FdId), networkMapping, true);
+        rwTx.put(LogicalDatastoreType.OPERATIONAL, NeutronMapperIidFactory.networkMappingIid(l2FdId), networkMapping, true);
 
         DataStoreHelper.submitToDs(rwTx);
     }
@@ -176,7 +177,7 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
         TenantId tenantId = new TenantId(Utils.normalizeUuid(network.getTenantID()));
         L2FloodDomainId l2FdId = new L2FloodDomainId(network.getID());
         Optional<NetworkMapping> potentionalNetworkMapping = DataStoreHelper.readFromDs(
-                LogicalDatastoreType.OPERATIONAL, IidFactory.networkMappingIid(l2FdId), rwTx);
+                LogicalDatastoreType.OPERATIONAL, NeutronMapperIidFactory.networkMappingIid(l2FdId), rwTx);
         if (!potentionalNetworkMapping.isPresent()) {
             LOG.warn("Illegal state - network-mapping {} does not exist.", l2FdId.getValue());
             rwTx.cancel();

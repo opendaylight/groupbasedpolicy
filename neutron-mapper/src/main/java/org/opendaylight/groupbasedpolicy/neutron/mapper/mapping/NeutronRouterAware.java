@@ -13,12 +13,13 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.DataStoreHelper;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.IidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils.ForwardingCtx;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronMapperIidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
+import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.neutron.spi.INeutronPortCRUD;
 import org.opendaylight.neutron.spi.INeutronRouterAware;
 import org.opendaylight.neutron.spi.INeutronSubnetCRUD;
@@ -473,7 +474,7 @@ public class NeutronRouterAware implements INeutronRouterAware {
         }
 
         Optional<NetworkMapping> potentialNetworkMapping = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
-                IidFactory.networkMappingIid(l2FdId), rwTx);
+                NeutronMapperIidFactory.networkMappingIid(l2FdId), rwTx);
         if (!potentialNetworkMapping.isPresent()) {
             LOG.warn("Illegal state - network-mapping {} does not exist.", l2FdId.getValue());
             rwTx.cancel();

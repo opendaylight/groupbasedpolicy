@@ -21,12 +21,13 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.DataStoreHelper;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.IidFactory;
+import org.opendaylight.groupbasedpolicy.neutron.gbp.util.NeutronGbpIidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils.ForwardingCtx;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
+import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.neutron.spi.INeutronPortAware;
 import org.opendaylight.neutron.spi.NeutronPort;
 import org.opendaylight.neutron.spi.NeutronSecurityGroup;
@@ -55,7 +56,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.l3.prefix.fields.EndpointL3GatewaysBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3PrefixKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L2;
@@ -229,32 +229,32 @@ public class NeutronPortAware implements INeutronPortAware {
             UniqueId portId = new UniqueId(port.getID());
             EndpointByRouterInterfacePort endpointByPort = MappingFactory.createEndpointByRouterInterfacePort(epKey,
                     portId);
-            rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointByRouterInterfacePortIid(portId),
+            rwTx.put(LogicalDatastoreType.OPERATIONAL, NeutronGbpIidFactory.endpointByRouterInterfacePortIid(portId),
                     endpointByPort, true);
             RouterInterfacePortByEndpoint portByEndpoint = MappingFactory.createRouterInterfacePortByEndpoint(portId,
                     epKey);
             rwTx.put(LogicalDatastoreType.OPERATIONAL,
-                    IidFactory.routerInterfacePortByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()),
+                    NeutronGbpIidFactory.routerInterfacePortByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()),
                     portByEndpoint, true);
         } else if (isRouterGatewayPort(port)) {
             LOG.trace("Adding RouterGatewayPort-Endpoint mapping for port {} and endpoint {}", port.getID(), epKey);
             UniqueId portId = new UniqueId(port.getID());
             EndpointByRouterGatewayPort endpointByPort = MappingFactory.createEndpointByRouterGatewayPort(epKey, portId);
-            rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointByRouterGatewayPortIid(portId),
+            rwTx.put(LogicalDatastoreType.OPERATIONAL, NeutronGbpIidFactory.endpointByRouterGatewayPortIid(portId),
                     endpointByPort, true);
             RouterGatewayPortByEndpoint portByEndpoint = MappingFactory.createRouterGatewayPortByEndpoint(portId, epKey);
             rwTx.put(LogicalDatastoreType.OPERATIONAL,
-                    IidFactory.routerGatewayPortByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()),
+                    NeutronGbpIidFactory.routerGatewayPortByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()),
                     portByEndpoint, true);
         } else {
             LOG.trace("Adding Port-Endpoint mapping for port {} (device owner {}) and endpoint {}", port.getID(),
                     port.getDeviceOwner(), epKey);
             UniqueId portId = new UniqueId(port.getID());
             EndpointByPort endpointByPort = MappingFactory.createEndpointByPort(epKey, portId);
-            rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointByPortIid(portId), endpointByPort, true);
+            rwTx.put(LogicalDatastoreType.OPERATIONAL, NeutronGbpIidFactory.endpointByPortIid(portId), endpointByPort, true);
             PortByEndpoint portByEndpoint = MappingFactory.createPortByEndpoint(portId, epKey);
             rwTx.put(LogicalDatastoreType.OPERATIONAL,
-                    IidFactory.portByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()), portByEndpoint, true);
+                    NeutronGbpIidFactory.portByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()), portByEndpoint, true);
         }
     }
 
