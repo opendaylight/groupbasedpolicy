@@ -2,7 +2,7 @@
 
     <div ng-include src="view_path+'parts/crud.tpl.html'"></div>
 
-    <section ng-show="view.subject">
+    <section ng-show="internalView.subject">
         <form name="subjectForm" novalidate="novalidate">
             <i class="icon-remove align-right" ng-click="close()"></i>
 
@@ -10,17 +10,17 @@
                 <label class="block basicLabel"><span>Name:</span>
                     <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="subjectForm.name.$error.required"></i>
                 </label>
-                <input class="form-control" type="text" ng-model="newSubjectObj.name" name="name" ng-required="true" ng-disabled="view.edit" />
+                <input class="form-control" type="text" ng-model="newSubjectObj.name" name="name" ng-required="true" ng-disabled="internalView.edit !== 'add'"/>
             </div>
 
-            <div class="rowWrapper">
+            <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newSubjectObj['order']">
                 <label class="block basicLabel"><span>Order:</span>
                     <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="subjectForm.order.$error.required"></i>
                 </label>
-                <input class="form-control" type="text" name="order" ng-required="true" ng-model="newSubjectObj.order" />
+                <input class="form-control" type="text" name="order" ng-required="true" ng-model="newSubjectObj.order" ng-disabled="internalView.edit === 'view'"/>
             </div>
 
-            <button class="btn btn-primary col-md-12" ng-click="save()">Save</button>
+            <button class="btn btn-primary col-md-12" ng-click="save()" ng-hide="internalView.edit === 'view'">Save</button>
         </form>
     </section>
     

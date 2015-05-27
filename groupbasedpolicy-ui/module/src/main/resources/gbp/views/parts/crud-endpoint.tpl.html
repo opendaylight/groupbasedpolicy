@@ -1,0 +1,32 @@
+<section class="rowWrapper clearfix" ng-controller="crudCtrl">
+    <div class="inline-block full-width">
+        <label class="block float-left"><span>{{ crudLabel }}</span></label>
+
+        <button type="button" class="btn btn-primary col-md-4 float-right" ng-click="filter = !filter"><i class="icon-filter"></i></button>
+    </div>
+
+    <div ng-init="filter = false" class="ep-filter" ng-show="filter">
+        <div class="inline-block">
+            <label class="block"><span>Endpoint group</span></label>
+            <input type="text" class="form-control" ng-model="q['endpoint-group']" placeholder="Filter by EPG"/>
+        </div>
+
+        <div class="inline-block">
+            <label class="block"><span>Network containment</span></label>
+            <input type="text" class="form-control" ng-model="q['network-containment']" placeholder="Filter by netw. containment"/>
+        </div>
+    </div>
+
+    <div class="selectWrapper col-md-6">
+        <select class="form-control" ng-model="selectedObj" ng-change="reload(selectedObj)" ng-options="getDisplayLabel(d, displayLabel) for d in list | filter:q">
+            <option value="">Select option</option>
+        </select>
+
+    </div>
+
+    <div class="btn-group col-md-6" role="group">
+      <button type="button" class="btn btn-primary col-md-4" ng-click="add()">Add</button>
+      <button type="button" class="btn btn-primary col-md-4" ng-click="modify()">Edit</button>
+      <button type="button" class="btn btn-primary col-md-4" ng-click="delete()">Delete</button>
+    </div>
+</section>

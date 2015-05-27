@@ -69,7 +69,7 @@
    <aside class="col-md-3"> 
         <section class="inWrapper">
 
-            <div class="panelWrapper clearfix">
+            <div class="panelWrapper clearfix" style="height: 109px;">
                 <!-- Tenants list -->
                 <div class="rowWrapper clearfix">
                     <label class="block"><span>Tenants list</span></label>
@@ -78,6 +78,9 @@
                             <option value="">Select option</option>
                         </select>
                     </div>
+                </div>
+                <div class="rowWrapper clearfix">
+                    <button class="btn btn-primary col-md-12" ng-click="showWizard('accessModelWizard')"><i class="icon-magic"></i>Access Model Wizard</button>
                 </div>
             </div>
 
@@ -90,23 +93,26 @@
 
             <div class="panelWrapper clearfix" ng-show="view.policy">
                 <button class="btn btn-primary col-md-12" ng-click="toggleExpanded('tenants')" >Tenants</button>
-                <button class="btn btn-primary col-md-12" ng-click="toggleExpanded('l2l3')"  >L2/L3</button>
                 <button class="btn btn-primary col-md-12" ng-click="toggleExpanded('epg')"  >EPG</button>
                 <button class="btn btn-primary col-md-12" ng-click="toggleExpanded('contracts')" >Contracts</button>
+                <button class="btn btn-primary col-md-12" ng-click="toggleExpanded('l2l3')"  >L2/L3</button>
                 <button class="btn btn-primary col-md-12" ng-click="toggleExpanded('docs')"  >Docs</button>
-                <button class="btn btn-primary col-md-12" ng-click="toggleExpanded('basic')"  >Back</button>
+                <button class="btn btn-primary col-md-12 bottom-buttons home" ng-click="toggleExpanded('basic')"  >Home</button>
+                <button class="btn btn-primary col-md-12 bottom-buttons back" ng-click="toggleExpanded('basic')"  >Back</button>
             </div>
 
             <div class="panelWrapper clearfix" ng-show="view.renderers">
                 <button class="btn btn-primary col-md-12" ng-click="toggleExpanded('classifiers')"  >Classifiers</button>
                 <button class="btn btn-primary col-md-12" ng-click="toggleExpanded('actions')"  >Actions</button>
-                <button class="btn btn-primary col-md-12" ng-click="toggleExpanded('basic')" >Back</button>
+                <button class="btn btn-primary col-md-12 bottom-buttons home" ng-click="toggleExpanded('basic')">Home</button>
+                <button class="btn btn-primary col-md-12 bottom-buttons back" ng-click="toggleExpanded('basic')">Back</button>
             </div>
 
             <div class="panelWrapper clearfix" ng-show="view.endpoints">
                 <button class="btn btn-primary col-md-12" ng-click="toggleExpanded('registerEndpoint')"  >Endpoint</button>
                 <button class="btn btn-primary col-md-12" ng-click="toggleExpanded('registerL3PrefixEndpoint')"  >L3 prefix endpoint</button>
-                <button class="btn btn-primary col-md-12" ng-click="toggleExpanded('basic')" >Back</button>
+                <button class="btn btn-primary col-md-12 bottom-buttons home" ng-click="toggleExpanded('basic')"  >Home</button>
+                <button class="btn btn-primary col-md-12 bottom-buttons back" ng-click="toggleExpanded('basic')" >Back</button>
             </div>
 
             <div class="panelWrapper clearfix" ng-show="view.tenants">
@@ -150,7 +156,13 @@
 
 
         </section>
-   </aside>
+    </aside>
 
+    <div ng-if="wizards.accessModelWizard">
+        <div ng-include src="view_path+'wizards/accessModelWizard.tpl.html'"></div>
+    </div>
 </section>
+
+
+
 

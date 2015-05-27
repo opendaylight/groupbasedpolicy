@@ -48,6 +48,10 @@ define(modules, function(gbp) {
                 actions: false
             };
 
+            $scope.wizards = {
+                accessModelWizard: false
+            };
+
             // TENANTS
             $scope.tenantList = [];
             $scope.selectedTenant = null;
@@ -63,7 +67,7 @@ define(modules, function(gbp) {
                     TopoServices.loadTopology(type, function(nodes, links) {
                         $scope.topologyData = { nodes: nodes, links: links };
                         $scope.viewTopo.box = true;
-                        $scope.viewTopo.button = type !== 'L2L3' && type !== null ? true : false;
+                        $scope.viewTopo.button = type !== GBPConstants.strings.l2l3 && type !== null ? true : false;
                         $scope.legend = TopoServices.getLegend(type);
                         reloadShowLegend();
                     }, function() {
@@ -80,7 +84,14 @@ define(modules, function(gbp) {
                     $scope.view[property] = expand !== property ? false : $scope.view[expand];
                 }
 
-                $scope.$broadcast('EV_INIT'+expand.toUpperCase());
+
+                if($scope.view[expand]) {
+                    if((expand === 'epg' || expand === 'contracts' || expand === 'classifiers' || expand === 'actions' || expand === 'renderers') && ($scope.topologyType !== GBPConstants.strings.config)) {
+                        $scope.loadTopology(GBPConstants.strings.config, { tenantId: $scope.selectedTenant ? $scope.selectedTenant.id : null, storage: 'config' });
+                    } else if((expand === 'l2l3' || expand === 'registerEndpoint' || expand === 'registerL3PrefixEndpoint') && ($scope.topologyType !== GBPConstants.strings.l2l3)) {
+                        $scope.loadTopology(GBPConstants.strings.l2l3, { tenantId: $scope.selectedTenant ? $scope.selectedTenant.id : null });
+                    }
+                }
             };
 
             $scope.topologyCustfunc = function(sigmaIstance, getSlowDownNum, dragListener, resize){
@@ -171,6 +182,14 @@ define(modules, function(gbp) {
                 return form.$valid;
             };
 
+            $scope.showWizard = function(wizardName) {
+                $scope.wizards[wizardName] = true;
+            };
+
+            $scope.closeWizard = function(wizardName) {
+                $scope.wizards[wizardName] = false;
+            };
+
             $scope.loadTenants();
 
             $scope.$on('GBP_GLOBAL_TENANT_RELOAD',function(){
@@ -192,13 +211,12 @@ define(modules, function(gbp) {
         $scope.close = function(){
             $scope.showTable = false;
         };
-
     }]);
-
 
     gbp.register.controller('crudCtrl',['$scope',  function($scope){
         $scope.selectedObj = null;
         $scope.label = '';
+        $scope.q = {};
 
         $scope.add = function() {
             $scope.selectedObj = null;
@@ -220,14 +238,28 @@ define(modules, function(gbp) {
 
     gbp.register.controller('contractCtrl', ['$scope','GBPContractServices', '$filter', function($scope, GBPContractServices, $filter){
         $scope.list = [];
-        $scope.contractView = false;
         $scope.selectedContract = null;
         $scope.newContractObj = GBPContractServices.createObj();
         $scope.displayLabel = 'id';
         $scope.crudLabel = 'Contract list';
 
+        $scope.internalView = {
+            contract: false,
+            edit: "view"
+        };
+
         var path = null,
-            mandatoryProperties = [];
+            mandatoryProperties = [],
+
+            clear = function(){
+                $scope.list = [];
+                $scope.internalView = {
+                    contract: false,
+                    edit: "view"
+                };
+                $scope.selectedContract = null;
+                $scope.newContractObj = GBPContractServices.createObj();
+            };
 
         $scope.init = function() {
             if ( $scope.selectedTenant ) {
@@ -241,6 +273,8 @@ define(modules, function(gbp) {
                 }, function(){
 
                 });
+            }else{
+                clear();
             }
         };
 
@@ -250,8 +284,9 @@ define(modules, function(gbp) {
                 path = GBPContractServices.createPathObj($scope.selectedTenant.id, $scope.newContractObj.id);
                 GBPContractServices.send(path, $scope.newContractObj, function(data){
                     $scope.init();
-                    $scope.contractView = false;
+                    $scope.internalView.contract = false;
                     $scope.reloadNewObj();
+                    $scope.internalView.edit = "view";
                 }, function(){
                     //TODO: error cbk
                 });
@@ -278,7 +313,15 @@ define(modules, function(gbp) {
 
         $scope.reload = function(selectedObj) {
             $scope.selectedContract = selectedObj;
-            if($scope.contractView) {
+            $scope.internalView.edit = $scope.internalView.edit == "edit" ? $scope.internalView.edit : "view";
+            if(selectedObj){
+                $scope.internalView.contract = true;
+            }else {
+                $scope.internalView.contract = false;
+                $scope.internalView.edit = "view";
+            }
+
+            if($scope.internalView.contract) {
                 angular.copy(selectedObj, $scope.newContractObj);
             }
             $scope.sendReloadEventFromRoot('GBP_CONTRACT_RELOAD');
@@ -286,18 +329,21 @@ define(modules, function(gbp) {
 
         $scope.showForm = function() {
             $scope.reloadNewObj();
-            $scope.contractView = true;
+            $scope.internalView.contract = true;
             $scope.selectedContract = null;
+            $scope.internalView.edit = "add";
         };
 
         $scope.close = function(){
-            $scope.contractView = false;
+            $scope.internalView.contract = false;
+            $scope.internalView.edit = "view";
         };
 
         $scope.$on('PGN_EDIT_ELEM', function(event){
             if(!event.defaultPrevented) {
                 if ( $scope.selectedContract ) {
-                    $scope.contractView = true;
+                    $scope.internalView.contract = true;
+                    $scope.internalView.edit = "edit";
                     angular.copy($scope.selectedContract, $scope.newContractObj);
                 }
                 event.defaultPrevented = true;
@@ -318,9 +364,9 @@ define(modules, function(gbp) {
         $scope.list = [];
         $scope.selectedClause = null;
         $scope.newClauseObj = GBPClauseServices.createObj();
-        $scope.view = {
+        $scope.internalView = {
             clause: false,
-            edit: false
+            edit: "view"
         };
         $scope.displayLabel = 'name';
         $scope.crudLabel = 'Clause list';
@@ -328,7 +374,17 @@ define(modules, function(gbp) {
         $scope.subjects = {'options' : [], 'labels' : null};
         $scope.getDisplayLabelsFromCtrl('GBP_SUBJECTS_LABEL', $scope.subjects);
 
-        var path = null;
+        var path = null,
+
+            clear = function(){
+                $scope.list = [];
+                $scope.selectedClause = null;
+                $scope.newClauseObj = GBPClauseServices.createObj();
+                $scope.internalView = {
+                    clause: false,
+                    edit: "view"
+                };
+            };
 
         //move to separate ctrl \/
         $scope.addNewElem = function(templateObj) {
@@ -370,6 +426,8 @@ define(modules, function(gbp) {
                 }, function(){
                     //TODO: error cbk
                 });
+            }else{
+                clear();
             }
         };
 
@@ -378,8 +436,9 @@ define(modules, function(gbp) {
                 path = GBPClauseServices.createPathObj($scope.selectedTenant.id, $scope.selectedContract.id, $scope.newClauseObj.name);
                 GBPClauseServices.send(path, $scope.newClauseObj, function(data){
                     $scope.init();
-                    $scope.view.clause = false;
+                    $scope.internalView.clause = false;
                     $scope.reloadNewObj();
+                    $scope.internalView.clause = "view";
                 }, function(){
                     //TODO: error cbk
                 });
@@ -404,28 +463,36 @@ define(modules, function(gbp) {
 
         $scope.reload = function(selectedObj) {
             $scope.selectedClause = selectedObj;
-            if($scope.view.clause) {
+            $scope.internalView.edit = $scope.internalView.edit == "edit" ? $scope.internalView.edit : "view";
+            if(selectedObj){
+                $scope.internalView.clause = true;
+            }else {
+                $scope.internalView.clause = false;
+                $scope.internalView.edit = "view";
+            }
+            
+            if($scope.internalView.clause) {
                 angular.copy(selectedObj, $scope.newClauseObj);
             }
         };
 
         $scope.showForm = function() {
             $scope.reloadNewObj();
-            $scope.view.clause = true;
-            $scope.view.edit = false;
+            $scope.internalView.clause = true;
+            $scope.internalView.edit = "add";
             $scope.selectedClause = null;
         };
 
         $scope.close = function(){
-            $scope.view.clause = false;
-            $scope.view.edit = false;
+            $scope.internalView.clause = false;
+            $scope.internalView.edit = "view";
         };
 
         $scope.$on('PGN_EDIT_ELEM', function(event){
             if (!event.defaultPrevented) {
                 if ( $scope.selectedClause ) {
-                    $scope.view.clause = true;
-                    $scope.view.edit = true;
+                    $scope.internalView.clause = true;
+                    $scope.internalView.edit = "edit";
                     angular.copy($scope.selectedClause, $scope.newClauseObj);
                 }
                 event.defaultPrevented = true;
@@ -446,15 +513,25 @@ define(modules, function(gbp) {
         $scope.selectedSubject = null;
         $scope.newSubjectObj = GBPSubjectServices.createObj();
         $scope.displayLabel = 'name';
-        $scope.view = {
+        $scope.internalView = {
             subject : false,
-            edit : false
+            edit : "view"
         };
         $scope.crudLabel = 'Subject list';
 
 
         var path = null,
-            mandatoryProperties = ['order'];
+            mandatoryProperties = ['order'],
+
+            clear = function(){
+                $scope.list = [];
+                $scope.selectedSubject = null;
+                $scope.newSubjectObj = GBPSubjectServices.createObj();
+                $scope.internalView = {
+                    subject : false,
+                    edit : "view"
+                };
+            };
 
         $scope.init = function() {
             if ( $scope.selectedContract ) {
@@ -467,6 +544,8 @@ define(modules, function(gbp) {
                 }, function(){
                     //TODO: error cbk
                 });
+            }else{
+                clear();
             }
         };
 
@@ -475,8 +554,9 @@ define(modules, function(gbp) {
                 path = GBPSubjectServices.createPathObj($scope.selectedTenant.id, $scope.selectedContract.id, $scope.newSubjectObj.name);
                 GBPSubjectServices.send(path, $scope.newSubjectObj, function(data){
                     $scope.init();
-                    $scope.view.subject = false;
+                    $scope.internalView.subject = false;
                     $scope.reloadNewObj();
+                    $scope.internalView.edit = "view";
                 }, function(){
                     //TODO: error cbk
                 });
@@ -501,7 +581,15 @@ define(modules, function(gbp) {
 
         $scope.reload = function(selectedObj) {
             $scope.selectedSubject = selectedObj;
-            if($scope.view.subject) {
+            $scope.internalView.edit = $scope.internalView.edit == "edit" ? $scope.internalView.edit : "view";
+            if(selectedObj){
+                $scope.internalView.subject = true;
+            }else {
+                $scope.internalView.subject = false;
+                $scope.internalView.edit = "view";
+            }
+
+            if($scope.internalView.subject) {
                 angular.copy(selectedObj, $scope.newSubjectObj);
             }
             $scope.sendReloadEventFromRoot('GBP_SUBJECT_RELOAD');
@@ -509,21 +597,21 @@ define(modules, function(gbp) {
 
         $scope.showForm = function() {
             $scope.reloadNewObj();
-            $scope.view.subject = true;
-            $scope.view.edit = false;
+            $scope.internalView.subject = true;
+            $scope.internalView.edit = "add";
             $scope.selectedSubject = null;
         };
 
         $scope.close = function(){
-            $scope.view.subject = false;
-            $scope.view.edit = false;
+            $scope.internalView.subject = false;
+            $scope.internalView.edit = "view";
         };
 
         $scope.$on('PGN_EDIT_ELEM', function(event){
             if (!event.defaultPrevented) {
                 if ( $scope.selectedSubject ) {
-                    $scope.view.subject = true;
-                    $scope.view.edit = true;
+                    $scope.internalView.subject = true;
+                    $scope.internalView.edit = "edit";
                     angular.copy($scope.selectedSubject, $scope.newSubjectObj);
                 }
                 event.defaultPrevented = true;
@@ -544,14 +632,24 @@ define(modules, function(gbp) {
         $scope.selectedRule = null;
         $scope.newRuleObj = GBPRuleServices.createObj();
         $scope.displayLabel = 'name';
-        $scope.view = {
+        $scope.internalView = {
             rule : false,
-            edit : false
+            edit : "view"
         };
         $scope.crudLabel = 'Rule list';
 
         var path = null,
-            mandatoryProperties = ['order'];
+            mandatoryProperties = ['order'],
+
+            clear = function(){
+                $scope.list = [];
+                $scope.selectedRule = null;
+                $scope.newRuleObj = GBPRuleServices.createObj();
+                $scope.internalView = {
+                    rule : false,
+                    edit : "view"
+                };
+            };
 
         $scope.init = function() {
             if ( $scope.selectedSubject ) {
@@ -563,6 +661,8 @@ define(modules, function(gbp) {
                 }, function(){
                     //TODO: error cbk
                 });
+            }else{
+                clear();
             }
         };
 
@@ -571,8 +671,9 @@ define(modules, function(gbp) {
                 path = GBPRuleServices.createPathObj($scope.selectedTenant.id, $scope.selectedContract.id, $scope.selectedSubject.name, $scope.newRuleObj.name);
                 GBPRuleServices.send(path, $scope.newRuleObj, function(data){
                     $scope.init();
-                    $scope.view.rule = false;
+                    $scope.internalView.rule = false;
                     $scope.reloadNewObj();
+                    $scope.internalView.edit = "view";
                 }, function(){
                     //TODO: error cbk
                 });
@@ -597,7 +698,15 @@ define(modules, function(gbp) {
 
         $scope.reload = function(selectedObj) {
             $scope.selectedRule = selectedObj;
-            if($scope.view.rule) {
+            $scope.internalView.edit = $scope.internalView.edit == "edit" ? $scope.internalView.edit : "view";
+            if(selectedObj){
+                $scope.internalView.rule = true;
+            }else {
+                $scope.internalView.rule = false;
+                $scope.internalView.edit = "view";
+            }
+
+            if($scope.internalView.rule) {
                 angular.copy(selectedObj, $scope.newRuleObj);
             }
             $scope.$broadcast('GBP_RULE_RELOAD');
@@ -605,21 +714,21 @@ define(modules, function(gbp) {
 
         $scope.showForm = function() {
             $scope.reloadNewObj();
-            $scope.view.rule = true;
-            $scope.view.edit = false;
+            $scope.internalView.rule = true;
+            $scope.internalView.edit = "add";
             $scope.selectedRule = null;
         };
 
         $scope.close = function(){
-            $scope.view.rule = false;
-            $scope.view.edit = false;
+            $scope.internalView.rule = false;
+            $scope.internalView.edit = "view";
         };
 
         $scope.$on('PGN_EDIT_ELEM', function(event){
             if (!event.defaultPrevented) {
                 if ( $scope.selectedRule ) {
-                $scope.view.rule = true;
-                $scope.view.edit = true;
+                $scope.internalView.rule = true;
+                $scope.internalView.edit = "edit";
                     angular.copy($scope.selectedRule, $scope.newRuleObj);
                 }
                 event.defaultPrevented = true;
@@ -636,25 +745,35 @@ define(modules, function(gbp) {
         $scope.selectedActionRef = null;
         $scope.newActionRefObj = GBPActionRefsServices.createObj();
         $scope.displayLabel = 'name';
-        $scope.view = {
+        $scope.internalView = {
             actionRef : false,
-            edit : false
+            edit : "view"
         };
         $scope.crudLabel = 'Action ref list';
 
         $scope.actionInstanceNames = {'options' : [], 'labels' : $scope.displayLabel};
 
         var path = null,
-            mandatoryProperties = ['order'];
+            mandatoryProperties = ['order'],
 
-        var actionInstanceNamesLoad = function() {
-            var actionInstancePath = GBPActionInstanceServices.createPathObj($scope.selectedTenant.id);
-            GBPActionInstanceServices.load(actionInstancePath, function(data){
-                $scope.actionInstanceNames.options = data;
-            },function(){
-                //TODO: error cbk
-            });
-        };
+            actionInstanceNamesLoad = function() {
+                var actionInstancePath = GBPActionInstanceServices.createPathObj($scope.selectedTenant.id);
+                GBPActionInstanceServices.load(actionInstancePath, function(data){
+                    $scope.actionInstanceNames.options = data;
+                },function(){
+                    //TODO: error cbk
+                });
+            },
+
+            clear = function(){
+                $scope.list = [];
+                $scope.selectedActionRef = null;
+                $scope.newActionRefObj = GBPActionRefsServices.createObj();
+                $scope.internalView = {
+                    actionRef : false,
+                    edit : "view"
+                };
+            };
 
         $scope.init = function() {
             if ( $scope.selectedRule ) {
@@ -668,6 +787,8 @@ define(modules, function(gbp) {
                 });
 
                 actionInstanceNamesLoad();
+            }else{
+                clear();
             }
         };
 
@@ -676,8 +797,9 @@ define(modules, function(gbp) {
                 path = GBPActionRefsServices.createPathObj($scope.selectedTenant.id, $scope.selectedContract.id, $scope.selectedSubject.name, $scope.selectedRule.name, $scope.newActionRefObj.name);
                 GBPActionRefsServices.send(path, $scope.newActionRefObj, function(data){
                     $scope.init();
-                    $scope.view.actionRef = false;
+                    $scope.internalView.actionRef = false;
                     $scope.reloadNewObj();
+                    $scope.internalView.edit = "view";
                 }, function(){
                     //TODO: error cbk
                 });
@@ -702,28 +824,36 @@ define(modules, function(gbp) {
 
         $scope.reload = function(selectedObj) {
             $scope.selectedActionRef = selectedObj;
-            if($scope.view.actionRef) {
+            $scope.internalView.edit = $scope.internalView.edit == "edit" ? $scope.internalView.edit : "view";
+            if(selectedObj){
+                $scope.internalView.actionRef = true;
+            }else {
+                $scope.internalView.actionRef = false;
+                $scope.internalView.edit = "view";
+            }
+
+            if($scope.internalView.actionRef) {
                 angular.copy(selectedObj, $scope.newActionRefObj);
             }
         };
 
         $scope.showForm = function() {
             $scope.reloadNewObj();
-            $scope.view.actionRef = true;
-            $scope.view.edit = false;
+            $scope.internalView.actionRef = true;
+            $scope.internalView.edit = "add";
             $scope.selectedActionRef = null;
         };
 
         $scope.close = function(){
-            $scope.view.actionRef = false;
-            $scope.view.edit = false;
+            $scope.internalView.actionRef = false;
+            $scope.internalView.edit = "view";
         };
 
         $scope.$on('PGN_EDIT_ELEM', function(event){
             if (!event.defaultPrevented) {
                 if ( $scope.selectedActionRef ) {
-                    $scope.view.actionRef = true;
-                    $scope.view.edit = true;
+                    $scope.internalView.actionRef = true;
+                    $scope.internalView.edit = "edit";
                     angular.copy($scope.selectedActionRef, $scope.newActionRefObj);
                 }
                 event.defaultPrevented = true;
@@ -744,9 +874,9 @@ define(modules, function(gbp) {
         $scope.selectedClassifierRef = null;
         $scope.newClassifierRefObj = GBPClassifierRefsServices.createObj();
         $scope.displayLabel = 'name';
-        $scope.view = {
+        $scope.internalView = {
             classifierRef : false,
-            edit : false
+            edit : "view"
         };
 
         $scope.instanceNames = {'options' : [], 'labels' : $scope.displayLabel};
@@ -756,16 +886,26 @@ define(modules, function(gbp) {
 
         $scope.crudLabel = 'Classifier ref list';
 
-        var path = null;
+        var path = null,
 
-        var instanceNamesLoad = function() {
-            var classifierInstancePath = GBPClassifierInstanceServices.createPathObj($scope.selectedTenant.id);
-            GBPClassifierInstanceServices.load(classifierInstancePath, function(data){
-                $scope.instanceNames.options = data;
-            },function(){
-                //TODO: error cbk
-            });
-        };
+            instanceNamesLoad = function() {
+                var classifierInstancePath = GBPClassifierInstanceServices.createPathObj($scope.selectedTenant.id);
+                GBPClassifierInstanceServices.load(classifierInstancePath, function(data){
+                    $scope.instanceNames.options = data;
+                },function(){
+                    //TODO: error cbk
+                });
+            },
+
+            clear = function(){
+                $scope.list = [];
+                $scope.selectedClassifierRef = null;
+                $scope.newClassifierRefObj = GBPClassifierRefsServices.createObj();
+                $scope.internalView = {
+                    classifierRef : false,
+                    edit : "view"
+                };
+            };
 
         $scope.init = function() {
             if ( $scope.selectedRule ) {
@@ -781,6 +921,8 @@ define(modules, function(gbp) {
                 });
 
                 instanceNamesLoad();
+            }else{
+                clear();
             }
         };
 
@@ -789,8 +931,9 @@ define(modules, function(gbp) {
                 path = GBPClassifierRefsServices.createPathObj($scope.selectedTenant.id, $scope.selectedContract.id, $scope.selectedSubject.name, $scope.selectedRule.name, $scope.newClassifierRefObj.name);
                 GBPClassifierRefsServices.send(path, $scope.newClassifierRefObj, function(data){
                     $scope.init();
-                    $scope.view.classifierRef = false;
+                    $scope.internalView.classifierRef = false;
                     $scope.reloadNewObj();
+                    $scope.internalView.edit = "view";
                 }, function(){
                     //TODO: error cbk
                 });
@@ -815,28 +958,36 @@ define(modules, function(gbp) {
 
         $scope.reload = function(selectedObj) {
             $scope.selectedClassifierRef = selectedObj;
-            if($scope.view.classifierRef) {
+            $scope.internalView.edit = $scope.internalView.edit == "edit" ? $scope.internalView.edit : "view";
+            if(selectedObj){
+                $scope.internalView.classifierRef = true;
+            }else {
+                $scope.internalView.classifierRef = false;
+                $scope.internalView.edit = "view";
+            }
+
+            if($scope.internalView.classifierRef) {
                 angular.copy(selectedObj, $scope.newClassifierRefObj);
             }
         };
 
         $scope.showForm = function() {
             $scope.reloadNewObj();
-            $scope.view.classifierRef = true;
-            $scope.view.edit = false;
+            $scope.internalView.classifierRef = true;
+            $scope.internalView.edit = "add";
             $scope.selectedClassifierRef = null;
         };
 
         $scope.close = function(){
-            $scope.view.classifierRef = false;
-            $scope.view.edit = false;
+            $scope.internalView.classifierRef = false;
+            $scope.internalView.edit = "view";
         };
 
         $scope.$on('PGN_EDIT_ELEM', function(event){
             if (!event.defaultPrevented) {
                 if ( $scope.selectedClassifierRef ) {
-                    $scope.view.classifierRef = true;
-                    $scope.view.edit = true;
+                    $scope.internalView.classifierRef = true;
+                    $scope.internalView.edit = "edit";
                     angular.copy($scope.selectedClassifierRef, $scope.newClassifierRefObj);
                 }
                 event.defaultPrevented = true;
@@ -854,11 +1005,15 @@ define(modules, function(gbp) {
 
     gbp.register.controller('tenantCtrl', ['$scope', 'GBPTenantServices', '$filter', function($scope, GBPTenantServices, $filter){ 
         $scope.list = [];
-        $scope.tenantView = false;
         $scope.selectedTenantObj = null;
         $scope.newTenantObj = GBPTenantServices.createObj();
         $scope.displayLabel = ['name' , 'id'];
         $scope.crudLabel = 'Tenants list';
+
+        $scope.view = {
+            tenant: false,
+            edit: "view"
+        };
 
         $scope.init = function() {
             GBPTenantServices.load(
@@ -877,7 +1032,8 @@ define(modules, function(gbp) {
                 path = GBPTenantServices.createPathObj($scope.newTenantObj.id);
                 GBPTenantServices.send(path, $scope.newTenantObj, function(data){
                     $scope.init();
-                    $scope.tenantView = false;
+                    $scope.view.tenant = false;
+                    $scope.view.edit = "view";
                     $scope.$emit('GBP_GLOBAL_TENANT_RELOAD');
                 }, function(){
                     //TODO: error cbk
@@ -891,7 +1047,7 @@ define(modules, function(gbp) {
 
                 GBPTenantServices.delete(path, function(data){
                     $scope.init();
-                    $scope.tenantView = false;
+                    $scope.view.tenant = false;
                     $scope.$emit('GBP_GLOBAL_TENANT_RELOAD');
                 }, function(){
                     //TODO: error cbk
@@ -901,7 +1057,17 @@ define(modules, function(gbp) {
 
         $scope.reload = function(selectedObj) {
             $scope.selectedTenantObj = selectedObj;
-            if ($scope.tenantView) {
+
+            $scope.view.edit = $scope.view.edit == "edit" ? $scope.view.edit : "view";
+            if(selectedObj){
+                $scope.view.tenant = true;
+            }
+            else {
+                $scope.view.tenant = false;
+                $scope.view.edit = "view";
+            }
+
+            if ($scope.view.tenant) {
                 angular.copy(selectedObj, $scope.newTenantObj);
             }
         };
@@ -909,33 +1075,35 @@ define(modules, function(gbp) {
         $scope.showForm = function() {
             $scope.newTenantObj = GBPTenantServices.createObj();
             $scope.selectedTenantObj = null;
-            $scope.tenantView = true;
+            $scope.view.tenant = true;
+            $scope.view.edit = "add";
         };
 
         $scope.close = function(){
-            $scope.tenantView = false;
+            $scope.view.tenant = false;
+            $scope.view.edit = "view";
         };
 
        $scope.$on('PGN_EDIT_ELEM', function(event){
             if (!event.defaultPrevented) {
                 if ( $scope.selectedTenantObj ) {
-                    $scope.tenantView = true;
+                    $scope.view.tenant = true;
+                    $scope.view.edit = "edit";
                     angular.copy($scope.selectedTenantObj, $scope.newTenantObj);
                 }
                 event.defaultPrevented = true;
             }
         });
 
-        // $scope.$on('GBP_TENANT_RELOAD',function(){
-        //     $scope.init();
-        // });
+        $scope.$on('GBP_GLOBAL_TENANT_RELOAD',function(){
+            $scope.init();
+        });
     }]);
 
     gbp.register.controller('epgCtrl',['$scope', 'GBPEpgServices', 'GBPContractServices', '$filter',
         function($scope, GBPEpgServices, GBPContractServices, $filter){
         $scope.selectedEpg = null;
         $scope.newEpgObj = GBPEpgServices.createObj();
-        $scope.epgView = false;
         $scope.displayLabel = ['name', 'id'];
         $scope.crudLabel = 'Group list';
 
@@ -946,15 +1114,30 @@ define(modules, function(gbp) {
 
         $scope.list = [];
 
-        var loadContracts = function() {
-            GBPContractServices.load(path, function(data){
-                $scope.contracts.options = data;
-            }, function(){
-                //TODO: error cbk
-            });
+        $scope.internalView = {
+            epg: false,
+            edit: "view"
         };
 
-        var mandatoryProperties = ['name'];
+        var loadContracts = function() {
+                GBPContractServices.load(path, function(data){
+                    $scope.contracts.options = data;
+                }, function(){
+                    //TODO: error cbk
+                });
+            },
+
+            mandatoryProperties = ['name'],
+
+            clear = function(){
+                $scope.list = [];
+                $scope.selectedEpg = null;
+                $scope.newEpgObj = GBPEpgServices.createObj();
+                 $scope.internalView = {
+                    epg: false,
+                    edit: "view"
+                };
+            };
 
         $scope.init = function() {
             if ($scope.selectedTenant) {
@@ -969,6 +1152,8 @@ define(modules, function(gbp) {
                 });
 
                 loadContracts();
+            }else{
+                clear();
             }
         };
 
@@ -977,8 +1162,9 @@ define(modules, function(gbp) {
                 path = GBPEpgServices.createPathObj($scope.selectedTenant.id, $scope.newEpgObj.id);
                 GBPEpgServices.send(path, $scope.newEpgObj, function(data){
                     $scope.init();
-                    $scope.epgView = false;
+                    $scope.internalView.epg = false;
                     $scope.reloadNewObj();
+                    $scope.internalView.edit = "view";
                 }, function(){
                     //TODO: error cbk
                 });
@@ -990,6 +1176,7 @@ define(modules, function(gbp) {
                 path = GBPEpgServices.createPathObj($scope.selectedTenant.id, $scope.selectedEpg.id);
                 GBPEpgServices.delete(path, function(data){
                     $scope.init();
+                    $scope.internalView.epg = false;
                 }, function(){
                     //TODO: error cbk
                 });
@@ -997,9 +1184,10 @@ define(modules, function(gbp) {
         };
 
         $scope.showForm = function() {
-            $scope.epgView = true;
+            $scope.internalView.epg = true;
             $scope.reloadNewObj();
             $scope.selectedEpg = null;
+            $scope.internalView.edit = "add";
         };
 
         $scope.reloadNewObj = function() {
@@ -1008,19 +1196,29 @@ define(modules, function(gbp) {
 
         $scope.reload = function(selectedObj) {
             $scope.selectedEpg = selectedObj;
-            if($scope.epgView) {
+            $scope.internalView.edit = $scope.internalView.edit == "edit" ? $scope.internalView.edit : "view";
+            if(selectedObj){
+                $scope.internalView.epg = true;
+            }else {
+                $scope.internalView.epg = false;
+                $scope.internalView.edit = "view";
+            }
+
+            if($scope.internalView.epg) {
                 angular.copy(selectedObj, $scope.newEpgObj);
             }
             $scope.sendReloadEventFromRoot('GBP_EPG_RELOAD');
         };
 
         $scope.close = function(){
-            $scope.epgView = false;
+            $scope.internalView.epg = false;
+            $scope.internalView.edit = "view";
         };
         $scope.$on('PGN_EDIT_ELEM', function(event){
             if (!event.defaultPrevented) {
                 if ( $scope.selectedEpg ) {
-                    $scope.epgView = true;
+                    $scope.internalView.epg = true;
+                    $scope.internalView.edit = "edit";
                     angular.copy($scope.selectedEpg, $scope.newEpgObj);
                 }
                 event.defaultPrevented = true;
@@ -1044,12 +1242,22 @@ define(modules, function(gbp) {
         $scope.list = [];
         $scope.selectedCNS = null;
         $scope.newCNSObj = GBPConNamedSelServices.createObj();
-        $scope.view = {
+        $scope.internalView = {
             cns: false,
-            edit: false
+            edit: "view"
         };
         $scope.displayLabel = 'name';
         $scope.crudLabel = 'Consumer named selectors list';
+
+        var clear = function(){
+                $scope.list = [];
+                $scope.selectedCNS = null;
+                $scope.newCNSObj = GBPConNamedSelServices.createObj();
+                $scope.internalView = {
+                    cns: false,
+                    edit: "view"
+                };
+            };
 
         //move to separate ctrl \/
         $scope.addNewElem = function(templateObj) {
@@ -1081,6 +1289,8 @@ define(modules, function(gbp) {
                 }, function(){
                     //TODO: error cbk
                 });
+            }else{
+                clear();
             }
         };
 
@@ -1089,8 +1299,8 @@ define(modules, function(gbp) {
                 path = GBPConNamedSelServices.createPathObj($scope.selectedTenant.id, $scope.selectedEpg.id, $scope.newCNSObj.name);
                 GBPConNamedSelServices.send(path, $scope.newCNSObj, function(data){
                     $scope.init();
-                    $scope.view.cns = false;
-
+                    $scope.internalView.cns = false;
+                    $scope.internalView.cns = "view";
                     $scope.reloadNewObj();
                 }, function(){
                     //TODO: error cbk
@@ -1112,8 +1322,8 @@ define(modules, function(gbp) {
         $scope.showForm = function() {
             $scope.reloadNewObj();
             $scope.selectedCNS = null;
-            $scope.view.cns = true;
-            $scope.view.edit = false;
+            $scope.internalView.cns = true;
+            $scope.internalView.edit = "add";
         };
 
         $scope.reloadNewObj = function() {
@@ -1122,21 +1332,29 @@ define(modules, function(gbp) {
 
         $scope.reload = function(selectedObj) {
             $scope.selectedCNS = selectedObj;
-            if($scope.view.cns) {
+            $scope.internalView.edit = $scope.internalView.edit == "edit" ? $scope.internalView.edit : "view";
+            if(selectedObj){
+                $scope.internalView.cns = true;
+            }else {
+                $scope.internalView.cns = false;
+                $scope.internalView.edit = "view";
+            }
+
+            if($scope.internalView.cns) {
                 angular.copy(selectedObj, $scope.newCNSObj);
             }
         };
 
         $scope.close = function(){
-            $scope.view.cns = false;
-            $scope.view.edit = false;
+            $scope.internalView.cns = false;
+            $scope.internalView.edit = "view";
         };
 
         $scope.$on('PGN_EDIT_ELEM', function(event){
             if (!event.defaultPrevented) {
                 if ( $scope.selectedEpg ) {
-                    $scope.view.cns = true;
-                    $scope.view.edit = true;
+                    $scope.internalView.cns = true;
+                    $scope.internalView.edit = "add";
                     angular.copy($scope.selectedCNS, $scope.newCNSObj);
                 }
                 event.defaultPrevented = true;
@@ -1154,10 +1372,20 @@ define(modules, function(gbp) {
         $scope.newPNSObj = GBPProNamedSelServices.createObj();
         $scope.displayLabel = 'name';
         $scope.crudLabel = 'Provider named selectors list';
-        $scope.view = {
+        $scope.internalView = {
             pns: false,
-            edit: false
+            edit: "view"
         };
+
+        var clear = function(){
+                $scope.list = [];
+                $scope.selectedPNS = null;
+                $scope.newPNSObj = GBPProNamedSelServices.createObj();
+                $scope.internalView = {
+                    pns: false,
+                    edit: "view"
+                };
+            };
 
         //move to separate ctrl \/
         $scope.addNewElem = function(templateObj) {
@@ -1189,6 +1417,8 @@ define(modules, function(gbp) {
                 }, function(){
                     //TODO: error cbk
                 });
+            }else{
+                clear();
             }
         };
 
@@ -1197,8 +1427,9 @@ define(modules, function(gbp) {
                 path = GBPProNamedSelServices.createPathObj($scope.selectedTenant.id, $scope.selectedEpg.id, $scope.newPNSObj.name);
                 GBPProNamedSelServices.send(path, $scope.newPNSObj, function(data){
                     $scope.init();
-                    $scope.view.pns = false;
+                    $scope.internalView.pns = false;
                     $scope.reloadNewObj();
+                    $scope.internalView.cns = "view";
                 }, function(){
                     //TODO: error cbk
                 });
@@ -1218,8 +1449,8 @@ define(modules, function(gbp) {
 
         $scope.showForm = function() {
             $scope.reloadNewObj();
-            $scope.view.pns = true;
-            $scope.view.edit = false;
+            $scope.internalView.pns = true;
+            $scope.internalView.edit = "add";
             $scope.selectedPNS = null;
         };
 
@@ -1229,20 +1460,28 @@ define(modules, function(gbp) {
 
         $scope.reload = function(selectedObj) {
             $scope.selectedPNS = selectedObj;
-            if($scope.view.pns) {
+            $scope.internalView.edit = $scope.internalView.edit == "edit" ? $scope.internalView.edit : "view";
+            if(selectedObj){
+                $scope.internalView.pns = true;
+            }else {
+                $scope.internalView.pns = false;
+                $scope.internalView.edit = "view";
+            }
+            
+            if($scope.internalView.pns) {
                 angular.copy(selectedObj, $scope.newPNSObj);
             }
         };
 
         $scope.close = function(){
-            $scope.view.pns = false;
-            $scope.view.edit = false;
+            $scope.internalView.pns = false;
+            $scope.internalView.edit = "view";
         };
         $scope.$on('PGN_EDIT_ELEM', function(event){
             if (!event.defaultPrevented) {
                 if ( $scope.selectedEpg ) {
-                    $scope.view.pns = true;
-                    $scope.view.edit = true;
+                    $scope.internalView.pns = true;
+                    $scope.internalView.edit = "edit";
                     angular.copy($scope.selectedPNS, $scope.newPNSObj);
                 }
                 event.defaultPrevented = true;
@@ -1256,7 +1495,6 @@ define(modules, function(gbp) {
 
     gbp.register.controller('l2FloodCtrl', ['$scope', 'GBPL2FloodDomainServices', 'GBPL2BridgeDomainServices', '$filter', function($scope, GBPL2FloodDomainServices, GBPL2BridgeDomainServices, $filter){ 
         $scope.list = [];
-        $scope.l2FloodView = false;
         $scope.selectedL2Flood = null;
         $scope.newL2FloodObj = GBPL2FloodDomainServices.createObj();
         $scope.displayLabel = ['name', 'id'];
@@ -1265,15 +1503,30 @@ define(modules, function(gbp) {
         $scope.l2bridge = {'options' : [], 'labels' : null};
         $scope.getDisplayLabelsFromCtrl('GBP_L2BRIDGE_LABEL', $scope.l2bridge);
 
-        var path = null;
-
-        var loadL2BridgeList = function() {
-            GBPL2BridgeDomainServices.load(GBPL2BridgeDomainServices.createPathObj($scope.selectedTenant.id), function(data){
-                $scope.l2bridge.options = data;
-            }, function(){
-
-            });
+        $scope.view = {
+            l2flood: false,
+            edit: "view"
         };
+
+        var path = null,
+
+            loadL2BridgeList = function() {
+                GBPL2BridgeDomainServices.load(GBPL2BridgeDomainServices.createPathObj($scope.selectedTenant.id), function(data){
+                    $scope.l2bridge.options = data;
+                }, function(){
+
+                });
+            },
+
+            clear = function(){
+                $scope.list = [];
+                $scope.selectedL2Flood = null;
+                $scope.newL2FloodObj = GBPL2FloodDomainServices.createObj();
+                $scope.view = {
+                    l2flood: false,
+                    edit: "view"
+                };
+            };
 
         $scope.init = function() {
             if ( $scope.selectedTenant ) {
@@ -1289,6 +1542,8 @@ define(modules, function(gbp) {
                 });
 
                 loadL2BridgeList();
+            }else{
+                clear();
             }
         };
 
@@ -1297,7 +1552,8 @@ define(modules, function(gbp) {
                 path = GBPL2FloodDomainServices.createPathObj($scope.selectedTenant.id, $scope.newL2FloodObj.id);
                 GBPL2FloodDomainServices.send(path, $scope.newL2FloodObj, function(data){
                     $scope.init();
-                    $scope.l2FloodView = false;
+                    $scope.view.l2flood = false;
+                    $scope.view.edit = "view";
                     $scope.sendReloadEventFromRoot('GBP_L2FLOOD_RELOAD');
                 }, function(){
                     //TODO: error cbk
@@ -1310,7 +1566,8 @@ define(modules, function(gbp) {
                 path = GBPL2FloodDomainServices.createPathObj($scope.selectedTenant.id, $scope.selectedL2Flood.id);
                 GBPL2FloodDomainServices.delete(path, function(data){
                     $scope.init();
-                    $scope.l2FloodView = false;
+                    $scope.view.l2flood = false;
+                    $scope.view.edit = "view";
                     $scope.sendReloadEventFromRoot('GBP_L2FLOOD_RELOAD');
                 }, function(){
                     //TODO: error cbk
@@ -1320,26 +1577,39 @@ define(modules, function(gbp) {
 
         $scope.reload = function(selectedObj) {
             $scope.selectedL2Flood = selectedObj;
-            if ($scope.l2FloodView) {
+
+            $scope.view.edit = $scope.view.edit == "edit" ? $scope.view.edit : "view";
+            if(selectedObj){
+                $scope.view.l2flood = true;
+            }
+            else {
+                $scope.view.l2flood = false;
+                $scope.view.edit = "view";
+            }
+
+            if ($scope.view.l2flood) {
                 angular.copy(selectedObj, $scope.newL2FloodObj);
             }
+
             $scope.sendReloadEventFromRoot('GBP_L2FLOOD_RELOAD');
         };
 
         $scope.showForm = function() {
             $scope.newL2FloodObj = GBPL2FloodDomainServices.createObj();
             $scope.selectedL2Flood = null;
-            $scope.l2FloodView = true;
+            $scope.view.l2flood = true;
+            $scope.view.edit = "add";
         };
 
         $scope.close = function(){
-            $scope.l2FloodView = false;
+            $scope.view.l2flood = false;
         };
 
         $scope.$on('PGN_EDIT_ELEM', function(event){
             if (!event.defaultPrevented) {
                 if ( $scope.selectedL2Flood ) {
-                    $scope.l2FloodView = true;
+                    $scope.view.l2flood = true;
+                    $scope.view.edit = "edit";
                     angular.copy($scope.selectedL2Flood, $scope.newL2FloodObj);
                 }
                 event.defaultPrevented = true;
@@ -1361,7 +1631,6 @@ define(modules, function(gbp) {
 
     gbp.register.controller('l2BridgeCtrl', ['$scope', 'GBPL2BridgeDomainServices', 'GBPL3ContextServices', '$filter', function($scope, GBPL2BridgeDomainServices, GBPL3ContextServices, $filter){ 
         $scope.list = [];
-        $scope.l2BridgeView = false;
         $scope.selectedL2Bridge = null;
         $scope.newL2BridgeObj = GBPL2BridgeDomainServices.createObj();
         $scope.displayLabel = ['name', 'id'];
@@ -1370,16 +1639,31 @@ define(modules, function(gbp) {
         $scope.l3context = {'options' : [], 'labels' : null};
         $scope.getDisplayLabelsFromCtrl('GBP_L3CONTEXT_LABEL', $scope.l3context);
 
-        var path = null;
-
-        var loadL3ContextList = function() {
-            GBPL3ContextServices.load(GBPL3ContextServices.createPathObj($scope.selectedTenant.id), function(data){
-                $scope.l3context.options = data;
-                //$scope.$broadcast('GBP_L2BRIDGE_RELOAD');
-            }, function(){
-
-            });
+        $scope.view = {
+            l2bridge: false,
+            edit: "view"
         };
+
+        var path = null,
+
+            loadL3ContextList = function() {
+                GBPL3ContextServices.load(GBPL3ContextServices.createPathObj($scope.selectedTenant.id), function(data){
+                    $scope.l3context.options = data;
+                    //$scope.$broadcast('GBP_L2BRIDGE_RELOAD');
+                }, function(){
+
+                });
+            },
+
+            clear = function(){
+                $scope.list = [];
+                $scope.selectedL2Bridge = null;
+                $scope.newL2BridgeObj = GBPL2BridgeDomainServices.createObj();
+                $scope.view = {
+                    l2bridge: false,
+                    edit: "view"
+                };
+            };
 
         $scope.init = function() {
             if ( $scope.selectedTenant ) {
@@ -1395,6 +1679,8 @@ define(modules, function(gbp) {
                 });
 
                 loadL3ContextList();
+            }else{
+                clear();
             }
         };
 
@@ -1405,7 +1691,8 @@ define(modules, function(gbp) {
                 path = GBPL2BridgeDomainServices.createPathObj($scope.selectedTenant.id, $scope.newL2BridgeObj.id);
                 GBPL2BridgeDomainServices.send(path, $scope.newL2BridgeObj, function(data){
                     $scope.init();
-                    $scope.l2BridgeView = false;
+                    $scope.view.l2bridge = false;
+                    $scope.view.edit = "view";
                     $scope.sendReloadEventFromRoot('GBP_L2BRIDGE_RELOAD');
                 }, function(){
                     //TODO: error cbk
@@ -1418,7 +1705,8 @@ define(modules, function(gbp) {
                 path = GBPL2BridgeDomainServices.createPathObj($scope.selectedTenant.id, $scope.selectedL2Bridge.id);
                 GBPL2BridgeDomainServices.delete(path, function(data){
                     $scope.init();
-                    $scope.l2BridgeView = false;
+                    $scope.view.l2bridge = false;
+                    $scope.view.edit = "view";
                     $scope.sendReloadEventFromRoot('GBP_L2BRIDGE_RELOAD');
                 }, function(){
                     //TODO: error cbk
@@ -1428,26 +1716,39 @@ define(modules, function(gbp) {
 
         $scope.reload = function(selectedObj) {
             $scope.selectedL2Bridge = selectedObj;
-            if ($scope.l2BridgeView) {
+
+            $scope.view.edit = $scope.view.edit == "edit" ? $scope.view.edit : "view";
+            if(selectedObj){
+                $scope.view.l2bridge = true;
+            }
+            else {
+                $scope.view.l2bridge = false;
+                $scope.view.edit = "view";
+            }
+
+            if ($scope.view.l2bridge) {
                 angular.copy(selectedObj, $scope.newL2BridgeObj);
             }
+
             $scope.sendReloadEventFromRoot('GBP_L2BRIDGE_RELOAD');
         };
 
         $scope.showForm = function() {
             $scope.newL2BridgeObj = GBPL2BridgeDomainServices.createObj();
             $scope.selectedL2Bridge = null;
-            $scope.l2BridgeView = true;
+            $scope.view.l2bridge = true;
+            $scope.view.edit = "add";
         };
 
         $scope.close = function(){
-            $scope.l2BridgeView = false;
+            $scope.view.l2bridge = false;
         };
 
         $scope.$on('PGN_EDIT_ELEM', function(event){
             if (!event.defaultPrevented) {
                 if ( $scope.selectedL2Bridge ) {
-                    $scope.l2BridgeView = true;
+                    $scope.view.l2bridge = true;
+                    $scope.view.edit = "edit";
                     angular.copy($scope.selectedL2Bridge, $scope.newL2BridgeObj);
                 }
                 event.defaultPrevented = true;
@@ -1469,13 +1770,27 @@ define(modules, function(gbp) {
 
     gbp.register.controller('l3ContextCtrl', ['$scope', 'GBPL3ContextServices', '$filter', function($scope, GBPL3ContextServices, $filter){ //GBPContractServices
         $scope.list = [];
-        $scope.l3ContextView = false;
         $scope.selectedL3Context = null;
         $scope.newL3ContextObj = GBPL3ContextServices.createObj();
         $scope.displayLabel = ['name', 'id'];
         $scope.crudLabel = 'L3 Context list';
 
-        var path = null;
+        $scope.view = {
+            l3context: false,
+            edit: "view"
+        };
+
+        var path = null,
+
+            clear = function(){
+                $scope.list = [];
+                $scope.view = {
+                    l3context: false,
+                    edit: "view"
+                };
+                $scope.selectedL3Context = null;
+                $scope.newL3ContextObj = GBPL3ContextServices.createObj();
+            };
 
         $scope.init = function() {
             if ( $scope.selectedTenant ) {
@@ -1488,6 +1803,8 @@ define(modules, function(gbp) {
                 }, function(){
 
                 });
+            }else{
+                clear();
             }
         };
 
@@ -1496,7 +1813,8 @@ define(modules, function(gbp) {
                 path = GBPL3ContextServices.createPathObj($scope.selectedTenant.id, $scope.newL3ContextObj.id);
                 GBPL3ContextServices.send(path, $scope.newL3ContextObj, function(data){
                     $scope.init();
-                    $scope.l3ContextView = false;
+                    $scope.view.l3context = false;
+                    $scope.view.edit = "view";
                     $scope.sendReloadEventFromRoot('GBP_L3CONTEXT_RELOAD');
                 }, function(){
                     //TODO: error cbk
@@ -1509,7 +1827,8 @@ define(modules, function(gbp) {
                 path = GBPL3ContextServices.createPathObj($scope.selectedTenant.id, $scope.selectedL3Context.id);
                 GBPL3ContextServices.delete(path, function(data){
                     $scope.init();
-                    $scope.l3ContextView = false;
+                    $scope.view.l3context = false;
+                    $scope.view.edit = "view";
                     $scope.sendReloadEventFromRoot('GBP_L3CONTEXT_RELOAD');
                 }, function(){
                     //TODO: error cbk
@@ -1519,26 +1838,39 @@ define(modules, function(gbp) {
 
         $scope.reload = function(selectedObj) {
             $scope.selectedL3Context = selectedObj;
-            if($scope.l3ContextView) {
+            
+            $scope.view.edit = $scope.view.edit == "edit" ? $scope.view.edit : "view";
+            if(selectedObj){
+                $scope.view.l3context = true;
+            }
+            else {
+                $scope.view.l3context = false;
+                $scope.view.edit = "view";
+            }
+
+            if($scope.view.l3context) {
                 angular.copy(selectedObj, $scope.newL3ContextObj);
             }
+
             $scope.sendReloadEventFromRoot('GBP_L3CONTEXT_RELOAD');
         };
 
         $scope.showForm = function() {
             $scope.newL3ContextObj = GBPL3ContextServices.createObj();
             $scope.selectedL3Context = null;
-            $scope.l3ContextView = true;
+            $scope.view.l3context = true;
+            $scope.view.edit = "add";
         };
 
         $scope.close = function(){
-            $scope.l3ContextView = false;
+            $scope.view.l3context = false;
         };
 
         $scope.$on('PGN_EDIT_ELEM', function(event){
             if (!event.defaultPrevented) {
                 if ( $scope.selectedL3Context ) {
-                    $scope.l3ContextView = true;
+                    $scope.view.l3context = true;
+                    $scope.view.edit = "edit";
                     angular.copy($scope.selectedL3Context, $scope.newL3ContextObj);
                 }
                 event.defaultPrevented = true;
@@ -1556,7 +1888,6 @@ define(modules, function(gbp) {
 
     gbp.register.controller('subnetCtrl', ['$scope', 'GBPSubnetServices', 'GBPL2FloodDomainServices', 'GBPL2BridgeDomainServices', 'GBPL3ContextServices', '$filter', function($scope, GBPSubnetServices, GBPL2FloodDomainServices, GBPL2BridgeDomainServices, GBPL3ContextServices, $filter){ 
         $scope.list = [];
-        $scope.subnetView = false;
         $scope.selectedSubnet = null;
         $scope.newSubnetObj = GBPSubnetServices.createObj();
         $scope.displayLabel = ['name', 'id'];
@@ -1565,30 +1896,45 @@ define(modules, function(gbp) {
         $scope.l2L3List = {'options' : [], 'labels' : null};
         $scope.getDisplayLabelsFromCtrl('GBP_L2FLOOD_LABEL', $scope.l2L3List);
 
-
-        var path = null;
-
-        var loadL2L3List = function() {
-            $scope.l2L3List.options = [];
-
-            GBPL3ContextServices.load(GBPL3ContextServices.createPathObj($scope.selectedTenant.id), function(l3ContextData){
-                $scope.l2L3List.options = $scope.l2L3List.options.concat(l3ContextData);
-            }, function(){
-
-            });
-
-            GBPL2FloodDomainServices.load(GBPL2FloodDomainServices.createPathObj($scope.selectedTenant.id), function(l2FloodData){
-                $scope.l2L3List.options = $scope.l2L3List.options.concat(l2FloodData);
-            }, function(){
-
-            });
-
-            GBPL2BridgeDomainServices.load(GBPL2BridgeDomainServices.createPathObj($scope.selectedTenant.id), function(l2BridgeData){
-                $scope.l2L3List.options = $scope.l2L3List.options.concat(l2BridgeData);
-            }, function(){
-
-            });
+        $scope.view = {
+            subnet: false,
+            edit: "view"
         };
+
+
+        var path = null,
+
+            loadL2L3List = function() {
+                $scope.l2L3List.options = [];
+
+                GBPL3ContextServices.load(GBPL3ContextServices.createPathObj($scope.selectedTenant.id), function(l3ContextData){
+                    $scope.l2L3List.options = $scope.l2L3List.options.concat(l3ContextData);
+                }, function(){
+
+                });
+
+                GBPL2FloodDomainServices.load(GBPL2FloodDomainServices.createPathObj($scope.selectedTenant.id), function(l2FloodData){
+                    $scope.l2L3List.options = $scope.l2L3List.options.concat(l2FloodData);
+                }, function(){
+
+                });
+
+                GBPL2BridgeDomainServices.load(GBPL2BridgeDomainServices.createPathObj($scope.selectedTenant.id), function(l2BridgeData){
+                    $scope.l2L3List.options = $scope.l2L3List.options.concat(l2BridgeData);
+                }, function(){
+
+                });
+            },
+
+            clear = function(){
+                $scope.list = [];
+                $scope.view = {
+                    subnet: false,
+                    edit: "view"
+                };
+                $scope.selectedSubnet = null;
+                $scope.newSubnetObj = GBPSubnetServices.createObj();
+            };
 
         $scope.init = function() {
             if ( $scope.selectedTenant ) {
@@ -1598,12 +1944,17 @@ define(modules, function(gbp) {
                     $scope.list = data;
                     $scope.newSubnetObj = GBPSubnetServices.createObj();
                     $scope.selectedSubnet = null;
+
+                    $scope.view.subnet = false;
+                    $scope.view.edit = "view";
                     //$scope.sendReloadEventFromRoot('GBP_L2BRIDGE_RELOAD');
                 }, function(){
 
                 });
 
                 loadL2L3List();
+            }else{
+                clear();
             }
         };
 
@@ -1612,7 +1963,8 @@ define(modules, function(gbp) {
                 path = GBPSubnetServices.createPathObj($scope.selectedTenant.id, $scope.newSubnetObj.id);
                 GBPSubnetServices.send(path, $scope.newSubnetObj, function(data){
                     $scope.init();
-                    $scope.subnetView = false;
+                    $scope.view.subnet = false;
+                    $scope.view.edit = "view";
                 }, function(){
                     //TODO: error cbk
                 });
@@ -1624,7 +1976,8 @@ define(modules, function(gbp) {
                 path = GBPSubnetServices.createPathObj($scope.selectedTenant.id, $scope.selectedSubnet.id);
                 GBPSubnetServices.delete(path, function(data){
                     $scope.init();
-                    $scope.subnetView = false;
+                    $scope.view.subnet = false;
+                    $scope.view.edit = "view";
                 }, function(){
                     //TODO: error cbk
                 });
@@ -1633,26 +1986,39 @@ define(modules, function(gbp) {
 
         $scope.reload = function(selectedObj) {
             $scope.selectedSubnet = selectedObj;
-            if($scope.subnetView) {
+            
+            $scope.view.edit = $scope.view.edit == "edit" ? $scope.view.edit : "view";
+            if(selectedObj){
+                $scope.view.subnet = true;
+            }
+            else {
+                $scope.view.subnet = false;
+                $scope.view.edit = "view";
+            }
+
+            if($scope.view.subnet) {
                 angular.copy(selectedObj, $scope.newSubnetObj);
             }
+
             $scope.sendReloadEventFromRoot('GBP_SUBNET_RELOAD');
         };
 
         $scope.showForm = function() {
             $scope.newSubnetObj = GBPSubnetServices.createObj();
             $scope.selectedSubnet = null;
-            $scope.subnetView = true;
+            $scope.view.subnet = true;
+            $scope.view.edit = "add";
         };
 
         $scope.close = function(){
-            $scope.subnetView = false;
+            $scope.view.subnet = false;
         };
 
         $scope.$on('PGN_EDIT_ELEM', function(event){
             if (!event.defaultPrevented) {
                 if ( $scope.selectedSubnet ) {
-                    $scope.subnetView = true;
+                    $scope.view.subnet = true;
+                    $scope.view.edit = "edit";
                     angular.copy($scope.selectedSubnet, $scope.newSubnetObj);
                 }
                 event.defaultPrevented = true;
@@ -1682,7 +2048,6 @@ define(modules, function(gbp) {
         $scope.$on('GBP_PREFIX_RELOAD',function(){
             $scope.init();
         });
-        
     }]);
 
     gbp.register.controller('gatewayCtrl', ['$scope', 'GBPGatewayServices', function($scope, GBPGatewayServices){ 
@@ -1692,13 +2057,19 @@ define(modules, function(gbp) {
         $scope.newGatewayObj = GBPGatewayServices.createObj();
         $scope.displayLabel = 'gateway';
         $scope.crudLabel = 'Gateway list';
-        $scope.view = {
+        $scope.internalView = {
             gateway: false,
-            edit: false
+            edit: "view"
         };
 
+        var path = null,
 
-        var path = null;
+            clear = function(){
+                $scope.list = [];
+                $scope.gatewayView = false;
+                $scope.selectedGateway = null;
+                $scope.newGatewayObj = GBPGatewayServices.createObj();
+            };
 
         $scope.init = function() {
             if ( $scope.selectedTenant && $scope.selectedSubnet ) {
@@ -1707,11 +2078,13 @@ define(modules, function(gbp) {
                 GBPGatewayServices.load(path, function(data){
                     $scope.list = data;
                     $scope.newGatewayObj = GBPGatewayServices.createObj();
-                    $scope.view.gateway = false;
+                    $scope.internalView.gateway = false;
                     $scope.selectedGateway = null;
                 }, function(){
 
                 });
+            }else{
+                clear();
             }
         };
 
@@ -1720,7 +2093,8 @@ define(modules, function(gbp) {
                 path = GBPGatewayServices.createPathObj($scope.selectedTenant.id, $scope.selectedSubnet.id, $scope.newGatewayObj.gateway);
                 GBPGatewayServices.send(path, $scope.newGatewayObj, function(data){
                     $scope.init();
-                    $scope.view.gateway = false;
+                    $scope.internalView.gateway = false;
+                    $scope.internalView.edit = "view";
                     $scope.sendReloadEventFromRoot('GBP_GATEWAY_RELOAD');
                 }, function(){
                     //TODO: error cbk
@@ -1733,7 +2107,7 @@ define(modules, function(gbp) {
                 path = GBPGatewayServices.createPathObj($scope.selectedTenant.id, $scope.selectedSubnet.id, $scope.selectedGateway.gateway);
                 GBPGatewayServices.delete(path, function(data){
                     $scope.init();
-                    $scope.view.gateway = false;
+                    $scope.internalView.gateway = false;
                     $scope.sendReloadEventFromRoot('GBP_GATEWAY_RELOAD');
                 }, function(){
                     //TODO: error cbk
@@ -1744,25 +2118,33 @@ define(modules, function(gbp) {
         $scope.reload = function(selectedObj) {
             $scope.selectedGateway = selectedObj;
             angular.copy(selectedObj, $scope.newGatewayObj);
+            $scope.internalView.edit = $scope.internalView.edit == "edit" ? $scope.internalView.edit : "view";
+            if(selectedObj){
+                $scope.internalView.gateway = true;
+            }else {
+                $scope.internalView.gateway = false;
+                $scope.internalView.edit = "view";
+            }
+
             $scope.sendReloadEventFromRoot('GBP_GATEWAY_SET');
         };
 
         $scope.showForm = function() {
             $scope.newGatewayObj = GBPGatewayServices.createObj();
-            $scope.view.gateway = true;
-            $scope.view.edit = false;
+            $scope.internalView.gateway = true;
+            $scope.internalView.edit = "add";
             $scope.selectedGateway = null;
         };
 
         $scope.close = function(){
-            $scope.view.gateway = false;
+            $scope.internalView.gateway = false;
         };
 
         $scope.$on('PGN_EDIT_ELEM', function(event){
             if (!event.defaultPrevented) {
                 if ( $scope.selectedGateway ) {
-                    $scope.view.gateway = true;
-                    $scope.view.edit = true;
+                    $scope.internalView.gateway = true;
+                    $scope.internalView.edit = "edit";
                     angular.copy($scope.selectedGateway, $scope.newGatewayObj);
                 }
                 event.defaultPrevented = true;
@@ -1784,13 +2166,22 @@ define(modules, function(gbp) {
         $scope.newPrefixObj = GBPPrefixServices.createObj();
         $scope.displayLabel = 'prefix';
         $scope.crudLabel = 'Prefix list';
-        $scope.view = {
+        $scope.internalView = {
             prefix: false,
-            edit: false
+            edit: "view"
         };
 
+        var path = null,
 
-        var path = null;
+            clear = function(){
+                $scope.list = [];
+                $scope.selectedPrefix = null;
+                $scope.newPrefixObj = GBPPrefixServices.createObj();
+                $scope.internalView = {
+                    prefix: false,
+                    edit: "view"
+                };
+            };
 
         $scope.init = function() {
             if ( $scope.selectedTenant && $scope.selectedSubnet && $scope.selectedGateway) {
@@ -1799,11 +2190,13 @@ define(modules, function(gbp) {
                 GBPPrefixServices.load(path, function(data){
                     $scope.list = data;
                     $scope.newPrefixObj = GBPPrefixServices.createObj();
-                    $scope.view.prefix = false;
+                    $scope.internalView.prefix = false;
                     $scope.selectedPrefix = null;
                 }, function(){
 
                 });
+            }else{
+                clear();
             }
         };
 
@@ -1812,7 +2205,8 @@ define(modules, function(gbp) {
                 path = GBPPrefixServices.createPathObj($scope.selectedTenant.id, $scope.selectedSubnet.id, $scope.selectedGateway.gateway, $scope.newPrefixObj.prefix);
                 GBPPrefixServices.send(path, $scope.newPrefixObj, function(data){
                     $scope.init();
-                    $scope.view.prefix = false;
+                    $scope.internalView.prefix = false;
+                    $scope.internalView.edit = "view";
                     $scope.sendReloadEventFromRoot('GBP_PREFIX_RELOAD');
                 }, function(){
                     //TODO: error cbk
@@ -1824,7 +2218,7 @@ define(modules, function(gbp) {
             path = GBPPrefixServices.createPathObj($scope.selectedTenant.id, $scope.selectedSubnet.id, $scope.selectedGateway.gateway, $scope.selectedPrefix.prefix);
             GBPPrefixServices.delete(path, function(data){
                 $scope.init();
-                $scope.view.prefix = false;
+                $scope.internalView.prefix = false;
                 $scope.sendReloadEventFromRoot('GBP_PREFIX_RELOAD');
             }, function(){
                 //TODO: error cbk
@@ -1833,25 +2227,33 @@ define(modules, function(gbp) {
 
         $scope.reload = function(selectedObj) {
             $scope.selectedPrefix = selectedObj;
+            $scope.internalView.edit = $scope.internalView.edit == "edit" ? $scope.internalView.edit : "view";
+            if(selectedObj){
+                $scope.internalView.prefix = true;
+            }else {
+                $scope.internalView.prefix = false;
+                $scope.internalView.edit = "view";
+            }
+
             angular.copy(selectedObj, $scope.newPrefixObj);
         };
 
         $scope.showForm = function() {
             $scope.newPrefixObj = GBPPrefixServices.createObj();
-            $scope.view.prefix = true;
-            $scope.view.edit = false;
+            $scope.internalView.prefix = true;
+            $scope.internalView.edit = "add";
             $scope.selectedPrefix = null;
         };
 
         $scope.close = function(){
-            $scope.view.prefix = false;
+            $scope.internalView.prefix = false;
         };
 
         $scope.$on('PGN_EDIT_ELEM', function(event){
             if (!event.defaultPrevented) {
                 if ( $scope.selectedPrefix ) {
-                    $scope.view.prefix = true;
-                    $scope.view.edit = true;
+                    $scope.internalView.prefix = true;
+                    $scope.internalView.edit = "edit";
                     angular.copy($scope.selectedPrefix, $scope.newPrefixObj);
                 }
                 event.defaultPrevented = true;
@@ -1917,9 +2319,17 @@ define(modules, function(gbp) {
         $scope.selectedClassifier = null;
         $scope.crudLabel = 'Classifiers';
         $scope.newClassifierObj = GBPClassifierInstanceServices.createObj();
-        $scope.edit = false;
+        $scope.edit = "view";
 
-        var mandatoryProperties = ['name'];
+        var mandatoryProperties = ['name'],
+
+            clear = function(){
+                $scope.list = [];
+                $scope.classifiersView = false;
+                $scope.selectedClassifier = null;
+                $scope.newClassifierObj = GBPClassifierInstanceServices.createObj();
+                $scope.edit = "view";
+            };
 
         $scope.getDefinitionObjParams = function(id){
             return GPBServices.getDefinitionObjParams($scope.classifierDefinitions.options, id);
@@ -1948,6 +2358,8 @@ define(modules, function(gbp) {
                 }, function(){
                     //TODO: error cbk
                 });
+            }else{
+                clear();
             }
         };
 
@@ -1958,6 +2370,7 @@ define(modules, function(gbp) {
                 GBPClassifierInstanceServices.send(path, $scope.newClassifierObj, function(data){
                     $scope.init();
                     $scope.classifiersView = false;
+                    $scope.edit = "view";
                 $scope.sendReloadEventFromRoot('GBP_CLASSIFIER_INSTANCE_RELOAD');
                 }, function(){
                     //TODO: error cbk
@@ -1969,22 +2382,33 @@ define(modules, function(gbp) {
             $scope.newClassifierObj = GBPClassifierInstanceServices.createObj();
             $scope.selectedClassifier = null;
             $scope.classifiersView = true;
-            $scope.edit = false;
+            $scope.edit = "add";
             $scope.reloadDefs();
         };
 
         $scope.reload = function(selectedObj){
             $scope.selectedClassifier = selectedObj;
+            $scope.sendReloadEventFromRoot('GBP_CLASSIFIER_INSTANCE_RELOAD');
+
+            $scope.edit = $scope.edit == "edit" ? $scope.edit : "view";
+            if(selectedObj){
+                $scope.classifiersView = true;
+            }
+            else {
+                $scope.classifiersView = false;
+                $scope.edit = "view";
+            }
+
             if($scope.classifiersView) {
                 angular.copy(selectedObj, $scope.newClassifierObj);
             }
-            $scope.sendReloadEventFromRoot('GBP_CLASSIFIER_INSTANCE_RELOAD');
+
             $scope.reloadDefs();
         };
 
         $scope.close = function(){
             $scope.classifiersView = false;
-            $scope.edit = false;
+            $scope.edit = "view";
         };
 
         $scope.$on('PGN_EDIT_ELEM', function(event){
@@ -1992,7 +2416,7 @@ define(modules, function(gbp) {
                 if ( $scope.selectedClassifier ) {
                     $scope.classifiersView = true;
                     angular.copy($scope.selectedClassifier, $scope.newClassifierObj);
-                    $scope.edit = true;
+                    $scope.edit = "edit";
                     $scope.reloadDefs();
                 }
                 event.defaultPrevented = true;
@@ -2027,9 +2451,17 @@ define(modules, function(gbp) {
         $scope.selectedAction = null;
         $scope.crudLabel = 'Actions';
         $scope.newActionObj = GBPActionInstanceServices.createObj();
-        $scope.edit = false;
+        $scope.edit = "view";
 
-        var mandatoryProperties = ['name'];
+        var mandatoryProperties = ['name'],
+
+            clear = function(){
+                $scope.list = [];
+                $scope.actionsView = false;
+                $scope.selectedAction = null;
+                $scope.newActionObj = GBPActionInstanceServices.createObj();
+                $scope.edit = "view";
+            };
 
         $scope.getDefinitionObjParams = function(id){
             return GPBServices.getDefinitionObjParams($scope.actionDefinitions.options, id);
@@ -2058,6 +2490,8 @@ define(modules, function(gbp) {
                 }, function(){
                     //TODO: error cbk
                 });
+            }else{
+                clear();
             }
         };
 
@@ -2069,6 +2503,7 @@ define(modules, function(gbp) {
                 GBPActionInstanceServices.send(path, $scope.newActionObj, function(data){
                     $scope.init();
                     $scope.actionsView = false;
+                    $scope.edit = "view";
                 $scope.sendReloadEventFromRoot('GBP_ACTION_INSTANCE_RELOAD');
                 }, function(){
                     //TODO: error cbk
@@ -2080,22 +2515,33 @@ define(modules, function(gbp) {
             $scope.newActionObj = GBPActionInstanceServices.createObj();
             $scope.selectedAction = null;
             $scope.actionsView = true;
-            $scope.edit = false;
+            $scope.edit = "add";
             $scope.reloadDefs();
         };
 
         $scope.reload = function(selectedObj){
             $scope.selectedAction = selectedObj;
+            $scope.sendReloadEventFromRoot('GBP_ACTION_INSTANCE_RELOAD');
+
+            $scope.edit = $scope.edit == "edit" ? $scope.edit : "view";
+            if(selectedObj){
+                $scope.actionsView = true;
+            }
+            else {
+                $scope.actionsView = false;
+                $scope.edit = "view";
+            }
+
             if($scope.actionsView) {
                 angular.copy(selectedObj, $scope.newActionObj);
             }
-            $scope.sendReloadEventFromRoot('GBP_ACTION_INSTANCE_RELOAD');
+
             $scope.reloadDefs();
         };
 
         $scope.close = function(){
             $scope.actionsView = false;
-            $scope.edit = false;
+            $scope.edit = "view";
         };
 
         $scope.$on('PGN_EDIT_ELEM', function(event){
@@ -2103,7 +2549,7 @@ define(modules, function(gbp) {
                 if ( $scope.selectedAction ) {
                     $scope.actionsView = true;
                     angular.copy($scope.selectedAction, $scope.newActionObj);
-                    $scope.edit = true;
+                    $scope.edit = "edit";
                     $scope.reloadDefs();
                 }
                 event.defaultPrevented = true;
@@ -2130,12 +2576,11 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('endpointCtrl', ['$scope', 'GBPEndpointServices', 'GPBServices', 'GBPL2FloodDomainServices', 'GBPL2BridgeDomainServices', 'GBPL3ContextServices', 'GBPEpgServices', '$filter',
-        function($scope, GBPEndpointServices, GPBServices, GBPL2FloodDomainServices, GBPL2BridgeDomainServices, GBPL3ContextServices, GBPEpgServices, $filter){
+    gbp.register.controller('endpointCtrl', ['$scope', 'GBPEndpointServices', 'GPBServices', 'GBPL2FloodDomainServices', 'GBPL2BridgeDomainServices', 'GBPL3ContextServices', 'GBPEpgServices', '$filter', 'GBPSubnetServices',
+        function($scope, GBPEndpointServices, GPBServices, GBPL2FloodDomainServices, GBPL2BridgeDomainServices, GBPL3ContextServices, GBPEpgServices, $filter, GBPSubnetServices){
         $scope.list = [];
         $scope.selectedEndpoint = null;
-        $scope.newEndpointObj = GBPEndpointServices.createObj();
-        $scope.endpointView = false;
+        $scope.newEndpointObj = GBPEndpointServices.createObj($scope.selectedTenant ? $scope.selectedTenant.id : null);
         $scope.displayLabel = function(obj) {
             return obj['mac-address'] + ':' + obj['l2-context'];
         };
@@ -2147,51 +2592,101 @@ define(modules, function(gbp) {
         $scope.l3context = {'options' : [], 'labels' : null};
         $scope.getDisplayLabelsFromCtrl('GBP_L3CONTEXT_LABEL', $scope.l3context);
 
+        $scope.subnet = {'options' : [], 'labels' : null};
+        $scope.getDisplayLabelsFromCtrl('GBP_SUBNET_LABEL', $scope.subnet);
+
         $scope.epg = {'options' : [], 'labels' : null};
         $scope.getDisplayLabelsFromCtrl('GBP_EPG_LABEL', $scope.epg);
 
+        $scope.networkContainment = {'options' : [], 'labels' : null};
+        $scope.getDisplayLabelsFromCtrl('GBP_L2FLOOD_LABEL', $scope.networkContainment);
+
+        $scope.view = {
+            endpoint: false,
+            edit: "view"
+        };
+
         var path = null,
-            mandatoryProperties = [];
+            mandatoryProperties = [],
 
-        var loadEpgOptions = function() {
-            $scope.epg.options = [];
+            loadEpgOptions = function() {
+                $scope.epg.options = [];
 
-            path = GBPEpgServices.createPathObj($scope.selectedTenant.id);
-            GBPEpgServices.load(path, function(data){
-                $scope.epg.options = data;
-            }, function(){
-                //TODO: error cbk
-            });
-        };
+                path = GBPEpgServices.createPathObj($scope.selectedTenant.id);
+                GBPEpgServices.load(path, function(data){
+                    $scope.epg.options = data;
+                }, function(){
+                    //TODO: error cbk
+                });
+            },
 
-        var loadL2ContextOptions = function() {
-            $scope.l2context.options = [];
+            loadL2ContextOptions = function() {
+                removeL2ContextOptions($scope.networkContainment.options, $scope.l2context.options);
+                $scope.l2context.options = [];
 
-            path = GBPL2FloodDomainServices.createPathObj($scope.selectedTenant.id);
-                
-            GBPL2FloodDomainServices.load(path, function(data){
-                $scope.l2context.options = $scope.l2context.options.concat(data);
-            }, function(){
+                path = GBPL2FloodDomainServices.createPathObj($scope.selectedTenant.id);
+                    
+                GBPL2FloodDomainServices.load(path, function(data){
+                    $scope.l2context.options = $scope.l2context.options.concat(data);
+                    $scope.networkContainment.options = $scope.networkContainment.options.concat(data);
+                }, function(){
 
-            });
+                });
 
-            path = GBPL2BridgeDomainServices.createPathObj($scope.selectedTenant.id);
-            GBPL2BridgeDomainServices.load(path, function(data){
-                $scope.l2context.options = $scope.l2context.options.concat(data);
-            }, function(){
+                path = GBPL2BridgeDomainServices.createPathObj($scope.selectedTenant.id);
+                GBPL2BridgeDomainServices.load(path, function(data){
+                    $scope.l2context.options = $scope.l2context.options.concat(data);
+                    $scope.networkContainment.options = $scope.networkContainment.options.concat(data);
+                }, function(){
 
-            });
-        };
+                });
+            },
 
-        var loadL3ContextOptions = function(){
-            $scope.l3context.options = [];
+            loadL3ContextOptions = function(){
+                removeL2ContextOptions($scope.networkContainment.options, $scope.l3context.options);
+                $scope.l3context.options = [];
 
-            GBPL3ContextServices.load(GBPL3ContextServices.createPathObj($scope.selectedTenant.id), function(data){
-                $scope.l3context.options = data;
-            }, function(){
+                GBPL3ContextServices.load(GBPL3ContextServices.createPathObj($scope.selectedTenant.id), function(data){
+                    $scope.l3context.options = data;
+                    $scope.networkContainment.options = $scope.networkContainment.options.concat(data);
+                }, function(){
 
-            });
-        };
+                });
+            },
+
+            loadSubnetOptions = function(){
+                $scope.subnet.options = [];
+
+                GBPSubnetServices.load(GBPSubnetServices.createPathObj($scope.selectedTenant.id), function(data){
+                    $scope.subnet.options = data;
+                    $scope.networkContainment.options = $scope.networkContainment.options.concat(data);
+                }, function(){
+
+                });
+            },
+
+            loadNetworkCotnaninemnt = function(){
+                $scope.networkContainment.options = [];
+
+                loadL2ContextOptions();
+                loadL3ContextOptions();
+                loadSubnetOptions();
+            },
+
+            clear = function(){
+                $scope.list = [];
+                $scope.selectedEndpoint = null;
+                $scope.newEndpointObj = GBPEndpointServices.createObj($scope.selectedTenant ? $scope.selectedTenant.id : null);
+                $scope.view = {
+                    endpoint: false,
+                    edit: "view"
+                };
+            },
+            removeL2ContextOptions = function(arr1, arr2) {
+                arr1 = arr1.filter( function( el ) {
+                  return arr2.indexOf( el ) < 0;
+                });
+            };
         
         $scope.init = function() {
             if ($scope.selectedTenant) {
@@ -2203,8 +2698,12 @@ define(modules, function(gbp) {
                 });
 
                 loadEpgOptions();
-                loadL2ContextOptions();
+                /*loadL2ContextOptions();
                 loadL3ContextOptions();
+                loadSubnetOptions();*/
+                loadNetworkCotnaninemnt();
+            }else{
+                clear();
             }
         };
 
@@ -2250,8 +2749,9 @@ define(modules, function(gbp) {
             if($scope.validateForm($scope.endpointForm)){
                 GBPEndpointServices.send(path, $scope.newEndpointObj, function(data){
                     $scope.init();
-                    $scope.endpointView = false;
+                    $scope.view.endpoint = false;
                     $scope.reloadNewObj();
+                    $scope.view.edit = "view";
                 }, function(){
                     //TODO: error cbk
                 });
@@ -2262,7 +2762,7 @@ define(modules, function(gbp) {
             if($scope.selectedTenant && $scope.selectedEndpoint) {
                 GBPEndpointServices.delete(path, $scope.selectedEndpoint, function(data){
                     $scope.init();
-                    $scope.endpointView = false;
+                    $scope.view.endpoint = false;
                 }, function(){
                     //TODO: error cbk
                 });
@@ -2270,30 +2770,43 @@ define(modules, function(gbp) {
         };
 
         $scope.showForm = function() {
-            $scope.endpointView = true;
+            $scope.view.endpoint = true;
             $scope.reloadNewObj();
             $scope.selectedEndpoint = null;
+
+            $scope.view.edit = "add";
         };
 
         $scope.reloadNewObj = function() {
-            $scope.newEndpointObj = GBPEndpointServices.createObj();
+            $scope.newEndpointObj = GBPEndpointServices.createObj($scope.selectedTenant ? $scope.selectedTenant.id : null);
         };
 
         $scope.reload = function(selectedObj) {
             $scope.selectedEndpoint = selectedObj;
-            if($scope.endpointView) {
+            $scope.view.edit = $scope.view.edit == "edit" ? $scope.view.edit : "view";
+            if(selectedObj){
+                $scope.view.endpoint = true;
+            }
+            else {
+                $scope.view.endpoint = false;
+                $scope.view.edit = "view";
+            }
+
+            if($scope.view.endpoint) {
                 angular.copy(selectedObj, $scope.newEndpointObj);
             }
         };
 
         $scope.close = function(){
-            $scope.endpointView = false;
+            $scope.view.endpoint = false;
+            $scope.view.edit = "view";
         };
 
         $scope.$on('PGN_EDIT_ELEM', function(event){
             if (!event.defaultPrevented) {
                 if ( $scope.selectedEndpoint ) {
-                    $scope.endpointView = true;
+                    $scope.view.endpoint = true;
+                    $scope.view.edit = "edit";
                     angular.copy($scope.selectedEndpoint, $scope.newEndpointObj);
                 }
                 event.defaultPrevented = true;
@@ -2309,15 +2822,23 @@ define(modules, function(gbp) {
         });
 
         $scope.$on('GBP_L2BRIDGE_RELOAD',function(){
-            loadL2ContextOptions();
+            //loadL2ContextOptions();
+            loadNetworkCotnaninemnt();
         });
 
         $scope.$on('GBP_L2FLOOD_RELOAD',function(){
-            loadL2ContextOptions();
+            //loadL2ContextOptions();
+            loadNetworkCotnaninemnt();
         });
 
         $scope.$on('GBP_L3CONTEXT_RELOAD',function(){
-            loadL3ContextOptions();
+            //loadL3ContextOptions();
+            loadNetworkCotnaninemnt();
+        });
+
+        $scope.$on('GBP_SUBNET_RELOAD',function(){
+            //loadSubnetOptions();
+            loadNetworkCotnaninemnt();
         });
     }]);
 
@@ -2326,7 +2847,6 @@ define(modules, function(gbp) {
         $scope.list = [];
         $scope.selectedEndpoint = null;
         $scope.newEndpointObj = GBPEndpointL3Services.createObj($scope.selectedTenant ? $scope.selectedTenant.id : null);
-        $scope.endpointView = false;
         $scope.displayLabel = function(obj) {
             return obj['ip-prefix'] + ':' + obj['l3-context'];
         };
@@ -2341,49 +2861,63 @@ define(modules, function(gbp) {
         $scope.epg = {'options' : [], 'labels' : null};
         $scope.getDisplayLabelsFromCtrl('GBP_EPG_LABEL', $scope.epg);
 
+        $scope.view = {
+            endpoint: false,
+            edit: "view"
+        };
 
         var path = null,
-            mandatoryProperties = [];
+            mandatoryProperties = [],
 
-        var loadEpgOptions = function() {
-            $scope.epg.options = [];
+            loadEpgOptions = function() {
+                $scope.epg.options = [];
 
-            path = GBPEpgServices.createPathObj($scope.selectedTenant.id);
-            GBPEpgServices.load(path, function(data){
-                $scope.epg.options = data;
-            }, function(){
-                //TODO: error cbk
-            });
-        };
+                path = GBPEpgServices.createPathObj($scope.selectedTenant.id);
+                GBPEpgServices.load(path, function(data){
+                    $scope.epg.options = data;
+                }, function(){
+                    //TODO: error cbk
+                });
+            },
 
-        var loadL2ContextOptions = function() {
-            $scope.l2context.options = [];
+            loadL2ContextOptions = function() {
+                $scope.l2context.options = [];
 
-            path = GBPL2FloodDomainServices.createPathObj($scope.selectedTenant.id);
-                
-            GBPL2FloodDomainServices.load(path, function(data){
-                $scope.l2context.options = $scope.l2context.options.concat(data);
-            }, function(){
+                path = GBPL2FloodDomainServices.createPathObj($scope.selectedTenant.id);
+                    
+                GBPL2FloodDomainServices.load(path, function(data){
+                    $scope.l2context.options = $scope.l2context.options.concat(data);
+                }, function(){
 
-            });
+                });
 
-            path = GBPL2BridgeDomainServices.createPathObj($scope.selectedTenant.id);
-            GBPL2BridgeDomainServices.load(path, function(data){
-                $scope.l2context.options = $scope.l2context.options.concat(data);
-            }, function(){
+                path = GBPL2BridgeDomainServices.createPathObj($scope.selectedTenant.id);
+                GBPL2BridgeDomainServices.load(path, function(data){
+                    $scope.l2context.options = $scope.l2context.options.concat(data);
+                }, function(){
 
-            });
-        };
+                });
+            },
 
-        var loadL3ContextOptions = function(){
-            $scope.l3context.options = [];
+            loadL3ContextOptions = function(){
+                $scope.l3context.options = [];
 
-            GBPL3ContextServices.load(GBPL3ContextServices.createPathObj($scope.selectedTenant.id), function(data){
-                $scope.l3context.options = data;
-            }, function(){
+                GBPL3ContextServices.load(GBPL3ContextServices.createPathObj($scope.selectedTenant.id), function(data){
+                    $scope.l3context.options = data;
+                }, function(){
 
-            });
-        };
+                });
+            },
+
+            clear = function(){
+                $scope.list = [];
+                $scope.selectedEndpoint = null;
+                $scope.newEndpointObj = GBPEndpointL3Services.createObj($scope.selectedTenant ? $scope.selectedTenant.id : null);
+                $scope.view = {
+                    endpoint: false,
+                    edit: "view"
+                };
+            };
         
         $scope.init = function() {
             if ($scope.selectedTenant) {
@@ -2397,6 +2931,8 @@ define(modules, function(gbp) {
                 loadEpgOptions();
                 loadL2ContextOptions();
                 loadL3ContextOptions();
+            }else{
+                clear();
             }
         };
 
@@ -2458,8 +2994,9 @@ define(modules, function(gbp) {
             if($scope.validateForm($scope.l3EndpointForm)){
                 GBPEndpointL3Services.send(path, $scope.newEndpointObj, function(data){
                     $scope.init();
-                    $scope.endpointView = false;
+                    $scope.view.endpoint = false;
                     $scope.reloadNewObj();
+                    $scope.view.edit = "view";
                 }, function(){
                     //TODO: error cbk
                 });
@@ -2477,30 +3014,39 @@ define(modules, function(gbp) {
         };
 
         $scope.showForm = function() {
-            $scope.endpointView = true;
+            $scope.view.endpoint = true;
             $scope.reloadNewObj();
             $scope.selectedEndpoint = null;
+            $scope.view.edit = "add";
         };
 
         $scope.reloadNewObj = function() {
-            $scope.newEndpointObj = GBPEndpointL3Services.createObj($scope.selectedTenant.id);
+            $scope.newEndpointObj = GBPEndpointL3Services.createObj($scope.selectedTenant ? $scope.selectedTenant.id : null);
         };
 
         $scope.reload = function(selectedObj) {
             $scope.selectedEndpoint = selectedObj;
-            if($scope.endpointView) {
-                angular.copy(selectedObj, $scope.newEndpointObj);
+            angular.copy(selectedObj, $scope.newEndpointObj);
+            $scope.view.edit = $scope.view.edit == "edit" ? $scope.view.edit : "view";
+            if(selectedObj){
+                $scope.view.endpoint = true;
+            }
+            else {
+                $scope.view.endpoint = false;
+                $scope.view.edit = "view";
             }
         };
 
         $scope.close = function(){
-            $scope.endpointView = false;
+            $scope.view.endpoint = false;
+            $scope.view.edit = "view";
         };
 
         $scope.$on('PGN_EDIT_ELEM', function(event){
             if (!event.defaultPrevented) {
                 if ( $scope.selectedEndpoint ) {
-                    $scope.endpointView = true;
+                    $scope.view.endpoint = true;
+                    $scope.view.edit = "edit";
                     angular.copy($scope.selectedEndpoint, $scope.newEndpointObj);
                 }
                 event.defaultPrevented = true;
@@ -2528,6 +3074,1082 @@ define(modules, function(gbp) {
         });
     }]);
 
+    gbp.register.controller('accessModelWizardCtrl', ['$scope', '$filter', 'GBPTenantServices', 'GBPEpgServices', 'GBPContractServices', 'GPBServices', function($scope, $filter, GBPTenantServices, GBPEpgServices, GBPContractServices, GPBServices){ 
+        $scope.wizardPage = null;
+
+        $scope.selectedTenant = null;
+        $scope.tenant = null;
+        //$scope.epgList = [];
+        $scope.newContractObj = null;
+
+        $scope.init = function() {
+            $scope.setPage('tenants');
+        };
+
+        $scope.setPage = function(pageName, object) {
+            $scope.wizardPage = pageName;
+
+            switch(pageName) {
+                case 'contracts':
+                    if(object) {
+                        $scope.tenant = object;
+                    }
+
+                    break;
+
+                case 'summary':
+                    $scope.tenant['endpoint-group'] = $scope.tenant['endpoint-group'] ? $scope.tenant['endpoint-group'] : [];
+
+                    if(object) {
+                        object.forEach(function(o) {
+                            $scope.tenant['endpoint-group'].push(GPBServices.stripNullValues(o));
+                        });
+                    }
+
+                    break;
+
+                 case 'epgs':
+                    $scope.tenant['contract'] = $scope.tenant['contract'] ? $scope.tenant['contract'] : [];
+
+                    if(object) {
+                        object.forEach(function(o) {
+                            $scope.tenant['contract'].push(GPBServices.stripNullValues(o));
+                        });
+                    }
+
+                    break;
+            }
+        };
+
+        $scope.submit = function(object) {
+            $scope.tenant['endpoint-group'] = $scope.tenant['endpoint-group'] ? $scope.tenant['endpoint-group'] : [];
+
+            if(object) {
+                object.forEach(function(o) {
+                    $scope.tenant['endpoint-group'].push(GPBServices.stripNullValues(o));
+                });
+            }
+
+            
+            path = GBPTenantServices.createPathObj($scope.tenant.id);
+            GBPTenantServices.send(path, $scope.tenant, function(data){
+                $scope.wizards.accessModelWizard = false;
+                $scope.sendReloadEventFromRoot('GBP_GLOBAL_TENANT_RELOAD');
+            }, function(){
+                //TODO: error cbk
+            });
+        };
+
+        $scope.updateList = function(list, object, key) {
+            var elementPos = list.map(function(x) {return x[key]; }).indexOf(object[key]);
+
+            if(elementPos < 0) {
+                list.push(object);
+            }
+            else {
+                list[elementPos] = object;
+            }
+        };
+    }]);
+
+    gbp.register.controller('wizardTenantCtrl', ['$scope', '$filter', 'GBPTenantServices', function($scope, $filter, GBPTenantServices){ 
+        $scope.tenantList = [];
+        $scope.newTenantObj = GBPTenantServices.createObj();
+
+        $scope.view = {
+            tenantEdit: false
+        };
+
+        $scope.init = function() {
+            $scope.getTenants();
+        };
+
+        $scope.getTenants = function() {
+            GBPTenantServices.load(
+                function(data) {
+                    $scope.tenantList = data;
+                    $scope.newTenantObj = GBPTenantServices.createObj();
+                },
+                function(){
+                    //TODO error
+                }
+            );
+        };
+
+        $scope.reloadTenants = function(selectedObject) {
+            if(!selectedObject) {
+                selectedObject = GBPTenantServices.createObj();
+                 $scope.view.tenantEdit = false;
+            }
+            else {
+                $scope.view.tenantEdit = true;
+            }
+
+            $scope.selectedTenant = selectedObject;
+            $scope.newTenantObj = selectedObject;
+        };
+
+        $scope.getNewTenantObject = function() {
+            return GBPTenantServices.createObj();
+        };
+    }]); 
+
+    gbp.register.controller('wizardEpgCtrl', ['$scope', '$filter', 'GBPEpgServices', function($scope, $filter, GBPEpgServices){ 
+        $scope.list = [];
+        $scope.newEpgObj = GBPEpgServices.createObj();
+        $scope.selectedEpg = null;
+        $scope.epgFormView = true;
+
+        $scope.displayLabel = ['name', 'id'];
+        $scope.crudLabel = 'Group list';
+
+        $scope.igpOpts = ['allow', 'require-contract'];
+
+        $scope.init = function() {
+            
+        };
+
+        $scope.showForm = function() {
+            $scope.epgFormView = true;
+            $scope.newEpgObj = GBPEpgServices.createObj();
+        };
+
+        $scope.save = function() {
+            $scope.updateList($scope.list, $scope.newEpgObj, "id");
+            $scope.newEpgObj = GBPEpgServices.createObj();
+            $scope.epgFormView = false;
+        };
+
+        $scope.delete = function() {
+            if($scope.selectedEpg) {
+                var index = $scope.list.indexOf($scope.selectedEpg);
+                $scope.list.splice(index, 1);
+                $scope.epgFormView = false;
+            }
+            //$scope.newEpgObj = GBPEpgServices.createObj();
+        };
+
+        $scope.reload = function(selectedObj) {
+            $scope.selectedEpg = selectedObj;
+            $scope.newEpgObj = selectedObj;
+            $scope.epgFormView = true;
+            $scope.$broadcast('WIZARD_EPG_RELOAD');
+        };
+
+        $scope.close = function() {
+            $scope.epgFormView = false;
+            $scope.newEpgObj = GBPEpgServices.createObj();
+            $scope.selectedEpg = null;
+        };
+
+        $scope.$on('PGN_EDIT_ELEM', function(event){
+            if (!event.defaultPrevented) {
+                if ( $scope.selectedEpg ) {
+                    $scope.epgFormView = true;
+                    angular.copy($scope.selectedEpg, $scope.newEpgObj);
+                }
+                event.defaultPrevented = true;
+            }
+        });
+
+        $scope.$on("WIZARD_CNS_RELOAD", function(event, args){
+            //$scope.selectedEpg['consumer-named-selector'] = args;
+            $scope.newEpgObj['consumer-named-selector'] = args;
+            $scope.updateList($scope.list, $scope.newEpgObj, "id");
+        });
+
+        $scope.$on("WIZARD_PNS_RELOAD", function(event, args){
+            //$scope.selectedEpg['provider-named-selector'] = args;
+            $scope.newEpgObj['provider-named-selector'] = args;
+            $scope.updateList($scope.list, $scope.newEpgObj, "id");
+        });
+    }]); 
+
+    gbp.register.controller('wizardContractCtrl', ['$scope', '$filter', 'GBPContractServices', function($scope, $filter, GBPContractServices){ 
+        $scope.list = [];
+        $scope.newContractObj = GBPContractServices.createObj();
+        $scope.selectedContract = null;
+
+        $scope.displayLabel = ['name', 'id'];
+        $scope.crudLabel = 'Contract list';
+
+        $scope.contractFormView = true;
+
+        $scope.init = function() {
+            
+        };
+
+        $scope.showForm = function() {
+            $scope.contractFormView = true;
+            $scope.newContractObj = GBPContractServices.createObj();
+        };
+
+        $scope.save = function() {
+            $scope.updateList($scope.list, $scope.newContractObj, "id");
+            $scope.contractFormView = false;
+            $scope.newContractObj = GBPContractServices.createObj();
+            $scope.selectedContract = null;
+        };
+
+        $scope.delete = function() {
+            if($scope.selectedContract) {
+                var index = $scope.list.indexOf($scope.selectedContract);
+                $scope.list.splice(index, 1);
+                $scope.contractFormView = false;
+                $scope.newContractObj = GBPContractServices.createObj();
+                $scope.selectedContract = null;
+            }
+        };
+
+        $scope.reload = function(selectedObj) {
+            $scope.selectedContract = selectedObj;
+            $scope.newContractObj = selectedObj;
+            $scope.contractFormView = true;
+        };
+
+        $scope.close = function() {
+            $scope.contractFormView = false;
+            //$scope.newContractObj = GBPContractServices.createObj();
+            //$scope.selectedContract = null;
+        };
+
+        $scope.$on('PGN_EDIT_ELEM', function(event){
+            if (!event.defaultPrevented) {
+                if ( $scope.selectedContract ) {
+                    $scope.contractFormView = true;
+                    angular.copy($scope.selectedContract, $scope.newContractObj);
+                }
+                event.defaultPrevented = true;
+            }
+        });
+
+        $scope.$on("WIZARD_SUBJECT_RELOAD", function(event, args){
+            //$scope.selectedEpg['consumer-named-selector'] = args;
+            $scope.newContractObj['subject'] = args;
+            $scope.updateList($scope.list, $scope.newContractObj, "id");
+        });
+
+        $scope.$on("WIZARD_CLAUSE_RELOAD", function(event, args){
+            //$scope.selectedEpg['consumer-named-selector'] = args;
+            $scope.newContractObj['clause'] = args;
+            $scope.updateList($scope.list, $scope.newContractObj, "id");
+        });
+    }]); 
+
+    gbp.register.controller('wizardCnsCtrl',['$scope', 'GBPConNamedSelServices', function($scope, GBPConNamedSelServices){
+        $scope.list = [];
+        $scope.selectedCNS = null;
+        $scope.newCNSObj = GBPConNamedSelServices.createObj();
+        $scope.internalView = {
+            cns: false,
+            edit: "view"
+        };
+        $scope.displayLabel = 'name';
+        $scope.crudLabel = 'Consumer named selectors list';
+
+        $scope.contractList = {'options' : [], 'labels' : null};
+        $scope.getDisplayLabelsFromCtrl('GBP_CONTRACTS_LABEL', $scope.contractList);
+
+        var clear = function(){
+                $scope.list = [];
+                $scope.selectedCNS = null;
+                $scope.newCNSObj = GBPConNamedSelServices.createObj();
+                $scope.internalView = {
+                    cns: false,
+                    edit: "add"
+                };
+            };
+
+        //move to separate ctrl \/
+        $scope.addNewElem = function(templateObj) {
+            if($scope.newCNSObj && $scope.newCNSObj.contract) {
+                var objToPush = templateObj || "";
+                $scope.newCNSObj.contract.push(objToPush);
+            }
+        };
+
+        $scope.deleteElemAt = function(index) {
+            if($scope.newCNSObj && $scope.newCNSObj.contract) {
+                $scope.newCNSObj.contract.splice(index, 1);
+            }
+        };
+
+        $scope.updateAt = function(index, value) {
+            if($scope.newCNSObj && $scope.newCNSObj.contract && $scope.newCNSObj.contract.length >= index) {
+                $scope.newCNSObj.contract[index] = value;
+            }
+        };
+        //move to separate ctrl /\
+
+        $scope.init = function() {
+            clear();
+
+            if($scope.tenant && $scope.tenant['contract'].length>0) {
+                $scope.contractList.options = $scope.tenant['contract'];
+            }
+
+            if($scope.selectedEpg && $scope.selectedEpg['consumer-named-selector']) {
+                $scope.list = $scope.selectedEpg['consumer-named-selector'];
+            }
+        };
+
+        $scope.save = function(){
+            $scope.updateList($scope.list, $scope.newCNSObj, "name");
+            $scope.internalView = {
+                    cns: false,
+                    edit: "add"
+                };
+            $scope.$emit('WIZARD_CNS_RELOAD', $scope.list);
+        };
+
+        $scope.delete = function() {
+            if($scope.selectedCNS) {
+                var index = $scope.list.indexOf($scope.selectedCNS);
+                $scope.list.splice(index, 1);
+                $scope.internalView = {
+                    cns: false,
+                    edit: "add"
+                };
+                $scope.$emit('WIZARD_CNS_RELOAD', $scope.list);
+            }
+        };
+
+        $scope.showForm = function() {
+            $scope.reloadNewObj();
+            $scope.selectedCNS = null;
+            $scope.internalView.cns = true;
+            $scope.internalView.edit = "add";
+        };
+
+        $scope.reloadNewObj = function() {
+            $scope.newCNSObj = GBPConNamedSelServices.createObj();
+        };
+
+        $scope.reload = function(selectedObj) {
+            $scope.selectedCNS = selectedObj;
+            $scope.internalView.edit = $scope.internalView.edit == "edit" ? $scope.internalView.edit : "view";
+            if(selectedObj){
+                $scope.internalView.cns = true;
+            }else {
+                $scope.internalView.cns = false;
+                $scope.internalView.edit = "view";
+            }
+
+            if($scope.internalView.cns) {
+                angular.copy(selectedObj, $scope.newCNSObj);
+            }
+        };
+
+        $scope.close = function(){
+            $scope.internalView.cns = false;
+            //$scope.internalView.edit = "view";
+        };
+
+        $scope.$on('PGN_EDIT_ELEM', function(event){
+            if (!event.defaultPrevented) {
+                if ( $scope.selectedEpg ) {
+                    $scope.internalView.cns = true;
+                    $scope.internalView.edit = "add";
+                    angular.copy($scope.selectedCNS, $scope.newCNSObj);
+                }
+                event.defaultPrevented = true;
+            }
+        });
+
+        $scope.$on('WIZARD_EPG_RELOAD',function(){
+            $scope.init();
+        });
+    }]);
+
+    gbp.register.controller('wizardPnsCtrl',['$scope', 'GBPProNamedSelServices', function($scope, GBPProNamedSelServices){
+        $scope.list = [];
+        $scope.selectedPNS = null;
+        $scope.newPNSObj = GBPProNamedSelServices.createObj();
+        $scope.displayLabel = 'name';
+        $scope.crudLabel = 'Provider named selectors list';
+        $scope.internalView = {
+            pns: false,
+            edit: "view"
+        };
+
+        $scope.contractList = {'options' : [], 'labels' : null};
+        $scope.getDisplayLabelsFromCtrl('GBP_CONTRACTS_LABEL', $scope.contractList);
+
+        var clear = function(){
+                $scope.list = [];
+                $scope.selectedPNS = null;
+                $scope.newPNSObj = GBPProNamedSelServices.createObj();
+                $scope.internalView = {
+                    pns: false,
+                    edit: "view"
+                };
+            };
+
+        //move to separate ctrl \/
+        $scope.addNewElem = function(templateObj) {
+            if($scope.newPNSObj && $scope.newPNSObj.contract) {
+                var objToPush = templateObj || "";
+                $scope.newPNSObj.contract.push(objToPush);
+            }
+        };
+
+        $scope.deleteElemAt = function(index) {
+            if($scope.newPNSObj && $scope.newPNSObj.contract) {
+                $scope.newPNSObj.contract.splice(index, 1);
+            }
+        };
+
+        $scope.updateAt = function(index, value) {
+            if($scope.newPNSObj && $scope.newPNSObj.contract && $scope.newPNSObj.contract.length >= index) {
+                $scope.newPNSObj.contract[index] = value;
+            }
+        };
+        //move to separate ctrl /\
+
+        $scope.init = function() {
+            clear();
+
+            if($scope.tenant && $scope.tenant['contract'].length>0) {
+                $scope.contractList.options = $scope.tenant['contract'];
+            }
+
+            if($scope.selectedEpg && $scope.selectedEpg['provider-named-selector']) {
+                $scope.list = $scope.selectedEpg['provider-named-selector'];
+            }
+        };
+
+        $scope.save = function(){
+            $scope.updateList($scope.list, $scope.newPNSObj, "name");
+            $scope.internalView = {
+                    pns: false,
+                    edit: "add"
+                };
+            $scope.$emit('WIZARD_PNS_RELOAD', $scope.list);
+        };
+
+        $scope.delete = function() {
+            if($scope.selectedPNS) {
+                var index = $scope.list.indexOf($scope.selectedPNS);
+                $scope.list.splice(index, 1);
+                $scope.internalView = {
+                    pns: false,
+                    edit: "add"
+                };
+                $scope.$emit('WIZARD_PNS_RELOAD', $scope.list);
+            }
+        };
+
+        $scope.showForm = function() {
+            $scope.reloadNewObj();
+            $scope.selectedPNS = null;
+            $scope.internalView.pns = true;
+            $scope.internalView.edit = "add";
+        };
+
+        $scope.reloadNewObj = function() {
+            $scope.newPNSObj = GBPProNamedSelServices.createObj();
+        };
+
+        $scope.reload = function(selectedObj) {
+            $scope.selectedPNS = selectedObj;
+            $scope.internalView.edit = $scope.internalView.edit == "edit" ? $scope.internalView.edit : "view";
+            if(selectedObj){
+                $scope.internalView.pns = true;
+            }else {
+                $scope.internalView.pns = false;
+                $scope.internalView.edit = "view";
+            }
+            
+            if($scope.internalView.pns) {
+                angular.copy(selectedObj, $scope.newPNSObj);
+            }
+        };
+
+        $scope.close = function(){
+            $scope.internalView.pns = false;
+            $scope.internalView.edit = "view";
+        };
+        $scope.$on('PGN_EDIT_ELEM', function(event){
+            if (!event.defaultPrevented) {
+                if ( $scope.selectedEpg ) {
+                    $scope.internalView.pns = true;
+                    $scope.internalView.edit = "edit";
+                    angular.copy($scope.selectedPNS, $scope.newPNSObj);
+                }
+                event.defaultPrevented = true;
+            }
+        });
+
+        $scope.$on('WIZARD_EPG_RELOAD',function(){
+            $scope.init();
+        });
+    }]);
+
+    gbp.register.controller('wizardSubjectCtrl', ['$scope','GBPSubjectServices', '$filter', function($scope, GBPSubjectServices, $filter){
+        $scope.list = [];
+        $scope.selectedSubject = null;
+        $scope.newSubjectObj = GBPSubjectServices.createObj();
+        $scope.displayLabel = 'name';
+        $scope.internalView = {
+            subject : false,
+            edit : "view"
+        };
+        $scope.crudLabel = 'Subject list';
+
+
+        var path = null,
+            mandatoryProperties = ['order'],
+
+            clear = function(){
+                $scope.list = [];
+                $scope.selectedSubject = null;
+                $scope.newSubjectObj = GBPSubjectServices.createObj();
+                $scope.internalView = {
+                    subject : false,
+                    edit : "view"
+                };
+            };
+
+        $scope.init = function() {
+            
+        };
+
+        $scope.save = function(){
+            $scope.updateList($scope.list, $scope.newSubjectObj, "name");
+            $scope.internalView = {
+                    subject: false,
+                    edit: "add"
+                };
+            $scope.reloadNewObj();
+            $scope.$emit('WIZARD_SUBJECT_RELOAD', $scope.list);
+        };
+
+        $scope.delete = function() {
+            if($scope.selectedSubject) {
+                var index = $scope.list.indexOf($scope.selectedSubject);
+                $scope.list.splice(index, 1);
+                $scope.internalView = {
+                    subject: false,
+                    edit: "add"
+                };
+                $scope.reloadNewObj();
+                $scope.$emit('WIZARD_SUBJECT_RELOAD', $scope.list);
+            }
+        };
+
+        $scope.reloadNewObj = function() {
+            $scope.newSubjectObj = GBPSubjectServices.createObj();
+        };
+
+        $scope.reload = function(selectedObj) {
+            $scope.selectedSubject = selectedObj;
+            $scope.internalView.edit = $scope.internalView.edit == "edit" ? $scope.internalView.edit : "view";
+            if(selectedObj){
+                $scope.internalView.subject = true;
+            }else {
+                $scope.internalView.subject = false;
+                $scope.internalView.edit = "view";
+            }
+
+            if($scope.internalView.subject) {
+                angular.copy(selectedObj, $scope.newSubjectObj);
+            }
+            //$scope.sendReloadEventFromRoot('GBP_SUBJECT_RELOAD');
+        };
+
+        $scope.showForm = function() {
+            $scope.reloadNewObj();
+            $scope.internalView.subject = true;
+            $scope.internalView.edit = "add";
+            $scope.selectedSubject = null;
+        };
+
+        $scope.close = function(){
+            $scope.internalView.subject = false;
+            $scope.internalView.edit = "view";
+        };
+
+        $scope.$on('PGN_EDIT_ELEM', function(event){
+            if (!event.defaultPrevented) {
+                if ( $scope.selectedSubject ) {
+                    $scope.internalView.subject = true;
+                    $scope.internalView.edit = "edit";
+                    angular.copy($scope.selectedSubject, $scope.newSubjectObj);
+                }
+                event.defaultPrevented = true;
+            }
+        });
+
+        $scope.$on('GBP_CONTRACT_RELOAD',function(){
+            $scope.init();
+        });
+
+        $scope.$on('GBP_SUBJECTS_LABEL', function(event, obj){
+            obj.labels = $scope.displayLabel;
+        });
+
+        $scope.$on("WIZARD_RULE_RELOAD", function(event, args){
+            //$scope.selectedEpg['consumer-named-selector'] = args;
+            $scope.newSubjectObj['rule'] = args;
+            $scope.updateList($scope.list, $scope.newSubjectObj, "id");
+            $scope.$emit('WIZARD_SUBJECT_RELOAD', $scope.list);
+        });
+    }]);
+
+    gbp.register.controller('wizardRuleCtrl', ['$scope','GBPRuleServices', '$filter', function($scope, GBPRuleServices, $filter){
+        $scope.list = [];
+        $scope.selectedRule = null;
+        $scope.newRuleObj = GBPRuleServices.createObj();
+        $scope.displayLabel = 'name';
+        $scope.internalView = {
+            rule : false,
+            edit : "view"
+        };
+        $scope.crudLabel = 'Rule list';
+
+        var path = null,
+            mandatoryProperties = ['order'],
+
+            clear = function(){
+                $scope.list = [];
+                $scope.selectedRule = null;
+                $scope.newRuleObj = GBPRuleServices.createObj();
+                $scope.internalView = {
+                    rule : false,
+                    edit : "view"
+                };
+            };
+
+        $scope.init = function() {
+            
+        };
+
+        $scope.save = function(){
+            $scope.updateList($scope.list, $scope.newRuleObj, "name");
+            $scope.internalView = {
+                    rule: false,
+                    edit: "add"
+                };
+            $scope.reloadNewObj();
+            $scope.$emit('WIZARD_RULE_RELOAD', $scope.list);
+        };
+
+        $scope.delete = function() {
+            if($scope.selectedRule) {
+                var index = $scope.list.indexOf($scope.selectedRule);
+                $scope.list.splice(index, 1);
+                $scope.internalView = {
+                    rule: false,
+                    edit: "add"
+                };
+                $scope.reloadNewObj();
+                $scope.$emit('WIZARD_RULE_RELOAD', $scope.list);
+            }
+        };
+
+        $scope.reloadNewObj = function() {
+            $scope.newRuleObj = GBPRuleServices.createObj();
+        };
+
+        $scope.reload = function(selectedObj) {
+            $scope.selectedRule = selectedObj;
+            $scope.internalView.edit = $scope.internalView.edit == "edit" ? $scope.internalView.edit : "view";
+            if(selectedObj){
+                $scope.internalView.rule = true;
+            }else {
+                $scope.internalView.rule = false;
+                $scope.internalView.edit = "view";
+            }
+
+            if($scope.internalView.rule) {
+                angular.copy(selectedObj, $scope.newRuleObj);
+            }
+            $scope.$broadcast('WIZARD_RULE_RELOAD');
+        };
+
+        $scope.showForm = function() {
+            $scope.reloadNewObj();
+            $scope.internalView.rule = true;
+            $scope.internalView.edit = "add";
+            $scope.selectedRule = null;
+        };
+
+        $scope.close = function(){
+            $scope.internalView.rule = false;
+            $scope.internalView.edit = "view";
+        };
+
+        $scope.$on('PGN_EDIT_ELEM', function(event){
+            if (!event.defaultPrevented) {
+                if ( $scope.selectedRule ) {
+                $scope.internalView.rule = true;
+                $scope.internalView.edit = "edit";
+                    angular.copy($scope.selectedRule, $scope.newRuleObj);
+                }
+                event.defaultPrevented = true;
+            }
+        });
+
+        $scope.$on('GBP_SUBJECT_RELOAD',function(){
+            $scope.init();
+        });
+
+        $scope.$on("WIZARD_CLASREF_RELOAD", function(event, args){
+            $scope.newRuleObj['classifier-ref'] = args;
+            $scope.updateList($scope.list, $scope.newRuleObj, "name");
+            $scope.$emit('WIZARD_RULE_RELOAD', $scope.list);
+        });
+
+        $scope.$on("WIZARD_ACTIONREF_RELOAD", function(event, args){
+            $scope.newRuleObj['action-ref'] = args;
+            $scope.updateList($scope.list, $scope.newRuleObj, "name");
+            $scope.$emit('WIZARD_RULE_RELOAD', $scope.list);
+        });
+    }]);
+
+    gbp.register.controller('wizardClauseCtrl', ['$scope','GBPClauseServices', 'GBPSubjectServices', 
+        function($scope, GBPClauseServices, GBPSubjectServices){
+        $scope.list = [];
+        $scope.selectedClause = null;
+        $scope.newClauseObj = GBPClauseServices.createObj();
+        $scope.internalView = {
+            clause: false,
+            edit: "view"
+        };
+        $scope.displayLabel = 'name';
+        $scope.crudLabel = 'Clause list';
+
+        $scope.subjects = {'options' : [], 'labels' : null};
+        $scope.getDisplayLabelsFromCtrl('GBP_SUBJECTS_LABEL', $scope.subjects);
+
+        var path = null,
+
+            clear = function(){
+                $scope.list = [];
+                $scope.selectedClause = null;
+                $scope.newClauseObj = GBPClauseServices.createObj();
+                $scope.internalView = {
+                    clause: false,
+                    edit: "view"
+                };
+            };
+
+        //move to separate ctrl \/
+        $scope.addNewElem = function(templateObj) {
+            if($scope.newClauseObj && $scope.newClauseObj['subject-refs']) {
+                $scope.init();
+                var objToPush = templateObj || "";
+                $scope.newClauseObj['subject-refs'].push(objToPush);
+            }
+        };
+
+        $scope.deleteElemAt = function(index) {
+            if($scope.newClauseObj && $scope.newClauseObj['subject-refs']) {
+                $scope.newClauseObj['subject-refs'].splice(index, 1);
+            }
+        };
+
+        $scope.updateAt = function(index, value) {
+            if($scope.newClauseObj && $scope.newClauseObj['subject-refs'] && $scope.newClauseObj['subject-refs'].length >= index) {
+                $scope.newClauseObj['subject-refs'][index] = value;
+            }
+        };
+        //move to separate ctrl /\
+
+        $scope.init = function() {
+            if($scope.selectedContract && $scope.selectedContract['subject'].length>0) {
+                $scope.subjects.options = $scope.selectedContract['subject'];
+            }
+        };
+
+        $scope.save = function(){
+            $scope.updateList($scope.list, $scope.newClauseObj, "name");
+            $scope.internalView = {
+                    clause: false,
+                    edit: "add"
+                };
+            $scope.$emit('WIZARD_CLAUSE_RELOAD', $scope.list);
+        };
+
+        $scope.delete = function() {
+            if($scope.selectedClause) {
+                var index = $scope.list.indexOf($scope.selectedClause);
+                $scope.list.splice(index, 1);
+                $scope.internalView = {
+                    clause: false,
+                    edit: "add"
+                };
+                $scope.$emit('WIZARD_CLAUSE_RELOAD', $scope.list);
+            }
+        };
+
+        $scope.reloadNewObj = function() {
+            $scope.newClauseObj = GBPClauseServices.createObj();
+        };
+
+        $scope.reload = function(selectedObj) {
+            $scope.selectedClause = selectedObj;
+            $scope.internalView.edit = $scope.internalView.edit == "edit" ? $scope.internalView.edit : "view";
+            if(selectedObj){
+                $scope.internalView.clause = true;
+            }else {
+                $scope.internalView.clause = false;
+                $scope.internalView.edit = "view";
+            }
+            
+            if($scope.internalView.clause) {
+                angular.copy(selectedObj, $scope.newClauseObj);
+            }
+        };
+
+        $scope.showForm = function() {
+            $scope.reloadNewObj();
+            $scope.internalView.clause = true;
+            $scope.internalView.edit = "add";
+            $scope.selectedClause = null;
+        };
+
+        $scope.close = function(){
+            $scope.internalView.clause = false;
+            $scope.internalView.edit = "view";
+        };
+
+        $scope.$on('PGN_EDIT_ELEM', function(event){
+            if (!event.defaultPrevented) {
+                if ( $scope.selectedClause ) {
+                    $scope.internalView.clause = true;
+                    $scope.internalView.edit = "edit";
+                    angular.copy($scope.selectedClause, $scope.newClauseObj);
+                }
+                event.defaultPrevented = true;
+            }
+        });
+
+        $scope.$on('WIZARD_SUBJECT_RELOAD',function(){
+            $scope.init();
+        });
+    }]);
+
+    gbp.register.controller('wizardActionRefCtrl', ['$scope','GBPActionRefsServices', 'GBPActionInstanceServices', '$filter', function($scope, GBPActionRefsServices, GBPActionInstanceServices, $filter){
+        $scope.list = [];
+        $scope.selectedActionRef = null;
+        $scope.newActionRefObj = GBPActionRefsServices.createObj();
+        $scope.displayLabel = 'name';
+        $scope.internalView = {
+            actionRef : false,
+            edit : "view"
+        };
+        $scope.crudLabel = 'Action ref list';
+
+        $scope.actionInstanceNames = {'options' : [], 'labels' : $scope.displayLabel};
+
+        var path = null,
+            mandatoryProperties = ['order'],
+
+            actionInstanceNamesLoad = function() {
+                if($scope.tenant) {
+                    var actionInstancePath = GBPActionInstanceServices.createPathObj($scope.tenant.id);
+                    GBPActionInstanceServices.load(actionInstancePath, function(data){
+                        $scope.actionInstanceNames.options = data;
+                    },function(){
+                        //TODO: error cbk
+                    });
+                }
+            },
+
+            clear = function(){
+                $scope.list = [];
+                $scope.selectedActionRef = null;
+                $scope.newActionRefObj = GBPActionRefsServices.createObj();
+                $scope.internalView = {
+                    actionRef : false,
+                    edit : "view"
+                };
+            };
+
+        $scope.init = function() {
+            actionInstanceNamesLoad();
+        };
+
+        $scope.save = function(){
+            $scope.updateList($scope.list, $scope.newActionRefObj, "name");
+            $scope.internalView = {
+                    actionRef: false,
+                    edit: "add"
+                };
+            $scope.$emit('WIZARD_ACTIONREF_RELOAD', $scope.list);
+        };
+
+        $scope.delete = function() {
+            if($scope.selectedActionRef) {
+                var index = $scope.list.indexOf($scope.selectedActionRef);
+                $scope.list.splice(index, 1);
+                $scope.internalView = {
+                    actionRef: false,
+                    edit: "add"
+                };
+                $scope.$emit('WIZARD_ACTIONREF_RELOAD', $scope.list);
+            }
+        };
+
+        $scope.reloadNewObj = function() {
+            $scope.newActionRefObj = GBPActionRefsServices.createObj();
+        };
+
+        $scope.reload = function(selectedObj) {
+            $scope.selectedActionRef = selectedObj;
+            $scope.internalView.edit = $scope.internalView.edit == "edit" ? $scope.internalView.edit : "view";
+            if(selectedObj){
+                $scope.internalView.actionRef = true;
+            }else {
+                $scope.internalView.actionRef = false;
+                $scope.internalView.edit = "view";
+            }
+
+            if($scope.internalView.actionRef) {
+                angular.copy(selectedObj, $scope.newActionRefObj);
+            }
+        };
+
+        $scope.showForm = function() {
+            $scope.reloadNewObj();
+            $scope.internalView.actionRef = true;
+            $scope.internalView.edit = "add";
+            $scope.selectedActionRef = null;
+        };
+
+        $scope.close = function(){
+            $scope.internalView.actionRef = false;
+            $scope.internalView.edit = "view";
+        };
+
+        $scope.$on('PGN_EDIT_ELEM', function(event){
+            if (!event.defaultPrevented) {
+                if ( $scope.selectedActionRef ) {
+                    $scope.internalView.actionRef = true;
+                    $scope.internalView.edit = "edit";
+                    angular.copy($scope.selectedActionRef, $scope.newActionRefObj);
+                }
+                event.defaultPrevented = true;
+            }
+        });
+
+        $scope.$on('WIZARD_RULE_RELOAD',function(){
+            $scope.init();
+        });
+    }]);
+
+    gbp.register.controller('wizardClassifierRefCtrl', ['$scope','GBPClassifierRefsServices', 'GBPClassifierInstanceServices', '$filter', function($scope, GBPClassifierRefsServices, GBPClassifierInstanceServices, $filter){
+        $scope.list = [];
+        $scope.selectedClassifierRef = null;
+        $scope.newClassifierRefObj = GBPClassifierRefsServices.createObj();
+        $scope.displayLabel = 'name';
+        $scope.internalView = {
+            classifierRef : false,
+            edit : "view"
+        };
+
+        $scope.instanceNames = {'options' : [], 'labels' : $scope.displayLabel};
+
+        $scope.formDirections = ['in', 'out', 'bidirectional'];
+        $scope.formConnectionTracking = ['normal', 'reflexive'];
+
+        $scope.crudLabel = 'Classifier ref list';
+
+        var path = null,
+
+            instanceNamesLoad = function() {
+                if($scope.tenant) {
+                    var classifierInstancePath = GBPClassifierInstanceServices.createPathObj($scope.tenant.id);
+                    GBPClassifierInstanceServices.load(classifierInstancePath, function(data){
+                        $scope.instanceNames.options = data;
+                    },function(){
+                        //TODO: error cbk
+                    });
+                }
+            },
+
+            clear = function(){
+                $scope.list = [];
+                $scope.selectedClassifierRef = null;
+                $scope.newClassifierRefObj = GBPClassifierRefsServices.createObj();
+                $scope.internalView = {
+                    classifierRef : false,
+                    edit : "view"
+                };
+            };
+
+        $scope.init = function() {
+            instanceNamesLoad();
+        };
+
+        $scope.save = function(){
+            $scope.updateList($scope.list, $scope.newClassifierRefObj, "name");
+            $scope.internalView = {
+                    classifierRef: false,
+                    edit: "add"
+                };
+            $scope.$emit('WIZARD_CLASREF_RELOAD', $scope.list);
+        };
+
+        $scope.delete = function() {
+            if($scope.selectedClassifierRef) {
+                var index = $scope.list.indexOf($scope.selectedClassifierRef);
+                $scope.list.splice(index, 1);
+                $scope.internalView = {
+                    classifierRef: false,
+                    edit: "add"
+                };
+                $scope.$emit('WIZARD_CLASREF_RELOAD', $scope.list);
+            }
+        };
+
+        $scope.reloadNewObj = function() {
+            $scope.newClassifierRefObj = GBPClassifierRefsServices.createObj();
+        };
+
+        $scope.reload = function(selectedObj) {
+            $scope.selectedClassifierRef = selectedObj;
+            $scope.internalView.edit = $scope.internalView.edit == "edit" ? $scope.internalView.edit : "view";
+            if(selectedObj){
+                $scope.internalView.classifierRef = true;
+            }else {
+                $scope.internalView.classifierRef = false;
+                $scope.internalView.edit = "view";
+            }
+
+            if($scope.internalView.classifierRef) {
+                angular.copy(selectedObj, $scope.newClassifierRefObj);
+            }
+        };
+
+        $scope.showForm = function() {
+            $scope.reloadNewObj();
+            $scope.internalView.classifierRef = true;
+            $scope.internalView.edit = "add";
+            $scope.selectedClassifierRef = null;
+        };
+
+        $scope.close = function(){
+            $scope.internalView.classifierRef = false;
+            $scope.internalView.edit = "view";
+        };
+
+        $scope.$on('PGN_EDIT_ELEM', function(event){
+            if (!event.defaultPrevented) {
+                if ( $scope.selectedClassifierRef ) {
+                    $scope.internalView.classifierRef = true;
+                    $scope.internalView.edit = "edit";
+                    angular.copy($scope.selectedClassifierRef, $scope.newClassifierRefObj);
+                }
+                event.defaultPrevented = true;
+            }
+        });
+
+        $scope.$on('WIZARD_RULE_RELOAD',function(){
+            $scope.init();
+        });
+    }]);
 });
 
 

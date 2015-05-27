@@ -5,7 +5,7 @@
 
     <div ng-include src="view_path+'parts/crud.tpl.html'"></div>
 
-    <section class="formWrapper clearfix" ng-show="tenantView">
+    <section class="formWrapper clearfix" ng-show="view.tenant">
         <form name="tenantForm" novalidate="novalidate">
             <i class="icon-remove align-right" ng-click="close()"></i>
             <label class="block">Add Tenant</label>
@@ -19,18 +19,18 @@
                 <label class="block basicLabel">Name:
                     <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="tenantForm.name.$error.required"></i>
                 </label>
-                <input class="form-control" type="text" name="name" ng-model="newTenantObj.name" ng-required="true" />
+                <input class="form-control" type="text" name="name" ng-model="newTenantObj.name" ng-required="true" ng-disabled="view.edit === 'view'" />
             </div>
 
-            <div class="rowWrapper">
+            <div class="rowWrapper" ng-hide="view.edit === 'view' && !newTenantObj.description">
                 <label class="block basicLabel">Description:</label>
-                <input class="form-control" type="text" ng-model="newTenantObj.description" />
+                <input class="form-control" type="text" ng-model="newTenantObj.description" ng-disabled="view.edit === 'view'"/>
             </div>
 
-            <button class="btn btn-primary col-md-12" ng-click="save()">Save</button>
+            <button class="btn btn-primary col-md-12" ng-click="save()" ng-hide="view.edit === 'view'">Save</button>
         </form>
     </section>
-
-    <button class="btn btn-primary col-md-12" ng-click="toggleExpanded('policy')">Back</button>
+    <button class="btn btn-primary col-md-12 bottom-buttons home" ng-click="toggleExpanded('basic')">Home</button>
+    <button class="btn btn-primary col-md-12 bottom-buttons back" ng-click="toggleExpanded('policy')">Back</button>
 
 </div>

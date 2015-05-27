@@ -2,7 +2,7 @@
 
     <div ng-include src="view_path+'parts/crud.tpl.html'"></div>
 
-    <section class="formWrapper clearfix" ng-show="view.clause">
+    <section class="formWrapper clearfix" ng-show="internalView.clause">
         <form name="clauseForm" novalidate="novalidate">
             <i class="icon-remove align-right" ng-click="close()"></i>
 
@@ -10,24 +10,24 @@
                 <label class="block basicLabel"><span>Name:</span>
                     <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="clauseForm.name.$error.required"></i>
                 </label>
-                <input class="form-control" type="text" ng-model="newClauseObj.name" name="name" ng-required="true" ng-disabled="view.edit" />
+                <input class="form-control" type="text" ng-model="newClauseObj.name" name="name" ng-required="true" ng-disabled="internalView.edit !== 'add'"/>
             </div>
 
-            <div class="rowWrapper">
+            <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newClauseObj['subject-refs']">
                 <label class="basicLabel"><span>Clause subjects:</span></label>
-                <button class="btn btn-primary btn-slim" ng-click="addNewElem()"><i class="icon-plus"></i></button>
+                <button class="btn btn-primary btn-slim" ng-click="addNewElem()" ng-hide="internalView.edit === 'view'"><i class="icon-plus"></i></button>
 
                 <div ng-repeat="subjectRef in newClauseObj['subject-refs'] track by $index">
                     <div class="selectWrapper col-md-10">
-                        <select class="form-control" ng-model="subjectRef" ng-change="updateAt($index, subjectRef)" ng-options="s.name as getDisplayLabel(s, subjects.labels) for s in subjects.options">
+                        <select class="form-control" ng-model="subjectRef" ng-change="updateAt($index, subjectRef)" ng-options="s.name as getDisplayLabel(s, subjects.labels) for s in subjects.options" ng-disabled="internalView.edit === 'view'">
                             <option>--</option>
                         </select>
                     </div>
-                    <button class="btn btn-danger col-md-2" ng-click="deleteElemAt($index)"><i class="icon-remove"></i></button>
+                    <button class="btn btn-danger col-md-2" ng-click="deleteElemAt($index)" ng-hide="internalView.edit === 'view'"><i class="icon-remove"></i></button>
                 </div>
             </div>
 
-            <button class="btn btn-primary col-md-12" ng-click="save()">Save</button>
+            <button class="btn btn-primary col-md-12" ng-click="save()" ng-hide="internalView.edit === 'view'">Save</button>
         </form>
     </section>
 

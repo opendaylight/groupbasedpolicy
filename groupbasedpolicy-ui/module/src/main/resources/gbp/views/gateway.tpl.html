@@ -2,7 +2,7 @@
 
     <div ng-include src="view_path+'parts/crud.tpl.html'"></div>
 
-    <section class="formWrapper clearfix" ng-show="view.gateway">
+    <section class="formWrapper clearfix" ng-show="internalView.gateway">
         <form name="gatewayForm" novalidate="novalidate">
             <i class="icon-remove align-right" ng-click="close()"></i>
 
@@ -11,10 +11,10 @@
                     <i class="icon-exclamation-sign red" tooltip="Invalid pattern" ng-show="gatewayForm.gateway.$error.pattern"></i>
                     <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="gatewayForm.gateway.$error.required"></i>
                 </label>
-                <input class="form-control" type="text" ng-model="newGatewayObj.gateway" ng-disabled="view.edit" name="gateway" ng-pattern="/^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\p{N}\p{L}]+)?$/" ng-required="true"/>
+                <input class="form-control" type="text" ng-model="newGatewayObj.gateway" name="gateway" ng-pattern="/^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\p{N}\p{L}]+)?$/" ng-required="true" ng-disabled="internalView.edit !== 'add'"/>
             </div>
 
-            <button class="btn btn-primary col-md-12" ng-click="save()">Save</button>
+            <button class="btn btn-primary col-md-12" ng-click="save()" ng-hide="internalView.edit === 'view'">Save</button>
         </form>
     </section>
 

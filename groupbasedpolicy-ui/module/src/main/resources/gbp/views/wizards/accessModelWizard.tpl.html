@@ -1,0 +1,396 @@
+<div ng-controller="accessModelWizardCtrl" ng-init="init()">
+    <div class="modal-canvas"></div>
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <i class="icon-remove align-right padding" ng-click="closeWizard('accessModelWizard')"></i>
+            <h2>Access model wizard</h2>
+        </div>
+        <aside class="modal-navigation">
+            <ul>
+                <li class="navigation-item {{wizardPage === 'tenants' ? 'selected' : ''}}">Tenants</li>
+                <li class="navigation-item {{wizardPage === 'contracts' ? 'selected' : ''}}">Contracts</li>
+                <li class="navigation-item {{wizardPage === 'epgs' ? 'selected' : ''}}">Endpoints</li>
+            </ul>
+        </aside>
+        <section class="modal-content-container">
+            <div ng-show="wizardPage === 'tenants'" ng-controller="wizardTenantCtrl" ng-init="init()">
+                <div class="content">
+                    <h2>Tenant</h2>
+                    <div class="clearfix">
+                        <div class="rowWrapper">
+                            <label class="block basicLabel">Select tenant</label>
+                            <select class="form-control" ng-model="selectedTenant"  ng-options="c.name for c in tenantList" ng-change="reloadTenants(selectedTenant)">
+                                <option value="">Select option</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="formWrapper clearfix">OR Add New</div>
+                    <div class="clearfix">
+                        <form name="tenantForm" novalidate="novalidate">
+                            <div class="rowWrapper">
+                                <label class="block basicLabel">Id:</label>
+                                <input class="form-control" type="text" ng-model="newTenantObj.id" disabled/>
+                            </div>
+
+                            <div class="rowWrapper">
+                                <label class="block basicLabel">Name:
+                                    <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="tenantForm.name.$error.required"></i>
+                                </label>
+                                <input class="form-control" type="text" name="name" ng-model="newTenantObj.name" ng-required="true" ng-disabled="view.tenantEdit"/>
+                            </div>
+
+                            <div class="rowWrapper">
+                                <label class="block basicLabel">Description:</label>
+                                <input class="form-control" type="text" ng-model="newTenantObj.description" ng-disabled="view.tenantEdit"/>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="bottom-navigation clearfix">
+                    <button class="btn btn-primary" ng-click="setPage('contracts', newTenantObj)" ng-disabled="!tenantForm.$valid">Next</button>
+                </div>
+            </div>
+
+            <div ng-show="wizardPage === 'contracts'" ng-controller="wizardContractCtrl" ng-init="init()">
+                <div class="content">
+                    <h2 class="text-center">Contracts</h2> 
+                    <div ng-include src="view_path+'parts/crud.tpl.html'"></div>
+                    
+                    <div class="formWrapper clearfix" ng-show="contractFormView">
+                        <form name="contractForm" novalidate="novalidate">
+                            <label class="block">Add contract</label>
+
+                            <div class="rowWrapper">
+                                <label class="block basicLabel">Id:</label>
+                                <input class="form-control" type="text" ng-model="newContractObj.id" disabled />
+                            </div>
+
+                            <div class="rowWrapper">
+                                <label class="block basicLabel">Description:</label>
+                                <input class="form-control" type="text" ng-model="newContractObj.description" />
+                            </div>
+
+                            <div class="rowWrapper">
+                                <label class="block basicLabel">Parent:</label>
+                                <select class="form-control" ng-model="newContractObj.parent" ng-options="d.id as getDisplayLabel(d, displayLabel) for d in list">
+                                    <option value="">Select option</option>
+                                </select>
+                            </div>
+
+                            <button class="btn btn-primary col-md-12" ng-click="save()" ng-disabled="!contractForm.$valid">Save contract</button>
+                        </form>
+                    </div>
+
+                    <fieldset ng-disabled="!selectedContract">
+                        <div class="formWrapper clearfix">
+                            <div ng-controller="wizardSubjectCtrl" ng-init="init()">
+                                <div ng-include src="view_path+'parts/crud.tpl.html'"></div>
+
+                                <div ng-show="internalView.subject">
+                                    <form name="subjectForm" novalidate="novalidate">
+                                        <i class="icon-remove align-right" ng-click="close()"></i>
+
+                                        <div class="rowWrapper">
+                                            <label class="block basicLabel"><span>Name:</span>
+                                                <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="subjectForm.name.$error.required"></i>
+                                            </label>
+                                            <input class="form-control" type="text" ng-model="newSubjectObj.name" name="name" ng-required="true" />
+                                        </div>
+
+                                        <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newSubjectObj['order']">
+                                            <label class="block basicLabel"><span>Order:</span>
+                                                <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="subjectForm.order.$error.required"></i>
+                                            </label>
+                                            <input class="form-control" type="text" name="order" ng-required="true" ng-model="newSubjectObj.order" />
+                                        </div>
+
+                                        <button class="btn btn-primary col-md-12" ng-click="save()" ng-disabled="!subjectForm.$valid">Save subject</button>
+                                    </form>
+                                </div>
+
+                                <fieldset ng-disabled="!selectedSubject">
+                                    <div class="formWrapper clearfix">
+                                        <div ng-controller="wizardRuleCtrl" ng-init="init()">
+
+                                            <div ng-include src="view_path+'parts/crud.tpl.html'"></div>
+
+                                            <div ng-show="internalView.rule">
+                                                <form name="rulesForm" novalidate="novalidate">
+                                                    <i class="icon-remove align-right" ng-click="close()"></i>
+                                                    
+                                                    <div class="rowWrapper">
+                                                        <label class="block basicLabel"><span>Name:</span>
+                                                            <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="rulesForm.name.$error.required"></i>
+                                                        </label>
+                                                        <input class="form-control" type="text" ng-model="newRuleObj.name" name="name" ng-required="true" />
+                                                    </div>
+
+                                                    <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newRuleObj['order']">
+                                                        <label class="block basicLabel"><span>Order:</span>
+                                                            <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="rulesForm.order.$error.required"></i>
+                                                        </label>
+                                                        <input class="form-control" type="text" name="order" ng-required="true" ng-model="newRuleObj.order" />
+                                                    </div>
+                                                    
+                                                    <button class="btn btn-primary col-md-12" ng-click="save()" ng-disabled="!rulesForm.$valid">Save rule</button>
+                                                </form>
+                                            </div>
+
+                                            <fieldset ng-disabled="!selectedRule">
+                                                <div class="formWrapper clearfix">
+                                                    <div ng-controller="wizardActionRefCtrl" ng-init="init()">
+
+                                                        <div ng-include src="view_path+'parts/crud.tpl.html'"></div>
+
+                                                        <div ng-show="internalView.actionRef">
+                                                            <form name="actionRefForm" novalidate="novalidate">
+                                                                <i class="icon-remove align-right" ng-click="close()"></i>
+                                                                
+                                                                <div class="rowWrapper">
+                                                                    <label class="block basicLabel"><span>Name:</span>
+                                                                        <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="actionRefForm.name.$error.required"></i>
+                                                                    </label>
+                                                                    <select class="form-control" ng-model="newActionRefObj.name" ng-options="c.name as getDisplayLabel(c, actionInstanceNames.labels) for c in actionInstanceNames.options" name="name" ng-required="true">
+                                                                        <option>--</option>
+                                                                    </select>
+                                                                </div>
+
+                                                                <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newActionRefObj['order']">
+                                                                    <label class="block basicLabel"><span>Order:</span></label>
+                                                                    <input class="form-control" type="text" ng-model="newActionRefObj.order"/>
+                                                                </div>
+                                                                
+                                                                <button class="btn btn-primary col-md-12" ng-click="save()" >Save</button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+
+                                                    <div ng-controller="wizardClassifierRefCtrl" ng-init="init()">
+
+                                                        <div ng-include src="view_path+'parts/crud.tpl.html'"></div>
+                                                        
+                                                        <div ng-show="internalView.classifierRef">
+                                                            <form name="classifierRefForm" novalidate="novalidate">
+                                                                <i class="icon-remove align-right" ng-click="close()"></i>
+
+                                                                <div class="rowWrapper">
+                                                                    <label class="block basicLabel"><span>Name:</span>
+                                                                        <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="classifierRefForm.name.$error.required"></i>
+                                                                    </label>
+                                                                    <input class="form-control" type="text" ng-model="newClassifierRefObj.name" name="name" ng-required="true" />
+                                                                </div>
+                                                                
+                                                                <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newClassifierRefObj['instance-name']">
+                                                                    <label class="block basicLabel"><span>Instance name:</span></label>
+                                                                    <select class="form-control" ng-model="newClassifierRefObj['instance-name']" ng-options="c.name as getDisplayLabel(c, instanceNames.labels) for c in instanceNames.options" >
+                                                                        <option>--</option>
+                                                                    </select>
+                                                                </div>
+
+                                                                <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newClassifierRefObj['direction']">
+                                                                    <label class="block basicLabel"><span>Direction:</span></label>
+                                                                    <select class="form-control" ng-model="newClassifierRefObj.direction" ng-options="c for c in formDirections" >
+                                                                        <option>--</option>
+                                                                    </select>
+                                                                </div>
+
+                                                                <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newClassifierRefObj['connection-tracking']">
+                                                                    <label class="block basicLabel"><span>Connection tracking:</span></label>
+                                                                    <select class="form-control" ng-model="newClassifierRefObj['connection-tracking']" ng-options="c for c in formConnectionTracking" >
+                                                                        <option>--</option>
+                                                                    </select>
+                                                                </div>
+                                                                
+                                                                <button class="btn btn-primary col-md-12" ng-click="save()" >Save</button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </fieldset>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </div>
+
+                            <div ng-controller="wizardClauseCtrl" ng-init="init()">
+                                <div ng-include src="view_path+'parts/crud.tpl.html'"></div>
+
+                                <div class="formWrapper clearfix" ng-show="internalView.clause">
+                                    <form name="clauseForm" novalidate="novalidate">
+                                        <i class="icon-remove align-right" ng-click="close()"></i>
+
+                                        <div class="rowWrapper">
+                                            <label class="block basicLabel"><span>Name:</span>
+                                                <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="clauseForm.name.$error.required"></i>
+                                            </label>
+                                            <input class="form-control" type="text" ng-model="newClauseObj.name" name="name" ng-required="true" />
+                                        </div>
+
+                                        <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newClauseObj['subject-refs']">
+                                            <label class="basicLabel"><span>Clause subjects:</span></label>
+                                            <button class="btn btn-primary btn-slim" ng-click="addNewElem()"><i class="icon-plus"></i></button>
+
+                                            <div ng-repeat="subjectRef in newClauseObj['subject-refs'] track by $index">
+                                                <div class="selectWrapper col-md-10">
+                                                    <select class="form-control" ng-model="subjectRef" ng-change="updateAt($index, subjectRef)" ng-options="s.name as getDisplayLabel(s, subjects.labels) for s in subjects.options">
+                                                        <option>--</option>
+                                                    </select>
+                                                </div>
+                                                <button class="btn btn-danger col-md-2" ng-click="deleteElemAt($index)" ><i class="icon-remove"></i></button>
+                                            </div>
+                                        </div>
+
+                                        <button class="btn btn-primary col-md-12" ng-click="save()" ng-disabled="!clauseForm.$valid">Save</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                </div>
+
+                <div class="bottom-navigation clearfix">
+                    <button class="btn" ng-click="setPage('tenants')">Previous</button>
+                    <button class="btn btn-primary" ng-click="setPage('epgs', list)">Next</button>
+                </div>
+            </div>
+                
+            <div ng-show="wizardPage === 'epgs'" ng-controller="wizardEpgCtrl" ng-init="init()">
+                <div class="content">
+                    <h2 class="text-center">Endpoint groups</h2> 
+                    <div ng-include src="view_path+'parts/crud.tpl.html'"></div>
+
+                    <div class=" clearfix" ng-show="epgFormView">
+                        <form name="epgForm" novalidate="novalidate">
+                            <i class="icon-remove align-right" ng-click="close()"></i>
+                            <div class="rowWrapper">
+                                <label class="block basicLabel">Id:</label>
+                                <input class="form-control" type="text" ng-model="newEpgObj.id" disabled />
+                            </div>
+
+                            <div class="rowWrapper">
+                                <label class="block basicLabel">Name:
+                                    <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="epgForm.name.$error.required"></i>
+                                </label>
+                                <input class="form-control" type="text" name="name" ng-model="newEpgObj.name" ng-required="true" />
+                            </div>
+
+                            <div class="rowWrapper">
+                                <label class="block basicLabel">Description:</label>
+                                <input class="form-control" type="text" ng-model="newEpgObj.description" />
+                            </div>
+
+                            <div class="rowWrapper">
+                                <label class="block basicLabel">Intra group policy:</label>
+                                <select class="form-control" ng-model="newEpgObj['intra-group-policy']" ng-options="opt for opt in igpOpts">
+                                    <option>--</option>
+                                </select>
+                            </div>
+
+                            <div class="rowWrapper">
+                                <label class="block basicLabel">Network domain:
+                                    <i class="icon-exclamation-sign red" tooltip="Invalid pattern" ng-show="epgForm.netDomain.$error.pattern"></i>
+                                </label>
+                                <input class="form-control" type="text" ng-model="newEpgObj['network-domain']" name="netDomain" ng-pattern="/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/"/>
+                            </div>
+
+                            <div class="rowWrapper">
+                                <label class="block basicLabel">Parent:</label>
+                                <select class="form-control" ng-model="newEpgObj.parent" ng-options="d.id as getDisplayLabel(d, displayLabel) for d in list">
+                                    <option>--</option>
+                                </select>
+                            </div>
+
+                            <button class="btn btn-primary col-md-12" ng-click="save()" ng-disabled="!epgForm.$valid">Save</button>
+                        </form>
+                    </div>
+
+                    <fieldset ng-disabled="!selectedEpg">
+                        <div class="formWrapper clearfix">
+                            <div ng-controller="wizardCnsCtrl" ng-init="init()">
+
+                                <div ng-include src="view_path+'parts/crud.tpl.html'"></div>
+
+                                <div class="formWrapper clearfix" ng-show="internalView.cns">
+                                    <form name="cnsForm" novalidate="novalidate">
+                                        <i class="icon-remove align-right" ng-click="close()"></i>
+
+                                        <div class="rowWrapper">
+                                            <label class="block basicLabel">Name:
+                                                <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="cnsForm.name.$error.required"></i>
+                                            </label>
+                                            <input class="form-control" type="text" name="name" ng-model="newCNSObj.name" ng-required="true" />
+                                        </div>
+
+                                        <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newCNSObj['contract']">
+                                            <label class="basicLabel">Contracts:</label>
+                                            <button class="btn btn-primary btn-slim" ng-click="addNewElem()" ><i class="icon-plus"></i></button>
+
+                                            <div ng-repeat="contractRef in newCNSObj.contract track by $index">
+                                                <div class="selectWrapper col-md-10">
+                                                    <select class="form-control" ng-model="contractRef" ng-change="updateAt($index, contractRef)" ng-options="c.id as getDisplayLabel(c, contractList.labels) for c in contractList.options" ng->
+                                                        <option value="">Select option</option>
+                                                    </select>
+                                                </div>
+                                                <button class="btn btn-danger col-md-2" ng-click="deleteElemAt($index)" ><i class="icon-remove"></i></button>
+                                            </div>
+                                        </div>
+
+                                        <button class="btn btn-primary col-md-12" ng-click="save()" ng-disabled="!cnsForm.$valid">Save</button>
+                                    </form>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div class="clearfix">
+                            <div ng-controller="wizardPnsCtrl" ng-init="init()">
+
+                                <div ng-include src="view_path+'parts/crud.tpl.html'"></div>
+
+                                <section class="formWrapper clearfix" ng-show="internalView.pns">
+                                    <form name="pnsForm" novalidate="novalidate">
+                                        <i class="icon-remove align-right" ng-click="close()"></i>
+
+                                        <div class="rowWrapper">
+                                            <label class="block basicLabel">Name:
+                                                <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="pnsForm.name.$error.required"></i>
+                                            </label>
+                                            <input class="form-control" type="text" ng-model="newPNSObj.name"  name="name" ng-required="true" />
+                                        </div>
+
+                                        <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newPNSObj['contract']">
+                                            <label class="basicLabel">Contracts:</label>
+                                            <button class="btn btn-primary btn-slim" ng-click="addNewElem()" ><i class="icon-plus"></i></button>
+
+
+                                            <div ng-repeat="contractRef in newPNSObj.contract track by $index">
+
+                                                <div class="selectWrapper col-md-10">
+                                                    <select class="form-control" ng-model="contractRef" ng-change="updateAt($index, contractRef)" ng-options="c.id as getDisplayLabel(c, contractList.labels) for c in contractList.options" >
+                                                        <option>--</option>
+                                                    </select>
+                                                </div>
+                                                <button class="btn btn-danger col-md-2" ng-click="deleteElemAt($index)" ><i class="icon-remove"></i></button>
+
+                                            </div>
+                                        </div>
+
+                                        <button class="btn btn-primary col-md-12" ng-click="save()" ng-disabled="!pnsForm.$valid">Save</button>
+                                    </form>
+                                </section>
+
+                            </div>
+                        </div>
+                    </fieldset>
+                </div>
+
+                <div class="bottom-navigation clearfix">
+                    <button class="btn" ng-click="setPage('contracts')">Previous</button>
+                    <!-- <button class="btn btn-primary" ng-click="setPage('summary', list)">Next</button> -->
+                    <button class="btn btn-primary"ng-click="submit(list)">Submit</button>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>

@@ -4,6 +4,7 @@
   margin-bottom: 0!important;
   min-height: 100%;
   padding-bottom: 60px;
+  
   span, label {
     color: #393939;
   }
@@ -42,6 +43,33 @@
     width:100%;
     float: left;
   }
+
+  .ep-filter{
+    margin-bottom: 20px;
+    DIV{
+      width: 48%;
+    }
+  }
+
+  .float-left{
+    float: left;
+  }
+
+  .float-right{
+    float: right;
+  }
+
+  .full-width{
+    width: 100%;
+
+    .btn{
+      width: 50px;
+    }
+
+    label{
+      margin-top: 10px;
+    }
+  }
 }
 
 .gbpWrapper{
@@ -51,6 +79,35 @@
     background-color: #428bca;
     border-color: #357ebd;
     font-weight: normal;
+
+    &:hover {
+      background-color: #1BAAFD;
+      border-color: #1BAAFD;
+    }
+
+    &.bottom-buttons {
+      bottom: 0;
+      position: absolute;
+      margin-bottom: 0 !important;
+      background-color: #FF7300;
+      border-color: #FF7300;
+      width: 45%;
+
+      &.back {
+        right:0;
+        margin-right: 15px;
+      }
+
+      &.home {
+        left:0;
+        margin-left: 15px;
+      }
+
+      &:hover {
+        background-color: #FF8f33;
+        border-color: #FF8f33;
+      }      
+    }
   }
 
   .noPadding{
@@ -66,14 +123,23 @@
     margin-bottom: 5px;
   }
 
+  .inline-block{
+    display: inline-block;
+  }
+
   aside{
     &.col-md-3{
-      min-height: 100%;
+      min-height: 800px;
+
+      .inWrapper{
+        height: 100%;
+      }
     }
   }
 
   .panelWrapper{
     padding: 20px 0; 
+    height: calc(~'100% - 109px');
     button{
       &.btn{
         margin-bottom: 5px;
@@ -179,6 +245,10 @@
   .icon-remove {
     &.align-right {
       float: right;
+
+      &.padding {
+        margin: 5px 5px 0 0;
+      }
     }
   }
 
@@ -226,6 +296,84 @@
       }
     }
   }
-
 }
+
+.modal-dialog {
+  z-index: 100;
+  height: 700px;
+  width: 700px;
+  background-color: white;
+  position: fixed;
+  opacity: 1;
+  top:50%;
+  left:50%;
+  margin:-350px 0 0 -400px;
+
+  .modal-header {
+    height: 70px;
+    padding: 10px 15px;
+  }
+
+  .modal-navigation {
+    float:left;
+    width: 150px;
+    height: 630px;
+    border-right: 1px solid #e5e5e5;
+    background-color: #eeeeee;
+
+    ul {
+      -webkit-padding-start: 0;
+      list-style-type: none;
+
+      li.navigation-item {
+         height: 54px;
+         width: 100%;
+         background-color: #eeeeee;
+         color: #666;
+         font-weight: bold;
+         padding: 20px;
+
+         &.selected {
+          background-color: #428bca;
+          border-color: #357ebd;
+          color: #ffffff;
+         }
+      }
+    }
+  }
+
+  .modal-content-container {
+    float: right;
+    width: 550px;
+    height: 630px;
+
+    .content {
+      overflow-y: scroll;
+      padding: 0 50px 0 20px;
+      height: 580px;
+    }
+    .bottom-navigation {
+      height: 50px;
+      bottom: 0;
+      float: right;
+      margin: 8px 30px
+    } 
+  }
+
+
+
+  
+}
+
+.modal-canvas {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+  background-color: #000;
+  opacity: .15;
+}
+
 /*GBP END*/

@@ -133,13 +133,12 @@ define(['app/gbp/gbp.module'], function(gbp) {
                 setNode = function(obj){
                     var nodeObj = {
                             'id': 'n' + nodes.length,
-                            'label': obj.type + ':' + obj.name,
+                            'label': obj.name || obj.id,
                             'name': obj.name,
                             'size': 1,
                             'x': Math.random(),
                             'y': Math.random(),
-                            'color': GBPConstants.colors[GBPConstants.strings.sigmaTopoDefault]/*,
-                            'type' : getNodeType(obj.type)*/
+                            'color': GBPConstants.colors[GBPConstants.strings.sigmaTopoDefault]
                         };
 
                     nodes.push(nodeObj);
@@ -163,43 +162,35 @@ define(['app/gbp/gbp.module'], function(gbp) {
                         return i[prop] === val;
                     });
                 };
-                
 
-            epgData.forEach(function(e){
+            if(epgData) {
+                epgData.forEach(function(e){
+                    var cepgnId = null,
+                        pepgnId = null;
 
-                var cepgnId = null,
-                    pepgnId = null;
-
-                
-                if ( !getObjByProp(e['consumer-endpoint-group-id'],'name', nodes).length ) {
-                    // epgArray.push(e['consumer-endpoint-group-id']);
-                    var objCepg = {
-                        type: 'epg',
-                        name: e['consumer-endpoint-group-id']
-                    };
-                    cepgnId = setNode(objCepg);
-                } else {
-                    cepgnId = getObjByProp(e['consumer-endpoint-group-id'],'name', nodes)[0].id;
-                }
-
-                if ( !getObjByProp(e['provider-endpoint-group-id'],'name', nodes).length ) {
-                    var objPepg = {
-                        type: 'epg',
-                        name: e['provider-endpoint-group-id']
-                    };
-                    pepgnId = setNode(objPepg);
-                } else {
-                    pepgnId = getObjByProp(e['provider-endpoint-group-id'],'name', nodes)[0].id;
-                }
-
-                if ( cepgnId && pepgnId ) {
-                    setEdge(cepgnId, pepgnId, e['ui-subject']);
-                }
-
-            });
-            
-            // console.log('nodes', nodes);
-            // console.log('edges', edges);
+                    if ( !getObjByProp(e['consumer-endpoint-group-id'],'name', nodes).length ) {
+                        var objCepg = {
+                            type: 'epg',
+                            name: e['consumer-endpoint-group-id']
+                        };
+                        cepgnId = setNode(objCepg);
+                    } else {
+                        cepgnId = getObjByProp(e['consumer-endpoint-group-id'],'name', nodes)[0].id;
+                    }
+                    if ( !getObjByProp(e['provider-endpoint-group-id'],'name', nodes).length ) {
+                        var objPepg = {
+                            type: 'epg',
+                            name: e['provider-endpoint-group-id']
+                        };
+                        pepgnId = setNode(objPepg);
+                    } else {
+                        pepgnId = getObjByProp(e['provider-endpoint-group-id'],'name', nodes)[0].id;
+                    }
+                    if ( cepgnId && pepgnId ) {
+                        setEdge(cepgnId, pepgnId, e['ui-subject']);
+                    }
+                });
+            }
 
             return {
                 nodes: nodes,
@@ -213,10 +204,10 @@ define(['app/gbp/gbp.module'], function(gbp) {
             var lid = 0,
                 nid = 0,
                 getL2L3Label = function(node) {
-                    return node.id + (node.name ? ':' + node.name : '');
+                    return node.name || node.id;
                 },
                 getSubnetLabel = function(node) {
-                    return node.id + (node['ip-prefix'] ? ':' + node['ip-prefix'] : '');
+                    return node['ip-prefix'] || node.id;
                 },
                 getNodeColor = function(src) {
                     return GBPConstants.colors[src] || GBPConstants.colors[GBPConstants.strings.sigmaTopoDefault];
@@ -361,7 +352,11 @@ define(['app/gbp/gbp.module'], function(gbp) {
             var storage = args.storage || 'config',
                 tenantId = args.tenantId;
 
-            TopologyDataLoaders.getSubjectsBetweenEndpointGroups(true, successCbk, errorCbk);
+            TopologyDataLoaders.getSubjectsBetweenEndpointGroups(true, tenantId, function(data){
+                var topo = TopologyDataLoaders.getEpgTopo(data);
+                successCbk(topo.nodes, topo.links);
+                //successCbk
+            }, errorCbk);
         };
 
         loaders[GBPConstants.strings.l2l3] = function(successCbk, errorCbk, args) {
@@ -1761,8 +1756,8 @@ define(['app/gbp/gbp.module'], function(gbp) {
 
         var s = {};
 
-        var Endpoint = function() {
-            this.tenant = null;
+        var Endpoint = function(tenantId) {
+            this.tenant = tenantId || null;
             this['network-containment'] = null;
             this['endpoint-group'] = null;
             this['endpoint-groups'] = [];
@@ -1819,8 +1814,8 @@ define(['app/gbp/gbp.module'], function(gbp) {
             return o;
         };
 
-        s.createObj = function() {
-            return new Endpoint();
+        s.createObj = function(tenantId) {
+            return new Endpoint(tenantId);
         };
 
         s.send = function(path, obj, successCbk, errorCbk) {
