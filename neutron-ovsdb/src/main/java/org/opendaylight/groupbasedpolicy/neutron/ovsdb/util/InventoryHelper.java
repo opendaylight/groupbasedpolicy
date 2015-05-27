@@ -7,14 +7,7 @@
  */
 package org.opendaylight.groupbasedpolicy.neutron.ovsdb.util;
 
-import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.readFromDs;
-import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.submitToDs;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getOvsdbBridgeFromTerminationPoint;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getOvsdbTerminationPoint;
-
-import java.util.ArrayList;
-import java.util.List;
-
+import com.google.common.base.Optional;
 import org.apache.commons.lang3.StringUtils;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
@@ -42,7 +35,15 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Optional;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getOvsdbBridgeFromTerminationPoint;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getOvsdbTerminationPoint;
+import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.readFromDs;
+import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.submitToDs;
 
 public class InventoryHelper {
     private static final Logger LOG = LoggerFactory.getLogger(InventoryHelper.class);
@@ -287,6 +288,41 @@ public class InventoryHelper {
             for (Tunnel tunnel: tunnelList) {
                 addTunnelToOfOverlayAugmentation(tunnel, nodeIdString, dataBroker);
             }
+        }
+    }
+
+    public static void removeTunnelsOfOverlayConfig(String nodeIdString,
+                                                    List<AbstractTunnelType> tunnels,
+                                                    DataBroker dataBroker) {
+
+        if (nodeIdString == null) {
+            LOG.debug("Can't update OfOverlay: requisite information not present");
+            return;
+        }
+        List<Tunnel> existingTunnels = new ArrayList<>();
+        OfOverlayNodeConfig ofConfig = getOfOverlayConfig(nodeIdString, dataBroker);
+        if (ofConfig != null) {
+            existingTunnels = ofConfig.getTunnel();
+        }
+        Set<Tunnel> tunnelsToRemove = new HashSet<>();
+        for (AbstractTunnelType tunnelType : tunnels) {
+            for (Tunnel currentTun : existingTunnels) {
+                if (tunnelType.getTunnelType().equals(currentTun.getTunnelType())) {
+                    tunnelsToRemove.add(currentTun);
+                }
+            }
+        }
+
+        // runs only if some tunnels were really removed
+        if (existingTunnels.removeAll(tunnelsToRemove)) {
+            OfOverlayNodeConfigBuilder ofOverlayBuilder;
+            if (ofConfig == null) {
+                ofOverlayBuilder = new OfOverlayNodeConfigBuilder();
+            } else {
+                ofOverlayBuilder = new OfOverlayNodeConfigBuilder(ofConfig);
+            }
+            ofOverlayBuilder.setTunnel(existingTunnels);
+            addOfOverlayAugmentation(ofOverlayBuilder.build(), nodeIdString, dataBroker);
         }
     }
 }
