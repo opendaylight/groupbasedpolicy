@@ -5,7 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.IidFactory;
+import org.opendaylight.groupbasedpolicy.neutron.gbp.util.NeutronGbpIidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.neutron.spi.INeutronFloatingIPAware;
@@ -69,9 +69,9 @@ public class NeutronFloatingIpAware implements INeutronFloatingIPAware {
         if ((!oldFixedIPAddress.isEmpty() && newFixedIPAddress.isEmpty())
                 || (!oldPortUUID.isEmpty() && newPortUUID.isEmpty())) {
             DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
-                    IidFactory.internalPortByFloatingIpPortIid(floatingIpPortId), rwTx);
+                    NeutronGbpIidFactory.internalPortByFloatingIpPortIid(floatingIpPortId), rwTx);
             DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
-                    IidFactory.floatingIpPortByInternalPortIid(new UniqueId(oldPortUUID)), rwTx);
+                    NeutronGbpIidFactory.floatingIpPortByInternalPortIid(new UniqueId(oldPortUUID)), rwTx);
             // TODO unregister EP representing floating ip port
         } else if (!newFixedIPAddress.isEmpty() && !newPortUUID.isEmpty()) {
             // workaround for https://bugs.opendaylight.org/show_bug.cgi?id=3368
@@ -89,9 +89,9 @@ public class NeutronFloatingIpAware implements INeutronFloatingIPAware {
                 .setInternalPortId(internalPortId)
                 .setInternalPortIpAddress(Utils.createIpAddress(newFixedIPAddress))
                 .build();
-            rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.internalPortByFloatingIpPortIid(floatingIpPortId),
+            rwTx.put(LogicalDatastoreType.OPERATIONAL, NeutronGbpIidFactory.internalPortByFloatingIpPortIid(floatingIpPortId),
                     internalPortByFloatingIpPort, true);
-            rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.floatingIpPortByInternalPortIid(internalPortId),
+            rwTx.put(LogicalDatastoreType.OPERATIONAL, NeutronGbpIidFactory.floatingIpPortByInternalPortIid(internalPortId),
                     new FloatingIpPortByInternalPortBuilder(internalPortByFloatingIpPort).build(), true);
         }
         boolean isSubmitToDsSuccessful = DataStoreHelper.submitToDs(rwTx);

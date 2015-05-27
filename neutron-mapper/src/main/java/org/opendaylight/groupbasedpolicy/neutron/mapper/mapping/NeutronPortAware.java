@@ -254,11 +254,11 @@ public class NeutronPortAware implements INeutronPortAware {
         } else if (isFloatingIpPort(port)) {
             LOG.trace("Adding FloatingIpPort-Endpoint mapping for port {} and endpoint {}", port.getID(), epKey);
             EndpointByFloatingIpPort endpointByPort = MappingFactory.createEndpointByFloatingIpPort(epKey, portId);
-            rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointByFloatingIpPortIid(portId),
+            rwTx.put(LogicalDatastoreType.OPERATIONAL, NeutronGbpIidFactory.endpointByFloatingIpPortIid(portId),
                     endpointByPort, true);
             FloatingIpPortByEndpoint portByEndpoint = MappingFactory.createFloatingIpPortByEndpoint(portId, epKey);
             rwTx.put(LogicalDatastoreType.OPERATIONAL,
-                    IidFactory.floatingIpPortByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()),
+                    NeutronGbpIidFactory.floatingIpPortByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()),
                     portByEndpoint, true);
         } else {
             LOG.trace("Adding Port-Endpoint mapping for port {} (device owner {}) and endpoint {}", port.getID(),
@@ -616,27 +616,27 @@ public class NeutronPortAware implements INeutronPortAware {
         if (isRouterInterfacePort(port)) {
             LOG.trace("Adding RouterInterfacePort-Endpoint mapping for port {} and endpoint {}", port.getID(), epKey);
             DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
-                    IidFactory.endpointByRouterInterfacePortIid(portId), rwTx);
+                    NeutronGbpIidFactory.endpointByRouterInterfacePortIid(portId), rwTx);
             DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
-                    IidFactory.routerInterfacePortByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()), rwTx);
+                    NeutronGbpIidFactory.routerInterfacePortByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()), rwTx);
         } else if (isRouterGatewayPort(port)) {
             LOG.trace("Adding RouterGatewayPort-Endpoint mapping for port {} and endpoint {}", port.getID(), epKey);
             DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
-                    IidFactory.endpointByRouterGatewayPortIid(portId), rwTx);
+                    NeutronGbpIidFactory.endpointByRouterGatewayPortIid(portId), rwTx);
             DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
-                    IidFactory.routerGatewayPortByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()), rwTx);
+                    NeutronGbpIidFactory.routerGatewayPortByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()), rwTx);
         } else if (isFloatingIpPort(port)) {
             LOG.trace("Adding FloatingIpPort-Endpoint mapping for port {} and endpoint {}", port.getID(), epKey);
             DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
-                    IidFactory.endpointByFloatingIpPortIid(portId), rwTx);
+                    NeutronGbpIidFactory.endpointByFloatingIpPortIid(portId), rwTx);
             DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
-                    IidFactory.floatingIpPortByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()), rwTx);
+                    NeutronGbpIidFactory.floatingIpPortByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()), rwTx);
         } else {
             LOG.trace("Adding Port-Endpoint mapping for port {} (device owner {}) and endpoint {}", port.getID(),
                     port.getDeviceOwner(), epKey);
-            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointByPortIid(portId), rwTx);
+            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL, NeutronGbpIidFactory.endpointByPortIid(portId), rwTx);
             DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
-                    IidFactory.portByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()), rwTx);
+                    NeutronGbpIidFactory.portByEndpointIid(epKey.getL2Context(), epKey.getMacAddress()), rwTx);
         }
     }
 
