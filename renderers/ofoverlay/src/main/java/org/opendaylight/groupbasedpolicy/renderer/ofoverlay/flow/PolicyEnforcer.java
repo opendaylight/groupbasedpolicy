@@ -14,6 +14,7 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxOutputRegAction;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -120,7 +121,10 @@ public class PolicyEnforcer extends FlowTable {
             for (EgKey srcEpgKey : ctx.getEndpointManager().getEgKeysForEndpoint(srcEp)) {
                 Set<EgKey> peers = policyInfo.getPeers(srcEpgKey);
                 for (EgKey dstEpgKey : peers) {
-                    for (Endpoint dstEp : ctx.getEndpointManager().getEndpointsForGroup(dstEpgKey)) {
+                    Set<Endpoint> dstEndpoints = new HashSet<>();
+                    dstEndpoints.addAll(ctx.getEndpointManager().getEndpointsForGroup(dstEpgKey));
+                    dstEndpoints.addAll(ctx.getEndpointManager().getExtEpsNoLocForGroup(dstEpgKey));
+                    for (Endpoint dstEp : dstEndpoints) {
                         // mEPG ordinals
                         EndpointFwdCtxOrdinals srcEpFwdCxtOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx,
                                 policyInfo, srcEp);

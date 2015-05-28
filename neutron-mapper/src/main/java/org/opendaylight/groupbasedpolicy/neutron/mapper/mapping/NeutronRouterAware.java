@@ -415,23 +415,23 @@ public class NeutronRouterAware implements INeutronRouterAware {
 
     private static NeutronSecurityRule createRouterSecRule(String ruleUuid, TenantId tenantId, IpPrefix ipSubnet,
             EndpointGroupId consumerEpgId, boolean isEgress) {
-        NeutronSecurityRule dhcpSecRule = new NeutronSecurityRule();
-        dhcpSecRule.setSecurityRuleGroupID(MappingUtils.EPG_ROUTER_ID.getValue());
-        dhcpSecRule.setSecurityRuleTenantID(tenantId.getValue());
-        dhcpSecRule.setSecurityRuleRemoteIpPrefix(Utils.getStringIpPrefix(ipSubnet));
+        NeutronSecurityRule routerSecRule = new NeutronSecurityRule();
+        routerSecRule.setSecurityRuleGroupID(MappingUtils.EPG_ROUTER_ID.getValue());
+        routerSecRule.setSecurityRuleTenantID(tenantId.getValue());
+        routerSecRule.setSecurityRuleRemoteIpPrefix(Utils.getStringIpPrefix(ipSubnet));
         if (isEgress) {
-            dhcpSecRule.setSecurityRuleUUID(NeutronUtils.EGRESS + "__" + ruleUuid);
-            dhcpSecRule.setSecurityRuleDirection(NeutronUtils.EGRESS);
+            routerSecRule.setSecurityRuleUUID(NeutronUtils.EGRESS + "__" + ruleUuid);
+            routerSecRule.setSecurityRuleDirection(NeutronUtils.EGRESS);
         } else {
-            dhcpSecRule.setSecurityRuleUUID(NeutronUtils.INGRESS + "__" + ruleUuid);
-            dhcpSecRule.setSecurityRuleDirection(NeutronUtils.INGRESS);
+            routerSecRule.setSecurityRuleUUID(NeutronUtils.INGRESS + "__" + ruleUuid);
+            routerSecRule.setSecurityRuleDirection(NeutronUtils.INGRESS);
         }
         if (ipSubnet.getIpv4Prefix() != null) {
-            dhcpSecRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
+            routerSecRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
         } else {
-            dhcpSecRule.setSecurityRuleEthertype(NeutronUtils.IPv6);
+            routerSecRule.setSecurityRuleEthertype(NeutronUtils.IPv6);
         }
-        return dhcpSecRule;
+        return routerSecRule;
     }
 
     @Override

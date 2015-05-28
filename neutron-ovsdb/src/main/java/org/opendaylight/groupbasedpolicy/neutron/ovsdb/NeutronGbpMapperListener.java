@@ -45,7 +45,7 @@ public class NeutronGbpMapperListener implements DataChangeListener, AutoCloseab
     public NeutronGbpMapperListener(DataBroker dataBroker) {
         this.dataBroker = checkNotNull(dataBroker);
         registration = dataBroker.registerDataChangeListener(LogicalDatastoreType.OPERATIONAL,
-                NeutronOvsdbIidFactory.neutronGbpExternalGatewaysIid(), this, DataChangeScope.SUBTREE);
+        NeutronOvsdbIidFactory.neutronGbpExternalGatewaysIid(), this, DataChangeScope.SUBTREE);
         LOG.trace("NeutronGbpMapperListener started");
     }
 

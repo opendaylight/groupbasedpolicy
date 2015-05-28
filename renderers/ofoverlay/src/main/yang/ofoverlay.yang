@@ -105,6 +105,26 @@ module ofoverlay {
             description
                 "Unique identifier for interface";
         }
+
+        container napt-translations {
+            description "List of NAPT translations";
+            list napt-translation {
+                key "ip-address";
+                uses napt-fields;
+            }
+        }
+    }
+
+    grouping napt-fields {
+        description "Support for IP NAPT";
+        leaf ip-address {
+            description "Ip address the L3Endpoint translates to.";
+            type inet:ip-address;
+        }
+        leaf port {
+            description "Port that L3Endpoint translates to.";
+            type inet:port-number;
+        }
     }
 
     augment "/endpoint:endpoints/endpoint:endpoint" {

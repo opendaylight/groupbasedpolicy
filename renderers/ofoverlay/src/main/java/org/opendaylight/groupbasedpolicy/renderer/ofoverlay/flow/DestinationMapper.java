@@ -8,6 +8,7 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.ARP;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.IPv4;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.IPv6;
@@ -32,6 +33,7 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.outputAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.setDlDstAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.setDlSrcAction;
+import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.readFromDs;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -46,9 +48,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
-import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
@@ -57,6 +57,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.groupbasedpolicy.resolver.TenantUtils;
+import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Prefix;
@@ -76,6 +77,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.l3.prefix.fields.EndpointL3Gateways;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key;
@@ -101,16 +103,15 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev14
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg6;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
-import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.CheckedFuture;
 
 /**
  * Manage the table that maps the destination address to the next hop for the
@@ -131,10 +132,11 @@ public class DestinationMapper extends FlowTable {
      */
     public static final MacAddress ROUTER_MAC = new MacAddress("88:f0:31:b5:12:b5");
     public static final MacAddress MULTICAST_MAC = new MacAddress("01:00:00:00:00:00");
+    public static final Integer BASE_L3_PRIORITY = 100;
 
     public DestinationMapper(OfContext ctx, short tableId) {
         super(ctx);
-        this.TABLE_ID=tableId;
+        this.TABLE_ID = tableId;
     }
 
     Map<TenantId, HashSet<Subnet>> subnetsByTenant = new HashMap<TenantId, HashSet<Subnet>>();
@@ -147,7 +149,7 @@ public class DestinationMapper extends FlowTable {
     @Override
     public void sync(NodeId nodeId, PolicyInfo policyInfo, FlowMap flowMap) throws Exception {
 
-        TenantId currentTenant=null;
+        TenantId currentTenant = null;
 
         flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null));
 
@@ -217,6 +219,13 @@ public class DestinationMapper extends FlowTable {
         Collection<EndpointL3Prefix> prefixEps = ctx.getEndpointManager().getEndpointsL3PrefixForTenant(currentTenant);
         if (prefixEps != null) {
             LOG.trace("DestinationMapper - Processing L3PrefixEndpoints");
+            for (EndpointL3Prefix prefixEp : prefixEps) {
+                Flow prefixFlow = createL3PrefixFlow(prefixEp, policyInfo, nodeId);
+                if (prefixFlow != null) {
+                    flowMap.writeFlow(nodeId, TABLE_ID, prefixFlow);
+                    LOG.trace("Wrote L3Prefix flow");
+                }
+            }
         }
 
     }
@@ -224,14 +233,172 @@ public class DestinationMapper extends FlowTable {
     // set up next-hop destinations for all the endpoints in the endpoint
     // group on the node
 
+    private Flow createL3PrefixFlow(EndpointL3Prefix prefixEp, PolicyInfo policyInfo, NodeId nodeId) throws Exception {
+        /*
+         * Priority: 100+lengthprefix
+         * Match: prefix, l3c, "mac address of router" ?
+         * Action:
+         * - set Reg2, Reg3 for L3Ep by L2Ep ?
+         * - if external,
+         * - Reg7: use switch location external port else punt for now
+         * - if internal
+         * - Reg7: grab L2Ep from L3Ep and use its location info
+         * - goto_table: POLENF (will check there for external on EP)
+         */
+
+        ReadOnlyTransaction rTx = ctx.getDataBroker().newReadOnlyTransaction();
+        // TODO Bug #3440 Target: Be - should support for more than first gateway.
+        EndpointL3Gateways l3Gateway = prefixEp.getEndpointL3Gateways().get(0);
+        Optional<EndpointL3> optL3Ep = readFromDs(LogicalDatastoreType.OPERATIONAL,
+                IidFactory.endpointL3Iid(l3Gateway.getL3Context(), l3Gateway.getIpAddress()), rTx);
+        if (!optL3Ep.isPresent()) {
+            LOG.error("createL3PrefixFlow - L3Endpoint gateway {} for L3Prefix {} not found.", l3Gateway, prefixEp);
+            return null;
+        }
+        EndpointL3 l3Ep = optL3Ep.get();
+        Optional<Endpoint> optL2Ep = readFromDs(LogicalDatastoreType.OPERATIONAL,
+                IidFactory.endpointIid(l3Ep.getL2Context(), l3Ep.getMacAddress()), rTx);
+        if (!optL2Ep.isPresent()) {
+            LOG.error("createL3PrefixFlow - L2Endpoint for L3Gateway {} not found.", l3Ep);
+            return null;
+        }
+        Endpoint l2Ep = optL2Ep.get();
+        EndpointFwdCtxOrdinals epFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, l2Ep);
+
+        NetworkDomainId epNetworkContainment = getEPNetworkContainment(l2Ep);
+
+        MacAddress epDestMac = l2Ep.getMacAddress();
+        MacAddress destSubnetGatewayMac = l2Ep.getMacAddress();
+
+        ArrayList<Instruction> l3instructions = new ArrayList<>();
+        List<Action> applyActions = new ArrayList<>();
+        List<Action> l3ApplyActions = new ArrayList<>();
+
+        int order = 0;
+
+        Action setdEPG = nxLoadRegAction(NxmNxReg2.class, BigInteger.valueOf(epFwdCtxOrds.getEpgId()));
+        Action setdCG = nxLoadRegAction(NxmNxReg3.class, BigInteger.valueOf(epFwdCtxOrds.getCgId()));
+        Action setNextHop;
+        String nextHop=null;
+
+        OfOverlayContext ofc = l2Ep.getAugmentation(OfOverlayContext.class);
+        LocationType location;
+
+        if (ofc != null && ofc.getLocationType() != null) {
+            location = ofc.getLocationType();
+        } else if (ofc != null) {
+            // Augmentation, but using default location
+            location = LocationType.Internal;
+        } else {
+            LOG.info("createL3PrefixFlow - Endpoint {} had no augmentation.", l2Ep);
+            return null;
+        }
+
+        long portNum = -1;
+
+        if (location.equals(LocationType.Internal)) {
+            checkNotNull(ofc.getNodeConnectorId());
+            nextHop = ofc.getNodeConnectorId().getValue();
+            try {
+                portNum = getOfPortNum(ofc.getNodeConnectorId());
+            } catch (NumberFormatException ex) {
+                LOG.warn("Could not parse port number {}", ofc.getNodeConnectorId(), ex);
+                return null;
+            }
+
+        } else {
+            // External
+            Set<NodeConnectorId> externalPorts = ctx.getSwitchManager().getExternalPorts(nodeId);
+            checkNotNull(externalPorts);
+            for (NodeConnectorId externalPort : externalPorts) {
+                // TODO Bug #3440 Target: Be - should support for more than first external port.
+                nextHop = externalPort.getValue();
+                try {
+                    portNum = getOfPortNum(externalPort);
+                } catch (NumberFormatException ex) {
+                    LOG.warn("Could not parse port number {}", ofc.getNodeConnectorId(), ex);
+                    return null;
+                }
+                continue;
+            }
+        }
+
+        if (Strings.isNullOrEmpty(nextHop)
+                || portNum == -1) {
+            LOG.error("createL3Prefix - Cannot find nodeConnectorId for {} for Prefix: ", l2Ep, prefixEp);
+            return null;
+        }
+        setNextHop = nxLoadRegAction(NxmNxReg7.class, BigInteger.valueOf(portNum));
+
+        Action setDlDst = setDlDstAction(epDestMac);
+        l3ApplyActions.add(setDlDst);
+
+        Action decTtl = decNwTtlAction();
+        l3ApplyActions.add(decTtl);
+
+        order += 1;
+        applyActions.add(setdEPG);
+        applyActions.add(setdCG);
+        applyActions.add(setNextHop);
+
+        applyActions.addAll(l3ApplyActions);
+        Instruction applyActionsIns = new InstructionBuilder().setOrder(order++)
+            .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
+            .build();
+
+        l3instructions.add(applyActionsIns);
+        Instruction gotoTable = new InstructionBuilder().setOrder(order++)
+            .setInstruction(gotoTableIns(ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()))
+            .build();
+        l3instructions.add(gotoTable);
+
+        Layer3Match m = null;
+        Long etherType = null;
+        String ikey = null;
+        Integer prefixLength=0;
+        if (prefixEp.getIpPrefix().getIpv4Prefix() != null) {
+            ikey = prefixEp.getIpPrefix().getIpv4Prefix().getValue();
+            etherType = IPv4;
+            prefixLength=Integer.valueOf(prefixEp.getIpPrefix().getIpv4Prefix().getValue().split("/")[1]);
+            m = new Ipv4MatchBuilder().setIpv4Destination(new Ipv4Prefix(ikey)).build();
+        } else if (prefixEp.getIpPrefix().getIpv6Prefix() != null) {
+            ikey = prefixEp.getIpPrefix().getIpv6Prefix().getValue();
+            etherType = IPv6;
+            /*
+             *  This will result in flows with priority between 100-228, but since its matching on IPv6 prefix as well
+             *  this shouldn't pose and issue, as the priority is more important within the address space of the matcher,
+             *  even though technically flows are processed in priority order.
+             */
+
+            prefixLength=Integer.valueOf(prefixEp.getIpPrefix().getIpv6Prefix().getValue().split("/")[1]);
+            m = new Ipv6MatchBuilder().setIpv6Destination(new Ipv6Prefix(ikey)).build();
+        } else {
+            LOG.error("Endpoint has IPAddress that is not recognised as either IPv4 or IPv6.", prefixEp);
+            return null;
+        }
+
+        FlowId flowid = new FlowId(new StringBuilder().append(Integer.toString(epFwdCtxOrds.getL3Id()))
+            .append("|l3prefix|")
+            .append(ikey)
+            .append("|")
+            .append(destSubnetGatewayMac)
+            .append("|")
+            .append(nextHop)
+            .toString());
+        MatchBuilder mb = new MatchBuilder().setEthernetMatch(ethernetMatch(null, null, etherType));
+//        MatchBuilder mb = new MatchBuilder();//.setLayer3Match(m);
+        addNxRegMatch(mb, RegMatch.of(NxmNxReg6.class, Long.valueOf(epFwdCtxOrds.getL3Id())));
+        FlowBuilder flowb = base().setId(flowid)
+            .setPriority(Integer.valueOf(BASE_L3_PRIORITY+prefixLength))
+            .setMatch(mb.build())
+            .setInstructions(new InstructionsBuilder().setInstruction(l3instructions).build());
+        return flowb.build();
+    }
+
     private Flow createBroadcastFlow(EndpointFwdCtxOrdinals epOrd) {
         FlowId flowId = new FlowId("broadcast|" + epOrd.getFdId());
-        MatchBuilder mb = new MatchBuilder()
-                            .setEthernetMatch(new EthernetMatchBuilder()
-                            .setEthernetDestination(new EthernetDestinationBuilder().
-                                                        setAddress(MULTICAST_MAC)
-                                                        .setMask(MULTICAST_MAC).build())
-                            .build());
+        MatchBuilder mb = new MatchBuilder().setEthernetMatch(new EthernetMatchBuilder().setEthernetDestination(
+                new EthernetDestinationBuilder().setAddress(MULTICAST_MAC).setMask(MULTICAST_MAC).build()).build());
         addNxRegMatch(mb, RegMatch.of(NxmNxReg5.class, Long.valueOf(epOrd.getFdId())));
 
         FlowBuilder flowb = base().setPriority(Integer.valueOf(140))
@@ -543,7 +710,7 @@ public class DestinationMapper extends FlowTable {
         Subnet destSubnet = null;
         HashSet<Subnet> subnets = getSubnets(destEp.getTenant());
         if (subnets == null) {
-            LOG.trace("No subnets in tenant {}", destL3Address.getIpAddress());
+            LOG.trace("No subnets in tenant {}", destEp.getTenant());
             return null;
         }
         NetworkDomainId epNetworkContainment = getEPNetworkContainment(destEp);
@@ -792,7 +959,7 @@ public class DestinationMapper extends FlowTable {
         Subnet destSubnet = null;
         HashSet<Subnet> subnets = getSubnets(destEp.getTenant());
         if (subnets == null) {
-            LOG.trace("No subnets in tenant {}", destL3Address.getIpAddress());
+            LOG.trace("No subnets in tenant {}", destEp.getTenant());
             return null;
         }
         NetworkDomainId epNetworkContainment = getEPNetworkContainment(destEp);
@@ -1022,24 +1189,6 @@ public class DestinationMapper extends FlowTable {
             }
         }
         return localSubnets;
-    }
-
-    /**
-     * Reads data from datastore as synchronous call.
-     *
-     * @return {@link Optional#isPresent()} is {@code true} if reading was
-     *         successful and data exists in datastore; {@link Optional#isPresent()} is
-     *         {@code false} otherwise
-     */
-    public static <T extends DataObject> Optional<T> readFromDs(LogicalDatastoreType store, InstanceIdentifier<T> path,
-            ReadTransaction rTx) {
-        CheckedFuture<Optional<T>, ReadFailedException> resultFuture = rTx.read(store, path);
-        try {
-            return resultFuture.checkedGet();
-        } catch (ReadFailedException e) {
-            LOG.warn("Read failed from DS.", e);
-            return Optional.absent();
-        }
     }
 
     static byte[] bytesFromHexString(String values) {

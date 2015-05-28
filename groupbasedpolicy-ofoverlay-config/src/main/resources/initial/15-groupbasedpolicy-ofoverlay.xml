@@ -27,7 +27,7 @@
                       <name>binding-data-broker</name>
                     </data-broker>
                     <gbp-ofoverlay-table-offset>0</gbp-ofoverlay-table-offset>
-                    <external-router-mac>01:02:03:04:05:06</external-router-mac>
+                    <external-router-mac>88:f0:31:04:05:06</external-router-mac>
                 </module>
             </modules>
         </data>

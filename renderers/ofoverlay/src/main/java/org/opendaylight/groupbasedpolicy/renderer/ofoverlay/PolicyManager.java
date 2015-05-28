@@ -45,7 +45,7 @@ import org.opendaylight.groupbasedpolicy.resolver.PolicyListener;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyScope;
 import org.opendaylight.groupbasedpolicy.util.SingletonTask;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.MacAddress;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.TableBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
@@ -90,6 +90,7 @@ public class PolicyManager
     private final short TABLEID_EGRESS_NAT = (short) (tableOffset+5);
     private final short TABLEID_EXTERNAL_MAPPER = (short) (tableOffset+6);
 
+    private static MacAddress externaMacAddress;
 
     private final SwitchManager switchManager;
     private final PolicyResolver policyResolver;
@@ -118,13 +119,14 @@ public class PolicyManager
                          RpcProviderRegistry rpcRegistry,
                          ScheduledExecutorService executor,
                          short tableOffset,
-                         MacAddress exernalRouterMac) {
+                         MacAddress externalRouterMac) {
         super();
         this.switchManager = switchManager;
         this.executor = executor;
         this.policyResolver = policyResolver;
         this.dataBroker = dataBroker;
         this.tableOffset=tableOffset;
+        this.externaMacAddress=externalRouterMac;
 
 
         if (dataBroker != null) {
@@ -262,7 +264,9 @@ public class PolicyManager
         // No-op for now
     }
 
-
+    public static MacAddress getExternaMacAddress() {
+        return externaMacAddress;
+    }
 
     // **************
     // Implementation

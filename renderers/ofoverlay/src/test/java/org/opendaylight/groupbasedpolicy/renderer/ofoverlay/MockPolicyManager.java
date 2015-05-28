@@ -9,7 +9,7 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.MacAddress;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 
 public class MockPolicyManager extends PolicyManager {
 

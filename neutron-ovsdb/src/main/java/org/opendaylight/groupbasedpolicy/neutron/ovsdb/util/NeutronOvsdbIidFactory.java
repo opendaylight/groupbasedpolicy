@@ -33,4 +33,9 @@ public class NeutronOvsdbIidFactory {
                 .build();
     }
 
+    public static InstanceIdentifier<NeutronByGbpMappings> neutronGbpMappingsIid() {
+        return InstanceIdentifier.builder(Mappings.class)
+                .child(NeutronByGbpMappings.class)
+                .build();
+    }
 }
