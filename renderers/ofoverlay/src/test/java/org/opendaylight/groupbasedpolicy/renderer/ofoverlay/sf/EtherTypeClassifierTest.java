@@ -60,7 +60,7 @@ public class EtherTypeClassifierTest {
                 .setIpMatch(ClassifierTestUtils.createIpMatch(ClassifierTestUtils.SCTP.shortValue())));
         params.putAll(ClassifierTestUtils.createIntValueParam(EtherTypeClassifier.ETHERTYPE_PARAM, FlowUtils.IPv6));
         thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("Trying to override ether-type value:");
+        thrown.expectMessage("Classification conflict detected");
         matches = Classifier.ETHER_TYPE_CL.update(matches, params);
     }
 
@@ -68,7 +68,7 @@ public class EtherTypeClassifierTest {
     public void checkPresenceOfRequiredParameters1Test() {
         params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, ClassifierTestUtils.TCP));
         thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("Parameter ethertype not present");
+        thrown.expectMessage("not specified.");
         Classifier.ETHER_TYPE_CL.checkPresenceOfRequiredParams(params);
     }
 

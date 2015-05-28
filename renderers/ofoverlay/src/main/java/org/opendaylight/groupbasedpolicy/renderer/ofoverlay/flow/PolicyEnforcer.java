@@ -35,7 +35,6 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ClassificationRes
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Classifier;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ParamDerivator;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
-import org.opendaylight.groupbasedpolicy.resolver.ConditionGroup;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.resolver.EndpointConstraint;
 import org.opendaylight.groupbasedpolicy.resolver.IndexedTenant;
@@ -367,52 +366,59 @@ public class PolicyEnforcer extends FlowTable {
             }
             classifiers.add(new ClassifierDefinitionId(ci.getClassifierDefinitionId()));
             for (ParameterValue v : ci.getParameterValue()) {
-
-                if (v.getIntValue() != null) {
-                    paramsFromClassifier.put(v.getName().getValue(), v);
-                } else if (v.getStringValue() != null) {
-                    paramsFromClassifier.put(v.getName().getValue(), v);
-                } else if (v.getRangeValue() != null) {
-                    paramsFromClassifier.put(v.getName().getValue(), v);
+                if (paramsFromClassifier.get(v.getName().getValue()) == null) {
+                    if (v.getIntValue() != null
+                            || v.getStringValue() != null
+                            || v.getRangeValue() != null) {
+                        paramsFromClassifier.put(v.getName().getValue(), v);
+                    }
+                } else {
+                    if (!paramsFromClassifier.get(v.getName().getValue()).equals(v)) {
+                        throw new IllegalArgumentException("Classification error in rule: " + rule.getName()
+                                + ".\nCause: " + "Classification conflict detected at parameter " + v.getName());
+                    }
                 }
             }
         }
+        if(classifiers.isEmpty()) {
+            return;
+        }
         List<Map<String, ParameterValue>> derivedParamsByName = ParamDerivator.ETHER_TYPE_DERIVATOR.deriveParameter(paramsFromClassifier);
-
+        String baseId = createBaseFlowId(direction, cgPair, priority);
+        List<MatchBuilder> flowMatchBuilders = new ArrayList<>();
         for (Map<String, ParameterValue> params : derivedParamsByName) {
-            for (ClassifierDefinitionId clDefId : classifiers) {
-                // XXX - TODO - implement connection tracking (requires openflow
-                // extension and data plane support - in 2.4. Will need to handle
-                // case where we are working with mix of nodes.
-
-                List<MatchBuilder> matches = new ArrayList<>();
-                if (cgPair.sIpPrefixes.isEmpty() && cgPair.dIpPrefixes.isEmpty()) {
-                    matches.add(createBaseMatch(direction, cgPair, null, null));
-                } else if (!cgPair.sIpPrefixes.isEmpty() && cgPair.dIpPrefixes.isEmpty()) {
-                    for (IpPrefix sIpPrefix : cgPair.sIpPrefixes) {
-                        matches.add(createBaseMatch(direction, cgPair, sIpPrefix, null));
-                    }
-                } else if (cgPair.sIpPrefixes.isEmpty() && !cgPair.dIpPrefixes.isEmpty()) {
+            List<MatchBuilder> matchBuildersToResolve = new ArrayList<>();
+            if (cgPair.sIpPrefixes.isEmpty() && cgPair.dIpPrefixes.isEmpty()) {
+                matchBuildersToResolve.add(createBaseMatch(direction, cgPair, null, null));
+            } else if (!cgPair.sIpPrefixes.isEmpty() && cgPair.dIpPrefixes.isEmpty()) {
+                for (IpPrefix sIpPrefix : cgPair.sIpPrefixes) {
+                    matchBuildersToResolve.add(createBaseMatch(direction, cgPair, sIpPrefix, null));
+                }
+            } else if (cgPair.sIpPrefixes.isEmpty() && !cgPair.dIpPrefixes.isEmpty()) {
+                for (IpPrefix dIpPrefix : cgPair.sIpPrefixes) {
+                    matchBuildersToResolve.add(createBaseMatch(direction, cgPair, null, dIpPrefix));
+                }
+            } else {
+                for (IpPrefix sIpPrefix : cgPair.sIpPrefixes) {
                     for (IpPrefix dIpPrefix : cgPair.sIpPrefixes) {
-                        matches.add(createBaseMatch(direction, cgPair, null, dIpPrefix));
-                    }
-                } else {
-                    for (IpPrefix sIpPrefix : cgPair.sIpPrefixes) {
-                        for (IpPrefix dIpPrefix : cgPair.sIpPrefixes) {
-                            matches.add(createBaseMatch(direction, cgPair, sIpPrefix, dIpPrefix));
-                        }
+                        matchBuildersToResolve.add(createBaseMatch(direction, cgPair, sIpPrefix, dIpPrefix));
                     }
                 }
-
+            }
+            for (ClassifierDefinitionId clDefId : classifiers) {
                 Classifier classifier = SubjectFeatures.getClassifier(clDefId);
-                ClassificationResult result = classifier.updateMatch(matches, params);
+                ClassificationResult result = classifier.updateMatch(matchBuildersToResolve, params);
                 if (!result.isSuccessfull()) {
                     // TODO consider different handling.
-                    throw new IllegalArgumentException(result.getErrorMessage());
+                    throw new IllegalArgumentException("Classification conflict detected in rule: " + rule.getName() + ".\nCause: "
+                            + result.getErrorMessage());
                 }
-                String baseId = createBaseFlowId(direction, cgPair, priority);
+                matchBuildersToResolve = new ArrayList<>(result.getMatchBuilders());
+            }
+            flowMatchBuilders.addAll(matchBuildersToResolve);
+        }
                 FlowBuilder flow = base().setPriority(Integer.valueOf(priority));
-                for (MatchBuilder match : result.getMatchBuilders()) {
+                for (MatchBuilder match : flowMatchBuilders) {
                     Match m = match.build();
                     FlowId flowId = new FlowId(baseId + "|" + m.toString());
                     flow.setMatch(m)
@@ -421,8 +427,6 @@ public class PolicyEnforcer extends FlowTable {
                         .setInstructions(instructions(applyActionIns(actionBuilderList)));
                     flowMap.writeFlow(netElements.getNodeId(), TABLE_ID, flow.build());
                 }
-            }
-        }
     }
 
     private String createBaseFlowId(Direction direction, CgPair cgPair, int priority) {

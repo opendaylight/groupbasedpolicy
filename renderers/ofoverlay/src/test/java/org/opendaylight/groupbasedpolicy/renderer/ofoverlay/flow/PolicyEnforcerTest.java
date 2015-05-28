@@ -36,6 +36,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.Matcher.MatchType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRefBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.condition.matchers.ConditionMatcherBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.conditions.Condition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.conditions.ConditionBuilder;
@@ -134,27 +135,37 @@ public class PolicyEnforcerTest extends FlowTableTest {
         Rule rule1 = new RuleBuilder().setActionRef(
                 ImmutableList.of(new ActionRefBuilder().setName(new ActionName("allow")).build()))
             .setClassifierRef(
-                    createClassifierRefs(ImmutableMap.<String, Direction>of("tcp_dst_80", Direction.In, "tcp_src_80",
-                            Direction.In)))
+                    createClassifierRefs(ImmutableMap.<String, Direction>of("tcp_dst_80", Direction.In,
+                                                                            "tcp_src_80", Direction.In)))
             .build();
         Rule rule2 = new RuleBuilder().setActionRef(
                 ImmutableList.of(new ActionRefBuilder().setName(new ActionName("allow")).build()))
             .setClassifierRef(
-                    createClassifierRefs(ImmutableMap.<String, Direction>of("tcp_dst_80", Direction.In, "tcp_src_80",
-                            Direction.Out)))
+                    createClassifierRefs(ImmutableMap.<String, Direction>of("tcp_dst_80", Direction.In,
+                                                                            "tcp_src_80", Direction.Out)))
             .build();
         Rule rule3 = new RuleBuilder().setActionRef(
                 ImmutableList.of(new ActionRefBuilder().setName(new ActionName("allow")).build()))
             .setClassifierRef(
-                    createClassifierRefs(ImmutableMap.<String, Direction>of("tcp_dst_80", Direction.In, "tcp_src_80",
-                            Direction.Out, "ether_type", Direction.In)))
+                    createClassifierRefs(ImmutableMap.<String, Direction>of("tcp_dst_80", Direction.In,
+                                                                            "tcp_src_80", Direction.Out,
+                                                                            "ether_type", Direction.In)))
             .build();
+        Rule rule4 = new RuleBuilder().setActionRef(
+                ImmutableList.of(new ActionRefBuilder().setName(new ActionName("allow")).build()))
+            .setClassifierRef(
+                    createClassifierRefs(ImmutableMap.<String, Direction>of("tcp_dst_80", Direction.In,
+                                                                            "tcp_dst_90", Direction.In)))
+            .build();
+
         assertEquals(5,
                 doTestDifferentEg(ImmutableList.<Subject>of(createSubject("s1", ImmutableList.<Rule>of(rule1)))));
         assertEquals(7,
                 doTestDifferentEg(ImmutableList.<Subject>of(createSubject("s2", ImmutableList.<Rule>of(rule2)))));
         assertEquals(6,
                 doTestDifferentEg(ImmutableList.<Subject>of(createSubject("s3", ImmutableList.<Rule>of(rule3)))));
+        assertEquals(3,
+                doTestDifferentEg(ImmutableList.<Subject>of(createSubject("s4", ImmutableList.<Rule>of(rule4)))));
     }
 
     private int doTestDifferentEg(List<Subject> subjects) throws Exception {

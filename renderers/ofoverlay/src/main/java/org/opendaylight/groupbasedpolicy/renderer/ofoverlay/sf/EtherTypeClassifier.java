@@ -84,12 +84,10 @@ public class EtherTypeClassifier extends Classifier {
     @Override
     protected void checkPresenceOfRequiredParams(Map<String, ParameterValue> params) {
         if (params.get(ETHERTYPE_PARAM) == null) {
-            throw new IllegalArgumentException("Classifier: {" + this.getClassDef().getName()
-                    + "}+ Parameter ethertype not present.");
+            throw new IllegalArgumentException("Parameter " + ETHERTYPE_PARAM + " not specified.");
         }
         if (params.get(ETHERTYPE_PARAM).getIntValue() == null) {
-            throw new IllegalArgumentException("Classifier: {" + this.getClassDef().getName()
-                    + "}+ Value of ethertype parameter is not present.");
+            throw new IllegalArgumentException("Value of " + ETHERTYPE_PARAM + " parameter is not present.");
         }
     }
 
@@ -113,9 +111,10 @@ public class EtherTypeClassifier extends Classifier {
     private void equalOrNotSetValidation(EthernetType ethTypeInMatch, long paramValue) {
         if (ethTypeInMatch != null) {
             if (paramValue != ethTypeInMatch.getType().getValue().longValue()) {
-                throw new IllegalArgumentException("Classification conflict at " + this.getClassDef().getName()
-                        + ": Trying to override ether-type value: " + ethTypeInMatch.getType().getValue()
-                        + " by value " + paramValue);
+                throw new IllegalArgumentException("Classification conflict detected at " + ETHERTYPE_PARAM
+                        + " parameter for values " + ethTypeInMatch.getType().getValue() + " and " + paramValue
+                        + ". It is not allowed "
+                        + "to assign different values to the same parameter among all the classifiers within one rule.");
             }
         }
     }

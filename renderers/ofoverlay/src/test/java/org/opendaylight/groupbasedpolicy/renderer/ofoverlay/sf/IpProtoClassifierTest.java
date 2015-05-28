@@ -60,7 +60,7 @@ public class IpProtoClassifierTest {
                 .setIpMatch(ClassifierTestUtils.createIpMatch(ClassifierTestUtils.SCTP.shortValue())));
         params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifier.PROTO_PARAM, ClassifierTestUtils.TCP));
         thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("Trying to override proto value");
+        thrown.expectMessage("Classification conflict detected");
         matches = Classifier.IP_PROTO_CL.update(matches, params);
     }
 
@@ -68,7 +68,7 @@ public class IpProtoClassifierTest {
     public void checkPresenceOfRequiredParameters1Test() {
         params.putAll(ClassifierTestUtils.createIntValueParam(EtherTypeClassifier.ETHERTYPE_PARAM, FlowUtils.IPv4));
         thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("Parameter proto not present");
+        thrown.expectMessage("not specified");
         Classifier.IP_PROTO_CL.checkPresenceOfRequiredParams(params);
     }
 
