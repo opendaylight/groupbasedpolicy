@@ -81,22 +81,6 @@
     </feature>
 
     <!--
-         The OpenStack Group Based Policy Northbound API.
-
-         This is actually built/packaged with the OpenFlow
-         Overlay renderer at the moment. All that's needed
-         for this package is just the config file that wires
-         things in.
-    -->
-    <feature name='odl-groupbasedpolicy-openstackgbp' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Support OpenStack GBP Endpoints '>
-        <!-- DEPRECATED SOON.
-        <feature version="${project.version}">odl-groupbasedpolicy-ofoverlay</feature>
-        -->
-        <feature version="${mdsal.version}">odl-mdsal-broker</feature>
-        <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.openstackendpointconfigfile}">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-openstackendpoint-config/${project.version}/xml/config</configfile>
-    </feature>
-
-    <!--
          The Neutron provider
     -->
     <feature name='odl-groupbasedpolicy-neutronmapper' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Neutron Mapper mapps neutron APIs to GBP APIs '>

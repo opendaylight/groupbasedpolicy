@@ -23,7 +23,6 @@
     <config.configfile.directory>etc/opendaylight/karaf</config.configfile.directory>
     <config.groupbasedpolicy.ofoverlayconfigfile>15-groupbasedpolicy-ofoverlay.xml</config.groupbasedpolicy.ofoverlayconfigfile>
     <config.groupbasedpolicy.opflexconfigfile>15-groupbasedpolicy-opflex.xml</config.groupbasedpolicy.opflexconfigfile>
-    <config.groupbasedpolicy.openstackendpointconfigfile>15-groupbasedpolicy-openstackendpoint.xml</config.groupbasedpolicy.openstackendpointconfigfile>
     <config.groupbasedpolicy.neutronmapperconfigfile>15-neutron-mapper.xml</config.groupbasedpolicy.neutronmapperconfigfile>
     <config.groupbasedpolicy.neutronovsdbconfigfile>15-neutron-ovsdb.xml</config.groupbasedpolicy.neutronovsdbconfigfile>
     <config.groupbasedpolicy.uibackendconfigfile>15-ui-backend.xml</config.groupbasedpolicy.uibackendconfigfile>
