@@ -29,6 +29,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.ExternalInterfacesKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.Tunnel;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.TunnelBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.TunnelKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
@@ -216,6 +217,19 @@ public class InventoryHelper {
         submitToDs(transaction);
     }
 
+    private static void addTunnelToOfOverlayAugmentation(Tunnel tunnel, String nodeIdString, DataBroker dataBroker) {
+        InstanceIdentifier<Tunnel> ofOverlayNodeIid = InstanceIdentifier.builder(
+                Nodes.class)
+            .child(Node.class, new NodeKey(new NodeId(nodeIdString)))
+            .augmentation(OfOverlayNodeConfig.class)
+            .child(Tunnel.class, new TunnelKey(tunnel.getKey()))
+            .build();
+
+        WriteTransaction transaction = dataBroker.newReadWriteTransaction();
+        transaction.merge(LogicalDatastoreType.CONFIGURATION, ofOverlayNodeIid, tunnel, true);
+        submitToDs(transaction);
+    }
+
     /**
      * Update the {@link OfOverlayConfig} of an Inventory Node
      * using the new tunnel state.
@@ -266,14 +280,9 @@ public class InventoryHelper {
             }
         }
         if (tunnelsUpdated == true) {
-            OfOverlayNodeConfigBuilder ofOverlayBuilder = null;
-            if (ofConfig == null) {
-                ofOverlayBuilder = new OfOverlayNodeConfigBuilder();
-            } else {
-                ofOverlayBuilder = new OfOverlayNodeConfigBuilder(ofConfig);
+            for (Tunnel tunnel: tunnelList) {
+                addTunnelToOfOverlayAugmentation(tunnel, nodeIdString, dataBroker);
             }
-            ofOverlayBuilder.setTunnel(tunnelList);
-            addOfOverlayAugmentation(ofOverlayBuilder.build(), nodeIdString, dataBroker);
         }
     }
 }
