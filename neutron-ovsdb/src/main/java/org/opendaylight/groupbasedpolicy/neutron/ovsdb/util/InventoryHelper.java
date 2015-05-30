@@ -198,7 +198,7 @@ public class InventoryHelper {
             .build();
 
         ReadWriteTransaction transaction = dataBroker.newReadWriteTransaction();
-        Optional<OfOverlayNodeConfig> overlayConfig = readFromDs(LogicalDatastoreType.OPERATIONAL, ofOverlayNodeIid, transaction );
+        Optional<OfOverlayNodeConfig> overlayConfig = readFromDs(LogicalDatastoreType.CONFIGURATION, ofOverlayNodeIid, transaction );
         if (overlayConfig.isPresent()) {
             return overlayConfig.get();
         }
@@ -226,8 +226,12 @@ public class InventoryHelper {
             .build();
 
         WriteTransaction transaction = dataBroker.newReadWriteTransaction();
-        transaction.merge(LogicalDatastoreType.CONFIGURATION, ofOverlayNodeIid, tunnel, true);
-        submitToDs(transaction);
+        transaction.put(LogicalDatastoreType.CONFIGURATION, ofOverlayNodeIid, tunnel, true);
+        if(submitToDs(transaction)) {
+            LOG.info("addTunnelToOfOverlayAugmentation: Wrote tunnel {}",tunnel.getKey());
+        } else {
+            LOG.error("addTunnelToOfOverlayAugmentation: submitToDs failed for tunnel {}",tunnel.getKey());
+        }
     }
 
     /**
@@ -250,7 +254,7 @@ public class InventoryHelper {
         List<Tunnel> tunnelList = new ArrayList<Tunnel>();
         List<Tunnel> existingTunnels = new ArrayList<Tunnel>();
         OfOverlayNodeConfig ofConfig = getOfOverlayConfig(nodeIdString, dataBroker);
-        if (ofConfig != null) {
+        if (ofConfig != null && ofConfig.getTunnel() != null) {
             existingTunnels = ofConfig.getTunnel();
         }
         boolean tunnelsUpdated = false;

@@ -35,7 +35,7 @@ public class OfOverlayNodeListener implements DataChangeListener, AutoCloseable 
     public OfOverlayNodeListener(DataBroker dataProvider, SwitchManager switchManager) {
         this.switchManager = checkNotNull(switchManager);
         listenerRegistration = checkNotNull(dataProvider).registerDataChangeListener(
-                LogicalDatastoreType.CONFIGURATION, ofOverlayNodeIid, this, DataChangeScope.BASE);
+                LogicalDatastoreType.CONFIGURATION, ofOverlayNodeIid, this, DataChangeScope.ONE);
     }
 
     @Override

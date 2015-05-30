@@ -43,7 +43,7 @@ public class NodeDataChangeListener implements DataChangeListener, AutoCloseable
     private static final String NEUTRON_PROVIDER_MAPPINGS_KEY = "provider_mappings";
     private static final String INVENTORY_PREFIX = "openflow:";
     private final ListenerRegistration<DataChangeListener> registration;
-    private final DataBroker dataBroker;
+    private static DataBroker dataBroker;
 
     public NodeDataChangeListener(DataBroker dataBroker) {
         this.dataBroker = checkNotNull(dataBroker);
@@ -93,7 +93,8 @@ public class NodeDataChangeListener implements DataChangeListener, AutoCloseable
         registration.close();
     }
 
-    private void processNodeNotification(OvsdbNodeAugmentation ovsdbNode) {
+
+    public static void processNodeNotification(OvsdbNodeAugmentation ovsdbNode) {
         LOG.trace("Search for provider mapping on node {}", ovsdbNode);
         String providerPortName = getProviderMapping(ovsdbNode);
         if (providerPortName != null) {
@@ -109,11 +110,11 @@ public class NodeDataChangeListener implements DataChangeListener, AutoCloseable
         }
     }
 
-    private NodeConnectorId getNodeConnectorId(String nodeConnectorIdString) {
+    private static NodeConnectorId getNodeConnectorId(String nodeConnectorIdString) {
         return new NodeConnectorId(nodeConnectorIdString);
     }
 
-    private String getProviderMapping(OvsdbNodeAugmentation ovsdbNode) {
+    public static String getProviderMapping(OvsdbNodeAugmentation ovsdbNode) {
         if (ovsdbNode.getOpenvswitchOtherConfigs() != null) {
             for (OpenvswitchOtherConfigs config : ovsdbNode.getOpenvswitchOtherConfigs()) {
                 if (config.getOtherConfigKey() == null || config.getOtherConfigValue() == null) {
@@ -139,7 +140,7 @@ public class NodeDataChangeListener implements DataChangeListener, AutoCloseable
      *
      * @return
      */
-    private String getInventoryNodeId(OvsdbNodeAugmentation ovsdbNode, String externalPortName) {
+    private static String getInventoryNodeId(OvsdbNodeAugmentation ovsdbNode, String externalPortName) {
         List<ManagedNodeEntry> ovsdbNodes = ovsdbNode.getManagedNodeEntry();
         if (ovsdbNodes == null) {
             return null;
@@ -174,7 +175,7 @@ public class NodeDataChangeListener implements DataChangeListener, AutoCloseable
         return null;
     }
 
-    private String buildInventoryNcid(OvsdbBridgeAugmentation ovsdbBridge,
+    private static String buildInventoryNcid(OvsdbBridgeAugmentation ovsdbBridge,
             OvsdbTerminationPointAugmentation terminationPoint) {
         Long macLong = getLongFromDpid(ovsdbBridge.getDatapathId().getValue());
         return INVENTORY_PREFIX + String.valueOf(macLong) + ":" + String.valueOf(terminationPoint.getOfport());

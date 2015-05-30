@@ -317,10 +317,11 @@ public class SwitchManager implements AutoCloseable {
                     }
                     tunnelBuilder.setNodeConnectorId(ncId);
                 }
-                if (nodeConfig != null && nodeConfig.getExternalInterfaces() != null) {
-                    for(ExternalInterfaces nc:nodeConfig.getExternalInterfaces()) {
-                        externalPorts.add(nc.getNodeConnectorId());
-                    }
+            }
+
+            if (nodeConfig != null && nodeConfig.getExternalInterfaces() != null) {
+                for (ExternalInterfaces nc : nodeConfig.getExternalInterfaces()) {
+                    externalPorts.add(nc.getNodeConnectorId());
                 }
             }
             if (nodeConfig != null && nodeConfig.getTunnel() != null) {
