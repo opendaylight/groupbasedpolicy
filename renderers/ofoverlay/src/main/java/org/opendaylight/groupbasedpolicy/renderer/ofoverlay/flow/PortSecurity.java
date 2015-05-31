@@ -75,23 +75,20 @@ public class PortSecurity extends FlowTable {
         flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(111), FlowUtils.IPv4));
         flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(112), FlowUtils.IPv6));
 
-        for (EgKey sepg : ctx.getEndpointManager().getGroupsForNode(nodeId)) {
-            for (Endpoint ep : ctx.getEndpointManager().getEndpointsForNode(nodeId, sepg)) {
-                OfOverlayContext ofc = ep.getAugmentation(OfOverlayContext.class);
+        for (Endpoint ep : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
+            OfOverlayContext ofc = ep.getAugmentation(OfOverlayContext.class);
 
-                if (ofc != null && ofc.getNodeConnectorId() != null &&
-                        (ofc.getLocationType() == null ||
-                        LocationType.Internal.equals(ofc.getLocationType()))) {
-                    // Allow layer 3 traffic (ARP and IP) with the correct
-                    // source IP, MAC, and source port
-                    l3flow(flowMap, nodeId, ep, ofc, 120, false);
-                    l3flow(flowMap, nodeId, ep, ofc, 121, true);
-                    flowMap.writeFlow(nodeId, TABLE_ID, l3DhcpDoraFlow(ep, ofc, 115));
+            if (ofc != null && ofc.getNodeConnectorId() != null
+                    && (ofc.getLocationType() == null || LocationType.Internal.equals(ofc.getLocationType()))) {
+                // Allow layer 3 traffic (ARP and IP) with the correct
+                // source IP, MAC, and source port
+                l3flow(flowMap, nodeId, ep, ofc, 120, false);
+                l3flow(flowMap, nodeId, ep, ofc, 121, true);
+                flowMap.writeFlow(nodeId, TABLE_ID, l3DhcpDoraFlow(ep, ofc, 115));
 
-                    // Allow layer 2 traffic with the correct source MAC and
-                    // source port (note lower priority than drop IP rules)
-                    flowMap.writeFlow(nodeId, TABLE_ID, l2flow(ep, ofc, 100));
-                }
+                // Allow layer 2 traffic with the correct source MAC and
+                // source port (note lower priority than drop IP rules)
+                flowMap.writeFlow(nodeId, TABLE_ID, l2flow(ep, ofc, 100));
             }
         }
     }
