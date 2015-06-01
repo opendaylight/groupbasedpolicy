@@ -32,6 +32,7 @@ import java.util.Map.Entry;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
+import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -228,7 +229,8 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
             updateOfOverlayConfig(hostIp, nodeIdString, nodeConnectorIdString, requiredTunnelTypes, dataBroker);
         }
         if (externalId != null) {
-            updateEndpointWithLocation(ep, nodeIdString, nodeConnectorIdString, ovsdbTp.getName(), epService);
+            ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
+            updateEndpointWithLocation(ep, nodeIdString, nodeConnectorIdString, rwTx);
         }
     }
 

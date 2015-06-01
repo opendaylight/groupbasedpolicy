@@ -192,9 +192,15 @@ public class IidFactory {
             .build();
     }
 
-    public static InstanceIdentifier<EndpointL3> endpointL3Iid(L3ContextId l3Context, IpAddress ipAddress) {
+    public static InstanceIdentifier<EndpointL3> l3EndpointIid(L3ContextId l3Context, IpAddress ipAddress) {
         return InstanceIdentifier.builder(Endpoints.class)
             .child(EndpointL3.class, new EndpointL3Key(ipAddress, l3Context))
+            .build();
+    }
+
+    public static InstanceIdentifier<EndpointL3> l3EndpointsIidWildcard() {
+        return InstanceIdentifier.builder(Endpoints.class)
+            .child(EndpointL3.class)
             .build();
     }
 
@@ -204,7 +210,7 @@ public class IidFactory {
             .build();
     }
 
-    public static InstanceIdentifier<Endpoints> endpointsIid() {
+    public static InstanceIdentifier<Endpoints> endpointsIidWildcard() {
         return ENDPOINTS_IID;
     }
 

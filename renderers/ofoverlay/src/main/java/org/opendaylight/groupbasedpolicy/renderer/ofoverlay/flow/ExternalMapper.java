@@ -8,10 +8,25 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.applyActionIns;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.instructions;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Action;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.AllowAction;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer3Match;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,37 +53,50 @@ public class ExternalMapper extends FlowTable {
     @Override
     public void sync(NodeId nodeId, PolicyInfo policyInfo, FlowMap flowMap) throws Exception {
 
-            if (ctx.getSwitchManager().getExternalPorts(nodeId) == null) {
-                LOG.trace("No external ports found for node: {}",nodeId);
-                return;
-            }
-            // Default drop all
-            flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null));
+        if (ctx.getSwitchManager().getExternalPorts(nodeId) == null) {
+            LOG.trace("No external ports found for node: {}", nodeId);
+            return;
+        }
+        // Default drop all
+        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null));
 
-            // Drop IP traffic that doesn't match a source IP rule
-            flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(2), FlowUtils.ARP));
-            flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(2), FlowUtils.IPv4));
-            flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(2), FlowUtils.IPv6));
-//        for (Endpoint ep : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
-//            OfOverlayContext ofc = ep.getAugmentation(OfOverlayContext.class);
-//            if (ofc != null && ofc.getNodeConnectorId() != null
-//                    && (ofc.getLocationType() == null || LocationType.Internal.equals(ofc.getLocationType()))
-//                    && ep.getTenant() != null && (ep.getEndpointGroup() != null || ep.getEndpointGroups() != null)) {
-//
-//                IndexedTenant tenant = ctx.getPolicyResolver().getTenant(ep.getTenant());
-//                if (tenant == null)
-//                    continue;
-//
-//                EndpointFwdCtxOrdinals epFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, ep);
-//                EgKey sepg = new EgKey(ep.getTenant(), ep.getEndpointGroup());
-//
-//                createRemoteTunnels(flowMap, nodeId, ep, policyInfo, epFwdCtxOrds);
-//
-//                /**
-//                 * Sync the local EP information.
-//                 */
-//                syncEP(flowMap, policyInfo, nodeId, ep, ofc, sepg, epFwdCtxOrds);
-//            }
-//        }
+        // Drop IP traffic that doesn't match a source IP rule
+        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(2), FlowUtils.ARP));
+        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(2), FlowUtils.IPv4));
+        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(2), FlowUtils.IPv6));
+        l3flow(flowMap,nodeId, 100, true);
+        l3flow(flowMap,nodeId, 200, false);
+    }
+
+    private void l3flow(FlowMap flowMap, NodeId nodeId, Integer priority, boolean arp) {
+
+        List<ActionBuilder> actionBuilderList = new ArrayList<ActionBuilder>();
+
+        Action action = SubjectFeatures.getAction(AllowAction.DEFINITION.getId());
+        actionBuilderList = action.updateAction(actionBuilderList, new HashMap<String, Object>(), 0, null);
+
+        Layer3Match m = null;
+        Long etherType = null;
+
+        if (arp) {
+            etherType = FlowUtils.ARP;
+        } else {
+            etherType = FlowUtils.IPv4;
+        }
+
+        FlowId flowid = new FlowId(new StringBuilder().append("ExternalMapper")
+            .append("|")
+            .append(etherType)
+            .toString());
+        Flow flow = base().setPriority(priority)
+            .setId(flowid)
+            .setMatch(
+                    new MatchBuilder().setEthernetMatch(FlowUtils.ethernetMatch(null, null, etherType))
+                        .setLayer3Match(m)
+                        .build())
+            .setInstructions(instructions(applyActionIns(actionBuilderList)))
+            .build();
+
+        flowMap.writeFlow(nodeId, TABLE_ID, flow);
     }
 }

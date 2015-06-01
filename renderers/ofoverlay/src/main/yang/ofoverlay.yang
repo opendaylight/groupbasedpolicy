@@ -105,7 +105,9 @@ module ofoverlay {
             description
                 "Unique identifier for interface";
         }
+    }
 
+    grouping napt-translations-fields {
         container napt-translations {
             description "List of NAPT translations";
             list napt-translation {
@@ -140,6 +142,16 @@ module ofoverlay {
     augment "/endpoint:register-endpoint/endpoint:input" {
         ext:augment-identifier "of-overlay-context-input";
         uses endpoint-location;
+    }
+
+    augment "/endpoint:endpoints/endpoint:endpoint-l3" {
+        ext:augment-identifier "of-overlay-l3-nat";
+        uses napt-translations-fields;
+    }
+
+    augment "/endpoint:register-endpoint/endpoint:input" {
+        ext:augment-identifier "of-overlay-l3-nat-input";
+        uses napt-translations-fields;
     }
 
     augment "/inv:nodes/inv:node" {

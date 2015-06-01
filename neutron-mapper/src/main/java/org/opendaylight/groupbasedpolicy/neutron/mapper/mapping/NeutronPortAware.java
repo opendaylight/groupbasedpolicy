@@ -243,7 +243,7 @@ public class NeutronPortAware implements INeutronPortAware {
         epgIds.add(MappingUtils.EPG_EXTERNAL_ID);
         epgIds.add(MappingUtils.EPG_ROUTER_ID);
         EndpointL3 epL3 = createL3Endpoint(tenantId, epL3Key, epgIds, networkContainment);
-        InstanceIdentifier<EndpointL3> iid_l3 = IidFactory.endpointL3Iid(l3ContextId, ipAddress);
+        InstanceIdentifier<EndpointL3> iid_l3 = IidFactory.l3EndpointIid(l3ContextId, ipAddress);
         rwTx.put(LogicalDatastoreType.OPERATIONAL, iid_l3, epL3, true);
         return true;
     }

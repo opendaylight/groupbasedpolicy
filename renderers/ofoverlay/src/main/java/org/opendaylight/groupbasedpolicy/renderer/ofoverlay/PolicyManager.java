@@ -178,9 +178,9 @@ public class PolicyManager
     }
 
 
-//    public short getTABLEID_INGRESS_NAT() {
-//        return TABLEID_INGRESS_NAT;
-//    }
+    public short getTABLEID_INGRESS_NAT() {
+        return TABLEID_INGRESS_NAT;
+    }
 
 
     public short getTABLEID_SOURCE_MAPPER() {
@@ -198,14 +198,14 @@ public class PolicyManager
     }
 
 
-//    public short getTABLEID_EGRESS_NAT() {
-//        return TABLEID_EGRESS_NAT;
-//    }
-//
-//
-//    public short getTABLEID_EXTERNAL_MAPPER() {
-//        return TABLEID_EXTERNAL_MAPPER;
-//    }
+    public short getTABLEID_EGRESS_NAT() {
+        return TABLEID_EGRESS_NAT;
+    }
+
+
+    public short getTABLEID_EXTERNAL_MAPPER() {
+        return TABLEID_EXTERNAL_MAPPER;
+    }
 
     @Override
     public void switchReady(final NodeId nodeId) {
