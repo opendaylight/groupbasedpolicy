@@ -98,8 +98,10 @@ public class PortSecurityTest extends FlowTableTest {
             flowMap.put(f.getId().getValue(), f);
             if (f.getMatch() != null && f.getMatch().getInPort() != null &&
                 ncs.contains(f.getMatch().getInPort().getValue())) {
-                assertEquals(f.getInstructions(),
-                             FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()));
+                assertTrue(f.getInstructions().equals(
+                             FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_INGRESS_NAT()))
+                             || f.getInstructions().equals(
+                                     FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER())));
                 count += 1;
             }
         }
