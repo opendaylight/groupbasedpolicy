@@ -10,13 +10,13 @@
   <parent>
     <groupId>org.opendaylight.controller</groupId>
     <artifactId>karaf-parent</artifactId>
-    <version>1.5.0-SNAPSHOT</version>
+    <version>1.6.0-SNAPSHOT</version>
     <relativePath />
   </parent>
 
   <artifactId>distribution-karaf</artifactId>
   <groupId>org.opendaylight.groupbasedpolicy</groupId>
-  <version>0.2.0-SNAPSHOT</version>
+  <version>0.3.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <prerequisites>
@@ -24,8 +24,8 @@
   </prerequisites>
 
   <properties>
-    <groupbasedpolicy.project.version>0.2.0-SNAPSHOT</groupbasedpolicy.project.version>
-    <sfc.version>0.1.0-SNAPSHOT</sfc.version>
+    <groupbasedpolicy.project.version>0.3.0-SNAPSHOT</groupbasedpolicy.project.version>
+    <sfc.version>0.2.0-SNAPSHOT</sfc.version>
   </properties>
 
   <dependencies>
