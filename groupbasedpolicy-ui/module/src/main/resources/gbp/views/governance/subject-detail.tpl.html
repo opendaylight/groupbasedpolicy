@@ -1,0 +1,13 @@
+<div ng-controller="subjectDetailCtrl">
+    <section class="simpleBox col-md-3">
+        <div class="selectWrapper col-md-12">
+            <select class="form-control" ng-model="selectedSubject" ng-change="setSubject(selectedSubject)" ng-options="d.name for d in subjectList">
+                <option value="">Select option</option>
+            </select>
+        </div>
+    </section>
+    <section class="sectionTitle col-md-3">
+        <label class="block"><span>Subject detail</span></label>
+    </section>
+    <div graph="graph" id="graph" width="100%" height="100%" grid-size="1" />
+</div>

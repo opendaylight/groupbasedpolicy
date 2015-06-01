@@ -12,6 +12,7 @@
 		<property name="cssDependencies">
             <list>
                  <value>src/app/gbp/gbp.css</value>
+                 <value>src/app/gbp/js/joint.css</value>
             </list>
         </property>
     </bean>

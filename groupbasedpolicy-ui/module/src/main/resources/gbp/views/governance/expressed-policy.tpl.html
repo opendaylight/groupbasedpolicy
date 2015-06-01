@@ -1,0 +1,24 @@
+<div ng-controller="expressedPolicyCtrl">
+    <section class="simpleBox col-md-3">
+        <label class="block"><span>Tenants list</span></label>
+        <div class="selectWrapper col-md-12">
+            <select class="form-control" ng-model="selectedTenant" ng-change="setTenant(selectedTenant)" ng-options="getDisplayLabel(d, tenantDisplayLabel) for d in tenantList">
+                <option value="">Select option</option>
+            </select>
+        </div>
+    </section>
+    <section class="sectionTitle col-md-3">
+        <label class="block"><span>Expressed policy</span></label>
+    </section>
+
+    <!-- Legend -->
+    <section class="simpleBox col-md-2 legendBox" ng-show="selectedTenant">
+        <ul>
+            <li class="item"><span class="line green"></span>consumes</li>
+            <li class="item"><span class="line blue"></span>provides</li>
+        </ul>
+    </section>
+
+    <!-- Graph -->
+    <div graph="graph" id="graph" width="100%" height="100%" grid-size="1" />
+</div>

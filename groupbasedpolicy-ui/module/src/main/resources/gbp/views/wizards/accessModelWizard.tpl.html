@@ -9,7 +9,7 @@
             <ul>
                 <li class="navigation-item {{wizardPage === 'tenants' ? 'selected' : ''}}">Tenants</li>
                 <li class="navigation-item {{wizardPage === 'contracts' ? 'selected' : ''}}">Contracts</li>
-                <li class="navigation-item {{wizardPage === 'epgs' ? 'selected' : ''}}">Endpoints</li>
+                <li class="navigation-item {{wizardPage === 'epgs' ? 'selected' : ''}}">Endpoint groups</li>
             </ul>
         </aside>
         <section class="modal-content-container">
@@ -19,7 +19,7 @@
                     <div class="clearfix">
                         <div class="rowWrapper">
                             <label class="block basicLabel">Select tenant</label>
-                            <select class="form-control" ng-model="selectedTenant"  ng-options="c.name for c in tenantList" ng-change="reloadTenants(selectedTenant)">
+                            <select class="form-control" ng-model="selectedTenant"  ng-options="getDisplayLabel(c, displayLabel) for c in tenantList" ng-change="reloadTenants(selectedTenant)">
                                 <option value="">Select option</option>
                             </select>
                         </div>
@@ -34,9 +34,9 @@
 
                             <div class="rowWrapper">
                                 <label class="block basicLabel">Name:
-                                    <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="tenantForm.name.$error.required"></i>
+                                    <i class="icon-exclamation-sign red" tooltip="{{tenantForm.name.$error.required ? 'Required field' : tenantForm.name.$error.pattern ? 'Value must start with letter followed by letters and digits without space' : ''}}" ng-show="tenantForm.name.$error.required || tenantForm.name.$error.pattern"></i>
                                 </label>
-                                <input class="form-control" type="text" name="name" ng-model="newTenantObj.name" ng-required="true" ng-disabled="view.tenantEdit"/>
+                                <input class="form-control" type="text" name="name" ng-model="newTenantObj.name" ng-required="true" ng-disabled="view.tenantEdit" ng-pattern="/^[a-zA-Z]([a-zA-Z0-9\-_.])*$/"/>
                             </div>
 
                             <div class="rowWrapper">
@@ -100,8 +100,9 @@
                                         <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newSubjectObj['order']">
                                             <label class="block basicLabel"><span>Order:</span>
                                                 <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="subjectForm.order.$error.required"></i>
+                                                <i class="icon-exclamation-sign red" tooltip="Invalid pattern" ng-show="errors.int32 && !subjectForm.order.$error.required"></i>
                                             </label>
-                                            <input class="form-control" type="text" name="order" ng-required="true" ng-model="newSubjectObj.order" />
+                                            <input class="form-control" type="text" name="order" ng-required="true" ng-model="newSubjectObj.order" ng-change="validate(newSubjectObj.order, errors)"/>
                                         </div>
 
                                         <button class="btn btn-primary col-md-12" ng-click="save()" ng-disabled="!subjectForm.$valid">Save subject</button>
@@ -120,16 +121,17 @@
                                                     
                                                     <div class="rowWrapper">
                                                         <label class="block basicLabel"><span>Name:</span>
-                                                            <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="rulesForm.name.$error.required"></i>
+                                                            <i class="icon-exclamation-sign red" tooltip="{{rulesForm.name.$error.required ? 'Required field' : rulesForm.name.$error.pattern ? 'Value must start with letter followed by letters and digits without space' : ''}}" ng-show="rulesForm.name.$error.required || rulesForm.name.$error.pattern"></i>
                                                         </label>
-                                                        <input class="form-control" type="text" ng-model="newRuleObj.name" name="name" ng-required="true" />
+                                                        <input class="form-control" type="text" ng-model="newRuleObj.name" name="name" ng-required="true" ng-pattern="/^[a-zA-Z]([a-zA-Z0-9\-_.])*$/"/>
                                                     </div>
 
                                                     <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newRuleObj['order']">
                                                         <label class="block basicLabel"><span>Order:</span>
                                                             <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="rulesForm.order.$error.required"></i>
+                                                            <i class="icon-exclamation-sign red" tooltip="Invalid pattern" ng-show="errors.int32 && !rulesForm.order.$error.required"></i>
                                                         </label>
-                                                        <input class="form-control" type="text" name="order" ng-required="true" ng-model="newRuleObj.order" />
+                                                        <input class="form-control" type="text" name="order" ng-required="true" ng-model="newRuleObj.order" ng-change="validate(newRuleObj.order, errors)"/>
                                                     </div>
                                                     
                                                     <button class="btn btn-primary col-md-12" ng-click="save()" ng-disabled="!rulesForm.$valid">Save rule</button>
@@ -156,8 +158,10 @@
                                                                 </div>
 
                                                                 <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newActionRefObj['order']">
-                                                                    <label class="block basicLabel"><span>Order:</span></label>
-                                                                    <input class="form-control" type="text" ng-model="newActionRefObj.order"/>
+                                                                    <label class="block basicLabel"><span>Order:</span>
+                                                                        <i class="icon-exclamation-sign red" tooltip="Invalid pattern" ng-show="errors.int32"></i>
+                                                                    </label>
+                                                                    <input class="form-control" type="text" ng-model="newActionRefObj.order" ng-change="validate(newActionRefObj.order, errors)"/>
                                                                 </div>
                                                                 
                                                                 <button class="btn btn-primary col-md-12" ng-click="save()" >Save</button>
@@ -175,9 +179,9 @@
 
                                                                 <div class="rowWrapper">
                                                                     <label class="block basicLabel"><span>Name:</span>
-                                                                        <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="classifierRefForm.name.$error.required"></i>
+                                                                        <i class="icon-exclamation-sign red" tooltip="{{classifierRefForm.name.$error.required ? 'Required field' : classifierRefForm.name.$error.pattern ? 'Value must start with letter followed by letters and digits without space' : ''}}" ng-show="classifierRefForm.name.$error.required || classifierRefForm.name.$error.pattern"></i>
                                                                     </label>
-                                                                    <input class="form-control" type="text" ng-model="newClassifierRefObj.name" name="name" ng-required="true" />
+                                                                    <input class="form-control" type="text" ng-model="newClassifierRefObj.name" name="name" ng-required="true" ng-pattern="/^[a-zA-Z]([a-zA-Z0-9\-_.])*$/"/>
                                                                 </div>
                                                                 
                                                                 <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newClassifierRefObj['instance-name']">
@@ -221,9 +225,9 @@
 
                                         <div class="rowWrapper">
                                             <label class="block basicLabel"><span>Name:</span>
-                                                <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="clauseForm.name.$error.required"></i>
+                                                <i class="icon-exclamation-sign red" tooltip="{{clauseForm.name.$error.required ? 'Required field' : clauseForm.name.$error.pattern ? 'Value must start with letter followed by letters and digits without space' : ''}}" ng-show="clauseForm.name.$error.required || clauseForm.name.$error.pattern"></i>
                                             </label>
-                                            <input class="form-control" type="text" ng-model="newClauseObj.name" name="name" ng-required="true" />
+                                            <input class="form-control" type="text" ng-model="newClauseObj.name" name="name" ng-required="true" ng-pattern="/^[a-zA-Z]([a-zA-Z0-9\-_.])*$/"/>
                                         </div>
 
                                         <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newClauseObj['subject-refs']">
@@ -270,9 +274,9 @@
 
                             <div class="rowWrapper">
                                 <label class="block basicLabel">Name:
-                                    <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="epgForm.name.$error.required"></i>
+                                    <i class="icon-exclamation-sign red" tooltip="{{epgForm.name.$error.required ? 'Required field' : epgForm.name.$error.pattern ? 'Value must start with letter followed by letters and digits without space' : ''}}" ng-show="epgForm.name.$error.required || epgForm.name.$error.pattern"></i>
                                 </label>
-                                <input class="form-control" type="text" name="name" ng-model="newEpgObj.name" ng-required="true" />
+                                <input class="form-control" type="text" name="name" ng-model="newEpgObj.name" ng-required="true" ng-pattern="/^[a-zA-Z]([a-zA-Z0-9\-_.])*$/"/>
                             </div>
 
                             <div class="rowWrapper">
