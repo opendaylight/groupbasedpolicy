@@ -8,9 +8,9 @@
 
             <div class="rowWrapper">
                 <label class="block basicLabel"><span>Name:</span>
-                    <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="clauseForm.name.$error.required"></i>
+                    <i class="icon-exclamation-sign red" tooltip="{{clauseForm.name.$error.required ? 'Required field' : clauseForm.name.$error.pattern ? 'Value must start with letter followed by letters and digits without space' : ''}}" ng-show="clauseForm.name.$error.required || clauseForm.name.$error.pattern"></i>
                 </label>
-                <input class="form-control" type="text" ng-model="newClauseObj.name" name="name" ng-required="true" ng-disabled="internalView.edit !== 'add'"/>
+                <input class="form-control" type="text" ng-model="newClauseObj.name" name="name" ng-required="true" ng-disabled="internalView.edit !== 'add'" ng-pattern="/^[a-zA-Z]([a-zA-Z0-9\-_.])*$/"/>
             </div>
 
             <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newClauseObj['subject-refs']">

@@ -1,4 +1,4 @@
-define(['app/gbp/gbp.module'], function(gbp) {
+define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joint) {
 
     gbp.register.factory('GBPRestangular', function(Restangular, ENV) {
         return Restangular.withConfig(function(RestangularConfig) {
@@ -7,7 +7,7 @@ define(['app/gbp/gbp.module'], function(gbp) {
     });
 
     gbp.register.factory('GBPConstants', function() {
-        var c = { colors: {}, strings: {}};
+        var c = { colors: {}, strings: {}, jointElements: {}, objType: {}, numbers: {}};
 
         c.strings.flood = 'flood';
         c.strings.bridge = 'bridge';
@@ -31,6 +31,20 @@ define(['app/gbp/gbp.module'], function(gbp) {
         c.colors[c.strings.bridge+'-'+c.strings.l3ctx] = '#6666FF';
 
         c.colors[c.strings.subnet+'-'] = '#6666FF';
+
+        c.jointElements.minWidth = 100;
+        c.jointElements.maxWidth = 300;
+        c.jointElements.minHeight = 50;
+        c.jointElements.maxHeight = 300;
+
+        c.objType.contract = 'contract';
+        c.objType.epg = 'epg';
+        c.objType.consumer = 'consumer';
+        c.objType.provider = 'provider';
+        c.objType.subject = 'subject';
+        c.objType.rule = 'rule';
+
+        c.numbers.displayLabelLength = 40;
 
         return c;
     });
@@ -115,6 +129,24 @@ define(['app/gbp/gbp.module'], function(gbp) {
                                         "pgn-application:tenant-id": tenantId
                                     }
                                 ]
+                            }
+                        };
+
+          restObj.post(rpcRes, reqData).then(function(data) {
+              successCbk(data); //set topology nodes
+          }, function(res) {
+              errorCbk(res);
+          });
+
+        };
+
+        tdl.getEndpointsFromEndpointGroup = function(tenantId, epgId, successCbk, errorCbk) {
+            var restObj = GBPRestangular.one('restconf').one('operations'),
+                rpcRes = 'ui-backend:get-endpoints-from-endpoint-group',
+                reqData = {
+                            "input": {
+                                "tenant-id": tenantId,
+                                "endpoint-group-id":epgId
                             }
                         };
 
@@ -283,7 +315,6 @@ define(['app/gbp/gbp.module'], function(gbp) {
         };
 
         return tdl;
-
     });
 
     gbp.register.factory('TopoServices', function(TopologyDataLoaders, MockServices, GBPConstants) {
@@ -520,8 +551,123 @@ define(['app/gbp/gbp.module'], function(gbp) {
 
         };
 
+        s.getPropFromListByProp = function(list, propSrc, targetValue, propDst) {
+            var output = null,
+                selectedObj = list.filter(function(e) {
+                    return e[propSrc] === targetValue;
+                })[0];
+
+            if(selectedObj) {
+                if(propDst) {
+                    output = selectedObj[propDst];
+                } else {
+                    output = selectedObj;
+                }
+            }
+
+            return output;
+        };
+
         return s;
 
+    });
+
+    gbp.register.factory('GBPGovernanceServices', function(TopologyDataLoaders) {
+        var s = {};
+
+        var subjectInList = function(subjectName, subjectList) {
+            return subjectList.some(function(s) {
+                return s.name === subjectName;
+            });
+        };
+
+        var EPG = function(epgId, tenantId) {
+            this.id = epgId;
+            this.tenantId = tenantId;
+        };
+
+        var Subject = function(name, rules) {
+            this.name = name;
+            this.rules = rules;
+            this.providers = [];
+            this.consumers = [];
+
+            this.addProvider = function(providingEpg) {
+                if(this.providers.indexOf(providingEpg) === -1) {
+                    this.providers.push(providingEpg);
+                }
+            };
+
+            this.addConsumer = function(consumingEpg) {
+                if(this.consumers.indexOf(consumingEpg) === -1) {
+                    this.consumers.push(consumingEpg);
+                }
+            };
+        };
+
+        var addEpg = function(epgList, epgId, tenantId) {
+                var addedEpg = null;
+
+                if(epgList.some(function(epg) {
+                    return epg.id === epgId && epg.tenantId === tenantId;
+                }) === false) {
+                    addedEpg = new EPG(epgId, tenantId);
+                }
+
+                if(addedEpg !== null) {
+                    epgList.push(addedEpg);
+                }
+
+                return addedEpg;
+            },
+            addSubject = function(subject, subjects, providerEpg, consumerEpg) {
+                var existingSubject = subjects.filter(function(s) {
+                        return s.name === subject.name;
+                    })[0],
+                    newSubject = (existingSubject === undefined);
+
+                if(newSubject) {
+                    existingSubject = new Subject(subject.name, subject['ui-rule']);
+                }
+
+                existingSubject.addProvider(providerEpg);
+                existingSubject.addConsumer(consumerEpg);
+
+                if(newSubject) {
+                    subjects.push(existingSubject);
+                }
+            },
+            processPairData = function(providers, consumers, subjects, pairData) {
+                addEpg(providers, pairData['provider-endpoint-group-id'], pairData['provider-tenant-id']);
+                addEpg(consumers, pairData['consumer-endpoint-group-id'], pairData['consumer-tenant-id']);
+
+                pairData['ui-subject'].forEach(function(s) {
+                    addSubject(s, subjects, pairData['provider-endpoint-group-id'], pairData['consumer-endpoint-group-id']);
+                });
+            };
+
+        s.getEPGsAndSubjects = function(tenantId, successCbk, errorCbk) {
+            TopologyDataLoaders.getSubjectsBetweenEndpointGroups(false, tenantId, 
+                function(data) {
+                    var epgPairs = data.output['endpoint-group-pair-with-subject'],
+                        consumers = [],
+                        providers = [],
+                        subjects = [];
+
+                    if(epgPairs) {
+                        epgPairs.forEach(function(p) {
+                            processPairData(providers, consumers, subjects, p);
+                        });
+                    }
+
+                    successCbk({providers: providers, consumers: consumers, subjects: subjects});
+                },
+                function() {
+                    //TODO log error
+            });
+        };
+
+        return s;
     });
 
     gbp.register.factory('GBPTenantServices', function(GPBServices) {
@@ -2144,5 +2290,121 @@ define(['app/gbp/gbp.module'], function(gbp) {
 
         return dvf;
 
+    });
+
+    gbp.register.factory('JointGraphOffsetFactory', function(GBPConstants){
+        var jgof = {};
+
+        jgof.createWHObj = function(w, h) {
+            return {w: w || 0, h: h || 0};
+        };
+
+        jgof.updateOffsets = function(delta, offset, margin, maximums) {
+            offset.w = offset.w + delta.w + margin.w;
+            if(offset.w >= maximums.w) {
+                offset.w = offset.ow;
+                offset.h = offset.h + margin.h;
+            }
+        };
+
+        jgof.resetOffsets = function(offset, w, h) {
+            offset.w = w;
+            offset.h = h;
+        };
+
+        return jgof;
+    });
+
+    gbp.register.factory('JointGraphFactory', function(GBPConstants){
+        var defaulColor = 'blue';
+
+        var jgf = {};
+
+        jgf.getLabelLength = function(length) {
+            return length * 10;
+        };
+
+        jgf.createGraph = function() {
+            var graph = new joint.dia.Graph();
+
+            var paper = new joint.dia.Paper({
+                el: $('#graph'),
+                width: 1300,
+                height: 800,
+                model: graph,
+                gridSize: 1
+            });
+
+            return paper;
+        };
+
+        jgf.reloadGraph = function(graph) {
+            graph.clear();
+        };
+
+        jgf.createElement = function(elementName, posx, posy, width, height, objectType, object, tooltip) {
+            var setWidth = function(width) {
+                return width < GBPConstants.jointElements.minWidth ? GBPConstants.jointElements.minWidth : 
+                       width > GBPConstants.jointElements.maxWidth ? GBPConstants.jointElements.maxWidth : width;
+            };
+
+            var setHeight = function(height) {
+                return height < GBPConstants.jointElements.minHeight ? GBPConstants.jointElements.minHeight : 
+                       height > GBPConstants.jointElements.maxHeight ? GBPConstants.jointElements.maxHeight : height;
+            };
+
+            joint.shapes.basic.Rect = joint.shapes.basic.Generic.extend({
+
+                markup: '<g class="rotatable"><g class="scalable"><rect/><title /></g><text/><title /></g>',
+                
+                defaults: joint.util.deepSupplement({
+                    type: 'basic.Rect',
+                    attrs: {
+                        'rect': { fill: 'white', stroke: 'black', 'follow-scale': true, width: 80, height: 40, cursor: 'pointer' },
+                        'text': { 'font-size': 14, 'ref-x': 0.5, 'ref-y': 0.5, ref: 'rect', 'y-alignment': 'middle', 'x-alignment': 'middle', cursor: 'pointer'},
+                        'title': {text: tooltip},
+                    }
+                    
+                }, joint.shapes.basic.Generic.prototype.defaults)
+            });
+
+            return new joint.shapes.basic.Rect({
+                position: { x: posx || 0, y: posy || 0 },
+                size: { width: width ||  GBPConstants.jointElements.minWidth, height: height || GBPConstants.jointElements.minHeight },
+                attrs: { rect: { fill: 'white' }, text: { text: elementName, fill: 'black' }},
+                objType: objectType,
+                objData: object
+            });
+        };
+
+        jgf.transformElement = function(element, transformX, transformY) {
+            return element.translate(transformX, transformY);
+        };
+
+        jgf.addItem = function(graph, item) {
+            graph.addCells([item]);
+        };
+
+        jgf.addItemList = function(graph, listItem) {
+            graph.addCells(listItem);
+        };
+
+        jgf.createLink = function(srcId, targetId, color) {
+            color = color || defaulColor;
+
+            var link = new joint.dia.Link({
+                source: { id: srcId },
+                target: { id: targetId }
+            });
+
+            link.attr({
+                '.connection': { stroke: color },
+                '.marker-target': { fill: color, d: 'M 10 0 L 0 5 L 10 10 z' }
+            });
+
+            return link;
+        };
+
+        return jgf;
     });
 });
