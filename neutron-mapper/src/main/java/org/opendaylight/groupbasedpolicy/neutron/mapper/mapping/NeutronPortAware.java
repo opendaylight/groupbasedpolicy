@@ -369,7 +369,6 @@ public class NeutronPortAware implements INeutronPortAware {
         NeutronSecurityRule dhcpSecRule = new NeutronSecurityRule();
         dhcpSecRule.setSecurityRuleGroupID(MappingUtils.EPG_DHCP_ID.getValue());
         dhcpSecRule.setSecurityRuleTenantID(tenantId.getValue());
-        dhcpSecRule.setSecurityRuleRemoteIpPrefix(Utils.getStringIpPrefix(ipSubnet));
         if (consumerEpgId != null) {
             dhcpSecRule.setSecurityRemoteGroupID(consumerEpgId.getValue());
         }
@@ -390,7 +389,6 @@ public class NeutronPortAware implements INeutronPortAware {
         NeutronSecurityRule dhcpSecRule = new NeutronSecurityRule();
         dhcpSecRule.setSecurityRuleGroupID(MappingUtils.EPG_DHCP_ID.getValue());
         dhcpSecRule.setSecurityRuleTenantID(tenantId.getValue());
-        dhcpSecRule.setSecurityRuleRemoteIpPrefix(Utils.getStringIpPrefix(ipSubnet));
         if (consumerEpgId != null) {
             dhcpSecRule.setSecurityRemoteGroupID(consumerEpgId.getValue());
         }
@@ -409,7 +407,6 @@ public class NeutronPortAware implements INeutronPortAware {
         NeutronSecurityRule dnsSecRule = new NeutronSecurityRule();
         dnsSecRule.setSecurityRuleGroupID(MappingUtils.EPG_DHCP_ID.getValue());
         dnsSecRule.setSecurityRuleTenantID(tenantId.getValue());
-        dnsSecRule.setSecurityRuleRemoteIpPrefix(Utils.getStringIpPrefix(ipSubnet));
         if (consumerEpgId != null) {
             dnsSecRule.setSecurityRemoteGroupID(consumerEpgId.getValue());
         }

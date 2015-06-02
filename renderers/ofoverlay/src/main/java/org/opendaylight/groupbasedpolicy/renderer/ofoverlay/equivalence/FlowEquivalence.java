@@ -79,9 +79,6 @@ public class FlowEquivalence extends Equivalence<Flow> {
         if (!Objects.equals(a.getOutPort(), b.getOutPort())) {
             return false;
         }
-        if (!Objects.equals(a.getPriority(), b.getPriority())) {
-            return false;
-        }
         if (!Objects.equals(a.getTableId(), b.getTableId())) {
             return false;
         }
@@ -121,7 +118,6 @@ public class FlowEquivalence extends Equivalence<Flow> {
                 : EquivalenceFabric.MATCH_EQUIVALENCE.wrap(flow.getMatch()).hashCode());
         result = prime * result + ((flow.getOutGroup() == null) ? 0 : flow.getOutGroup().hashCode());
         result = prime * result + ((flow.getOutPort() == null) ? 0 : flow.getOutPort().hashCode());
-        result = prime * result + ((flow.getPriority() == null) ? 0 : flow.getPriority().hashCode());
         result = prime * result + ((flow.getTableId() == null) ? 0 : flow.getTableId().hashCode());
         result = prime * result + ((flow.isBarrier() == null) ? 0 : flow.isBarrier().hashCode());
         result = prime * result + ((flow.isInstallHw() == null) ? 0 : flow.isInstallHw().hashCode());
