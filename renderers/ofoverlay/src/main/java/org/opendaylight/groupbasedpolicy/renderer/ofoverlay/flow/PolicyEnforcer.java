@@ -17,7 +17,6 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.EndpointManager.isExternal;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -486,42 +485,52 @@ public class PolicyEnforcer extends FlowTable {
                     RegMatch.of(NxmNxReg1.class, Long.valueOf(cgPair.scgId)),
                     RegMatch.of(NxmNxReg2.class, Long.valueOf(cgPair.depg)),
                     RegMatch.of(NxmNxReg3.class, Long.valueOf(cgPair.dcgId)));
-            if (sIpPrefix != null) {
-                baseMatch.setLayer3Match(createLayer3Match(sIpPrefix, true));
-            }
-            if (dIpPrefix != null) {
-                baseMatch.setLayer3Match(createLayer3Match(dIpPrefix, true));
-            }
+            baseMatch.setLayer3Match(createLayer3Match(sIpPrefix, dIpPrefix));
         } else {
             addNxRegMatch(baseMatch,
                     RegMatch.of(NxmNxReg0.class, Long.valueOf(cgPair.depg)),
                     RegMatch.of(NxmNxReg1.class, Long.valueOf(cgPair.dcgId)),
                     RegMatch.of(NxmNxReg2.class, Long.valueOf(cgPair.sepg)),
                     RegMatch.of(NxmNxReg3.class, Long.valueOf(cgPair.scgId)));
-            if (sIpPrefix != null) {
-                baseMatch.setLayer3Match(createLayer3Match(sIpPrefix, false));
-            }
-            if (dIpPrefix != null) {
-                baseMatch.setLayer3Match(createLayer3Match(dIpPrefix, false));
-            }
+            baseMatch.setLayer3Match(createLayer3Match(dIpPrefix, sIpPrefix));
         }
         return baseMatch;
     }
 
-    private Layer3Match createLayer3Match(IpPrefix ipPrefix, boolean isSrc) {
-        if (ipPrefix.getIpv4Prefix() != null) {
-            if (isSrc) {
-                return new Ipv4MatchBuilder().setIpv4Source(ipPrefix.getIpv4Prefix()).build();
+    private Layer3Match createLayer3Match(IpPrefix sIpPrefix, IpPrefix dIpPrefix) {
+        Ipv4MatchBuilder ipv4MatchBuilder = new Ipv4MatchBuilder();
+        boolean isIPv4 = false;
+        Ipv6MatchBuilder ipv6MatchBuilder = new Ipv6MatchBuilder();
+        boolean isIPv6 = false;
+        if (sIpPrefix != null) {
+            if (sIpPrefix.getIpv4Prefix() != null) {
+                ipv4MatchBuilder.setIpv4Source(sIpPrefix.getIpv4Prefix());
+                isIPv4 = true;
             } else {
-                return new Ipv4MatchBuilder().setIpv4Destination(ipPrefix.getIpv4Prefix()).build();
-            }
-        } else {
-            if (isSrc) {
-                return new Ipv6MatchBuilder().setIpv6Source(ipPrefix.getIpv6Prefix()).build();
-            } else {
-                return new Ipv6MatchBuilder().setIpv6Destination(ipPrefix.getIpv6Prefix()).build();
+                ipv6MatchBuilder.setIpv6Source(sIpPrefix.getIpv6Prefix());
+                isIPv6 = true;
             }
         }
+        if (dIpPrefix != null) {
+            if (dIpPrefix.getIpv4Prefix() != null) {
+                ipv4MatchBuilder.setIpv4Destination(dIpPrefix.getIpv4Prefix());
+                isIPv4 = true;
+            } else {
+                ipv6MatchBuilder.setIpv6Destination(dIpPrefix.getIpv6Prefix());
+                isIPv6 = true;
+            }
+        }
+        if (isIPv4 && isIPv6) {
+            LOG.warn("EIC with IP prefix contains different IP versions. EIC is ignored.");
+            return null;
+        }
+        if (isIPv4) {
+            return ipv4MatchBuilder.build();
+        }
+        if (isIPv6) {
+            return ipv6MatchBuilder.build();
+        }
+        return null;
     }
 
     // TODO: move to a common utils for all renderers
