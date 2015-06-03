@@ -136,6 +136,10 @@
 	
     <!-- gbp dependencies -->
     <dependency>
+      <groupId>commons-net</groupId>
+      <artifactId>commons-net</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>groupbasedpolicy</artifactId>
     </dependency>

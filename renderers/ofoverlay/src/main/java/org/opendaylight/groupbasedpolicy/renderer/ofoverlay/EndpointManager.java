@@ -27,6 +27,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.NotificationService;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
@@ -36,17 +37,16 @@ import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
 import org.opendaylight.groupbasedpolicy.endpoint.EpRendererAugmentation;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.arp.ArpTasker;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.resolver.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.groupbasedpolicy.util.SetUtils;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNodeConnector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
@@ -58,7 +58,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3PrefixBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
@@ -127,18 +126,35 @@ public class EndpointManager implements AutoCloseable, DataChangeListener {
 
     final private DataBroker dataProvider;
 
-    public EndpointManager(DataBroker dataProvider, RpcProviderRegistry rpcRegistry, ScheduledExecutorService executor,
+    private final ArpTasker arpTasker;
+    private final ListenerRegistration<ArpTasker> notificationListenerRegistration;
+
+    public EndpointManager(DataBroker dataProvider, RpcProviderRegistry rpcRegistry, NotificationService notificationService, ScheduledExecutorService executor,
             SwitchManager switchManager) {
         this.executor = executor;
         this.dataProvider = dataProvider;
-        EndpointRpcRegistry.register(dataProvider, rpcRegistry, endpointRpcAug);
-        EndpointRpcRegistry.register(dataProvider, rpcRegistry, ofOverlayL3NatAug);
+        if (rpcRegistry != null) {
+            EndpointRpcRegistry.register(dataProvider, rpcRegistry, endpointRpcAug);
+            EndpointRpcRegistry.register(dataProvider, rpcRegistry, ofOverlayL3NatAug);
+            if (notificationService != null && dataProvider != null) {
+                this.arpTasker = new ArpTasker(rpcRegistry, dataProvider);
+                notificationListenerRegistration = notificationService.registerNotificationListener(arpTasker);
+            } else {
+                LOG.info("Missinge service {}", NotificationService.class.getSimpleName());
+                this.arpTasker = null;
+                this.notificationListenerRegistration = null;
+            }
+        } else {
+            LOG.warn("Missinge service {}", RpcProviderRegistry.class.getSimpleName());
+            this.arpTasker = null;
+            this.notificationListenerRegistration = null;
+        }
         if (dataProvider != null) {
             listenerReg = dataProvider.registerDataChangeListener(LogicalDatastoreType.OPERATIONAL,
                     IidFactory.endpointsIidWildcard(), this, DataChangeScope.SUBTREE);
-        } else
+        } else {
             listenerReg = null;
-
+        }
         LOG.debug("Initialized OFOverlay endpoint manager");
     }
 
@@ -455,16 +471,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener {
                 if (newL3Ep.getMacAddress() == null && getLocationType(newL3Ep) != null
                         && getLocationType(newL3Ep).equals(LocationType.External)) {
                     if (newL3Ep.getNetworkContainment() != null) {
-                        EndpointL3 l3Ep = updateEndpointL3MacAddress(newL3Ep);
-                        ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
-                        Endpoint newL2Ep = addEndpointFromL3Endpoint(l3Ep, rwTx);
-                        l3Ep = updateL3EndpointL2Context(l3Ep, newL2Ep.getL2Context());
-                        if (l3Ep == null) {
-                            return;
-                        }
-                        rwTx.put(LogicalDatastoreType.OPERATIONAL,
-                                IidFactory.l3EndpointIid(l3Ep.getL3Context(), l3Ep.getIpAddress()), l3Ep, true);
-                        DataStoreHelper.submitToDs(rwTx);
+                        arpTasker.addMacForL3EpAndCreateEp(newL3Ep);
                         return;
                     } else {
                         LOG.error("Cannot generate MacAddress for L3Endpoint {}. NetworkContainment is null.", newL3Ep);
@@ -492,29 +499,6 @@ public class EndpointManager implements AutoCloseable, DataChangeListener {
             LOG.info("L3Endpoint updatbut no augmentation information");
             return;
         }
-    }
-
-    private EndpointL3 updateL3EndpointL2Context(EndpointL3 l3Ep, L2BridgeDomainId l2BdId) {
-
-        if (l3Ep == null || l2BdId == null) {
-            LOG.warn("L3Endpoint {} or L2BridgeDomain {} was null in updateEndpointL3L2Context.", l3Ep, l2BdId);
-            return null;
-        }
-        return new EndpointL3Builder(l3Ep).addAugmentation(OfOverlayL3Context.class,
-                l3Ep.getAugmentation(OfOverlayL3Context.class))
-            .setL2Context(l2BdId)
-            .build();
-
-    }
-
-    private EndpointL3 updateEndpointL3MacAddress(EndpointL3 endpointL3) {
-
-        EndpointL3Builder epL3Builder = new EndpointL3Builder(endpointL3).addAugmentation(OfOverlayL3Context.class,
-                endpointL3.getAugmentation(OfOverlayL3Context.class))
-            .setMacAddress(getMacAddress(endpointL3))
-            .setTimestamp(System.currentTimeMillis());
-
-        return epL3Builder.build();
     }
 
     /**
@@ -971,6 +955,9 @@ public class EndpointManager implements AutoCloseable, DataChangeListener {
     public void close() throws Exception {
         if (listenerReg != null)
             listenerReg.close();
+        if (notificationListenerRegistration != null) {
+            notificationListenerRegistration.close();
+        }
         EndpointRpcRegistry.unregister(endpointRpcAug);
     }
 
@@ -1113,10 +1100,6 @@ public class EndpointManager implements AutoCloseable, DataChangeListener {
             return null;
         }
         return epL3.getAugmentation(OfOverlayL3Context.class).getLocationType();
-    }
-
-    private MacAddress getMacAddress(EndpointL3 endpointL3) {
-        return PolicyManager.getExternaMacAddress();
     }
 
     public static boolean isExternal(Endpoint ep) {

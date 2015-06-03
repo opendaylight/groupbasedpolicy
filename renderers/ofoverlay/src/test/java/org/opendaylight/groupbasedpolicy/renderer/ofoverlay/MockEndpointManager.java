@@ -17,7 +17,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 public class MockEndpointManager extends EndpointManager {
 
     public MockEndpointManager() {
-        super(null, null, null, null);
+        super(null, null, null, null, null);
     }
 
     public void addEndpoint(Endpoint ep) {
