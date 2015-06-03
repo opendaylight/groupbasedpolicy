@@ -13,13 +13,13 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.NotificationService;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
@@ -48,7 +48,6 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     private final PolicyManager policyManager;
 
     private final short tableOffset;
-    private final MacAddress externalRouterMac;
 
     private final ScheduledExecutorService executor;
 
@@ -60,19 +59,18 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
 
     public OFOverlayRenderer(DataBroker dataProvider,
                              RpcProviderRegistry rpcRegistry,
-                             short tableOffset,
-                             MacAddress externalRouterMac) {
+                             NotificationService notificationService,
+                             short tableOffset) {
         super();
         this.dataBroker = dataProvider;
         this.tableOffset=tableOffset;
-        this.externalRouterMac=externalRouterMac;
 
         int numCPU = Runtime.getRuntime().availableProcessors();
         //TODO: Consider moving to groupbasedpolicy-ofoverlay-config so as to be user configurable in distribution.
         executor = Executors.newScheduledThreadPool(numCPU * 2);
 
         switchManager = new SwitchManager(dataProvider);
-        endpointManager = new EndpointManager(dataProvider, rpcRegistry,
+        endpointManager = new EndpointManager(dataProvider, rpcRegistry, notificationService,
                                               executor, switchManager);
         policyResolver = new PolicyResolver(dataProvider, executor);
 
@@ -82,8 +80,7 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
                                           endpointManager,
                                           rpcRegistry,
                                           executor,
-                                          tableOffset,
-                                          externalRouterMac);
+                                          tableOffset);
 
         configReg =
                 dataProvider.registerDataChangeListener(LogicalDatastoreType.CONFIGURATION,

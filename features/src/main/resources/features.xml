@@ -61,6 +61,7 @@
         <feature version='${sfc.version}'>odl-sfc-ovs</feature>
         <feature version='${sfc.version}'>odl-sfc-netconf</feature>
         <feature version='${sfc.version}'>odl-sfc-ui</feature>
+        <bundle>mvn:commons-net/commons-net/${commons.net.version}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/ofoverlay-renderer/${project.version}</bundle>
         <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.ofoverlayconfigfile}">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-ofoverlay-config/${project.version}/xml/config</configfile>
     </feature>

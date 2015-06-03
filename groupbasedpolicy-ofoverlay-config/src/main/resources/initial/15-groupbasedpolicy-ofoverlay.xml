@@ -26,8 +26,12 @@
                       <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
                       <name>binding-data-broker</name>
                     </data-broker>
+
+                    <notification-adapter>
+                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding:impl">binding:binding-new-notification-service</type>
+                        <name>binding-notification-adapter</name>
+                    </notification-adapter>
                     <gbp-ofoverlay-table-offset>0</gbp-ofoverlay-table-offset>
-                    <external-router-mac>08:00:27:87:a0:ca</external-router-mac>
                 </module>
             </modules>
         </data>

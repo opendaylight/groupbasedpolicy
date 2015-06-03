@@ -14,6 +14,7 @@ module ofoverlay-provider-impl {
     import config { prefix config; revision-date 2013-04-05; }
     import opendaylight-md-sal-binding { prefix mdsal; revision-date 2013-10-28; }
     import ietf-yang-types { prefix "yang"; revision-date 2010-09-24; }
+    import opendaylight-sal-binding-broker-impl { prefix sal-broker; revision-date 2013-10-28;}
 
     description
         "This module contains the base YANG definitions for 
@@ -53,18 +54,21 @@ module ofoverlay-provider-impl {
                     }
                 }
             }
+            // Notification service
+            container notification-adapter {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity sal-broker:binding-new-notification-service;
+                    }
+                }
+            }
 
             leaf gbp-ofoverlay-table-offset {
                 description 
                     "Used to offset pipeline to start at offset+1. Table0 is required.
                     This is to allow the enduser to configure where the GBP pipeline starts.";
                 type uint16;
-            }
-
-            leaf external-router-mac {
-                description
-                    "Used to allow configuraiton of MAC address for external router";
-                type yang:mac-address;
             }
         }
     }

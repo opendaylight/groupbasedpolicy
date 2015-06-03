@@ -256,6 +256,10 @@ public class DestinationMapper extends FlowTable {
             return null;
         }
         EndpointL3 l3Ep = optL3Ep.get();
+        if (l3Ep.getL2Context() == null || l3Ep.getMacAddress() == null) {
+            LOG.debug("L3 endpoint representing L3 gateway does not contain L2-context or MAC address. {}", l3Ep);
+            return null;
+        }
         Optional<Endpoint> optL2Ep = readFromDs(LogicalDatastoreType.OPERATIONAL,
                 IidFactory.endpointIid(l3Ep.getL2Context(), l3Ep.getMacAddress()), rTx);
         if (!optL2Ep.isPresent()) {

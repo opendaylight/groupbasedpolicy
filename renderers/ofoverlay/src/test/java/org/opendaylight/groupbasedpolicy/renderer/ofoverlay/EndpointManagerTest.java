@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2015 Cisco Systems, Inc. and others. All rights reserved.
- * 
+ *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -17,7 +17,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -30,6 +29,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.NotificationService;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
@@ -61,6 +61,7 @@ public class EndpointManagerTest {
 
     private DataBroker dataProvider;
     private RpcProviderRegistry rpcRegistry;
+    private NotificationService notificationService;
     private ScheduledExecutorService executor;
     private SwitchManager switchManager;
     private BindingAwareBroker.RpcRegistration<EndpointService> rpcRegistration;
@@ -87,6 +88,7 @@ public class EndpointManagerTest {
     public void initialisation() {
         dataProvider = mock(DataBroker.class);
         rpcRegistry = mock(RpcProviderRegistry.class);
+        notificationService = mock(NotificationService.class);
         executor = mock(ScheduledExecutorService.class);
         switchManager = mock(SwitchManager.class);
         writeTransaction = mock(WriteTransaction.class);
@@ -100,7 +102,7 @@ public class EndpointManagerTest {
                         any(DataChangeListener.class), any(DataChangeScope.class))).thenReturn(listenerReg);
         when(rpcRegistry.addRpcImplementation(any(Class.class), any(RpcService.class))).thenReturn(rpcRegistration);
 
-        endpointManager = spy(new EndpointManager(dataProvider, rpcRegistry, executor, switchManager));
+        endpointManager = spy(new EndpointManager(dataProvider, rpcRegistry, notificationService, executor, switchManager));
         endpointListener = mock(EndpointListener.class);
         endpointManager.registerListener(endpointListener);
 
@@ -171,7 +173,7 @@ public class EndpointManagerTest {
     public void closeTest() throws Exception {
         endpointManager.close();
         verify(listenerReg).close();
-        endpointManager = new EndpointManager(null, rpcRegistry, executor, switchManager);
+        endpointManager = new EndpointManager(null, rpcRegistry, notificationService, executor, switchManager);
         endpointManager.close();
     }
 

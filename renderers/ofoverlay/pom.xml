@@ -33,6 +33,14 @@
       <groupId>org.opendaylight.openflowplugin</groupId>
       <artifactId>openflowplugin-extension-nicira</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.opendaylight.controller</groupId>
+      <artifactId>liblldp</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>commons-net</groupId>
+      <artifactId>commons-net</artifactId>
+    </dependency>
     <!-- SFC -->
     <dependency>
       <groupId>org.opendaylight.sfc</groupId>

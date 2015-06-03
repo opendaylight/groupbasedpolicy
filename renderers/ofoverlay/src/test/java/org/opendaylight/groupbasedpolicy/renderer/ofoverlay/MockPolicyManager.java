@@ -9,14 +9,13 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 
 public class MockPolicyManager extends PolicyManager {
 
     private static short offSet = 0;
     public MockPolicyManager(PolicyResolver policyResolver,
                              EndpointManager endpointManager) {
-        super(null, policyResolver, null, endpointManager, null, null, offSet, new MacAddress("01:23:45:67:89:00"));
+        super(null, policyResolver, null, endpointManager, null, null, offSet);
     }
 
 }

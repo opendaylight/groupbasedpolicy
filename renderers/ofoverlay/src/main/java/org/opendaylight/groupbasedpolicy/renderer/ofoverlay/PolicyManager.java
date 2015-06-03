@@ -8,15 +8,20 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 
-import com.google.common.base.Equivalence;
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.CheckedFuture;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
@@ -26,10 +31,10 @@ import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.equivalence.EquivalenceFabric;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.DestinationMapper;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.EgressNatMapper;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.ExternalMapper;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.GroupTable;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.EgressNatMapper;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.IngressNatMapper;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OfTable;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer;
@@ -45,7 +50,6 @@ import org.opendaylight.groupbasedpolicy.resolver.PolicyListener;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyScope;
 import org.opendaylight.groupbasedpolicy.util.SingletonTask;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.TableBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
@@ -57,19 +61,15 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletionService;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import com.google.common.base.Equivalence;
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 
 /**
  * Manage policies on switches by subscribing to updates from the
@@ -89,8 +89,6 @@ public class PolicyManager
     private final short TABLEID_POLICY_ENFORCER = (short) (tableOffset+4);
     private final short TABLEID_EGRESS_NAT = (short) (tableOffset+5);
     private final short TABLEID_EXTERNAL_MAPPER = (short) (tableOffset+6);
-
-    private static MacAddress externaMacAddress;
 
     private final SwitchManager switchManager;
     private final PolicyResolver policyResolver;
@@ -118,15 +116,13 @@ public class PolicyManager
                          EndpointManager endpointManager,
                          RpcProviderRegistry rpcRegistry,
                          ScheduledExecutorService executor,
-                         short tableOffset,
-                         MacAddress externalRouterMac) {
+                         short tableOffset) {
         super();
         this.switchManager = switchManager;
         this.executor = executor;
         this.policyResolver = policyResolver;
         this.dataBroker = dataBroker;
-        this.tableOffset=tableOffset;
-        this.externaMacAddress=externalRouterMac;
+        this.tableOffset = tableOffset;
 
 
         if (dataBroker != null) {
@@ -264,10 +260,6 @@ public class PolicyManager
         // No-op for now
     }
 
-    public static MacAddress getExternaMacAddress() {
-        return externaMacAddress;
-    }
-
     // **************
     // Implementation
     // **************
@@ -371,30 +363,6 @@ public class PolicyManager
                 @Override
                 public void onFailure(Throwable t) {
                     LOG.error("Could not write flow table {}", t);
-                }
-
-                @Override
-                public void onSuccess(Void result) {
-                    LOG.debug("Flow table updated.");
-                }
-            });
-        }
-
-        private void purgeFromDataStore() {
-            // TODO: tbachman: Remove for Lithium -- this is a workaround
-            //       where some flow-mods aren't getting installed
-            //       on vSwitches when changing L3 contexts
-            WriteTransaction d = dataBroker.newWriteOnlyTransaction();
-
-            for( Entry<InstanceIdentifier<Table>, TableBuilder> entry : flowMap.entrySet()) {
-                d.delete(LogicalDatastoreType.CONFIGURATION, entry.getKey());
-            }
-
-            CheckedFuture<Void, TransactionCommitFailedException> fu = d.submit();
-            Futures.addCallback(fu, new FutureCallback<Void>() {
-                @Override
-                public void onFailure(Throwable th) {
-                    LOG.error("Could not write flow table.", th);
                 }
 
                 @Override

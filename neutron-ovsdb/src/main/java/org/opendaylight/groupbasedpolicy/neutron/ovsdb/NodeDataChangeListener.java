@@ -143,6 +143,7 @@ public class NodeDataChangeListener implements DataChangeListener, AutoCloseable
     private static String getInventoryNodeId(OvsdbNodeAugmentation ovsdbNode, String externalPortName) {
         List<ManagedNodeEntry> ovsdbNodes = ovsdbNode.getManagedNodeEntry();
         if (ovsdbNodes == null) {
+            LOG.trace("No ManagedNodeEntry was found on {}", ovsdbNode);
             return null;
         }
         for (ManagedNodeEntry managedNode : ovsdbNodes) {
@@ -159,6 +160,7 @@ public class NodeDataChangeListener implements DataChangeListener, AutoCloseable
                 }
                 OvsdbBridgeAugmentation ovsdbBridge = node.getAugmentation(OvsdbBridgeAugmentation.class);
                 if (ovsdbBridge == null) {
+                    LOG.trace("OVSDB Node {} does not contain OvsdbBridgeAugmentation. {}", node.getKey(), node);
                     continue;
                 }
                 for (TerminationPoint tp : node.getTerminationPoint()) {
