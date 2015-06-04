@@ -8,7 +8,29 @@
 
 package org.opendaylight.groupbasedpolicy.neutron.ovsdb;
 
-import com.google.common.base.Optional;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.NodeDataChangeListener.getProviderMapping;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.NodeDataChangeListener.processNodeNotification;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.EndpointHelper.lookupEndpoint;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.EndpointHelper.updateEndpointRemoveLocation;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.EndpointHelper.updateEndpointWithLocation;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.InventoryHelper.checkOfOverlayConfig;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.InventoryHelper.getInventoryNodeConnectorIdString;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.InventoryHelper.getInventoryNodeIdString;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.InventoryHelper.removeTunnelsOfOverlayConfig;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.InventoryHelper.updateOfOverlayConfig;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.NeutronHelper.getEpKeyFromNeutronMapper;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.createTunnelPort;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getManagerNode;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getOvsdbBridgeFromTerminationPoint;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getTopologyNode;
+import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.readFromDs;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map.Entry;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
@@ -37,28 +59,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map.Entry;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.NodeDataChangeListener.getProviderMapping;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.NodeDataChangeListener.processNodeNotification;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.EndpointHelper.lookupEndpoint;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.EndpointHelper.updateEndpointRemoveLocation;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.EndpointHelper.updateEndpointWithLocation;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.InventoryHelper.checkOfOverlayConfig;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.InventoryHelper.getInventoryNodeConnectorIdString;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.InventoryHelper.getInventoryNodeIdString;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.InventoryHelper.removeTunnelsOfOverlayConfig;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.InventoryHelper.updateOfOverlayConfig;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.NeutronHelper.getEpKeyFromNeutronMapper;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.createTunnelPort;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getManagerNode;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getOvsdbBridgeFromTerminationPoint;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getTopologyNode;
-import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.readFromDs;
+import com.google.common.base.Optional;
 
 public class TerminationPointDataChangeListener implements DataChangeListener, AutoCloseable {
 
@@ -84,8 +85,8 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
 
     private List<AbstractTunnelType> createSupportedTunnelsList() {
         List<AbstractTunnelType> required = new ArrayList<AbstractTunnelType>();
-        // required.add(new VxlanGpeTunnelType());
         required.add(new VxlanTunnelType());
+        required.add(new VxlanGpeTunnelType());
         return Collections.unmodifiableList(required);
     }
 
@@ -130,8 +131,7 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
             if (old instanceof OvsdbTerminationPointAugmentation) {
                 OvsdbTerminationPointAugmentation ovsdbTp = (OvsdbTerminationPointAugmentation) old;
                 @SuppressWarnings("unchecked")
-                InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid =
-                        (InstanceIdentifier<OvsdbTerminationPointAugmentation>) iid;
+                InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid = (InstanceIdentifier<OvsdbTerminationPointAugmentation>) iid;
                 OvsdbBridgeAugmentation ovsdbBridge = getOvsdbBridgeFromTerminationPoint(ovsdbTpIid, dataBroker);
                 if (ovsdbBridge != null) {
                     processRemovedTp(ovsdbBridge, ovsdbTp, ovsdbTpIid);
@@ -213,13 +213,13 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
 
         /*
          * Check if Neutron External port was announed in Node before TerminationPoint it refers to
-         * was actually instantiated. This may or may not have external information in the future, hence
+         * was actually instantiated. This may or may not have external information in the future,
+         * hence
          * not process as IF/ELSE externalID.
          */
         ReadOnlyTransaction transaction = dataBroker.newReadOnlyTransaction();
         Optional<Node> node = readFromDs(LogicalDatastoreType.OPERATIONAL, nodeIid, transaction);
-        if (node.isPresent()
-                && node.get().getAugmentation(OvsdbNodeAugmentation.class) != null) {
+        if (node.isPresent() && node.get().getAugmentation(OvsdbNodeAugmentation.class) != null) {
             OvsdbNodeAugmentation ovsdbNodeAug = node.get().getAugmentation(OvsdbNodeAugmentation.class);
             if (getProviderMapping(ovsdbNodeAug) != null) {
                 processNodeNotification(ovsdbNodeAug);
@@ -232,8 +232,9 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
          * In that case, we need to update the Inventory Node's OfOverlay
          * augmentation with missing information
          */
-        if (isTunnelPort(ovsdbTp, requiredTunnelTypes)) {
-            updateOfOverlayConfig(hostIp, nodeIdString, nodeConnectorIdString, requiredTunnelTypes, dataBroker);
+        AbstractTunnelType tunnel = getTunnelType(ovsdbTp, requiredTunnelTypes);
+        if (tunnel != null) {
+            updateOfOverlayConfig(hostIp, nodeIdString, nodeConnectorIdString, tunnel, dataBroker);
         }
         if (externalId != null) {
             ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
@@ -250,11 +251,13 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
      * @param ovsdbTp {@link OvsdbTerminationPointAugmentation}
      * @param ovsdbTpIid termination point's IID {@link InstanceIdentifier}
      */
-    private void processRemovedTp(OvsdbBridgeAugmentation ovsdbBridge, OvsdbTerminationPointAugmentation ovsdbTp, InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid) {
+    private void processRemovedTp(OvsdbBridgeAugmentation ovsdbBridge, OvsdbTerminationPointAugmentation ovsdbTp,
+            InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid) {
 
         checkNotNull(ovsdbBridge);
         if (ovsdbBridge.getBridgeName().getValue().equals(ovsdbTp.getName())) {
-            LOG.debug("Termination Point {} same as Bridge {}. Not processing.", ovsdbTp.getName(), ovsdbBridge.getBridgeName().getValue());
+            LOG.debug("Termination Point {} same as Bridge {}. Not processing.", ovsdbTp.getName(),
+                    ovsdbBridge.getBridgeName().getValue());
             return;
         }
 
@@ -276,7 +279,7 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
      *
      * @param ovsdbTp {@link OvsdbTerminationPointAugmentation}
      */
-    private void deleteLocationForTp(OvsdbTerminationPointAugmentation ovsdbTp){
+    private void deleteLocationForTp(OvsdbTerminationPointAugmentation ovsdbTp) {
         String externalId = getNeutronPortUuid(ovsdbTp);
         if (externalId != null) {
             EndpointKey epKey = getEpKeyFromNeutronMapper(new Uuid(externalId), dataBroker);
@@ -288,7 +291,9 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
             Endpoint ep = lookupEndpoint(epKey, readOnlyTransaction);
             readOnlyTransaction.close();
             if (ep == null) {
-                LOG.warn("TerminationPoint {} with external ID {} is in Neutron Map, but corresponding Endpoint {} isn't in Endpoint Repository.", ovsdbTp, externalId, epKey);
+                LOG.warn(
+                        "TerminationPoint {} with external ID {} is in Neutron Map, but corresponding Endpoint {} isn't in Endpoint Repository.",
+                        ovsdbTp, externalId, epKey);
                 return;
             }
             updateEndpointRemoveLocation(ep, dataBroker.newReadWriteTransaction());
@@ -298,11 +303,32 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
     }
 
     /**
+     * Check to see if the {@link OvsdbTerminationPointAugmentation} is also a Tunnel port that we
+     * care about.
+     *
+     * @param ovsdbTp {@link OvsdbTerminationPointAugmentation}
+     * @param requiredTunnelTypes {@link List} of tunnel types
+     */
+    private static AbstractTunnelType getTunnelType(OvsdbTerminationPointAugmentation ovsdbTp,
+            List<AbstractTunnelType> requiredTunnelTypes) {
+        if (ovsdbTp.getInterfaceType() != null) {
+            for (AbstractTunnelType tunnelType : requiredTunnelTypes) {
+                if (tunnelType.isValidTunnelPort(ovsdbTp)) {
+                    return tunnelType;
+                }
+            }
+        }
+        return null;
+    }
+
+    /*
      * Check to see if the {@link OvsdbTerminationPointAugmentation}
      * is also a Tunnel port that we care about.
      *
      * @param ovsdbTp {@link OvsdbTerminationPointAugmentation}
+     *
      * @param requiredTunnelTypes {@link List} of tunnel types
+     *
      * @return true if it's a required tunnel port, false if it isn't
      */
     private boolean isTunnelPort(OvsdbTerminationPointAugmentation ovsdbTp, List<AbstractTunnelType> requiredTunnelTypes) {

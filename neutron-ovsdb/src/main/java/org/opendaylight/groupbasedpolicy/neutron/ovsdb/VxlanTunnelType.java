@@ -73,7 +73,9 @@ public class VxlanTunnelType extends AbstractTunnelType {
 	@Override
     public boolean isValidTunnelPort(OvsdbTerminationPointAugmentation tpAugmentation) {
         if (hasTunnelOptions(tpAugmentation, optsMap)
-                && InterfaceTypeVxlan.class.equals(tpAugmentation.getInterfaceType())) {
+                && InterfaceTypeVxlan.class.equals(tpAugmentation.getInterfaceType())
+                && (getDestPort(tpAugmentation) == null
+                || getDestPort(tpAugmentation).equals(VXLAN_PORT_NUMBER.toString()))) {
             return true;
         }
         return false;

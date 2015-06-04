@@ -22,6 +22,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.re
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.ovsdb.port._interface.attributes.OptionsBuilder;
 
 public abstract class AbstractTunnelType {
+    protected static final String DESTPORT_KEY = "dst_port";
     protected static final String REMOTE_IP_KEY = "remote_ip";
     protected static final String REMOTE_IP_VALUE = "flow";
     protected static final String VNID_KEY = "key";
@@ -61,6 +62,19 @@ public abstract class AbstractTunnelType {
             }
         }
         return false;
+    }
+
+    protected String getDestPort(OvsdbTerminationPointAugmentation tpAugmentation) {
+        List<Options> options = tpAugmentation.getOptions();
+        if (options == null) {
+            return null;
+        }
+        for (Options opt: options) {
+            if (DESTPORT_KEY.equals(opt.getOption())) {
+                return opt.getValue();
+            }
+        }
+        return null;
     }
 
     /**

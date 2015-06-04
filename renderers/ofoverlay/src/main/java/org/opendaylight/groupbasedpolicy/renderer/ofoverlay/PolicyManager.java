@@ -298,6 +298,8 @@ public class PolicyManager
 
             if (!wrappedFlows.contains(wFlow)) {
                 tableBuilder.getFlow().add(Preconditions.checkNotNull(flow));
+            } else {
+                LOG.debug("Flow already exists in FlowMap - {}", flow);
             }
         }
 
