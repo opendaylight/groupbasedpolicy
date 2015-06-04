@@ -16,7 +16,8 @@ public class NeutronOvsdb implements AutoCloseable {
     private final List<ServiceRegistration<?>> registrations = new ArrayList<ServiceRegistration<?>>();
     private final TerminationPointDataChangeListener tpListener;
     private final NodeDataChangeListener nodeListener;
-    private final NeutronGbpMapperListener neutronGbpMapperListener;
+    private final NeutronGbpExternalGatewaysListener neutronGbpExternalGatewaysListener;
+    private final NeutronGbpFloatingIpListener neutronGbpFloatingIpListener;
 
     public NeutronOvsdb(DataBroker dataProvider, RpcProviderRegistry rpcProvider, BundleContext context) {
         checkNotNull(dataProvider);
@@ -26,7 +27,8 @@ public class NeutronOvsdb implements AutoCloseable {
         EndpointService epService = rpcProvider.getRpcService(EndpointService.class);
         tpListener = new TerminationPointDataChangeListener(dataProvider, epService);
         nodeListener = new NodeDataChangeListener(dataProvider);
-        neutronGbpMapperListener = new NeutronGbpMapperListener(dataProvider);
+        neutronGbpExternalGatewaysListener = new NeutronGbpExternalGatewaysListener(dataProvider);
+        neutronGbpFloatingIpListener = new NeutronGbpFloatingIpListener(dataProvider);
     }
 
     /**

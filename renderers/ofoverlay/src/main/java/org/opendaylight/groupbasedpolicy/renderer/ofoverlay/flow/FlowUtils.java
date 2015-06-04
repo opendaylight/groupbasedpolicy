@@ -12,6 +12,11 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Address;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Uri;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action;
@@ -21,13 +26,21 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.acti
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.OutputActionCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.SetDlDstActionCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.SetDlSrcActionCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.SetNwDstActionCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.SetNwSrcActionCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.dec.nw.ttl._case.DecNwTtlBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.drop.action._case.DropActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.group.action._case.GroupActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.output.action._case.OutputActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.set.dl.dst.action._case.SetDlDstActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.set.dl.src.action._case.SetDlSrcActionBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.set.nw.dst.action._case.SetNwDstAction;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.set.nw.dst.action._case.SetNwDstActionBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.set.nw.src.action._case.SetNwSrcActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.address.Address;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.address.address.Ipv4Builder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.address.address.Ipv6Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
@@ -40,8 +53,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.M
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.Instruction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.ApplyActionsCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.GoToTableCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.WriteActionsCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.apply.actions._case.ApplyActionsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.go.to.table._case.GoToTableBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.write.actions._case.WriteActionsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.InstructionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.BucketId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.GroupId;
@@ -150,6 +165,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.ni
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.nxm.nx.nsp.grouping.NxmNxNspBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.nxm.nx.reg.grouping.NxmNxRegBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.nxm.nx.tun.id.grouping.NxmNxTunIdBuilder;
+import org.opendaylight.yangtools.yang.binding.Augmentation;
+import org.opendaylight.yangtools.yang.binding.DataContainer;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.collect.ImmutableList;
@@ -294,6 +311,16 @@ public final class FlowUtils {
                 new ApplyActionsBuilder().setAction(actionList(actions)).build()).build();
     }
 
+    public static Instruction writeActionIns(List<ActionBuilder> actions) {
+        return new WriteActionsCaseBuilder().setWriteActions(
+                new WriteActionsBuilder().setAction(actionList(actions)).build()).build();
+    }
+
+    public static Instruction writeActionIns(Action... actions) {
+        return new WriteActionsCaseBuilder().setWriteActions(
+                new WriteActionsBuilder().setAction(actionList(actions)).build()).build();
+    }
+
     public static Instructions instructions(Instruction... instructions) {
         ArrayList<org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.Instruction> ins = new ArrayList<>();
         int order = 0;
@@ -328,6 +355,42 @@ public final class FlowUtils {
     public static Action setDlDstAction(MacAddress mac) {
         return new SetDlDstActionCaseBuilder().setSetDlDstAction(new SetDlDstActionBuilder().setAddress(mac).build())
             .build();
+    }
+
+    public static Action setIpv4DstAction(Ipv4Address ipAddress) {
+        Ipv4Builder ipDest = new Ipv4Builder();
+        Ipv4Prefix prefixdst = new Ipv4Prefix(new Ipv4Prefix(ipAddress.getValue() + "/32"));
+        ipDest.setIpv4Address(prefixdst);
+        SetNwDstActionBuilder setNwDstActionBuilder = new SetNwDstActionBuilder();
+        setNwDstActionBuilder.setAddress(ipDest.build());
+        return new SetNwDstActionCaseBuilder().setSetNwDstAction(setNwDstActionBuilder.build()).build();
+    }
+
+    public static Action setIpv6DstAction(Ipv6Address ipAddress) {
+        Ipv6Builder ipDest = new Ipv6Builder();
+        Ipv6Prefix prefixdst = new Ipv6Prefix(new Ipv6Prefix(ipAddress.getValue() + "/128"));
+        ipDest.setIpv6Address(prefixdst);
+        SetNwDstActionBuilder setNwDstActionBuilder = new SetNwDstActionBuilder();
+        setNwDstActionBuilder.setAddress(ipDest.build());
+        return new SetNwDstActionCaseBuilder().setSetNwDstAction(setNwDstActionBuilder.build()).build();
+    }
+
+    public static Action setIpv4SrcAction(Ipv4Address ipAddress) {
+        Ipv4Builder ipSrc = new Ipv4Builder();
+        Ipv4Prefix prefixdst = new Ipv4Prefix(new Ipv4Prefix(ipAddress.getValue() + "/32"));
+        ipSrc.setIpv4Address(prefixdst);
+        SetNwSrcActionBuilder setNwSrcActionBuilder = new SetNwSrcActionBuilder();
+        setNwSrcActionBuilder.setAddress(ipSrc.build());
+        return new SetNwSrcActionCaseBuilder().setSetNwSrcAction(setNwSrcActionBuilder.build()).build();
+    }
+
+    public static Action setIpv6SrcAction(Ipv6Address ipAddress) {
+        Ipv6Builder ipSrc = new Ipv6Builder();
+        Ipv6Prefix prefixdst = new Ipv6Prefix(new Ipv6Prefix(ipAddress.getValue() + "/128"));
+        ipSrc.setIpv6Address(prefixdst);
+        SetNwSrcActionBuilder setNwSrcActionBuilder = new SetNwSrcActionBuilder();
+        setNwSrcActionBuilder.setAddress(ipSrc.build());
+        return new SetNwSrcActionCaseBuilder().setSetNwSrcAction(setNwSrcActionBuilder.build()).build();
     }
 
     public static Action decNwTtlAction() {

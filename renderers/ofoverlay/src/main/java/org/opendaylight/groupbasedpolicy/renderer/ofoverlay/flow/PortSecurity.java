@@ -57,14 +57,18 @@ public class PortSecurity extends FlowTable {
     @Override
     public void sync(NodeId nodeId, PolicyInfo policyInfo, FlowMap flowMap) {
 
-        // Allow traffic from tunnel and external ports
+        // Allow traffic from tunnel ports
         NodeConnectorId tunnelIf = ctx.getSwitchManager().getTunnelPort(nodeId, TunnelTypeVxlan.class);
         if (tunnelIf != null)
             flowMap.writeFlow(nodeId, TABLE_ID, allowFromPort(tunnelIf));
+
+        // Allow traffic from tunnel ports
+        //TODO Bug 3546 - Difficult: External port is unrelated to Tenant, L3C, L2BD..
+
         Set<NodeConnectorId> external =
                 ctx.getSwitchManager().getExternalPorts(nodeId);
         for (NodeConnectorId extIf : external) {
-            flowMap.writeFlow(nodeId, TABLE_ID, allowFromPort(extIf));
+            flowMap.writeFlow(nodeId, TABLE_ID, allowFromExternalPort(extIf));
         }
 
         // Default drop all
@@ -93,8 +97,7 @@ public class PortSecurity extends FlowTable {
         }
     }
 
-    private Flow allowFromPort(
-            NodeConnectorId port) {
+    private Flow allowFromPort(NodeConnectorId port) {
         FlowId flowid = new FlowId(new StringBuilder()
                 .append("allow|")
                 .append(port.getValue())
@@ -107,7 +110,21 @@ public class PortSecurity extends FlowTable {
                         .build())
                 .setInstructions(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()));
         return flowb.build();
+    }
 
+    private Flow allowFromExternalPort(NodeConnectorId port) {
+        FlowId flowid = new FlowId(new StringBuilder()
+                .append("allowExternal|")
+                .append(port.getValue())
+                .toString());
+        FlowBuilder flowb = base()
+                .setId(flowid)
+                .setPriority(Integer.valueOf(200))
+                .setMatch(new MatchBuilder()
+                        .setInPort(port)
+                        .build())
+                .setInstructions(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_INGRESS_NAT()));
+        return flowb.build();
     }
 
     private Flow l2flow(Endpoint ep, OfOverlayContext ofc, Integer priority) {

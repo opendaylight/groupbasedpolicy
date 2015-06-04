@@ -250,7 +250,7 @@ public class DestinationMapper extends FlowTable {
         // TODO Bug #3440 Target: Be - should support for more than first gateway.
         EndpointL3Gateways l3Gateway = prefixEp.getEndpointL3Gateways().get(0);
         Optional<EndpointL3> optL3Ep = readFromDs(LogicalDatastoreType.OPERATIONAL,
-                IidFactory.endpointL3Iid(l3Gateway.getL3Context(), l3Gateway.getIpAddress()), rTx);
+                IidFactory.l3EndpointIid(l3Gateway.getL3Context(), l3Gateway.getIpAddress()), rTx);
         if (!optL3Ep.isPresent()) {
             LOG.error("createL3PrefixFlow - L3Endpoint gateway {} for L3Prefix {} not found.", l3Gateway, prefixEp);
             return null;
@@ -312,6 +312,7 @@ public class DestinationMapper extends FlowTable {
             checkNotNull(externalPorts);
             for (NodeConnectorId externalPort : externalPorts) {
                 // TODO Bug #3440 Target: Be - should support for more than first external port.
+                //TODO Bug 3546 - Difficult: External port is unrelated to Tenant, L3C, L2BD..
                 nextHop = externalPort.getValue();
                 try {
                     portNum = getOfPortNum(externalPort);

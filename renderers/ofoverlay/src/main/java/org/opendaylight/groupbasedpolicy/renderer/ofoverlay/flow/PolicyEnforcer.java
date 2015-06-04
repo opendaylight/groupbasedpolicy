@@ -9,9 +9,12 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.addNxRegMatch;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.writeActionIns;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.applyActionIns;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.gotoTableIns;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.instructions;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxOutputRegAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.EndpointManager.isExternal;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -49,10 +52,14 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.ta
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.Instruction;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.InstructionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
@@ -89,12 +96,20 @@ public class PolicyEnforcer extends FlowTable {
 
     protected static final Logger LOG = LoggerFactory.getLogger(PolicyEnforcer.class);
 
-    public static short TABLE_ID = 3;
+    private static org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.Instruction gotoEgressNatInstruction;
+    private static org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.Instruction gotoExternalInstruction;
+
+    public static short TABLE_ID;
 
     public PolicyEnforcer(OfContext ctx, short tableId) {
         super(ctx);
         this.TABLE_ID=tableId;
+        this.gotoEgressNatInstruction = gotoTableIns(ctx.getPolicyManager().getTABLEID_EGRESS_NAT());
+        this.gotoExternalInstruction = gotoTableIns(ctx.getPolicyManager().getTABLEID_EGRESS_NAT());
     }
+
+
+
 
 
     @Override
@@ -305,10 +320,10 @@ public class PolicyEnforcer extends FlowTable {
             /*
              * Pre-sort by references using order, then name
              */
-            List<ActionRef> arl = new ArrayList<ActionRef>(rule.getActionRef());
-            Collections.sort(arl, ActionRefComparator.INSTANCE);
+            List<ActionRef> actionRefList = new ArrayList<ActionRef>(rule.getActionRef());
+            Collections.sort(actionRefList, ActionRefComparator.INSTANCE);
 
-            for (ActionRef actionRule : arl) {
+            for (ActionRef actionRule : actionRefList) {
                 ActionInstance actionInstance = contractTenant.getAction(actionRule.getName());
                 if (actionInstance == null) {
                     // XXX TODO fail the match and raise an exception
@@ -421,16 +436,24 @@ public class PolicyEnforcer extends FlowTable {
             }
             flowMatchBuilders.addAll(matchBuildersToResolve);
         }
-                FlowBuilder flow = base().setPriority(Integer.valueOf(priority));
-                for (MatchBuilder match : flowMatchBuilders) {
-                    Match m = match.build();
-                    FlowId flowId = new FlowId(baseId + "|" + m.toString());
-                    flow.setMatch(m)
-                        .setId(flowId)
-                        .setPriority(Integer.valueOf(priority))
-                        .setInstructions(instructions(applyActionIns(actionBuilderList)));
-                    flowMap.writeFlow(netElements.getNodeId(), TABLE_ID, flow.build());
-                }
+
+
+
+        FlowBuilder flow = base().setPriority(Integer.valueOf(priority));
+        for (MatchBuilder match : flowMatchBuilders) {
+            Match m = match.build();
+            FlowId flowId = new FlowId(baseId + "|" + m.toString());
+            flow.setMatch(m)
+                .setId(flowId)
+                .setPriority(Integer.valueOf(priority));
+                        // If destination is External, the last Action ALLOW must be changed to goto NAT/External table.
+        if (isExternal(netElements.getDst())) {
+            flow.setInstructions(instructions(getGotoEgressNatInstruction()));
+        } else {
+            flow.setInstructions(instructions(applyActionIns(actionBuilderList)));
+        }
+            flowMap.writeFlow(netElements.getNodeId(), TABLE_ID, flow.build());
+        }
     }
 
     private String createBaseFlowId(Direction direction, CgPair cgPair, int priority) {
@@ -527,6 +550,14 @@ public class PolicyEnforcer extends FlowTable {
             epConditions = ep.getCondition();
         }
         return constraint.getConditionSet().matches(epConditions);
+    }
+
+    private static org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.Instruction getGotoEgressNatInstruction() {
+        return gotoEgressNatInstruction;
+    }
+
+    private static org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.Instruction getGotoExternalInstruction() {
+        return gotoExternalInstruction;
     }
 
     @Immutable

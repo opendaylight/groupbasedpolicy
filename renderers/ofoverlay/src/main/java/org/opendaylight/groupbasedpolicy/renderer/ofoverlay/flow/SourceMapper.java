@@ -19,6 +19,7 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import java.math.BigInteger;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
@@ -34,6 +35,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.ta
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
@@ -75,26 +78,39 @@ public class SourceMapper extends FlowTable {
 
         flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null));
 
+        // Handle case where packets from from External
+        Map<EndpointKey, EndpointL3> l3EpWithNatByL2Key = ctx.getEndpointManager().getL3EpWithNatByL2Key();
         for (Endpoint ep : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
             OfOverlayContext ofc = ep.getAugmentation(OfOverlayContext.class);
+
+            IndexedTenant tenant = ctx.getPolicyResolver().getTenant(ep.getTenant());
+            if (tenant == null)
+                continue;
+
+            EndpointFwdCtxOrdinals epFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, ep);
+            EgKey sepg = new EgKey(ep.getTenant(), ep.getEndpointGroup());
+
+            createRemoteTunnels(flowMap, nodeId, ep, policyInfo, epFwdCtxOrds);
+
+            if (ep.getTenant() == null || (ep.getEndpointGroup() == null && ep.getEndpointGroups() == null)) {
+                continue;
+            }
+
             if (ofc != null && ofc.getNodeConnectorId() != null
-                    && (ofc.getLocationType() == null || LocationType.Internal.equals(ofc.getLocationType()))
-                    && ep.getTenant() != null && (ep.getEndpointGroup() != null || ep.getEndpointGroups() != null)) {
-
-                IndexedTenant tenant = ctx.getPolicyResolver().getTenant(ep.getTenant());
-                if (tenant == null)
-                    continue;
-
-                EndpointFwdCtxOrdinals epFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, ep);
-                EgKey sepg = new EgKey(ep.getTenant(), ep.getEndpointGroup());
-
-                createRemoteTunnels(flowMap, nodeId, ep, policyInfo, epFwdCtxOrds);
-
+                    && (ofc.getLocationType() == null || LocationType.Internal.equals(ofc.getLocationType()))) {
                 /**
                  * Sync the local EP information.
                  */
-                syncEP(flowMap, policyInfo, nodeId, ep, ofc, sepg, epFwdCtxOrds);
+                syncEP(flowMap, nodeId, ep, ofc.getNodeConnectorId(), epFwdCtxOrds);
+
             }
+//            if (l3EpWithNatByL2Key.containsKey(ep.getKey())) {
+//                Set<NodeConnectorId> external = ctx.getSwitchManager().getExternalPorts(nodeId);
+//                for (NodeConnectorId ncId : external) {
+//                    // TODO Bug 3546 - Difficult: External port is unrelated to Tenant, L3C, L2BD..
+//                    syncEP(flowMap, nodeId, ep, ncId, epFwdCtxOrds);
+//                }
+//            }
         }
     }
 
@@ -216,8 +232,7 @@ public class SourceMapper extends FlowTable {
         return flowb.build();
     }
 
-    private void syncEP(FlowMap flowMap, PolicyInfo policyInfo, NodeId nodeId, Endpoint ep, OfOverlayContext ofc,
-            EgKey egKey, EndpointFwdCtxOrdinals epFwdCtxOrds) throws Exception {
+    private void syncEP(FlowMap flowMap, NodeId nodeId, Endpoint ep, NodeConnectorId ncId, EndpointFwdCtxOrdinals epFwdCtxOrds) throws Exception {
 
         // TODO alagalah Li/Be: We should also match on EndpointL3 with the appropriate
         // network containment. This would solve a lot of problems and prepare for EndpointL3 RPC.
@@ -229,7 +244,7 @@ public class SourceMapper extends FlowTable {
         int cgId = epFwdCtxOrds.getCgId();
         int tunnelId = epFwdCtxOrds.getTunnelId();
 
-        FlowId flowid = new FlowId(new StringBuilder().append(ofc.getNodeConnectorId().getValue())
+        FlowId flowid = new FlowId(new StringBuilder().append(ncId.getValue())
             .append("|")
             .append(ep.getMacAddress().getValue())
             .append("|")
@@ -254,7 +269,7 @@ public class SourceMapper extends FlowTable {
             .setId(flowid)
             .setMatch(
                     new MatchBuilder().setEthernetMatch(ethernetMatch(ep.getMacAddress(), null, null))
-                        .setInPort(ofc.getNodeConnectorId())
+                        .setInPort(ncId)
                         .build())
             .setInstructions(
                     instructions(applyActionIns(segReg, scgReg, bdReg, fdReg, vrfReg,tunIdAction),
