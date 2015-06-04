@@ -242,3 +242,8 @@ svg {
   border-radius: none;
   background-image: none;
 }
+
+text.text1, text.text2 {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+}

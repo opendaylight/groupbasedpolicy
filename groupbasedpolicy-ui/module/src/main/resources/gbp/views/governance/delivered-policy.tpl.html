@@ -20,5 +20,15 @@
     </section>
 
     <!-- Graph -->
-    <div graph="graph" id="graph" width="100%" height="100%" grid-size="1"/>
+    <div class="clear"></div>
+    <section class="graphWrapper" ng-controller="graphCtrl" ng-init="init(getPaperObj())">
+        
+        <section class="controlPanelButtons">
+            <button class="btn btn-primary btn-slim" ng-click="zoom()"><i class="icon-zoom-in"></i></button>
+            <div class="line"></div>
+            <button class="btn btn-primary btn-slim" ng-click="zoom(true)"><i class="icon-zoom-out"></i></button>
+        </section>
+
+        <div graph="graph" id="graph" grid-size="1" />
+    </section>
 </div>

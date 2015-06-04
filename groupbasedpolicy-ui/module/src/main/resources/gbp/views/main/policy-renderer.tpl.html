@@ -80,25 +80,25 @@
             </div>
 
             <div class="panelWrapper clearfix" ng-show="policyRendererView.basic">
-                <button class="btn btn-primary col-md-12 btn-lg" ng-click="setViewExpand('subMenuView','policySub'); setBreadcrumb('l2', 'Policy', subMenuView.policySub);" >Policy</button>
+                <button class="btn btn-primary col-md-12 btn-lg" ng-click="setViewExpand('subMenuView','policySub'); setBreadcrumb('l2', 'Policy', subMenuView.policySub);" tooltip="Show/Hide policy submenu" >Policy</button>
                 <section ng-show="subMenuView.policySub">
-                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('tenants'); setBreadcrumb('l3', 'Tenants', policyRendererView.tenants);" >Tenants</button>
-                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('epg'); setBreadcrumb('l3', 'Endpoint groups', policyRendererView.epg);">Endpoint groups</button>
-                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('contracts'); setBreadcrumb('l3', 'Contracts', policyRendererView.contracts);">Contracts</button>
-                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('l2l3'); setBreadcrumb('l3', 'L2/L3', policyRendererView.l2l3);">L2/L3</button>
+                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('tenants'); setBreadcrumb('l3', 'Tenants', policyRendererView.tenants);" tooltip="CRUD for tenants" >Tenants</button>
+                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('epg'); setBreadcrumb('l3', 'Endpoint groups', policyRendererView.epg);" tooltip="CRUD for endpoint groups">Endpoint groups</button>
+                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('contracts'); setBreadcrumb('l3', 'Contracts', policyRendererView.contracts);" tooltip="CRUD for contracts">Contracts</button>
+                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('l2l3'); setBreadcrumb('l3', 'L2/L3', policyRendererView.l2l3);" tooltip="CRUD for l2/l3">L2/L3</button>
                 </section>
 
-                <button class="btn btn-primary col-md-12 btn-lg" ng-click="setViewExpand('subMenuView','renderers'); setBreadcrumb('l2', 'Renderers', subMenuView.renderers);">Renderers</button>
+                <button class="btn btn-primary col-md-12 btn-lg" ng-click="setViewExpand('subMenuView','renderers'); setBreadcrumb('l2', 'Renderers', subMenuView.renderers);" tooltip="Show/Hide renderers submenu" >Renderers</button>
 
                 <section ng-show="subMenuView.renderers">
-                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('classifiers'); setBreadcrumb('l3', 'Classifiers', policyRendererView.classifiers);">Classifiers</button>
-                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('actions'); setBreadcrumb('l3', 'Actions', policyRendererView.actions);">Actions</button>
+                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('classifiers'); setBreadcrumb('l3', 'Classifiers', policyRendererView.classifiers);" tooltip="CRUD for classifiers">Classifiers</button>
+                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('actions'); setBreadcrumb('l3', 'Actions', policyRendererView.actions);" tooltip="CRUD for actions">Actions</button>
                 </section>
 
-                <button class="btn btn-primary col-md-12 btn-lg" ng-click="setViewExpand('subMenuView','endpoints'); setBreadcrumb('l2', 'Endpoints', subMenuView.endpoints);">Endpoints</button>
+                <button class="btn btn-primary col-md-12 btn-lg" ng-click="setViewExpand('subMenuView','endpoints'); setBreadcrumb('l2', 'Endpoints', subMenuView.endpoints);" tooltip="Show/Hide endpoints submenu">Endpoints</button>
                 <section ng-show="subMenuView.endpoints">
-                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('registerEndpoint'); setBreadcrumb('l3', 'Endpoint', policyRendererView.registerEndpoint);">Endpoint</button>
-                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('registerL3PrefixEndpoint'); setBreadcrumb('l3', 'L3 prefix endpoint', policyRendererView.registerL3PrefixEndpoint);">L3 prefix endpoint</button>
+                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('registerEndpoint'); setBreadcrumb('l3', 'Endpoint', policyRendererView.registerEndpoint);" tooltip="CRUD for endpoint">Endpoint</button>
+                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('registerL3PrefixEndpoint'); setBreadcrumb('l3', 'L3 prefix endpoint', policyRendererView.registerL3PrefixEndpoint);" tooltip="CRUD for L3 prefix endpoint">L3 prefix endpoint</button>
                 </section>
                 <!-- <button class="btn btn-primary col-md-12" ng-click="toggleExpanded('docs')"  >Docs</button> -->
 
