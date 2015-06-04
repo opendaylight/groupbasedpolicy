@@ -101,7 +101,8 @@
         </form>
     </section>
 
-    <button class="btn btn-primary col-md-12 bottom-buttons home" ng-click="toggleExpanded('basic')">Home</button>
-    <button class="btn btn-primary col-md-12 bottom-buttons back" ng-click="toggleExpanded('endpoints')">Back</button>
+    <button class="btn btn-primary  bottom-buttons full-width wizard-button" ng-click="showWizard('accessModelWizard')"><i class="icon-magic"></i>Access Model Wizard</button>
+    <button class="btn btn-primary col-md-12 bottom-buttons home" ng-click="toggleExpandedMM('main')">Home</button>
+    <button class="btn btn-primary col-md-12 bottom-buttons back" ng-click="setViewExpand('policyRendererView', 'basic', true); setBreadcrumb('l3', null, false);">Back</button>
 
 </div>

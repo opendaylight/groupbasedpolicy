@@ -1,0 +1,73 @@
+<div ng-controller="boxStaticCtrl" class="simpleBox maxHeight500">
+    <h2 class="text-center">Endpoint groups</h2>
+
+    <section class="formWrapper clearfix">
+
+        <div class="rowWrapper">
+            <label class="block mb0">Id:</label>
+            <span class="block">{{selectedObj.id}}</span>
+        </div>
+
+        <div class="rowWrapper" ng-hide="!selectedObj['name']">
+            <label class="block mb0">Name:</label>
+            <span class="block">{{selectedObj.name}}</span>
+        </div>
+
+        <div class="rowWrapper" ng-hide="!selectedObj['description']">
+            <label class="block mb0">Description:</label>
+            <span class="block">{{selectedObj.description}}</span>
+        </div>
+
+        <div class="rowWrapper" ng-hide="!selectedObj['intra-group-policy']">
+            <label class="block mb0">Intra group policy:</label>
+            <span class="block">{{selectedObj['intra-group-policy']}}</span>
+        </div>
+
+        <div class="rowWrapper" ng-hide="!selectedObj['network-domain']">
+            <label class="block mb0">Network domain:</label>
+            <span class="block">{{selectedObj['network-domain']}}</span>
+        </div>
+
+        <div class="rowWrapper" ng-hide="!selectedObj['parent']">
+            <label class="block mb0">Parent:</label>
+            <span class="block">{{selectedObj.parent}}</span>
+        </div>
+
+        <div class="rowWrapper mt20" ng-hide="!selectedObj['consumer-named-selector']">
+            <label class="block"><span>Consumer named selectors list</span></label>
+
+            <div class="ml10" ng-repeat="cns in selectedObj['consumer-named-selector']">
+
+                <div class="rowWrapper">
+                    <label class="block">Name:</label>
+                    <span class="block">{{cns.name}}</span>
+                </div>
+
+                <div class="rowWrapper">
+                    <label class="block">Contracts:</label>
+                    <span class="block" ng-repeat="con in cns.contract track by $index">{{con}}</span>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="rowWrapper mt20" ng-hide="!selectedObj['provider-named-selector']">
+            <label class="block"><span>Provider named selectors list</span></label>
+
+            <div class="ml10" ng-repeat="pns in selectedObj['provider-named-selector']">
+
+                <div class="rowWrapper">
+                    <label class="block">Name:</label>
+                    <span class="block">{{pns.name}}</span>
+                </div>
+
+                <div class="rowWrapper">
+                    <label class="block">Contracts:</label>
+                    <span class="block" ng-repeat="con in pns.contract track by $index">{{con}}</span>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+</div>
