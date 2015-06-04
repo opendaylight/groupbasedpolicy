@@ -7,7 +7,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
     });
 
     gbp.register.factory('GBPConstants', function() {
-        var c = { colors: {}, strings: {}, jointElements: {}, objType: {}, numbers: {}};
+        var c = { colors: {'graph' : {}}, strings: {}, jointElements: {}, objType: {}, numbers: {}};
 
         c.strings.flood = 'flood';
         c.strings.bridge = 'bridge';
@@ -31,6 +31,10 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
         c.colors[c.strings.bridge+'-'+c.strings.l3ctx] = '#6666FF';
 
         c.colors[c.strings.subnet+'-'] = '#6666FF';
+
+        c.colors['graph']['subject'] = '#FFFFD4';
+        c.colors['graph']['cns'] = '#8EEDFF';
+        c.colors['graph']['pns'] = '#FF9C9C';
 
         c.jointElements.minWidth = 100;
         c.jointElements.maxWidth = 300;
@@ -314,6 +318,10 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
             });
         };
 
+        tdl.getClassifierInstances = function() {
+
+        };
+
         return tdl;
     });
 
@@ -586,9 +594,9 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
             this.tenantId = tenantId;
         };
 
-        var Subject = function(name, rules) {
+        var Subject = function(name) {
             this.name = name;
-            this.rules = rules;
+            this.rules = [];
             this.providers = [];
             this.consumers = [];
 
@@ -602,6 +610,22 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
                 if(this.consumers.indexOf(consumingEpg) === -1) {
                     this.consumers.push(consumingEpg);
                 }
+            };
+
+            this.addRule = function(rule, classifierInstances) {
+                if(rule['classifier-ref'] && rule['classifier-ref'].length > 0) {
+                    
+                    rule['classifier-ref'].forEach(function(cr) {
+                        //cr['parameters'] = [];
+                        classifierInstances.forEach(function(ci) {
+                            if(ci['name'] === cr['instance-name']) {
+                                cr['parameters'] = ci['parameter-value'];
+                            }
+                        });
+                    });
+                }
+
+                this.rules.push(rule);
             };
         };
 
@@ -620,33 +644,40 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
                 return addedEpg;
             },
-            addSubject = function(subject, subjects, providerEpg, consumerEpg) {
+            addSubject = function(subject, subjects, providerEpg, consumerEpg, classifierInstances) {
+                //console.log('classifierInstances:', classifierInstances);
                 var existingSubject = subjects.filter(function(s) {
                         return s.name === subject.name;
                     })[0],
                     newSubject = (existingSubject === undefined);
 
                 if(newSubject) {
-                    existingSubject = new Subject(subject.name, subject['ui-rule']);
+                    existingSubject = new Subject(subject.name);
                 }
 
                 existingSubject.addProvider(providerEpg);
                 existingSubject.addConsumer(consumerEpg);
-
+                
+                if(subject['ui-rule'] && subject['ui-rule'].length > 0) {
+                    subject['ui-rule'].forEach(function(r) {
+                        existingSubject.addRule(r, classifierInstances);
+                    });
+                }
+                
                 if(newSubject) {
                     subjects.push(existingSubject);
                 }
             },
-            processPairData = function(providers, consumers, subjects, pairData) {
+            processPairData = function(providers, consumers, subjects, pairData, classifierInstances) {
                 addEpg(providers, pairData['provider-endpoint-group-id'], pairData['provider-tenant-id']);
                 addEpg(consumers, pairData['consumer-endpoint-group-id'], pairData['consumer-tenant-id']);
 
                 pairData['ui-subject'].forEach(function(s) {
-                    addSubject(s, subjects, pairData['provider-endpoint-group-id'], pairData['consumer-endpoint-group-id']);
+                    addSubject(s, subjects, pairData['provider-endpoint-group-id'], pairData['consumer-endpoint-group-id'], classifierInstances);
                 });
             };
 
-        s.getEPGsAndSubjects = function(tenantId, successCbk, errorCbk) {
+        s.getEPGsAndSubjects = function(tenantId, classifierInstances, successCbk, errorCbk) {
             TopologyDataLoaders.getSubjectsBetweenEndpointGroups(false, tenantId, 
                 function(data) {
                     var epgPairs = data.output['endpoint-group-pair-with-subject'],
@@ -656,7 +687,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
                     if(epgPairs) {
                         epgPairs.forEach(function(p) {
-                            processPairData(providers, consumers, subjects, p);
+                            processPairData(providers, consumers, subjects, p, classifierInstances);
                         });
                     }
 
@@ -2299,17 +2330,52 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
             return {w: w || 0, h: h || 0};
         };
 
-        jgof.updateOffsets = function(delta, offset, margin, maximums) {
+        jgof.updateOffsets = function(delta, offset, margin, maximums, paper) {
             offset.w = offset.w + delta.w + margin.w;
+
             if(offset.w >= maximums.w) {
+                paper.setDimensions(offset.w + 30, paper.options.height);
                 offset.w = offset.ow;
                 offset.h = offset.h + margin.h;
             }
+
         };
 
         jgof.resetOffsets = function(offset, w, h) {
             offset.w = w;
             offset.h = h;
+        };
+
+        jgof.getCurrentOffset = function(array, type) {
+            var max = 0;
+            array.forEach(function(item){
+                max = item.attributes.position[type] > max ? item.attributes.position[type] : max;
+            });
+
+            return max;
+        };
+
+        jgof.checkObjsHoffsets = function(array, size, paper) {
+            var lastPosY = 0,
+                addOffset = false,
+                cellBottomOffset = 80,
+                setItemPosition = function(item, type) {
+                    while (item.attributes.position[type] < size + cellBottomOffset) {
+                        item.translate(null, cellBottomOffset);
+                    }
+                };
+
+            array.forEach(function(item){
+                addOffset = (size + cellBottomOffset) >= item.attributes.position.y;
+
+                if ( addOffset ) {
+                    setItemPosition(item, 'y');
+                }
+
+                if ( item.attributes.position.y + cellBottomOffset > paper.options.height ) {
+                    paper.setDimensions(paper.options.width, paper.options.height + cellBottomOffset);
+                }
+            });
         };
 
         return jgof;
@@ -2321,7 +2387,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
         var jgf = {};
 
         jgf.getLabelLength = function(length) {
-            return length * 10;
+            return length * 10 > 200 ? 200 : length * 10;
         };
 
         jgf.createGraph = function() {
@@ -2330,7 +2396,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
             var paper = new joint.dia.Paper({
                 el: $('#graph'),
                 width: 1300,
-                height: 800,
+                height: 650,
                 model: graph,
                 gridSize: 1
             });
@@ -2342,7 +2408,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
             graph.clear();
         };
 
-        jgf.createElement = function(elementName, posx, posy, width, height, objectType, object, tooltip) {
+        jgf.createElement = function(elementName, posx, posy, width, height, objectType, object, tooltip, bgcolor, titleName) {
             var setWidth = function(width) {
                 return width < GBPConstants.jointElements.minWidth ? GBPConstants.jointElements.minWidth : 
                        width > GBPConstants.jointElements.maxWidth ? GBPConstants.jointElements.maxWidth : width;
@@ -2353,25 +2419,75 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
                        height > GBPConstants.jointElements.maxHeight ? GBPConstants.jointElements.maxHeight : height;
             };
 
-            joint.shapes.basic.Rect = joint.shapes.basic.Generic.extend({
+            // joint.shapes.basic.Rect = joint.shapes.basic.Generic.extend({
+            joint.shapes.html = {};
+            joint.shapes.html.Element = joint.shapes.basic.Generic.extend({
 
-                markup: '<g class="rotatable"><g class="scalable"><rect/><title /></g><text/><title /></g>',
+                markup: '<g class="rotatable"><g class="scalable"><rect/><title /></g><text class="text1"></text><text class="text2"></text><title /></g>',
                 
                 defaults: joint.util.deepSupplement({
-                    type: 'basic.Rect',
+                    type: 'html.Element',
                     attrs: {
-                        'rect': { fill: 'white', stroke: 'black', 'follow-scale': true, width: 80, height: 40, cursor: 'pointer' },
-                        'text': { 'font-size': 14, 'ref-x': 0.5, 'ref-y': 0.5, ref: 'rect', 'y-alignment': 'middle', 'x-alignment': 'middle', cursor: 'pointer'},
+                        'rect': { fill: bgcolor, stroke: 'black', 'follow-scale': true, width: 80, height: 40, cursor: 'pointer' },
+                        '.text1': { ref: 'rect', 'ref-x': 0.5, 'ref-y': 0.3, 'y-alignment': 'middle', 'x-alignment': 'middle', cursor: 'pointer', 'font-weight' : 'bold'},
+                        '.text2': { ref: 'rect', 'ref-x': 0.5, 'ref-y': 0.7, 'y-alignment': 'middle', 'x-alignment': 'middle', cursor: 'pointer'},
                         'title': {text: tooltip},
                     }
                     
                 }, joint.shapes.basic.Generic.prototype.defaults)
             });
 
-            return new joint.shapes.basic.Rect({
+            // joint.shapes.html.ElementView = joint.dia.ElementView.extend({
+
+            //     template: [
+            //         '<input class="html-element" type="text" value="'+elementName+'"/>',
+            //         ''
+            //     ].join(''),
+
+            //     initialize: function() {
+            //         _.bindAll(this, 'updateBox');
+            //         joint.dia.ElementView.prototype.initialize.apply(this, arguments);
+
+            //         this.$box = $(_.template(this.template)());
+            //         // Prevent paper from handling pointerdown.
+            //         this.$box.find('input,select').on('mousedown click', function(evt) { evt.stopPropagation(); });
+            //         // This is an example of reacting on the input change and storing the input data in the cell model.
+            //         this.$box.find('input').on('change', _.bind(function(evt) {
+            //             this.model.set('input', $(evt.target).val());
+            //         }, this));
+            //         this.$box.find('button').on('click', _.bind(function(evt) {
+            //             this.model.set('button', $('.divc').css('display','block'));
+            //         }, this));
+            //         // Update the box position whenever the underlying model changes.
+            //         this.model.on('change', this.updateBox, this);
+
+            //         this.updateBox();
+            //     },
+            //     render: function() {
+            //         joint.dia.ElementView.prototype.render.apply(this, arguments);
+            //         this.paper.$el.prepend(this.$box);
+            //         this.updateBox();
+            //         return this;
+            //     },
+            //     updateBox: function() {
+            //         // Set the position and dimension of the box so that it covers the JointJS element.
+            //         var bbox = this.model.getBBox();
+            //         // Example of updating the HTML with a data stored in the cell model.
+            //         this.$box.css({ width: bbox.width, height: bbox.height, left: bbox.x, top: bbox.y, transform: 'rotate(' + (this.model.get('angle') || 0) + 'deg)' });
+            //     },
+            //     removeBox: function(evt) {
+            //         this.$box.remove();
+            //     }
+            // });
+
+            elementName = elementName.length > 20 ? elementName.slice(0,20) + '...' : elementName;
+            // width = width > 200 ? 200 : width;
+
+            // return new joint.shapes.basic.Rect({
+            return new joint.shapes.html.Element({
                 position: { x: posx || 0, y: posy || 0 },
                 size: { width: width ||  GBPConstants.jointElements.minWidth, height: height || GBPConstants.jointElements.minHeight },
-                attrs: { rect: { fill: 'white' }, text: { text: elementName, fill: 'black' }},
+                attrs: { rect: { fill: bgcolor }, '.text1': { fill: 'black', text: titleName}, '.text2': { fill: 'black', text: elementName }},
                 objType: objectType,
                 objData: object
             });

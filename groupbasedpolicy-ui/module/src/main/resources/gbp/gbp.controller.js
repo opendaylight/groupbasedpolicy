@@ -7,7 +7,7 @@ define(modules, function(gbp) {
 
     gbp.register.controller('gbpCtrl', ['$scope', '$rootScope', 'GBPTenantServices','DesignGbpFactory', 'GBPConstants',
         function ($scope, $rootScope, GBPTenantServices, DesignGbpFactory, GBPConstants) {
-            $rootScope['section_logo'] = 'logo_yangui';
+            $rootScope['section_logo'] = 'logo_gbp';
             $scope.view_path =  'src/app/gbp/views/';
 
             $scope.mainView = {
@@ -192,6 +192,7 @@ define(modules, function(gbp) {
                 $scope.menuTpl = 'main-menu';
                 $scope.contentTpl = 'main';
                 $scope.$emit('GBP_GLOBAL_TENANT_RELOAD');
+                $scope.menuBox = null;
             });
 
 
@@ -226,10 +227,24 @@ define(modules, function(gbp) {
                 $scope.$apply();
             }
 
-
-            // console.log('data', data, apply);
         });
 
+    }]);
+
+    gbp.register.controller('graphCtrl', ['$scope', function($scope){
+        var paper = null,
+            paperScale = 1;
+
+        $scope.init = function(paperInstance){
+            paper = paperInstance;
+        };
+
+
+        $scope.zoom = function(out){
+            paperScale = out ? paperScale - 0.1 : paperScale >= 1 ? 1 : paperScale + 0.1;
+            paper.scale(paperScale, paperScale);
+        };
+        
     }]);
 
     gbp.register.controller('expressedPolicyCtrl', ['$scope', 'JointGraphFactory', 'JointGraphOffsetFactory', 'GBPConstants',
@@ -255,15 +270,22 @@ define(modules, function(gbp) {
             });
 
             var createEpgLinks = function(epg, epgItem, contracts) {
-                var providers = epg['provider-named-selector'] && epg['provider-named-selector'].length>0 ? epg['provider-named-selector'][0]['contract'] : [];
-                var consumers = epg['consumer-named-selector'] && epg['consumer-named-selector'].length>0 ? epg['consumer-named-selector'][0]['contract'] : [];
+                var providers = epg['provider-named-selector'] && epg['provider-named-selector'].length>0 ? epg['provider-named-selector'] : [];
+                var consumers = epg['consumer-named-selector'] && epg['consumer-named-selector'].length>0 ? epg['consumer-named-selector'] : [];
+                var consumerLinkItems = [];
+                var providerLinkItems = [];
 
-                var providerLinkItems = providers.map(function(p) {
-                        return JointGraphFactory.createLink(contracts[p].id, epgItem.id, 'green');
+                consumers.forEach(function(c) {
+                    c.contract.forEach(function(con) {
+                        consumerLinkItems.push(JointGraphFactory.createLink(contracts[con].id, epgItem.id, 'green'));
                     });
-                    consumerLinkItems = consumers.map(function(c) {
-                        return JointGraphFactory.createLink(epgItem.id, contracts[c].id, 'blue');
+                });
+
+                providers.forEach(function(p) {
+                    p.contract.forEach(function(con) {
+                        providerLinkItems.push(JointGraphFactory.createLink(epgItem.id, contracts[con].id, 'blue'));    
                     });
+                });
 
                 JointGraphFactory.addItemList(paper.model, providerLinkItems);
                 JointGraphFactory.addItemList(paper.model, consumerLinkItems);
@@ -281,6 +303,14 @@ define(modules, function(gbp) {
                         marginObj = {
                             w: 50,
                             h: 80
+                        },
+                        offsetHobj = {
+                            contract: 0,
+                            epg: 0
+                        },
+                        itemsArray = {
+                            contract: [],
+                            epg: []
                         };
 
                     JointGraphFactory.reloadGraph(paper.model);
@@ -288,32 +318,51 @@ define(modules, function(gbp) {
                     $scope.selectedTenant.contract.forEach(function(c, i) {
                         var label = c.description ? $scope.sliceLabel(c.description) : c.id,
                             width = JointGraphFactory.getLabelLength(label.length);
-                            item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.objType.contract, c, 'Click to see contract info');
+                            item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.objType.contract, c, 'Click to see contract info', GBPConstants.colors.graph['subject'], 'Contract');
 
-                        JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width));
+                        itemsArray.contract.push(item);
+
+                        JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width, paper.options.height), paper);
                         JointGraphFactory.addItem(paper.model, item);
                         contractItems[c.id] = item;
                     });
 
-                    JointGraphOffsetFactory.resetOffsets(offsetObj, offsetObj.ow, 400);
+                    offsetHobj.contract = offsetObj.h;
+
+                    JointGraphOffsetFactory.resetOffsets(offsetObj, offsetObj.ow, offsetObj.h > 400 ? offsetObj.h : 400);
                     $scope.selectedTenant['endpoint-group'].forEach(function(e, i) {
                         var label = e.name || e.id,
                             width = JointGraphFactory.getLabelLength(label.length);
-                            item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.objType.epg, e, 'Click to see epg info');
+                            item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.objType.epg, e, 'Click to see epg info', GBPConstants.colors.graph['pns'], 'EP group');
 
-                        JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width));
+                        itemsArray.epg.push(item);
+
+                        JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width, paper.options.height), paper);
                         JointGraphFactory.addItem(paper.model, item);
                         epgItems[e.id] = item;
 
                         createEpgLinks(e, item, contractItems);
                     });
+
+                    offsetHobj.epg = JointGraphOffsetFactory.getCurrentOffset(itemsArray.contract, 'y');
+                    JointGraphOffsetFactory.checkObjsHoffsets(itemsArray.epg ,offsetHobj.epg, paper);
                 }
+
+            };
+
+            $scope.getPaperObj = function(){
+                return paper;
             };
 
             $scope.$on('GBP_TENANT_RELOAD',function(){
-                loadData();
+                if ($scope.selectedTenant) {
+                    loadData();
+                }
+                else {
+                    JointGraphFactory.reloadGraph(paper.model);
+                }
             });
-
+            
             loadData();
     }]);
 
@@ -410,6 +459,10 @@ define(modules, function(gbp) {
                     consumerItems = {};
                     subjectItems = {};
 
+                    var classifierInstances = $scope.selectedTenant['subject-feature-instances'] && 
+                                          $scope.selectedTenant['subject-feature-instances']['classifier-instance'] && 
+                                          $scope.selectedTenant['subject-feature-instances']['classifier-instance'].length > 0 ? $scope.selectedTenant['subject-feature-instances']['classifier-instance'] : [];
+
                     var offsetObj = {
                             ow: 100,
                             oh: 100,
@@ -419,23 +472,37 @@ define(modules, function(gbp) {
                         marginObj = {
                             w: 50,
                             h: 80
+                        },
+                        offsetHobj = {
+                            pEpg: 0,
+                            cEpg: 0,
+                            subject: 0
+                        },
+                        itemsArray = {
+                            pEpg: [],
+                            cEpg: [],
+                            subject: []
                         };
 
                     JointGraphFactory.reloadGraph(paper.model);
 
-                    GBPGovernanceServices.getEPGsAndSubjects($scope.selectedTenant.id, function(data){
+                    GBPGovernanceServices.getEPGsAndSubjects($scope.selectedTenant.id, classifierInstances, function(data){
                         data.providers.forEach(function(p, i) {
                             var relatedObj = GPBServices.getPropFromListByProp($scope.selectedTenant['endpoint-group'], 'id', p.id),
                                 label = relatedObj.name || p.id,
                                 width = JointGraphFactory.getLabelLength(label.length);
 
                             relatedObj.rules = p.rules;
-                            var item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.objType.provider, relatedObj, 'Click to see epg info, doubleclick to see Endpoint group detail');
+                            var item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.objType.provider, relatedObj, 'Click to see epg info, doubleclick to see Endpoint group detail', GBPConstants.colors.graph['pns'], 'Provider EPG');
 
-                            JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width));
+                            itemsArray.pEpg.push(item);
+
+                            JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width, paper.options.height), paper);
                             JointGraphFactory.addItem(paper.model, item);
                             providerItems[p.id] = item;
                         });
+
+                        offsetHobj.pEpg = offsetObj.h;
 
                         JointGraphOffsetFactory.resetOffsets(offsetObj, offsetObj.ow, 500);
                         data.consumers.forEach(function(c, i) {
@@ -444,31 +511,53 @@ define(modules, function(gbp) {
                                 width = JointGraphFactory.getLabelLength(label.length);
 
                             relatedObj.rules = c.rules;
-                            var item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.objType.consumer, relatedObj, 'Click to see epg info, doubleclick to see Endpoint group detail');
+                            var item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.objType.consumer, relatedObj, 'Click to see epg info, doubleclick to see Endpoint group detail', GBPConstants.colors.graph['cns'], 'Consumer EPG');
 
-                            JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width));
+                            itemsArray.cEpg.push(item);
+
+                            JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width, paper.options.height), paper);
                             JointGraphFactory.addItem(paper.model, item);
                             consumerItems[c.id] = item;
                         });
 
-                        JointGraphOffsetFactory.resetOffsets(offsetObj, offsetObj.ow, 300);
+                        JointGraphOffsetFactory.resetOffsets(offsetObj, offsetObj.ow, offsetHobj.pEpg > 300 ? offsetHobj.pEpg : 300);
                         data.subjects.forEach(function(s, i) {
                             var label = s.name,
                                 width = JointGraphFactory.getLabelLength(label.length),
-                                item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.objType.subject, s, 'Click to see subject info, doubleclick to see Subject detail');
+                                item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.objType.subject, s, 'Click to see subject info, doubleclick to see Subject detail', GBPConstants.colors.graph['subject'], 'Subject');
 
-                            JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width));
+                            itemsArray.subject.push(item);
+
+                            JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width, paper.options.height), paper);
                             JointGraphFactory.addItem(paper.model, item);
                             subjectItems[s.name] = item;
                             createSubjectLinks(s, item, providerItems, consumerItems);
                         });
+
+                        offsetHobj.pEpg = JointGraphOffsetFactory.getCurrentOffset(itemsArray.pEpg, 'y');
+                        JointGraphOffsetFactory.checkObjsHoffsets(itemsArray.subject ,offsetHobj.pEpg, paper);
+                        offsetHobj.subject = JointGraphOffsetFactory.getCurrentOffset(itemsArray.subject, 'y');
+                        JointGraphOffsetFactory.checkObjsHoffsets(itemsArray.cEpg ,offsetHobj.subject, paper);
                     }, function(){});
+
                 }
+
+
+                // paper.scaleContentToFit();
+                // paper.fitToContent();
             };
+
+            $scope.getPaperObj = function(){
+                return paper;
+            };
+
 
             $scope.$on('GBP_TENANT_RELOAD',function(){
                 if ($scope.selectedTenant) {
                     loadData();
+                }
+                else {
+                    JointGraphFactory.reloadGraph(paper.model);
                 }
             });
 
@@ -526,7 +615,7 @@ define(modules, function(gbp) {
 
                     var label = $scope.selectedSubject.name || $scope.selectedSubject.id,
                         width = JointGraphFactory.getLabelLength(label.length);
-                        subjectItem = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.objType.subject, $scope.selectedSubject, 'Click to see subject info');
+                        subjectItem = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.objType.subject, $scope.selectedSubject, 'Click to see subject info', GBPConstants.colors.graph['subject'], 'Subject');
 
                     JointGraphFactory.addItem(paper.model, subjectItem);
 
@@ -534,15 +623,19 @@ define(modules, function(gbp) {
                     $scope.selectedSubject.rules.forEach(function(r, i) {
                         var label = r.name,
                             width = JointGraphFactory.getLabelLength(label.length);
-                            item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.objType.rule, r, 'Click to see rule info');
+                            item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.objType.rule, r, 'Click to see rule info', GBPConstants.colors.graph['cns'], 'Rule');
 
-                        JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width));
+                        JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width), paper);
                         JointGraphFactory.addItem(paper.model, item);
                         ruleItems[r.name] = item;
 
                         createSubjectLinks(subjectItem, item);
                     });
                 }
+            };
+
+            $scope.getPaperObj = function(){
+                return paper;
             };
 
             $scope.$on('SET_SELECTED_SUBJECT', function(event, data){
@@ -559,8 +652,8 @@ define(modules, function(gbp) {
             loadData();
     }]);
 
- gbp.register.controller('epgDetailCtrl', ['$scope', 'JointGraphFactory', 'TopologyDataLoaders', 'GBPEpgServices', 'JointGraphOffsetFactory',
-        function ($scope, JointGraphFactory, TopologyDataLoaders, GBPEpgServices, JointGraphOffsetFactory) {
+ gbp.register.controller('epgDetailCtrl', ['$scope', 'JointGraphFactory', 'TopologyDataLoaders', 'GBPEpgServices', 'JointGraphOffsetFactory', 'GBPConstants',
+        function ($scope, JointGraphFactory, TopologyDataLoaders, GBPEpgServices, JointGraphOffsetFactory, GBPConstants) {
             var paper = JointGraphFactory.createGraph(),
                 epgItem = {},
                 epItems = {};
@@ -617,9 +710,9 @@ define(modules, function(gbp) {
 
                         var label = $scope.selectedEpg.name || $scope.selectedEpg.id,
                             width = JointGraphFactory.getLabelLength(label.length);
-                            epgItem = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, 'epg', $scope.selectedEpg, 'Click to see epg info');
+                            epgItem = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, 'epg', $scope.selectedEpg, 'Click to see epg info', GBPConstants.colors.graph['subject'], 'EPG');
 
-                        JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width));
+                        JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width), paper);
                         JointGraphFactory.addItem(paper.model, epgItem);
 
                         JointGraphOffsetFactory.resetOffsets(offsetObj, offsetObj.ow, 500);
@@ -627,9 +720,9 @@ define(modules, function(gbp) {
                             data.output['ui-endpoint'].forEach(function(ep, i){
                                 var label = ep['mac-address'] + ':' + ep['l2-context'],
                                     width = JointGraphFactory.getLabelLength(label.length);
-                                    item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, 'ep', ep, 'Click to see ep info');
+                                    item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, 'ep', ep, 'Click to see ep info', GBPConstants.colors.graph['pns'], 'Endpoint');
 
-                                JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width));
+                                JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width), paper);
                                 JointGraphFactory.addItem(paper.model, item);
                                 epItems[label] = item;
                                 links.push(JointGraphFactory.createLink(item.id, epgItem.id, 'green'));
@@ -639,6 +732,10 @@ define(modules, function(gbp) {
                         }
                     }, function(){});
                 }
+            };
+
+            $scope.getPaperObj = function(){
+                return paper;
             };
 
             // init();
@@ -2890,7 +2987,7 @@ define(modules, function(gbp) {
         });
 
         $scope.$on('GBP_SET_PARAM_VALUE', function(event, name, intVal, strVal) {
-            console.info($scope.parameter, ' got GBP_SET_PARAM_VALUE', name, intVal, strVal, event);
+            //console.info($scope.parameter, ' got GBP_SET_PARAM_VALUE', name, intVal, strVal, event);
             
         });
     }]);
