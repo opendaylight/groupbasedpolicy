@@ -10,6 +10,7 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.applyActionIns;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.instructions;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxOutputRegAction;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,8 +27,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.Fl
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer3Match;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlanGpe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,40 +65,20 @@ public class ExternalMapper extends FlowTable {
         // Default drop all
         flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
-        // Drop IP traffic that doesn't match a source IP rule
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(2), FlowUtils.ARP, TABLE_ID));
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(2), FlowUtils.IPv4, TABLE_ID));
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(2), FlowUtils.IPv6, TABLE_ID));
-        l3flow(flowMap,nodeId, 100, true);
-        l3flow(flowMap,nodeId, 200, false);
+        /*
+         *  Default Egress flow. Other methods may write to this table to augment egress
+         *  functionality, such as bypassing/utilising the NAT table, or ServiceFunctionChaining
+         */
+        flowMap.writeFlow(nodeId, TABLE_ID, defaultFlow());
+
     }
 
-    private void l3flow(FlowMap flowMap, NodeId nodeId, Integer priority, boolean arp) {
-
-        List<ActionBuilder> actionBuilderList = new ArrayList<ActionBuilder>();
-
-        Action action = SubjectFeatures.getAction(AllowAction.DEFINITION.getId());
-        actionBuilderList = action.updateAction(actionBuilderList, new HashMap<String, Object>(), 0, null);
-
-        Layer3Match m = null;
-        Long etherType = null;
-
-        if (arp) {
-            etherType = FlowUtils.ARP;
-        } else {
-            etherType = FlowUtils.IPv4;
-        }
-
-        Match match = new MatchBuilder().setEthernetMatch(FlowUtils.ethernetMatch(null, null, etherType))
-                .setLayer3Match(m)
-                .build();
-        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "ExternalMapper", match);
-        Flow flow = base().setPriority(priority)
+    private Flow defaultFlow() {
+        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "defaultExternalFlow", null);
+        Flow flow = base().setPriority(100)
             .setId(flowid)
-            .setMatch(match)
-            .setInstructions(instructions(applyActionIns(actionBuilderList)))
+            .setInstructions(instructions(applyActionIns(nxOutputRegAction(NxmNxReg7.class))))
             .build();
-
-        flowMap.writeFlow(nodeId, TABLE_ID, flow);
+        return flow;
     }
 }

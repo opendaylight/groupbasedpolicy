@@ -378,19 +378,7 @@ public class DestinationMapper extends FlowTable {
             return null;
         }
 
-        /*
-        // commented out because of the new FlowId implementation
-        FlowId flowid = new FlowId(new StringBuilder().append(Integer.toString(epFwdCtxOrds.getL3Id()))
-            .append("|l3prefix|")
-            .append(ikey)
-            .append("|")
-            .append(destSubnetGatewayMac)
-            .append("|")
-            .append(nextHop)
-            .toString());
-        */
         MatchBuilder mb = new MatchBuilder().setEthernetMatch(ethernetMatch(null, null, etherType));
-//        MatchBuilder mb = new MatchBuilder();//.setLayer3Match(m);
         addNxRegMatch(mb, RegMatch.of(NxmNxReg6.class, Long.valueOf(epFwdCtxOrds.getL3Id())));
         Match match = mb.build();
         FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "L3prefix", match);
@@ -602,15 +590,8 @@ public class DestinationMapper extends FlowTable {
         }
         OfOverlayContext ofc = destEp.getAugmentation(OfOverlayContext.class);
 
-        // ////////////////////////////////////////////////////////////////////////////////////////
-        /*
-         * NOT HANDLING EXTERNALS TODO: alagalah Li: External Gateway
-         * functionality needed here.
-         */
         if (LocationType.External.equals(ofc.getLocationType())) {
-            // XXX - TODO - perform NAT and send to the external network
-            // TODO: Use case neutron gateway interface
-            LOG.warn("External endpoints not yet supported");
+            LOG.error("syncEp(): External endpoints should not be seen here.");
             return;
         }
 

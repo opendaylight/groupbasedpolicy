@@ -80,7 +80,6 @@ public class SourceMapper extends FlowTable {
         flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
         // Handle case where packets from from External
-        Map<EndpointKey, EndpointL3> l3EpWithNatByL2Key = ctx.getEndpointManager().getL3EpWithNatByL2Key();
         for (Endpoint ep : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
             OfOverlayContext ofc = ep.getAugmentation(OfOverlayContext.class);
 
@@ -89,7 +88,6 @@ public class SourceMapper extends FlowTable {
                 continue;
 
             EndpointFwdCtxOrdinals epFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, ep);
-            EgKey sepg = new EgKey(ep.getTenant(), ep.getEndpointGroup());
 
             createRemoteTunnels(flowMap, nodeId, ep, policyInfo, epFwdCtxOrds);
 
@@ -103,15 +101,7 @@ public class SourceMapper extends FlowTable {
                  * Sync the local EP information.
                  */
                 syncEP(flowMap, nodeId, ep, ofc.getNodeConnectorId(), epFwdCtxOrds);
-
             }
-//            if (l3EpWithNatByL2Key.containsKey(ep.getKey())) {
-//                Set<NodeConnectorId> external = ctx.getSwitchManager().getExternalPorts(nodeId);
-//                for (NodeConnectorId ncId : external) {
-//                    // TODO Bug 3546 - Difficult: External port is unrelated to Tenant, L3C, L2BD..
-//                    syncEP(flowMap, nodeId, ep, ncId, epFwdCtxOrds);
-//                }
-//            }
         }
     }
 

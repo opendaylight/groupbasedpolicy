@@ -28,7 +28,9 @@ public class TunnelTypeTest {
     protected static final String VNID_VALUE = "flow";
     protected static final String REMOTE_IP_KEY = "remote_ip";
     protected static final String REMOTE_IP_VALUE = "flow";
-
+    private static final String DESTPORT_KEY = "dst_port";
+    private static final Integer VXLAN_GPE_PORT_NUMBER = 6633;
+    private static final String DESTPORT_VALUE = VXLAN_GPE_PORT_NUMBER.toString();
     private static final String NSH_NSI_KEY = "nsi";
     private static final String NSH_NSI_VALUE = "flow";
     private static final String NSH_NSP_KEY = "nsp";
@@ -81,6 +83,10 @@ public class TunnelTypeTest {
         ob = new OptionsBuilder();
         ob.setOption(NSH_NSHC4_KEY)
           .setValue(NSH_NSHC4_VALUE);
+        nshOptions.add(ob.build());
+        ob = new OptionsBuilder();
+        ob.setOption(DESTPORT_KEY)
+          .setValue(DESTPORT_VALUE);
         nshOptions.add(ob.build());
     }
 

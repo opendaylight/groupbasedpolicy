@@ -12,7 +12,6 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Address;
@@ -34,11 +33,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.acti
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.output.action._case.OutputActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.set.dl.dst.action._case.SetDlDstActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.set.dl.src.action._case.SetDlSrcActionBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.set.nw.dst.action._case.SetNwDstAction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.set.nw.dst.action._case.SetNwDstActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.set.nw.src.action._case.SetNwSrcActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.address.Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.address.address.Ipv4Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.address.address.Ipv6Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNode;
@@ -157,6 +154,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.ni
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxmNxReg6Key;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxmNxReg7Key;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxmNxTunIdKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxmNxTunIpv4DstKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.nxm.nx.nshc._1.grouping.NxmNxNshc1Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.nxm.nx.nshc._2.grouping.NxmNxNshc2Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.nxm.nx.nshc._3.grouping.NxmNxNshc3Builder;
@@ -165,8 +163,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.ni
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.nxm.nx.nsp.grouping.NxmNxNspBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.nxm.nx.reg.grouping.NxmNxRegBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.nxm.nx.tun.id.grouping.NxmNxTunIdBuilder;
-import org.opendaylight.yangtools.yang.binding.Augmentation;
-import org.opendaylight.yangtools.yang.binding.DataContainer;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.nxm.nx.tun.ipv4.dst.grouping.NxmNxTunIpv4DstBuilder;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.collect.ImmutableList;
@@ -430,9 +427,6 @@ public final class FlowUtils {
         return nxLoadRegAction(new DstNxRegCaseBuilder().setNxReg(reg).build(), value);
     }
 
-    // TODO: alagalah Li Need to address nicira yang model to make this extend an NxmNxNshFoo case
-    // class
-
     public static Action nxLoadNshc1RegAction(Long value) {
         NxSetNshc1 newNshc1 = new NxSetNshc1Builder().setNshc(value).build();
         return new NxActionSetNshc1NodesNodeTableFlowApplyActionsCaseBuilder().setNxSetNshc1(newNshc1).build();
@@ -502,12 +496,15 @@ public final class FlowUtils {
     }
 
     public static Action nxMoveRegTunDstToNshc1() {
-        return nxMoveRegAction(new SrcNxTunIpv4DstCaseBuilder().setNxTunIpv4Dst(Boolean.TRUE).build(),new DstNxNshc1CaseBuilder().setNxNshc1Dst(Boolean.TRUE).build(),31,false);
+        return nxMoveRegAction(new SrcNxTunIpv4DstCaseBuilder().setNxTunIpv4Dst(Boolean.TRUE).build(),
+                new DstNxNshc1CaseBuilder().setNxNshc1Dst(Boolean.TRUE).build(), 31, false);
     }
 
     public static Action nxMoveTunIdtoNshc2() {
-        return nxMoveRegAction(new SrcNxTunIdCaseBuilder().setNxTunId(Boolean.TRUE).build(), new DstNxNshc2CaseBuilder().setNxNshc2Dst(Boolean.TRUE).build(),31,false);
+        return nxMoveRegAction(new SrcNxTunIdCaseBuilder().setNxTunId(Boolean.TRUE).build(),
+                new DstNxNshc2CaseBuilder().setNxNshc2Dst(Boolean.TRUE).build(), 31, false);
     }
+
     public static Action nxMoveRegTunIdAction(Class<? extends NxmNxReg> src, boolean groupBucket) {
         return nxMoveRegAction(new SrcNxRegCaseBuilder().setNxReg(src).build(),
                 new DstNxTunIdCaseBuilder().setNxTunId(Boolean.TRUE).build(), 31, groupBucket);
@@ -595,142 +592,59 @@ public final class FlowUtils {
         match.addAugmentation(GeneralAugMatchNodesNodeTableFlow.class, m);
     }
 
-    // TODO alagalah Be/Li: Once OFP yang refactored to support container/grouping similar to nxreg
-    // we can follow same pattern. For now its match/set per nsh header
     public static void addNxNshc1RegMatch(MatchBuilder match, Long value) {
-        List<ExtensionList> existingExtensions = match.getAugmentation(GeneralAugMatchNodesNodeTableFlow.class).getExtensionList();
-        ArrayList<ExtensionList> extensions = new ArrayList<>();
-        if(existingExtensions != null && !existingExtensions.isEmpty()) {
-            extensions.addAll(existingExtensions);
-        }
         NxAugMatchNodesNodeTableFlow am = new NxAugMatchNodesNodeTableFlowBuilder().setNxmNxNshc1(
                 new NxmNxNshc1Builder().setValue(value).build()).build();
-
-        extensions.add(new ExtensionListBuilder().setExtensionKey(NxmNxNshc1Key.class)
-            .setExtension(new ExtensionBuilder().addAugmentation(NxAugMatchNodesNodeTableFlow.class, am).build())
-            .build());
-
-        GeneralAugMatchNodesNodeTableFlow m = new GeneralAugMatchNodesNodeTableFlowBuilder().setExtensionList(
-                extensions).build();
+        GeneralAugMatchNodesNodeTableFlow m = addExtensionKeyAugmentationMatcher(NxmNxNshc1Key.class, am, match);
         match.addAugmentation(GeneralAugMatchNodesNodeTableFlow.class, m);
     }
 
     public static void addNxNshc2RegMatch(MatchBuilder match, Long value) {
-        List<ExtensionList> existingExtensions = match.getAugmentation(GeneralAugMatchNodesNodeTableFlow.class).getExtensionList();
-        ArrayList<ExtensionList> extensions = new ArrayList<>();
-        if(existingExtensions != null && !existingExtensions.isEmpty()) {
-            extensions.addAll(existingExtensions);
-        }
         NxAugMatchNodesNodeTableFlow am = new NxAugMatchNodesNodeTableFlowBuilder().setNxmNxNshc2(
                 new NxmNxNshc2Builder().setValue(value).build()).build();
-
-        extensions.add(new ExtensionListBuilder().setExtensionKey(NxmNxNshc2Key.class)
-            .setExtension(new ExtensionBuilder().addAugmentation(NxAugMatchNodesNodeTableFlow.class, am).build())
-            .build());
-
-        GeneralAugMatchNodesNodeTableFlow m = new GeneralAugMatchNodesNodeTableFlowBuilder().setExtensionList(
-                extensions).build();
+        GeneralAugMatchNodesNodeTableFlow m = addExtensionKeyAugmentationMatcher(NxmNxNshc2Key.class, am, match);
         match.addAugmentation(GeneralAugMatchNodesNodeTableFlow.class, m);
     }
 
     public static void addNxNshc3RegMatch(MatchBuilder match, Long value) {
-        List<ExtensionList> existingExtensions = match.getAugmentation(GeneralAugMatchNodesNodeTableFlow.class).getExtensionList();
-        ArrayList<ExtensionList> extensions = new ArrayList<>();
-        if(existingExtensions != null && !existingExtensions.isEmpty()) {
-            extensions.addAll(existingExtensions);
-        }
         NxAugMatchNodesNodeTableFlow am = new NxAugMatchNodesNodeTableFlowBuilder().setNxmNxNshc3(
                 new NxmNxNshc3Builder().setValue(value).build()).build();
-
-        extensions.add(new ExtensionListBuilder().setExtensionKey(NxmNxNshc3Key.class)
-            .setExtension(new ExtensionBuilder().addAugmentation(NxAugMatchNodesNodeTableFlow.class, am).build())
-            .build());
-
-        GeneralAugMatchNodesNodeTableFlow m = new GeneralAugMatchNodesNodeTableFlowBuilder().setExtensionList(
-                extensions).build();
+        GeneralAugMatchNodesNodeTableFlow m = addExtensionKeyAugmentationMatcher(NxmNxNshc3Key.class, am, match);
         match.addAugmentation(GeneralAugMatchNodesNodeTableFlow.class, m);
     }
 
     public static void addNxNshc4RegMatch(MatchBuilder match, Long value) {
-        List<ExtensionList> existingExtensions = match.getAugmentation(GeneralAugMatchNodesNodeTableFlow.class).getExtensionList();
-        ArrayList<ExtensionList> extensions = new ArrayList<>();
-        if(existingExtensions != null && !existingExtensions.isEmpty()) {
-            extensions.addAll(existingExtensions);
-        }
         NxAugMatchNodesNodeTableFlow am = new NxAugMatchNodesNodeTableFlowBuilder().setNxmNxNshc4(
                 new NxmNxNshc4Builder().setValue(value).build()).build();
-
-        extensions.add(new ExtensionListBuilder().setExtensionKey(NxmNxNshc4Key.class)
-            .setExtension(new ExtensionBuilder().addAugmentation(NxAugMatchNodesNodeTableFlow.class, am).build())
-            .build());
-
-        GeneralAugMatchNodesNodeTableFlow m = new GeneralAugMatchNodesNodeTableFlowBuilder().setExtensionList(
-                extensions).build();
-        match.addAugmentation(GeneralAugMatchNodesNodeTableFlow.class, m);
-    }
-
-    public static void addNxNshcMatch(MatchBuilder match, RegMatch... matches) {
-        ArrayList<ExtensionList> extensions = new ArrayList<>();
-        for (RegMatch rm : matches) {
-            Class<? extends ExtensionKey> key;
-            if (NxmNxReg0.class.equals(rm.reg)) {
-                key = NxmNxReg0Key.class;
-            } else if (NxmNxReg1.class.equals(rm.reg)) {
-                key = NxmNxReg1Key.class;
-            } else if (NxmNxReg2.class.equals(rm.reg)) {
-                key = NxmNxReg2Key.class;
-            } else if (NxmNxReg3.class.equals(rm.reg)) {
-                key = NxmNxReg3Key.class;
-            } else if (NxmNxReg4.class.equals(rm.reg)) {
-                key = NxmNxReg4Key.class;
-            } else if (NxmNxReg5.class.equals(rm.reg)) {
-                key = NxmNxReg5Key.class;
-            } else if (NxmNxReg6.class.equals(rm.reg)) {
-                key = NxmNxReg6Key.class;
-            } else {
-                key = NxmNxReg7Key.class;
-            }
-            NxAugMatchNodesNodeTableFlow am = new NxAugMatchNodesNodeTableFlowBuilder().setNxmNxReg(
-                    new NxmNxRegBuilder().setReg(rm.reg).setValue(rm.value).build()).build();
-            extensions.add(new ExtensionListBuilder().setExtensionKey(key)
-                .setExtension(new ExtensionBuilder().addAugmentation(NxAugMatchNodesNodeTableFlow.class, am).build())
-                .build());
-        }
-        GeneralAugMatchNodesNodeTableFlow m = new GeneralAugMatchNodesNodeTableFlowBuilder().setExtensionList(
-                extensions).build();
+        GeneralAugMatchNodesNodeTableFlow m = addExtensionKeyAugmentationMatcher(NxmNxNshc4Key.class, am, match);
         match.addAugmentation(GeneralAugMatchNodesNodeTableFlow.class, m);
     }
 
     public static void addNxTunIdMatch(MatchBuilder match, int tunId) {
         NxAugMatchNodesNodeTableFlow am = new NxAugMatchNodesNodeTableFlowBuilder().setNxmNxTunId(
                 new NxmNxTunIdBuilder().setValue(BigInteger.valueOf(tunId)).build()).build();
-        GeneralAugMatchNodesNodeTableFlow m = new GeneralAugMatchNodesNodeTableFlowBuilder().setExtensionList(
-                ImmutableList.of(new ExtensionListBuilder().setExtensionKey(NxmNxTunIdKey.class)
-                    .setExtension(
-                            new ExtensionBuilder().addAugmentation(NxAugMatchNodesNodeTableFlow.class, am).build())
-                    .build())).build();
+        GeneralAugMatchNodesNodeTableFlow m = addExtensionKeyAugmentationMatcher(NxmNxTunIdKey.class, am, match);
+        match.addAugmentation(GeneralAugMatchNodesNodeTableFlow.class, m);
+    }
+
+    public static void addNxTunIpv4DstMatch(MatchBuilder match, Ipv4Address ipv4Address) {
+        NxAugMatchNodesNodeTableFlow am = new NxAugMatchNodesNodeTableFlowBuilder().setNxmNxTunIpv4Dst(
+                new NxmNxTunIpv4DstBuilder().setIpv4Address(ipv4Address).build()).build();
+        GeneralAugMatchNodesNodeTableFlow m = addExtensionKeyAugmentationMatcher(NxmNxTunIpv4DstKey.class, am, match);
         match.addAugmentation(GeneralAugMatchNodesNodeTableFlow.class, m);
     }
 
     public static void addNxNsiMatch(MatchBuilder match, short nsi) {
         NxAugMatchNodesNodeTableFlow am = new NxAugMatchNodesNodeTableFlowBuilder().setNxmNxNsi(
                 new NxmNxNsiBuilder().setNsi(nsi).build()).build();
-        GeneralAugMatchNodesNodeTableFlow m = new GeneralAugMatchNodesNodeTableFlowBuilder().setExtensionList(
-                ImmutableList.of(new ExtensionListBuilder().setExtensionKey(NxmNxNsiKey.class)
-                    .setExtension(
-                            new ExtensionBuilder().addAugmentation(NxAugMatchNodesNodeTableFlow.class, am).build())
-                    .build())).build();
+        GeneralAugMatchNodesNodeTableFlow m = addExtensionKeyAugmentationMatcher(NxmNxNsiKey.class, am, match);
         match.addAugmentation(GeneralAugMatchNodesNodeTableFlow.class, m);
     }
 
     public static void addNxNspMatch(MatchBuilder match, Long nsp) {
         NxAugMatchNodesNodeTableFlow am = new NxAugMatchNodesNodeTableFlowBuilder().setNxmNxNsp(
                 new NxmNxNspBuilder().setValue(nsp).build()).build();
-        GeneralAugMatchNodesNodeTableFlow m = new GeneralAugMatchNodesNodeTableFlowBuilder().setExtensionList(
-                ImmutableList.of(new ExtensionListBuilder().setExtensionKey(NxmNxNspKey.class)
-                    .setExtension(
-                            new ExtensionBuilder().addAugmentation(NxAugMatchNodesNodeTableFlow.class, am).build())
-                    .build())).build();
+        GeneralAugMatchNodesNodeTableFlow m = addExtensionKeyAugmentationMatcher(NxmNxNspKey.class, am, match);
         match.addAugmentation(GeneralAugMatchNodesNodeTableFlow.class, m);
     }
 
@@ -743,6 +657,27 @@ public final class FlowUtils {
         if (etherType != null)
             emb.setEthernetType(new EthernetTypeBuilder().setType(new EtherType(etherType)).build());
         return emb.build();
+    }
+
+    private static List<ExtensionList> getExistingGeneralAugMatchNodesNodeTableFlow(MatchBuilder match) {
+        ArrayList<ExtensionList> extensions = new ArrayList<>();
+        if (match.getAugmentation(GeneralAugMatchNodesNodeTableFlow.class) != null) {
+            List<ExtensionList> existingExtensions = match.getAugmentation(GeneralAugMatchNodesNodeTableFlow.class)
+                .getExtensionList();
+            if (existingExtensions != null && !existingExtensions.isEmpty()) {
+                extensions.addAll(existingExtensions);
+            }
+        }
+        return extensions;
+    }
+
+    private static GeneralAugMatchNodesNodeTableFlow addExtensionKeyAugmentationMatcher(
+            Class<? extends ExtensionKey> key, NxAugMatchNodesNodeTableFlow am, MatchBuilder match) {
+        List<ExtensionList> extensions = getExistingGeneralAugMatchNodesNodeTableFlow(match);
+        extensions.add(new ExtensionListBuilder().setExtensionKey(key)
+            .setExtension(new ExtensionBuilder().addAugmentation(NxAugMatchNodesNodeTableFlow.class, am).build())
+            .build());
+        return new GeneralAugMatchNodesNodeTableFlowBuilder().setExtensionList(extensions).build();
     }
 
     /**

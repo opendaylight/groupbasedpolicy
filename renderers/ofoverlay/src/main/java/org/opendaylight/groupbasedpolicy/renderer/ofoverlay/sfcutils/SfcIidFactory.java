@@ -8,6 +8,9 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils;
 
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.RenderedServicePaths;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.paths.RenderedServicePath;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.paths.RenderedServicePathKey;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfc.rev140701.ServiceFunctionChains;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfc.rev140701.service.function.chain.grouping.ServiceFunctionChain;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfc.rev140701.service.function.chain.grouping.ServiceFunctionChainKey;
@@ -35,6 +38,12 @@ public class SfcIidFactory {
         ServiceFunctionPathKey serviceFunctionPathKey = new ServiceFunctionPathKey(sfpName);
         return InstanceIdentifier.builder(ServiceFunctionPaths.class)
                 .child(ServiceFunctionPath.class, serviceFunctionPathKey).build();
+    }
 
+    public static InstanceIdentifier<RenderedServicePath> rspIid(String rspName) {
+
+        RenderedServicePathKey rspKey = new RenderedServicePathKey(rspName);
+        return InstanceIdentifier.builder(RenderedServicePaths.class)
+                .child(RenderedServicePath.class, rspKey).build();
     }
 }

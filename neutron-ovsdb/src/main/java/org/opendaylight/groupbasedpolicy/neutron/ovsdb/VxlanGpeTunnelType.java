@@ -21,6 +21,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.re
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.ovsdb.port._interface.attributes.Options;
 
 public class VxlanGpeTunnelType extends AbstractTunnelType {
+
+    private static final String VXLAN_GPE_TUNNEL_PREFIX = "vxlangpe-";
+    private static final Integer VXLAN_GPE_PORT_NUMBER = 6633;
+
     private static final String NSH_NSI_KEY = "nsi";
     private static final String NSH_NSI_VALUE = "flow";
     private static final String NSH_NSP_KEY = "nsp";
@@ -33,10 +37,10 @@ public class VxlanGpeTunnelType extends AbstractTunnelType {
     private static final String NSH_NSHC3_VALUE = "flow";
     private static final String NSH_NSHC4_KEY = "nshc4";
     private static final String NSH_NSHC4_VALUE = "flow";
+    private static final String DESTPORT_KEY = "dst_port";
+    private static final String DESTPORT_VALUE = VXLAN_GPE_PORT_NUMBER.toString();
 
-    private static final String VXLAN_GPE_TUNNEL_PREFIX = "vxlangpe-";
 
-    private static final Integer VXLAN_GPE_PORT_NUMBER = 6633;
 	private final PortNumber udpTunnelPort;
     private final List<Options> optionsList;
     private static final Class<? extends TunnelTypeBase> tunnelType = TunnelTypeVxlanGpe.class;
@@ -57,6 +61,7 @@ public class VxlanGpeTunnelType extends AbstractTunnelType {
         opts.put(NSH_NSHC2_KEY, NSH_NSHC2_VALUE);
         opts.put(NSH_NSHC3_KEY, NSH_NSHC3_VALUE);
         opts.put(NSH_NSHC4_KEY, NSH_NSHC4_VALUE);
+        opts.put(DESTPORT_KEY, DESTPORT_VALUE);
         optsMap = Collections.unmodifiableMap(opts);
     }
 
@@ -93,7 +98,8 @@ public class VxlanGpeTunnelType extends AbstractTunnelType {
 	@Override
     public boolean isValidTunnelPort(OvsdbTerminationPointAugmentation tpAugmentation) {
         if (hasTunnelOptions(tpAugmentation, optsMap)
-                && InterfaceTypeVxlan.class.equals(tpAugmentation.getInterfaceType())) {
+                && InterfaceTypeVxlan.class.equals(tpAugmentation.getInterfaceType())
+                && getDestPort(tpAugmentation).equals(VXLAN_GPE_PORT_NUMBER.toString())) {
             return true;
         }
         return false;

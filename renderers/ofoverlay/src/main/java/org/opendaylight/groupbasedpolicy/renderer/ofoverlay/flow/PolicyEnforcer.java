@@ -8,16 +8,14 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.EndpointManager.isExternal;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.addNxRegMatch;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.writeActionIns;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.applyActionIns;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.gotoTableIns;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.instructions;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxOutputRegAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.EndpointManager.isExternal;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -32,7 +30,6 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Action;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.AllowAction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ClassificationResult;
@@ -52,13 +49,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.ta
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.Instruction;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.InstructionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRef;
@@ -84,6 +78,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Table.Cell;
@@ -103,14 +98,10 @@ public class PolicyEnforcer extends FlowTable {
 
     public PolicyEnforcer(OfContext ctx, short tableId) {
         super(ctx);
-        this.TABLE_ID=tableId;
+        this.TABLE_ID = tableId;
         this.gotoEgressNatInstruction = gotoTableIns(ctx.getPolicyManager().getTABLEID_EGRESS_NAT());
-        this.gotoExternalInstruction = gotoTableIns(ctx.getPolicyManager().getTABLEID_EGRESS_NAT());
+        this.gotoExternalInstruction = gotoTableIns(ctx.getPolicyManager().getTABLEID_EXTERNAL_MAPPER());
     }
-
-
-
-
 
     @Override
     public short getTableId() {
@@ -122,12 +113,13 @@ public class PolicyEnforcer extends FlowTable {
 
         flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
-        NodeConnectorId tunPort = SwitchManager.getTunnelPort(nodeId, TunnelTypeVxlan.class);
+        NodeConnectorId tunPort = ctx.getSwitchManager().getTunnelPort(nodeId, TunnelTypeVxlan.class);
         if (tunPort != null) {
             flowMap.writeFlow(nodeId, TABLE_ID, allowFromTunnel(tunPort));
         }
 
-        HashSet<CgPair> visitedPairs = new HashSet<>();
+        HashSet<PolicyPair> visitedPairs = new HashSet<>();
+        HashSet<PolicyPair> visitedReversePairs = new HashSet<>();
 
         // Used for ARP flows
         Set<Integer> fdIds = new HashSet<>();
@@ -140,7 +132,7 @@ public class PolicyEnforcer extends FlowTable {
                     dstEndpoints.addAll(ctx.getEndpointManager().getEndpointsForGroup(dstEpgKey));
                     dstEndpoints.addAll(ctx.getEndpointManager().getExtEpsNoLocForGroup(dstEpgKey));
                     for (Endpoint dstEp : dstEndpoints) {
-                        // mEPG ordinals
+
                         EndpointFwdCtxOrdinals srcEpFwdCxtOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx,
                                 policyInfo, srcEp);
                         EndpointFwdCtxOrdinals dstEpFwdCxtOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx,
@@ -149,34 +141,53 @@ public class PolicyEnforcer extends FlowTable {
                         int depgId = dstEpFwdCxtOrds.getEpgId();
                         int scgId = srcEpFwdCxtOrds.getCgId();
                         int sepgId = srcEpFwdCxtOrds.getEpgId();
-                        NetworkElements netElements = new NetworkElements(srcEp, dstEp, nodeId, ctx, policyInfo);
+
                         fdIds.add(srcEpFwdCxtOrds.getFdId());
+                        NetworkElements netElements = new NetworkElements(srcEp, dstEp, nodeId, ctx, policyInfo);
 
                         Policy policy = policyInfo.getPolicy(dstEpgKey, srcEpgKey);
-                        for (Cell<EndpointConstraint, EndpointConstraint, List<RuleGroup>> activeRulesByConstraints: getActiveRulesBetweenEps(policy, dstEp, srcEp)) {
+                        for (Cell<EndpointConstraint, EndpointConstraint, List<RuleGroup>> activeRulesByConstraints : getActiveRulesBetweenEps(
+                                policy, dstEp, srcEp)) {
                             Set<IpPrefix> sIpPrefixes = Policy.getIpPrefixesFrom(activeRulesByConstraints.getRowKey()
                                 .getL3EpPrefixes());
                             Set<IpPrefix> dIpPrefixes = Policy.getIpPrefixesFrom(activeRulesByConstraints.getColumnKey()
                                 .getL3EpPrefixes());
-                            CgPair p = new CgPair(depgId, sepgId, dcgId, scgId, dIpPrefixes, sIpPrefixes);
-                            if (visitedPairs.contains(p))
+                            PolicyPair policyPair = new PolicyPair(depgId, sepgId, dcgId, scgId, dIpPrefixes,
+                                    sIpPrefixes, netElements.getDstNodeId(), netElements.getSrcNodeId());
+                            if (visitedPairs.contains(policyPair)) {
+                                LOG.trace("PolicyEnforcer: Already visited PolicyPair {}, endpoints {} {} skipped",
+                                        policyPair, srcEp.getKey(), dstEp.getKey());
                                 continue;
-                            visitedPairs.add(p);
-                            syncPolicy(flowMap, netElements, activeRulesByConstraints.getValue(), p);
+                            } else {
+                                LOG.trace("PolicyEnforcer: Visiting PolicyPair {} endpoints {} {}", policyPair,
+                                        srcEp.getKey(), dstEp.getKey());
+                                visitedPairs.add(policyPair);
+                            }
+                            syncPolicy(flowMap, netElements, activeRulesByConstraints.getValue(), policyPair);
                         }
 
                         // Reverse
                         policy = policyInfo.getPolicy(srcEpgKey, dstEpgKey);
-                        for (Cell<EndpointConstraint, EndpointConstraint, List<RuleGroup>> activeRulesByConstraints : getActiveRulesBetweenEps(policy, srcEp, dstEp)) {
+                        for (Cell<EndpointConstraint, EndpointConstraint, List<RuleGroup>> activeRulesByConstraints : getActiveRulesBetweenEps(
+                                policy, srcEp, dstEp)) {
                             Set<IpPrefix> sIpPrefixes = Policy.getIpPrefixesFrom(activeRulesByConstraints.getRowKey()
                                 .getL3EpPrefixes());
                             Set<IpPrefix> dIpPrefixes = Policy.getIpPrefixesFrom(activeRulesByConstraints.getColumnKey()
                                 .getL3EpPrefixes());
-                            CgPair p = new CgPair(sepgId, depgId, scgId, dcgId, sIpPrefixes, dIpPrefixes);
-                            if (visitedPairs.contains(p))
+                            PolicyPair policyPair = new PolicyPair(sepgId, depgId, scgId, dcgId, sIpPrefixes,
+                                    dIpPrefixes, netElements.getSrcNodeId(), netElements.getDstNodeId());
+                            if (visitedReversePairs.contains(policyPair)) {
+                                LOG.trace(
+                                        "PolicyEnforcer: Reverse: Already visited PolicyPair {}, endpoints {} {} skipped",
+                                        policyPair, srcEp.getKey(), dstEp.getKey());
                                 continue;
-                            visitedPairs.add(p);
-                            syncPolicy(flowMap, netElements, activeRulesByConstraints.getValue(), p);
+                            } else {
+                                LOG.trace("PolicyEnforcer: Reverse: Visiting: PolicyPair {} via endpoints {} {}",
+                                        policyPair, srcEp.getKey(), dstEp.getKey());
+                                visitedReversePairs.add(policyPair);
+
+                            }
+                            syncPolicy(flowMap, netElements, activeRulesByConstraints.getValue(), policyPair);
                         }
                     }
                 }
@@ -184,9 +195,7 @@ public class PolicyEnforcer extends FlowTable {
         }
 
         // Allow same EPG
-        // Set<Endpoint> visitedEps = new HashSet<>();
         for (Endpoint srcEp : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
-            // visitedEps.add(srcEp);
             for (EgKey srcEpgKey : ctx.getEndpointManager().getEgKeysForEndpoint(srcEp)) {
 
                 IndexedTenant tenant = ctx.getPolicyResolver().getTenant(srcEpgKey.getTenantId());
@@ -195,11 +204,6 @@ public class PolicyEnforcer extends FlowTable {
 
                 if (igp == null || igp.equals(IntraGroupPolicy.Allow)) {
                     for (Endpoint dstEp : ctx.getEndpointManager().getEndpointsForGroup(srcEpgKey)) {
-                        // mEPG ordinals
-                        // if(visitedEps.contains(dstEp)) {
-                        // continue;
-                        // }
-                        // visitedEps.add(dstEp);
                         EndpointFwdCtxOrdinals srcEpFwdCxtOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx,
                                 policyInfo, srcEp);
                         EndpointFwdCtxOrdinals dstEpFwdCxtOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx,
@@ -267,14 +271,14 @@ public class PolicyEnforcer extends FlowTable {
 
     }
 
-    private void syncPolicy(FlowMap flowMap, NetworkElements netElements, List<RuleGroup> rgs, CgPair p) {
+    private void syncPolicy(FlowMap flowMap, NetworkElements netElements, List<RuleGroup> rgs, PolicyPair policyPair) {
         int priority = 65000;
         for (RuleGroup rg : rgs) {
             TenantId tenantId = rg.getContractTenant().getId();
             IndexedTenant tenant = ctx.getPolicyResolver().getTenant(tenantId);
             for (Rule r : rg.getRules()) {
-                syncDirection(flowMap, netElements, tenant, p, r, Direction.In, priority);
-                syncDirection(flowMap, netElements, tenant, p, r, Direction.Out, priority);
+                syncDirection(flowMap, netElements, tenant, policyPair, r, Direction.In, priority);
+                syncDirection(flowMap, netElements, tenant, policyPair, r, Direction.Out, priority);
 
                 priority -= 1;
             }
@@ -301,18 +305,13 @@ public class PolicyEnforcer extends FlowTable {
 
     }
 
-    private void syncDirection(FlowMap flowMap, NetworkElements netElements, IndexedTenant contractTenant, CgPair cgPair, Rule rule,
-            Direction direction, int priority) {
+    private void syncDirection(FlowMap flowMap, NetworkElements netElements, IndexedTenant contractTenant,
+            PolicyPair policyPair, Rule rule, Direction direction, int priority) {
         /*
          * Create the ordered action list. The implicit action is "allow", and
          * is therefore always in the list
-         *
-         * TODO: revisit implicit vs. default for "allow" TODO: look into
-         * incorporating operational policy for actions
          */
 
-        // TODO: can pass Comparator ActionRefComparator to List constructor, rather than
-        // referencing in sort
         List<ActionBuilder> actionBuilderList = new ArrayList<ActionBuilder>();
         if (rule.getActionRef() != null) {
             /*
@@ -350,11 +349,11 @@ public class PolicyEnforcer extends FlowTable {
                 /*
                  * Convert the GBP Action to one or more OpenFlow Actions
                  */
-                actionBuilderList = action.updateAction(actionBuilderList, params, actionRule.getOrder(),netElements);
+                if (!(actionRefList.indexOf(actionRule) == (actionRefList.size() - 1) && action.equals(SubjectFeatures.getAction(AllowAction.DEFINITION.getId())))) {
+                    actionBuilderList = action.updateAction(actionBuilderList, params, actionRule.getOrder(), netElements, policyPair, flowMap, ctx);
+                }
+
             }
-        } else {
-            Action act = SubjectFeatures.getAction(AllowAction.DEFINITION.getId());
-            actionBuilderList = act.updateAction(actionBuilderList, new HashMap<String, Object>(), 0, netElements);
         }
 
         Map<String, ParameterValue> paramsFromClassifier = new HashMap<>();
@@ -384,9 +383,7 @@ public class PolicyEnforcer extends FlowTable {
             classifiers.add(new ClassifierDefinitionId(ci.getClassifierDefinitionId()));
             for (ParameterValue v : ci.getParameterValue()) {
                 if (paramsFromClassifier.get(v.getName().getValue()) == null) {
-                    if (v.getIntValue() != null
-                            || v.getStringValue() != null
-                            || v.getRangeValue() != null) {
+                    if (v.getIntValue() != null || v.getStringValue() != null || v.getRangeValue() != null) {
                         paramsFromClassifier.put(v.getName().getValue(), v);
                     }
                 } else {
@@ -397,28 +394,27 @@ public class PolicyEnforcer extends FlowTable {
                 }
             }
         }
-        if(classifiers.isEmpty()) {
+        if (classifiers.isEmpty()) {
             return;
         }
         List<Map<String, ParameterValue>> derivedParamsByName = ParamDerivator.ETHER_TYPE_DERIVATOR.deriveParameter(paramsFromClassifier);
-        String baseId = createBaseFlowId(direction, cgPair, priority);
         List<MatchBuilder> flowMatchBuilders = new ArrayList<>();
         for (Map<String, ParameterValue> params : derivedParamsByName) {
             List<MatchBuilder> matchBuildersToResolve = new ArrayList<>();
-            if (cgPair.sIpPrefixes.isEmpty() && cgPair.dIpPrefixes.isEmpty()) {
-                matchBuildersToResolve.add(createBaseMatch(direction, cgPair, null, null));
-            } else if (!cgPair.sIpPrefixes.isEmpty() && cgPair.dIpPrefixes.isEmpty()) {
-                for (IpPrefix sIpPrefix : cgPair.sIpPrefixes) {
-                    matchBuildersToResolve.add(createBaseMatch(direction, cgPair, sIpPrefix, null));
+            if (policyPair.consumerEicIpPrefixes.isEmpty() && policyPair.providerEicIpPrefixes.isEmpty()) {
+                matchBuildersToResolve.add(createBaseMatch(direction, policyPair, null, null));
+            } else if (!policyPair.consumerEicIpPrefixes.isEmpty() && policyPair.providerEicIpPrefixes.isEmpty()) {
+                for (IpPrefix sIpPrefix : policyPair.consumerEicIpPrefixes) {
+                    matchBuildersToResolve.add(createBaseMatch(direction, policyPair, sIpPrefix, null));
                 }
-            } else if (cgPair.sIpPrefixes.isEmpty() && !cgPair.dIpPrefixes.isEmpty()) {
-                for (IpPrefix dIpPrefix : cgPair.sIpPrefixes) {
-                    matchBuildersToResolve.add(createBaseMatch(direction, cgPair, null, dIpPrefix));
+            } else if (policyPair.consumerEicIpPrefixes.isEmpty() && !policyPair.providerEicIpPrefixes.isEmpty()) {
+                for (IpPrefix dIpPrefix : policyPair.consumerEicIpPrefixes) {
+                    matchBuildersToResolve.add(createBaseMatch(direction, policyPair, null, dIpPrefix));
                 }
             } else {
-                for (IpPrefix sIpPrefix : cgPair.sIpPrefixes) {
-                    for (IpPrefix dIpPrefix : cgPair.sIpPrefixes) {
-                        matchBuildersToResolve.add(createBaseMatch(direction, cgPair, sIpPrefix, dIpPrefix));
+                for (IpPrefix sIpPrefix : policyPair.consumerEicIpPrefixes) {
+                    for (IpPrefix dIpPrefix : policyPair.consumerEicIpPrefixes) {
+                        matchBuildersToResolve.add(createBaseMatch(direction, policyPair, sIpPrefix, dIpPrefix));
                     }
                 }
             }
@@ -427,8 +423,8 @@ public class PolicyEnforcer extends FlowTable {
                 ClassificationResult result = classifier.updateMatch(matchBuildersToResolve, params);
                 if (!result.isSuccessfull()) {
                     // TODO consider different handling.
-                    throw new IllegalArgumentException("Classification conflict detected in rule: " + rule.getName() + ".\nCause: "
-                            + result.getErrorMessage());
+                    throw new IllegalArgumentException("Classification conflict detected in rule: " + rule.getName()
+                            + ".\nCause: " + result.getErrorMessage());
                 }
                 matchBuildersToResolve = new ArrayList<>(result.getMatchBuilders());
             }
@@ -439,53 +435,34 @@ public class PolicyEnforcer extends FlowTable {
         for (MatchBuilder mb : flowMatchBuilders) {
             Match match = mb.build();
             FlowId flowId = FlowIdUtils.newFlowId(TABLE_ID, "cg", match);
-            flow.setMatch(match)
-                .setId(flowId)
-                .setPriority(Integer.valueOf(priority));
-                        // If destination is External, the last Action ALLOW must be changed to goto NAT/External table.
-        if (isExternal(netElements.getDst())) {
-            flow.setInstructions(instructions(getGotoEgressNatInstruction()));
-        } else {
-            flow.setInstructions(instructions(applyActionIns(actionBuilderList)));
-        }
-            flowMap.writeFlow(netElements.getNodeId(), TABLE_ID, flow.build());
+            flow.setMatch(match).setId(flowId).setPriority(Integer.valueOf(priority));
+
+            /*
+             * If destination is External, the last Action ALLOW must be changed to goto
+             * NAT/External table.
+             * If actionBuilderList is empty (we removed the last Allow) then go straight to
+             * ExternalMapper table.
+             */
+
+            if (isExternal(netElements.getDstEp())) {
+                flow.setInstructions(instructions(getGotoEgressNatInstruction()));
+            } else if (actionBuilderList.isEmpty()) {
+                flow.setInstructions(instructions(getGotoExternalInstruction()));
+            } else {
+                flow.setInstructions(instructions(applyActionIns(actionBuilderList), getGotoExternalInstruction()));
+            }
+            flowMap.writeFlow(netElements.getLocalNodeId(), TABLE_ID, flow.build());
         }
     }
 
-    private String createBaseFlowId(Direction direction, CgPair cgPair, int priority) {
-        StringBuilder idb = new StringBuilder();
-        if (direction.equals(Direction.In)) {
-            idb.append(cgPair.sepg)
-                    .append("|")
-                    .append(cgPair.scgId)
-                    .append("|")
-                    .append(cgPair.depg)
-                    .append("|")
-                    .append(cgPair.dcgId)
-                    .append("|")
-                    .append(priority);
-        } else {
-            idb.append(cgPair.depg)
-                    .append("|")
-                    .append(cgPair.dcgId)
-                    .append("|")
-                    .append(cgPair.sepg)
-                    .append("|")
-                    .append(cgPair.scgId)
-                    .append("|")
-                    .append(priority);
-        }
-        return idb.toString();
-    }
-
-    private MatchBuilder createBaseMatch(Direction direction, CgPair cgPair, IpPrefix sIpPrefix, IpPrefix dIpPrefix) {
+    private MatchBuilder createBaseMatch(Direction direction, PolicyPair policyPair, IpPrefix sIpPrefix,
+            IpPrefix dIpPrefix) {
         MatchBuilder baseMatch = new MatchBuilder();
         if (direction.equals(Direction.In)) {
-            addNxRegMatch(baseMatch,
-                    RegMatch.of(NxmNxReg0.class, Long.valueOf(cgPair.sepg)),
-                    RegMatch.of(NxmNxReg1.class, Long.valueOf(cgPair.scgId)),
-                    RegMatch.of(NxmNxReg2.class, Long.valueOf(cgPair.depg)),
-                    RegMatch.of(NxmNxReg3.class, Long.valueOf(cgPair.dcgId)));
+            addNxRegMatch(baseMatch, RegMatch.of(NxmNxReg0.class, Long.valueOf(policyPair.consumerEpgId)),
+                    RegMatch.of(NxmNxReg1.class, Long.valueOf(policyPair.consumerCondGrpId)),
+                    RegMatch.of(NxmNxReg2.class, Long.valueOf(policyPair.providerEpgId)),
+                    RegMatch.of(NxmNxReg3.class, Long.valueOf(policyPair.providerCondGrpId)));
             if (sIpPrefix != null) {
                 baseMatch.setLayer3Match(createLayer3Match(sIpPrefix, true));
             }
@@ -493,11 +470,10 @@ public class PolicyEnforcer extends FlowTable {
                 baseMatch.setLayer3Match(createLayer3Match(dIpPrefix, true));
             }
         } else {
-            addNxRegMatch(baseMatch,
-                    RegMatch.of(NxmNxReg0.class, Long.valueOf(cgPair.depg)),
-                    RegMatch.of(NxmNxReg1.class, Long.valueOf(cgPair.dcgId)),
-                    RegMatch.of(NxmNxReg2.class, Long.valueOf(cgPair.sepg)),
-                    RegMatch.of(NxmNxReg3.class, Long.valueOf(cgPair.scgId)));
+            addNxRegMatch(baseMatch, RegMatch.of(NxmNxReg0.class, Long.valueOf(policyPair.providerEpgId)),
+                    RegMatch.of(NxmNxReg1.class, Long.valueOf(policyPair.providerCondGrpId)),
+                    RegMatch.of(NxmNxReg2.class, Long.valueOf(policyPair.consumerEpgId)),
+                    RegMatch.of(NxmNxReg3.class, Long.valueOf(policyPair.consumerCondGrpId)));
             if (sIpPrefix != null) {
                 baseMatch.setLayer3Match(createLayer3Match(sIpPrefix, false));
             }
@@ -525,8 +501,8 @@ public class PolicyEnforcer extends FlowTable {
     }
 
     // TODO: move to a common utils for all renderers
-    public List<Cell<EndpointConstraint, EndpointConstraint, List<RuleGroup>>>
-                getActiveRulesBetweenEps(Policy policy, Endpoint consEp, Endpoint provEp) {
+    public List<Cell<EndpointConstraint, EndpointConstraint, List<RuleGroup>>> getActiveRulesBetweenEps(Policy policy,
+            Endpoint consEp, Endpoint provEp) {
         List<Cell<EndpointConstraint, EndpointConstraint, List<RuleGroup>>> rulesWithEpConstraints = new ArrayList<>();
         if (policy.getRuleMap() != null) {
             for (Cell<EndpointConstraint, EndpointConstraint, List<RuleGroup>> cell : policy.getRuleMap().cellSet()) {
@@ -557,35 +533,59 @@ public class PolicyEnforcer extends FlowTable {
     }
 
     @Immutable
-    private static class CgPair {
+    public static class PolicyPair {
 
-        private final int sepg;
-        private final int depg;
-        private final int scgId;
-        private final int dcgId;
-        private final Set<IpPrefix> sIpPrefixes;
-        private final Set<IpPrefix> dIpPrefixes;
+        private final int consumerEpgId;
+        private final int providerEpgId;
+        private final int consumerCondGrpId;
+        private final int providerCondGrpId;
+        private final Set<IpPrefix> consumerEicIpPrefixes;
+        private final Set<IpPrefix> providerEicIpPrefixes;
+        private NodeId consumerEpNodeId;
+        private NodeId providerEpNodeId;
 
-        public CgPair(int sepg, int depg, int scgId, int dcgId, Set<IpPrefix> sIpPrefixes, Set<IpPrefix> dIpPrefixes) {
+        public int getConsumerEpgId() {
+            return consumerEpgId;
+        }
+
+        public int getProviderEpgId() {
+            return providerEpgId;
+        }
+
+        public NodeId getConsumerEpNodeId() {
+            return consumerEpNodeId;
+        }
+
+        public NodeId getProviderEpNodeId() {
+            return providerEpNodeId;
+        }
+
+        public PolicyPair(int consumerEpgId, int providerEpgId, int consumerCondGrpId, int providerCondGrpId,
+                Set<IpPrefix> consumerEicIpPrefixes, Set<IpPrefix> providerEicIpPrefixes, NodeId consumerEpNodeId, NodeId providerEpNodeId) {
             super();
-            this.sepg = sepg;
-            this.depg = depg;
-            this.scgId = scgId;
-            this.dcgId = dcgId;
-            this.sIpPrefixes = sIpPrefixes;
-            this.dIpPrefixes = dIpPrefixes;
+            this.consumerEpgId = consumerEpgId;
+            this.providerEpgId = providerEpgId;
+            this.consumerCondGrpId = consumerCondGrpId;
+            this.providerCondGrpId = providerCondGrpId;
+            this.consumerEicIpPrefixes = consumerEicIpPrefixes;
+            this.providerEicIpPrefixes = providerEicIpPrefixes;
+            this.consumerEpNodeId = consumerEpNodeId;
+            this.providerEpNodeId = providerEpNodeId;
         }
 
         @Override
         public int hashCode() {
             final int prime = 31;
             int result = 1;
-            result = prime * result + ((dIpPrefixes == null) ? 0 : dIpPrefixes.hashCode());
-            result = prime * result + dcgId;
-            result = prime * result + depg;
-            result = prime * result + ((sIpPrefixes == null) ? 0 : sIpPrefixes.hashCode());
-            result = prime * result + scgId;
-            result = prime * result + sepg;
+            result = prime * result + ((providerEicIpPrefixes == null) ? 0 : providerEicIpPrefixes.hashCode());
+            result = prime * result + providerCondGrpId;
+            result = prime * result + providerEpgId;
+            result = prime * result + ((consumerEicIpPrefixes == null) ? 0 : consumerEicIpPrefixes.hashCode());
+            result = prime * result + consumerCondGrpId;
+            result = prime * result + consumerEpgId;
+            result = prime * result + ((consumerEpNodeId == null) ? 0 : consumerEpNodeId.hashCode());
+            result = prime * result + ((providerEpNodeId == null) ? 0 : providerEpNodeId.hashCode());
+
             return result;
         }
 
@@ -597,70 +597,128 @@ public class PolicyEnforcer extends FlowTable {
                 return false;
             if (getClass() != obj.getClass())
                 return false;
-            CgPair other = (CgPair) obj;
-            if (dIpPrefixes == null) {
-                if (other.dIpPrefixes != null)
+            PolicyPair other = (PolicyPair) obj;
+            if (providerEicIpPrefixes == null) {
+                if (other.providerEicIpPrefixes != null) {
                     return false;
-            } else if (!dIpPrefixes.equals(other.dIpPrefixes))
+                }
+            } else if (!providerEicIpPrefixes.equals(other.providerEicIpPrefixes)) {
                 return false;
-            if (dcgId != other.dcgId)
-                return false;
-            if (sIpPrefixes == null) {
-                if (other.sIpPrefixes != null)
+            }
+            if (consumerEicIpPrefixes == null) {
+                if (other.consumerEicIpPrefixes != null) {
                     return false;
-            } else if (!sIpPrefixes.equals(other.sIpPrefixes))
+                }
+            } else if (!consumerEicIpPrefixes.equals(other.consumerEicIpPrefixes)) {
                 return false;
-            if (depg != other.depg)
+            }
+            if (consumerEpNodeId == null) {
+                if (other.consumerEpNodeId != null) {
+                    return false;
+                }
+            } else if (!consumerEpNodeId.getValue().equals(other.consumerEpNodeId.getValue())) {
                 return false;
-            if (scgId != other.scgId)
+            }
+            if (providerEpNodeId == null) {
+                if (other.providerEpNodeId != null) {
+                    return false;
+                }
+            } else if (!providerEpNodeId.getValue().equals(other.providerEpNodeId.getValue())) {
                 return false;
-            if (sepg != other.sepg)
+            }
+            if (providerCondGrpId != other.providerCondGrpId)
                 return false;
+            if (providerEpgId != other.providerEpgId)
+                return false;
+            if (consumerCondGrpId != other.consumerCondGrpId)
+                return false;
+            if (consumerEpgId != other.consumerEpgId)
+                return false;
+
             return true;
+        }
+
+        @Override
+        public String toString() {
+            return new StringBuilder().append("consumerEPG: ")
+                .append(consumerEpgId)
+                .append("consumerCG: ")
+                .append(consumerCondGrpId)
+                .append("providerEPG: ")
+                .append(providerEpgId)
+                .append("providerCG: ")
+                .append(providerCondGrpId)
+                .append("consumerEpNodeId: ")
+                .append(consumerEpNodeId)
+                .append("providerEpNodeId: ")
+                .append(providerEpNodeId)
+                .append("consumerEicIpPrefixes: ")
+                .append(consumerEicIpPrefixes)
+                .append("providerEicIpPrefixes: ")
+                .append(providerEicIpPrefixes)
+                .toString();
         }
     }
 
     public class NetworkElements {
-        Endpoint src;
-        Endpoint dst;
-        NodeId nodeId;
-        EndpointFwdCtxOrdinals srcOrds;
-        EndpointFwdCtxOrdinals dstOrds;
 
-        public NetworkElements(Endpoint src, Endpoint dst, NodeId nodeId, OfContext ctx, PolicyInfo policyInfo) throws Exception {
-            this.src=src;
-            this.dst=dst;
-            this.nodeId = nodeId;
-            this.srcOrds=OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, src);
-            this.dstOrds=OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, dst);
+        private Endpoint srcEp;
+        private Endpoint dstEp;
+        private NodeId srcNodeId;
+        private NodeId dstNodeId;
+        private NodeId localNodeId;
+        private EndpointFwdCtxOrdinals srcEpOrds;
+        private EndpointFwdCtxOrdinals dstEpOrds;
+
+        public NetworkElements(Endpoint srcEp, Endpoint dstEp, NodeId nodeId, OfContext ctx, PolicyInfo policyInfo)
+                throws Exception {
+            Preconditions.checkArgument(srcEp.getAugmentation(OfOverlayContext.class) != null);
+            Preconditions.checkArgument(dstEp.getAugmentation(OfOverlayContext.class) != null);
+
+            this.srcEp = srcEp;
+            this.dstEp = dstEp;
+            this.localNodeId = nodeId;
+            this.srcEpOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, srcEp);
+            this.dstEpOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, dstEp);
+            this.dstNodeId = dstEp.getAugmentation(OfOverlayContext.class).getNodeId();
+            this.srcNodeId = srcEp.getAugmentation(OfOverlayContext.class).getNodeId();
         }
 
 
-
-        public EndpointFwdCtxOrdinals getSrcOrds() {
-            return srcOrds;
+        Endpoint getSrcEp() {
+            return srcEp;
         }
 
 
-
-        public EndpointFwdCtxOrdinals getDstOrds() {
-            return dstOrds;
+        Endpoint getDstEp() {
+            return dstEp;
         }
 
 
-        public Endpoint getSrc() {
-            return src;
+        NodeId getSrcNodeId() {
+            return srcNodeId;
         }
 
 
-        public Endpoint getDst() {
-            return dst;
+        public NodeId getDstNodeId() {
+            return dstNodeId;
         }
 
 
-        public NodeId getNodeId() {
-            return nodeId;
+        public NodeId getLocalNodeId() {
+            return localNodeId;
         }
+
+
+        public EndpointFwdCtxOrdinals getSrcEpOrds() {
+            return srcEpOrds;
+        }
+
+
+        EndpointFwdCtxOrdinals getDstEpOrds() {
+            return dstEpOrds;
+        }
+
 
 
     }

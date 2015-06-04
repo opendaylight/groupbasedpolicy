@@ -249,7 +249,7 @@ public class OvsdbHelper {
                 buildOvsdbBridgeAugmentation(bridge,managerNode);
         Node configNode = getNode(node, tps,ovsdbBridgeAugmentation);
         LOG.info("About to write nodeId {} node {}",nodeIid,configNode);
-        transaction.put(LogicalDatastoreType.CONFIGURATION, nodeIid, configNode);
+        transaction.merge(LogicalDatastoreType.CONFIGURATION, nodeIid, configNode);
         submitToDs(transaction);
     }
 

@@ -2,6 +2,8 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
+
+import org.apache.commons.lang3.StringUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.general.rev140714.GeneralAugMatchNodesNodeTableFlow;
@@ -49,6 +51,9 @@ public class FlowIdUtils {
     }
 
     private static String formatMatch(Match match) {
+        if (match == null) {
+            return StringUtils.EMPTY;
+        }
         StringBuilder builder = new StringBuilder(MATCH_PREFIX);
         boolean first = true;
         if (match.getEthernetMatch() != null) {

@@ -8,6 +8,7 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
+import java.util.Collection;
 import java.util.Set;
 
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;

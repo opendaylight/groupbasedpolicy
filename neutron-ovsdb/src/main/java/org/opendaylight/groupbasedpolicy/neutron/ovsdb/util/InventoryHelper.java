@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2015 Cisco Systems, Inc. and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -8,6 +8,8 @@
 package org.opendaylight.groupbasedpolicy.neutron.ovsdb.util;
 
 import com.google.common.base.Optional;
+import java.util.HashSet;
+import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
@@ -46,6 +48,7 @@ import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.readFromDs;
 import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.submitToDs;
 
 public class InventoryHelper {
+
     private static final Logger LOG = LoggerFactory.getLogger(InventoryHelper.class);
     private static final String HEX = "0x";
 
@@ -57,20 +60,16 @@ public class InventoryHelper {
      */
     public static Long getLongFromDpid(String dpid) {
         String[] addressInBytes = dpid.split(":");
-        Long address =
-                (Long.decode(HEX + addressInBytes[2]) << 40) |
-                (Long.decode(HEX + addressInBytes[3]) << 32) |
-                (Long.decode(HEX + addressInBytes[4]) << 24) |
-                (Long.decode(HEX + addressInBytes[5]) << 16) |
-                (Long.decode(HEX + addressInBytes[6]) << 8 ) |
-                (Long.decode(HEX + addressInBytes[7]));
+        Long address = (Long.decode(HEX + addressInBytes[2]) << 40) | (Long.decode(HEX + addressInBytes[3]) << 32)
+                | (Long.decode(HEX + addressInBytes[4]) << 24) | (Long.decode(HEX + addressInBytes[5]) << 16)
+                | (Long.decode(HEX + addressInBytes[6]) << 8) | (Long.decode(HEX + addressInBytes[7]));
         return address;
     }
 
-    private static final Long MAX_OF_PORT=65534L;
+    private static final Long MAX_OF_PORT = 65534L;
+
     /**
-     * Construct a String that can be used to create a
-     * {@link NodeId}.
+     * Construct a String that can be used to create a {@link NodeId}.
      * The String is constructed by getting the Datapath ID from the OVSDB bridge
      * augmentation, converting that to a Long, and prepending it with the
      * "openflow:" prefix.
@@ -91,8 +90,8 @@ public class InventoryHelper {
         }
         Long macLong = getLongFromDpid(ovsdbBridge.getDatapathId().getValue());
         String nodeIdString = "openflow:" + String.valueOf(macLong);
-        if(StringUtils.countMatches(nodeIdString, ":") != 1) {
-            LOG.error("{} is not correct format for NodeId.",nodeIdString);
+        if (StringUtils.countMatches(nodeIdString, ":") != 1) {
+            LOG.error("{} is not correct format for NodeId.", nodeIdString);
             return null;
         }
         return nodeIdString;
@@ -109,21 +108,17 @@ public class InventoryHelper {
      * @return String representation of the Inventory NodeConnectorId, null if it fails
      */
     public static String getInventoryNodeConnectorIdString(String inventoryNodeId,
-                       OvsdbTerminationPointAugmentation ovsdbTp,
-                       InstanceIdentifier<OvsdbTerminationPointAugmentation> tpIid,
-                       DataBroker dataBroker) {
+            OvsdbTerminationPointAugmentation ovsdbTp, InstanceIdentifier<OvsdbTerminationPointAugmentation> tpIid,
+            DataBroker dataBroker) {
         Long ofport = null;
-        if (ovsdbTp.getOfport() != null && ovsdbTp.getOfport()>MAX_OF_PORT) {
-            LOG.debug("Invalid OpenFlow port {} for {}",ovsdbTp.getOfport(), ovsdbTp);
+        if (ovsdbTp.getOfport() != null && ovsdbTp.getOfport() > MAX_OF_PORT) {
+            LOG.debug("Invalid OpenFlow port {} for {}", ovsdbTp.getOfport(), ovsdbTp);
             return null;
         }
         if (ovsdbTp.getOfport() == null) {
-            OvsdbTerminationPointAugmentation readOvsdbTp =
-                    getOvsdbTerminationPoint(tpIid, dataBroker);
-            if (readOvsdbTp == null
-                    || readOvsdbTp.getOfport() == null
-                    || readOvsdbTp.getOfport() >MAX_OF_PORT) {
-                LOG.debug("Couldn't get OpenFlow port for {}",ovsdbTp);
+            OvsdbTerminationPointAugmentation readOvsdbTp = getOvsdbTerminationPoint(tpIid, dataBroker);
+            if (readOvsdbTp == null || readOvsdbTp.getOfport() == null || readOvsdbTp.getOfport() > MAX_OF_PORT) {
+                LOG.debug("Couldn't get OpenFlow port for {}", ovsdbTp);
                 return null;
             }
             ofport = readOvsdbTp.getOfport();
@@ -132,8 +127,8 @@ public class InventoryHelper {
         }
         String nodeConnectorIdString = inventoryNodeId + ":" + String.valueOf(ofport);
 
-        if(StringUtils.countMatches(nodeConnectorIdString, ":") != 2) {
-            LOG.error("{} is not correct format for NodeConnectorId.",nodeConnectorIdString);
+        if (StringUtils.countMatches(nodeConnectorIdString, ":") != 2) {
+            LOG.error("{} is not correct format for NodeConnectorId.", nodeConnectorIdString);
             return null;
         }
         return nodeConnectorIdString;
@@ -146,11 +141,11 @@ public class InventoryHelper {
      *
      * @return true if tunnel types are present, false otherwise
      */
-    public static boolean checkOfOverlayConfig(String nodeIdString,
-                       List<AbstractTunnelType> requiredTunnelTypes, DataBroker dataBroker) {
+    public static boolean checkOfOverlayConfig(String nodeIdString, List<AbstractTunnelType> requiredTunnelTypes,
+            DataBroker dataBroker) {
         OfOverlayNodeConfig config = getOfOverlayConfig(nodeIdString, dataBroker);
         if (config == null || config.getTunnel() == null) {
-            LOG.debug("No OfOverlay config for {}",nodeIdString);
+            LOG.debug("No OfOverlay config for {}", nodeIdString);
             return false;
         }
 
@@ -158,9 +153,9 @@ public class InventoryHelper {
          * See if the OfOverlayNodeConfig has the
          * tunnel type information.
          */
-        for (AbstractTunnelType tunnelType: requiredTunnelTypes) {
+        for (AbstractTunnelType tunnelType : requiredTunnelTypes) {
             boolean tunnelPresent = false;
-            for (Tunnel tunnel: config.getTunnel()) {
+            for (Tunnel tunnel : config.getTunnel()) {
                 if (tunnelType.getTunnelType().equals(tunnel.getTunnelType())) {
                     tunnelPresent = true;
                     break;
@@ -174,120 +169,121 @@ public class InventoryHelper {
     }
 
     public static void addOfOverlayExternalPort(String nodeIdString, NodeConnectorId ncId, DataBroker dataBroker) {
-        InstanceIdentifier<ExternalInterfaces> nodeExternalInterfacesIid = InstanceIdentifier.builder(
-                Nodes.class)
+        InstanceIdentifier<ExternalInterfaces> nodeExternalInterfacesIid = InstanceIdentifier.builder(Nodes.class)
             .child(Node.class, new NodeKey(new NodeId(nodeIdString)))
             .augmentation(OfOverlayNodeConfig.class)
-            .child(ExternalInterfaces.class,new ExternalInterfacesKey(ncId))
+            .child(ExternalInterfaces.class, new ExternalInterfacesKey(ncId))
             .build();
 
-        ExternalInterfaces externalInterfaces = new ExternalInterfacesBuilder()
-                                                .setKey(new ExternalInterfacesKey(ncId))
-                                                .setNodeConnectorId(ncId)
-                                                .build();
+        ExternalInterfaces externalInterfaces = new ExternalInterfacesBuilder().setKey(new ExternalInterfacesKey(ncId))
+            .setNodeConnectorId(ncId)
+            .build();
         WriteTransaction transaction = dataBroker.newReadWriteTransaction();
         transaction.put(LogicalDatastoreType.CONFIGURATION, nodeExternalInterfacesIid, externalInterfaces, true);
         submitToDs(transaction);
-        LOG.trace("Added external interface node connector {} to node {}", ncId.getValue(),nodeIdString);
+        LOG.trace("Added external interface node connector {} to node {}", ncId.getValue(), nodeIdString);
     }
 
     public static OfOverlayNodeConfig getOfOverlayConfig(String nodeIdString, DataBroker dataBroker) {
-        InstanceIdentifier<OfOverlayNodeConfig> ofOverlayNodeIid = InstanceIdentifier.builder(
-                Nodes.class)
+        InstanceIdentifier<OfOverlayNodeConfig> ofOverlayNodeIid = InstanceIdentifier.builder(Nodes.class)
             .child(Node.class, new NodeKey(new NodeId(nodeIdString)))
             .augmentation(OfOverlayNodeConfig.class)
             .build();
 
         ReadWriteTransaction transaction = dataBroker.newReadWriteTransaction();
-        Optional<OfOverlayNodeConfig> overlayConfig = readFromDs(LogicalDatastoreType.CONFIGURATION, ofOverlayNodeIid, transaction );
+        Optional<OfOverlayNodeConfig> overlayConfig = readFromDs(LogicalDatastoreType.CONFIGURATION, ofOverlayNodeIid,
+                transaction);
         if (overlayConfig.isPresent()) {
             return overlayConfig.get();
         }
         return null;
     }
 
-    private static void addOfOverlayAugmentation(OfOverlayNodeConfig config, String nodeIdString, DataBroker dataBroker) {
-        InstanceIdentifier<OfOverlayNodeConfig> ofOverlayNodeIid = InstanceIdentifier.builder(
-                Nodes.class)
+    private static boolean addOfOverlayAugmentation(OfOverlayNodeConfig config, String nodeIdString, DataBroker dataBroker) {
+        InstanceIdentifier<OfOverlayNodeConfig> ofOverlayNodeIid = InstanceIdentifier.builder(Nodes.class)
             .child(Node.class, new NodeKey(new NodeId(nodeIdString)))
             .augmentation(OfOverlayNodeConfig.class)
             .build();
 
         WriteTransaction transaction = dataBroker.newReadWriteTransaction();
         transaction.put(LogicalDatastoreType.CONFIGURATION, ofOverlayNodeIid, config, true);
-        submitToDs(transaction);
-    }
-
-    private static void addTunnelToOfOverlayAugmentation(Tunnel tunnel, String nodeIdString, DataBroker dataBroker) {
-        InstanceIdentifier<Tunnel> ofOverlayNodeIid = InstanceIdentifier.builder(
-                Nodes.class)
-            .child(Node.class, new NodeKey(new NodeId(nodeIdString)))
-            .augmentation(OfOverlayNodeConfig.class)
-            .child(Tunnel.class, new TunnelKey(tunnel.getKey()))
-            .build();
-
-        WriteTransaction transaction = dataBroker.newReadWriteTransaction();
-        transaction.put(LogicalDatastoreType.CONFIGURATION, ofOverlayNodeIid, tunnel, true);
-        if(submitToDs(transaction)) {
-            LOG.info("addTunnelToOfOverlayAugmentation: Wrote tunnel {}",tunnel.getKey());
-        } else {
-            LOG.error("addTunnelToOfOverlayAugmentation: submitToDs failed for tunnel {}",tunnel.getKey());
-        }
+        return submitToDs(transaction);
     }
 
     /**
      * Update the {@link OfOverlayConfig} of an Inventory Node
      * using the new tunnel state.
      *
+     * @param ip
      * @param nodeIdString
-     * @param tunnels
+     * @param nodeConnectorIdString
+     * @param tunnelType
      * @param dataBroker
      */
-    public static void updateOfOverlayConfig(IpAddress ip, String nodeIdString,
-            String nodeConnectorIdString, List<AbstractTunnelType> tunnels, DataBroker dataBroker) {
+    public static void updateOfOverlayConfig(IpAddress ip, String nodeIdString, String nodeConnectorIdString,
+            AbstractTunnelType tunnelType, DataBroker dataBroker) {
 
-        if ((ip == null) || (nodeIdString == null)
-                || (nodeConnectorIdString == null)) {
+        if ((ip == null) || (nodeIdString == null) || (nodeConnectorIdString == null)) {
             LOG.debug("Can't update OfOverlay: requisite information not present");
             return;
         }
         NodeConnectorId nodeConnectorId = new NodeConnectorId(nodeConnectorIdString);
-        List<Tunnel> tunnelList = new ArrayList<Tunnel>();
-        List<Tunnel> existingTunnels = new ArrayList<Tunnel>();
+
+
+        // Pull existing augmentation
         OfOverlayNodeConfig ofConfig = getOfOverlayConfig(nodeIdString, dataBroker);
-        if (ofConfig != null && ofConfig.getTunnel() != null) {
-            existingTunnels = ofConfig.getTunnel();
-        }
-        boolean tunnelsUpdated = false;
-        for (AbstractTunnelType tunnelType: tunnels) {
-            boolean tunnelFound = false;
-            for (Tunnel currentTun: existingTunnels) {
-                if (tunnelType.getTunnelType().equals(currentTun.getTunnelType())) {
-                    // tunnel update
-                    TunnelBuilder tunnelBuilder = new TunnelBuilder(currentTun);
-                    tunnelBuilder.setIp(ip);
-                    tunnelBuilder.setPort(tunnelType.getPortNumber());
-                    tunnelBuilder.setNodeConnectorId(nodeConnectorId);
-                    tunnelList.add(tunnelBuilder.build());
-                    tunnelFound = true;
-                    tunnelsUpdated = true;
-                }
+
+        // If it exists, use it in new augmentation constructor, else new augmentation
+        OfOverlayNodeConfigBuilder ofOverlayNodeConfigBuilder;
+        Set<Tunnel> existingTunnels = new HashSet<Tunnel>();
+        if (ofConfig != null) {
+            ofOverlayNodeConfigBuilder = new OfOverlayNodeConfigBuilder(ofConfig);
+            if(ofConfig.getTunnel() != null) {
+                existingTunnels.addAll(ofConfig.getTunnel());
             }
-            // new tunnel
-            if (tunnelFound == false) {
-                TunnelBuilder tunnelBuilder = new TunnelBuilder();
+        } else {
+            ofOverlayNodeConfigBuilder = new OfOverlayNodeConfigBuilder();
+        }
+
+        // Determine if this is an update to existing tunnel of this type or a new tunnel
+        boolean tunnelsUpdated = false;
+        TunnelBuilder tunnelBuilder = new TunnelBuilder();
+
+        boolean tunnelFound = false;
+        for (Tunnel currentTun : existingTunnels) {
+            if (tunnelType.getTunnelType().equals(currentTun.getTunnelType())) {
+                // tunnel update
                 tunnelBuilder.setIp(ip);
                 tunnelBuilder.setPort(tunnelType.getPortNumber());
                 tunnelBuilder.setNodeConnectorId(nodeConnectorId);
-                tunnelBuilder.setTunnelType(tunnelType.getTunnelType());
-                tunnelList.add(tunnelBuilder.build());
+                tunnelFound = true;
                 tunnelsUpdated = true;
+                break;
             }
         }
-        if (tunnelsUpdated == true) {
-            for (Tunnel tunnel: tunnelList) {
-                addTunnelToOfOverlayAugmentation(tunnel, nodeIdString, dataBroker);
-            }
+        // new tunnel
+        if (tunnelFound == false) {
+            tunnelBuilder.setIp(ip);
+            tunnelBuilder.setPort(tunnelType.getPortNumber());
+            tunnelBuilder.setNodeConnectorId(nodeConnectorId);
+            tunnelBuilder.setTunnelType(tunnelType.getTunnelType());
+            tunnelsUpdated = true;
+        }
+
+        // Nothing was updated, nothing to see here, move along...
+        if (tunnelsUpdated == false) {
+            return;
+        }
+
+        existingTunnels.add(tunnelBuilder.build());
+
+        // Update the OfOverlayNodeConfig with the new tunnel information
+        OfOverlayNodeConfig newConfig=ofOverlayNodeConfigBuilder.setTunnel(new ArrayList<Tunnel>(existingTunnels)).build();
+        if (addOfOverlayAugmentation(newConfig, nodeIdString, dataBroker)) {
+            LOG.trace("updateOfOverlayConfig - Added Tunnel: {} to Node: {} at NodeConnector: {}",tunnelBuilder.build(), nodeIdString, nodeConnectorIdString);
+            return;
+        } else {
+            LOG.error("updateOfOverlayConfig - could not write OfOverlayNodeConfig: {} to datastore.", newConfig);
         }
     }
 

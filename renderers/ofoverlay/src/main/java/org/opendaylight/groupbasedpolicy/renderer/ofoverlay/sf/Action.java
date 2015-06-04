@@ -12,12 +12,13 @@ import java.util.List;
 import java.util.Map;
 
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.NetworkElements;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.PolicyPair;
 import org.opendaylight.groupbasedpolicy.resolver.ActionInstanceValidator;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ActionDefinition;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 
 /**
  * Represent an action definition, and provide tools for generating
@@ -48,5 +49,8 @@ public abstract class Action implements ActionInstanceValidator{
     public abstract List<ActionBuilder> updateAction(List<ActionBuilder> actions,
                                                      Map<String, Object> params,
                                                      Integer order,
-                                                     NetworkElements netElements);
+                                                     NetworkElements netElements,
+                                                     PolicyPair policyPair,
+                                                     FlowMap flowMap,
+                                                     OfContext ctx);
 }
