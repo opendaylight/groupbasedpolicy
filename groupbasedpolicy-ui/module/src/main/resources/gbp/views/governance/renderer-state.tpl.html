@@ -1,0 +1,7 @@
+<section class="col-md-9 col-md-offset-2 simpleBox mt30">
+    <div ng-controller="rendererStateCtrl">
+        <div ng-if="!checkData(data, 'Array')" ng-repeat="(key, value) in data" ng-include src="view_path+'/node-structure.tpl.html'">
+        </div>
+    </div>
+</section>
+

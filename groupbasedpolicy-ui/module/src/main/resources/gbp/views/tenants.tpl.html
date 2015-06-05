@@ -17,9 +17,9 @@
 
             <div class="rowWrapper">
                 <label class="block basicLabel">Name:
-                    <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="tenantForm.name.$error.required"></i>
+                    <i class="icon-exclamation-sign red" tooltip="{{tenantForm.name.$error.required ? 'Required field' : tenantForm.name.$error.pattern ? 'Value must start with letter followed by letters and digits without space' : ''}}" ng-show="tenantForm.name.$error.required || tenantForm.name.$error.pattern"></i>
                 </label>
-                <input class="form-control" type="text" name="name" ng-model="newTenantObj.name" ng-required="true" ng-disabled="view.edit === 'view'" />
+                <input class="form-control" type="text" name="name" ng-model="newTenantObj.name" ng-required="true" ng-disabled="view.edit === 'view'" ng-pattern="/^[a-zA-Z]([a-zA-Z0-9\-_.])*$/"/>
             </div>
 
             <div class="rowWrapper" ng-hide="view.edit === 'view' && !newTenantObj.description">
@@ -30,7 +30,9 @@
             <button class="btn btn-primary col-md-12" ng-click="save()" ng-hide="view.edit === 'view'">Save</button>
         </form>
     </section>
-    <button class="btn btn-primary col-md-12 bottom-buttons home" ng-click="toggleExpanded('basic')">Home</button>
-    <button class="btn btn-primary col-md-12 bottom-buttons back" ng-click="toggleExpanded('policy')">Back</button>
+
+    <button class="btn btn-primary  bottom-buttons full-width wizard-button" ng-click="showWizard('accessModelWizard')"><i class="icon-magic"></i>Access Model Wizard</button>
+    <button class="btn btn-primary col-md-12 bottom-buttons home" ng-click="toggleExpandedMM('main')">Home</button>
+    <button class="btn btn-primary col-md-12 bottom-buttons back" ng-click="setViewExpand('policyRendererView', 'basic', true); setBreadcrumb('l3', null, false);">Back</button>
 
 </div>

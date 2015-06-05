@@ -1,0 +1,155 @@
+<section ng-controller="policyRendererCtrl">
+    <!-- TOPOLOGY -->
+    <section class="sigmaWrapper col-md-9">
+        
+        <section class="sigmaModalWrapper" ng-show="viewTopo.box" ng-controller="topoDataCtrl">
+
+            <div class="legend" ng-show="showLegend">
+              <ul>
+                <li><span>Legend:</span></li>
+                <li ng-repeat="(key, value) in legend" class="clearfix">
+                  <div class="itemWrapper left">
+                    <div class="color left" style="background: {{value}};"></div>
+                    <div class="left text">{{key}}</div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <button class="btn btn-primary" ng-show="viewTopo.button" ng-click="show()">Show topology data</button>
+
+            <div class="tableWrapper" ng-show="showTable">
+                <i class="icon-remove" ng-click="close()"></i>
+
+                <div class="dataWrapper">
+                    <div class="rowWrapper" ng-repeat="edge in topologyData.links">
+                        <section class="header">
+                            <label>End Point Groups:</label>
+                            <span class="block">{{ getConsProvLabel(edge) }}</span>
+                        </section>
+
+                        <section ng-repeat="subject in edge.data">
+                            <section ng-repeat="rule in subject['ui-rule']">
+                                <label class="block">Subject:{{subject.name}} - Rule:{{rule.name}}</label>
+                                <section ng-repeat="classifier in rule['classifier-ref']">
+                                    <span class="block">Classifier:</span>
+                                    <ul>
+                                        <li ng-repeat="(key, value) in classifier">{{key}}: {{value}}</li>
+                                    </ul>
+                                </section>
+                            </section>
+                        </section>
+                    </div>
+                </div>
+                
+            </div>
+
+        </section>
+
+        <section>
+            <sigma-topology drag-nodes="true" topology-data="topologyData" settings-sigma="settingsSigma" settings-atlas="settingsAtlas" topology-custfunc="topologyCustfunc"></sigma-toppology>
+        </section>
+
+        <div class="topoNav">
+            <label class="block"><span>Topology type:</span></label>
+            <div class="btn-group" role="group">
+              <button type="button" class="btn btn-primary" ng-click="loadTopology('CONFIG', { tenantId: selectedTenant.id })">Config</button>
+              <button type="button" class="btn btn-primary" ng-click="loadTopology('OPERATIONAL', { tenantId: selectedTenant.id })">Operational</button>
+              <button type="button" class="btn btn-primary" ng-click="loadTopology('L2L3', { tenantId: selectedTenant.id, storage: 'config' })">L2/L3</button>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- RIGHT PANEL -->
+    <aside class="col-md-3"> 
+        <section class="inWrapper">
+
+            <div ng-include src="view_path+'parts/breadcrumbs.tpl.html'" class="breadcrumbs clearfix"></div>
+
+            <div class="block clearfix" style="height: 109px;">
+                <!-- Tenants list -->
+                <div class="rowWrapper clearfix">
+                    <label class="block"><span>Tenants list</span></label>
+                    <div class="selectWrapper col-md-12">
+                        <select class="form-control" ng-model="selectedTenant" ng-change="setTenant()" ng-options="getDisplayLabel(d, tenantDisplayLabel) for d in tenantList">
+                            <option value="">Select option</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panelWrapper clearfix" ng-show="policyRendererView.basic">
+                <button class="btn btn-primary col-md-12 btn-lg" ng-click="setViewExpand('subMenuView','policySub'); setBreadcrumb('l2', 'Policy', subMenuView.policySub);" >Policy</button>
+                <section ng-show="subMenuView.policySub">
+                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('tenants'); setBreadcrumb('l3', 'Tenants', policyRendererView.tenants);" >Tenants</button>
+                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('epg'); setBreadcrumb('l3', 'Endpoint groups', policyRendererView.epg);">Endpoint groups</button>
+                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('contracts'); setBreadcrumb('l3', 'Contracts', policyRendererView.contracts);">Contracts</button>
+                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('l2l3'); setBreadcrumb('l3', 'L2/L3', policyRendererView.l2l3);">L2/L3</button>
+                </section>
+
+                <button class="btn btn-primary col-md-12 btn-lg" ng-click="setViewExpand('subMenuView','renderers'); setBreadcrumb('l2', 'Renderers', subMenuView.renderers);">Renderers</button>
+
+                <section ng-show="subMenuView.renderers">
+                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('classifiers'); setBreadcrumb('l3', 'Classifiers', policyRendererView.classifiers);">Classifiers</button>
+                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('actions'); setBreadcrumb('l3', 'Actions', policyRendererView.actions);">Actions</button>
+                </section>
+
+                <button class="btn btn-primary col-md-12 btn-lg" ng-click="setViewExpand('subMenuView','endpoints'); setBreadcrumb('l2', 'Endpoints', subMenuView.endpoints);">Endpoints</button>
+                <section ng-show="subMenuView.endpoints">
+                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('registerEndpoint'); setBreadcrumb('l3', 'Endpoint', policyRendererView.registerEndpoint);">Endpoint</button>
+                    <button class="btn btn-default col-md-12" ng-click="toggleExpanded('registerL3PrefixEndpoint'); setBreadcrumb('l3', 'L3 prefix endpoint', policyRendererView.registerL3PrefixEndpoint);">L3 prefix endpoint</button>
+                </section>
+                <!-- <button class="btn btn-primary col-md-12" ng-click="toggleExpanded('docs')"  >Docs</button> -->
+
+                <button class="btn btn-primary  bottom-buttons full-width wizard-button" ng-click="showWizard('accessModelWizard')"><i class="icon-magic"></i>Access Model Wizard</button>
+                <button class="btn btn-primary bottom-buttons full-width" ng-click="toggleExpandedMM('main')"  >Home</button>
+            </div>
+
+            <div class="panelWrapper clearfix" ng-show="policyRendererView.tenants">
+                <div ng-include src="view_path+'tenants.tpl.html'"></div>
+            </div>
+
+            <div class="panelWrapper clearfix" ng-show="policyRendererView.l2l3">
+                <div ng-include src="view_path+'l2l3.tpl.html'"></div>
+            </div>
+
+            <div class="panelWrapper clearfix" ng-show="policyRendererView.epg" ng-controller="epgCtrl">
+                <div ng-include src="view_path+'epg.tpl.html'"></div>
+            </div>
+
+            <div class="panelWrapper clearfix" ng-show="policyRendererView.contracts">
+                <div ng-include src="view_path+'contracts.tpl.html'"></div>
+            </div>
+
+            <div class="panelWrapper clearfix" ng-show="policyRendererView.docs">
+                <div ng-include src="view_path+'docs.tpl.html'"></div>
+            </div>
+
+            <div ng-controller="renderersCtrl">
+                <div class="panelWrapper clearfix" ng-show="policyRendererView.classifiers" ng-controller="classifiersCtrl">
+                    <div ng-include src="view_path+'classifiers.tpl.html'"></div>
+                </div>
+
+                <div class="panelWrapper clearfix" ng-show="policyRendererView.actions" ng-controller="actionsCtrl">
+                    <div ng-include src="view_path+'actions.tpl.html'"></div>
+                </div>
+            </div>
+
+            <div class="panelWrapper clearfix" ng-show="policyRendererView.registerEndpoint">
+                <div ng-include src="view_path+'endpoint.tpl.html'"></div>
+            </div>
+
+            <div class="panelWrapper clearfix" ng-show="policyRendererView.registerL3PrefixEndpoint">
+                <div ng-include src="view_path+'l3-endpoint.tpl.html'"></div>
+            </div>
+
+
+
+        </section>
+    </aside>
+
+    <div ng-if="wizards.accessModelWizard">
+        <div ng-include src="view_path+'wizards/accessModelWizard.tpl.html'"></div>
+    </div>
+</section>

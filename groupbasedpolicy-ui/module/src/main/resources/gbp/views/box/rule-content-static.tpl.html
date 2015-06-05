@@ -1,0 +1,38 @@
+<div ng-controller="boxStaticCtrl" class="simpleBox maxHeight500">
+    <h2 class="text-center">Rule</h2>
+
+    <section class="formWrapper clearfix">
+        <section>
+            <label class="block">Name:</label>
+            <span>{{selectedObj.name}}</span>
+
+
+            <section class="formWrapper" ng-repeat="classifier in selectedObj['classifier-ref'] track by $index" ng-show="selectedObj['classifier-ref']">
+                <label class="block mb0"><span>Classifier ref</span></label>
+
+                <div>
+                    <label class="basicLabel mb0">Name:</label>
+                    <span>{{classifier.name}}</span>
+                </div>
+
+                <div ng-show="classifier.direction">
+                    <label class="basicLabel mb0">Direction:</label>
+                    <span>{{classifier.direction}}</span>
+                </div>
+            </section>
+
+            <section class="formWrapper" ng-show="selectedObj['action-ref']" ng-repeat="action in selectedObj['action-ref'] track by $index">
+
+                    <label class="block mb0"><span>Action ref</span></label>
+
+                    <div class="rowWrapper">
+                        <label class="basicLabel mb0">Name:</label>
+                        <span>{{action.name}}</span>
+                    </div>
+
+            </section>
+
+        </section>
+    </section>
+
+</div>
