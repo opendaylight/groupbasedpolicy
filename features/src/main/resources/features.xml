@@ -111,6 +111,7 @@
     <feature name='odl-groupbasedpolicy-ui' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: DLUX UI '>
         <feature version="${dlux.version}">odl-dlux-core</feature>
         <feature version="${dlux.version}">odl-dlux-yangvisualizer</feature>
+        <feature version="${project.version}">odl-groupbasedpolicy-uibackend</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-ui-bundle/${project.version}</bundle>
     </feature>
 </features>
