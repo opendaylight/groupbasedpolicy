@@ -591,141 +591,141 @@
 /*-------------------YangUI import START-------------------*/
 
 @iconsRootPath : 'images/yang-ui-icons/';
-
-.customContainer{
-  border-left: 1px solid #7a7a7a;
-  margin: 35px 5px 5px 15px;
-  padding: 5px;
-  /*z-index: 10;*/
-  width:auto;
-  position: relative;
-  &.withoutBorder{
-    border-left: 0;
-    padding-bottom: 0;
-    .treeBullet.containerBullet{
-      left: -25px;
-      top: -25px;
-    }
-  }
-}
-
-.topContainerPart{
-  margin-left: -19px;
-  margin-top: -28px;
-  margin-bottom: 10px;
-}
-
-.treeBullet{
-  font-size: 25px;
-  color: #7a7a7a;
-  position: absolute;
-  left: -15px;
-  top: 0;
-  &.containerBullet{
-    top: -25px; 
-    left: -25px;
-  }
-}
-
-.btn-name{
-  -webkit-border-radius: 5px;
-  border-radius: 5px;
-  background: transparent;
-  font-weight: bold;
-  color: @text-color;
-  border: 2px solid @text-color;
-  cursor: auto;
-}
-
-button, div{
-  &.yangButton{
-    cursor: pointer;
+.gbpWrapper{
+  .customContainer{
+    border-left: 1px solid #7a7a7a;
+    margin: 35px 5px 5px 15px;
+    padding: 5px;
+    /*z-index: 10;*/
+    width:auto;
     position: relative;
-    width: 24px;
-    height: 24px;
-    border: 0;
-    margin: 2px;
-    .inlineBlock;
-    &.iconArrowDown{
-      background: transparent url('@{iconsRootPath}icon-arrow-down.png') no-repeat center top;
-    }
-    &.iconArrowRight{
-      background: transparent url('@{iconsRootPath}icon-arrow-right.png') no-repeat center top;
-    }
-    &.iconNext{
-      background: transparent url('@{iconsRootPath}icon-next.png') no-repeat center top;
-    }
-    &.iconPrev{
-      background: transparent url('@{iconsRootPath}icon-prev.png') no-repeat center top;
-    }
-    &:hover{
-      background-position: center -24px;
-    }
-    &.disabled{
-      .opacityDeph(0.4)!important;
-      &:hover{
-        background-position: center top;
+    &.withoutBorder{
+      border-left: 0;
+      padding-bottom: 0;
+      .treeBullet.containerBullet{
+        left: -25px;
+        top: -25px;
       }
     }
   }
-}
 
-.btn-slim {
-    padding-top: 2px;
-    padding-bottom: 2px;
-}
+  .topContainerPart{
+    margin-left: -19px;
+    margin-top: -28px;
+    margin-bottom: 10px;
+  }
 
-.inlineBlock {
-    display: -moz-inline-stack;
-    display: inline-block;
-    vertical-align: top;
-    zoom: 1;
-    *display: inline;
-}
+  .treeBullet{
+    font-size: 25px;
+    color: #7a7a7a;
+    position: absolute;
+    left: -15px;
+    top: 0;
+    &.containerBullet{
+      top: -25px; 
+      left: -25px;
+    }
+  }
 
-.leaf {
-    margin: 5px;
-    padding-left: 5px;
-    position: relative;
-}
-
-.leaf-label {
-    margin-right: 10px;
+  .btn-name{
+    -webkit-border-radius: 5px;
+    border-radius: 5px;
+    background: transparent;
     font-weight: bold;
-    .inlineBlock;
-    /*width: 170px;*/
-    padding-top: 6px;
-    button.iconQuestion{
-      margin-top: -2px;
+    color: @text-color;
+    border: 2px solid @text-color;
+    cursor: auto;
+  }
+
+  button, div{
+    &.yangButton{
+      cursor: pointer;
+      position: relative;
+      width: 24px;
+      height: 24px;
+      border: 0;
+      margin: 2px;
+      .inlineBlock;
+      &.iconArrowDown{
+        background: transparent url('@{iconsRootPath}icon-arrow-down.png') no-repeat center top;
+      }
+      &.iconArrowRight{
+        background: transparent url('@{iconsRootPath}icon-arrow-right.png') no-repeat center top;
+      }
+      &.iconNext{
+        background: transparent url('@{iconsRootPath}icon-next.png') no-repeat center top;
+      }
+      &.iconPrev{
+        background: transparent url('@{iconsRootPath}icon-prev.png') no-repeat center top;
+      }
+      &:hover{
+        background-position: center -24px;
+      }
+      &.disabled{
+        .opacityDeph(0.4)!important;
+        &:hover{
+          background-position: center top;
+        }
+      }
     }
+  }
 
-    i.icon-key {
-      font-size: 1.3em;
-      padding-left:  5px;
-    }
+  .btn-slim {
+      padding-top: 2px;
+      padding-bottom: 2px;
+  }
+
+  .inlineBlock {
+      display: -moz-inline-stack;
+      display: inline-block;
+      vertical-align: top;
+      zoom: 1;
+      *display: inline;
+  }
+
+  .leaf {
+      margin: 5px;
+      padding-left: 5px;
+      position: relative;
+  }
+
+  .leaf-label {
+      margin-right: 10px;
+      font-weight: bold;
+      .inlineBlock;
+      /*width: 170px;*/
+      padding-top: 6px;
+      button.iconQuestion{
+        margin-top: -2px;
+      }
+
+      i.icon-key {
+        font-size: 1.3em;
+        padding-left:  5px;
+      }
+  }
+
+  .clear{
+      clear: both;
+  }
+
+  .borderArrow{
+    color: @text-color;
+    position: absolute;
+    bottom: -6px;
+    left: -6px;
+    font-size: 1.3em;
+  }
+
+  .tooltip-inner{
+    color: #fff;
+    white-space: pre-wrap;      /* CSS3 */   
+    white-space: -moz-pre-wrap; /* Firefox */    
+    white-space: -pre-wrap;     /* Opera <7 */   
+    white-space: -o-pre-wrap;   /* Opera 7 */    
+    word-wrap: break-word;      /* IE */
+  }
 }
-
-.clear{
-    clear: both;
-}
-
-.borderArrow{
-  color: @text-color;
-  position: absolute;
-  bottom: -6px;
-  left: -6px;
-  font-size: 1.3em;
-}
-
-.tooltip-inner{
-  color: #fff;
-  white-space: pre-wrap;      /* CSS3 */   
-  white-space: -moz-pre-wrap; /* Firefox */    
-  white-space: -pre-wrap;     /* Opera <7 */   
-  white-space: -o-pre-wrap;   /* Opera 7 */    
-  word-wrap: break-word;      /* IE */
-}
-
 /*-------------------YangUI import END-------------------*/
 
 /*

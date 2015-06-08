@@ -530,7 +530,7 @@
   display: none;
 }
 /*-------------------YangUI import START-------------------*/
-.customContainer {
+.gbpWrapper .customContainer {
   border-left: 1px solid #7a7a7a;
   margin: 35px 5px 5px 15px;
   padding: 5px;
@@ -538,31 +538,31 @@
   width: auto;
   position: relative;
 }
-.customContainer.withoutBorder {
+.gbpWrapper .customContainer.withoutBorder {
   border-left: 0;
   padding-bottom: 0;
 }
-.customContainer.withoutBorder .treeBullet.containerBullet {
+.gbpWrapper .customContainer.withoutBorder .treeBullet.containerBullet {
   left: -25px;
   top: -25px;
 }
-.topContainerPart {
+.gbpWrapper .topContainerPart {
   margin-left: -19px;
   margin-top: -28px;
   margin-bottom: 10px;
 }
-.treeBullet {
+.gbpWrapper .treeBullet {
   font-size: 25px;
   color: #7a7a7a;
   position: absolute;
   left: -15px;
   top: 0;
 }
-.treeBullet.containerBullet {
+.gbpWrapper .treeBullet.containerBullet {
   top: -25px;
   left: -25px;
 }
-.btn-name {
+.gbpWrapper .btn-name {
   -webkit-border-radius: 5px;
   border-radius: 5px;
   background: transparent;
@@ -571,8 +571,8 @@
   border: 2px solid #393939;
   cursor: auto;
 }
-button.yangButton,
-div.yangButton {
+.gbpWrapper button.yangButton,
+.gbpWrapper div.yangButton {
   cursor: pointer;
   position: relative;
   width: 24px;
@@ -585,55 +585,55 @@ div.yangButton {
   zoom: 1;
   *display: inline;
 }
-button.yangButton.iconArrowDown,
-div.yangButton.iconArrowDown {
+.gbpWrapper button.yangButton.iconArrowDown,
+.gbpWrapper div.yangButton.iconArrowDown {
   background: transparent url('images/yang-ui-icons/icon-arrow-down.tpl.html') no-repeat center top;
 }
-button.yangButton.iconArrowRight,
-div.yangButton.iconArrowRight {
+.gbpWrapper button.yangButton.iconArrowRight,
+.gbpWrapper div.yangButton.iconArrowRight {
   background: transparent url('images/yang-ui-icons/icon-arrow-right.tpl.html') no-repeat center top;
 }
-button.yangButton.iconNext,
-div.yangButton.iconNext {
+.gbpWrapper button.yangButton.iconNext,
+.gbpWrapper div.yangButton.iconNext {
   background: transparent url('images/yang-ui-icons/icon-next.tpl.html') no-repeat center top;
 }
-button.yangButton.iconPrev,
-div.yangButton.iconPrev {
+.gbpWrapper button.yangButton.iconPrev,
+.gbpWrapper div.yangButton.iconPrev {
   background: transparent url('images/yang-ui-icons/icon-prev.tpl.html') no-repeat center top;
 }
-button.yangButton:hover,
-div.yangButton:hover {
+.gbpWrapper button.yangButton:hover,
+.gbpWrapper div.yangButton:hover {
   background-position: center -24px;
 }
-button.yangButton.disabled,
-div.yangButton.disabled {
+.gbpWrapper button.yangButton.disabled,
+.gbpWrapper div.yangButton.disabled {
   -ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity= 40 )' !important;
   filter: alpha(opacity= 40 ) !important;
   -moz-opacity: 0.4 !important;
   -khtml-opacity: 0.4 !important;
   opacity: 0.4 !important;
 }
-button.yangButton.disabled:hover,
-div.yangButton.disabled:hover {
+.gbpWrapper button.yangButton.disabled:hover,
+.gbpWrapper div.yangButton.disabled:hover {
   background-position: center top;
 }
-.btn-slim {
+.gbpWrapper .btn-slim {
   padding-top: 2px;
   padding-bottom: 2px;
 }
-.inlineBlock {
+.gbpWrapper .inlineBlock {
   display: -moz-inline-stack;
   display: inline-block;
   vertical-align: top;
   zoom: 1;
   *display: inline;
 }
-.leaf {
+.gbpWrapper .leaf {
   margin: 5px;
   padding-left: 5px;
   position: relative;
 }
-.leaf-label {
+.gbpWrapper .leaf-label {
   margin-right: 10px;
   font-weight: bold;
   display: -moz-inline-stack;
@@ -644,24 +644,24 @@ div.yangButton.disabled:hover {
   /*width: 170px;*/
   padding-top: 6px;
 }
-.leaf-label button.iconQuestion {
+.gbpWrapper .leaf-label button.iconQuestion {
   margin-top: -2px;
 }
-.leaf-label i.icon-key {
+.gbpWrapper .leaf-label i.icon-key {
   font-size: 1.3em;
   padding-left: 5px;
 }
-.clear {
+.gbpWrapper .clear {
   clear: both;
 }
-.borderArrow {
+.gbpWrapper .borderArrow {
   color: #393939;
   position: absolute;
   bottom: -6px;
   left: -6px;
   font-size: 1.3em;
 }
-.tooltip-inner {
+.gbpWrapper .tooltip-inner {
   color: #fff;
   white-space: pre-wrap;
   /* CSS3 */
@@ -703,7 +703,7 @@ div.yangButton.disabled:hover {
 */
 /*GBP END*/
 
-.btn-like-tab {
+.gbpWrapper .btn-like-tab {
   text-decoration: none;
   color: #464646;
   border: 0;
@@ -725,17 +725,18 @@ div.yangButton.disabled:hover {
   -o-transition: all 150ms linear;
   transition: all 150ms linear;
 }
-.btn-like-tab.btn-selected,
-.btn-like-tab:hover {
+.gbpWrapper .btn-like-tab.btn-selected,
+.gbpWrapper .btn-like-tab:hover {
   border-bottom: 3px solid #1baafd;
   background: transparent !important;
+}
+
+.gbpWrapper h1, .gbpWrapper h2, .gbpWrapper h3 {
+  color: #393939;
 }
 
 #page_logo {
   display:none;
 }
 
-h1, h2, h3 {
-  color: #393939;
-}
 
