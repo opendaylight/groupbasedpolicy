@@ -19,6 +19,7 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
@@ -72,12 +73,12 @@ public class PortSecurity extends FlowTable {
         }
 
         // Default drop all
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null));
+        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
         // Drop IP traffic that doesn't match a source IP rule
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(110), FlowUtils.ARP));
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(111), FlowUtils.IPv4));
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(112), FlowUtils.IPv6));
+        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(110), FlowUtils.ARP, TABLE_ID));
+        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(111), FlowUtils.IPv4, TABLE_ID));
+        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(112), FlowUtils.IPv6, TABLE_ID));
 
         for (Endpoint ep : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
             OfOverlayContext ofc = ep.getAugmentation(OfOverlayContext.class);
@@ -98,49 +99,42 @@ public class PortSecurity extends FlowTable {
     }
 
     private Flow allowFromPort(NodeConnectorId port) {
-        FlowId flowid = new FlowId(new StringBuilder()
-                .append("allow|")
-                .append(port.getValue())
-                .toString());
+        Match match = new MatchBuilder()
+                .setInPort(port)
+                .build();
+        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "allow", match);
         FlowBuilder flowb = base()
                 .setId(flowid)
                 .setPriority(Integer.valueOf(200))
-                .setMatch(new MatchBuilder()
-                        .setInPort(port)
-                        .build())
+                .setMatch(match)
                 .setInstructions(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()));
         return flowb.build();
     }
 
     private Flow allowFromExternalPort(NodeConnectorId port) {
-        FlowId flowid = new FlowId(new StringBuilder()
-                .append("allowExternal|")
-                .append(port.getValue())
-                .toString());
+        Match match = new MatchBuilder()
+                .setInPort(port)
+                .build();
+        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "allowExternal", match);
         FlowBuilder flowb = base()
                 .setId(flowid)
                 .setPriority(Integer.valueOf(200))
-                .setMatch(new MatchBuilder()
-                        .setInPort(port)
-                        .build())
+                .setMatch(match)
                 .setInstructions(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_INGRESS_NAT()));
         return flowb.build();
     }
 
     private Flow l2flow(Endpoint ep, OfOverlayContext ofc, Integer priority) {
-        FlowId flowid = new FlowId(new StringBuilder()
-                .append(ofc.getNodeConnectorId().getValue())
-                .append("|")
-                .append(ep.getMacAddress().getValue())
-                .toString());
+        Match match = new MatchBuilder()
+                .setEthernetMatch(
+                        FlowUtils.ethernetMatch(ep.getMacAddress(), null, null))
+                .setInPort(ofc.getNodeConnectorId())
+                .build();
+        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "L2", match);
         FlowBuilder flowb = base()
                 .setPriority(priority)
                 .setId(flowid)
-                .setMatch(new MatchBuilder()
-                        .setEthernetMatch(FlowUtils.ethernetMatch(ep.getMacAddress(),
-                                null, null))
-                        .setInPort(ofc.getNodeConnectorId())
-                        .build())
+                .setMatch(match)
                 .setInstructions(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()));
 
         return flowb.build();
@@ -154,23 +148,19 @@ public class PortSecurity extends FlowTable {
         String ikey = "255.255.255.255/32";
         Layer3Match m = new Ipv4MatchBuilder().setIpv4Destination(new Ipv4Prefix(ikey)).build();
 
-        FlowId flowid = new FlowId(new StringBuilder()
-                .append(ofc.getNodeConnectorId().getValue())
-                .append("|")
-                .append(ep.getMacAddress().getValue())
-                .append("|dhcp|")
-                .append(etherType)
-                .toString());
+        Match match = new MatchBuilder()
+                .setEthernetMatch(
+                        FlowUtils.ethernetMatch(ep.getMacAddress(),
+                        null,
+                        etherType))
+                .setLayer3Match(m)
+                .setInPort(ofc.getNodeConnectorId())
+                .build();
+        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "dhcp", match);
         Flow flow = base()
                 .setPriority(priority)
                 .setId(flowid)
-                .setMatch(new MatchBuilder()
-                        .setEthernetMatch(FlowUtils.ethernetMatch(ep.getMacAddress(),
-                                null,
-                                etherType))
-                        .setLayer3Match(m)
-                        .setInPort(ofc.getNodeConnectorId())
-                        .build())
+                .setMatch(match)
                 .setInstructions(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()))
                 .build();
 
@@ -212,25 +202,19 @@ public class PortSecurity extends FlowTable {
             } else {
                 continue;
             }
-            FlowId flowid = new FlowId(new StringBuilder()
-                    .append(ofc.getNodeConnectorId().getValue())
-                    .append("|")
-                    .append(ep.getMacAddress().getValue())
-                    .append("|")
-                    .append(ikey)
-                    .append("|")
-                    .append(etherType)
-                    .toString());
+            Match match = new MatchBuilder()
+                    .setEthernetMatch(
+                            FlowUtils.ethernetMatch(ep.getMacAddress(),
+                            null,
+                            etherType))
+                    .setLayer3Match(m)
+                    .setInPort(ofc.getNodeConnectorId())
+                    .build();
+            FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "L3", match);
             Flow flow = base()
                     .setPriority(priority)
                     .setId(flowid)
-                    .setMatch(new MatchBuilder()
-                            .setEthernetMatch(FlowUtils.ethernetMatch(ep.getMacAddress(),
-                                    null,
-                                    etherType))
-                            .setLayer3Match(m)
-                            .setInPort(ofc.getNodeConnectorId())
-                            .build())
+                    .setMatch(match)
                     .setInstructions(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()))
                     .build();
 
