@@ -237,12 +237,35 @@ define(modules, function(gbp) {
 
         $scope.init = function(paperInstance){
             paper = paperInstance;
+            $scope.loadMouseScrollEvent();
         };
 
 
         $scope.zoom = function(out){
             paperScale = out ? paperScale - 0.1 : paperScale >= 1 ? 1 : paperScale + 0.1;
             paper.scale(paperScale, paperScale);
+        };
+
+        
+
+        $scope.loadMouseScrollEvent = function(){
+            /*mouse wheel event for zooming*/
+            var graph = document.getElementById('graph'),
+            MouseWheelHandler = function(e){
+                var mouseEvent = window.event || e; // old IE support
+                var delta = Math.max(-1, Math.min(1, (mouseEvent.wheelDelta || -mouseEvent.detail)));
+                $scope.zoom(delta === 1 ? false : true);
+            };
+
+            if (graph.addEventListener) {
+                // IE9, Chrome, Safari, Opera
+                graph.addEventListener("mousewheel", MouseWheelHandler, false);
+                // Firefox
+                graph.addEventListener("DOMMouseScroll", MouseWheelHandler, false);
+            }
+            // IE 6/7/8
+            else {graph.attachEvent("onmousewheel", MouseWheelHandler);}
+            /*mouse wheel event for zooming - end*/
         };
         
     }]);
