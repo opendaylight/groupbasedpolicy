@@ -123,7 +123,7 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
                 .setIntraGroupPolicy(IntraGroupPolicy.RequireContract)
                 .build();
             rwTx.put(LogicalDatastoreType.CONFIGURATION,
-                    IidFactory.endpointGroupIid(tenantId, MappingUtils.EPG_EXTERNAL_ID), epgExternal);
+                    IidFactory.endpointGroupIid(tenantId, MappingUtils.EPG_EXTERNAL_ID), epgExternal, true);
         }
     }
 
