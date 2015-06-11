@@ -96,6 +96,16 @@ module neutron-gbp-mapper {
                     uses gbp-endpoint:l3-key;
                 }
             }
+
+            container external-networks-by-l2-flood-domains {
+                list external-network-by-l2-flood-domain {
+                    key l2-flood-domain-id;
+                    leaf l2-flood-domain-id {
+                        description "The L2 Flood Domain ID";
+                        type gbp-common:l2-flood-domain-id;
+                    }
+                }
+            }
         }
 
         container gbp-by-neutron-mappings {
