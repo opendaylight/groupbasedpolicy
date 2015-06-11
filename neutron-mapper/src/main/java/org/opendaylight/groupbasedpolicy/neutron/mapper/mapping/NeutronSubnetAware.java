@@ -12,20 +12,28 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.opendaylight.groupbasedpolicy.neutron.gbp.util.NeutronGbpIidFactory;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils.ForwardingCtx;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.neutron.spi.INeutronSubnetAware;
 import org.opendaylight.neutron.spi.NeutronSubnet;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2FloodDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Name;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubnetId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.external.networks.by.l2.flood.domains.ExternalNetworkByL2FloodDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.SubnetBuilder;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,6 +71,19 @@ public class NeutronSubnetAware implements INeutronSubnetAware {
         Subnet subnet = createSubnet(neutronSubnet);
         rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.subnetIid(tenantId, subnetId), subnet, true);
         DataStoreHelper.submitToDs(rwTx);
+        rwTx = dataProvider.newReadWriteTransaction();
+
+        L2FloodDomainId l2FdId = new L2FloodDomainId(subnet.getParent().getValue());
+        ForwardingCtx fwCtx = MappingUtils.createForwardingContext(tenantId, l2FdId, rwTx);
+
+        if (isExternalNetwork(subnet.getParent(), rwTx)) {
+            LOG.trace("neutronSubnetCreated - adding L3 Endpoint");
+            IpAddress defaultGateway = Utils.createIpAddress(neutronSubnet.getGatewayIP());
+            //Create L3Endpoint for defaultGateway and write to externalGateways to L3Endpoints in neutron-gbp datastore
+            NetworkDomainId containment = new NetworkDomainId(neutronSubnet.getID());
+            NeutronPortAware.addL3EndpointForExternalGateway(tenantId, fwCtx.getL3Context().getId(), defaultGateway, containment ,rwTx);
+            DataStoreHelper.submitToDs(rwTx);
+        }
     }
 
     private Subnet createSubnet(NeutronSubnet neutronSubnet) {
@@ -74,6 +95,19 @@ public class NeutronSubnetAware implements INeutronSubnetAware {
         }
         subnetBuilder.setIpPrefix(Utils.createIpPrefix(neutronSubnet.getCidr()));
         return subnetBuilder.build();
+    }
+
+
+    private boolean isExternalNetwork(ContextId context, ReadWriteTransaction rwTx) {
+        L2FloodDomainId l2FdId = new L2FloodDomainId(context.getValue());
+        LOG.trace("neutronSubnetCreated - Looking up L2FD: {}", l2FdId);
+        InstanceIdentifier<ExternalNetworkByL2FloodDomain> iid = NeutronGbpIidFactory.externalNetworkByL2FloodDomain(l2FdId);
+        Optional<ExternalNetworkByL2FloodDomain> external = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
+                iid, rwTx);
+        if (external.isPresent()) {
+            return true;
+        }
+        return false;
     }
 
     /**

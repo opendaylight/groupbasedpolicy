@@ -14,6 +14,7 @@ import java.util.UUID;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.neutron.gbp.util.NeutronGbpIidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronMapperIidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
@@ -27,6 +28,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Name;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.external.networks.by.l2.flood.domains.ExternalNetworkByL2FloodDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.external.networks.by.l2.flood.domains.ExternalNetworkByL2FloodDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.mapper.rev150223.mappings.network.mappings.NetworkMapping;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.mapper.rev150223.mappings.network.mappings.NetworkMappingBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup;
@@ -111,7 +114,23 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
             .build();
         rwTx.put(LogicalDatastoreType.OPERATIONAL, NeutronMapperIidFactory.networkMappingIid(l2FdId), networkMapping, true);
 
+        if (network.getRouterExternal() != null
+                && network.getRouterExternal() == true) {
+            addExternalNetworkIfMissing(l2Fd.getId(), rwTx);
+        }
         DataStoreHelper.submitToDs(rwTx);
+    }
+
+    private void addExternalNetworkIfMissing(L2FloodDomainId l2FdId, ReadWriteTransaction rwTx) {
+        InstanceIdentifier<ExternalNetworkByL2FloodDomain> iid = NeutronGbpIidFactory.externalNetworkByL2FloodDomain(l2FdId);
+        Optional<ExternalNetworkByL2FloodDomain> externalPresent = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
+                iid, rwTx);
+        if (!externalPresent.isPresent()) {
+            ExternalNetworkByL2FloodDomainBuilder builder = new ExternalNetworkByL2FloodDomainBuilder()
+                .setL2FloodDomainId(l2FdId);
+            rwTx.put(LogicalDatastoreType.OPERATIONAL,
+                    NeutronGbpIidFactory.externalNetworkByL2FloodDomain(l2FdId), builder.build(), true);
+        }
     }
 
     private void addEpgExternalIfMissing(TenantId tenantId, ReadWriteTransaction rwTx) {
