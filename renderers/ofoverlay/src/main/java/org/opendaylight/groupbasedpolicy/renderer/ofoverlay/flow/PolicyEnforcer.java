@@ -199,19 +199,21 @@ public class PolicyEnforcer extends FlowTable {
             for (EgKey srcEpgKey : ctx.getEndpointManager().getEgKeysForEndpoint(srcEp)) {
 
                 IndexedTenant tenant = ctx.getPolicyResolver().getTenant(srcEpgKey.getTenantId());
-                EndpointGroup group = tenant.getEndpointGroup(srcEpgKey.getEgId());
-                IntraGroupPolicy igp = group.getIntraGroupPolicy();
+                if (tenant != null) {
+                    EndpointGroup group = tenant.getEndpointGroup(srcEpgKey.getEgId());
+                    IntraGroupPolicy igp = group.getIntraGroupPolicy();
 
-                if (igp == null || igp.equals(IntraGroupPolicy.Allow)) {
-                    for (Endpoint dstEp : ctx.getEndpointManager().getEndpointsForGroup(srcEpgKey)) {
-                        EndpointFwdCtxOrdinals srcEpFwdCxtOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx,
-                                policyInfo, srcEp);
-                        EndpointFwdCtxOrdinals dstEpFwdCxtOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx,
-                                policyInfo, dstEp);
-                        int depgId = dstEpFwdCxtOrds.getEpgId();
-                        int sepgId = srcEpFwdCxtOrds.getEpgId();
-                        flowMap.writeFlow(nodeId, TABLE_ID, allowSameEpg(sepgId, depgId));
-                        flowMap.writeFlow(nodeId, TABLE_ID, allowSameEpg(depgId, sepgId));
+                    if (igp == null || igp.equals(IntraGroupPolicy.Allow)) {
+                        for (Endpoint dstEp : ctx.getEndpointManager().getEndpointsForGroup(srcEpgKey)) {
+                            EndpointFwdCtxOrdinals srcEpFwdCxtOrds =
+                                OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, srcEp);
+                            EndpointFwdCtxOrdinals dstEpFwdCxtOrds =
+                                OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, dstEp);
+                            int depgId = dstEpFwdCxtOrds.getEpgId();
+                            int sepgId = srcEpFwdCxtOrds.getEpgId();
+                            flowMap.writeFlow(nodeId, TABLE_ID, allowSameEpg(sepgId, depgId));
+                            flowMap.writeFlow(nodeId, TABLE_ID, allowSameEpg(depgId, sepgId));
+                        }
                     }
                 }
             }

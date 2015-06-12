@@ -186,6 +186,10 @@ public class OrdinalFactory {
             this.ep = new EpKey(ep.getL2Context(), ep.getMacAddress());
 
             IndexedTenant tenant = ctx.getPolicyResolver().getTenant(ep.getTenant());
+            if (tenant == null) {
+                LOG.debug("Tenant {} is null", ep.getTenant());
+                return;
+            }
             // Set network containment either from ep, or from primary EPG
             if (ep.getNetworkContainment() != null) {
                 this.networkContainment = ep.getNetworkContainment();
