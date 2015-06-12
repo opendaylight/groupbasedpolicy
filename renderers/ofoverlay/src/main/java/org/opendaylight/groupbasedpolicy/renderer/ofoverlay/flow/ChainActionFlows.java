@@ -15,6 +15,7 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadNshc2RegAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.outputAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.addNxTunIpv4DstMatch;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ChainAction.isSrcEpConsumer;
 
 import java.math.BigInteger;
 import java.util.List;
@@ -24,6 +25,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMa
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.NetworkElements;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.PolicyPair;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ChainAction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcNshHeader;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
@@ -33,6 +35,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.ta
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg0;
@@ -55,10 +58,16 @@ public class ChainActionFlows {
     }
 
     public static void createChainTunnelFlows(SfcNshHeader sfcNshHeader, NetworkElements netElements, FlowMap flowMap,
-            OfContext ctx) {
+            OfContext ctx, boolean swap) {
 
         NodeId localNodeId = netElements.getLocalNodeId();
         NodeId destNodeId = netElements.getDstEp().getAugmentation(OfOverlayContext.class).getNodeId();
+        EndpointFwdCtxOrdinals epOrds = netElements.getSrcEpOrds();
+
+        if (swap) {
+            destNodeId = netElements.getSrcEp().getAugmentation(OfOverlayContext.class).getNodeId();
+        }
+
         NodeConnectorId localNodeTunPort = ctx.getSwitchManager().getTunnelPort(localNodeId, TunnelTypeVxlanGpe.class);
         NodeConnectorId destNodeTunPort = ctx.getSwitchManager().getTunnelPort(destNodeId, TunnelTypeVxlanGpe.class);
         if (localNodeTunPort == null || destNodeTunPort == null) {
@@ -76,20 +85,19 @@ public class ChainActionFlows {
                 localNodeId,
                 ctx.getPolicyManager().getTABLEID_EXTERNAL_MAPPER(),
                 createExternalFlow(sfcNshHeader, localNodeTunPort, netElements, ctx.getPolicyManager()
-                    .getTABLEID_EXTERNAL_MAPPER(), ctx));
+                    .getTABLEID_EXTERNAL_MAPPER(), ctx, swap));
 
         flowMap.writeFlow(
                 destNodeId,
                 ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER(),
-                createChainTunnelFlow(sfcNshHeader, destNodeTunPort, netElements.getSrcEpOrds(), ctx.getPolicyManager()
+                createChainTunnelFlow(sfcNshHeader, destNodeTunPort, epOrds, ctx.getPolicyManager()
                     .getTABLEID_SOURCE_MAPPER(), ctx));
 
         flowMap.writeFlow(
                 destNodeId,
                 ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER(),
-                createChainBroadcastFlow(sfcNshHeader, destNodeTunPort, netElements.getSrcEpOrds(),
-                        ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER(), ctx));
-
+                createChainBroadcastFlow(sfcNshHeader, destNodeTunPort, epOrds, ctx.getPolicyManager()
+                    .getTABLEID_SOURCE_MAPPER(), ctx));
     }
 
     private static Flow createChainBroadcastFlow(SfcNshHeader sfcNshHeader, NodeConnectorId tunPort,
@@ -119,24 +127,41 @@ public class ChainActionFlows {
     }
 
     private static Flow createExternalFlow(SfcNshHeader sfcNshHeader, NodeConnectorId tunPort,
-             NetworkElements netElements, short tableId, OfContext ctx) {
+            NetworkElements netElements, short tableId, OfContext ctx, boolean swap) {
 
         Integer priority = 1000;
+        BigInteger destTunnelId;
+        int matchTunnelId;
+        NodeId destNodeId;
+        Long l3c;
+        if (swap) {
+            destTunnelId = BigInteger.valueOf(netElements.getSrcEpOrds().getTunnelId());
+            l3c = Long.valueOf(netElements.getDstEpOrds().getL3Id());
+            matchTunnelId = netElements.getSrcEpOrds().getTunnelId();
+            destNodeId = netElements.getDstEp().getAugmentation(OfOverlayContext.class).getNodeId();
 
+        } else {
+            destTunnelId = BigInteger.valueOf(netElements.getDstEpOrds().getTunnelId());
+            l3c = Long.valueOf(netElements.getSrcEpOrds().getL3Id());
+            matchTunnelId = netElements.getDstEpOrds().getTunnelId();
+            destNodeId = netElements.getSrcEp().getAugmentation(OfOverlayContext.class).getNodeId();
+        }
         org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action loadC1 = nxLoadNshc1RegAction(sfcNshHeader.getNshMetaC1());
         org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action loadC2 = nxLoadNshc2RegAction(sfcNshHeader.getNshMetaC2());
-        org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action loadChainTunVnid =
-                nxLoadTunIdAction(BigInteger.valueOf(netElements.getSrcEpOrds().getTunnelId()), false);
-        org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action loadChainTunDest = nxLoadTunIPv4Action(sfcNshHeader.getNshTunIpDst().getValue(), false);
-
+        org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action loadChainTunVnid = nxLoadTunIdAction(
+                destTunnelId, false);
+        org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action loadChainTunDest = nxLoadTunIPv4Action(
+                sfcNshHeader.getNshTunIpDst().getValue(), false);
 
         MatchBuilder mb = new MatchBuilder();
-        addNxRegMatch(mb, RegMatch.of(NxmNxReg6.class, Long.valueOf(netElements.getDstEpOrds().getL3Id())));
-        addNxTunIdMatch(mb, netElements.getSrcEpOrds().getTunnelId());
+        addNxRegMatch(mb, RegMatch.of(NxmNxReg6.class, l3c));
+        addNxTunIdMatch(mb, matchTunnelId);
         addNxNspMatch(mb, sfcNshHeader.getNshNspToChain());
         addNxNsiMatch(mb, sfcNshHeader.getNshNsiToChain());
-        if (!netElements.getDstEp().getAugmentation(OfOverlayContext.class).getNodeId().equals(netElements.getLocalNodeId())) {
-            addNxTunIpv4DstMatch(mb, ctx.getSwitchManager().getTunnelIP(netElements.getDstNodeId(), TunnelTypeVxlan.class).getIpv4Address());
+        if (!destNodeId.equals(netElements.getLocalNodeId())) {
+            addNxTunIpv4DstMatch(mb, ctx.getSwitchManager()
+                .getTunnelIP(destNodeId, TunnelTypeVxlan.class)
+                .getIpv4Address());
             priority = 1500;
         }
 
@@ -145,7 +170,9 @@ public class ChainActionFlows {
         FlowBuilder flowb = base(tableId).setId(flowId)
             .setPriority(Integer.valueOf(priority))
             .setMatch(match)
-            .setInstructions(instructions(applyActionIns(loadC1, loadC2, loadChainTunDest, loadChainTunVnid, outputAction(tunPort))));
+            .setInstructions(
+                    instructions(applyActionIns(loadC1, loadC2, loadChainTunDest, loadChainTunVnid,
+                            outputAction(tunPort))));
         return flowb.build();
     }
 

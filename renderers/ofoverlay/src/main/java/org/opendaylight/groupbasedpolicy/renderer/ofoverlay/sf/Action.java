@@ -18,6 +18,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.
 import org.opendaylight.groupbasedpolicy.resolver.ActionInstanceValidator;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ActionDefinition;
 
 /**
@@ -44,6 +45,7 @@ public abstract class Action implements ActionInstanceValidator{
      * that the order of the returned list be consistent however
      * @param actions The existing actions
      * @param params the parameters for the action instance
+     * @param direction
      * @return the updated list of actions (may be a different length)
      */
     public abstract List<ActionBuilder> updateAction(List<ActionBuilder> actions,
@@ -52,5 +54,6 @@ public abstract class Action implements ActionInstanceValidator{
                                                      NetworkElements netElements,
                                                      PolicyPair policyPair,
                                                      FlowMap flowMap,
-                                                     OfContext ctx);
+                                                     OfContext ctx,
+                                                     Direction direction);
 }
