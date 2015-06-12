@@ -89,10 +89,8 @@
                     
                 </section>
 
+                <label class="block mb0"><span>Action ref</span> <button class="btn btn-primary" ng-click="showWizard('actionReferenceWizard', 'ACTION_RULE_WIZARD_LOAD', rule, {tenantId: selectedTenant.id, contractId: selectedObj.id, subjectId: subject.name, ruleId: rule.name})">Manage</button></label>
                 <section class="mb10" ng-show="rule['action-ref']" ng-repeat="action in rule['action-ref'] track by $index">
-
-                        <label class="block mb0"><span>Action ref</span></label>
-
                         <div class="rowWrapper">
                             <label class="basicLabel mb0">Name:</label>
                             <span>{{action.name}}</span>

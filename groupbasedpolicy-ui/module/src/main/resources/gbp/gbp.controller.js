@@ -44,6 +44,11 @@ define(modules, function(gbp) {
                                   'l2' : null,
                                   'l3' : null};
 
+            $scope.wizards = {
+                accessModelWizard: false,
+                actionReferenceWizard: false
+            };
+
             $scope.setBreadcrumb = function(level, label, visible){
                 $scope.breadcrumbs[level] = visible ? label : null;
                 if(level === 'l1'){
@@ -98,18 +103,25 @@ define(modules, function(gbp) {
 
             // TENANTS
             $scope.tenantList = [];
+            $scope.selectedTenant = null;
             $scope.tenantDisplayLabel = ['name' , 'id'];
 
             $scope.loadTenants = function() {
                 GBPTenantServices.load(
                     function(tenants) {
                         $scope.tenantList = tenants;
+                        console.log('$scope.tenantList', $scope.tenantList);
                     },
                     function(){
                         //TODO error
                     });
 
                 DesignGbpFactory.setMainClass();
+            };
+
+            $scope.setTenant = function(selectedTenant) {
+                $scope.selectedTenant = selectedTenant;
+                $scope.$broadcast('GBP_TENANT_RELOAD', $scope.selectedTenant);
             };
 
             $scope.loadTenants();
@@ -122,6 +134,31 @@ define(modules, function(gbp) {
                 $scope.$broadcast(eventName, val);
             };
 
+
+            // TODO: rework, use $scope.setViewContent or something
+            $scope.showWizard = function(wizardName, broadcast, broadcastedData, path) {
+                $scope.wizards[wizardName] = true;
+
+                if ( broadcast ) {
+                    $scope.sendReloadEventFromRoot(broadcast, {data: broadcastedData, path: path});
+                }
+            };
+
+            $scope.closeWizard = function(wizardName) {
+                $scope.wizards[wizardName] = false;
+            };
+
+            $scope.updateList = function(list, object, key) {
+                var elementPos = list.map(function(x) {return x[key]; }).indexOf(object[key]);
+
+                if(elementPos < 0) {
+                    list.push(object);
+                }
+                else {
+                    list[elementPos] = object;
+                }
+            };
+
     }]);
 
     gbp.register.controller('governanceCtrl', ['$rootScope','$scope',
@@ -129,7 +166,7 @@ define(modules, function(gbp) {
             $scope.menuTpl = 'main-menu';
             $scope.menuBox = null;
             $scope.contentTpl = 'main';
-            $scope.selectedTenant = null;
+            // $scope.selectedTenant = null;
             $scope.rendererList = [];
             var broadcastObj = {};
 
@@ -146,10 +183,7 @@ define(modules, function(gbp) {
                 }
             };
 
-            $scope.setTenant = function(selectedTenant) {
-                $scope.selectedTenant = selectedTenant;
-                $scope.$broadcast('GBP_TENANT_RELOAD');
-            };
+            
 
             $scope.setViewContent = function(tplName, data, broadcast, tplType) {
 
@@ -191,8 +225,12 @@ define(modules, function(gbp) {
             $scope.$on('GOV_INIT', function(){
                 $scope.menuTpl = 'main-menu';
                 $scope.contentTpl = 'main';
-                $scope.$emit('GBP_GLOBAL_TENANT_RELOAD');
+                // $scope.$emit('GBP_GLOBAL_TENANT_RELOAD');
                 $scope.menuBox = null;
+            });
+
+            $scope.$on('GBP_TENANT_RELOAD', function(e, obj){
+                $scope.selectedTenant = obj;
             });
 
 
@@ -338,34 +376,42 @@ define(modules, function(gbp) {
 
                     JointGraphFactory.reloadGraph(paper.model);
 
-                    $scope.selectedTenant.contract.forEach(function(c, i) {
-                        var label = c.description ? $scope.sliceLabel(c.description) : c.id,
-                            width = JointGraphFactory.getLabelLength(label.length);
-                            item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.objType.contract, c, 'Click to see contract info', GBPConstants.colors.graph['subject'], 'Contract');
+                    if ( $scope.selectedTenant && $scope.selectedTenant.contract ) {
 
-                        itemsArray.contract.push(item);
+                        $scope.selectedTenant.contract.forEach(function(c, i) {
+                            var label = c.description ? $scope.sliceLabel(c.description) : c.id,
+                                width = JointGraphFactory.getLabelLength(label.length);
+                                item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.objType.contract, c, 'Click to see contract info', GBPConstants.colors.graph['subject'], 'Contract');
 
-                        JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width, paper.options.height), paper);
-                        JointGraphFactory.addItem(paper.model, item);
-                        contractItems[c.id] = item;
-                    });
+                            itemsArray.contract.push(item);
 
-                    offsetHobj.contract = offsetObj.h;
+                            JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width, paper.options.height), paper);
+                            JointGraphFactory.addItem(paper.model, item);
+                            contractItems[c.id] = item;
+                        });
 
-                    JointGraphOffsetFactory.resetOffsets(offsetObj, offsetObj.ow, offsetObj.h > 400 ? offsetObj.h : 400);
-                    $scope.selectedTenant['endpoint-group'].forEach(function(e, i) {
-                        var label = e.name || e.id,
-                            width = JointGraphFactory.getLabelLength(label.length);
-                            item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.objType.epg, e, 'Click to see epg info', GBPConstants.colors.graph['pns'], 'EP group');
+                        offsetHobj.contract = offsetObj.h;
 
-                        itemsArray.epg.push(item);
+                    }
 
-                        JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width, paper.options.height), paper);
-                        JointGraphFactory.addItem(paper.model, item);
-                        epgItems[e.id] = item;
+                    if ( $scope.selectedTenant && $scope.selectedTenant['endpoint-group'] ) {
 
-                        createEpgLinks(e, item, contractItems);
-                    });
+                        JointGraphOffsetFactory.resetOffsets(offsetObj, offsetObj.ow, offsetObj.h > 400 ? offsetObj.h : 400);
+                        $scope.selectedTenant['endpoint-group'].forEach(function(e, i) {
+                            var label = e.name || e.id,
+                                width = JointGraphFactory.getLabelLength(label.length);
+                                item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.objType.epg, e, 'Click to see epg info', GBPConstants.colors.graph['pns'], 'EP group');
+
+                            itemsArray.epg.push(item);
+
+                            JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width, paper.options.height), paper);
+                            JointGraphFactory.addItem(paper.model, item);
+                            epgItems[e.id] = item;
+
+                            createEpgLinks(e, item, contractItems);
+                        });
+                        
+                    }
 
                     offsetHobj.epg = JointGraphOffsetFactory.getCurrentOffset(itemsArray.contract, 'y');
                     JointGraphOffsetFactory.checkObjsHoffsets(itemsArray.epg ,offsetHobj.epg, paper);
@@ -675,7 +721,7 @@ define(modules, function(gbp) {
             loadData();
     }]);
 
- gbp.register.controller('epgDetailCtrl', ['$scope', 'JointGraphFactory', 'TopologyDataLoaders', 'GBPEpgServices', 'JointGraphOffsetFactory', 'GBPConstants',
+    gbp.register.controller('epgDetailCtrl', ['$scope', 'JointGraphFactory', 'TopologyDataLoaders', 'GBPEpgServices', 'JointGraphOffsetFactory', 'GBPConstants',
         function ($scope, JointGraphFactory, TopologyDataLoaders, GBPEpgServices, JointGraphOffsetFactory, GBPConstants) {
             var paper = JointGraphFactory.createGraph(),
                 epgItem = {},
@@ -792,11 +838,8 @@ define(modules, function(gbp) {
                 button: false
             };
 
-            $scope.wizards = {
-                accessModelWizard: false
-            };
 
-            $scope.selectedTenant = null;
+            // $scope.selectedTenant = null;
 
             $scope.mandatoryProperties = [];
             $scope.loadTopology = function(type, args) {
@@ -853,8 +896,7 @@ define(modules, function(gbp) {
                 }
             };
 
-            $scope.setTenant = function() {
-                $scope.$broadcast('GBP_TENANT_RELOAD');
+            $scope.loadTopo = function() {
                 if($scope.selectedTenant) {
                     $scope.loadTopology($scope.topologyType, { tenantId: $scope.selectedTenant.id });
                 }
@@ -887,16 +929,11 @@ define(modules, function(gbp) {
             $scope.validateForm = function(form) {
                 return form.$valid;
             };
+          
+            $scope.$on('GBP_TENANT_RELOAD', function(e, obj){
+                $scope.selectedTenant = obj;
+            });
 
-            $scope.showWizard = function(wizardName) {
-                $scope.wizards[wizardName] = true;
-            };
-
-            $scope.closeWizard = function(wizardName) {
-                $scope.wizards[wizardName] = false;
-            };
-
-            
     }]);
 
     gbp.register.controller('topoDataCtrl',['$scope', 'TopoServices',  function($scope, TopoServices){
@@ -3013,6 +3050,10 @@ define(modules, function(gbp) {
             //console.info($scope.parameter, ' got GBP_SET_PARAM_VALUE', name, intVal, strVal, event);
             
         });
+
+        $scope.$on('GBP_RESET_PARAM', function(event){
+            $scope.value = null;
+        });
     }]);
 
     gbp.register.controller('classifiersCtrl', ['$scope', 'GBPClassifierInstanceServices', 'GPBServices', '$filter',
@@ -3844,20 +3885,20 @@ define(modules, function(gbp) {
             });
         };
 
-        $scope.updateList = function(list, object, key) {
-            var elementPos = list.map(function(x) {return x[key]; }).indexOf(object[key]);
+        // $scope.updateList = function(list, object, key) {
+        //     var elementPos = list.map(function(x) {return x[key]; }).indexOf(object[key]);
 
-            if(elementPos < 0) {
-                list.push(object);
-            }
-            else {
-                list[elementPos] = object;
-            }
-        };
+        //     if(elementPos < 0) {
+        //         list.push(object);
+        //     }
+        //     else {
+        //         list[elementPos] = object;
+        //     }
+        // };
     }]);
 
     gbp.register.controller('wizardTenantCtrl', ['$scope', '$filter', 'GBPTenantServices', function($scope, $filter, GBPTenantServices){ 
-        $scope.tenantList = [];
+        // $scope.tenantList = [];
         $scope.newTenantObj = GBPTenantServices.createObj();
         $scope.displayLabel = ['name' , 'id'];
 
@@ -3865,21 +3906,21 @@ define(modules, function(gbp) {
             tenantEdit: false
         };
 
-        $scope.init = function() {
-            $scope.getTenants();
-        };
+        // $scope.init = function() {
+        //     $scope.getTenants();
+        // };
 
-        $scope.getTenants = function() {
-            GBPTenantServices.load(
-                function(data) {
-                    $scope.tenantList = data;
-                    $scope.newTenantObj = GBPTenantServices.createObj();
-                },
-                function(){
-                    //TODO error
-                }
-            );
-        };
+        // $scope.getTenants = function() {
+        //     GBPTenantServices.load(
+        //         function(data) {
+        //             $scope.tenantList = data;
+        //             $scope.newTenantObj = GBPTenantServices.createObj();
+        //         },
+        //         function(){
+        //             //TODO error
+        //         }
+        //     );
+        // };
 
         $scope.reloadTenants = function(selectedObject) {
             if(!selectedObject) {
@@ -4777,7 +4818,6 @@ define(modules, function(gbp) {
         });
     }]);
 
-
     gbp.register.controller('rendererStateCtrl', ['$scope', 'GPBServices', function($scope, GPBServices){
         $scope.data = {'subject-feature-definitions' : {}};
         $scope.view_path = 'src/app/gbp/views/governance';
@@ -4839,6 +4879,168 @@ define(modules, function(gbp) {
             return result[type];
         };
     }]);
+
+    gbp.register.controller('actionReferenceWizardCtrl', ['$scope', '$filter', 'GBPRuleServices', 'GBPActionInstanceServices', function($scope, $filter, GBPRuleServices, GBPActionInstanceServices){ 
+        $scope.wizardPage = null;
+        $scope.path = {};
+        $scope.rule = {};
+
+        $scope.actionInstanceNames = {'options' : [], 'labels' : "name"};
+
+        var actionInstanceNamesLoad = function() {
+            var actionInstancePath = GBPActionInstanceServices.createPathObj($scope.selectedTenant.id);
+            GBPActionInstanceServices.load(actionInstancePath, function(data){
+                $scope.actionInstanceNames.options = data;
+            },function(){
+                //TODO: error cbk
+            });
+        };
+
+        $scope.init = function() {
+            $scope.setPage('reference');
+        };
+
+        $scope.setPage = function(pageName, object) {
+            $scope.wizardPage = pageName;
+        };
+
+        $scope.submit = function() {
+            //if($scope.validateForm($scope.actionsForm)){
+                $scope.actionInstanceNames.options.forEach(function(i) {
+                    path = GBPActionInstanceServices.createPathObj($scope.path.tenantId, i.name);
+                //saveParams();
+
+                    GBPActionInstanceServices.send(path, i, function(data){
+                    $scope.sendReloadEventFromRoot('GBP_ACTION_INSTANCE_RELOAD');
+                    }, function(){
+                        //TODO: error cbk
+                    });
+                });
+                
+            //}
+
+            //if($scope.validateForm($scope.rulesForm)){
+                path = GBPRuleServices.createPathObj($scope.path.tenantId, $scope.path.contractId, $scope.path.subjectId, $scope.path.ruleId);
+                GBPRuleServices.send(path, $scope.rule, function(data){
+
+                    $scope.wizards.actionReferenceWizard = false;
+                    
+                    //$scope.sendReloadEventFromRoot('GBP_TENANT_RELOAD');
+                }, function(){
+                    //TODO: error cbk
+                });
+            //}
+            //$scope.
+        };
+
+        $scope.$on('ACTION_RULE_WIZARD_LOAD', function(event, data){
+            $scope.rule = angular.copy(data.data);
+            $scope.path = data.path;
+        });
+
+        $scope.$on('WIZARD_ACTIONREF_ADD', function(event, data){
+            if(!$scope.rule['action-ref']) {
+                $scope.rule['action-ref'] = [];
+            }
+            $scope.updateList($scope.rule['action-ref'], data, "name");
+        });
+
+        $scope.$on('WIZARD_ACTIONREF_DELETE', function(event, data){
+            $scope.rule['action-ref'].splice(data, 1);
+        });
+
+        $scope.$on('WIZARD_ACTIONINSTANCE_ADD', function(event, data){
+            $scope.updateList($scope.actionInstanceNames.options, data, "name");
+
+            $scope.setPage('reference');
+        });
+
+        $scope.$on('GBP_TENANT_RELOAD',function(){
+            actionInstanceNamesLoad();
+        });
+
+    }]);
+
+    gbp.register.controller('actionsRefListCtrl', ['$scope', '$filter', function($scope, $filter){ 
+        
+        $scope.actionReferenceForm = false;
+
+        $scope.showForm = function(object) {
+            $scope.actionReferenceForm = true;
+            $scope.newActionRefObj = object || null;
+        };
+
+        $scope.closeForm = function() {
+            $scope.actionReferenceForm = false;
+        };
+
+        $scope.save = function(){
+            $scope.$emit('WIZARD_ACTIONREF_ADD', $scope.newActionRefObj);
+            $scope.resetObject();
+        };
+
+        $scope.deleteElemAt = function(index) {
+            $scope.$emit('WIZARD_ACTIONREF_DELETE', index);
+            $scope.resetObject();
+        };
+
+        $scope.resetObject = function() {
+            $scope.newActionRefObj = null;
+        };
+
+        
+
+    }]);
+
+    gbp.register.controller('actionInstanceWizardCtrl', ['$scope', '$filter', 'GPBServices', 'GBPActionInstanceServices', function($scope, $filter, GPBServices, GBPActionInstanceServices){ 
+        $scope.actionDefinitions = {'options' : [], 'labels' : "name"};
+        $scope.newActionObj = GBPActionInstanceServices.createObj();
+
+        var loadDefinitions = function() {
+            GPBServices.getDefinitions(function(classifierDefs, actionDefs) {
+                $scope.actionDefinitions.options = actionDefs;
+                //$scope.getDisplayLabelsFromCtrl('GBP_ACTIONS_LABEL', $scope.actionDefinitions);
+            });
+        };
+
+        $scope.reloadDefs = function(){
+            $scope.defs = angular.copy($scope.getDefinitionObjParams($scope.newActionObj['action-definition-id']));
+
+            //TODO: rework
+            if($scope.defs.length && $scope.defs[0].name === 'sfc-chain-name') {
+                GPBServices.getServiceFunctionChains(function(data) {
+                    $scope.serviceFunctionChains = data;
+                });
+            }
+        };
+
+        $scope.getDefinitionObjParams = function(id){
+            return GPBServices.getDefinitionObjParams($scope.actionDefinitions.options, id);
+        };
+
+        $scope.save = function(){
+            $scope.newActionObj['parameter-value'] = [];
+            $scope.$broadcast('GBP_SAVE_PARAM');
+            $scope.$emit('WIZARD_ACTIONINSTANCE_ADD', $scope.newActionObj);
+            $scope.resetObject();
+        };
+
+        $scope.resetObject = function() {
+            $scope.newActionObj = GBPActionInstanceServices.createObj();
+        };
+
+        $scope.saveParam = function() {
+            
+        };
+
+        $scope.addParam = function(name, type, value) {
+            $scope.newActionObj['parameter-value'].push(GPBServices.createParamObj(name, type, value));
+        };
+
+        loadDefinitions();
+
+    }]);
+
 });
 
 

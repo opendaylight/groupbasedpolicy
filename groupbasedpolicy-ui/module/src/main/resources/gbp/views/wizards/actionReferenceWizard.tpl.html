@@ -1,0 +1,153 @@
+<div ng-controller="actionReferenceWizardCtrl" ng-init="init()">
+    <div class="modal-canvas"></div>
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <i class="icon-remove align-right padding" ng-click="closeWizard('actionReferenceWizard')"></i>
+            <h2>Action reference wizard</h2>
+        </div>
+        <aside class="modal-navigation">
+            <ul>
+                <li class="navigation-item {{wizardPage === 'reference' ? 'selected' : ''}}">References</li>
+                <li class="navigation-item {{wizardPage === 'instance' ? 'selected' : ''}}">Instances</li>
+            </ul>
+        </aside>
+        <section class="modal-content-container">
+            <div ng-show="wizardPage === 'reference'" ng-controller="actionsRefListCtrl">
+                <div class="content">
+                    <label class="basicLabel mb0">Action references list:</label>
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                              <th>Order</th>
+                              <th>Name</th>
+                              <th><button class="btn btn-primary" tooltip="Add Action reference" ng-click="showForm()"><i class="icon-plus"></i></button></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="action in rule['action-ref'] track by $index | orderBy:'order'">
+                                  <th>{{action.order}}</th>
+                                  <td>{{action.name}}</td>
+                                  <td>
+                                    <button class="btn btn-primary" ng-click="showForm(action)" tooltil="Edit Action reference" >
+                                        <i class="icon-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-danger" ng-click="deleteElemAt($index)" tooltip="Remove Action reference">
+                                        <i class="icon-remove"></i>
+                                    </button>
+                                  </td>
+                                </tr>
+                        </tbody>
+                    </table>
+                    <div ng-show="actionReferenceForm">
+                        <form name="actionRefForm" novalidate="novalidate">
+                            <i class="icon-remove align-right padding" ng-click="closeForm()"></i>
+                            <div class="rowWrapper">
+                                <label class="block basicLabel"><span>Instance name:</span>
+                                    <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="actionRefForm.name.$error.required"></i>
+                                </label>
+                                <select class="form-control" ng-model="newActionRefObj.name" ng-options="c.name as getDisplayLabel(c, actionInstanceNames.labels) for c in actionInstanceNames.options" name="name" ng-required="true" >
+                                    <option>--</option>
+                                </select>
+                                <button class="btn btn-primary" tooltip="Add Action instance" ng-click="setPage('instance')"><i class="icon-plus"></i></button>
+                            </div>
+
+                            <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newActionRefObj['order']">
+                                <label class="block basicLabel"><span>Order:</span>
+                                    <i class="icon-exclamation-sign red" tooltip="Invalid pattern" ng-show="errors.int32"></i>
+                                </label>
+                                <input class="form-control" type="text" ng-model="newActionRefObj.order" ng-change="validate(newActionRefObj.order, errors)"/>
+                            </div>
+
+                            <div class="rowWrapper">
+                                <button ng-click="save()" class="btn btn-primary col-md-12" ng-disabled="!actionRefForm.$valid">Save</button>
+                            </div>
+                        </form>
+                    </div>
+
+                </div>
+                <div class="bottom-navigation clearfix">
+                    <button class="btn btn-primary" ng-click="submit()">Submit</button>
+                </div>
+            </div>
+
+            <div ng-show="wizardPage === 'instance'" ng-controller="actionInstanceWizardCtrl" ng-init="init()">
+                <div class="content">
+                    <section class="formWrapper clearfix">
+                        <form name="actionsForm" novalidate="novalidate">
+                            <label class="block">Add actions</label>
+
+                            <div class="rowWrapper">
+                                <label class="block basicLabel">Name
+                                    <i class="icon-exclamation-sign red" tooltip="{{actionsForm.name.$error.required ? 'Required field' : actionsForm.name.$error.pattern ? 'Value must start with letter followed by letters and digits without space' : ''}}" ng-show="actionsForm.name.$error.required || actionsForm.name.$error.pattern"></i>
+                                </label>
+                                <input class="form-control" type="text" name="name" ng-required="true" ng-model="newActionObj.name" ng-pattern="/^[a-zA-Z]([a-zA-Z0-9\-_.])*$/"/>
+                            </div>
+
+                            <div class="rowWrapper" ng-hide="edit === 'view' && !newActionObj['action-definition-id']">
+                                <label class="block basicLabel">Definition</label>
+                                <select class="form-control" ng-model="newActionObj['action-definition-id']" ng-options="d.id as getDisplayLabel(d, actionDefinitions.labels) for d in actionDefinitions.options" ng-change="reloadDefs()">
+                                    <option value="">Select option</option>
+                                </select>
+                            </div>
+
+                            <div class="rowWrapper">
+                                <div ng-repeat="param in defs">
+                                    <div class="row-param" ng-controller="paramCtrl" ng-init="init(param, newActionObj['parameter-value'])">
+                                        <div ng-show="param.type !== 'range' && param.name !== 'sfc-chain-name'">
+                                            <label class="block basicLabel">{{ parameter.name + ' (' + parameter.type + ')' }}:</label>
+                                            <input class="form-control" type="text" ng-model="value" ng-disabled="edit === 'view'"></input>
+                                        </div>
+                                        <div ng-show="param.name === 'sfc-chain-name'">
+                                            <label class="block basicLabel">Pick SFC:</label>
+                                            <input class="form-control" type="text" ng-model="value" disabled></input>
+                                            <table class="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                      <th>Symmetric</th>
+                                                      <th>Name</th>
+                                                      <th>Functions</th>
+                                                      <th>Action</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr ng-repeat="chain in serviceFunctionChains">
+                                                            <th>{{chain.symmetric}}</th>
+                                                            <td>{{chain.name}}</td>
+                                                            <td>
+                                                                <ul>
+                                                                    <li ng-repeat="function in chain['sfc-service-function']">
+                                                                        {{function.name + ' - ' + function.type}}
+                                                                    </li>
+                                                                </ul>
+                                                            </td>
+                                                            <td>
+                                                                <button class="btn btn-primary" ng-click="$parent.value = chain.name" ng-disabled="value === chain.name">
+                                                                    {{value === chain.name ? 'picked' : 'pick'}}
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div ng-show="param.type === 'range'">
+                                            <label class="param-label">{{ parameter.name + ' (' + parameter.type + ')' }}:</label>
+
+                                            <input class="form-control narrow-input-left" type="text" ng-model="value.min" ng-disabled="edit === 'view'"></input>
+                                            <input class="form-control narrow-input-right" type="text" ng-model="value.max" ng-disabled="edit === 'view'"></input>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button class="btn btn-primary col-md-12" ng-click="save()" ng-hide="edit === 'view'" ng-disabled="!actionsForm.$valid">Save</button>
+                        </form>
+                    </section>
+                </div>
+
+                 <div class="bottom-navigation clearfix">
+                    <button class="btn btn-primary" ng-click="setPage('reference')">Back</button>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
