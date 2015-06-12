@@ -118,6 +118,11 @@ public class IngressNatMapper extends FlowTable {
         for (NaptTranslation nat : naptAugL3Endpoint) {
             Endpoint ep = ctx.getEndpointManager().getEndpoint(new EpKey(l3Ep.getL2Context(), l3Ep.getMacAddress()));
             EndpointFwdCtxOrdinals epFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, ep);
+            if (epFwdCtxOrds == null) {
+                LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", ep);
+                continue;
+            }
+
 
             flow = buildNatFlow(nat.getIpAddress(), l3Ep.getIpAddress(), l3Ep.getMacAddress(), epFwdCtxOrds);
             if (flow != null) {

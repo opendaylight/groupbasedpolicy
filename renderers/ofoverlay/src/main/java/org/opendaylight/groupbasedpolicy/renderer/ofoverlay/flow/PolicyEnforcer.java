@@ -135,8 +135,18 @@ public class PolicyEnforcer extends FlowTable {
 
                         EndpointFwdCtxOrdinals srcEpFwdCxtOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx,
                                 policyInfo, srcEp);
+                        if (srcEpFwdCxtOrds == null) {
+                            LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", srcEp);
+                            continue;
+                        }
+
                         EndpointFwdCtxOrdinals dstEpFwdCxtOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx,
                                 policyInfo, dstEp);
+                        if (dstEpFwdCxtOrds == null) {
+                            LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", dstEp);
+                            continue;
+                        }
+
                         int dcgId = dstEpFwdCxtOrds.getCgId();
                         int depgId = dstEpFwdCxtOrds.getEpgId();
                         int scgId = srcEpFwdCxtOrds.getCgId();
@@ -199,19 +209,31 @@ public class PolicyEnforcer extends FlowTable {
             for (EgKey srcEpgKey : ctx.getEndpointManager().getEgKeysForEndpoint(srcEp)) {
 
                 IndexedTenant tenant = ctx.getPolicyResolver().getTenant(srcEpgKey.getTenantId());
-                EndpointGroup group = tenant.getEndpointGroup(srcEpgKey.getEgId());
-                IntraGroupPolicy igp = group.getIntraGroupPolicy();
+                if (tenant != null) {
+                    EndpointGroup group = tenant.getEndpointGroup(srcEpgKey.getEgId());
+                    IntraGroupPolicy igp = group.getIntraGroupPolicy();
 
-                if (igp == null || igp.equals(IntraGroupPolicy.Allow)) {
-                    for (Endpoint dstEp : ctx.getEndpointManager().getEndpointsForGroup(srcEpgKey)) {
-                        EndpointFwdCtxOrdinals srcEpFwdCxtOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx,
-                                policyInfo, srcEp);
-                        EndpointFwdCtxOrdinals dstEpFwdCxtOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx,
-                                policyInfo, dstEp);
-                        int depgId = dstEpFwdCxtOrds.getEpgId();
-                        int sepgId = srcEpFwdCxtOrds.getEpgId();
-                        flowMap.writeFlow(nodeId, TABLE_ID, allowSameEpg(sepgId, depgId));
-                        flowMap.writeFlow(nodeId, TABLE_ID, allowSameEpg(depgId, sepgId));
+                    if (igp == null || igp.equals(IntraGroupPolicy.Allow)) {
+                        for (Endpoint dstEp : ctx.getEndpointManager().getEndpointsForGroup(srcEpgKey)) {
+                            EndpointFwdCtxOrdinals srcEpFwdCxtOrds =
+                                OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, srcEp);
+                            if (srcEpFwdCxtOrds == null) {
+                                LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", srcEp);
+                                continue;
+                            }
+
+                            EndpointFwdCtxOrdinals dstEpFwdCxtOrds =
+                                OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, dstEp);
+                            if (dstEpFwdCxtOrds == null) {
+                                LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", dstEp);
+                                continue;
+                            }
+
+                            int depgId = dstEpFwdCxtOrds.getEpgId();
+                            int sepgId = srcEpFwdCxtOrds.getEpgId();
+                            flowMap.writeFlow(nodeId, TABLE_ID, allowSameEpg(sepgId, depgId));
+                            flowMap.writeFlow(nodeId, TABLE_ID, allowSameEpg(depgId, sepgId));
+                        }
                     }
                 }
             }
@@ -680,7 +702,15 @@ public class PolicyEnforcer extends FlowTable {
             this.dstEp = dstEp;
             this.localNodeId = nodeId;
             this.srcEpOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, srcEp);
+            if (this.srcEpOrds == null) {
+                LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", srcEp);
+                return;
+            }
             this.dstEpOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, dstEp);
+            if (this.dstEpOrds == null) {
+                LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", dstEp);
+                return;
+            }
             this.dstNodeId = dstEp.getAugmentation(OfOverlayContext.class).getNodeId();
             this.srcNodeId = srcEp.getAugmentation(OfOverlayContext.class).getNodeId();
         }
