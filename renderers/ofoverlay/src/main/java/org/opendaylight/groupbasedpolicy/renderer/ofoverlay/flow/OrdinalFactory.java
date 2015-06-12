@@ -48,6 +48,15 @@ public class OrdinalFactory {
     // XXX - need to garbage collect
     private final static ConcurrentMap<ConditionGroup, Integer> cgOrdinals = new ConcurrentHashMap<>();
 
+    /**
+     * Creates an ordinal for the OfOverlay pipeline comparison, based on @TenantId and a
+     * uniqueID (UUID) associated with any other attribute.
+     *
+     * @param tenantId
+     * @param id
+     * @return
+     * @throws Exception
+     */
     public static int getContextOrdinal(final TenantId tenantId, final UniqueId id) throws Exception {
         if (tenantId == null || id == null)
             return 0;

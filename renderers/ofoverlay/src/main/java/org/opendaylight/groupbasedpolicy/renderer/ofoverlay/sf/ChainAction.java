@@ -19,6 +19,7 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.ChainActionFlows.createChainTunnelFlows;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxSetNsiAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxSetNspAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ChainAction.isSrcEpConsumer;
 
 import java.util.List;
 import java.util.Map;
@@ -27,11 +28,13 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.NetworkElements;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.PolicyPair;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcIidFactory;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcNshHeader;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcNshHeader.SfcNshHeaderBuilder;
+import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.sfc.provider.api.SfcProviderRenderedPathAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServiceChainAPI;
@@ -50,6 +53,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definition.Parameter.IsRequired;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definition.Parameter.Type;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definition.ParameterBuilder;
@@ -109,65 +114,59 @@ public class ChainAction extends Action {
 
     @Override
     public List<ActionBuilder> updateAction(List<ActionBuilder> actions, Map<String, Object> params, Integer order,
-            NetworkElements netElements, PolicyPair policyPair, FlowMap flowMap, OfContext ctx) {
+            NetworkElements netElements, PolicyPair policyPair, FlowMap flowMap, OfContext ctx, Direction direction) {
         /*
          * Get the named chain
          */
-        ServiceFunctionPath sfcPath = null;
         String chainName = null;
         if (params != null) {
-            LOG.debug("ChainAction: Searching for named chain");
+            LOG.debug("updateAction: Searching for named chain");
             for (String name : params.keySet()) {
                 if (name instanceof String) {
                     if (name.equals(SFC_CHAIN_NAME)) {
                         chainName = (String) params.get(name);
                         if (chainName == null) {
-                            LOG.error("ChainAction: Chain name was null");
+                            LOG.error("updateAction: Chain name was null");
                             return null;
                         }
-                        sfcPath = getSfcPath(chainName);
                     }
                 }
             }
         } else {
-            LOG.error("ChainAction: Parameters null for chain action");
+            LOG.error("updateAction: Parameters null for chain action");
+            return null;
+        }
+
+        if (chainName == null) {
+            LOG.error("updateAction: Chain name was null");
             return null;
         }
 
         /*
-         * If path is symmetrical
-         *      if src == consumer, chainName
-         *      else src == provider, chainName-Reverse.
+         * If path is symmetrical then there are two RSPs.
+         * if srcEp is in consumer EPG use "rspName"
+         * else srcEp is in provider EPG, "rspName-Reverse".
          */
-        if (sfcPath == null) {
-            LOG.error("ChainAction: SFC Path null for chain {}", chainName);
+        ServiceFunctionPath sfcPath = getSfcPath(chainName);
+        if (sfcPath == null || sfcPath.getName() == null) {
+            LOG.error("updateAction: SFC Path was invalid. Either null or name was null.", sfcPath);
             return null;
         }
-
         // Find existing RSP based on following naming convention, else create it.
         String rspName = sfcPath.getName() + "-gbp-rsp";
         ReadOnlyTransaction rTx = ctx.getDataBroker().newReadOnlyTransaction();
-        RenderedServicePath renderedServicePath = getRspByName(rspName, rTx);
-        if (renderedServicePath == null) {
-            LOG.info("ChainAction: Could not find RSP {} for Chain {}", rspName, chainName);
-
-            CreateRenderedPathInput rspInput = new CreateRenderedPathInputBuilder().setParentServiceFunctionPath(
-                    sfcPath.getName())
-                .setName(rspName)
-                .setSymmetric(Boolean.FALSE)
-                .build();
-            renderedServicePath = SfcProviderRenderedPathAPI.createRenderedServicePathAndState(sfcPath, rspInput);
-            if (renderedServicePath == null) {
-                LOG.error("ChainAction: Could not find or create RSP for chain {}", chainName);
+        RenderedServicePath renderedServicePath;
+        RenderedServicePath rsp = getRspByName(rspName, rTx);
+        if (rsp == null) {
+            renderedServicePath = createRsp(sfcPath, rspName);
+            if (renderedServicePath != null) {
+                LOG.info("updateAction: Could not find RSP {} for Chain {}, created.", rspName, chainName);
+            } else {
+                LOG.error("updateAction: Could not create RSP {} for Chain {}", rspName, chainName);
                 return null;
             }
-        }
-
-        RenderedServicePathFirstHop rspFirstHop = SfcProviderRenderedPathAPI.readRenderedServicePathFirstHop(rspName);
-
-        if (!isValidRspFirstHop(rspFirstHop)) {
-            // Errors logged in method.
-            return null;
+        } else {
+            renderedServicePath = rsp;
         }
 
         NodeId tunnelDestNodeId;
@@ -178,17 +177,51 @@ public class ChainAction extends Action {
             tunnelDestNodeId = netElements.getDstNodeId();
         }
 
-        IpAddress tunnelDest = ctx.getSwitchManager().getTunnelIP(tunnelDestNodeId, TunnelTypeVxlanGpe.class);
+        Long returnVnid = (long) netElements.getSrcEpOrds().getTunnelId();
 
-        if (tunnelDest == null || tunnelDest.getIpv4Address() == null) {
-            LOG.error("ChainAction: Invalid tunnelDest for NodeId: {}", tunnelDestNodeId);
+        try {
+            if (sfcPath.isSymmetric() && direction.equals(Direction.Out)){
+                rspName = rspName + "-Reverse";
+                rsp = getRspByName(rspName, rTx);
+                if (rsp == null) {
+                    LOG.info("updateAction: Could not find Reverse RSP {} for Chain {}", rspName, chainName);
+                    renderedServicePath = createSymmetricRsp(renderedServicePath);
+                    if (renderedServicePath == null) {
+                        LOG.error("updateAction: Could not create RSP {} for Chain {}", rspName, chainName);
+                        return null;
+                    }
+                } else {
+                    renderedServicePath = rsp;
+                }
+                if(isSrcEpConsumer(netElements.getSrcEp(), policyPair.getConsumerEpgId(), ctx)) {
+                    if (netElements.getSrcNodeId().equals(netElements.getLocalNodeId())) {
+                        // Return destination is here
+                        tunnelDestNodeId = netElements.getLocalNodeId();
+                    } else {
+                        tunnelDestNodeId = netElements.getSrcNodeId();
+                    }
+                    returnVnid = (long) netElements.getDstEpOrds().getTunnelId();
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("updateAction: Attemping to determine if srcEp {} was consumer.", netElements.getSrcEp().getKey(), e);
             return null;
         }
 
+        RenderedServicePathFirstHop rspFirstHop = SfcProviderRenderedPathAPI.readRenderedServicePathFirstHop(rspName);
+        if (!isValidRspFirstHop(rspFirstHop)) {
+            // Errors logged in method.
+            return null;
+        }
+
+        IpAddress tunnelDest = ctx.getSwitchManager().getTunnelIP(tunnelDestNodeId, TunnelTypeVxlanGpe.class);
+        if (tunnelDest == null || tunnelDest.getIpv4Address() == null) {
+            LOG.error("updateAction: Invalid tunnelDest for NodeId: {}", tunnelDestNodeId);
+            return null;
+        }
 
         RenderedServicePathHop firstRspHop = renderedServicePath.getRenderedServicePathHop().get(0);
         RenderedServicePathHop lastRspHop = Iterables.getLast(renderedServicePath.getRenderedServicePathHop());
-
         SfcNshHeader sfcNshHeader = new SfcNshHeaderBuilder().setNshTunIpDst(rspFirstHop.getIp().getIpv4Address())
             .setNshTunUdpPort(rspFirstHop.getPort())
             .setNshNsiToChain(firstRspHop.getServiceIndex())
@@ -196,17 +229,64 @@ public class ChainAction extends Action {
             .setNshNsiFromChain((short) (lastRspHop.getServiceIndex().intValue() - 1))
             .setNshNspFromChain(renderedServicePath.getPathId())
             .setNshMetaC1(SfcNshHeader.convertIpAddressToLong(tunnelDest.getIpv4Address()))
-            .setNshMetaC2((long) netElements.getSrcEpOrds().getTunnelId())
+            .setNshMetaC2(returnVnid)
             .build();
 
-        // Cannot set all actions here. Some actions are destination specific, and we don't know a destination is to be
-        // chained until we reach this point. Need to write match/action in External Table for chained packets.
+        // Cannot set all actions here. Some actions are destination specific, and we don't know
+        // a destination is to be
+        // chained until we reach this point. Need to write match/action in External Table for
+        // chained packets.
         actions = addActionBuilder(actions, nxSetNsiAction(sfcNshHeader.getNshNsiToChain()), order);
         actions = addActionBuilder(actions, nxSetNspAction(sfcNshHeader.getNshNspToChain()), order);
-
-        createChainTunnelFlows(sfcNshHeader, netElements, flowMap, ctx);
-
+        boolean swap=false;
+        if ((direction.equals(Direction.Out) && !(isSrcEpConsumer(netElements.getSrcEp(), policyPair.getConsumerEpgId(), ctx)))
+         || (direction.equals(Direction.In) && (isSrcEpConsumer(netElements.getSrcEp(), policyPair.getConsumerEpgId(), ctx)))){
+            swap = true;
+        }
+        createChainTunnelFlows(sfcNshHeader, netElements, flowMap, ctx, swap);
         return actions;
+    }
+
+    private boolean usesReversePath(Direction direction, PolicyPair policyPair, NetworkElements netElements, OfContext ctx) {
+        boolean isConsumer;
+        isConsumer = isSrcEpConsumer(netElements.getSrcEp(), policyPair.getConsumerEpgId(), ctx);
+        if (isConsumer && direction.equals(Direction.In)) {
+            return true;
+        }
+        if (!isConsumer && direction.equals(Direction.Out)) {
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean isSrcEpConsumer(Endpoint srcEp, int consumerEpgOrdId, OfContext ctx ){
+        for (EgKey egKey: ctx.getEndpointManager().getEgKeysForEndpoint(srcEp)) {
+            try {
+                if(OrdinalFactory.getContextOrdinal(egKey.getTenantId(),egKey.getEgId()) == consumerEpgOrdId) {
+                    return true;
+                }
+            } catch (Exception e) {
+                LOG.error("isSrcEpConsumer: Could not determine if srcEp {} was consumer", srcEp.getKey());
+                return false;
+            }
+        }
+        return false;
+    }
+
+    private RenderedServicePath createRsp(ServiceFunctionPath sfcPath, String rspName) {
+        CreateRenderedPathInput rspInput = new CreateRenderedPathInputBuilder().setParentServiceFunctionPath(
+                sfcPath.getName())
+            .setName(rspName)
+            .setSymmetric(sfcPath.isSymmetric())
+            .build();
+         return SfcProviderRenderedPathAPI.createRenderedServicePathAndState(sfcPath, rspInput);
+    }
+
+    private RenderedServicePath createSymmetricRsp(RenderedServicePath rsp) {
+        if (rsp == null) {
+            return null;
+        }
+        return SfcProviderRenderedPathAPI.createSymmetricRenderedServicePathAndState(rsp);
     }
 
     private boolean isValidRspFirstHop(RenderedServicePathFirstHop rspFirstHop) {
@@ -254,13 +334,12 @@ public class ChainAction extends Action {
         if (pv == null) {
             return false;
         }
-        LOG.trace("Invoking RPC for chain {}", pv.getStringValue());
+        LOG.trace("isValidGbpChain: Invoking RPC for chain {}", pv.getStringValue());
         ServiceFunctionChain chain = SfcProviderServiceChainAPI.readServiceFunctionChain(pv.getStringValue());
         return (chain != null);
     }
 
     public ServiceFunctionPath getSfcPath(String chainName) {
-
         ServiceFunctionPaths paths = SfcProviderServicePathAPI.readAllServiceFunctionPaths();
         for (ServiceFunctionPath path : paths.getServiceFunctionPath()) {
             if (path.getServiceChainName().equals(chainName)) {

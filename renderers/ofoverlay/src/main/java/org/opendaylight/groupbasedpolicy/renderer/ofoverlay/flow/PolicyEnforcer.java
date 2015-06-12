@@ -307,54 +307,7 @@ public class PolicyEnforcer extends FlowTable {
 
     private void syncDirection(FlowMap flowMap, NetworkElements netElements, IndexedTenant contractTenant,
             PolicyPair policyPair, Rule rule, Direction direction, int priority) {
-        /*
-         * Create the ordered action list. The implicit action is "allow", and
-         * is therefore always in the list
-         */
 
-        List<ActionBuilder> actionBuilderList = new ArrayList<ActionBuilder>();
-        if (rule.getActionRef() != null) {
-            /*
-             * Pre-sort by references using order, then name
-             */
-            List<ActionRef> actionRefList = new ArrayList<ActionRef>(rule.getActionRef());
-            Collections.sort(actionRefList, ActionRefComparator.INSTANCE);
-
-            for (ActionRef actionRule : actionRefList) {
-                ActionInstance actionInstance = contractTenant.getAction(actionRule.getName());
-                if (actionInstance == null) {
-                    // XXX TODO fail the match and raise an exception
-                    LOG.warn("Action instance {} not found", actionRule.getName().getValue());
-                    return;
-                }
-                Action action = SubjectFeatures.getAction(actionInstance.getActionDefinitionId());
-                if (action == null) {
-                    // XXX TODO fail the match and raise an exception
-                    LOG.warn("Action definition {} not found", actionInstance.getActionDefinitionId().getValue());
-                    return;
-                }
-
-                Map<String, Object> params = new HashMap<>();
-                if (actionInstance.getParameterValue() != null) {
-                    for (ParameterValue v : actionInstance.getParameterValue()) {
-                        if (v.getName() == null)
-                            continue;
-                        if (v.getIntValue() != null) {
-                            params.put(v.getName().getValue(), v.getIntValue());
-                        } else if (v.getStringValue() != null) {
-                            params.put(v.getName().getValue(), v.getStringValue());
-                        }
-                    }
-                }
-                /*
-                 * Convert the GBP Action to one or more OpenFlow Actions
-                 */
-                if (!(actionRefList.indexOf(actionRule) == (actionRefList.size() - 1) && action.equals(SubjectFeatures.getAction(AllowAction.DEFINITION.getId())))) {
-                    actionBuilderList = action.updateAction(actionBuilderList, params, actionRule.getOrder(), netElements, policyPair, flowMap, ctx);
-                }
-
-            }
-        }
 
         Map<String, ParameterValue> paramsFromClassifier = new HashMap<>();
         Set<ClassifierDefinitionId> classifiers = new HashSet<>();
@@ -431,6 +384,54 @@ public class PolicyEnforcer extends FlowTable {
             flowMatchBuilders.addAll(matchBuildersToResolve);
         }
 
+        /*
+         * Create the ordered action list. The implicit action is "allow", and
+         * is therefore always in the list
+         */
+
+        List<ActionBuilder> actionBuilderList = new ArrayList<ActionBuilder>();
+        if (rule.getActionRef() != null) {
+            /*
+             * Pre-sort by references using order, then name
+             */
+            List<ActionRef> actionRefList = new ArrayList<ActionRef>(rule.getActionRef());
+            Collections.sort(actionRefList, ActionRefComparator.INSTANCE);
+
+            for (ActionRef actionRule : actionRefList) {
+                ActionInstance actionInstance = contractTenant.getAction(actionRule.getName());
+                if (actionInstance == null) {
+                    // XXX TODO fail the match and raise an exception
+                    LOG.warn("Action instance {} not found", actionRule.getName().getValue());
+                    return;
+                }
+                Action action = SubjectFeatures.getAction(actionInstance.getActionDefinitionId());
+                if (action == null) {
+                    // XXX TODO fail the match and raise an exception
+                    LOG.warn("Action definition {} not found", actionInstance.getActionDefinitionId().getValue());
+                    return;
+                }
+
+                Map<String, Object> params = new HashMap<>();
+                if (actionInstance.getParameterValue() != null) {
+                    for (ParameterValue v : actionInstance.getParameterValue()) {
+                        if (v.getName() == null)
+                            continue;
+                        if (v.getIntValue() != null) {
+                            params.put(v.getName().getValue(), v.getIntValue());
+                        } else if (v.getStringValue() != null) {
+                            params.put(v.getName().getValue(), v.getStringValue());
+                        }
+                    }
+                }
+                /*
+                 * Convert the GBP Action to one or more OpenFlow Actions
+                 */
+                if (!(actionRefList.indexOf(actionRule) == (actionRefList.size() - 1) && action.equals(SubjectFeatures.getAction(AllowAction.DEFINITION.getId())))) {
+                    actionBuilderList = action.updateAction(actionBuilderList, params, actionRule.getOrder(), netElements, policyPair, flowMap, ctx, direction);
+                }
+
+            }
+        }
         FlowBuilder flow = base().setPriority(Integer.valueOf(priority));
         for (MatchBuilder mb : flowMatchBuilders) {
             Match match = mb.build();
@@ -685,7 +686,7 @@ public class PolicyEnforcer extends FlowTable {
         }
 
 
-        Endpoint getSrcEp() {
+        public Endpoint getSrcEp() {
             return srcEp;
         }
 
@@ -695,7 +696,7 @@ public class PolicyEnforcer extends FlowTable {
         }
 
 
-        NodeId getSrcNodeId() {
+        public NodeId getSrcNodeId() {
             return srcNodeId;
         }
 
@@ -715,7 +716,7 @@ public class PolicyEnforcer extends FlowTable {
         }
 
 
-        EndpointFwdCtxOrdinals getDstEpOrds() {
+        public EndpointFwdCtxOrdinals getDstEpOrds() {
             return dstEpOrds;
         }
 
