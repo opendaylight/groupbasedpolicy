@@ -72,7 +72,7 @@
                 <div class="rowWrapper clearfix">
                     <label class="block"><span>Tenants list</span></label>
                     <div class="selectWrapper col-md-12">
-                        <select class="form-control" ng-model="selectedTenant" ng-change="setTenant()" ng-options="getDisplayLabel(d, tenantDisplayLabel) for d in tenantList">
+                        <select class="form-control" ng-model="selectedTenant" ng-change="setTenant(selectedTenant);loadTopo();" ng-options="getDisplayLabel(d, tenantDisplayLabel) for d in tenantList">
                             <option value="">Select option</option>
                         </select>
                     </div>
