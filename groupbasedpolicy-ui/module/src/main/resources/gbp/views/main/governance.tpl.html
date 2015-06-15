@@ -14,5 +14,9 @@
             <section class="mb50" ng-if="menuBox" ng-include src="view_path + 'box/' + menuBox + '.tpl.html'" onload="broadcastCalling('menuBox')"></section>
         </section>
     </aside>
+
+    <section ng-show="wizards.actionReferenceWizard">
+        <div ng-include src="view_path+'wizards/actionReferenceWizard.tpl.html'"></div>
+    </section>
 </section>
 
