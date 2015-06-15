@@ -472,6 +472,20 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
             });
         };
 
+        s.getServiceFunctionChains = function(successCbk, errorCbk) {
+            var restObj = GBPRestangular.one('restconf').one('config').one('service-function-chain:service-function-chains');
+
+            restObj.get().then(function(data) {
+                if(data['service-function-chains']) {
+                    successCbk(data['service-function-chains']['service-function-chain']);
+                } else {
+                    //TODO log error
+                }
+            }, function(res) {
+                // errorCbk(res);
+            });
+        };
+
         s.getUUIDnumber = function() {
             var d = new Date().getTime();
             return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
