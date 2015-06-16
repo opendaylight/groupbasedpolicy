@@ -974,7 +974,10 @@ public class DestinationMapper extends FlowTable {
         MacAddress matcherMac = routerPortMac(destL3c, srcSubnet.getVirtualRouterIp());
         MacAddress epDestMac = destEp.getMacAddress();
         MacAddress destSubnetGatewayMac = routerPortMac(destL3c, destSubnet.getVirtualRouterIp());
-
+        if (srcSubnet.getId().getValue().equals(destSubnet.getId().getValue())) {
+            // This is our final destination, so match on actual EP mac.
+            matcherMac = epDestMac;
+        }
         ArrayList<Instruction> l3instructions = new ArrayList<>();
         List<Action> applyActions = new ArrayList<>();
         List<Action> l3ApplyActions = new ArrayList<>();
@@ -1031,8 +1034,11 @@ public class DestinationMapper extends FlowTable {
         applyActions.add(setdCG);
         applyActions.add(setNextHop);
 
-        Action setDlSrc = setDlSrcAction(destSubnetGatewayMac);
-        l3ApplyActions.add(setDlSrc);
+        // Lets not re-write the srcMac if its local.
+        if (!(matcherMac.getValue().equals(epDestMac.getValue()))) {
+            Action setDlSrc = setDlSrcAction(destSubnetGatewayMac);
+            l3ApplyActions.add(setDlSrc);
+        }
 
         Action setDlDst = setDlDstAction(epDestMac);
         l3ApplyActions.add(setDlDst);
