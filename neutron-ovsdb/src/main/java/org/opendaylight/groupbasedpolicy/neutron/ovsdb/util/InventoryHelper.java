@@ -256,6 +256,7 @@ public class InventoryHelper {
                 tunnelBuilder.setIp(ip);
                 tunnelBuilder.setPort(tunnelType.getPortNumber());
                 tunnelBuilder.setNodeConnectorId(nodeConnectorId);
+                tunnelBuilder.setTunnelType(tunnelType.getTunnelType());
                 tunnelFound = true;
                 tunnelsUpdated = true;
                 break;
@@ -278,7 +279,10 @@ public class InventoryHelper {
         existingTunnels.add(tunnelBuilder.build());
 
         // Update the OfOverlayNodeConfig with the new tunnel information
-        OfOverlayNodeConfig newConfig=ofOverlayNodeConfigBuilder.setTunnel(new ArrayList<Tunnel>(existingTunnels)).build();
+        if (!existingTunnels.isEmpty()) {
+            ofOverlayNodeConfigBuilder.setTunnel(new ArrayList<Tunnel>(existingTunnels));
+        }
+        OfOverlayNodeConfig newConfig = ofOverlayNodeConfigBuilder.build();
         if (addOfOverlayAugmentation(newConfig, nodeIdString, dataBroker)) {
             LOG.trace("updateOfOverlayConfig - Added Tunnel: {} to Node: {} at NodeConnector: {}",tunnelBuilder.build(), nodeIdString, nodeConnectorIdString);
             return;
