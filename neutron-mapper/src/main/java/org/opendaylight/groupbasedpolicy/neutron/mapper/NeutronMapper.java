@@ -20,12 +20,14 @@ import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronNetworkAw
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronPortAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronRouterAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronSecurityGroupAware;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronSecurityRuleAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronSubnetAware;
 import org.opendaylight.neutron.spi.INeutronFloatingIPAware;
 import org.opendaylight.neutron.spi.INeutronNetworkAware;
 import org.opendaylight.neutron.spi.INeutronPortAware;
 import org.opendaylight.neutron.spi.INeutronRouterAware;
 import org.opendaylight.neutron.spi.INeutronSecurityGroupAware;
+import org.opendaylight.neutron.spi.INeutronSecurityRuleAware;
 import org.opendaylight.neutron.spi.INeutronSubnetAware;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService;
 import org.osgi.framework.BundleContext;
@@ -60,6 +62,10 @@ public class NeutronMapper implements AutoCloseable {
         ServiceRegistration<INeutronSecurityGroupAware> neutronSecurityGroupAwareRegistration = context.registerService(
                 INeutronSecurityGroupAware.class, new NeutronSecurityGroupAware(dataProvider), null);
         registrations.add(neutronSecurityGroupAwareRegistration);
+
+        ServiceRegistration<INeutronSecurityRuleAware> neutronSecurityRuleAwareRegistration = context.registerService(
+                INeutronSecurityRuleAware.class, new NeutronSecurityRuleAware(dataProvider), null);
+        registrations.add(neutronSecurityRuleAwareRegistration);
 
         NeutronRouterAware.init(dataProvider, epService);
         ServiceRegistration<INeutronRouterAware> neutronRouterAwareRegistration = context.registerService(
