@@ -383,6 +383,11 @@ public class NeutronRouterAware implements INeutronRouterAware {
                     .build());
             }
         }
+        if (neutronSubnet.getGatewayIP() != null) {
+            l3Eps.add(new L3Builder().setL3Context(oldL3ContextId)
+                    .setIpAddress(Utils.createIpAddress(neutronSubnet.getGatewayIP()))
+                    .build());
+        }
 
         if (!l3Eps.isEmpty()) {
             epService.unregisterEndpoint(new UnregisterEndpointInputBuilder().setL3(l3Eps).build());
