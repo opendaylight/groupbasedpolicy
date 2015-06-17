@@ -14,7 +14,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 
 /**
  * A listener to events related to endpoints being added, removed or updated.
- * @author readams
  */
 public interface EndpointListener {
     /**
@@ -23,7 +22,7 @@ public interface EndpointListener {
      * @param epKey the key for the affected endpoint
      */
     public void endpointUpdated(EpKey epKey);
-    
+
     /**
      * An endpoint attached to a particular node have been added, removed,
      * or updated
@@ -31,9 +30,9 @@ public interface EndpointListener {
      * @param epKey the key for the affected endpoint
      */
     public void nodeEndpointUpdated(NodeId nodeId, EpKey epKey);
-    
+
     /**
-     * An endpoint for an endpoint group have been added, removed, 
+     * An endpoint for an endpoint group have been added, removed,
      * or updated.
      * @param egKey the key for the affected endpoint group
      * @param epKey the key for the affected endpoint

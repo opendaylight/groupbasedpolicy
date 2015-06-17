@@ -472,27 +472,31 @@ public class EndpointManager implements AutoCloseable, DataChangeListener {
                         && getLocationType(newL3Ep).equals(LocationType.External)) {
                     if (newL3Ep.getNetworkContainment() != null) {
                         arpTasker.addMacForL3EpAndCreateEp(newL3Ep);
-                        return;
                     } else {
                         LOG.error("Cannot generate MacAddress for L3Endpoint {}. NetworkContainment is null.", newL3Ep);
                         return;
                     }
                 }
+                if (newL3Ep.getL2Context() != null && newL3Ep.getMacAddress() != null) {
+                    notifyEndpointUpdated(new EpKey(newL3Ep.getL2Context(), newL3Ep.getMacAddress()));
+                }
+                return;
             } else {
                 LOG.error("{} is not a valid L3 Endpoint", newL3Ep);
                 return;
             }
-            return;
         }
 
         if (oldL3Ep != null && newL3Ep == null) {
             // deleted L3Endpoint
+            notifyEndpointUpdated(new EpKey(oldL3Ep.getL2Context(), oldL3Ep.getMacAddress()));
             return;
         }
 
         if (oldL3Ep != null && newL3Ep != null) {
             LOG.trace("Updating L3 Endpoint {}");
             // updated Endpoint
+            notifyEndpointUpdated(new EpKey(newL3Ep.getL2Context(), newL3Ep.getMacAddress()));
             return;
         }
         if (newL3Ep.getAugmentation(OfOverlayL3Context.class) == null) {
@@ -632,7 +636,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener {
             // Get map of EPGs and their Endpoints for Node
             ConcurrentMap<EgKey, Set<EpKey>> map = endpointsByGroupByNode.get(oldLoc);
             // For each EPG in the removed endpoint...
-            for (EndpointGroupId oldEpgId : newEpgIds) {
+            for (EndpointGroupId oldEpgId : oldEpgIds) {
                 EgKey oldEgKey = new EgKey(oldEp.getTenant(), oldEpgId);
                 // Get list of endpoints for EPG
                 Set<EpKey> eps = map.get(oldEgKey);
