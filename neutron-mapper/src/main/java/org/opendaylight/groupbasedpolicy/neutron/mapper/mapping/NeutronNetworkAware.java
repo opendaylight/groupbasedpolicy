@@ -9,12 +9,16 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.neutron.gbp.util.NeutronGbpIidFactory;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.NetworkClient;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.Router;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronMapperIidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
@@ -33,7 +37,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gb
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.mapper.rev150223.mappings.network.mappings.NetworkMapping;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.mapper.rev150223.mappings.network.mappings.NetworkMappingBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup.IntraGroupPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroupBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L2BridgeDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L2BridgeDomainBuilder;
@@ -51,6 +54,7 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(NeutronNetworkAware.class);
     private final DataBroker dataProvider;
+    private Set<TenantId> tenantsWithRouterEntities = new HashSet<>();
 
     public NeutronNetworkAware(DataBroker dataProvider) {
         this.dataProvider = checkNotNull(dataProvider);
@@ -75,20 +79,20 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         L2FloodDomainId l2FdId = new L2FloodDomainId(network.getID());
         TenantId tenantId = new TenantId(Utils.normalizeUuid(network.getTenantID()));
-        addEpgDhcpIfMissing(tenantId, rwTx);
-        addEpgRouterIfMissing(tenantId, rwTx);
-        // Note that Router External doesn't mean the router exists yet, it simply means it will connect to one.
-        if(network.getRouterExternal()) {
-            addEpgExternalIfMissing(tenantId, rwTx);
-        }
-        Description domainDescription = new Description(MappingUtils.NEUTRON_NETWORK__ + network.getID());
         Name name = null;
         if (network.getNetworkName() != null) {
-            name = new Name(network.getNetworkName());
+            try {
+                name = new Name(network.getNetworkName());
+            } catch (Exception e) {
+                name = null;
+                LOG.info("Name of Neutron Network '{}' is ignored.",
+                        network.getNetworkName());
+                LOG.debug("Name exception", e);
+            }
         }
+
         L3ContextId l3ContextId = new L3ContextId(UUID.randomUUID().toString());
         L3Context l3Context = new L3ContextBuilder().setId(l3ContextId)
-            .setDescription(domainDescription)
             .setName(name)
             .build();
         rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l3ContextIid(tenantId, l3ContextId), l3Context, true);
@@ -96,14 +100,12 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
         L2BridgeDomainId l2BdId = new L2BridgeDomainId(UUID.randomUUID().toString());
         L2BridgeDomain l2Bd = new L2BridgeDomainBuilder().setId(l2BdId)
             .setParent(l3ContextId)
-            .setDescription(domainDescription)
             .setName(name)
             .build();
         rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l2BridgeDomainIid(tenantId, l2BdId), l2Bd, true);
 
         L2FloodDomain l2Fd = new L2FloodDomainBuilder().setId(l2FdId)
             .setParent(l2BdId)
-            .setDescription(domainDescription)
             .setName(name)
             .build();
         rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l2FloodDomainIid(tenantId, l2FdId), l2Fd, true);
@@ -114,8 +116,14 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
             .build();
         rwTx.put(LogicalDatastoreType.OPERATIONAL, NeutronMapperIidFactory.networkMappingIid(l2FdId), networkMapping, true);
 
-        if (network.getRouterExternal() != null
-                && network.getRouterExternal() == true) {
+        if (!tenantsWithRouterEntities.contains(tenantId)) {
+            tenantsWithRouterEntities.add(tenantId);
+            Router.writeRouterEntitiesToTenant(tenantId, rwTx);
+            Router.writeRouterClauseWithConsProvEic(tenantId, null, rwTx);
+            NetworkClient.writeConsumerNamedSelector(tenantId, Router.CONTRACT_CONSUMER_SELECTOR, rwTx);
+        }
+        if (network.getRouterExternal() != null && network.getRouterExternal() == true) {
+            addEpgExternalIfMissing(tenantId, rwTx);
             addExternalNetworkIfMissing(l2Fd.getId(), rwTx);
         }
         DataStoreHelper.submitToDs(rwTx);
@@ -140,41 +148,10 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
             EndpointGroup epgExternal = new EndpointGroupBuilder()
                 .setId(MappingUtils.EPG_EXTERNAL_ID)
                 .setName(new Name("EXTERNAL_group"))
-                .setDescription(new Description(MappingUtils.NEUTRON_EXTERNAL__ + "epg_external_networks"))
-                .setIntraGroupPolicy(IntraGroupPolicy.RequireContract)
+                .setDescription(new Description(MappingUtils.NEUTRON_EXTERNAL + "epg_external_networks"))
                 .build();
             rwTx.put(LogicalDatastoreType.CONFIGURATION,
                     IidFactory.endpointGroupIid(tenantId, MappingUtils.EPG_EXTERNAL_ID), epgExternal, true);
-        }
-    }
-
-    private void addEpgDhcpIfMissing(TenantId tenantId, ReadWriteTransaction rwTx) {
-        InstanceIdentifier<EndpointGroup> epgDhcpIid = IidFactory.endpointGroupIid(tenantId, MappingUtils.EPG_DHCP_ID);
-        Optional<EndpointGroup> potentialDhcpEpg = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
-                epgDhcpIid, rwTx);
-        if (!potentialDhcpEpg.isPresent()) {
-            EndpointGroup epgDhcp = new EndpointGroupBuilder()
-                .setId(MappingUtils.EPG_DHCP_ID)
-                .setName(new Name("DHCP_group"))
-                .setDescription(new Description("Group where are all DHCP endpoints."))
-                .setIntraGroupPolicy(IntraGroupPolicy.RequireContract)
-                .build();
-            rwTx.put(LogicalDatastoreType.CONFIGURATION, epgDhcpIid, epgDhcp);
-        }
-    }
-
-    private void addEpgRouterIfMissing(TenantId tenantId, ReadWriteTransaction rwTx) {
-        Optional<EndpointGroup> potentialEpgRouter = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.endpointGroupIid(tenantId, MappingUtils.EPG_ROUTER_ID), rwTx);
-        if (!potentialEpgRouter.isPresent()) {
-            EndpointGroup epgRouter = new EndpointGroupBuilder()
-                .setId(MappingUtils.EPG_ROUTER_ID)
-                .setName(new Name("ROUTER_group"))
-                .setDescription(new Description(MappingUtils.NEUTRON_ROUTER__ + "epg_routers"))
-                .setIntraGroupPolicy(IntraGroupPolicy.RequireContract)
-                .build();
-            rwTx.put(LogicalDatastoreType.CONFIGURATION,
-                    IidFactory.endpointGroupIid(tenantId, MappingUtils.EPG_ROUTER_ID), epgRouter);
         }
     }
 

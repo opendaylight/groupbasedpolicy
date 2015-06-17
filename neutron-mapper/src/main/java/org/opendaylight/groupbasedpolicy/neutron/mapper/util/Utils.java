@@ -10,12 +10,8 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.util;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.net.Inet4Address;
-import java.net.Inet6Address;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 
-import org.apache.commons.net.util.SubnetUtils;
-import org.apache.commons.net.util.SubnetUtils.SubnetInfo;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
@@ -23,15 +19,15 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Prefix;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.net.InetAddresses;
 
-/**
- * @author Martin Sunal
- */
 public class Utils {
 
-    private Utils() {}
+    private Utils() {
+        throw new UnsupportedOperationException("Cannot create an instance.");
+    }
 
     /**
      * This implementation does not use nameservice lookups (e.g. no DNS).
@@ -69,6 +65,7 @@ public class Utils {
     }
 
     public static String getStringIpPrefix(IpPrefix ipPrefix) {
+        Preconditions.checkNotNull(ipPrefix);
         if (ipPrefix.getIpv4Prefix() != null) {
             return ipPrefix.getIpv4Prefix().getValue();
         }
@@ -80,48 +77,6 @@ public class Utils {
             return ipAddress.getIpv4Address().getValue();
         }
         return ipAddress.getIpv6Address().getValue();
-    }
-
-    public static boolean isHostInIpPrefix(IpAddress host, IpPrefix ipPrefix) {
-        String ipAddress = "";
-        int ipVersion = 0;
-        if (host.getIpv4Address() != null) {
-            ipAddress = host.getIpv4Address().getValue();
-            ipVersion = 4;
-        } else {
-            ipAddress = host.getIpv6Address().getValue();
-            ipVersion = 6;
-        }
-        String cidr = getStringIpPrefix(ipPrefix);
-
-        if (ipVersion == 4) {
-            try {
-                SubnetUtils util = new SubnetUtils(cidr);
-                SubnetInfo info = util.getInfo();
-                return info.isInRange(ipAddress);
-            } catch (IllegalArgumentException e) {
-                return false;
-            }
-        }
-
-        if (ipVersion == 6) {
-            String[] parts = cidr.split("/");
-            try {
-                int length = Integer.parseInt(parts[1]);
-                byte[] cidrBytes = ((Inet6Address) InetAddress.getByName(parts[0])).getAddress();
-                byte[] ipBytes = ((Inet6Address) InetAddress.getByName(ipAddress)).getAddress();
-                int i;
-                for (i = 0; i < length; i++) { // offset is to ensure proper comparison
-                    if ((((cidrBytes[i / 8]) & 0x000000FF) & (1 << (7 - (i % 8)))) != (((ipBytes[i / 8]) & 0x000000FF) & (1 << (7 - (i % 8))))) {
-                        return false;
-                    }
-                }
-                return true;
-            } catch (UnknownHostException e) {
-                return false;
-            }
-        }
-        return false;
     }
 
     public static String normalizeUuid(String string) {

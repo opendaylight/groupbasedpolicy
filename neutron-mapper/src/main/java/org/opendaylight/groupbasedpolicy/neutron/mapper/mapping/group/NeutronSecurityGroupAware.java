@@ -5,7 +5,7 @@
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
-package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping;
+package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.group;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -15,6 +15,8 @@ import java.util.List;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.StatusCode;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.NeutronSecurityRuleAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
@@ -29,6 +31,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroupBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup.IntraGroupPolicy;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,9 +48,13 @@ public class NeutronSecurityGroupAware implements INeutronSecurityGroupAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(NeutronSecurityGroupAware.class);
     private final DataBroker dataProvider;
+    private final NeutronSecurityRuleAware secRuleAware;
+    private final SecGroupDao secGroupDao;
 
-    public NeutronSecurityGroupAware(DataBroker dataProvider) {
+    public NeutronSecurityGroupAware(DataBroker dataProvider, NeutronSecurityRuleAware secRuleAware, SecGroupDao secGroupDao) {
         this.dataProvider = checkNotNull(dataProvider);
+        this.secRuleAware = checkNotNull(secRuleAware);
+        this.secGroupDao = checkNotNull(secGroupDao);
     }
 
     /**
@@ -75,13 +82,30 @@ public class NeutronSecurityGroupAware implements INeutronSecurityGroupAware {
         }
     }
 
-    public static boolean addNeutronSecurityGroup(NeutronSecurityGroup secGroup, ReadWriteTransaction rwTx) {
+    public boolean addNeutronSecurityGroup(NeutronSecurityGroup secGroup, ReadWriteTransaction rwTx) {
+        secGroupDao.addSecGroup(secGroup);
         TenantId tenantId = new TenantId(Utils.normalizeUuid(secGroup.getSecurityGroupTenantID()));
         EndpointGroupId providerEpgId = new EndpointGroupId(secGroup.getSecurityGroupUUID());
         EndpointGroupBuilder providerEpgBuilder = new EndpointGroupBuilder().setId(providerEpgId);
-        providerEpgBuilder.setName(new Name(MappingUtils.NEUTRON_GROUP__ + Strings.nullToEmpty(secGroup.getSecurityGroupName())));
-        providerEpgBuilder.setDescription(new Description(MappingUtils.NEUTRON_GROUP__
-                + Strings.nullToEmpty(secGroup.getSecurityGroupDescription())));
+        if (!Strings.isNullOrEmpty(secGroup.getSecurityGroupName())) {
+            try {
+                providerEpgBuilder.setName(new Name(secGroup.getSecurityGroupName()));
+            } catch (Exception e) {
+                LOG.info("Name '{}' of Neutron Security-group '{}' is ignored.",
+                        secGroup.getSecurityGroupName(), secGroup.getSecurityGroupUUID());
+                LOG.debug("Name exception", e);
+            }
+        }
+        if (!Strings.isNullOrEmpty(secGroup.getSecurityGroupDescription())) {
+            try {
+                providerEpgBuilder.setDescription(new Description(secGroup.getSecurityGroupDescription()));
+            } catch (Exception e) {
+                LOG.info("Description '{}' of Neutron Security-group '{}' is ignored.",
+                        secGroup.getSecurityGroupDescription(), secGroup.getSecurityGroupUUID());
+                LOG.debug("Description exception", e);
+            }
+        }
+        providerEpgBuilder.setIntraGroupPolicy(IntraGroupPolicy.RequireContract);
         rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.endpointGroupIid(tenantId, providerEpgId),
                 providerEpgBuilder.build(), true);
         List<NeutronSecurityRule> secRules = secGroup.getSecurityRules();
@@ -110,20 +134,20 @@ public class NeutronSecurityGroupAware implements INeutronSecurityGroupAware {
 
     public static void addEpgIfMissing(TenantId tenantId, EndpointGroupId epgId, ReadWriteTransaction rwTx) {
         InstanceIdentifier<EndpointGroup> epgIid = IidFactory.endpointGroupIid(tenantId, epgId);
-        Optional<EndpointGroup> potentialConsumerEpg = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
-                epgIid, rwTx);
+        Optional<EndpointGroup> potentialConsumerEpg =
+                DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, epgIid, rwTx);
         if (!potentialConsumerEpg.isPresent()) {
             EndpointGroup epg = new EndpointGroupBuilder().setId(epgId)
-                .setName(new Name(MappingUtils.NEUTRON_GROUP__))
-                .setDescription(new Description(MappingUtils.NEUTRON_GROUP__ + "EPG was created just based on remote group ID from a security rule."))
+                .setDescription(new Description(MappingUtils.NEUTRON_GROUP
+                        + "EPG was created just based on remote group ID from a security rule."))
                 .build();
             rwTx.put(LogicalDatastoreType.CONFIGURATION, epgIid, epg);
         }
     }
 
-    private static boolean addNeutronSecurityRule(List<NeutronSecurityRule> secRules, ReadWriteTransaction rwTx) {
+    private boolean addNeutronSecurityRule(List<NeutronSecurityRule> secRules, ReadWriteTransaction rwTx) {
         for (NeutronSecurityRule secRule : secRules) {
-            boolean isSecRuleAdded = NeutronSecurityRuleAware.addNeutronSecurityRule(secRule, rwTx);
+            boolean isSecRuleAdded = secRuleAware.addNeutronSecurityRule(secRule, rwTx);
             if (!isSecRuleAdded) {
                 return false;
             }
@@ -179,6 +203,7 @@ public class NeutronSecurityGroupAware implements INeutronSecurityGroupAware {
         }
         TenantId tenantId = new TenantId(Utils.normalizeUuid(secGroup.getSecurityGroupTenantID()));
         EndpointGroupId epgId = new EndpointGroupId(secGroup.getSecurityGroupUUID());
+        secGroupDao.removeSecGroup(epgId);
         Optional<EndpointGroup> potentialEpg = DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.endpointGroupIid(tenantId, epgId), rwTx);
         if (!potentialEpg.isPresent()) {
@@ -192,7 +217,7 @@ public class NeutronSecurityGroupAware implements INeutronSecurityGroupAware {
 
     private boolean deleteNeutronSecurityRules(List<NeutronSecurityRule> secRules, ReadWriteTransaction rwTx) {
         for (NeutronSecurityRule secRule : secRules) {
-            boolean isSecRuleDeleted = NeutronSecurityRuleAware.deleteNeutronSecurityRule(secRule, rwTx);
+            boolean isSecRuleDeleted = secRuleAware.deleteNeutronSecurityRule(secRule, rwTx);
             if (!isSecRuleDeleted) {
                 return false;
             }

@@ -20,13 +20,16 @@ import java.util.concurrent.ExecutionException;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
-import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.neutron.gbp.util.NeutronGbpIidFactory;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.NetworkClient;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.NetworkService;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.Router;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.group.NeutronSecurityGroupAware;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.NeutronSecurityRuleAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils.ForwardingCtx;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
@@ -98,15 +101,18 @@ public class NeutronPortAware implements INeutronPortAware {
     private static final String DEVICE_OWNER_ROUTER_IFACE = "network:router_interface";
     private static final String DEVICE_OWNER_ROUTER_GATEWAY = "network:router_gateway";
     private static final String DEVICE_OWNER_FLOATING_IP = "network:floatingip";
-    private static final int DHCP_SERVER_PORT = 67;
-    private static final int DNS_SERVER_PORT = 53;
     private final DataBroker dataProvider;
     private final EndpointService epService;
+    private final NeutronSecurityRuleAware secRuleAware;
+    private final NeutronSecurityGroupAware secGrpAware;
     private final static Map<String, UniqueId> floatingIpPortByDeviceId = new HashMap<>();
+    private final Set<TenantId> tenantsWithNetworkSeviceEntities = new HashSet<>();
 
-    public NeutronPortAware(DataBroker dataProvider, EndpointService epService) {
+    public NeutronPortAware(DataBroker dataProvider, EndpointService epService, NeutronSecurityRuleAware secRuleAware, NeutronSecurityGroupAware secGrpAware) {
         this.dataProvider = checkNotNull(dataProvider);
         this.epService = checkNotNull(epService);
+        this.secRuleAware = checkNotNull(secRuleAware);
+        this.secGrpAware = secGrpAware;
     }
 
     /**
@@ -149,20 +155,23 @@ public class NeutronPortAware implements INeutronPortAware {
         TenantId tenantId = new TenantId(Utils.normalizeUuid(port.getTenantID()));
         if (isDhcpPort(port)) {
             LOG.trace("Port is DHCP port. - {}", port.getID());
-            List<NeutronSecurityRule> dhcpSecRules = createDhcpSecRules(port, null, rwTx);
-            if (dhcpSecRules == null) {
+            Neutron_IPs firstIp = MappingUtils.getFirstIp(port.getFixedIPs());
+            if (firstIp == null) {
+                LOG.warn("Illegal state - DHCP port does not have an IP address.");
                 rwTx.cancel();
                 return;
             }
-
-            for (NeutronSecurityRule dhcpSecRule : dhcpSecRules) {
-                boolean isDhcpSecRuleAdded = NeutronSecurityRuleAware.addNeutronSecurityRule(dhcpSecRule, rwTx);
-                if (!isDhcpSecRuleAdded) {
-                    rwTx.cancel();
-                    return;
-                }
+            if (!tenantsWithNetworkSeviceEntities.contains(tenantId)) {
+                tenantsWithNetworkSeviceEntities.add(tenantId);
+                NetworkService.writeNetworkServiceEntitiesToTenant(tenantId, rwTx);
+                NetworkService.writeDhcpClauseWithConsProvEic(tenantId, null, rwTx);
+                NetworkService.writeDnsClauseWithConsProvEic(tenantId, null, rwTx);
+                NetworkClient.writeNetworkClientEntitiesToTenant(tenantId, rwTx);
+                NetworkClient.writeConsumerNamedSelector(tenantId, NetworkService.DHCP_CONTRACT_CONSUMER_SELECTOR, rwTx);
+                NetworkClient.writeConsumerNamedSelector(tenantId, NetworkService.DNS_CONTRACT_CONSUMER_SELECTOR, rwTx);
             }
         } else {
+            // this is here b/c stable/kilo sends sec-groups only with port
             List<NeutronSecurityGroup> secGroups = port.getSecurityGroups();
             if (secGroups != null) {
                 for (NeutronSecurityGroup secGroup : secGroups) {
@@ -170,28 +179,16 @@ public class NeutronPortAware implements INeutronPortAware {
                     Optional<EndpointGroup> potentialEpg = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
                             IidFactory.endpointGroupIid(tenantId, epgId), rwTx);
                     if (!potentialEpg.isPresent()) {
-                        boolean isSecGroupCreated = NeutronSecurityGroupAware.addNeutronSecurityGroup(secGroup, rwTx);
+                        boolean isSecGroupCreated = secGrpAware.addNeutronSecurityGroup(secGroup, rwTx);
                         if (!isSecGroupCreated) {
                             rwTx.cancel();
                             return;
-                        }
-                        if (containsSecRuleWithRemoteSecGroup(secGroup)) {
-                            List<NeutronSecurityRule> dhcpSecRules = createDhcpSecRules(port, epgId, rwTx);
-                            if (dhcpSecRules == null) {
-                                rwTx.cancel();
-                                return;
-                            }
-                            List<NeutronSecurityRule> routerSecRules = NeutronRouterAware.createRouterSecRules(port, epgId, rwTx);
-                            if (routerSecRules == null) {
-                                rwTx.cancel();
-                                return;
-                            }
                         }
                     } else {
                         List<NeutronSecurityRule> secRules = secGroup.getSecurityRules();
                         if (secRules != null) {
                             for (NeutronSecurityRule secRule : secRules) {
-                                NeutronSecurityRuleAware.addNeutronSecurityRule(secRule, rwTx);
+                                secRuleAware.addNeutronSecurityRule(secRule, rwTx);
                             }
                         }
                     }
@@ -240,7 +237,7 @@ public class NeutronPortAware implements INeutronPortAware {
         List<EndpointGroupId> epgIds = new ArrayList<>();
         // each EP has to be in EPG ANY, except dhcp and router
         epgIds.add(MappingUtils.EPG_EXTERNAL_ID);
-        epgIds.add(MappingUtils.EPG_ROUTER_ID);
+        epgIds.add(Router.EPG_ID);
         EndpointL3 epL3 = createL3Endpoint(tenantId, epL3Key, epgIds, networkContainment);
         InstanceIdentifier<EndpointL3> iid_l3 = IidFactory.l3EndpointIid(l3ContextId, ipAddress);
         rwTx.put(LogicalDatastoreType.OPERATIONAL, iid_l3, epL3, true);
@@ -296,18 +293,14 @@ public class NeutronPortAware implements INeutronPortAware {
     }
 
     public static boolean addL3PrefixEndpoint(L3ContextId l3ContextId, IpPrefix ipPrefix, IpAddress ipAddress, TenantId tenantId,
-            ReadWriteTransaction rwTx, EndpointService epService) {
-
+            EndpointService epService) {
         EndpointL3PrefixKey epL3PrefixKey = new EndpointL3PrefixKey( ipPrefix, l3ContextId);
-
         EndpointL3Key epL3Key = null;
         List<EndpointL3Key> l3Gateways = new ArrayList<>();
         if (ipAddress != null) {
             epL3Key = new EndpointL3Key(ipAddress, l3ContextId);
             l3Gateways.add(epL3Key);
         }
-
-
         try {
             RegisterL3PrefixEndpointInput registerL3PrefixEpRpcInput = createRegisterL3PrefixEndpointInput(epL3PrefixKey, l3Gateways,tenantId);
 
@@ -338,106 +331,6 @@ public class NeutronPortAware implements INeutronPortAware {
             return false;
         }
         return true;
-    }
-
-    private List<NeutronSecurityRule> createDhcpSecRules(NeutronPort port, EndpointGroupId consumerEpgId, ReadTransaction rTx) {
-        TenantId tenantId = new TenantId(Utils.normalizeUuid(port.getTenantID()));
-        Neutron_IPs firstIp = MappingUtils.getFirstIp(port.getFixedIPs());
-        if (firstIp == null) {
-            LOG.warn("Illegal state - DHCP port does not have an IP address.");
-            return null;
-        }
-        IpAddress ipAddress = Utils.createIpAddress(firstIp.getIpAddress());
-        boolean isIPv4Ethertype = ipAddress.getIpv4Address() == null ? false : true;
-        List<NeutronSecurityRule> rules = new ArrayList<>();
-        rules.add(createDhcpIngressSecRule(port.getID(), tenantId, isIPv4Ethertype, consumerEpgId));
-        rules.add(createDnsSecRule(port.getID(), tenantId, isIPv4Ethertype, consumerEpgId));
-        rules.add(createUdpEgressSecRule(port.getID(), tenantId, isIPv4Ethertype, consumerEpgId));
-        rules.add(createIcmpSecRule(port.getID(), tenantId, isIPv4Ethertype, consumerEpgId, true));
-        rules.add(createIcmpSecRule(port.getID(), tenantId, isIPv4Ethertype, consumerEpgId, false));
-        return rules;
-    }
-
-    private NeutronSecurityRule createDhcpIngressSecRule(String ruleUuid, TenantId tenantId, boolean isIPv4Ethertype, EndpointGroupId consumerEpgId) {
-        NeutronSecurityRule dhcpSecRule = new NeutronSecurityRule();
-        dhcpSecRule.setSecurityRuleGroupID(MappingUtils.EPG_DHCP_ID.getValue());
-        dhcpSecRule.setSecurityRuleTenantID(tenantId.getValue());
-        if (consumerEpgId != null) {
-            dhcpSecRule.setSecurityRemoteGroupID(consumerEpgId.getValue());
-        }
-        dhcpSecRule.setSecurityRuleUUID(NeutronUtils.INGRESS + "_dhcp__" + ruleUuid);
-        dhcpSecRule.setSecurityRuleDirection(NeutronUtils.INGRESS);
-        dhcpSecRule.setSecurityRulePortMin(DHCP_SERVER_PORT);
-        dhcpSecRule.setSecurityRulePortMax(DHCP_SERVER_PORT);
-        dhcpSecRule.setSecurityRuleProtocol(NeutronUtils.UDP);
-        if (isIPv4Ethertype) {
-            dhcpSecRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
-        } else {
-            dhcpSecRule.setSecurityRuleEthertype(NeutronUtils.IPv6);
-        }
-        return dhcpSecRule;
-    }
-
-    private NeutronSecurityRule createUdpEgressSecRule(String ruleUuid, TenantId tenantId, boolean isIPv4Ethertype, EndpointGroupId consumerEpgId) {
-        NeutronSecurityRule dhcpSecRule = new NeutronSecurityRule();
-        dhcpSecRule.setSecurityRuleGroupID(MappingUtils.EPG_DHCP_ID.getValue());
-        dhcpSecRule.setSecurityRuleTenantID(tenantId.getValue());
-        if (consumerEpgId != null) {
-            dhcpSecRule.setSecurityRemoteGroupID(consumerEpgId.getValue());
-        }
-        dhcpSecRule.setSecurityRuleUUID(NeutronUtils.EGRESS + "_udp__" + ruleUuid);
-        dhcpSecRule.setSecurityRuleDirection(NeutronUtils.EGRESS);
-        dhcpSecRule.setSecurityRuleProtocol(NeutronUtils.UDP);
-        if (isIPv4Ethertype) {
-            dhcpSecRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
-        } else {
-            dhcpSecRule.setSecurityRuleEthertype(NeutronUtils.IPv6);
-        }
-        return dhcpSecRule;
-    }
-
-    private NeutronSecurityRule createDnsSecRule(String ruleUuid, TenantId tenantId, boolean isIPv4Ethertype, EndpointGroupId consumerEpgId) {
-        NeutronSecurityRule dnsSecRule = new NeutronSecurityRule();
-        dnsSecRule.setSecurityRuleGroupID(MappingUtils.EPG_DHCP_ID.getValue());
-        dnsSecRule.setSecurityRuleTenantID(tenantId.getValue());
-        if (consumerEpgId != null) {
-            dnsSecRule.setSecurityRemoteGroupID(consumerEpgId.getValue());
-        }
-        dnsSecRule.setSecurityRuleUUID(NeutronUtils.INGRESS + "_dns__" + ruleUuid);
-        dnsSecRule.setSecurityRuleDirection(NeutronUtils.INGRESS);
-        dnsSecRule.setSecurityRulePortMin(DNS_SERVER_PORT);
-        dnsSecRule.setSecurityRulePortMax(DNS_SERVER_PORT);
-        dnsSecRule.setSecurityRuleProtocol(NeutronUtils.UDP);
-        if (isIPv4Ethertype) {
-            dnsSecRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
-        } else {
-            dnsSecRule.setSecurityRuleEthertype(NeutronUtils.IPv6);
-        }
-        return dnsSecRule;
-    }
-
-    private NeutronSecurityRule createIcmpSecRule(String ruleUuid, TenantId tenantId, boolean isIPv4Ethertype, EndpointGroupId consumerEpgId,
-            boolean isEgress) {
-        NeutronSecurityRule icmpSecRule = new NeutronSecurityRule();
-        icmpSecRule.setSecurityRuleGroupID(MappingUtils.EPG_DHCP_ID.getValue());
-        icmpSecRule.setSecurityRuleTenantID(tenantId.getValue());
-        if (consumerEpgId != null) {
-            icmpSecRule.setSecurityRemoteGroupID(consumerEpgId.getValue());
-        }
-        if (isEgress) {
-            icmpSecRule.setSecurityRuleUUID(NeutronUtils.EGRESS + "_icmp__" + ruleUuid);
-            icmpSecRule.setSecurityRuleDirection(NeutronUtils.EGRESS);
-        } else {
-            icmpSecRule.setSecurityRuleUUID(NeutronUtils.INGRESS + "_icmp__" + ruleUuid);
-            icmpSecRule.setSecurityRuleDirection(NeutronUtils.INGRESS);
-        }
-        icmpSecRule.setSecurityRuleProtocol(NeutronUtils.ICMP);
-        if (isIPv4Ethertype) {
-            icmpSecRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
-        } else {
-            icmpSecRule.setSecurityRuleEthertype(NeutronUtils.IPv6);
-        }
-        return icmpSecRule;
     }
 
     /**
@@ -656,9 +549,6 @@ public class NeutronPortAware implements INeutronPortAware {
 
     private static RegisterL3PrefixEndpointInput createRegisterL3PrefixEndpointInput(EndpointL3PrefixKey key, List<EndpointL3Key> endpointL3Keys, TenantId tenantId) {
         List<EndpointGroupId> epgIds = new ArrayList<>();
-        // each EP has to be in EPG ANY, except dhcp and router
-        epgIds.add(MappingUtils.EPG_ANY_ID);
-
         List<EndpointL3Gateways> l3Gateways = new ArrayList<EndpointL3Gateways>();
         for (EndpointL3Key epL3Key : endpointL3Keys) {
             EndpointL3Gateways l3Gateway = new EndpointL3GatewaysBuilder().setIpAddress(epL3Key.getIpAddress())
@@ -692,11 +582,8 @@ public class NeutronPortAware implements INeutronPortAware {
 
     private static RegisterEndpointInput createRegisterEndpointInput(NeutronPort port, ForwardingCtx fwCtx) {
         List<EndpointGroupId> epgIds = new ArrayList<>();
-        // each EP has to be in EPG ANY, except dhcp and router
         if (isDhcpPort(port)) {
-            epgIds.add(MappingUtils.EPG_DHCP_ID);
-        } else if (!containsSecRuleWithRemoteSecGroup(port.getSecurityGroups())) {
-            epgIds.add(MappingUtils.EPG_ANY_ID);
+            epgIds.add(NetworkService.EPG_ID);
         }
 
         List<NeutronSecurityGroup> securityGroups = port.getSecurityGroups();
@@ -712,6 +599,7 @@ public class NeutronPortAware implements INeutronPortAware {
             for (NeutronSecurityGroup secGrp : securityGroups) {
                 epgIds.add(new EndpointGroupId(secGrp.getSecurityGroupUUID()));
             }
+            epgIds.add(NetworkClient.EPG_ID);
         }
         LocationType locationType = LocationType.Internal;
         if(isRouterGatewayPort(port)) {
@@ -743,32 +631,6 @@ public class NeutronPortAware implements INeutronPortAware {
 
         }
         return inputBuilder.build();
-    }
-
-    private static boolean containsSecRuleWithRemoteSecGroup(List<NeutronSecurityGroup> secGroups) {
-        if (secGroups == null) {
-            return false;
-        }
-        for (NeutronSecurityGroup secGroup : secGroups) {
-            boolean containsSecRuleWithRemoteSecGroup = containsSecRuleWithRemoteSecGroup(secGroup);
-            if (containsSecRuleWithRemoteSecGroup) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean containsSecRuleWithRemoteSecGroup(NeutronSecurityGroup secGroup) {
-        List<NeutronSecurityRule> secRules = secGroup.getSecurityRules();
-        if (secRules == null) {
-            return false;
-        }
-        for (NeutronSecurityRule secRule : secRules) {
-            if (!Strings.isNullOrEmpty(secRule.getSecurityRemoteGroupID())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static Name createTapPortName(NeutronPort port) {

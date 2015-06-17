@@ -19,9 +19,11 @@ import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronFloatingI
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronNetworkAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronPortAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronRouterAware;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronSecurityGroupAware;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronSecurityRuleAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronSubnetAware;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.group.NeutronSecurityGroupAware;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.group.SecGroupDao;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.NeutronSecurityRuleAware;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.SecRuleDao;
 import org.opendaylight.neutron.spi.INeutronFloatingIPAware;
 import org.opendaylight.neutron.spi.INeutronNetworkAware;
 import org.opendaylight.neutron.spi.INeutronPortAware;
@@ -42,38 +44,43 @@ public class NeutronMapper implements AutoCloseable {
         checkNotNull(rpcProvider);
         checkNotNull(context);
         EndpointService epService = rpcProvider.getRpcService(EndpointService.class);
-
         registerAwareProviders(dataProvider, epService, context);
     }
 
     private void registerAwareProviders(DataBroker dataProvider, EndpointService epService, BundleContext context) {
-        ServiceRegistration<INeutronNetworkAware> neutronNetworkAwareRegistration = context.registerService(
-                INeutronNetworkAware.class, new NeutronNetworkAware(dataProvider), null);
+        ServiceRegistration<INeutronNetworkAware> neutronNetworkAwareRegistration =
+                context.registerService(INeutronNetworkAware.class, new NeutronNetworkAware(dataProvider), null);
         registrations.add(neutronNetworkAwareRegistration);
 
-        ServiceRegistration<INeutronSubnetAware> neutronSubnetAwareRegistration = context.registerService(
-                INeutronSubnetAware.class, new NeutronSubnetAware(dataProvider), null);
+        ServiceRegistration<INeutronSubnetAware> neutronSubnetAwareRegistration =
+                context.registerService(INeutronSubnetAware.class, new NeutronSubnetAware(dataProvider), null);
         registrations.add(neutronSubnetAwareRegistration);
 
-        ServiceRegistration<INeutronPortAware> neutronPortAwareRegistration = context.registerService(
-                INeutronPortAware.class, new NeutronPortAware(dataProvider, epService), null);
-        registrations.add(neutronPortAwareRegistration);
-
-        ServiceRegistration<INeutronSecurityGroupAware> neutronSecurityGroupAwareRegistration = context.registerService(
-                INeutronSecurityGroupAware.class, new NeutronSecurityGroupAware(dataProvider), null);
-        registrations.add(neutronSecurityGroupAwareRegistration);
-
-        ServiceRegistration<INeutronSecurityRuleAware> neutronSecurityRuleAwareRegistration = context.registerService(
-                INeutronSecurityRuleAware.class, new NeutronSecurityRuleAware(dataProvider), null);
+        SecGroupDao secGroupDao = new SecGroupDao();
+        SecRuleDao secRuleDao = new SecRuleDao();
+        NeutronSecurityRuleAware securityRuleAware = new NeutronSecurityRuleAware(dataProvider, secRuleDao, secGroupDao);
+        ServiceRegistration<INeutronSecurityRuleAware> neutronSecurityRuleAwareRegistration =
+                context.registerService(INeutronSecurityRuleAware.class, securityRuleAware, null);
         registrations.add(neutronSecurityRuleAwareRegistration);
 
-        NeutronRouterAware.init(dataProvider, epService);
-        ServiceRegistration<INeutronRouterAware> neutronRouterAwareRegistration = context.registerService(
-                INeutronRouterAware.class, NeutronRouterAware.getInstance(), null);
+        NeutronSecurityGroupAware securityGroupAware = new NeutronSecurityGroupAware(dataProvider, securityRuleAware, secGroupDao);
+        ServiceRegistration<INeutronSecurityGroupAware> neutronSecurityGroupAwareRegistration =
+                context.registerService(INeutronSecurityGroupAware.class, securityGroupAware, null);
+        registrations.add(neutronSecurityGroupAwareRegistration);
+
+        NeutronPortAware portAware =
+                new NeutronPortAware(dataProvider, epService, securityRuleAware, securityGroupAware);
+        ServiceRegistration<INeutronPortAware> neutronPortAwareRegistration =
+                context.registerService(INeutronPortAware.class, portAware, null);
+        registrations.add(neutronPortAwareRegistration);
+
+        NeutronRouterAware routerAware = new NeutronRouterAware(dataProvider, epService, securityRuleAware);
+        ServiceRegistration<INeutronRouterAware> neutronRouterAwareRegistration =
+                context.registerService(INeutronRouterAware.class, routerAware, null);
         registrations.add(neutronRouterAwareRegistration);
 
-        ServiceRegistration<INeutronFloatingIPAware> neutronFloatingIpAwareRegistration = context.registerService(
-                INeutronFloatingIPAware.class, new NeutronFloatingIpAware(dataProvider, epService), null);
+        ServiceRegistration<INeutronFloatingIPAware> neutronFloatingIpAwareRegistration = context
+            .registerService(INeutronFloatingIPAware.class, new NeutronFloatingIpAware(dataProvider, epService), null);
         registrations.add(neutronFloatingIpAwareRegistration);
     }
 
