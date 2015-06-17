@@ -11,6 +11,7 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.arp;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
@@ -64,6 +65,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubnetId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3AddressBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey;
@@ -188,6 +190,10 @@ public class ArpTasker implements PacketProcessingListener {
         if (l2BdId != null) {
             updatedL3Ep = updatedL3EpBuilder.setL2Context(l2BdId).build();
             EndpointBuilder newEpBuilder = new EndpointBuilder(updatedL3Ep).setKey(new EndpointKey(l2BdId, sha));
+            L3AddressBuilder l3AddressBuilder = new L3AddressBuilder();
+            l3AddressBuilder.setIpAddress(updatedL3Ep.getIpAddress())
+                .setL3Context(updatedL3Ep.getL3Context());
+            newEpBuilder.setL3Address(Arrays.asList(l3AddressBuilder.build()));
             OfOverlayL3Context augmentation = updatedL3Ep.getAugmentation(OfOverlayL3Context.class);
             if (augmentation != null) {
                 newEpBuilder.addAugmentation(OfOverlayContext.class, new OfOverlayContextBuilder(augmentation).build());
