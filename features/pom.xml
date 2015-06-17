@@ -22,7 +22,6 @@
     <features.file>features.xml</features.file>
     <config.configfile.directory>etc/opendaylight/karaf</config.configfile.directory>
     <config.groupbasedpolicy.ofoverlayconfigfile>15-groupbasedpolicy-ofoverlay.xml</config.groupbasedpolicy.ofoverlayconfigfile>
-    <config.groupbasedpolicy.opflexconfigfile>15-groupbasedpolicy-opflex.xml</config.groupbasedpolicy.opflexconfigfile>
     <config.groupbasedpolicy.neutronmapperconfigfile>15-neutron-mapper.xml</config.groupbasedpolicy.neutronmapperconfigfile>
     <config.groupbasedpolicy.neutronovsdbconfigfile>15-neutron-ovsdb.xml</config.groupbasedpolicy.neutronovsdbconfigfile>
     <config.groupbasedpolicy.uibackendconfigfile>15-ui-backend.xml</config.groupbasedpolicy.uibackendconfigfile>
@@ -145,10 +144,6 @@
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
-      <artifactId>opflex-renderer</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>ofoverlay-renderer</artifactId>
     </dependency>
     <dependency>
@@ -175,13 +170,6 @@
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>groupbasedpolicy-ofoverlay-config</artifactId>
-      <version>${project.version}</version>
-      <type>xml</type>
-      <classifier>config</classifier>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.groupbasedpolicy</groupId>
-      <artifactId>groupbasedpolicy-opflex-config</artifactId>
       <version>${project.version}</version>
       <type>xml</type>
       <classifier>config</classifier>
