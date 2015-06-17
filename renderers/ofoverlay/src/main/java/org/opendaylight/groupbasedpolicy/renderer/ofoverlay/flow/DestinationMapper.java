@@ -220,10 +220,16 @@ public class DestinationMapper extends FlowTable {
         if (prefixEps != null) {
             LOG.trace("DestinationMapper - Processing L3PrefixEndpoints");
             for (EndpointL3Prefix prefixEp : prefixEps) {
-                Flow prefixFlow = createL3PrefixFlow(prefixEp, policyInfo, nodeId);
-                if (prefixFlow != null) {
-                    flowMap.writeFlow(nodeId, TABLE_ID, prefixFlow);
-                    LOG.trace("Wrote L3Prefix flow");
+                List<Subnet> localSubnets = getLocalSubnets(nodeId);
+                if (localSubnets == null) {
+                    continue;
+                }
+                for (Subnet localSubnet: localSubnets) {
+                    Flow prefixFlow = createL3PrefixFlow(prefixEp, policyInfo, nodeId, localSubnet);
+                    if (prefixFlow != null) {
+                        flowMap.writeFlow(nodeId, TABLE_ID, prefixFlow);
+                        LOG.trace("Wrote L3Prefix flow");
+                    }
                 }
             }
         }
@@ -233,7 +239,7 @@ public class DestinationMapper extends FlowTable {
     // set up next-hop destinations for all the endpoints in the endpoint
     // group on the node
 
-    private Flow createL3PrefixFlow(EndpointL3Prefix prefixEp, PolicyInfo policyInfo, NodeId nodeId) throws Exception {
+    private Flow createL3PrefixFlow(EndpointL3Prefix prefixEp, PolicyInfo policyInfo, NodeId nodeId, Subnet subnet) throws Exception {
         /*
          * Priority: 100+lengthprefix
          * Match: prefix, l3c, "mac address of router" ?
@@ -273,6 +279,13 @@ public class DestinationMapper extends FlowTable {
 
         MacAddress epDestMac = l2Ep.getMacAddress();
         MacAddress destSubnetGatewayMac = l2Ep.getMacAddress();
+        L3Context destL3c = getL3ContextForSubnet(prefixEp.getTenant(), subnet);
+        if (destL3c == null || destL3c.getId() == null) {
+            LOG.error("No L3 Context found associated with subnet {}", subnet.getId());
+            return null;
+        }
+
+        MacAddress matcherMac = routerPortMac(destL3c, subnet.getVirtualRouterIp());
 
         ArrayList<Instruction> l3instructions = new ArrayList<>();
         List<Action> applyActions = new ArrayList<>();
@@ -382,7 +395,7 @@ public class DestinationMapper extends FlowTable {
             return null;
         }
 
-        MatchBuilder mb = new MatchBuilder().setEthernetMatch(ethernetMatch(null, null, etherType));
+        MatchBuilder mb = new MatchBuilder().setEthernetMatch(ethernetMatch(null, matcherMac, etherType));
         addNxRegMatch(mb, RegMatch.of(NxmNxReg6.class, Long.valueOf(epFwdCtxOrds.getL3Id())));
         Match match = mb.build();
         FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "L3prefix", match);
