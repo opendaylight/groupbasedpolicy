@@ -13,10 +13,11 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.Router;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.NeutronSecurityRuleAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils.ForwardingCtx;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronMapperIidFactory;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
@@ -27,13 +28,11 @@ import org.opendaylight.neutron.spi.NeutronCRUDInterfaces;
 import org.opendaylight.neutron.spi.NeutronPort;
 import org.opendaylight.neutron.spi.NeutronRouter;
 import org.opendaylight.neutron.spi.NeutronRouter_Interface;
-import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.neutron.spi.NeutronSubnet;
 import org.opendaylight.neutron.spi.Neutron_IPs;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2FloodDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Name;
@@ -63,23 +62,14 @@ import com.google.common.collect.ImmutableList;
 public class NeutronRouterAware implements INeutronRouterAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(NeutronRouterAware.class);
-    private static final NeutronRouterAware INSTANCE = new NeutronRouterAware();
-    private static DataBroker dataProvider;
-    private static EndpointService epService;
+    private final DataBroker dataProvider;
+    private final  EndpointService epService;
+    private final NeutronSecurityRuleAware secRuleAware;
 
-    private NeutronRouterAware() {
-        if (NeutronRouterAware.INSTANCE != null) {
-            throw new IllegalStateException("Already instantiated");
-        }
-    }
-
-    public static NeutronRouterAware getInstance() {
-        return NeutronRouterAware.INSTANCE;
-    }
-
-    public static void init(DataBroker dataProvider, EndpointService epService) {
-        NeutronRouterAware.dataProvider = checkNotNull(dataProvider);
-        NeutronRouterAware.epService = checkNotNull(epService);
+    public NeutronRouterAware(DataBroker dataProvider, EndpointService epService, NeutronSecurityRuleAware secRuleAware) {
+        this.dataProvider = checkNotNull(dataProvider);
+        this.epService = checkNotNull(epService);
+        this.secRuleAware = checkNotNull(secRuleAware);
     }
 
     @Override
@@ -159,7 +149,7 @@ public class NeutronRouterAware implements INeutronRouterAware {
             for (String route : router.getRoutes()) {
                 IpPrefix ipPrefix = Utils.createIpPrefix(route);
                 boolean addedL3Prefix = NeutronPortAware.addL3PrefixEndpoint(l3ContextIdFromRouterId, ipPrefix,
-                        defaultGateway, tenantId, rwTx, epService);
+                        defaultGateway, tenantId, epService);
                 if (!addedL3Prefix) {
                     LOG.warn("Could not add EndpointL3Prefix for Neutron route {} for router {}", route, router.getID());
                     rwTx.cancel();
@@ -183,19 +173,6 @@ public class NeutronRouterAware implements INeutronRouterAware {
 
             if (Strings.isNullOrEmpty(routerPort.getTenantID())) {
                 routerPort.setTenantID(router.getTenantID());
-            }
-            // create security rules for router
-            List<NeutronSecurityRule> routerSecRules = createRouterSecRules(routerPort, null, rwTx);
-            if (routerSecRules == null) {
-                rwTx.cancel();
-                return;
-            }
-            for (NeutronSecurityRule routerSecRule : routerSecRules) {
-                boolean isRouterSecRuleAdded = NeutronSecurityRuleAware.addNeutronSecurityRule(routerSecRule, rwTx);
-                if (!isRouterSecRuleAdded) {
-                    rwTx.cancel();
-                    return;
-                }
             }
 
             boolean isSuccessful = setNewL3ContextToEpsFromSubnet(tenantId, l3Context, subnet, rwTx);
@@ -221,9 +198,9 @@ public class NeutronRouterAware implements INeutronRouterAware {
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         TenantId tenantId = new TenantId(Utils.normalizeUuid(router.getTenantID()));
         Optional<EndpointGroup> potentialEpg = DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.endpointGroupIid(tenantId, MappingUtils.EPG_ROUTER_ID), rwTx);
+                IidFactory.endpointGroupIid(tenantId, Router.EPG_ID), rwTx);
         if (!potentialEpg.isPresent()) {
-            LOG.warn("Illegal state - Endpoint group {} does not exist.", MappingUtils.EPG_ROUTER_ID.getValue());
+            LOG.warn("Illegal state - Endpoint group {} does not exist.", Router.EPG_ID.getValue());
             rwTx.cancel();
             return;
         }
@@ -292,20 +269,6 @@ public class NeutronRouterAware implements INeutronRouterAware {
         }
         rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.subnetIid(tenantId, subnet.getId()), subnet);
 
-        // create security rules for router
-        List<NeutronSecurityRule> routerSecRules = createRouterSecRules(routerPort, null, rwTx);
-        if (routerSecRules == null) {
-            rwTx.cancel();
-            return;
-        }
-        for (NeutronSecurityRule routerSecRule : routerSecRules) {
-            boolean isRouterSecRuleAdded = NeutronSecurityRuleAware.addNeutronSecurityRule(routerSecRule, rwTx);
-            if (!isRouterSecRuleAdded) {
-                rwTx.cancel();
-                return;
-            }
-        }
-
         boolean isSuccessful = setNewL3ContextToEpsFromSubnet(tenantId, l3Context, subnet, rwTx);
         if (!isSuccessful) {
             rwTx.cancel();
@@ -322,7 +285,7 @@ public class NeutronRouterAware implements INeutronRouterAware {
         }
         return new L3ContextBuilder().setId(new L3ContextId(router.getID()))
             .setName(l3ContextName)
-            .setDescription(new Description(MappingUtils.NEUTRON_ROUTER__ + router.getID()))
+            .setDescription(new Description(MappingUtils.NEUTRON_ROUTER + router.getID()))
             .build();
     }
 
@@ -397,50 +360,6 @@ public class NeutronRouterAware implements INeutronRouterAware {
             epService.unregisterEndpoint(new UnregisterEndpointInputBuilder().setL3(l3Eps).build());
         }
         return true;
-    }
-
-    public static List<NeutronSecurityRule> createRouterSecRules(NeutronPort port, EndpointGroupId consumerEpgId,
-            ReadTransaction rTx) {
-        TenantId tenantId = new TenantId(Utils.normalizeUuid(port.getTenantID()));
-        Neutron_IPs firstIp = MappingUtils.getFirstIp(port.getFixedIPs());
-        if (firstIp == null) {
-            LOG.warn("Illegal state - Router port does not have an IP address.");
-            return null;
-        }
-        SubnetId routerSubnetId = new SubnetId(firstIp.getSubnetUUID());
-        Optional<Subnet> potentialSubnet = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.subnetIid(tenantId, routerSubnetId), rTx);
-        if (!potentialSubnet.isPresent()) {
-            LOG.warn("Illegal state - Subnet {} where is router port does not exist.", routerSubnetId.getValue());
-            return null;
-        }
-        IpPrefix ipSubnet = potentialSubnet.get().getIpPrefix();
-        NeutronSecurityRule routerRuleEgress = createRouterSecRule(port.getID(), tenantId, ipSubnet, consumerEpgId,
-                true);
-        NeutronSecurityRule routerRuleIngress = createRouterSecRule(port.getID(), tenantId, ipSubnet, consumerEpgId,
-                false);
-        return ImmutableList.of(routerRuleEgress, routerRuleIngress);
-    }
-
-    private static NeutronSecurityRule createRouterSecRule(String ruleUuid, TenantId tenantId, IpPrefix ipSubnet,
-            EndpointGroupId consumerEpgId, boolean isEgress) {
-        NeutronSecurityRule routerSecRule = new NeutronSecurityRule();
-        routerSecRule.setSecurityRuleGroupID(MappingUtils.EPG_ROUTER_ID.getValue());
-        routerSecRule.setSecurityRuleTenantID(tenantId.getValue());
-        routerSecRule.setSecurityRuleRemoteIpPrefix(Utils.getStringIpPrefix(ipSubnet));
-        if (isEgress) {
-            routerSecRule.setSecurityRuleUUID(NeutronUtils.EGRESS + "__" + ruleUuid);
-            routerSecRule.setSecurityRuleDirection(NeutronUtils.EGRESS);
-        } else {
-            routerSecRule.setSecurityRuleUUID(NeutronUtils.INGRESS + "__" + ruleUuid);
-            routerSecRule.setSecurityRuleDirection(NeutronUtils.INGRESS);
-        }
-        if (ipSubnet.getIpv4Prefix() != null) {
-            routerSecRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
-        } else {
-            routerSecRule.setSecurityRuleEthertype(NeutronUtils.IPv6);
-        }
-        return routerSecRule;
     }
 
     @Override

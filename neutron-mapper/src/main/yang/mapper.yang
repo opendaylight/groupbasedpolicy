@@ -25,27 +25,6 @@ module neutron-mapper {
         }
     }
 
-    grouping endpoint-group-pair-fields {
-        leaf provider-tenant-id {
-            type gbp-common:tenant-id;
-        }
-        leaf consumer-tenant-id {
-            type gbp-common:tenant-id;
-        }
-        leaf contract-tenant-id {
-            type gbp-common:tenant-id;
-        }
-        leaf provider-epg-id {
-            type gbp-common:endpoint-group-id;
-        }
-        leaf consumer-epg-id {
-            type gbp-common:endpoint-group-id;
-        }
-        leaf contract-id {
-            type gbp-common:contract-id;
-        }
-    }
-
     container mappings {
         config false;
         container network-mappings {
@@ -63,12 +42,6 @@ module neutron-mapper {
                     description "A unique ID of l3-context generated for neutron network";
                     type gbp-common:l3-context-id;
                 }
-            }
-        }
-        container endpoint-group-pair-to-contract-mappings {
-            list endpoint-group-pair-to-contract-mapping {
-                key "provider-tenant-id provider-epg-id consumer-tenant-id consumer-epg-id";
-                uses endpoint-group-pair-fields;
             }
         }
     }

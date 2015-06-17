@@ -15,6 +15,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2FloodDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRef;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRefBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L2BridgeDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L2FloodDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L3Context;
@@ -22,22 +24,24 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstanceBuilder;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 
 public final class MappingUtils {
 
-    public static final String NEUTRON_RULE__ = "neutron_rule__";
-    public static final String NEUTRON_NETWORK__ = "neutron_network__";
-    public static final String NEUTRON_ROUTER__ = "neutron_router__";
-    public static final String NEUTRON_EXTERNAL__ = "neutron_external_network__";
-    public static final String NEUTRON_GROUP__ = "neutron_group__";
+    public static final String NEUTRON_ROUTER = "neutron_router-";
+    public static final String NEUTRON_EXTERNAL = "neutron_external_network-";
+    public static final String NEUTRON_GROUP = "neutron_group-";
     public static final ActionInstance ACTION_ALLOW = new ActionInstanceBuilder().setName(
-            new ActionName(NEUTRON_RULE__ + "allow"))
+            new ActionName("Allow"))
         .setActionDefinitionId(AllowAction.DEFINITION.getId())
         .build();
-    public static final EndpointGroupId EPG_ANY_ID = new EndpointGroupId("aaaec0ce-dd5a-11e4-b9d6-1681e6b88ec1");
-    public static final EndpointGroupId EPG_DHCP_ID = new EndpointGroupId("ddd6cfe6-dfe5-11e4-8a00-1681e6b88ec1");
-    public static final EndpointGroupId EPG_ROUTER_ID = new EndpointGroupId("1118172e-cd84-4933-a35f-749f9a651de9");
+    public static final List<ActionRef> ACTION_REF_ALLOW =
+            ImmutableList.of(new ActionRefBuilder().setName(ACTION_ALLOW.getName()).setOrder(0).build());
     public static final EndpointGroupId EPG_EXTERNAL_ID = new EndpointGroupId("eeeaa3a2-e9ba-44e0-a462-bea923d30e38");
+
+    public static final String NAME_VALUE_DELIMETER = "-";
+    public static final String NAME_DELIMETER = "_";
+    public static final String NAME_DOUBLE_DELIMETER = "__";
 
     private MappingUtils() {
         throw new UnsupportedOperationException("Cannot create an instance.");
