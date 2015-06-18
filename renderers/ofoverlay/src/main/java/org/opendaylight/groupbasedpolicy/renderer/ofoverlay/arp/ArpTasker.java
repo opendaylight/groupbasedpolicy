@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2015 Cisco Systems, Inc. and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -10,11 +10,9 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.arp;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicLong;
 
 import javax.annotation.Nullable;
 
@@ -35,6 +33,7 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNode;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNodeConnector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.TableKey;
@@ -46,7 +45,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.service.rev130819.AddF
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.service.rev130819.RemoveFlowInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.service.rev130819.RemoveFlowInputBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.service.rev130819.SalFlowService;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.FlowCookie;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.FlowModFlags;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.FlowRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.InstructionsBuilder;
@@ -92,15 +90,17 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.Pa
 import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketProcessingService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketReceived;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSetMultimap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -114,12 +114,10 @@ public class ArpTasker implements PacketProcessingListener {
     private static final String ARP_REPLY_TO_CONTROLLER_FLOW_NAME = "arpReplyToController";
     private static final int ARP_REPLY_TO_CONTROLLER_FLOW_PRIORITY = 10000;
     private static final Instruction SEND_TO_CONTROLLER_INSTRUCTION;
-    private static final MacAddress SENDER_MAC = new MacAddress("B4:71:13:06:52:D9");
     private final ArpSender arpSender;
     private final SalFlowService flowService;
     private final DataBroker dataProvider;
-    private final AtomicLong flowCookie = new AtomicLong();
-    private final ConcurrentHashMap<String, Pair<RemoveFlowInput, EndpointL3Key>> arpRemoveFlowInputAndL3EpKeyById = new ConcurrentHashMap<>();
+    private final ListMultimap<String, Pair<RemoveFlowInput, EndpointL3Key>> requestInfoByKey = Multimaps.synchronizedListMultimap(ArrayListMultimap.<String, Pair<RemoveFlowInput, EndpointL3Key>>create());
 
     static {
         ApplyActions applyActions = new ApplyActionsBuilder().setAction(
@@ -168,10 +166,12 @@ public class ArpTasker implements PacketProcessingListener {
         }
         Ipv4Address spa = ArpUtils.bytesToIp(arp.getSenderProtocolAddress());
         MacAddress sha = ArpUtils.bytesToMac(arp.getSenderHardwareAddress());
-        Pair<RemoveFlowInput, EndpointL3Key> removeFlowInputAndL3EpKey = arpRemoveFlowInputAndL3EpKeyById.get(createKey(
-                nodeKey.getId(), spa));
-        flowService.removeFlow(removeFlowInputAndL3EpKey.getLeft());
-        final EndpointL3Key l3EpKey = removeFlowInputAndL3EpKey.getRight();
+        List<Pair<RemoveFlowInput, EndpointL3Key>> removeFlowInputsAndL3EpKeys = requestInfoByKey.get(createKey(nodeKey.getId(), spa));
+        for (Pair<RemoveFlowInput, EndpointL3Key> removeFlowInputAndL3EpKey : removeFlowInputsAndL3EpKeys) {
+            flowService.removeFlow(removeFlowInputAndL3EpKey.getLeft());
+        }
+        // each L3EpKey on right-side part of Pair is same
+        final EndpointL3Key l3EpKey = removeFlowInputsAndL3EpKeys.get(0).getRight();
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         InstanceIdentifier<EndpointL3> l3EpIid = IidFactory.l3EndpointIid(l3EpKey.getL3Context(),
                 l3EpKey.getIpAddress());
@@ -226,11 +226,15 @@ public class ArpTasker implements PacketProcessingListener {
     }
 
     /**
-     * Uses ARP to get MAC for the given L3 endpoint. Tries to find MAC for IP from {@link EndpointL3#getKey()}.<br>
+     * Uses ARP to get MAC for the given L3 endpoint. Tries to find MAC for IP from
+     * {@link EndpointL3#getKey()}.<br>
      * {@link EndpointL3#getNetworkContainment()} has to point to a {@link Subnet}.<br>
-     * ARP Request is sent from all node connectors obtaining from {@link OfOverlayNodeConfig#getExternalInterfaces()}<br>
+     * ARP Request is sent from all node connectors obtaining from
+     * {@link OfOverlayNodeConfig#getExternalInterfaces()}<br>
      * MAC address obtained from ARP reply is added to the given L3 endpoint (if still exits).<br>
-     * Also an {@link Endpoint} is created based on MAC If the subnet from network containment point to {@link L2BridgeDomain} directly or throught {@link L2FloodDomain}.
+     * Also an {@link Endpoint} is created based on MAC If the subnet from network containment point
+     * to {@link L2BridgeDomain} directly or throught {@link L2FloodDomain}.
+     *
      * @param l3Ep the L3 endpoint which needs to have an MAC address
      */
     public void addMacForL3EpAndCreateEp(final EndpointL3 l3Ep) {
@@ -240,13 +244,13 @@ public class ArpTasker implements PacketProcessingListener {
             return;
         }
         ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
-        final SetMultimap<Node, NodeConnectorId> extIfacesByNode = readNodesWithExternalIfaces(rTx);
-        if (extIfacesByNode.isEmpty()) {
+        final SetMultimap<Node, Pair<InstanceIdentifier<NodeConnector>, MacAddress>> extNcWithMacByNode = readNodesWithExternalIfaces(rTx);
+        if (extNcWithMacByNode.isEmpty()) {
             LOG.debug("No node with external interface was found.");
             rTx.close();
             return;
         }
-        Ipv4Address senderIpAddress = createSenderIpAddress(l3Ep, rTx);
+        final Ipv4Address senderIpAddress = createSenderIpAddress(l3Ep, rTx);
         if (senderIpAddress == null) {
             LOG.warn("Cannot create sender IPv4 address for L3 endpoint {}", l3Ep);
             rTx.close();
@@ -254,46 +258,55 @@ public class ArpTasker implements PacketProcessingListener {
         }
         rTx.close();
 
-        final ArpMessageAddress senderAddress = new ArpMessageAddress(SENDER_MAC, senderIpAddress);
-        final Flow arpReplyToControllerFlow = createArpReplyToControllerFlow(senderAddress, tpa);
-        for (final Node node : extIfacesByNode.keySet()) {
-            // check if flow with packet-in exists
+        for (final Node node : extNcWithMacByNode.keySet()) {
             final InstanceIdentifier<Node> nodeIid = InstanceIdentifier.builder(Nodes.class)
                 .child(Node.class, node.getKey())
                 .build();
-            final InstanceIdentifier<Flow> flowIid = createFlowIid(arpReplyToControllerFlow, nodeIid);
             final NodeRef nodeRef = new NodeRef(nodeIid);
-            Future<RpcResult<AddFlowOutput>> futureAddFlowResult = flowService.addFlow(new AddFlowInputBuilder(
-                    arpReplyToControllerFlow).setFlowRef(new FlowRef(flowIid)).setNode(nodeRef).build());
-            Futures.addCallback(JdkFutureAdapters.listenInPoolThread(futureAddFlowResult),
-                    new FutureCallback<RpcResult<AddFlowOutput>>() {
+            List<ListenableFuture<RpcResult<AddFlowOutput>>> arpFlowResultFutures = new ArrayList<>();
+            List<Pair<RemoveFlowInput, EndpointL3Key>> flowsForRemove = new ArrayList<>();
+            for (final Pair<InstanceIdentifier<NodeConnector>, MacAddress> extNcIidAndMac : extNcWithMacByNode.get(node)) {
+                final ArpMessageAddress senderAddress = new ArpMessageAddress(extNcIidAndMac.getRight(),
+                        senderIpAddress);
+                NodeConnectorId ncId = extNcIidAndMac.getLeft().firstKeyOf(NodeConnector.class, NodeConnectorKey.class).getId();
+                final Flow arpReplyToControllerFlow = createArpReplyToControllerFlow(senderAddress, tpa, ncId);
+                flowsForRemove.add(new ImmutablePair<>(new RemoveFlowInputBuilder(arpReplyToControllerFlow).setNode(
+                        nodeRef).build(), l3Ep.getKey()));
+                final InstanceIdentifier<Flow> flowIid = createFlowIid(arpReplyToControllerFlow, nodeIid);
+                Future<RpcResult<AddFlowOutput>> futureAddFlowResult = flowService.addFlow(new AddFlowInputBuilder(
+                        arpReplyToControllerFlow).setFlowRef(new FlowRef(flowIid)).setNode(nodeRef).build());
+                arpFlowResultFutures.add(JdkFutureAdapters.listenInPoolThread(futureAddFlowResult));
+            }
+            requestInfoByKey.putAll(createKey(node.getId(), tpa), flowsForRemove);
+            ListenableFuture<List<RpcResult<AddFlowOutput>>> futureArpFlowResults = Futures.allAsList(arpFlowResultFutures);
+            Futures.addCallback(futureArpFlowResults, new FutureCallback<List<RpcResult<AddFlowOutput>>>() {
 
-                        @Override
-                        public void onSuccess(RpcResult<AddFlowOutput> result) {
-                            if (!result.isSuccessful()) {
-                                LOG.warn("ARP Reply to Controller flow was not created: {} \nErrors: {}", flowIid,
-                                        result.getErrors());
-                                return;
-                            }
-                            LOG.debug("ARP Reply to Controller flow was created: {}", flowIid);
-                            arpRemoveFlowInputAndL3EpKeyById.put(
-                                    createKey(node.getId(), tpa),
-                                    new ImmutablePair<>(new RemoveFlowInputBuilder(arpReplyToControllerFlow).setNode(
-                                            nodeRef).build(), l3Ep.getKey()));
-                            for (NodeConnectorId egressNc : extIfacesByNode.get(node)) {
-                                KeyedInstanceIdentifier<NodeConnector, NodeConnectorKey> egressNcIid = nodeIid.child(
-                                        NodeConnector.class, new NodeConnectorKey(egressNc));
-                                ListenableFuture<RpcResult<Void>> futureSendArpResult = arpSender.sendArp(
-                                        senderAddress, tpa, egressNcIid);
-                                Futures.addCallback(futureSendArpResult, logResult(tpa, egressNcIid));
-                            }
+                @Override
+                public void onSuccess(List<RpcResult<AddFlowOutput>> result) {
+                    for (RpcResult<AddFlowOutput> addFlowResult : result) {
+                        if (!addFlowResult.isSuccessful()) {
+                            LOG.warn("An ARP Reply to Controller flow was not created on node {} \nErrors: {}",
+                                    node.getId().getValue(), addFlowResult.getErrors());
+                            continue;
                         }
+                    }
+                    LOG.debug("ARP Reply to Controller flows were created on node {}", node.getId().getValue());
+                    for (final Pair<InstanceIdentifier<NodeConnector>, MacAddress> extNcIidAndMac : extNcWithMacByNode.get(node)) {
+                        final ArpMessageAddress senderAddress = new ArpMessageAddress(extNcIidAndMac.getRight(),
+                                senderIpAddress);
+                        ListenableFuture<RpcResult<Void>> futureSendArpResult = arpSender.sendArp(senderAddress, tpa,
+                                extNcIidAndMac.getLeft());
+                        Futures.addCallback(futureSendArpResult, logResult(tpa, extNcIidAndMac.getLeft()));
+                    }
+                }
 
-                        @Override
-                        public void onFailure(Throwable t) {
-                            LOG.warn("ARP Reply to Controller flow was not created: {}", flowIid, t);
-                        }
-                    });
+                @Override
+                public void onFailure(Throwable t) {
+                    LOG.error(
+                            "Illegal state - Installation of ARP flows on node {} failed. Node can contain just some ARP flows.",
+                            node.getId(), t);
+                }
+            });
         }
     }
 
@@ -305,27 +318,41 @@ public class ArpTasker implements PacketProcessingListener {
         return ipAddress.getIpv4Address();
     }
 
-    private SetMultimap<Node, NodeConnectorId> readNodesWithExternalIfaces(ReadTransaction rTx) {
+    private SetMultimap<Node, Pair<InstanceIdentifier<NodeConnector>, MacAddress>> readNodesWithExternalIfaces(
+            ReadTransaction rTx) {
         Optional<Nodes> potentialNodes = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
                 InstanceIdentifier.builder(Nodes.class).build(), rTx);
         if (!potentialNodes.isPresent() && potentialNodes.get().getNode() != null) {
             return ImmutableSetMultimap.of();
         }
         List<Node> nodes = potentialNodes.get().getNode();
-        SetMultimap<Node, NodeConnectorId> extIfacesByNode = HashMultimap.create();
+        SetMultimap<Node, Pair<InstanceIdentifier<NodeConnector>, MacAddress>> extIfacesByNode = HashMultimap.create();
         for (Node node : nodes) {
-            Optional<Node> potentialNodeFromOper = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
-                    InstanceIdentifier.builder(Nodes.class).child(Node.class, node.getKey()).build(), rTx);
-            if (!potentialNodeFromOper.isPresent()) {
-                LOG.debug("Node exists in CONF DS but not in OPER DS. Node from CONF: {}", node);
-                continue;
-            }
             OfOverlayNodeConfig ofOverlayNode = node.getAugmentation(OfOverlayNodeConfig.class);
             if (ofOverlayNode != null) {
                 List<ExternalInterfaces> externalIfaces = ofOverlayNode.getExternalInterfaces();
                 if (externalIfaces != null) {
                     for (ExternalInterfaces extIface : externalIfaces) {
-                        extIfacesByNode.put(node, extIface.getNodeConnectorId());
+                        NodeConnectorId externalNc = extIface.getNodeConnectorId();
+                        InstanceIdentifier<NodeConnector> extNcIid = InstanceIdentifier.builder(Nodes.class)
+                            .child(Node.class, node.getKey())
+                            .child(NodeConnector.class, new NodeConnectorKey(externalNc))
+                            .build();
+                        Optional<NodeConnector> potentialExtNcFromOper = DataStoreHelper.readFromDs(
+                                LogicalDatastoreType.OPERATIONAL, extNcIid, rTx);
+                        if (!potentialExtNcFromOper.isPresent()) {
+                            LOG.debug("Node connector {} does not exit in OPER DS. Node from CONF: {}",
+                                    externalNc.getValue(), node);
+                            continue;
+                        }
+                        FlowCapableNodeConnector externalFcNc = potentialExtNcFromOper.get().getAugmentation(
+                                FlowCapableNodeConnector.class);
+                        if (externalFcNc == null || externalFcNc.getHardwareAddress() == null) {
+                            LOG.debug("Hardware address does not exist on node connector {}", externalNc.getValue());
+                            LOG.trace("Node connector from OPER DS {}", potentialExtNcFromOper.get());
+                            continue;
+                        }
+                        extIfacesByNode.put(node, new ImmutablePair<>(extNcIid, externalFcNc.getHardwareAddress()));
                     }
                 }
             }
@@ -339,9 +366,9 @@ public class ArpTasker implements PacketProcessingListener {
             return null;
         }
         SubnetInfo subnetInfo = new SubnetUtils(subnetOfL3Ep.getIpPrefix().getIpv4Prefix().getValue()).getInfo();
-        String senderIp = subnetInfo.getLowAddress();
+        String senderIp = subnetInfo.getHighAddress();
         if (senderIp.equals(l3Ep.getKey().getIpAddress().getIpv4Address().getValue())) {
-            senderIp = subnetInfo.getHighAddress();
+            senderIp = subnetInfo.getLowAddress();
         }
         return new Ipv4Address(senderIp);
     }
@@ -367,7 +394,7 @@ public class ArpTasker implements PacketProcessingListener {
         return potentialSubnet.get();
     }
 
-    private Flow createArpReplyToControllerFlow(ArpMessageAddress senderAddress, Ipv4Address ipForRequestedMac) {
+    private Flow createArpReplyToControllerFlow(ArpMessageAddress senderAddress, Ipv4Address ipForRequestedMac, NodeConnectorId inPort) {
         checkNotNull(senderAddress);
         checkNotNull(ipForRequestedMac);
         FlowBuilder arpFlow = new FlowBuilder().setTableId(TABEL_FOR_ARP_FLOW)
@@ -376,11 +403,10 @@ public class ArpTasker implements PacketProcessingListener {
             .setBufferId(OFConstants.OFP_NO_BUFFER)
             .setIdleTimeout(0)
             .setHardTimeout(0)
-            .setCookie(new FlowCookie(BigInteger.valueOf(flowCookie.incrementAndGet())))
             .setFlags(new FlowModFlags(false, false, false, false, false));
-        EthernetMatch ethernetMatch = ArpFlowFactory.createEthernetMatch(senderAddress.getHardwareAddress());
+        EthernetMatch ethernetMatch = ArpFlowFactory.createEthernetMatch();
         ArpMatch arpMatch = ArpFlowFactory.createArpMatch(senderAddress, ipForRequestedMac);
-        Match match = new MatchBuilder().setEthernetMatch(ethernetMatch).setLayer3Match(arpMatch).build();
+        Match match = new MatchBuilder().setEthernetMatch(ethernetMatch).setLayer3Match(arpMatch).setInPort(inPort).build();
         arpFlow.setMatch(match);
         arpFlow.setInstructions(new InstructionsBuilder().setInstruction(
                 ImmutableList.of(SEND_TO_CONTROLLER_INSTRUCTION)).build());
@@ -405,17 +431,17 @@ public class ArpTasker implements PacketProcessingListener {
     }
 
     private FutureCallback<RpcResult<Void>> logResult(final Ipv4Address tpa,
-            final KeyedInstanceIdentifier<NodeConnector, NodeConnectorKey> egressNcIid) {
+            final InstanceIdentifier<NodeConnector> ncIid) {
         return new FutureCallback<RpcResult<Void>>() {
 
             @Override
             public void onSuccess(RpcResult<Void> result) {
-                LOG.debug("ARP Request for IP {} was sent from {}.", tpa.getValue(), egressNcIid);
+                LOG.debug("ARP Request for IP {} was sent from {}.", tpa.getValue(), ncIid);
             }
 
             @Override
             public void onFailure(Throwable t) {
-                LOG.warn("ARP Request for IP {} was NOT sent from {}.", tpa.getValue(), egressNcIid);
+                LOG.warn("ARP Request for IP {} was NOT sent from {}.", tpa.getValue(), ncIid);
             }
         };
     }
