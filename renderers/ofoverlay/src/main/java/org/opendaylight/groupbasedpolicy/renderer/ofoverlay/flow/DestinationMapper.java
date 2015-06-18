@@ -21,6 +21,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMa
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
+import org.opendaylight.groupbasedpolicy.resolver.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.groupbasedpolicy.resolver.TenantUtils;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
@@ -485,7 +486,12 @@ public class DestinationMapper extends FlowTable {
     }
 
     private L3Context getL3ContextForSubnet(TenantId tenantId, Subnet sn) {
-        L3Context l3c = ctx.getPolicyResolver().getTenant(tenantId).resolveL3Context(sn.getId());
+        IndexedTenant indexedTenant = ctx.getPolicyResolver().getTenant(tenantId);
+        if (indexedTenant == null) {
+            LOG.debug("Tenant {} is null, cannot get L3 context", tenantId);
+            return null;
+        }
+        L3Context l3c = indexedTenant.resolveL3Context(sn.getId());
         return l3c;
     }
 
@@ -602,7 +608,11 @@ public class DestinationMapper extends FlowTable {
         EndpointFwdCtxOrdinals srcEpFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, srcEp);
 
         if (destEp.getTenant() == null || (destEp.getEndpointGroup() == null && destEp.getEndpointGroups() == null)) {
-            LOG.trace("Didn't process endpoint due to either tenant, or EPG(s) being null", destEp.getKey());
+            if (destEp.getTenant() == null) {
+                LOG.debug("Didn't process endpoint {} due to tenant being null", destEp.getKey());
+            } else {
+                LOG.debug("Didn't process endpoint {} due to EPG(s) being null", destEp.getKey());
+            }
             return;
         }
         OfOverlayContext ofc = destEp.getAugmentation(OfOverlayContext.class);
@@ -1155,8 +1165,8 @@ public class DestinationMapper extends FlowTable {
         for (Endpoint endpoint : endpointsForNode) {
             HashSet<Subnet> subnets = getSubnets(endpoint.getTenant());
             if (subnets == null) {
-                LOG.error("No local subnets.");
-                return null;
+                LOG.debug("No local subnets in tenant {} for EP {}.", endpoint.getTenant(), endpoint.getKey());
+                continue;
             }
             NetworkDomainId epNetworkContainment = getEPNetworkContainment(endpoint);
             for (Subnet subnet : subnets) {

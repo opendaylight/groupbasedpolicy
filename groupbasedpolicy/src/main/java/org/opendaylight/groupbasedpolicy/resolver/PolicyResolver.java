@@ -24,17 +24,15 @@ import javax.annotation.concurrent.Immutable;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
+import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
+import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Subject;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.Rule;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -302,7 +300,9 @@ public class PolicyResolver implements AutoCloseable {
             @Override
             public void onSuccess(Optional<Tenant> result) {
                 if (!result.isPresent()) {
-                    LOG.warn("Tenant {} not found", tenantId);
+                    LOG.info("Tenant {} not found in CONF; check&delete from OPER", tenantId);
+                    deleteOperTenantIfExists(tiid, tenantId);
+                    return;
                 }
 
                 Tenant t = InheritanceUtils.resolveTenant(result.get());
@@ -326,6 +326,30 @@ public class PolicyResolver implements AutoCloseable {
                 LOG.error("Count not get tenant {}", tenantId, t);
             }
         }, executor);
+    }
+
+    private void deleteOperTenantIfExists(final InstanceIdentifier<Tenant> tiid, final TenantId tenantId) {
+        final ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
+
+        ListenableFuture<Optional<Tenant>> readFuture = rwTx.read(LogicalDatastoreType.OPERATIONAL, tiid);
+        Futures.addCallback(readFuture, new FutureCallback<Optional<Tenant>>() {
+            @Override
+            public void onSuccess(Optional<Tenant> result) {
+                if(result.isPresent()){
+                    unsubscribeTenant(tenantId);
+                    rwTx.delete(LogicalDatastoreType.OPERATIONAL, tiid);
+                    rwTx.submit();
+                    updatePolicy();
+                }
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                LOG.error("Failed to read operational datastore: {}", t);
+                rwTx.cancel();
+            }
+        }, executor);
+
     }
 
     protected void updatePolicy() {
