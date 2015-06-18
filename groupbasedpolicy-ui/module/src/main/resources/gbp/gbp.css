@@ -1,4 +1,3 @@
-/*GBP*/
 .pl0 {
   padding-left: 0 !important;
 }
@@ -269,7 +268,7 @@
   border-right: 5px solid #393939;
 }
 .gbpWrapper .mainNavigation .middleBox .infinityIcon {
-  background: transparent url('../../../src/app/gbp/images/infinity-loop.tpl.html') no-repeat center center;
+  background: transparent url('../../src/app/gbp/images/infinity-loop.tpl.html') no-repeat center center;
   width: 128px;
   height: 128px;
   margin: 11px auto 0;
@@ -528,8 +527,7 @@
 .connection-wrap,
 .marker-arrowheads {
   display: none;
-}
-/*-------------------YangUI import START-------------------*/
+}/*-------------------YangUI import START-------------------*/
 .gbpWrapper .customContainer {
   border-left: 1px solid #7a7a7a;
   margin: 35px 5px 5px 15px;

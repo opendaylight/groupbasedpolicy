@@ -344,7 +344,7 @@ define(modules, function(gbp) {
 
                 providers.forEach(function(p) {
                     p.contract.forEach(function(con) {
-                        providerLinkItems.push(JointGraphFactory.createLink(epgItem.id, contracts[con].id, 'blue'));    
+                        providerLinkItems.push(JointGraphFactory.createLink(epgItem.id, contracts[con].id, 'blue'));
                     });
                 });
 
@@ -607,6 +607,7 @@ define(modules, function(gbp) {
                         JointGraphOffsetFactory.checkObjsHoffsets(itemsArray.subject ,offsetHobj.pEpg, paper);
                         offsetHobj.subject = JointGraphOffsetFactory.getCurrentOffset(itemsArray.subject, 'y');
                         JointGraphOffsetFactory.checkObjsHoffsets(itemsArray.cEpg ,offsetHobj.subject, paper);
+
                     }, function(){});
 
                 }
@@ -810,13 +811,16 @@ define(modules, function(gbp) {
             // init();
     }]);
 
-    gbp.register.controller('policyRendererCtrl', ['$scope', '$http', '$timeout', 'PGNServices', 'TopoServices', 'GBPTenantServices', 'GBPConstants',
-        function ($scope, $http, $timeout, PGNServices, TopoServices, GBPTenantServices, GBPConstants) {
+    gbp.register.controller('policyRendererCtrl', ['$scope', '$http', '$timeout', 'PGNServices', 'TopoServices', 'GBPTenantServices', 'GBPConstants', 'JointGraphFactory','GBPJointGraphBuilder',
+        function ($scope, $http, $timeout, PGNServices, TopoServices, GBPTenantServices, GBPConstants, JointGraphFactory, GBPJointGraphBuilder) {
             
             $scope.topologyData = { nodes: [], links: [] };
             $scope.topologyType = null;
+            $scope.topologyArgs = {};
             $scope.legend = {};
             $scope.showLegend = false;
+
+            var paper = JointGraphFactory.createGraph();
 
             var reloadShowLegend = function() {
                 $scope.showLegend = !$.isEmptyObject($scope.legend);
@@ -838,67 +842,38 @@ define(modules, function(gbp) {
                 button: false
             };
 
-
-            // $scope.selectedTenant = null;
+            paper.on('cell:pointerdown', function(cellView, evt) {
+                if (cellView.model.isLink() && cellView.model.attributes.objData) {
+                    $scope.$broadcast('SET_LINK_DATA', cellView.model.attributes.objData);
+                }
+            });
 
             $scope.mandatoryProperties = [];
             $scope.loadTopology = function(type, args) {
-                if ( $scope.selectedTenant  ) {
-
-                    $scope.topologyData = { nodes: [], links: [] };
+                if ($scope.selectedTenant) {
                     $scope.topologyType = type;
-
-                    TopoServices.loadTopology(type, function(nodes, links) {
-                        $scope.topologyData = { nodes: nodes, links: links };
-                        $scope.viewTopo.box = true;
-                        $scope.viewTopo.button = type !== GBPConstants.strings.l2l3 && type !== null ? true : false;
-                        $scope.legend = TopoServices.getLegend(type);
-                        reloadShowLegend();
-                    }, function() {
-                        $scope.legend = {};
-                        reloadShowLegend();
-                    }, args);
-
+                    $scope.topologyArgs = args;
+                    GBPJointGraphBuilder.loadTopology(args, paper, type);
                 }
             };
-
-            $scope.topologyCustfunc = function(sigmaIstance, getSlowDownNum, dragListener, resize){
-
-                sigmaIstance.bind('clickStage', function(e){
-                  sigmaIstance.killForceAtlas2();
-                });
-
-                // Bind the events:
-                // sigmaIstance.bind('overNode outNode clickNode doubleClickNode rightClickNode', function(e) {
-                //   console.log(e.type, e.data.node.label, e.data.captor);
-                // });
-                // sigmaIstance.bind('overEdge outEdge clickEdge doubleClickEdge rightClickEdge', function(e) {
-                //   console.log(e.type, e.data.edge, e.data.captor);
-                // });
-                // sigmaIstance.bind('clickStage', function(e) {
-                //   console.log(e.type, e.data.captor);
-                // });
-                // sigmaIstance.bind('doubleClickStage rightClickStage', function(e) {
-                //   console.log(e.type, e.data.captor);
-                // });
-
-              };
-
             $scope.toggleExpanded = function(expand, show) {
                 $scope.setViewExpand('policyRendererView',expand, show, 'l2');
 
-                if($scope.policyRendererView[expand]) {
+                if($scope.policyRendererView[expand] && $scope.selectedTenant) {
+                    $scope.topologyArgs.tenantId = $scope.selectedTenant.id;
+
                     if((expand === 'epg' || expand === 'contracts' || expand === 'classifiers' || expand === 'actions' || expand === 'renderers') && ($scope.topologyType !== GBPConstants.strings.config)) {
-                        $scope.loadTopology(GBPConstants.strings.config, { tenantId: $scope.selectedTenant ? $scope.selectedTenant.id : null, storage: 'config' });
+                        $scope.loadTopology(GBPConstants.strings.config, $scope.topologyArgs);
                     } else if((expand === 'l2l3' || expand === 'registerEndpoint' || expand === 'registerL3PrefixEndpoint') && ($scope.topologyType !== GBPConstants.strings.l2l3)) {
-                        $scope.loadTopology(GBPConstants.strings.l2l3, { tenantId: $scope.selectedTenant ? $scope.selectedTenant.id : null });
+                        $scope.loadTopology(GBPConstants.strings.l2l3, $scope.topologyArgs);
                     }
                 }
             };
 
-            $scope.loadTopo = function() {
+            $scope.reloadTopo = function() {
                 if($scope.selectedTenant) {
-                    $scope.loadTopology($scope.topologyType, { tenantId: $scope.selectedTenant.id });
+                    $scope.topologyArgs.tenantId = $scope.selectedTenant.id;
+                    GBPJointGraphBuilder.loadTopology($scope.topologyArgs, paper, $scope.topologyType);
                 }
             };
 
@@ -936,12 +911,8 @@ define(modules, function(gbp) {
 
     }]);
 
-    gbp.register.controller('topoDataCtrl',['$scope', 'TopoServices',  function($scope, TopoServices){
+    gbp.register.controller('linkDataCtrl',['$scope', function($scope){
         $scope.showTable = false;
-
-        $scope.getConsProvLabel = function(edge){
-            return TopoServices.getConsProvLabel(edge, $scope.topologyData);
-        };
 
         $scope.show = function(){
             $scope.showTable = true;
@@ -950,6 +921,12 @@ define(modules, function(gbp) {
         $scope.close = function(){
             $scope.showTable = false;
         };
+        
+        $scope.$on('SET_LINK_DATA', function(e, obj){
+           $scope.linkData = obj;
+           $scope.show();
+           $scope.$apply();
+        });
     }]);
 
     gbp.register.controller('crudCtrl',['$scope',  function($scope){
@@ -1910,6 +1887,7 @@ define(modules, function(gbp) {
                     $scope.internalView.epg = false;
                     $scope.reloadNewObj();
                     $scope.internalView.edit = "view";
+                    $scope.reloadTopo();
                 }, function(){
                     //TODO: error cbk
                 });
@@ -1922,6 +1900,7 @@ define(modules, function(gbp) {
                 GBPEpgServices.delete(path, function(data){
                     $scope.init();
                     $scope.internalView.epg = false;
+                    $scope.reloadTopo();
                 }, function(){
                     //TODO: error cbk
                 });
@@ -2047,6 +2026,7 @@ define(modules, function(gbp) {
                     $scope.internalView.cns = false;
                     $scope.internalView.cns = "view";
                     $scope.reloadNewObj();
+                    $scope.reloadTopo();
                 }, function(){
                     //TODO: error cbk
                 });
@@ -2058,6 +2038,7 @@ define(modules, function(gbp) {
                 path = GBPConNamedSelServices.createPathObj($scope.selectedTenant.id, $scope.selectedEpg.id, $scope.selectedCNS.name);
                 GBPConNamedSelServices.delete(path, function(data){
                     $scope.init();
+                    $scope.reloadTopo();
                 }, function(){
                     //TODO: error cbk
                 });
@@ -2175,6 +2156,7 @@ define(modules, function(gbp) {
                     $scope.internalView.pns = false;
                     $scope.reloadNewObj();
                     $scope.internalView.cns = "view";
+                    $scope.reloadTopo();
                 }, function(){
                     //TODO: error cbk
                 });
@@ -2186,6 +2168,7 @@ define(modules, function(gbp) {
                 path = GBPProNamedSelServices.createPathObj($scope.selectedTenant.id, $scope.selectedEpg.id, $scope.selectedPNS.name);
                 GBPProNamedSelServices.delete(path, function(data){
                     $scope.init();
+                    $scope.reloadTopo();
                 }, function(){
                     //TODO: error cbk
                 });
@@ -2300,6 +2283,8 @@ define(modules, function(gbp) {
                     $scope.view.l2flood = false;
                     $scope.view.edit = "view";
                     $scope.sendReloadEventFromRoot('GBP_L2FLOOD_RELOAD');
+
+                    $scope.reloadTopo();
                 }, function(){
                     //TODO: error cbk
                 });
@@ -2314,6 +2299,8 @@ define(modules, function(gbp) {
                     $scope.view.l2flood = false;
                     $scope.view.edit = "view";
                     $scope.sendReloadEventFromRoot('GBP_L2FLOOD_RELOAD');
+
+                    $scope.reloadTopo();
                 }, function(){
                     //TODO: error cbk
                 });
@@ -2439,6 +2426,8 @@ define(modules, function(gbp) {
                     $scope.view.l2bridge = false;
                     $scope.view.edit = "view";
                     $scope.sendReloadEventFromRoot('GBP_L2BRIDGE_RELOAD');
+
+                    $scope.reloadTopo();
                 }, function(){
                     //TODO: error cbk
                 });
@@ -2453,6 +2442,8 @@ define(modules, function(gbp) {
                     $scope.view.l2bridge = false;
                     $scope.view.edit = "view";
                     $scope.sendReloadEventFromRoot('GBP_L2BRIDGE_RELOAD');
+
+                    $scope.reloadTopo();
                 }, function(){
                     //TODO: error cbk
                 });
@@ -2561,6 +2552,8 @@ define(modules, function(gbp) {
                     $scope.view.l3context = false;
                     $scope.view.edit = "view";
                     $scope.sendReloadEventFromRoot('GBP_L3CONTEXT_RELOAD');
+
+                    $scope.reloadTopo();
                 }, function(){
                     //TODO: error cbk
                 });
@@ -2575,6 +2568,8 @@ define(modules, function(gbp) {
                     $scope.view.l3context = false;
                     $scope.view.edit = "view";
                     $scope.sendReloadEventFromRoot('GBP_L3CONTEXT_RELOAD');
+
+                    $scope.reloadTopo();
                 }, function(){
                     //TODO: error cbk
                 });
@@ -2710,6 +2705,8 @@ define(modules, function(gbp) {
                     $scope.init();
                     $scope.view.subnet = false;
                     $scope.view.edit = "view";
+
+                    $scope.reloadTopo();
                 }, function(){
                     //TODO: error cbk
                 });
@@ -2723,6 +2720,8 @@ define(modules, function(gbp) {
                     $scope.init();
                     $scope.view.subnet = false;
                     $scope.view.edit = "view";
+
+                    $scope.reloadTopo();
                 }, function(){
                     //TODO: error cbk
                 });
@@ -3884,6 +3883,7 @@ define(modules, function(gbp) {
             GBPTenantServices.send(path, $scope.tenant, function(data){
                 $scope.wizards.accessModelWizard = false;
                 $scope.sendReloadEventFromRoot('GBP_GLOBAL_TENANT_RELOAD');
+                $scope.reloadTopo();
             }, function(){
                 //TODO: error cbk
             });
