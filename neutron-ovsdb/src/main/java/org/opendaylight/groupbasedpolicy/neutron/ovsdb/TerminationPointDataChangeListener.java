@@ -28,7 +28,9 @@ import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.readFromDs;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -44,6 +46,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbBridgeAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbNodeAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbTerminationPointAugmentation;
@@ -95,6 +98,12 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
         registration.close();
     }
 
+    /*
+     * When vSwitch is deleted, we loose data in operational DS to determine Iid of
+     * corresponding NodeId.
+     */
+    private static final Map<InstanceIdentifier<OvsdbTerminationPointAugmentation>, NodeId> nodeIdByTerminPoint = new HashMap<>();
+
     @Override
     public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
 
@@ -105,8 +114,11 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
         for (Entry<InstanceIdentifier<?>, DataObject> entry : change.getCreatedData().entrySet()) {
             if (entry.getValue() instanceof OvsdbTerminationPointAugmentation) {
                 OvsdbTerminationPointAugmentation ovsdbTp = (OvsdbTerminationPointAugmentation) entry.getValue();
+                @SuppressWarnings("unchecked")
                 InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid = (InstanceIdentifier<OvsdbTerminationPointAugmentation>) entry.getKey();
                 OvsdbBridgeAugmentation ovsdbBridge = getOvsdbBridgeFromTerminationPoint(ovsdbTpIid, dataBroker);
+                nodeIdByTerminPoint.put(ovsdbTpIid,
+                        new NodeId(getInventoryNodeIdString(ovsdbBridge, ovsdbTpIid, dataBroker)));
                 processOvsdbBridge(ovsdbBridge, ovsdbTp, ovsdbTpIid);
             }
         }
@@ -117,6 +129,7 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
         for (Entry<InstanceIdentifier<?>, DataObject> entry : change.getUpdatedData().entrySet()) {
             if (entry.getValue() instanceof OvsdbTerminationPointAugmentation) {
                 OvsdbTerminationPointAugmentation ovsdbTp = (OvsdbTerminationPointAugmentation) entry.getValue();
+                @SuppressWarnings("unchecked")
                 InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid = (InstanceIdentifier<OvsdbTerminationPointAugmentation>) entry.getKey();
                 OvsdbBridgeAugmentation ovsdbBridge = getOvsdbBridgeFromTerminationPoint(ovsdbTpIid, dataBroker);
                 processOvsdbBridge(ovsdbBridge, ovsdbTp, ovsdbTpIid);
@@ -132,10 +145,7 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
                 OvsdbTerminationPointAugmentation ovsdbTp = (OvsdbTerminationPointAugmentation) old;
                 @SuppressWarnings("unchecked")
                 InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid = (InstanceIdentifier<OvsdbTerminationPointAugmentation>) iid;
-                OvsdbBridgeAugmentation ovsdbBridge = getOvsdbBridgeFromTerminationPoint(ovsdbTpIid, dataBroker);
-                if (ovsdbBridge != null) {
-                    processRemovedTp(ovsdbBridge, ovsdbTp, ovsdbTpIid);
-                }
+                processRemovedTp(nodeIdByTerminPoint.get(ovsdbTpIid) , ovsdbTp, ovsdbTpIid);
             }
         }
     }
@@ -251,24 +261,10 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
      * @param ovsdbTp {@link OvsdbTerminationPointAugmentation}
      * @param ovsdbTpIid termination point's IID {@link InstanceIdentifier}
      */
-    private void processRemovedTp(OvsdbBridgeAugmentation ovsdbBridge, OvsdbTerminationPointAugmentation ovsdbTp,
+    private void processRemovedTp(NodeId nodeId, OvsdbTerminationPointAugmentation ovsdbTp,
             InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid) {
-
-        checkNotNull(ovsdbBridge);
-        if (ovsdbBridge.getBridgeName().getValue().equals(ovsdbTp.getName())) {
-            LOG.debug("Termination Point {} same as Bridge {}. Not processing.", ovsdbTp.getName(),
-                    ovsdbBridge.getBridgeName().getValue());
-            return;
-        }
-
-        String nodeIdString = getInventoryNodeIdString(ovsdbBridge, ovsdbTpIid, dataBroker);
-        if (nodeIdString == null) {
-            LOG.debug("nodeIdString for TerminationPoint {} was null.", ovsdbTp);
-            return;
-        }
-
         if (isTunnelPort(ovsdbTp, requiredTunnelTypes)) {
-            removeTunnelsOfOverlayConfig(nodeIdString, requiredTunnelTypes, dataBroker);
+            removeTunnelsOfOverlayConfig(nodeId.getValue(), requiredTunnelTypes, dataBroker);
         } else {
             deleteLocationForTp(ovsdbTp);
         }

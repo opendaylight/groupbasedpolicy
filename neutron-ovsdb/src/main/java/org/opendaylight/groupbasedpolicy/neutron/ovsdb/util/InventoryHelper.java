@@ -24,7 +24,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.ExternalInterfacesKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.Tunnel;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.TunnelBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.TunnelKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
@@ -38,9 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getOvsdbBridgeFromTerminationPoint;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getOvsdbTerminationPoint;
@@ -168,9 +165,9 @@ public class InventoryHelper {
         return true;
     }
 
-    public static void addOfOverlayExternalPort(String nodeIdString, NodeConnectorId ncId, DataBroker dataBroker) {
+    public static InstanceIdentifier<ExternalInterfaces> addOfOverlayExternalPort(NodeId nodeId, NodeConnectorId ncId, DataBroker dataBroker) {
         InstanceIdentifier<ExternalInterfaces> nodeExternalInterfacesIid = InstanceIdentifier.builder(Nodes.class)
-            .child(Node.class, new NodeKey(new NodeId(nodeIdString)))
+            .child(Node.class, new NodeKey(nodeId))
             .augmentation(OfOverlayNodeConfig.class)
             .child(ExternalInterfaces.class, new ExternalInterfacesKey(ncId))
             .build();
@@ -181,7 +178,8 @@ public class InventoryHelper {
         WriteTransaction transaction = dataBroker.newReadWriteTransaction();
         transaction.put(LogicalDatastoreType.CONFIGURATION, nodeExternalInterfacesIid, externalInterfaces, true);
         submitToDs(transaction);
-        LOG.trace("Added external interface node connector {} to node {}", ncId.getValue(), nodeIdString);
+        LOG.trace("Added external interface node connector {} to node {}", ncId.getValue(), nodeId.getValue());
+        return nodeExternalInterfacesIid;
     }
 
     public static OfOverlayNodeConfig getOfOverlayConfig(String nodeIdString, DataBroker dataBroker) {
@@ -197,17 +195,6 @@ public class InventoryHelper {
             return overlayConfig.get();
         }
         return null;
-    }
-
-    private static boolean addOfOverlayAugmentation(OfOverlayNodeConfig config, String nodeIdString, DataBroker dataBroker) {
-        InstanceIdentifier<OfOverlayNodeConfig> ofOverlayNodeIid = InstanceIdentifier.builder(Nodes.class)
-            .child(Node.class, new NodeKey(new NodeId(nodeIdString)))
-            .augmentation(OfOverlayNodeConfig.class)
-            .build();
-
-        WriteTransaction transaction = dataBroker.newReadWriteTransaction();
-        transaction.put(LogicalDatastoreType.CONFIGURATION, ofOverlayNodeIid, config, true);
-        return submitToDs(transaction);
     }
 
     /**
@@ -283,7 +270,7 @@ public class InventoryHelper {
             ofOverlayNodeConfigBuilder.setTunnel(new ArrayList<Tunnel>(existingTunnels));
         }
         OfOverlayNodeConfig newConfig = ofOverlayNodeConfigBuilder.build();
-        if (addOfOverlayAugmentation(newConfig, nodeIdString, dataBroker)) {
+        if (addTunnelsOfOverlayConfig(newConfig.getTunnel(), new NodeId(nodeIdString), dataBroker)) {
             LOG.trace("updateOfOverlayConfig - Added Tunnel: {} to Node: {} at NodeConnector: {}",tunnelBuilder.build(), nodeIdString, nodeConnectorIdString);
             return;
         } else {
@@ -315,14 +302,31 @@ public class InventoryHelper {
 
         // runs only if some tunnels were really removed
         if (existingTunnels.removeAll(tunnelsToRemove)) {
-            OfOverlayNodeConfigBuilder ofOverlayBuilder;
-            if (ofConfig == null) {
-                ofOverlayBuilder = new OfOverlayNodeConfigBuilder();
-            } else {
-                ofOverlayBuilder = new OfOverlayNodeConfigBuilder(ofConfig);
+            ReadWriteTransaction wTx = dataBroker.newReadWriteTransaction();
+            for (Tunnel tunnel : tunnelsToRemove) {
+                InstanceIdentifier<Tunnel> tunnelIid = InstanceIdentifier.builder(Nodes.class)
+                    .child(Node.class, new NodeKey(new NodeId(nodeIdString)))
+                    .augmentation(OfOverlayNodeConfig.class)
+                    .child(Tunnel.class, tunnel.getKey())
+                    .build();
+                wTx.delete(LogicalDatastoreType.CONFIGURATION, tunnelIid);
+                LOG.trace("Removing tunnel: {} from node {}",tunnel, nodeIdString);
             }
-            ofOverlayBuilder.setTunnel(existingTunnels);
-            addOfOverlayAugmentation(ofOverlayBuilder.build(), nodeIdString, dataBroker);
+            submitToDs(wTx);
         }
+    }
+
+    private static boolean addTunnelsOfOverlayConfig(List<Tunnel> tunnels, NodeId nodeId, DataBroker dataBroker) {
+        ReadWriteTransaction wTx = dataBroker.newReadWriteTransaction();
+        for (Tunnel tunnel : tunnels) {
+            InstanceIdentifier<Tunnel> tunnelIid = InstanceIdentifier.builder(Nodes.class)
+                .child(Node.class, new NodeKey(nodeId))
+                .augmentation(OfOverlayNodeConfig.class)
+                .child(Tunnel.class, tunnel.getKey())
+                .build();
+            wTx.put(LogicalDatastoreType.CONFIGURATION, tunnelIid, tunnel, true);
+            LOG.trace("Adding tunnel: {} to node {}",tunnel, nodeId.getValue());
+        }
+        return submitToDs(wTx);
     }
 }

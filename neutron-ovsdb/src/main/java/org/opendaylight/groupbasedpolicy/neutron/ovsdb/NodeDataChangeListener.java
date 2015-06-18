@@ -14,16 +14,21 @@ import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.InventoryHelp
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.NeutronOvsdbIidFactory.ovsdbNodeAugmentationIid;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getNodeFromBridgeRef;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.ovsdb.southbound.SouthboundConstants;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.ExternalInterfaces;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbBridgeAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbNodeAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbTerminationPointAugmentation;
@@ -36,6 +41,11 @@ import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Strings;
+
+import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.removeIfExists;
+import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.submitToDs;
 
 public class NodeDataChangeListener implements DataChangeListener, AutoCloseable {
 
@@ -52,7 +62,14 @@ public class NodeDataChangeListener implements DataChangeListener, AutoCloseable
         LOG.trace("NodeDataChangeListener started");
     }
 
+    /*
+     * When vSwitch is deleted, we loose data in operational DS to determine Iid of
+     * corresponding ExternalInterfaces.
+     */
+    public static final Map<InstanceIdentifier<OvsdbNodeAugmentation>, InstanceIdentifier<ExternalInterfaces>> nodeIdByExtInterface = new HashMap<>();
+
     @Override
+    @SuppressWarnings("unchecked")
     public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
 
         /*
@@ -62,7 +79,11 @@ public class NodeDataChangeListener implements DataChangeListener, AutoCloseable
         for (Entry<InstanceIdentifier<?>, DataObject> entry : change.getCreatedData().entrySet()) {
             if (entry.getValue() instanceof OvsdbNodeAugmentation) {
                 OvsdbNodeAugmentation ovsdbNode = (OvsdbNodeAugmentation) entry.getValue();
-                processNodeNotification(ovsdbNode);
+                InstanceIdentifier<OvsdbNodeAugmentation> key = (InstanceIdentifier<OvsdbNodeAugmentation>) entry.getKey();
+                InstanceIdentifier<ExternalInterfaces> extInterfacesIid = processNodeNotification(ovsdbNode);
+                if (extInterfacesIid != null) {
+                    nodeIdByExtInterface.put(key, extInterfacesIid);
+                }
             }
         }
 
@@ -72,7 +93,9 @@ public class NodeDataChangeListener implements DataChangeListener, AutoCloseable
         for (Entry<InstanceIdentifier<?>, DataObject> entry : change.getUpdatedData().entrySet()) {
             if (entry.getValue() instanceof OvsdbNodeAugmentation) {
                 OvsdbNodeAugmentation ovsdbNode = (OvsdbNodeAugmentation) entry.getValue();
-                processNodeNotification(ovsdbNode);
+                if (Strings.isNullOrEmpty(getProviderMapping(ovsdbNode))) {
+                    removeExternalInterfaces((InstanceIdentifier<OvsdbNodeAugmentation>) entry.getKey());
+                }
             }
         }
 
@@ -80,10 +103,10 @@ public class NodeDataChangeListener implements DataChangeListener, AutoCloseable
          * Deletions
          */
         for (InstanceIdentifier<?> iid : change.getRemovedPaths()) {
-            if (iid instanceof OvsdbTerminationPointAugmentation) {
-                /*
-                 * Remove the state from OfOverlay?
-                 */
+            if (iid.getTargetType().equals(OvsdbNodeAugmentation.class)) {
+                if (nodeIdByExtInterface.get(iid) != null) {
+                    removeExternalInterfaces((InstanceIdentifier<OvsdbNodeAugmentation>) iid);
+                }
             }
         }
     }
@@ -93,8 +116,7 @@ public class NodeDataChangeListener implements DataChangeListener, AutoCloseable
         registration.close();
     }
 
-
-    public static void processNodeNotification(OvsdbNodeAugmentation ovsdbNode) {
+    public static InstanceIdentifier<ExternalInterfaces> processNodeNotification(OvsdbNodeAugmentation ovsdbNode) {
         LOG.trace("Search for provider mapping on node {}", ovsdbNode);
         String providerPortName = getProviderMapping(ovsdbNode);
         if (providerPortName != null) {
@@ -105,9 +127,18 @@ public class NodeDataChangeListener implements DataChangeListener, AutoCloseable
                 String[] elements = nodeConnectorIdString.split(":");
                 String nodeIdString = elements[0] + ":" + elements[1];
                 NodeConnectorId ncid = getNodeConnectorId(nodeConnectorIdString);
-                addOfOverlayExternalPort(nodeIdString, ncid, dataBroker);
+                return addOfOverlayExternalPort(new NodeId(nodeIdString), ncid, dataBroker);
             }
         }
+        return null;
+    }
+
+    private void removeExternalInterfaces(InstanceIdentifier<OvsdbNodeAugmentation> iidOvsdbNodeAug){
+        InstanceIdentifier<ExternalInterfaces> iidExtInterface = nodeIdByExtInterface.get(iidOvsdbNodeAug);
+        ReadWriteTransaction wTx = dataBroker.newReadWriteTransaction();
+        removeIfExists(LogicalDatastoreType.CONFIGURATION, iidExtInterface, wTx);
+        submitToDs(wTx);
+        nodeIdByExtInterface.remove(iidOvsdbNodeAug);
     }
 
     private static NodeConnectorId getNodeConnectorId(String nodeConnectorIdString) {
