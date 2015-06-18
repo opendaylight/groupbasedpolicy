@@ -170,6 +170,11 @@ public class GroupTable extends OfTable {
 
             for (Endpoint localEp : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
                 EndpointFwdCtxOrdinals localEpFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, localEp);
+                if (localEpFwdCtxOrds == null) {
+                    LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", localEp);
+                    continue;
+                }
+
                 GroupId gid = new GroupId(Long.valueOf(localEpFwdCtxOrds.getFdId()));
                 GroupCtx gctx = groupMap.get(gid);
                 if (gctx == null) {
