@@ -103,7 +103,7 @@ public class SwitchManager implements AutoCloseable {
             LOG.error("No SwitchState for {} in deactivatingSwitch. This should not happen.",nodeId);
             return;
         }
-        state.setHasEndpoints(false);;
+        state.setHasEndpoints(false);
         state.updateStatus();
     }
 
@@ -136,8 +136,9 @@ public class SwitchManager implements AutoCloseable {
 
     public synchronized Set<NodeConnectorId> getExternalPorts(NodeId nodeId) {
         SwitchState state = switches.get(nodeId);
-        if (state == null)
+        if (state == null) {
             return Collections.emptySet();
+        }
         return ImmutableSet.copyOf(state.externalPorts);
     }
 
@@ -407,12 +408,15 @@ public class SwitchManager implements AutoCloseable {
         }
 
         public boolean isConfigurationEmpty() {
-            if (fcNode != null)
+            if (fcNode != null) {
                 return false;
-            if (nodeConfig != null)
+            }
+            if (nodeConfig != null) {
                 return false;
-            if (!fcncByNcIid.isEmpty())
+            }
+            if (!fcncByNcIid.isEmpty()) {
                 return false;
+            }
             return true;
         }
 
