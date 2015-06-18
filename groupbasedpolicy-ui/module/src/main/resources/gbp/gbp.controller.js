@@ -1239,6 +1239,7 @@ define(modules, function(gbp) {
         });
 
         $scope.$on('GBP_CONTRACT_RELOAD',function(){
+            $scope.internalView.clause = false;
             $scope.init();
         });
 
@@ -1358,6 +1359,7 @@ define(modules, function(gbp) {
         });
 
         $scope.$on('GBP_CONTRACT_RELOAD',function(){
+            $scope.internalView.subject = false;
             $scope.init();
         });
 
@@ -1602,6 +1604,7 @@ define(modules, function(gbp) {
         });
 
         $scope.$on('GBP_RULE_RELOAD',function(){
+            $scope.internalView.actionRef = false;
             $scope.init();
         });
 
@@ -1736,6 +1739,7 @@ define(modules, function(gbp) {
         });
 
         $scope.$on('GBP_RULE_RELOAD',function(){
+            $scope.internalView.classifierRef = false;
             $scope.init();
         });
 
