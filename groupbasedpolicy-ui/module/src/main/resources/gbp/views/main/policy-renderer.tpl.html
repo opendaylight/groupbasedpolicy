@@ -1,53 +1,39 @@
 <section ng-controller="policyRendererCtrl">
     <!-- TOPOLOGY -->
     <section class="sigmaWrapper col-md-9">
-        
-        <section class="sigmaModalWrapper" ng-show="viewTopo.box" ng-controller="topoDataCtrl">
-
-            <div class="legend" ng-show="showLegend">
-              <ul>
-                <li><span>Legend:</span></li>
-                <li ng-repeat="(key, value) in legend" class="clearfix">
-                  <div class="itemWrapper left">
-                    <div class="color left" style="background: {{value}};"></div>
-                    <div class="left text">{{key}}</div>
-                  </div>
-                </li>
-              </ul>
-            </div>
-
-            <button class="btn btn-primary" ng-show="viewTopo.button" ng-click="show()">Show topology data</button>
-
-            <div class="tableWrapper" ng-show="showTable">
+        <section class="sigmaModalWrapper simpleBox" ng-controller="linkDataCtrl" ng-show="showTable">
+            <div class="tableWrapper">
                 <i class="icon-remove" ng-click="close()"></i>
 
                 <div class="dataWrapper">
-                    <div class="rowWrapper" ng-repeat="edge in topologyData.links">
+                    <section ng-repeat="subject in linkData">
                         <section class="header">
-                            <label>End Point Groups:</label>
-                            <span class="block">{{ getConsProvLabel(edge) }}</span>
+                            <span class="block">{{ 'Subject: ' + subject.name }}</span>
                         </section>
 
-                        <section ng-repeat="subject in edge.data">
-                            <section ng-repeat="rule in subject['ui-rule']">
-                                <label class="block">Subject:{{subject.name}} - Rule:{{rule.name}}</label>
-                                <section ng-repeat="classifier in rule['classifier-ref']">
-                                    <span class="block">Classifier:</span>
-                                    <ul>
-                                        <li ng-repeat="(key, value) in classifier">{{key}}: {{value}}</li>
-                                    </ul>
-                                </section>
+                        <section class="ml10" ng-repeat="rule in subject['ui-rule']">
+                            <label class="block">Rule:{{rule.name}}</label>
+                            <section class="ml10" ng-repeat="classifier in rule['classifier-ref']">
+                                <span class="block">Classifier:</span>
+                                <ul>
+                                    <li ng-repeat="(key, value) in classifier">{{key}}: {{value}}</li>
+                                </ul>
+                            </section>
+                            <section ng-repeat="classifier in rule['action-ref']">
+                                <span class="block">Action:</span>
+                                <ul>
+                                    <li ng-repeat="(key, value) in classifier">{{key}}: {{value}}</li>
+                                </ul>
                             </section>
                         </section>
-                    </div>
+                    </section>
                 </div>
-                
             </div>
-
         </section>
-
-        <section>
-            <sigma-topology drag-nodes="true" topology-data="topologyData" settings-sigma="settingsSigma" settings-atlas="settingsAtlas" topology-custfunc="topologyCustfunc"></sigma-toppology>
+        
+        
+        <section class="policyGraphWrapper">
+            <div graph="graph" id="graph" grid-size="1" />
         </section>
 
         <div class="topoNav">
@@ -72,7 +58,7 @@
                 <div class="rowWrapper clearfix">
                     <label class="block"><span>Tenants list</span></label>
                     <div class="selectWrapper col-md-12">
-                        <select class="form-control" ng-model="selectedTenant" ng-change="setTenant(selectedTenant);loadTopo();" ng-options="getDisplayLabel(d, tenantDisplayLabel) for d in tenantList">
+                        <select class="form-control" ng-model="selectedTenant" ng-change="setTenant(selectedTenant); reloadTopo();" ng-options="getDisplayLabel(d, tenantDisplayLabel) for d in tenantList">
                             <option value="">Select option</option>
                         </select>
                     </div>

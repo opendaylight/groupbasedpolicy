@@ -13,6 +13,10 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
         c.strings.bridge = 'bridge';
         c.strings.l3ctx = 'l3ctx';
         c.strings.subnet = 'subnet';
+        c.strings.linklabel = 'linklabel';
+        c.strings.in = 'in';
+        c.strings.out = 'out';
+        c.strings.bi = 'bidirectional';
 
         c.strings.config = 'CONFIG';
         c.strings.oper = 'OPERATIONAL';
@@ -26,6 +30,8 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
         c.colors[c.strings.l3ctx] = '#3ADF00';
         c.colors[c.strings.subnet] = '#FF9933';
         c.colors[c.strings.sigmaTopoDefaultText] = '#fff';
+        c.colors[c.strings.epg] = '#8fde70';
+        c.colors[c.strings.linklabel] = '#3366CC';
 
         c.colors[c.strings.flood+'-'+c.strings.bridge] = '#6666FF';
         c.colors[c.strings.bridge+'-'+c.strings.l3ctx] = '#6666FF';
@@ -174,19 +180,21 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
                             'size': 1,
                             'x': Math.random(),
                             'y': Math.random(),
-                            'color': GBPConstants.colors[GBPConstants.strings.sigmaTopoDefault]
+                            'color': GBPConstants.colors[GBPConstants.strings.sigmaTopoDefault],
+                            'type': obj.type
                         };
 
                     nodes.push(nodeObj);
                     return nodeObj.id;
                 },
-                setEdge = function(sourceId, destId, data) {
+                setEdge = function(sourceId, destId, data, direction) {
                     var obj = {
                             'id': 'e' + edges.length,
                             'source': sourceId,
                             'target': destId,
                             'color': GBPConstants.colors[GBPConstants.strings.sigmaTopoDefault],
-                            'data': data
+                            'data': data,
+                            'direction' : direction
                             // 'type': 'curve',
                             // 'size' : 100
                         };
@@ -197,6 +205,26 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
                     return list.filter(function(i){
                         return i[prop] === val;
                     });
+                },
+                getDirection = function(subjects){
+                    var directions = [];
+                    if ( subjects ) {
+                        subjects.forEach(function(s){
+                            if ( s['ui-rule'] ) {
+                                s['ui-rule'].forEach(function(rule){
+                                    if ( rule['classifier-ref'] ) {
+                                        rule['classifier-ref'].forEach(function(classifier){
+                                            if ( classifier.direction && directions.indexOf(classifier.direction) === -1 ){
+                                                directions.push(classifier.direction);
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+                    return directions.length === 1 ? directions[0] : directions.length > 1 ? 'bidirectional' : null;
+
                 };
 
             if(epgData) {
@@ -222,8 +250,11 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
                     } else {
                         pepgnId = getObjByProp(e['provider-endpoint-group-id'],'name', nodes)[0].id;
                     }
+
+                    var direction = getDirection(e['ui-subject']);
+
                     if ( cepgnId && pepgnId ) {
-                        setEdge(cepgnId, pepgnId, e['ui-subject']);
+                        setEdge(cepgnId, pepgnId, e['ui-subject'], direction);
                     }
                 });
             }
@@ -260,7 +291,8 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
                             'size': 3,
                             'x': Math.random(),
                             'y': Math.random(),
-                            'color': getNodeColor(srcDesc)
+                            'color': getNodeColor(srcDesc),
+                            'elemType': srcDesc
                         };
 
                         nid += 1;
@@ -2412,10 +2444,21 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
                 width: 1300,
                 height: 650,
                 model: graph,
-                gridSize: 1
+                gridSize: 1,
+                interactive: { vertexAdd: false }
             });
 
             return paper;
+        };
+
+        jgf.resetGraphDimension = function(paper, element, paddingT, paddingL){
+            paddingT = paddingT ? paddingT : 0;
+            paddingL = paddingL ? paddingL : paddingT;
+
+            var paperWidth = element.width() - paddingL,
+                paperHeight = element.height() - paddingT - 5;
+
+            paper.setDimensions(paperWidth, paperHeight);
         };
 
         jgf.reloadGraph = function(graph) {
@@ -2519,22 +2562,309 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
             graph.addCells(listItem);
         };
 
-        jgf.createLink = function(srcId, targetId, color) {
-            color = color || defaulColor;
+        jgf.createLink = function(srcId, targetId, colorIn, colorOut, direction, objData) {
+            colorIn = colorIn || defaulColor;
+            colorOut = colorOut || defaulColor;
 
-            var link = new joint.dia.Link({
+            var labelTextColor = GBPConstants.colors[GBPConstants.strings.sigmaTopoDefaultText],
+                labelBckColor = GBPConstants.colors[GBPConstants.strings.linklabel];
+
+            var linkObj = {
                 source: { id: srcId },
-                target: { id: targetId }
-            });
+                target: { id: targetId },
+                attrs: {
+                    '.connection': { stroke: colorIn, 'stroke-width': 2, name: 'normal' },
+                    '.connection-wrap': { 'stroke-width': 10 } 
+                },
+                objData: objData
+            };
 
-            link.attr({
-                '.connection': { stroke: color },
-                '.marker-target': { fill: color, d: 'M 10 0 L 0 5 L 10 10 z' }
-            });
+            if(direction === 'in' || direction == 'bidirectional' || direction === undefined || direction === null) {
+                linkObj.attrs['.marker-target'] = { fill: colorIn, d: 'M 10 0 L 0 5 L 10 10 z' };
+            }
+
+            if(direction === 'out' || direction == 'bidirectional') {
+                linkObj.attrs['.marker-source'] = { fill: colorOut, d: 'M 10 0 L 0 5 L 10 10 z' };
+            }
+
+            var link = new joint.dia.Link(linkObj);
+
+            // if(labelText) {
+            //     link.label(0, { position: 0.3, attrs: { text: { text: labelText, fill: labelTextColor }, rect: { stroke: labelBckColor, 'stroke-width': 20 }}});
+            // }
+
 
             return link;
         };
 
         return jgf;
+    });
+
+    gbp.register.factory('GBPJointGraphBuilder', function(GBPRestangular, GBPConstants, JointGraphFactory, JointGraphOffsetFactory, TopologyDataLoaders){
+        var jgb = {};
+
+        var builders = {};
+
+        var buildJointData = function(paper, nodes, links) {
+
+        };
+
+        var setOperConfigTopoData = function(paper, data){
+            var topo = TopologyDataLoaders.getEpgTopo(data);
+
+            var offsetObj = {
+                    ow: 100,
+                    oh: 100,
+                    w: 100,
+                    h: 100
+                },
+                marginObj = {
+                    w: 50,
+                    h: 80
+                },
+                offsetHobj = {
+                    pEpg: 0,
+                    cEpg: 0,
+                    subject: 0
+                },
+                itemsArray = {
+                    epg: []
+                },
+                linksArray = [];
+
+            JointGraphFactory.resetGraphDimension(paper, $('.policyGraphWrapper'));
+            JointGraphFactory.reloadGraph(paper.model);
+
+            var deg2rad = function(deg){
+                return deg * Math.PI / 180;
+            };
+
+            var getXYInCircle = function(elementIndex, elementsCount, paperCenterX, paperCenterY, elementWidth, elementHeight){
+                var result = {x:0, y:0};
+                    circleMargin = 100;
+                    r = (paperCenterX < paperCenterY ? paperCenterX : paperCenterY ) - circleMargin;
+                    degs = 360 / elementsCount * (elementIndex+1) + 180;
+                    rads = deg2rad(degs);
+                
+                elementWidth = elementWidth ? elementWidth : GBPConstants.jointElements.minWidth;
+                elementHeight = elementHeight ? elementHeight : GBPConstants.jointElements.minHeight;
+                
+                if(elementWidth < GBPConstants.jointElements.minWidth){elementWidth = GBPConstants.jointElements.minWidth;}
+                if(elementWidth > GBPConstants.jointElements.maxWidth){elementWidth = GBPConstants.jointElements.maxWidth;}
+                if(elementHeight < GBPConstants.jointElements.minHeight){elementHeight = GBPConstants.jointElements.minHeight;}
+                if(elementHeight > GBPConstants.jointElements.maxHeight){elementHeight = GBPConstants.jointElements.maxHeight;}
+                    
+                result.x = paperCenterX + r * Math.cos(rads);
+                result.y = paperCenterY + r * Math.sin(rads);
+                
+                degs = degs % 360;
+                if(degs > 90 && degs < 270){
+                    result.x = result.x - elementWidth;
+                }
+                if(degs == 90 || degs == 270){
+                    result.x = result.x - elementWidth / 2;
+                }
+                if(degs > 180 && degs < 360){
+                    result.y = result.y - elementHeight;
+                }
+                if(degs === 0 || degs == 180){
+                    result.y = result.y - elementHeight / 2;
+                }
+                return result;
+            };
+            
+            var paperCenterX = (paper.options.width) / 2;
+            var paperCenterY = (paper.options.height) / 2;
+            topo.nodes.forEach(function(i, index){
+                var label = i.label,
+                    header = 'Epg',
+                    width =  Math.max(JointGraphFactory.getLabelLength(label.length), JointGraphFactory.getLabelLength(header.length)),
+                    color = GBPConstants.colors[GBPConstants.strings.epg];
+                    
+                var itemPos = getXYInCircle(index, topo.nodes.length, paperCenterX, paperCenterY, width, null);
+                var item = JointGraphFactory.createElement(label, itemPos.x, itemPos.y, width, null, GBPConstants.strings.epg , i, label, color, header);
+
+                itemsArray.epg.push(item);
+
+                // JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width, paper.options.height), paper);
+                JointGraphFactory.addItem(paper.model, item);
+            });
+
+            var getItemById = function(id, array){
+                var item = array.filter(function(i){
+                    return i.attributes.objData.id === id;
+                });
+
+                return item.length ? item[0] : null;
+            };
+
+            topo.links.forEach(function(l){
+                var sourceItem = getItemById(l.source, itemsArray.epg),
+                    targetItem = getItemById(l.target, itemsArray.epg);
+
+                if (sourceItem && targetItem) {
+                    var link = JointGraphFactory.createLink(sourceItem.id, targetItem.id, 'blue', 'green', l.direction, l.data);
+                    linksArray.push(link);
+                }
+            });
+
+            JointGraphFactory.addItemList(paper.model, linksArray);
+        };
+
+        jgb.loadTopology = function(args, paper, type) {
+            if(type === null || builders.hasOwnProperty(type) === false) {
+                type = GBPConstants.strings.empty;
+            }
+
+            builders[type](args, paper);
+        };
+
+        builders[GBPConstants.strings.empty] = function(args, paper) {
+            JointGraphFactory.reloadGraph(paper.model);
+        };
+
+        builders[GBPConstants.strings.config] = function(args, paper) {
+            var storage = args.storage || 'config',
+                tenantId = args.tenantId;
+                
+       
+            TopologyDataLoaders.getSubjectsBetweenEndpointGroups(false, tenantId, function(data){
+                setOperConfigTopoData(paper, data);
+            }, function(){});
+        };
+
+        builders[GBPConstants.strings.oper] = function(args, paper) {
+            var storage = args.storage || 'config',
+                tenantId = args.tenantId;
+
+            TopologyDataLoaders.getSubjectsBetweenEndpointGroups(true, tenantId, function(data){
+                setOperConfigTopoData(paper, data);
+            }, function(){});
+        };
+
+        builders[GBPConstants.strings.l2l3] = function(args, paper) {
+            var storage = args.storage || 'config',
+                tenantId = args.tenantId;
+
+            if(storage && tenantId) {
+                restObj = GBPRestangular.one('restconf').one(storage).one('policy:tenants').one('tenant').one(tenantId);
+
+                restObj.get().then(function(data) {
+                    var createLinks = function(srcList, srcItems, dstItems) {
+                        var linkItems = srcList.map(function(srcObj) {
+                            var linkItem = null;
+                            if(srcObj.parent && dstItems[srcObj.parent]) {
+                                linkItem = JointGraphFactory.createLink(srcItems[srcObj.id].id, dstItems[srcObj.parent].id, 'blue');
+                            }
+                            return linkItem;
+                        }).filter(function(linkObj) {
+                            return linkObj !== null;
+                        });
+
+                        return linkItems;
+                    };
+
+                    var offsetObj = {
+                        ow: 100,
+                        oh: 100,
+                        w: 100,
+                        h: 100
+                    },
+                    marginObj = {
+                        w: 50,
+                        h: 80
+                    },
+                    itemsArray = {
+                        l3: {},
+                        l2bridge: {},
+                        l2flood: {},
+                        subnets: {}
+                    };
+
+                    JointGraphFactory.reloadGraph(paper.model);
+
+                    data.tenant[0]['l3-context'].forEach(function(c, i) {
+                        var label = c.name || c.id,
+                            header = 'L3 context',
+                            color = GBPConstants.colors[GBPConstants.strings.l3ctx],
+                            width = Math.max(JointGraphFactory.getLabelLength(label.length), JointGraphFactory.getLabelLength(header.length));
+                            item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.strings.l3ctx , c, null, color, header);
+
+                        itemsArray.l3[c.id] = item;
+
+                        JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width, paper.options.height), paper);
+                        JointGraphFactory.addItem(paper.model, item);
+                    });
+
+                    JointGraphOffsetFactory.resetOffsets(offsetObj, offsetObj.ow, offsetObj.h + 100);
+
+                    data.tenant[0]['l2-bridge-domain'].forEach(function(c, i) {
+                        var label = c.name || c.id,
+                            header = 'L2 bridge domain',
+                            color = GBPConstants.colors[GBPConstants.strings.bridge],
+                            width = Math.max(JointGraphFactory.getLabelLength(label.length), JointGraphFactory.getLabelLength(header.length));
+                            item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.strings.bridge , c, null, color, header);
+
+                        itemsArray.l2bridge[c.id] = item;
+
+                        JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width, paper.options.height), paper);
+                        JointGraphFactory.addItem(paper.model, item);
+                    });
+
+                    JointGraphOffsetFactory.resetOffsets(offsetObj, offsetObj.ow, offsetObj.h + 100);
+
+                    data.tenant[0]['l2-flood-domain'].forEach(function(c, i) {
+                        var label = c.name || c.id,
+                            header = 'L2 flood domain',
+                            color = GBPConstants.colors[GBPConstants.strings.flood],
+                            width = Math.max(JointGraphFactory.getLabelLength(label.length), JointGraphFactory.getLabelLength(header.length));
+                            item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.strings.flood , c, null, color, header);
+
+                        itemsArray.l2flood[c.id] = item;
+
+                        JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width, paper.options.height), paper);
+                        JointGraphFactory.addItem(paper.model, item);
+                    });
+
+                    JointGraphOffsetFactory.resetOffsets(offsetObj, offsetObj.ow, offsetObj.h + 100);
+
+                    data.tenant[0]['subnet'].forEach(function(c, i) {
+                        var label = c.name || c.id,
+                            header = 'Subnet',
+                            color = GBPConstants.colors[GBPConstants.strings.subnet],
+                            width = Math.max(JointGraphFactory.getLabelLength(label.length), JointGraphFactory.getLabelLength(header.length));
+                            item = JointGraphFactory.createElement(label, offsetObj.w, offsetObj.h, width, null, GBPConstants.strings.subnet , c, null, color, header);
+
+                        itemsArray.subnets[c.id] = item;
+
+                        JointGraphOffsetFactory.updateOffsets(JointGraphOffsetFactory.createWHObj(width), offsetObj, marginObj, JointGraphOffsetFactory.createWHObj(paper.options.width, paper.options.height), paper);
+                        JointGraphFactory.addItem(paper.model, item);
+                    });
+
+                    JointGraphOffsetFactory.resetOffsets(offsetObj, offsetObj.ow, offsetObj.oh);
+
+                    var l2bridgeL3 = createLinks(data.tenant[0]['l2-bridge-domain'], itemsArray.l2bridge, itemsArray.l3);
+                    JointGraphFactory.addItemList(paper.model, l2bridgeL3);
+
+                    var l2floodL2bridge = createLinks(data.tenant[0]['l2-flood-domain'], itemsArray.l2flood, itemsArray.l2bridge);
+                    JointGraphFactory.addItemList(paper.model, l2floodL2bridge);
+
+                    var l2floodSubnet = createLinks(data.tenant[0]['subnet'], itemsArray.subnets, itemsArray.l2flood);
+                    JointGraphFactory.addItemList(paper.model, l2floodSubnet);
+
+                    var l2bridgeSubnet = createLinks(data.tenant[0]['subnet'], itemsArray.subnets, itemsArray.l2bridge);
+                    JointGraphFactory.addItemList(paper.model, l2bridgeSubnet);
+
+                    var l3Subnet = createLinks(data.tenant[0]['subnet'], itemsArray.subnets, itemsArray.l3);
+                    JointGraphFactory.addItemList(paper.model, l3Subnet);
+
+                }, function() {
+
+                });
+            }
+        };
+
+
+        return jgb;
     });
 });
