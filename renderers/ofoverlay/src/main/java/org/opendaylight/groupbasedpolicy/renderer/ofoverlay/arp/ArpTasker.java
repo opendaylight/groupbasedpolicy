@@ -320,6 +320,12 @@ public class ArpTasker implements PacketProcessingListener {
         List<Node> nodes = potentialNodes.get().getNode();
         SetMultimap<Node, NodeConnectorId> extIfacesByNode = HashMultimap.create();
         for (Node node : nodes) {
+            Optional<Node> potentialNodeFromOper = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
+                    InstanceIdentifier.builder(Nodes.class).child(Node.class, node.getKey()).build(), rTx);
+            if (!potentialNodeFromOper.isPresent()) {
+                LOG.debug("Node exists in CONF DS but not in OPER DS. Node from CONF: {}", node);
+                continue;
+            }
             OfOverlayNodeConfig ofOverlayNode = node.getAugmentation(OfOverlayNodeConfig.class);
             if (ofOverlayNode != null) {
                 List<ExternalInterfaces> externalIfaces = ofOverlayNode.getExternalInterfaces();
