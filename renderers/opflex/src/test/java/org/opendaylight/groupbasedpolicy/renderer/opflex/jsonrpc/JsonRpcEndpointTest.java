@@ -222,7 +222,7 @@ public class JsonRpcEndpointTest implements RpcBroker, RpcBroker.RpcCallback {
             assertTrue(result.toString().contains("method"));
             assertTrue(result.toString().contains("params"));
             channel.finish();
-        } catch ( Throwable e ) {
+        } catch ( Exception e ) {
             fail();
         }
     }
@@ -270,7 +270,7 @@ public class JsonRpcEndpointTest implements RpcBroker, RpcBroker.RpcCallback {
             Object tmp = lf.get();
             assertTrue(tmp instanceof JsonRpcEndpointTest.OpflexTest);
             channel.finish();
-         } catch ( Throwable e ) {
+         } catch ( Exception e ) {
             fail();
         }
     }
