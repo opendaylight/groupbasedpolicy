@@ -567,7 +567,7 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker, Rp
     public synchronized void publish(JsonRpcEndpoint endpoint, RpcMessage message) {
         List<RpcCallback> cbList = brokerMap.get(message.getName());
         if (cbList == null) {
-            System.out.println("Unhandled Message name is " + message.getName());
+            logger.warn("Unhandled Message name is " + message.getName());
             return;
         }
 
