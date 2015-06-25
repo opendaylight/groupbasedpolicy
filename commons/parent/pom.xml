@@ -10,13 +10,13 @@
   <parent>
     <groupId>org.opendaylight.odlparent</groupId>
     <artifactId>odlparent</artifactId>
-    <version>1.5.0-SNAPSHOT</version>
+    <version>1.5.0-Lithium</version>
     <relativePath>../../odlparent/odlparent</relativePath>
   </parent>
 
   <groupId>org.opendaylight.groupbasedpolicy</groupId>
   <artifactId>commons.groupbasedpolicy</artifactId>
-  <version>0.2.0-SNAPSHOT</version>
+  <version>0.2.0-Lithium</version>
   <packaging>pom</packaging>
 
   <prerequisites>
@@ -28,16 +28,16 @@
     <generated.sources.sal>${project.build.directory}/generated-sources/sal</generated.sources.sal>
     <generated.sources.config>${project.build.directory}/generated-sources/config</generated.sources.config>
     <generated.yang.docs>${project.build.directory}/site/models</generated.yang.docs>
-    <config.version>0.3.0-SNAPSHOT</config.version>
-    <mdsal.version>1.2.0-SNAPSHOT</mdsal.version>
-    <sfc.version>0.1.0-SNAPSHOT</sfc.version>
-    <restconf.version>1.2.0-SNAPSHOT</restconf.version>
-    <yangtools.version>0.7.0-SNAPSHOT</yangtools.version>
-    <openflowplugin.version>0.1.0-SNAPSHOT</openflowplugin.version>
-    <neutron.version>0.5.0-SNAPSHOT</neutron.version>
-    <ovsdb.southbound.version>1.1.0-SNAPSHOT</ovsdb.southbound.version>
-    <dlux.version>0.2.0-SNAPSHOT</dlux.version>
-    <liblldp.version>0.9.0-SNAPSHOT</liblldp.version>
+    <config.version>0.3.0-Lithium</config.version>
+    <mdsal.version>1.2.0-Lithium</mdsal.version>
+    <sfc.version>0.1.0-Lithium</sfc.version>
+    <restconf.version>1.2.0-Lithium</restconf.version>
+    <yangtools.version>0.7.0-Lithium</yangtools.version>
+    <openflowplugin.version>0.1.0-Lithium</openflowplugin.version>
+    <neutron.version>0.5.0-Lithium</neutron.version>
+    <ovsdb.southbound.version>1.1.0-Lithium</ovsdb.southbound.version>
+    <dlux.version>0.2.0-Lithium</dlux.version>
+    <liblldp.version>0.9.0-Lithium</liblldp.version>
     <apache.felix.osgi.compendium.version>1.4.0</apache.felix.osgi.compendium.version>
   </properties>
 
