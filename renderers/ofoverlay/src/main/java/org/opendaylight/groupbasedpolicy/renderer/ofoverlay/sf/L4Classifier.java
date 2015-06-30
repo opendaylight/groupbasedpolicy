@@ -8,8 +8,6 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf;
 
-
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -105,34 +103,35 @@ public class L4Classifier extends Classifier {
 
     @Override
     protected void checkPresenceOfRequiredParams(Map<String, ParameterValue> params) {
-        if (params.get(SRC_PORT_PARAM) != null && params.get(SRC_PORT_RANGE_PARAM) != null) {
-            throw new IllegalArgumentException("Source port parameters " + SRC_PORT_PARAM + " and " + SRC_PORT_RANGE_PARAM
-                    + " are mutually exclusive.");
-        }
-        if (params.get(DST_PORT_PARAM) != null && params.get(DST_PORT_RANGE_PARAM) != null) {
-            throw new IllegalArgumentException("Destination port parameters " + DST_PORT_PARAM + " and " + DST_PORT_RANGE_PARAM
-                    + " are mutually exclusive.");
-        }
-        if (params.get(SRC_PORT_PARAM) != null) {
-            if (params.get(SRC_PORT_PARAM).getIntValue() == null) {
-                throw new IllegalArgumentException("Value of " + SRC_PORT_PARAM + " parameter is not specified.");
-            }
-        }
-        if (params.get(SRC_PORT_RANGE_PARAM) != null) {
-            if (params.get(SRC_PORT_RANGE_PARAM) != null) {
-                validateRangeValue(params.get(SRC_PORT_RANGE_PARAM).getRangeValue());
-            }
-        }
+        validatePortParam(params, SRC_PORT_PARAM, SRC_PORT_RANGE_PARAM);
+        validatePortParam(params, DST_PORT_PARAM, DST_PORT_RANGE_PARAM);
+        validateRange(params, SRC_PORT_RANGE_PARAM);
+        validateRange(params, DST_PORT_RANGE_PARAM);
+    }
 
-        if (params.get(DST_PORT_PARAM) != null) {
-            if (params.get(DST_PORT_PARAM).getIntValue() == null) {
-                throw new IllegalArgumentException("Value of " + DST_PORT_PARAM + " parameter is not specified.");
+    private void validatePortParam(Map<String, ParameterValue> params, String portParam, String portRangeParam) {
+        if (params.get(portParam) != null) {
+            StringBuilder paramLog = new StringBuilder();
+            if (params.get(portParam).getIntValue() == null) {
+                paramLog.append("Value of ")
+                    .append(portParam)
+                    .append(" parameter is not specified.");
+                throw new IllegalArgumentException(paramLog.toString());
+            }
+            if(params.get(portRangeParam) != null) {
+                paramLog.append("Source port parameters ")
+                    .append(portParam)
+                    .append(" and ")
+                    .append(portRangeParam)
+                    .append(" are mutually exclusive.");
+                throw new IllegalArgumentException(paramLog.toString());
             }
         }
-        if (params.get(DST_PORT_RANGE_PARAM) != null) {
-            if (params.get(DST_PORT_RANGE_PARAM) != null) {
-                validateRangeValue(params.get(DST_PORT_RANGE_PARAM).getRangeValue());
-            }
+    }
+
+    private void validateRange(Map<String, ParameterValue> params, String portRangeParam) {
+        if (params.get(portRangeParam) != null) {
+            validateRangeValue(params.get(portRangeParam).getRangeValue());
         }
     }
 
@@ -151,17 +150,8 @@ public class L4Classifier extends Classifier {
     public List<MatchBuilder> update(List<MatchBuilder> matches, Map<String, ParameterValue> params) {
         Set<Long> sPorts = new HashSet<>();
         Set<Long> dPorts = new HashSet<>();
-        if (params.get(SRC_PORT_PARAM) != null) {
-            sPorts.add(params.get(SRC_PORT_PARAM).getIntValue());
-        } else if (params.get(SRC_PORT_RANGE_PARAM) != null) {
-            sPorts.addAll(createSetFromRange(params.get(SRC_PORT_RANGE_PARAM).getRangeValue()));
-        }
-        if (params.get(DST_PORT_PARAM) != null) {
-            dPorts.add(params.get(DST_PORT_PARAM).getIntValue());
-        } else if (params.get(DST_PORT_RANGE_PARAM) != null) {
-            dPorts.addAll(createSetFromRange(params.get(DST_PORT_RANGE_PARAM).getRangeValue()));
-        }
-
+        addToPortSet(params, SRC_PORT_PARAM, SRC_PORT_RANGE_PARAM, sPorts);
+        addToPortSet(params, DST_PORT_PARAM, DST_PORT_RANGE_PARAM, dPorts);
         List<MatchBuilder> newMatches = new ArrayList<>();
         for (MatchBuilder matchBuilder : matches) {
             Layer4Match l4Match = matchBuilder.getLayer4Match();
@@ -169,18 +159,20 @@ public class L4Classifier extends Classifier {
             if (l4Match == null) {
                 l4Match = resolveL4Match(params);
             }
-            if (l4Match instanceof UdpMatch) {
-                l4Matches = createUdpMatches((UdpMatch) l4Match, sPorts, dPorts);
-            } else if (l4Match instanceof TcpMatch) {
-                l4Matches = createTcpMatches((TcpMatch) l4Match, sPorts, dPorts);
-            } else if (l4Match instanceof SctpMatch) {
-                l4Matches = createSctpMatches((SctpMatch) l4Match, sPorts, dPorts);
-            }
+            l4Matches = createL4Matches(l4Match, sPorts, dPorts);
             for (Layer4Match newL4Match : l4Matches) {
                 newMatches.add(new MatchBuilder(matchBuilder.build()).setLayer4Match(newL4Match));
             }
         }
         return newMatches;
+    }
+
+    private void addToPortSet(Map<String, ParameterValue> params, String portParam, String portRangeParam, Set<Long> portSet) {
+        if (params.get(portParam) != null) {
+            portSet.add(params.get(portParam).getIntValue());
+        } else if (params.get(portRangeParam) != null) {
+            portSet.addAll(createSetFromRange(params.get(portRangeParam).getRangeValue()));
+        }
     }
 
     private Layer4Match resolveL4Match(Map<String, ParameterValue> params) {
@@ -209,6 +201,18 @@ public class L4Classifier extends Classifier {
             }
         }
         return res;
+    }
+
+    private Set<? extends Layer4Match> createL4Matches(Layer4Match l4Match, Set<Long> sPorts, Set<Long> dPorts) {
+        Set<? extends Layer4Match> l4Matches = null;
+        if (l4Match instanceof UdpMatch) {
+            l4Matches = createUdpMatches((UdpMatch) l4Match, sPorts, dPorts);
+        } else if (l4Match instanceof TcpMatch) {
+            l4Matches = createTcpMatches((TcpMatch) l4Match, sPorts, dPorts);
+        } else if (l4Match instanceof SctpMatch) {
+            l4Matches = createSctpMatches((SctpMatch) l4Match, sPorts, dPorts);
+        }
+        return l4Matches;
     }
 
     private Set<UdpMatch> createUdpMatches(UdpMatch udpMatch, Set<Long> sPorts, Set<Long> dPorts) {
