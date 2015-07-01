@@ -82,13 +82,13 @@ public class PolicyManager
             LoggerFactory.getLogger(PolicyManager.class);
 
     private short tableOffset;
-    private final short TABLEID_PORTSECURITY = 0;
-    private final short TABLEID_INGRESS_NAT = (short) (tableOffset+1);
-    private final short TABLEID_SOURCE_MAPPER = (short) (tableOffset+2);
-    private final short TABLEID_DESTINATION_MAPPER = (short) (tableOffset+3);
-    private final short TABLEID_POLICY_ENFORCER = (short) (tableOffset+4);
-    private final short TABLEID_EGRESS_NAT = (short) (tableOffset+5);
-    private final short TABLEID_EXTERNAL_MAPPER = (short) (tableOffset+6);
+    private static final short TABLEID_PORTSECURITY = 0;
+    private static final short TABLEID_INGRESS_NAT =  1;
+    private static final short TABLEID_SOURCE_MAPPER = 2;
+    private static final short TABLEID_DESTINATION_MAPPER = 3;
+    private static final short TABLEID_POLICY_ENFORCER = 4;
+    private static final short TABLEID_EGRESS_NAT = 5;
+    private static final short TABLEID_EXTERNAL_MAPPER = 6;
 
     private final SwitchManager switchManager;
     private final PolicyResolver policyResolver;
@@ -143,14 +143,14 @@ public class PolicyManager
                                         this, policyResolver, switchManager,
                                         endpointManager, executor);
 
-        flowPipeline = ImmutableList.of(new PortSecurity(ctx,TABLEID_PORTSECURITY),
+        flowPipeline = ImmutableList.of(new PortSecurity(ctx, (short)(tableOffset+TABLEID_PORTSECURITY)),
                                         new GroupTable(ctx),
-                                        new IngressNatMapper(ctx,TABLEID_INGRESS_NAT),
-                                        new SourceMapper(ctx,TABLEID_SOURCE_MAPPER),
-                                        new DestinationMapper(ctx,TABLEID_DESTINATION_MAPPER),
-                                        new PolicyEnforcer(ctx,TABLEID_POLICY_ENFORCER),
-                                        new EgressNatMapper(ctx,TABLEID_EGRESS_NAT),
-                                        new ExternalMapper(ctx,TABLEID_EXTERNAL_MAPPER)
+                                        new IngressNatMapper(ctx, (short)(tableOffset+TABLEID_INGRESS_NAT)),
+                                        new SourceMapper(ctx, (short)(tableOffset+TABLEID_SOURCE_MAPPER)),
+                                        new DestinationMapper(ctx, (short)(tableOffset+TABLEID_DESTINATION_MAPPER)),
+                                        new PolicyEnforcer(ctx, (short)(tableOffset+TABLEID_POLICY_ENFORCER)),
+                                        new EgressNatMapper(ctx, (short)(tableOffset+TABLEID_EGRESS_NAT)),
+                                        new ExternalMapper(ctx, (short)(tableOffset+TABLEID_EXTERNAL_MAPPER))
                                         );
 
         policyScope = policyResolver.registerListener(this);
@@ -170,37 +170,37 @@ public class PolicyManager
 
 
     public short getTABLEID_PORTSECURITY() {
-        return TABLEID_PORTSECURITY;
+        return (short)(tableOffset+TABLEID_PORTSECURITY);
     }
 
 
     public short getTABLEID_INGRESS_NAT() {
-        return TABLEID_INGRESS_NAT;
+        return (short)(tableOffset+TABLEID_INGRESS_NAT);
     }
 
 
     public short getTABLEID_SOURCE_MAPPER() {
-        return TABLEID_SOURCE_MAPPER;
+        return (short)(tableOffset+TABLEID_SOURCE_MAPPER);
     }
 
 
     public short getTABLEID_DESTINATION_MAPPER() {
-        return TABLEID_DESTINATION_MAPPER;
+        return (short)(tableOffset+TABLEID_DESTINATION_MAPPER);
     }
 
 
     public short getTABLEID_POLICY_ENFORCER() {
-        return TABLEID_POLICY_ENFORCER;
+        return (short)(tableOffset+TABLEID_POLICY_ENFORCER);
     }
 
 
     public short getTABLEID_EGRESS_NAT() {
-        return TABLEID_EGRESS_NAT;
+        return (short)(tableOffset+TABLEID_EGRESS_NAT);
     }
 
 
     public short getTABLEID_EXTERNAL_MAPPER() {
-        return TABLEID_EXTERNAL_MAPPER;
+        return (short)(tableOffset+TABLEID_EXTERNAL_MAPPER);
     }
 
     @Override
