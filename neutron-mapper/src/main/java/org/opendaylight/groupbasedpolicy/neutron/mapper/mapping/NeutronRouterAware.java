@@ -110,7 +110,8 @@ public class NeutronRouterAware implements INeutronRouterAware {
             return;
         }
 
-        INeutronPortCRUD portInterface = NeutronCRUDInterfaces.getINeutronPortCRUD(this);
+        NeutronCRUDInterfaces neutronCRUDInterface = new NeutronCRUDInterfaces().fetchINeutronPortCRUD(this);
+        INeutronPortCRUD portInterface = neutronCRUDInterface.getPortInterface();
         if (portInterface == null) {
             LOG.warn("Illegal state - No provider for {}", INeutronPortCRUD.class.getName());
             return;
@@ -131,7 +132,8 @@ public class NeutronRouterAware implements INeutronRouterAware {
             rwTx.put(LogicalDatastoreType.CONFIGURATION, l3ContextIidForRouterId, l3Context);
         }
 
-        INeutronSubnetCRUD subnetInterface = NeutronCRUDInterfaces.getINeutronSubnetCRUD(this);
+        neutronCRUDInterface = neutronCRUDInterface.fetchINeutronSubnetCRUD(this);
+        INeutronSubnetCRUD subnetInterface = neutronCRUDInterface.getSubnetInterface();
         if (subnetInterface == null) {
             LOG.warn("Illegal state - No provider for {}", INeutronSubnetCRUD.class.getName());
             return;
@@ -256,7 +258,8 @@ public class NeutronRouterAware implements INeutronRouterAware {
     @Override
     public void neutronRouterInterfaceAttached(NeutronRouter router, NeutronRouter_Interface routerInterface) {
         LOG.trace("neutronRouterInterfaceAttached - router: {} interface: {}", router, routerInterface);
-        INeutronPortCRUD portInterface = NeutronCRUDInterfaces.getINeutronPortCRUD(this);
+        NeutronCRUDInterfaces neutronCRUDInterface = new NeutronCRUDInterfaces().fetchINeutronPortCRUD(this);
+        INeutronPortCRUD portInterface = neutronCRUDInterface.getPortInterface();
         if (portInterface == null) {
             LOG.warn("Illegal state - No provider for {}", INeutronPortCRUD.class.getName());
             return;
@@ -359,7 +362,8 @@ public class NeutronRouterAware implements INeutronRouterAware {
         rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l2BridgeDomainIid(tenantId, l2BridgeDomain.getId()),
                 l2BridgeDomain);
 
-        INeutronSubnetCRUD subnetInterface = NeutronCRUDInterfaces.getINeutronSubnetCRUD(this);
+        NeutronCRUDInterfaces neutronCRUDInterface = new NeutronCRUDInterfaces().fetchINeutronSubnetCRUD(this);
+        INeutronSubnetCRUD subnetInterface = neutronCRUDInterface.getSubnetInterface();
         if (subnetInterface == null) {
             LOG.warn("Illegal state - No provider for {}", INeutronSubnetCRUD.class.getName());
             return false;
@@ -449,7 +453,8 @@ public class NeutronRouterAware implements INeutronRouterAware {
     @Override
     public void neutronRouterInterfaceDetached(NeutronRouter router, NeutronRouter_Interface routerInterface) {
         LOG.trace("neutronRouterInterfaceDetached - router: {} interface: {}", router, routerInterface);
-        INeutronSubnetCRUD subnetInterface = NeutronCRUDInterfaces.getINeutronSubnetCRUD(this);
+        NeutronCRUDInterfaces neutronCRUDInterface = new NeutronCRUDInterfaces().fetchINeutronSubnetCRUD(this);
+        INeutronSubnetCRUD subnetInterface = neutronCRUDInterface.getSubnetInterface();
         if (subnetInterface == null) {
             LOG.warn("Illegal state - No provider for {}", INeutronSubnetCRUD.class.getName());
             return;

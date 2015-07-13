@@ -103,7 +103,8 @@ public class NeutronFloatingIpAware implements INeutronFloatingIPAware {
     }
 
     private Integer registerFloatingIpPort(String tenantUUID, String floatingIpPortUUID, ReadWriteTransaction rwTx) {
-        INeutronPortCRUD portInterface = NeutronCRUDInterfaces.getINeutronPortCRUD(this);
+        NeutronCRUDInterfaces neutronCRUDInterface = new NeutronCRUDInterfaces().fetchINeutronPortCRUD(this);
+        INeutronPortCRUD portInterface = neutronCRUDInterface.getPortInterface();
         if (portInterface == null) {
             LOG.warn("Illegal state - No provider for {}", INeutronPortCRUD.class.getName());
             return StatusCode.INTERNAL_SERVER_ERROR;
