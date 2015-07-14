@@ -105,9 +105,9 @@ public class JsonRpcEndpoint implements ChannelFutureListener {
      * @param message The concrete {@link RpcMessage} to send
      * @return SettableFuture&lt;Object&gt; The caller can use the returned
      * object to wait for the response (currently no timeout)
-     * @throws Throwable The concrete message couldn't be serialized and sent
+     * @throws Exception The concrete message couldn't be serialized and sent
      */
-    public SettableFuture<Object> sendRequest(RpcMessage message) throws Throwable {
+    public SettableFuture<Object> sendRequest(RpcMessage message) throws Exception {
         if (messageMap.get(message.getName()) == null) {
                 return null;
         }
@@ -130,9 +130,9 @@ public class JsonRpcEndpoint implements ChannelFutureListener {
      * Send a response to a previous {@link RpcMessage}request
      *
      * @param message The concrete {@link RpcMessage}
-     * @throws Throwable The concrete message couldn't be serialized and sent
+     * @throws Exception The concrete message couldn't be serialized and sent
      */
-    public void  sendResponse (RpcMessage message) throws Throwable {
+    public void  sendResponse (RpcMessage message) throws Exception {
 
         String s = objectMapper.writeValueAsString(message) + "\0";
         logger.trace("sendResponse: {}", s);

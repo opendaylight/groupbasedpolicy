@@ -346,7 +346,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
             request.setParams(paramList);
             try {
                 agent.sendRequest(request);
-            } catch (Throwable t) {
+            } catch (Exception e) {
 
             }
 
@@ -618,7 +618,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
             resp.setId(req.getId());
             try {
                 agent.sendResponse(resp);
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 LOG.warn("Response {} could not be sent to {}", resp, agent);
             }
 
@@ -642,7 +642,7 @@ public class EndpointManager implements AutoCloseable, DataChangeListener, RpcBr
         public void run() {
             try {
                 ctx.getPeer().sendResponse(resp);
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 // TODO: what to do here
             }
 

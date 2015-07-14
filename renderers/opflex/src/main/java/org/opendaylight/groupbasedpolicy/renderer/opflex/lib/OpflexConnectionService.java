@@ -650,8 +650,8 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker, Rp
          */
         try {
             endpoint.sendResponse(response);
-        } catch (Throwable e) {
-            logger.error("Throwable for sending {}, {}", message, e);
+        } catch (Exception e) {
+            logger.error("Exception for sending {}, {}", message, e);
         }
     }
 
@@ -717,8 +717,8 @@ public class OpflexConnectionService implements ConnectionService, RpcBroker, Rp
 
         try {
             endpoint.sendRequest(ourId);
-        } catch (Throwable t) {
-            logger.error("Couldn't send Identity {}", t);
+        } catch (Exception e) {
+            logger.error("Couldn't send Identity {}", e);
         }
     }
 

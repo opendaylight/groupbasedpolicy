@@ -229,7 +229,7 @@ public class PolicyManager implements PolicyListener, RpcBroker.RpcCallback, Aut
             request.setParams(paramsList);
             try {
                 agent.sendRequest(request);
-            } catch (Throwable t) {
+            } catch (Exception e) {
 
             }
         }
@@ -509,8 +509,8 @@ public class PolicyManager implements PolicyListener, RpcBroker.RpcCallback, Aut
         if (response != null) {
             try {
                 endpoint.sendResponse(response);
-            } catch (Throwable t) {
-                LOG.warn("Error sending response {}", t);
+            } catch (Exception e) {
+                LOG.warn("Error sending response {}", e);
             }
         }
 
