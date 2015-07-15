@@ -59,6 +59,19 @@ module ofoverlay {
                 }
             }
         }
+
+        uses initial-values;
+    }
+
+    grouping initial-values {
+        description
+            "Initial value of table offset is set in config subsystem";
+        leaf gbp-ofoverlay-table-offset {
+            description
+                "Used to offset pipeline to start at offset+1. Table0 is required.
+                This is to allow the enduser to configure where the GBP pipeline starts.";
+            type uint8;
+        }
     }
 
     grouping endpoint-location {

@@ -57,19 +57,23 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig.LearningMode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.SubjectFeatureDefinitions;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.table.types.rev131026.TableId;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Equivalence;
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * Manage policies on switches by subscribing to updates from the
@@ -98,11 +102,11 @@ public class PolicyManager
     private final ScheduledExecutorService executor;
     private final SingletonTask flowUpdateTask;
     private final DataBroker dataBroker;
-
+    private final OfContext ofCtx;
     /**
      * The flow tables that make up the processing pipeline
      */
-    private final List<? extends OfTable> flowPipeline;
+    private List<? extends OfTable> flowPipeline;
 
     /**
      * The delay before triggering the flow update task in response to an
@@ -123,7 +127,13 @@ public class PolicyManager
         this.policyResolver = policyResolver;
         this.dataBroker = dataBroker;
         this.tableOffset = tableOffset;
-
+        try {
+            // to validate against model
+            verifyMaxTableId(tableOffset);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Failed to start OF-Overlay renderer\n."
+                    + "Max. table ID would be out of range. Check config-subsystem.\n{}", e);
+        }
 
         if (dataBroker != null) {
             WriteTransaction t = dataBroker.newWriteOnlyTransaction();
@@ -139,19 +149,11 @@ public class PolicyManager
             policyResolver.registerActionDefinitions(entry.getKey(), entry.getValue());
         }
 
-        OfContext ctx = new OfContext(dataBroker, rpcRegistry,
+        ofCtx = new OfContext(dataBroker, rpcRegistry,
                                         this, policyResolver, switchManager,
                                         endpointManager, executor);
 
-        flowPipeline = ImmutableList.of(new PortSecurity(ctx, (short)(tableOffset+TABLEID_PORTSECURITY)),
-                                        new GroupTable(ctx),
-                                        new IngressNatMapper(ctx, (short)(tableOffset+TABLEID_INGRESS_NAT)),
-                                        new SourceMapper(ctx, (short)(tableOffset+TABLEID_SOURCE_MAPPER)),
-                                        new DestinationMapper(ctx, (short)(tableOffset+TABLEID_DESTINATION_MAPPER)),
-                                        new PolicyEnforcer(ctx, (short)(tableOffset+TABLEID_POLICY_ENFORCER)),
-                                        new EgressNatMapper(ctx, (short)(tableOffset+TABLEID_EGRESS_NAT)),
-                                        new ExternalMapper(ctx, (short)(tableOffset+TABLEID_EXTERNAL_MAPPER))
-                                        );
+        flowPipeline = createFlowPipeline();
 
         policyScope = policyResolver.registerListener(this);
         if (switchManager != null)
@@ -164,10 +166,99 @@ public class PolicyManager
         LOG.debug("Initialized OFOverlay policy manager");
     }
 
+    private List<? extends OfTable> createFlowPipeline() {
+        // TODO - PORTSECURITY is kept in table 0.
+        // According to openflow spec,processing on vSwitch always starts from table 0.
+        // Packets will be droped if table 0 is empty.
+        // Alternative workaround - table-miss flow entries in table 0.
+        return ImmutableList.of(new PortSecurity(ofCtx, (short) 0),
+                                        new GroupTable(ofCtx),
+                                        new IngressNatMapper(ofCtx, getTABLEID_INGRESS_NAT()),
+                                        new SourceMapper(ofCtx, getTABLEID_SOURCE_MAPPER()),
+                                        new DestinationMapper(ofCtx, getTABLEID_DESTINATION_MAPPER()),
+                                        new PolicyEnforcer(ofCtx, getTABLEID_POLICY_ENFORCER()),
+                                        new EgressNatMapper(ofCtx, getTABLEID_EGRESS_NAT()),
+                                        new ExternalMapper(ofCtx, getTABLEID_EXTERNAL_MAPPER())
+                                        );
+    }
+
+    /**
+     * @param tableOffset - new offset value
+     * @return ListenableFuture<List> - to indicate that tables have been synced
+     */
+    public ListenableFuture<Void> changeOpenFlowTableOffset(final short tableOffset) {
+        try {
+            verifyMaxTableId(tableOffset);
+        } catch (IllegalArgumentException e) {
+            LOG.error("Cannot update table offset. Max. table ID would be out of range.\n{}", e);
+            // TODO - invalid offset value remains in conf DS
+            // It's not possible to validate offset value by using constrains in model,
+            // because number of tables in pipeline varies.
+            return Futures.immediateFuture(null);
+        }
+        List<Short> tableIDs = getTableIDs();
+        this.tableOffset = tableOffset;
+        return Futures.transform(removeUnusedTables(tableIDs), new Function<Void, Void>() {
+
+            @Override
+            public Void apply(Void tablesRemoved) {
+                flowPipeline = createFlowPipeline();
+                scheduleUpdate();
+                return null;
+            }
+        });
+    }
+
+    /**
+     * @param  tableIDs - IDs of tables to delete
+     * @return ListenableFuture<Void> - which will be filled when clearing is done
+     */
+    private ListenableFuture<Void> removeUnusedTables(final List<Short> tableIDs) {
+        List<ListenableFuture<Void>> checkList = new ArrayList<>();
+        final ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
+        for (Short tableId : tableIDs) {
+            for (NodeId nodeId : switchManager.getReadySwitches()) {
+                final InstanceIdentifier<Table> tablePath = FlowUtils.createTablePath(nodeId, tableId);
+                checkList.add(deteleTableIfExists(rwTx, tablePath));
+            }
+        }
+        ListenableFuture<List<Void>> allAsListFuture = Futures.allAsList(checkList);
+        return Futures.transform(allAsListFuture, new AsyncFunction<List<Void>, Void>() {
+
+            @Override
+            public ListenableFuture<Void> apply(List<Void> readyToSubmit) {
+                return rwTx.submit();
+            }
+        });
+    }
+
+    private List<Short> getTableIDs() {
+        List<Short> tableIds = new ArrayList<>();
+        tableIds.add(getTABLEID_PORTSECURITY());
+        tableIds.add(getTABLEID_INGRESS_NAT());
+        tableIds.add(getTABLEID_SOURCE_MAPPER());
+        tableIds.add(getTABLEID_DESTINATION_MAPPER());
+        tableIds.add(getTABLEID_POLICY_ENFORCER());
+        tableIds.add(getTABLEID_EGRESS_NAT());
+        tableIds.add(getTABLEID_EXTERNAL_MAPPER());
+        return tableIds;
+    }
+
+    private ListenableFuture<Void> deteleTableIfExists(final ReadWriteTransaction rwTx, final InstanceIdentifier<Table> tablePath){
+    return Futures.transform(rwTx.read(LogicalDatastoreType.CONFIGURATION, tablePath), new Function<Optional<Table>, Void>() {
+
+        @Override
+        public Void apply(Optional<Table> optTable) {
+            if(optTable.isPresent()){
+                rwTx.delete(LogicalDatastoreType.CONFIGURATION, tablePath);
+            }
+            return null;
+        }});
+    }
+
     // **************
     // SwitchListener
     // **************
-
 
     public short getTABLEID_PORTSECURITY() {
         return (short)(tableOffset+TABLEID_PORTSECURITY);
@@ -201,6 +292,11 @@ public class PolicyManager
 
     public short getTABLEID_EXTERNAL_MAPPER() {
         return (short)(tableOffset+TABLEID_EXTERNAL_MAPPER);
+    }
+
+
+    public TableId verifyMaxTableId(short tableOffset) {
+        return new TableId((short)(tableOffset+TABLEID_EXTERNAL_MAPPER));
     }
 
     @Override
