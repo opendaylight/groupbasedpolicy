@@ -14,7 +14,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 import org.junit.Before;
@@ -35,6 +34,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.Futures;
 
 public class OFOverlayRendererTest {
 
@@ -67,9 +67,8 @@ public class OFOverlayRendererTest {
 
         readTransaction = mock(ReadOnlyTransaction.class);
         when(dataProvider.newReadOnlyTransaction()).thenReturn(readTransaction);
-        future = mock(CheckedFuture.class);
+        future = Futures.immediateCheckedFuture(Optional.<OfOverlayConfig> absent());
         when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(future);
-
         renderer = new OFOverlayRenderer(dataProvider, rpcRegistry, notificationService, tableOffset);
     }
 
@@ -82,13 +81,10 @@ public class OFOverlayRendererTest {
     @Test
     public void applyConfigTest() throws Exception {
         OfOverlayConfig config = mock(OfOverlayConfig.class);
-        Field field = OFOverlayRenderer.class.getDeclaredField("config");
-        field.setAccessible(true);
-        field.set(renderer, config);
-
-        Method method = OFOverlayRenderer.class.getDeclaredMethod("applyConfig");
+        when(config.getGbpOfoverlayTableOffset()).thenReturn(null);
+        Method method = OFOverlayRenderer.class.getDeclaredMethod("applyConfig",OfOverlayConfig.class);
         method.setAccessible(true);
-        method.invoke(renderer);
+        method.invoke(renderer, config);
 
         verify(config).getEncapsulationFormat();
         verify(config, times(2)).getLearningMode();

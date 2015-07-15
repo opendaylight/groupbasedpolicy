@@ -15,9 +15,10 @@ module ofoverlay-provider-impl {
     import opendaylight-md-sal-binding { prefix mdsal; revision-date 2013-10-28; }
     import ietf-yang-types { prefix "yang"; revision-date 2010-09-24; }
     import opendaylight-sal-binding-broker-impl { prefix sal-broker; revision-date 2013-10-28;}
+    import ofoverlay { prefix ofoverlay; revision-date 2014-05-28; }
 
     description
-        "This module contains the base YANG definitions for 
+        "This module contains the base YANG definitions for
           ofoverlay-provider impl implementation.";
 
     revision "2014-06-11" {
@@ -64,12 +65,7 @@ module ofoverlay-provider-impl {
                 }
             }
 
-            leaf gbp-ofoverlay-table-offset {
-                description 
-                    "Used to offset pipeline to start at offset+1. Table0 is required.
-                    This is to allow the enduser to configure where the GBP pipeline starts.";
-                type uint16;
-            }
+            uses ofoverlay:initial-values;
         }
     }
 }
