@@ -4,12 +4,12 @@
   <parent>
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>commons.groupbasedpolicy</artifactId>
-    <version>0.1.4-Helium-SR4</version>
+    <version>0.1.5-SNAPSHOT</version>
     <relativePath>commons/parent</relativePath>
   </parent>
   <groupId>org.opendaylight.groupbasedpolicy</groupId>
   <artifactId>groupbasedpolicy.project</artifactId>
-  <version>0.1.4-Helium-SR4</version>
+  <version>0.1.5-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>groupbasedpolicy</name> <!-- Used by Sonar to set project name -->
   <prerequisites>
