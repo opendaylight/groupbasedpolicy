@@ -229,9 +229,9 @@ public class EndpointRpcRegistry implements EndpointService {
                     Class<? extends Augmentation<Endpoint>> augmentationType = (Class<? extends Augmentation<Endpoint>>) getAugmentationContextType(augmentation);
                     eb.addAugmentation(augmentationType, augmentation);
                 }
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 LOG.warn("Endpoint Augmentation error while processing "
-                        + entry.getKey() + ". Reason: ", t);
+                        + entry.getKey() + ". Reason: ", e);
             }
         }
         return eb;
@@ -257,9 +257,9 @@ public class EndpointRpcRegistry implements EndpointService {
                     Class<? extends Augmentation<EndpointL3>> augmentationType = (Class<? extends Augmentation<EndpointL3>>) getAugmentationContextType(augmentation);
                     eb.addAugmentation(augmentationType, augmentation);
                 }
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 LOG.warn("L3 endpoint Augmentation error while processing "
-                        + entry.getKey() + ". Reason: ", t);
+                        + entry.getKey() + ". Reason: ", e);
             }
         }
         return eb;
@@ -279,9 +279,9 @@ public class EndpointRpcRegistry implements EndpointService {
                 .entrySet()) {
             try {
                 entry.getValue().buildL3PrefixEndpointAugmentation(eb, input);
-            } catch (Throwable t) {
+            } catch (Exception e) {
                 LOG.warn("L3 endpoint Augmentation error while processing "
-                        + entry.getKey() + ". Reason: ", t);
+                        + entry.getKey() + ". Reason: ", e);
             }
         }
         return eb;
