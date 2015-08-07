@@ -57,16 +57,17 @@ public class OvsdbHelper {
      */
     public static OvsdbBridgeAugmentation getOvsdbBridgeFromTerminationPoint(
             InstanceIdentifier<OvsdbTerminationPointAugmentation> tpIid, DataBroker dataBroker) {
-        InstanceIdentifier<OvsdbBridgeAugmentation> ovsdbBridgeIid =
-                tpIid.firstIdentifierOf(Node.class).augmentation(OvsdbBridgeAugmentation.class);
-        if (ovsdbBridgeIid == null) {
-            return null;
-        }
-        ReadTransaction transaction = dataBroker.newReadOnlyTransaction();
-        Optional<OvsdbBridgeAugmentation> ovsdbBridge =
-                readFromDs(LogicalDatastoreType.OPERATIONAL, ovsdbBridgeIid, transaction );
-        if (ovsdbBridge.isPresent()) {
-            return ovsdbBridge.get();
+        InstanceIdentifier<Node> nodeIid = tpIid.firstIdentifierOf(Node.class);
+        if (nodeIid != null) {
+            InstanceIdentifier<OvsdbBridgeAugmentation> ovsdbBridgeIid = nodeIid.augmentation(OvsdbBridgeAugmentation.class);
+            if (ovsdbBridgeIid != null) {
+                ReadTransaction transaction = dataBroker.newReadOnlyTransaction();
+                Optional<OvsdbBridgeAugmentation> ovsdbBridge =
+                    readFromDs(LogicalDatastoreType.OPERATIONAL, ovsdbBridgeIid, transaction);
+                if (ovsdbBridge.isPresent()) {
+                    return ovsdbBridge.get();
+                }
+            }
         }
         return null;
     }
