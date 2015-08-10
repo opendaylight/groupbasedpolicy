@@ -4,38 +4,33 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.addNxNspMatch;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.addNxRegMatch;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.addNxTunIdMatch;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.addNxTunIpv4DstMatch;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.applyActionIns;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.gotoTableIns;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.instructions;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadNshc1RegAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadNshc2RegAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadRegAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadTunIPv4Action;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadTunIdAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxOutputRegAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadNshc1RegAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadNshc2RegAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.outputAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.addNxTunIpv4DstMatch;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ChainAction.isSrcEpConsumer;
 
 import java.math.BigInteger;
-import java.util.List;
 
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.NetworkElements;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.PolicyPair;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ChainAction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcNshHeader;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg0;
@@ -44,7 +39,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev14
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg5;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg6;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlanGpe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,15 +52,11 @@ public class ChainActionFlows {
     }
 
     public static void createChainTunnelFlows(SfcNshHeader sfcNshHeader, NetworkElements netElements, FlowMap flowMap,
-            OfContext ctx, boolean swap) {
+            OfContext ctx) {
 
         NodeId localNodeId = netElements.getLocalNodeId();
         NodeId destNodeId = netElements.getDstEp().getAugmentation(OfOverlayContext.class).getNodeId();
         EndpointFwdCtxOrdinals epOrds = netElements.getSrcEpOrds();
-
-        if (swap) {
-            destNodeId = netElements.getSrcEp().getAugmentation(OfOverlayContext.class).getNodeId();
-        }
 
         NodeConnectorId localNodeTunPort = ctx.getSwitchManager().getTunnelPort(localNodeId, TunnelTypeVxlanGpe.class);
         NodeConnectorId destNodeTunPort = ctx.getSwitchManager().getTunnelPort(destNodeId, TunnelTypeVxlanGpe.class);
@@ -85,7 +75,7 @@ public class ChainActionFlows {
                 localNodeId,
                 ctx.getPolicyManager().getTABLEID_EXTERNAL_MAPPER(),
                 createExternalFlow(sfcNshHeader, localNodeTunPort, netElements, ctx.getPolicyManager()
-                    .getTABLEID_EXTERNAL_MAPPER(), ctx, swap));
+                    .getTABLEID_EXTERNAL_MAPPER(), ctx));
 
         flowMap.writeFlow(
                 destNodeId,
@@ -127,29 +117,16 @@ public class ChainActionFlows {
     }
 
     private static Flow createExternalFlow(SfcNshHeader sfcNshHeader, NodeConnectorId tunPort,
-            NetworkElements netElements, short tableId, OfContext ctx, boolean swap) {
+            NetworkElements netElements, short tableId, OfContext ctx) {
 
         Integer priority = 1000;
-        BigInteger destTunnelId;
-        int matchTunnelId;
-        NodeId destNodeId;
-        Long l3c;
-        if (swap) {
-            destTunnelId = BigInteger.valueOf(netElements.getSrcEpOrds().getTunnelId());
-            l3c = Long.valueOf(netElements.getDstEpOrds().getL3Id());
-            matchTunnelId = netElements.getSrcEpOrds().getTunnelId();
-            destNodeId = netElements.getDstEp().getAugmentation(OfOverlayContext.class).getNodeId();
+        int matchTunnelId=sfcNshHeader.getNshMetaC2().intValue();
+        Long l3c=Long.valueOf(netElements.getSrcEpOrds().getL3Id());
 
-        } else {
-            destTunnelId = BigInteger.valueOf(netElements.getDstEpOrds().getTunnelId());
-            l3c = Long.valueOf(netElements.getSrcEpOrds().getL3Id());
-            matchTunnelId = netElements.getDstEpOrds().getTunnelId();
-            destNodeId = netElements.getSrcEp().getAugmentation(OfOverlayContext.class).getNodeId();
-        }
         org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action loadC1 = nxLoadNshc1RegAction(sfcNshHeader.getNshMetaC1());
         org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action loadC2 = nxLoadNshc2RegAction(sfcNshHeader.getNshMetaC2());
         org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action loadChainTunVnid = nxLoadTunIdAction(
-                destTunnelId, false);
+                BigInteger.valueOf(sfcNshHeader.getNshMetaC2()), false);
         org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action loadChainTunDest = nxLoadTunIPv4Action(
                 sfcNshHeader.getNshTunIpDst().getValue(), false);
 
@@ -158,9 +135,9 @@ public class ChainActionFlows {
         addNxTunIdMatch(mb, matchTunnelId);
         addNxNspMatch(mb, sfcNshHeader.getNshNspToChain());
         addNxNsiMatch(mb, sfcNshHeader.getNshNsiToChain());
-        if (!destNodeId.equals(netElements.getLocalNodeId())) {
+        if (!netElements.getDstNodeId().equals(netElements.getSrcNodeId())) {
             addNxTunIpv4DstMatch(mb, ctx.getSwitchManager()
-                .getTunnelIP(destNodeId, TunnelTypeVxlan.class)
+                .getTunnelIP(netElements.getDstNodeId(), TunnelTypeVxlanGpe.class)
                 .getIpv4Address());
             priority = 1500;
         }
