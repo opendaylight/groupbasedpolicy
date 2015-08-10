@@ -19,7 +19,6 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.ChainActionFlows.createChainTunnelFlows;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxSetNsiAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxSetNspAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ChainAction.isSrcEpConsumer;
 
 import java.util.List;
 import java.util.Map;
@@ -74,7 +73,7 @@ import com.google.common.collect.Iterables;
 /**
  * Chain action for the OpenFlow Overlay renderer
  * TODO: separate the generic definition from the concrete
- * implementation for the OpenFlow Ovelray renderer
+ * implementation for the OpenFlow Overlay renderer
  */
 public class ChainAction extends Action {
 
@@ -169,16 +168,6 @@ public class ChainAction extends Action {
             renderedServicePath = rsp;
         }
 
-        NodeId tunnelDestNodeId;
-        if (netElements.getDstNodeId().equals(netElements.getLocalNodeId())) {
-            // Return destination is here
-            tunnelDestNodeId = netElements.getLocalNodeId();
-        } else {
-            tunnelDestNodeId = netElements.getDstNodeId();
-        }
-
-        Long returnVnid = (long) netElements.getSrcEpOrds().getTunnelId();
-
         try {
             if (sfcPath.isSymmetric() && direction.equals(Direction.Out)){
                 rspName = rspName + "-Reverse";
@@ -193,15 +182,6 @@ public class ChainAction extends Action {
                 } else {
                     renderedServicePath = rsp;
                 }
-                if(isSrcEpConsumer(netElements.getSrcEp(), policyPair.getConsumerEpgId(), ctx)) {
-                    if (netElements.getSrcNodeId().equals(netElements.getLocalNodeId())) {
-                        // Return destination is here
-                        tunnelDestNodeId = netElements.getLocalNodeId();
-                    } else {
-                        tunnelDestNodeId = netElements.getSrcNodeId();
-                    }
-                    returnVnid = (long) netElements.getDstEpOrds().getTunnelId();
-                }
             }
         } catch (Exception e) {
             LOG.error("updateAction: Attemping to determine if srcEp {} was consumer.", netElements.getSrcEp().getKey(), e);
@@ -213,6 +193,10 @@ public class ChainAction extends Action {
             // Errors logged in method.
             return null;
         }
+
+        NodeId tunnelDestNodeId=netElements.getDstNodeId();
+
+        Long returnVnid = (long) netElements.getSrcEpOrds().getTunnelId();
 
         IpAddress tunnelDest = ctx.getSwitchManager().getTunnelIP(tunnelDestNodeId, TunnelTypeVxlanGpe.class);
         if (tunnelDest == null || tunnelDest.getIpv4Address() == null) {
@@ -238,39 +222,8 @@ public class ChainAction extends Action {
         // chained packets.
         actions = addActionBuilder(actions, nxSetNsiAction(sfcNshHeader.getNshNsiToChain()), order);
         actions = addActionBuilder(actions, nxSetNspAction(sfcNshHeader.getNshNspToChain()), order);
-        boolean swap=false;
-        if ((direction.equals(Direction.Out) && !(isSrcEpConsumer(netElements.getSrcEp(), policyPair.getConsumerEpgId(), ctx)))
-         || (direction.equals(Direction.In) && (isSrcEpConsumer(netElements.getSrcEp(), policyPair.getConsumerEpgId(), ctx)))){
-            swap = true;
-        }
-        createChainTunnelFlows(sfcNshHeader, netElements, flowMap, ctx, swap);
+        createChainTunnelFlows(sfcNshHeader, netElements, flowMap, ctx);
         return actions;
-    }
-
-    private boolean usesReversePath(Direction direction, PolicyPair policyPair, NetworkElements netElements, OfContext ctx) {
-        boolean isConsumer;
-        isConsumer = isSrcEpConsumer(netElements.getSrcEp(), policyPair.getConsumerEpgId(), ctx);
-        if (isConsumer && direction.equals(Direction.In)) {
-            return true;
-        }
-        if (!isConsumer && direction.equals(Direction.Out)) {
-            return true;
-        }
-        return false;
-    }
-
-    public static boolean isSrcEpConsumer(Endpoint srcEp, int consumerEpgOrdId, OfContext ctx ){
-        for (EgKey egKey: ctx.getEndpointManager().getEgKeysForEndpoint(srcEp)) {
-            try {
-                if(OrdinalFactory.getContextOrdinal(egKey.getTenantId(),egKey.getEgId()) == consumerEpgOrdId) {
-                    return true;
-                }
-            } catch (Exception e) {
-                LOG.error("isSrcEpConsumer: Could not determine if srcEp {} was consumer", srcEp.getKey());
-                return false;
-            }
-        }
-        return false;
     }
 
     private RenderedServicePath createRsp(ServiceFunctionPath sfcPath, String rspName) {
