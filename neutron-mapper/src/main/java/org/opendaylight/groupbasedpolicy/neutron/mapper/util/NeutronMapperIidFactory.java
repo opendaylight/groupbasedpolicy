@@ -1,6 +1,7 @@
 package org.opendaylight.groupbasedpolicy.neutron.mapper.util;
 
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.UniqueId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.mapper.rev150223.Mappings;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.mapper.rev150223.mappings.EndpointGroupPairToContractMappings;
@@ -22,11 +23,11 @@ public class NeutronMapperIidFactory {
     }
 
     public static InstanceIdentifier<EndpointGroupPairToContractMapping> endpointGroupPairToContractMappingIid(
-            EndpointGroupId providerEpg, EndpointGroupId consumerEpg) {
+            EndpointGroupId providerEpg, TenantId providerTenantId, EndpointGroupId consumerEpg, TenantId consumerTenantId) {
         return InstanceIdentifier.builder(Mappings.class)
             .child(EndpointGroupPairToContractMappings.class)
             .child(EndpointGroupPairToContractMapping.class,
-                    new EndpointGroupPairToContractMappingKey(consumerEpg, providerEpg))
+                    new EndpointGroupPairToContractMappingKey(consumerEpg, consumerTenantId, providerEpg, providerTenantId))
             .build();
     }
 
