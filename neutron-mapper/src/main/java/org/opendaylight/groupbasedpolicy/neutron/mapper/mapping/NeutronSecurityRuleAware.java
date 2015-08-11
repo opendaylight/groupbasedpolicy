@@ -95,8 +95,8 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
         EndpointGroupId consumerEpgId = transform.getConsumerEpgId();
         SubjectName subjectName = transform.getSubjectName();
 
-        Optional<ContractId> potentialContractId = readContractIdFromEpgPairToContractMapping(providerEpgId,
-                consumerEpgId, rwTx);
+        Optional<ContractId> potentialContractId = readContractIdFromEpgPairToContractMapping(tenantId, providerEpgId,
+                tenantId, consumerEpgId, rwTx);
         ContractId contractId = null;
         if (potentialContractId.isPresent()) {
             contractId = potentialContractId.get();
@@ -148,7 +148,7 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
             Contract contract = createContract(clause, subject);
             contractId = contract.getId();
             rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.contractIid(tenantId, contractId), contract);
-            putEpgPairToContractMapping(providerEpgId, consumerEpgId, contractId, rwTx);
+            putEpgPairToContractMapping(tenantId, providerEpgId, tenantId, consumerEpgId, tenantId, contractId, rwTx);
 
             // adds provider and consumer named selectors
             ProviderNamedSelector providerSelector = createProviderNamedSelector(contractId);
@@ -238,8 +238,8 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
         EndpointGroupId providerEpgId = transform.getProviderEpgId();
         EndpointGroupId consumerEpgId = transform.getConsumerEpgId();
 
-        Optional<ContractId> potentialContractId = readContractIdFromEpgPairToContractMapping(providerEpgId,
-                consumerEpgId, rwTx);
+        Optional<ContractId> potentialContractId = readContractIdFromEpgPairToContractMapping(tenantId, providerEpgId,
+                tenantId, consumerEpgId, rwTx);
         if (!potentialContractId.isPresent()) {
             LOG.warn("Illegal state - mapping EPG pair (provider EPG {} consumer EPG {}) does not exist.",
                     providerEpgId.getValue(), consumerEpgId.getValue());
@@ -327,26 +327,29 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
         return true;
     }
 
-    public static Optional<ContractId> readContractIdFromEpgPairToContractMapping(EndpointGroupId providerEpgId,
-            EndpointGroupId consumerEpgId, ReadTransaction rTx) {
+    public static Optional<ContractId> readContractIdFromEpgPairToContractMapping(TenantId providerTenantId, EndpointGroupId providerEpgId,
+            TenantId consumerTenantId, EndpointGroupId consumerEpgId, ReadTransaction rTx) {
         Optional<EndpointGroupPairToContractMapping> potentialMapping = DataStoreHelper.readFromDs(
                 LogicalDatastoreType.OPERATIONAL,
-                NeutronMapperIidFactory.endpointGroupPairToContractMappingIid(providerEpgId, consumerEpgId), rTx);
+                NeutronMapperIidFactory.endpointGroupPairToContractMappingIid(providerEpgId, providerTenantId, consumerEpgId, consumerTenantId), rTx);
         if (potentialMapping.isPresent()) {
             return Optional.of(potentialMapping.get().getContractId());
         }
         return Optional.absent();
     }
 
-    private static void putEpgPairToContractMapping(EndpointGroupId providerEpgId, EndpointGroupId consumerEpgId,
-            ContractId contractId, WriteTransaction wTx) {
-        EndpointGroupPairToContractMapping epgPairToContractMapping = new EndpointGroupPairToContractMappingBuilder().setProviderEpgId(
-                providerEpgId)
+    private static void putEpgPairToContractMapping(TenantId providerTenantId, EndpointGroupId providerEpgId, TenantId consumerTenantId,
+            EndpointGroupId consumerEpgId, TenantId contractTenantId, ContractId contractId, WriteTransaction wTx) {
+        EndpointGroupPairToContractMapping epgPairToContractMapping = new EndpointGroupPairToContractMappingBuilder()
+            .setProviderEpgId(providerEpgId)
+            .setProviderTenantId(providerTenantId)
             .setConsumerEpgId(consumerEpgId)
+            .setConsumerTenantId(consumerTenantId)
             .setContractId(contractId)
+            .setContractTenantId(contractTenantId)
             .build();
         wTx.put(LogicalDatastoreType.OPERATIONAL, NeutronMapperIidFactory.endpointGroupPairToContractMappingIid(
-                epgPairToContractMapping.getProviderEpgId(), epgPairToContractMapping.getConsumerEpgId()),
+                epgPairToContractMapping.getProviderEpgId(), epgPairToContractMapping.getProviderTenantId(), epgPairToContractMapping.getConsumerEpgId(),epgPairToContractMapping.getConsumerTenantId()),
                 epgPairToContractMapping, true);
     }
 
