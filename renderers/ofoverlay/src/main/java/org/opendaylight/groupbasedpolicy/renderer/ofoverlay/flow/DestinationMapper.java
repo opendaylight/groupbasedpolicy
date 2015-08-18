@@ -234,7 +234,6 @@ public class DestinationMapper extends FlowTable {
                 }
             }
         }
-
     }
 
     // set up next-hop destinations for all the endpoints in the endpoint
