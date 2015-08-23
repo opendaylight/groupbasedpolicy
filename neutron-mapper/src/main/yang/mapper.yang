@@ -26,15 +26,6 @@ module neutron-mapper {
     }
 
     grouping endpoint-group-pair-fields {
-        leaf provider-tenant-id {
-            type gbp-common:tenant-id;
-        }
-        leaf consumer-tenant-id {
-            type gbp-common:tenant-id;
-        }
-        leaf contract-tenant-id {
-            type gbp-common:tenant-id;
-        }
         leaf provider-epg-id {
             type gbp-common:endpoint-group-id;
         }
@@ -67,7 +58,7 @@ module neutron-mapper {
         }
         container endpoint-group-pair-to-contract-mappings {
             list endpoint-group-pair-to-contract-mapping {
-                key "provider-tenant-id provider-epg-id consumer-tenant-id consumer-epg-id";
+                key "provider-epg-id consumer-epg-id";
                 uses endpoint-group-pair-fields;
             }
         }
