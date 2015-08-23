@@ -10,13 +10,13 @@
   <parent>
     <groupId>org.opendaylight.odlparent</groupId>
     <artifactId>odlparent</artifactId>
-    <version>1.5.1-Lithium-SR1</version>
+    <version>1.5.2-SNAPSHOT</version>
     <relativePath>../../odlparent/odlparent</relativePath>
   </parent>
 
   <groupId>org.opendaylight.groupbasedpolicy</groupId>
   <artifactId>commons.groupbasedpolicy</artifactId>
-  <version>0.2.1-Lithium-SR1</version>
+  <version>0.2.2-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <prerequisites>
@@ -28,16 +28,16 @@
     <generated.sources.sal>${project.build.directory}/generated-sources/sal</generated.sources.sal>
     <generated.sources.config>${project.build.directory}/generated-sources/config</generated.sources.config>
     <generated.yang.docs>${project.build.directory}/site/models</generated.yang.docs>
-    <config.version>0.3.1-Lithium-SR1</config.version>
-    <mdsal.version>1.2.1-Lithium-SR1</mdsal.version>
-    <sfc.version>0.1.1-Lithium-SR1</sfc.version>
-    <restconf.version>1.2.1-Lithium-SR1</restconf.version>
-    <yangtools.version>0.7.1-Lithium-SR1</yangtools.version>
-    <openflowplugin.version>0.1.1-Lithium-SR1</openflowplugin.version>
-    <neutron.version>0.5.1-Lithium-SR1</neutron.version>
-    <ovsdb.southbound.version>1.1.1-Lithium-SR1</ovsdb.southbound.version>
-    <dlux.version>0.2.1-Lithium-SR1</dlux.version>
-    <liblldp.version>0.9.1-Lithium-SR1</liblldp.version>
+    <config.version>0.3.2-SNAPSHOT</config.version>
+    <mdsal.version>1.2.2-SNAPSHOT</mdsal.version>
+    <sfc.version>0.1.2-SNAPSHOT</sfc.version>
+    <restconf.version>1.2.2-SNAPSHOT</restconf.version>
+    <yangtools.version>0.7.2-SNAPSHOT</yangtools.version>
+    <openflowplugin.version>0.1.2-SNAPSHOT</openflowplugin.version>
+    <neutron.version>0.5.2-SNAPSHOT</neutron.version>
+    <ovsdb.southbound.version>1.1.2-SNAPSHOT</ovsdb.southbound.version>
+    <dlux.version>0.2.2-SNAPSHOT</dlux.version>
+    <liblldp.version>0.9.2-SNAPSHOT</liblldp.version>
     <apache.felix.osgi.compendium.version>1.4.0</apache.felix.osgi.compendium.version>
   </properties>
 
