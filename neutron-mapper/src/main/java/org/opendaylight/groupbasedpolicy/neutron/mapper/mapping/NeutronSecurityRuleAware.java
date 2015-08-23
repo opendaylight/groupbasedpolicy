@@ -20,7 +20,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Name;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.RuleName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SelectorName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
@@ -183,9 +182,7 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
     }
 
     private static EndpointGroup createEpgAny() {
-        return new EndpointGroupBuilder()
-                .setId(MappingUtils.EPG_ANY_ID)
-                .setName(new Name("ANY_group"))
+        return new EndpointGroupBuilder().setId(MappingUtils.EPG_ANY_ID)
                 .setDescription(new Description(MappingUtils.NEUTRON_RULE__ + "epg_any"))
                 .setIntraGroupPolicy(IntraGroupPolicy.RequireContract)
                 .build();

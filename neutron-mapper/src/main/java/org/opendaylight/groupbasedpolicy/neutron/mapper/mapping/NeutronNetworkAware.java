@@ -137,9 +137,7 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
         Optional<EndpointGroup> potentialEpgExternal = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.endpointGroupIid(tenantId, MappingUtils.EPG_EXTERNAL_ID), rwTx);
         if (!potentialEpgExternal.isPresent()) {
-            EndpointGroup epgExternal = new EndpointGroupBuilder()
-                .setId(MappingUtils.EPG_EXTERNAL_ID)
-                .setName(new Name("EXTERNAL_group"))
+            EndpointGroup epgExternal = new EndpointGroupBuilder().setId(MappingUtils.EPG_EXTERNAL_ID)
                 .setDescription(new Description(MappingUtils.NEUTRON_EXTERNAL__ + "epg_external_networks"))
                 .setIntraGroupPolicy(IntraGroupPolicy.RequireContract)
                 .build();
@@ -153,8 +151,7 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
         Optional<EndpointGroup> potentialDhcpEpg = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
                 epgDhcpIid, rwTx);
         if (!potentialDhcpEpg.isPresent()) {
-            EndpointGroup epgDhcp = new EndpointGroupBuilder()
-                .setId(MappingUtils.EPG_DHCP_ID)
+            EndpointGroup epgDhcp = new EndpointGroupBuilder().setId(MappingUtils.EPG_DHCP_ID)
                 .setName(new Name("DHCP_group"))
                 .setDescription(new Description("Group where are all DHCP endpoints."))
                 .setIntraGroupPolicy(IntraGroupPolicy.RequireContract)
@@ -167,9 +164,7 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
         Optional<EndpointGroup> potentialEpgRouter = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.endpointGroupIid(tenantId, MappingUtils.EPG_ROUTER_ID), rwTx);
         if (!potentialEpgRouter.isPresent()) {
-            EndpointGroup epgRouter = new EndpointGroupBuilder()
-                .setId(MappingUtils.EPG_ROUTER_ID)
-                .setName(new Name("ROUTER_group"))
+            EndpointGroup epgRouter = new EndpointGroupBuilder().setId(MappingUtils.EPG_ROUTER_ID)
                 .setDescription(new Description(MappingUtils.NEUTRON_ROUTER__ + "epg_routers"))
                 .setIntraGroupPolicy(IntraGroupPolicy.RequireContract)
                 .build();
