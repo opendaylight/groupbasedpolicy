@@ -47,7 +47,7 @@ public class PolicyValidator {
      * additional data required for individual validation process
      * @return Concrete {@link Validator} for given object
      */
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings("unchecked")
     static <T extends DataContainer> Validator<T> createValidator(T object, PolicyResolver policyResolver) {
         AbstractValidator validator = VALIDATORS.get(object.getImplementedInterface());
         if (validator == null) {
