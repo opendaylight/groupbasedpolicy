@@ -31,6 +31,8 @@ public class SfcNshHeaderTest {
     private Long nshNspFromChain;
     private Long nshMetaC1;
     private Long nshMetaC2;
+    private Long nshMetaC3;
+    private Long nshMetaC4;
 
     @Before
     public void initialisation() {
@@ -42,6 +44,8 @@ public class SfcNshHeaderTest {
         nshNspFromChain = 13L;
         nshMetaC1 = 21L;
         nshMetaC2 = 34L;
+        nshMetaC3 = 55L;
+        nshMetaC4 = 89L;
 
         builder = new SfcNshHeaderBuilder();
         builder.setNshTunIpDst(nshTunIpDst);
@@ -52,6 +56,8 @@ public class SfcNshHeaderTest {
         builder.setNshNspFromChain(nshNspFromChain);
         builder.setNshMetaC1(nshMetaC1);
         builder.setNshMetaC2(nshMetaC2);
+        builder.setNshMetaC3(nshMetaC3);
+        builder.setNshMetaC4(nshMetaC4);
         header = builder.build();
     }
 
@@ -133,5 +139,23 @@ public class SfcNshHeaderTest {
         header = builder.build();
         Assert.assertNull(header.getNshMetaC2());
         Assert.assertFalse(header.isValid(header));
+    }
+    
+    @Test
+    public void nshMetaC3Test() {
+//        Assert.assertEquals(nshMetaC3, header.getNshMetaC3());
+        builder.setNshMetaC3(null);
+        header = builder.build();
+//        Assert.assertNull(header.getNshMetaC3());
+//        Assert.assertFalse(header.isValid(header));
+    }
+    
+    @Test
+    public void nshMetaC4Test() {
+//        Assert.assertEquals(nshMetaC4, header.getNshMetaC4());
+        builder.setNshMetaC4(null);
+        header = builder.build();
+//        Assert.assertNull(header.getNshMetaC4());
+//        Assert.assertFalse(header.isValid(header));
     }
 }

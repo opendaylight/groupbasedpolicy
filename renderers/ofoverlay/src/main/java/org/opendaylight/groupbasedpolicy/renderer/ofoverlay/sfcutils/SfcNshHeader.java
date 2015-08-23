@@ -15,12 +15,16 @@ public class SfcNshHeader {
     private final Short nshNsiFromChain;
     private final Long nshMetaC1;
     private final Long nshMetaC2;
+    private final Long nshMetaC3;
+    private final Long nshMetaC4;
 
     private static final int TYPE = 1;
 
     private SfcNshHeader(SfcNshHeaderBuilder builder) {
         this.nshMetaC1 = builder.nshMetaC1;
         this.nshMetaC2 = builder.nshMetaC2;
+        this.nshMetaC3 = builder.nshMetaC3;
+        this.nshMetaC4 = builder.nshMetaC4;
         this.nshTunIpDst = builder.nshTunIpDst;
         this.nshTunUdpPort = builder.nshTunUdpPort;
         this.nshNspToChain = builder.nshNspToChain;
@@ -95,6 +99,8 @@ public class SfcNshHeader {
         private Short nshNsiFromChain;
         private Long nshMetaC1;
         private Long nshMetaC2;
+        private Long nshMetaC3;
+        private Long nshMetaC4;
 
         public SfcNshHeader build() {
             SfcNshHeader sfcNshHeader = new SfcNshHeader(this);
@@ -121,6 +127,8 @@ public class SfcNshHeader {
             this.nshNsiFromChain = sfcNshHeader.nshNsiFromChain;
             this.nshMetaC1 = sfcNshHeader.nshMetaC1;
             this.nshMetaC2 = sfcNshHeader.nshMetaC2;
+            this.nshMetaC3 = sfcNshHeader.nshMetaC3;
+            this.nshMetaC4 = sfcNshHeader.nshMetaC4;
         }
 
         public SfcNshHeaderBuilder setNshTunIpDst(Ipv4Address nshTunIpDst) {
@@ -160,6 +168,16 @@ public class SfcNshHeader {
 
         public SfcNshHeaderBuilder setNshMetaC2(Long nshMetaC2) {
             this.nshMetaC2 = nshMetaC2;
+            return this;
+        }
+
+        public SfcNshHeaderBuilder setNshMetaC3(Long nshMetaC3) {
+            this.nshMetaC3 = nshMetaC3;
+            return this;
+        }
+
+        public SfcNshHeaderBuilder setNshMetaC4(Long nshMetaC4) {
+            this.nshMetaC4 = nshMetaC4;
             return this;
         }
 
