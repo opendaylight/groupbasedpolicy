@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Cisco Systems, Inc. and others. All rights reserved.
+ * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -8,155 +8,148 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.util.Arrays;
-import java.util.HashSet;
+import java.math.BigInteger;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Objects;
 
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.EndpointManager;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
+import org.opendaylight.groupbasedpolicy.resolver.ConditionGroup;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
-import org.opendaylight.groupbasedpolicy.resolver.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.ApplyActionsCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.Instruction;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfigBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.TunnelBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg0;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg1;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg4;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg5;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg6;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class SourceMapperTest {
+import com.google.common.collect.ImmutableList;
 
-    private SourceMapper mapper;
+import static org.junit.Assert.*;
 
-    private OfContext ctx;
-    private short tableId;
-    private NodeId nodeId;
-    private PolicyInfo policyInfo;
-    private FlowMap flowMap;
-    private Endpoint endpoint;
-    private EndpointManager endpointManager;
-    private IndexedTenant tenant;
-    private PolicyResolver policyResolver;
-    private TenantId tenantId;
-    private PolicyManager policyManager;
-    private OfOverlayContext ofOverlayContext;
-    private NodeConnectorId nodeConnectorId;
-    private EndpointGroupId endpointGroupIdSingle;
-    private EndpointGroupId endpointGroupIdList;
-    private EndpointGroup endpointGroup;
-    private SwitchManager switchManager;
+public class SourceMapperTest extends FlowTableTest {
 
+    protected static final Logger LOG = LoggerFactory.getLogger(SourceMapperTest.class);
+
+    NodeConnectorId remoteTunnelId =
+            new NodeConnectorId(remoteNodeId.getValue() + ":101");
+
+    @Override
     @Before
-    public void initialisation() {
-        ctx = mock(OfContext.class);
-        tableId = 5;
-        nodeId = mock(NodeId.class);
-        policyInfo = mock(PolicyInfo.class);
-        flowMap = mock(FlowMap.class);
+    public void setup() throws Exception {
+        initCtx();
+        table = new SourceMapper(ctx,ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER());
+        super.setup();
+    }
 
-        mapper = new SourceMapper(ctx, tableId);
-
-        endpointManager = mock(EndpointManager.class);
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        endpoint = mock(Endpoint.class);
-        List<Endpoint> endpointsForNode = Arrays.asList(endpoint);
-        when(endpointManager.getEndpointsForNode(nodeId)).thenReturn(endpointsForNode);
-
-        ofOverlayContext = mock(OfOverlayContext.class);
-        when(endpoint.getAugmentation(OfOverlayContext.class)).thenReturn(ofOverlayContext);
-        nodeConnectorId = mock(NodeConnectorId.class);
-        when(ofOverlayContext.getNodeConnectorId()).thenReturn(nodeConnectorId);
-        when(ofOverlayContext.getLocationType()).thenReturn(LocationType.Internal);
-
-        tenantId = mock(TenantId.class);
-        when(endpoint.getTenant()).thenReturn(tenantId);
-        policyResolver = mock(PolicyResolver.class);
-        when(ctx.getPolicyResolver()).thenReturn(policyResolver);
-        tenant = mock(IndexedTenant.class);
-        when(policyResolver.getTenant(tenantId)).thenReturn(tenant);
-        policyManager = mock(PolicyManager.class);
-        when(ctx.getPolicyManager()).thenReturn(policyManager);
-
-        endpointGroup = mock(EndpointGroup.class);
-        when(tenant.getEndpointGroup(any(EndpointGroupId.class))).thenReturn(endpointGroup);
-
-        Set<NodeId> nodeIdPeers = new HashSet<NodeId>(Arrays.asList(nodeId));
-        when(endpointManager.getNodesForGroup(any(EgKey.class))).thenReturn(nodeIdPeers);
-
-        switchManager = mock(SwitchManager.class);
-        when(ctx.getSwitchManager()).thenReturn(switchManager);
-        when(switchManager.getTunnelPort(nodeId, TunnelTypeVxlan.class)).thenReturn(nodeConnectorId);
+    private void addSwitches() {
+        switchManager.addSwitch(
+                nodeId,
+                tunnelId,
+                Collections.<NodeConnectorId>emptySet(),
+                new OfOverlayNodeConfigBuilder().setTunnel(
+                        ImmutableList.of(new TunnelBuilder().setIp(new IpAddress(new Ipv4Address("1.2.3.4")))
+                            .setTunnelType(TunnelTypeVxlan.class)
+                            .setNodeConnectorId(tunnelId)
+                            .build())).build());
+        switchManager.addSwitch(
+                remoteNodeId,
+                remoteTunnelId,
+                Collections.<NodeConnectorId>emptySet(),
+                new OfOverlayNodeConfigBuilder().setTunnel(
+                        ImmutableList.of(new TunnelBuilder().setIp(new IpAddress(new Ipv4Address("1.2.3.5")))
+                            .setTunnelType(TunnelTypeVxlan.class)
+                            .setNodeConnectorId(tunnelId)
+                            .build())).build());
     }
 
     @Test
-    public void constructorTest() {
-        Assert.assertEquals(tableId, mapper.getTableId());
+    public void testNoPolicy() throws Exception {
+        endpointManager.addEndpoint(localEP().build());
+        FlowMap fm = dosync(null);
+        assertEquals(1, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()).getFlow().size());
     }
 
     @Test
-    public void syncTestEndpointGroup() throws Exception {
-        endpointGroupIdSingle = mock(EndpointGroupId.class);
-        when(endpoint.getEndpointGroup()).thenReturn(endpointGroupIdSingle);
-        when(endpoint.getEndpointGroups()).thenReturn(null);
+    public void testMap() throws Exception {
+        switchManager.addSwitch(
+                nodeId,
+                tunnelId,
+                Collections.<NodeConnectorId>emptySet(),
+                new OfOverlayNodeConfigBuilder().setTunnel(
+                        ImmutableList.of(new TunnelBuilder().setIp(new IpAddress(new Ipv4Address("1.2.3.4")))
+                            .setTunnelType(TunnelTypeVxlan.class)
+                            .setNodeConnectorId(tunnelId)
+                            .build())).build());
+        Endpoint ep = localEP().build();
+        switchManager.addSwitch(nodeId, null,
+                Collections.<NodeConnectorId> emptySet(),
+                null);
+        endpointManager.addEndpoint(ep);
+        policyResolver.addTenant(baseTenant().build());
 
-        mapper.sync(nodeId, policyInfo, flowMap);
-        verify(flowMap, times(4)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
+        FlowMap fm = dosync(null);
+        assertEquals(2, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()).getFlow().size());
+
+        int count = 0;
+        HashMap<String, Flow> flowMap = new HashMap<>();
+        for (Flow f : fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()).getFlow()) {
+            flowMap.put(f.getId().getValue(), f);
+            if (f.getMatch() == null || f.getMatch().getEthernetMatch() == null) {
+                assertEquals(FlowUtils.dropInstructions(), f.getInstructions());
+                count += 1;
+            } else if ((f.getMatch() !=null && f.getMatch().getEthernetMatch() != null)
+             && (Objects.equals(ep.getMacAddress(), f.getMatch()
+                .getEthernetMatch()
+                .getEthernetSource()
+                .getAddress()))) {
+                PolicyInfo pi = policyResolver.getCurrentPolicy();
+                List<ConditionName> cset = endpointManager.getCondsForEndpoint(ep);
+                ConditionGroup cg = pi.getEgCondGroup(new EgKey(tid, eg), cset);
+
+                Instruction ins = f.getInstructions().getInstruction().get(0);
+                assertTrue(ins.getInstruction() instanceof ApplyActionsCase);
+                List<Action> actions = ((ApplyActionsCase) ins.getInstruction()).getApplyActions().getAction();
+                int v = OrdinalFactory.getContextOrdinal(ep);
+                assertEquals(FlowUtils.nxLoadRegAction(NxmNxReg0.class, BigInteger.valueOf(v)), actions.get(0)
+                    .getAction());
+                v = OrdinalFactory.getCondGroupOrdinal(cg);
+                assertEquals(FlowUtils.nxLoadRegAction(NxmNxReg1.class, BigInteger.valueOf(v)), actions.get(1)
+                    .getAction());
+                v = OrdinalFactory.getContextOrdinal(tid, bd);
+                assertEquals(FlowUtils.nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(v)), actions.get(2)
+                    .getAction());
+                v = OrdinalFactory.getContextOrdinal(tid, fd);
+                assertEquals(FlowUtils.nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(v)), actions.get(3)
+                    .getAction());
+                v = OrdinalFactory.getContextOrdinal(tid, l3c);
+                assertEquals(FlowUtils.nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(v)), actions.get(4)
+                    .getAction());
+                count += 1;
+            }
+        }
+        assertEquals(2, count);
+        int numberOfFlows = fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()).getFlow().size();
+        fm = dosync(flowMap);
+        assertEquals(numberOfFlows, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()).getFlow().size());
     }
 
-    @Test
-    public void syncTestEndpointGroups() throws Exception {
-        endpointGroupIdList = mock(EndpointGroupId.class);
-        List<EndpointGroupId> endpointGroups = Arrays.asList(endpointGroupIdList);
-        when(endpoint.getEndpointGroups()).thenReturn(endpointGroups);
-
-        mapper.sync(nodeId, policyInfo, flowMap);
-        verify(flowMap, times(4)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
-    }
-
-    @Test
-    public void syncTestEndpointGroupPeers() throws Exception {
-        endpointGroupIdSingle = mock(EndpointGroupId.class);
-        when(endpoint.getEndpointGroup()).thenReturn(endpointGroupIdSingle);
-        when(endpoint.getEndpointGroups()).thenReturn(null);
-
-        mapper.sync(nodeId, policyInfo, flowMap);
-        verify(flowMap, times(4)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
-    }
-
-    @Test
-    public void syncTestEndpointGroupTunPortNull() throws Exception {
-        endpointGroupIdSingle = mock(EndpointGroupId.class);
-        when(endpoint.getEndpointGroup()).thenReturn(endpointGroupIdSingle);
-        when(endpoint.getEndpointGroups()).thenReturn(null);
-        when(switchManager.getTunnelPort(nodeId, TunnelTypeVxlan.class)).thenReturn(null);
-
-        mapper.sync(nodeId, policyInfo, flowMap);
-        verify(flowMap, times(2)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
-    }
-
-    @Test
-    public void syncTestTenantNull() throws Exception {
-        when(policyResolver.getTenant(tenantId)).thenReturn(null);
-
-        mapper.sync(nodeId, policyInfo, flowMap);
-        verify(flowMap, times(1)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
-    }
 }
