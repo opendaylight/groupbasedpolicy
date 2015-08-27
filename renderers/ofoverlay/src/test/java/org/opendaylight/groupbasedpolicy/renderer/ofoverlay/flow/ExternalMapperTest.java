@@ -22,8 +22,8 @@ import java.util.Set;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
@@ -38,7 +38,7 @@ public class ExternalMapperTest {
     private short tableId;
     private NodeId nodeId;
     private PolicyInfo policyInfo;
-    private FlowMap flowMap;
+    private OfWriter ofWriter;
     private SwitchManager switchManager;
 
     @Before
@@ -47,7 +47,7 @@ public class ExternalMapperTest {
         tableId = 5;
         nodeId = mock(NodeId.class);
         policyInfo = mock(PolicyInfo.class);
-        flowMap = mock(FlowMap.class);
+        ofWriter = mock(OfWriter.class);
         switchManager = mock(SwitchManager.class);
         when(ctx.getSwitchManager()).thenReturn(switchManager);
 
@@ -65,15 +65,15 @@ public class ExternalMapperTest {
         Set<NodeConnectorId> externalPorts = new HashSet<NodeConnectorId>(Arrays.asList(nodeConnectorId));
         when(switchManager.getExternalPorts(nodeId)).thenReturn(externalPorts);
 
-        mapper.sync(nodeId, policyInfo, flowMap);
-        verify(flowMap, times(2)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
+        mapper.sync(nodeId, policyInfo, ofWriter);
+        verify(ofWriter, times(2)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
     }
 
     @Test
     public void syncTestNoExternalPorts() throws Exception {
         when(switchManager.getExternalPorts(nodeId)).thenReturn(null);
 
-        mapper.sync(nodeId, policyInfo, flowMap);
-        verify(flowMap, never()).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
+        mapper.sync(nodeId, policyInfo, ofWriter);
+        verify(ofWriter, never()).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
     }
 }

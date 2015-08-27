@@ -9,7 +9,6 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.ARP;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.addNxRegMatch;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.applyActionIns;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.ethernetMatch;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.gotoTableIns;
@@ -33,9 +32,8 @@ import java.util.Collection;
 import java.util.List;
 
 import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
@@ -47,13 +45,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.Fl
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.napt.translations.fields.napt.translations.NaptTranslation;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L3Context;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer3Match;
@@ -90,9 +84,9 @@ public class IngressNatMapper extends FlowTable {
     }
 
     @Override
-    public void sync(NodeId nodeId, PolicyInfo policyInfo, FlowMap flowMap) throws Exception {
+    public void sync(NodeId nodeId, PolicyInfo policyInfo, OfWriter ofWriter) throws Exception {
 
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
+        ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
         // TODO Bug 3546 - Difficult: External port is unrelated to Tenant, L3C, L2BD..
 
@@ -102,13 +96,13 @@ public class IngressNatMapper extends FlowTable {
             if (l3Ep.getL2Context() != null && l3Ep.getMacAddress() !=null ) {
                 Endpoint ep = ctx.getEndpointManager().getEndpoint(new EpKey(l3Ep.getL2Context(), l3Ep.getMacAddress()));
                 if (endpointsForNode.contains(ep)) {
-                    createNatFlow(l3Ep, nodeId, flowMap, policyInfo);
+                    createNatFlow(l3Ep, nodeId, ofWriter, policyInfo);
                 }
             }
         }
     }
 
-    private void createNatFlow(EndpointL3 l3Ep, NodeId nodeId, FlowMap flowMap, PolicyInfo policyInfo) throws Exception {
+    private void createNatFlow(EndpointL3 l3Ep, NodeId nodeId, OfWriter ofWriter, PolicyInfo policyInfo) throws Exception {
         List<NaptTranslation> naptAugL3Endpoint = ctx.getEndpointManager().getNaptAugL3Endpoint(l3Ep);
         // Match on L3 Nat Augmentation in Destination, set to IPAddress/Mac, send to SourceMapper
         if (naptAugL3Endpoint == null) {
@@ -126,11 +120,11 @@ public class IngressNatMapper extends FlowTable {
 
             flow = buildNatFlow(nat.getIpAddress(), l3Ep.getIpAddress(), l3Ep.getMacAddress(), epFwdCtxOrds);
             if (flow != null) {
-                flowMap.writeFlow(nodeId, TABLE_ID, flow);
+                ofWriter.writeFlow(nodeId, TABLE_ID, flow);
             }
             flow = createOutsideArpFlow(nat.getIpAddress(), l3Ep.getMacAddress(), nodeId);
             if (flow != null) {
-                flowMap.writeFlow(nodeId, TABLE_ID, flow);
+                ofWriter.writeFlow(nodeId, TABLE_ID, flow);
             }
             break;
         }

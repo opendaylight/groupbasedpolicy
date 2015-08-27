@@ -8,8 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.slf4j.Logger;
@@ -41,10 +41,10 @@ public abstract class OfTable {
      * Update the relevant flow table for the node
      * @param nodeId the node to update
      * @param policyInfo
-     * @param flowMap
+     * @param ofWriter
      * @throws Exception
      */
     public abstract void update(NodeId nodeId,
                                 PolicyInfo policyInfo,
-                                FlowMap flowMap) throws Exception;
+                                OfWriter ofWriter) throws Exception;
 }

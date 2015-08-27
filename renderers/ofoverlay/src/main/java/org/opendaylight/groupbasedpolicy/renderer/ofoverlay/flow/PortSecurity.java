@@ -8,12 +8,10 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
-import java.util.Collection;
 import java.util.Set;
 
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
-import org.opendaylight.groupbasedpolicy.resolver.EgKey;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Prefix;
@@ -57,12 +55,12 @@ public class PortSecurity extends FlowTable {
     }
 
     @Override
-    public void sync(NodeId nodeId, PolicyInfo policyInfo, FlowMap flowMap) {
+    public void sync(NodeId nodeId, PolicyInfo policyInfo, OfWriter ofWriter) {
 
         // Allow traffic from tunnel ports
         NodeConnectorId tunnelIf = ctx.getSwitchManager().getTunnelPort(nodeId, TunnelTypeVxlan.class);
         if (tunnelIf != null)
-            flowMap.writeFlow(nodeId, TABLE_ID, allowFromPort(tunnelIf));
+            ofWriter.writeFlow(nodeId, TABLE_ID, allowFromPort(tunnelIf));
 
         // Allow traffic from tunnel ports
         //TODO Bug 3546 - Difficult: External port is unrelated to Tenant, L3C, L2BD..
@@ -70,16 +68,16 @@ public class PortSecurity extends FlowTable {
         Set<NodeConnectorId> external =
                 ctx.getSwitchManager().getExternalPorts(nodeId);
         for (NodeConnectorId extIf : external) {
-            flowMap.writeFlow(nodeId, TABLE_ID, allowFromExternalPort(extIf));
+            ofWriter.writeFlow(nodeId, TABLE_ID, allowFromExternalPort(extIf));
         }
 
         // Default drop all
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
+        ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
         // Drop IP traffic that doesn't match a source IP rule
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(110), FlowUtils.ARP, TABLE_ID));
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(111), FlowUtils.IPv4, TABLE_ID));
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(112), FlowUtils.IPv6, TABLE_ID));
+        ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(110), FlowUtils.ARP, TABLE_ID));
+        ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(111), FlowUtils.IPv4, TABLE_ID));
+        ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(112), FlowUtils.IPv6, TABLE_ID));
 
         for (Endpoint ep : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
             OfOverlayContext ofc = ep.getAugmentation(OfOverlayContext.class);
@@ -88,13 +86,13 @@ public class PortSecurity extends FlowTable {
                     && (ofc.getLocationType() == null || LocationType.Internal.equals(ofc.getLocationType()))) {
                 // Allow layer 3 traffic (ARP and IP) with the correct
                 // source IP, MAC, and source port
-                l3flow(flowMap, nodeId, ep, ofc, 120, false);
-                l3flow(flowMap, nodeId, ep, ofc, 121, true);
-                flowMap.writeFlow(nodeId, TABLE_ID, l3DhcpDoraFlow(ep, ofc, 115));
+                l3flow(ofWriter, nodeId, ep, ofc, 120, false);
+                l3flow(ofWriter, nodeId, ep, ofc, 121, true);
+                ofWriter.writeFlow(nodeId, TABLE_ID, l3DhcpDoraFlow(ep, ofc, 115));
 
                 // Allow layer 2 traffic with the correct source MAC and
                 // source port (note lower priority than drop IP rules)
-                flowMap.writeFlow(nodeId, TABLE_ID, l2flow(ep, ofc, 100));
+                ofWriter.writeFlow(nodeId, TABLE_ID, l2flow(ep, ofc, 100));
             }
         }
     }
@@ -168,7 +166,7 @@ public class PortSecurity extends FlowTable {
         return flow;
     }
 
-    private void l3flow(FlowMap flowMap, NodeId nodeId,
+    private void l3flow(OfWriter ofWriter, NodeId nodeId,
                         Endpoint ep, OfOverlayContext ofc,
                         Integer priority, boolean arp) {
         if (ep.getL3Address() == null)
@@ -219,7 +217,7 @@ public class PortSecurity extends FlowTable {
                     .setInstructions(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()))
                     .build();
 
-            flowMap.writeFlow(nodeId, TABLE_ID,flow);
+            ofWriter.writeFlow(nodeId, TABLE_ID,flow);
         }
     }
 }

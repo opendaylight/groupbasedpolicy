@@ -26,8 +26,8 @@ import java.util.Set;
 
 import javax.annotation.concurrent.Immutable;
 
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Action;
@@ -109,13 +109,13 @@ public class PolicyEnforcer extends FlowTable {
     }
 
     @Override
-    public void sync(NodeId nodeId, PolicyInfo policyInfo, FlowMap flowMap) throws Exception {
+    public void sync(NodeId nodeId, PolicyInfo policyInfo, OfWriter ofWriter) throws Exception {
 
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
+        ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
         NodeConnectorId tunPort = ctx.getSwitchManager().getTunnelPort(nodeId, TunnelTypeVxlan.class);
         if (tunPort != null) {
-            flowMap.writeFlow(nodeId, TABLE_ID, allowFromTunnel(tunPort));
+            ofWriter.writeFlow(nodeId, TABLE_ID, allowFromTunnel(tunPort));
         }
 
         HashSet<PolicyPair> visitedPairs = new HashSet<>();
@@ -173,7 +173,7 @@ public class PolicyEnforcer extends FlowTable {
                                         srcEp.getKey(), dstEp.getKey());
                                 visitedPairs.add(policyPair);
                             }
-                            syncPolicy(flowMap, netElements, activeRulesByConstraints.getValue(), policyPair);
+                            syncPolicy(ofWriter, netElements, activeRulesByConstraints.getValue(), policyPair);
                         }
 
                         // Reverse
@@ -197,7 +197,7 @@ public class PolicyEnforcer extends FlowTable {
                                 visitedReversePairs.add(policyPair);
 
                             }
-                            syncPolicy(flowMap, netElements, activeRulesByConstraints.getValue(), policyPair);
+                            syncPolicy(ofWriter, netElements, activeRulesByConstraints.getValue(), policyPair);
                         }
                     }
                 }
@@ -231,8 +231,8 @@ public class PolicyEnforcer extends FlowTable {
 
                             int depgId = dstEpFwdCxtOrds.getEpgId();
                             int sepgId = srcEpFwdCxtOrds.getEpgId();
-                            flowMap.writeFlow(nodeId, TABLE_ID, allowSameEpg(sepgId, depgId));
-                            flowMap.writeFlow(nodeId, TABLE_ID, allowSameEpg(depgId, sepgId));
+                            ofWriter.writeFlow(nodeId, TABLE_ID, allowSameEpg(sepgId, depgId));
+                            ofWriter.writeFlow(nodeId, TABLE_ID, allowSameEpg(depgId, sepgId));
                         }
                     }
                 }
@@ -241,7 +241,7 @@ public class PolicyEnforcer extends FlowTable {
 
         // Write ARP flows per flood domain.
         for (Integer fdId : fdIds) {
-            flowMap.writeFlow(nodeId, TABLE_ID, createArpFlow(fdId));
+            ofWriter.writeFlow(nodeId, TABLE_ID, createArpFlow(fdId));
         }
     }
 
@@ -293,14 +293,14 @@ public class PolicyEnforcer extends FlowTable {
 
     }
 
-    private void syncPolicy(FlowMap flowMap, NetworkElements netElements, List<RuleGroup> rgs, PolicyPair policyPair) {
+    private void syncPolicy(OfWriter ofWriter, NetworkElements netElements, List<RuleGroup> rgs, PolicyPair policyPair) {
         int priority = 65000;
         for (RuleGroup rg : rgs) {
             TenantId tenantId = rg.getContractTenant().getId();
             IndexedTenant tenant = ctx.getPolicyResolver().getTenant(tenantId);
             for (Rule r : rg.getRules()) {
-                syncDirection(flowMap, netElements, tenant, policyPair, r, Direction.In, priority);
-                syncDirection(flowMap, netElements, tenant, policyPair, r, Direction.Out, priority);
+                syncDirection(ofWriter, netElements, tenant, policyPair, r, Direction.In, priority);
+                syncDirection(ofWriter, netElements, tenant, policyPair, r, Direction.Out, priority);
 
                 priority -= 1;
             }
@@ -327,7 +327,7 @@ public class PolicyEnforcer extends FlowTable {
 
     }
 
-    private void syncDirection(FlowMap flowMap, NetworkElements netElements, IndexedTenant contractTenant,
+    private void syncDirection(OfWriter ofWriter, NetworkElements netElements, IndexedTenant contractTenant,
             PolicyPair policyPair, Rule rule, Direction direction, int priority) {
 
 
@@ -449,7 +449,8 @@ public class PolicyEnforcer extends FlowTable {
                  * Convert the GBP Action to one or more OpenFlow Actions
                  */
                 if (!(actionRefList.indexOf(actionRule) == (actionRefList.size() - 1) && action.equals(SubjectFeatures.getAction(AllowAction.DEFINITION.getId())))) {
-                    actionBuilderList = action.updateAction(actionBuilderList, params, actionRule.getOrder(), netElements, policyPair, flowMap, ctx, direction);
+                    actionBuilderList = action.updateAction(actionBuilderList, params, actionRule.getOrder(), netElements, policyPair,
+                            ofWriter, ctx, direction);
                 }
 
             }
@@ -474,7 +475,7 @@ public class PolicyEnforcer extends FlowTable {
             } else {
                 flow.setInstructions(instructions(applyActionIns(actionBuilderList), getGotoExternalInstruction()));
             }
-            flowMap.writeFlow(netElements.getLocalNodeId(), TABLE_ID, flow.build());
+            ofWriter.writeFlow(netElements.getLocalNodeId(), TABLE_ID, flow.build());
         }
     }
 

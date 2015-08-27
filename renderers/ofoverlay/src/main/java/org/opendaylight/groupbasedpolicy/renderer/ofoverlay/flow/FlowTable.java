@@ -8,8 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
@@ -38,9 +38,9 @@ public abstract class FlowTable extends OfTable {
 
     @Override
     public void update(NodeId nodeId, PolicyInfo policyInfo,
-                       FlowMap flowMap) throws Exception {
+                       OfWriter ofWriter) throws Exception {
 
-        sync(nodeId, policyInfo, flowMap);
+        sync(nodeId, policyInfo, ofWriter);
 
     }
 
@@ -52,7 +52,7 @@ public abstract class FlowTable extends OfTable {
      * Sync flow state using the flow map
      * @throws Exception
      */
-    public abstract void sync(NodeId nodeId, PolicyInfo policyInfo, FlowMap flowMap) throws Exception;
+    public abstract void sync(NodeId nodeId, PolicyInfo policyInfo, OfWriter ofWriter) throws Exception;
 
     /**
      * Get the table ID being manipulated

@@ -19,7 +19,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Custom Equivalence for Match
+ * Custom {@link Equivalence} for {@link Match}
  *
  * @see FlowEquivalence
  */
