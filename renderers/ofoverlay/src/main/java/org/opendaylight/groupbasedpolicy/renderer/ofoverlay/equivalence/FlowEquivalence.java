@@ -19,7 +19,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Custom Equivalence for Flow
+ * Custom {@link Equivalence} for {@link Flow}
  *
  */
 public class FlowEquivalence extends Equivalence<Flow> {
@@ -58,7 +58,7 @@ public class FlowEquivalence extends Equivalence<Flow> {
             setA = new HashSet<>(listA);
         }
         List<Instruction> listB = new ArrayList<>();
-        if (a.getInstructions() != null) {
+        if (b.getInstructions() != null) {
             listB = b.getInstructions().getInstruction();
         }
         Set<Instruction> setB = new HashSet<>();

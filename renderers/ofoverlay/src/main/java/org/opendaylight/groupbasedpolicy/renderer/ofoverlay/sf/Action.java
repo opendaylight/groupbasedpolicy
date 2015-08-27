@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.NetworkElements;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.PolicyPair;
 import org.opendaylight.groupbasedpolicy.resolver.ActionInstanceValidator;
@@ -53,7 +53,7 @@ public abstract class Action implements ActionInstanceValidator{
                                                      Integer order,
                                                      NetworkElements netElements,
                                                      PolicyPair policyPair,
-                                                     FlowMap flowMap,
+                                                     OfWriter ofWriter,
                                                      OfContext ctx,
                                                      Direction direction);
 }

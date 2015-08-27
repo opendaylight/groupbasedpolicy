@@ -10,7 +10,7 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
 import java.util.Map;
 
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
@@ -24,17 +24,17 @@ public class FlowTableTest extends OfTableTest {
                                          table.getTableId());
     }
 
-    protected FlowMap dosync(Map<String, Flow> flows) throws Exception {
-        FlowMap flowMap = policyManager.new FlowMap();
+    protected OfWriter dosync(Map<String, Flow> flows) throws Exception {
+        OfWriter ofWriter = new OfWriter();
         if (flows != null) {
             for (String key : flows.keySet()) {
                 Flow flow = flows.get(key);
                 if (flow != null) {
-                    flowMap.writeFlow(nodeId, flow.getTableId(), flow);
+                    ofWriter.writeFlow(nodeId, flow.getTableId(), flow);
                 }
             }
         }
-        table.sync(nodeId, policyResolver.getCurrentPolicy(), flowMap);
-        return flowMap;
+        table.sync(nodeId, policyResolver.getCurrentPolicy(), ofWriter);
+        return ofWriter;
     }
 }

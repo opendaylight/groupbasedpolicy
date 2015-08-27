@@ -16,8 +16,8 @@ import com.google.common.collect.Sets;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
@@ -30,7 +30,6 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
@@ -39,7 +38,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.M
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.Instruction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.InstructionBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.groups.Group;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
@@ -57,7 +55,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.ethernet.match.fields.EthernetDestinationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.EthernetMatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer3Match;
@@ -93,7 +90,6 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.IPv6;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.addNxRegMatch;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.applyActionIns;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.createNodePath;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.decNwTtlAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.ethernetMatch;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.getOfPortNum;
@@ -148,11 +144,11 @@ public class DestinationMapper extends FlowTable {
     }
 
     @Override
-    public void sync(NodeId nodeId, PolicyInfo policyInfo, FlowMap flowMap) throws Exception {
+    public void sync(NodeId nodeId, PolicyInfo policyInfo, OfWriter ofWriter) throws Exception {
 
         TenantId currentTenant = null;
 
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
+        ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
         SetMultimap<EpKey, EpKey> visitedEps = HashMultimap.create();
         Set<EndpointFwdCtxOrdinals> epOrdSet = new HashSet<>();
@@ -177,7 +173,7 @@ public class DestinationMapper extends FlowTable {
                         if (visitedEps.get(srcEpKey) != null && visitedEps.get(srcEpKey).contains(peerEpKey)) {
                             continue;
                         }
-                        syncEP(flowMap, nodeId, policyInfo, srcEp, peerEp);
+                        syncEP(ofWriter, nodeId, policyInfo, srcEp, peerEp);
                         visitedEps.put(srcEpKey, peerEpKey);
 
                         // Process subnets and flood-domains for epPeer
@@ -205,7 +201,7 @@ public class DestinationMapper extends FlowTable {
                 Flow arpFlow = createRouterArpFlow(currentTenant, nodeId, sn,
                         OrdinalFactory.getContextOrdinal(currentTenant, l3c.getId()));
                 if (arpFlow != null) {
-                    flowMap.writeFlow(nodeId, TABLE_ID, arpFlow);
+                    ofWriter.writeFlow(nodeId, TABLE_ID, arpFlow);
                 } else {
                     LOG.debug(
                             "Gateway ARP flow is not created, because virtual router IP has not been set for subnet {} .",
@@ -216,8 +212,8 @@ public class DestinationMapper extends FlowTable {
 
         // Write broadcast flows per flood domain.
         for (EndpointFwdCtxOrdinals epOrd : epOrdSet) {
-            if (groupExists(nodeId, epOrd.getFdId())) {
-                flowMap.writeFlow(nodeId, TABLE_ID, createBroadcastFlow(epOrd));
+            if (ofWriter.groupExists(nodeId, Integer.valueOf(epOrd.getFdId()).longValue())) {
+                ofWriter.writeFlow(nodeId, TABLE_ID, createBroadcastFlow(epOrd));
             }
         }
 
@@ -233,7 +229,7 @@ public class DestinationMapper extends FlowTable {
                 for (Subnet localSubnet: localSubnets) {
                     Flow prefixFlow = createL3PrefixFlow(prefixEp, policyInfo, nodeId, localSubnet);
                     if (prefixFlow != null) {
-                        flowMap.writeFlow(nodeId, TABLE_ID, prefixFlow);
+                        ofWriter.writeFlow(nodeId, TABLE_ID, prefixFlow);
                         LOG.trace("Wrote L3Prefix flow");
                     }
                 }
@@ -417,11 +413,10 @@ public class DestinationMapper extends FlowTable {
 
     private Flow createBroadcastFlow(EndpointFwdCtxOrdinals epOrd) {
         MatchBuilder mb = new MatchBuilder()
-                            .setEthernetMatch(new EthernetMatchBuilder()
-                            .setEthernetDestination(new EthernetDestinationBuilder().
-                                                        setAddress(MULTICAST_MAC)
-                                                        .setMask(MULTICAST_MAC).build())
-                            .build());
+                .setEthernetMatch(new EthernetMatchBuilder().setEthernetDestination(
+                        new EthernetDestinationBuilder().setAddress(MULTICAST_MAC)
+                                .setMask(MULTICAST_MAC)
+                                .build()).build());
         addNxRegMatch(mb, RegMatch.of(NxmNxReg5.class, Long.valueOf(epOrd.getFdId())));
 
         Match match = mb.build();
@@ -434,32 +429,6 @@ public class DestinationMapper extends FlowTable {
                             groupAction(Long.valueOf(epOrd.getFdId())))));
 
         return flowb.build();
-    }
-
-    private boolean groupExists(NodeId nodeId, Integer fdId) throws Exception {
-        // Fetch existing GroupTables
-        if (ctx.getDataBroker() == null) {
-            return false;
-        }
-
-        ReadOnlyTransaction t = ctx.getDataBroker().newReadOnlyTransaction();
-        InstanceIdentifier<Node> niid = createNodePath(nodeId);
-        Optional<Node> r = t.read(LogicalDatastoreType.CONFIGURATION, niid).get();
-        if (!r.isPresent())
-            return false;
-        FlowCapableNode fcn = r.get().getAugmentation(FlowCapableNode.class);
-        if (fcn == null)
-            return false;
-
-        if (fcn.getGroup() != null) {
-            for (Group g : fcn.getGroup()) {
-                if (g.getGroupId().getValue().equals(Long.valueOf(fdId))) { // Group
-                                                                            // Exists.
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     private MacAddress routerPortMac(L3Context l3c, IpAddress ipAddress) {
@@ -607,7 +576,7 @@ public class DestinationMapper extends FlowTable {
         return flowb.build();
     }
 
-    private void syncEP(FlowMap flowMap, NodeId nodeId, PolicyInfo policyInfo, Endpoint srcEp, Endpoint destEp)
+    private void syncEP(OfWriter ofWriter, NodeId nodeId, PolicyInfo policyInfo, Endpoint srcEp, Endpoint destEp)
             throws Exception {
 
         if (ctx.getPolicyResolver().getTenant(srcEp.getTenant()) == null
@@ -662,7 +631,7 @@ public class DestinationMapper extends FlowTable {
             // port
 
             if (srcEpFwdCtxOrds.getBdId() == destEpFwdCtxOrds.getBdId()) {
-                flowMap.writeFlow(nodeId, TABLE_ID, createLocalL2Flow(destEp, destEpFwdCtxOrds, ofc));
+                ofWriter.writeFlow(nodeId, TABLE_ID, createLocalL2Flow(destEp, destEpFwdCtxOrds, ofc));
             }
             // TODO Li alagalah: Need to move to EndpointL3 for L3 processing.
             // The Endpoint conflation must end!
@@ -680,7 +649,7 @@ public class DestinationMapper extends FlowTable {
                     for (Subnet localSubnet : localSubnets) {
                         Flow flow = createLocalL3RoutedFlow(destEp, l3a, destEpFwdCtxOrds, ofc, localSubnet);
                         if (flow != null) {
-                            flowMap.writeFlow(nodeId, TABLE_ID, flow);
+                            ofWriter.writeFlow(nodeId, TABLE_ID, flow);
                         } else {
                             LOG.trace("Did not write remote L3 flow for endpoint {} and subnet {}", l3a.getIpAddress(),
                                     localSubnet.getIpPrefix().getValue());
@@ -694,7 +663,7 @@ public class DestinationMapper extends FlowTable {
             if (srcEpFwdCtxOrds.getBdId() == destEpFwdCtxOrds.getBdId()) {
                 Flow remoteL2Flow = createRemoteL2Flow(destEp, nodeId, srcEpFwdCtxOrds, destEpFwdCtxOrds, ofc);
                 if (remoteL2Flow != null) {
-                    flowMap.writeFlow(nodeId, TABLE_ID, remoteL2Flow);
+                    ofWriter.writeFlow(nodeId, TABLE_ID, remoteL2Flow);
                 }
             } else {
                 LOG.trace("DestinationMapper: RemoteL2Flow: not created, in different BDs src: {} dst: {}",
@@ -717,7 +686,7 @@ public class DestinationMapper extends FlowTable {
                         Flow remoteL3Flow = createRemoteL3RoutedFlow(destEp, l3a, nodeId, srcEpFwdCtxOrds,
                                 destEpFwdCtxOrds, ofc, localSubnet);
                         if (remoteL3Flow != null) {
-                            flowMap.writeFlow(nodeId, TABLE_ID, remoteL3Flow);
+                            ofWriter.writeFlow(nodeId, TABLE_ID, remoteL3Flow);
                         } else {
                             LOG.trace("Did not write remote L3 flow for endpoint {} and subnet {}", l3a.getIpAddress(),
                                     localSubnet.getIpPrefix().getValue());

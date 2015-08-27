@@ -27,7 +27,7 @@ import java.util.Set;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.PolicyPair;
 import org.opendaylight.groupbasedpolicy.resolver.ConditionGroup;
@@ -109,7 +109,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
 
     @Test
     public void testNoEps() throws Exception {
-        FlowMap fm = dosync(null);
+        OfWriter fm = dosync(null);
         assertEquals(2, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())
             .getFlow()
             .size());
@@ -124,7 +124,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
         policyResolver.addTenant(baseTenant().setContract(ImmutableList.<Contract>of(baseContract(null).build()))
             .build());
 
-        FlowMap fm = dosync(null);
+        OfWriter fm = dosync(null);
         assertNotEquals(0, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())
             .getFlow()
             .size());
@@ -199,7 +199,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
         policyResolver.addTenant(baseTenant().setContract(ImmutableList.<Contract>of(baseContract(subjects).build()))
             .build());
 
-        FlowMap fm = dosync(null);
+        OfWriter fm = dosync(null);
         assertNotEquals(0, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())
             .getFlow()
             .size());
@@ -306,7 +306,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
                 RegMatch.of(NxmNxReg3.class, Long.valueOf(cg1Id)));
         GeneralAugMatchNodesNodeTableFlow m2 = mb.getAugmentation(GeneralAugMatchNodesNodeTableFlow.class);
         int count = 0;
-        FlowMap fm = dosync(null);
+        OfWriter fm = dosync(null);
         assertEquals(7, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())
             .getFlow()
             .size());

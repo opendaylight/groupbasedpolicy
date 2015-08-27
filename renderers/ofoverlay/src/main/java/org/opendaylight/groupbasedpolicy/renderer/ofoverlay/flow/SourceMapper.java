@@ -19,11 +19,10 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import java.math.BigInteger;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.resolver.IndexedTenant;
@@ -36,8 +35,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.M
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
@@ -75,9 +72,9 @@ public class SourceMapper extends FlowTable {
     }
 
     @Override
-    public void sync(NodeId nodeId, PolicyInfo policyInfo, FlowMap flowMap) throws Exception {
+    public void sync(NodeId nodeId, PolicyInfo policyInfo, OfWriter ofWriter) throws Exception {
 
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
+        ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
         // Handle case where packets from from External
         for (Endpoint ep : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
@@ -93,7 +90,7 @@ public class SourceMapper extends FlowTable {
                 continue;
             }
 
-            createRemoteTunnels(flowMap, nodeId, ep, policyInfo, epFwdCtxOrds);
+            createRemoteTunnels(ofWriter, nodeId, ep, policyInfo, epFwdCtxOrds);
 
             if (ep.getTenant() == null || (ep.getEndpointGroup() == null && ep.getEndpointGroups() == null)) {
                 continue;
@@ -104,12 +101,12 @@ public class SourceMapper extends FlowTable {
                 /**
                  * Sync the local EP information.
                  */
-                syncEP(flowMap, nodeId, ep, ofc.getNodeConnectorId(), epFwdCtxOrds);
+                syncEP(ofWriter, nodeId, ep, ofc.getNodeConnectorId(), epFwdCtxOrds);
             }
         }
     }
 
-    private void createRemoteTunnels(FlowMap flowMap, NodeId nodeId, Endpoint ep, PolicyInfo policyInfo,
+    private void createRemoteTunnels(OfWriter ofWriter, NodeId nodeId, Endpoint ep, PolicyInfo policyInfo,
             EndpointFwdCtxOrdinals epFwdCtxOrds) throws Exception {
         Set<EgKey> epgs = new HashSet<>();
 
@@ -138,8 +135,8 @@ public class SourceMapper extends FlowTable {
                                 nodeId.getValue(), remoteNodeId.getValue());
                         continue;
                     }
-                    flowMap.writeFlow(remoteNodeId, TABLE_ID, createTunnelFlow(tunPort, epFwdCtxOrds));
-                    flowMap.writeFlow(remoteNodeId, TABLE_ID, createBroadcastFlow(tunPort, epFwdCtxOrds));
+                    ofWriter.writeFlow(remoteNodeId, TABLE_ID, createTunnelFlow(tunPort, epFwdCtxOrds));
+                    ofWriter.writeFlow(remoteNodeId, TABLE_ID, createBroadcastFlow(tunPort, epFwdCtxOrds));
                 }
             }
         }
@@ -212,7 +209,7 @@ public class SourceMapper extends FlowTable {
         return flowb.build();
     }
 
-    private void syncEP(FlowMap flowMap, NodeId nodeId, Endpoint ep, NodeConnectorId ncId, EndpointFwdCtxOrdinals epFwdCtxOrds) throws Exception {
+    private void syncEP(OfWriter ofWriter, NodeId nodeId, Endpoint ep, NodeConnectorId ncId, EndpointFwdCtxOrdinals epFwdCtxOrds) throws Exception {
 
         // TODO alagalah Li/Be: We should also match on EndpointL3 with the appropriate
         // network containment. This would solve a lot of problems and prepare for EndpointL3 RPC.
@@ -241,7 +238,7 @@ public class SourceMapper extends FlowTable {
             .setInstructions(
                     instructions(applyActionIns(segReg, scgReg, bdReg, fdReg, vrfReg,tunIdAction),
                             gotoTableIns(ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER())));
-        flowMap.writeFlow(nodeId, TABLE_ID, flowb.build());
+        ofWriter.writeFlow(nodeId, TABLE_ID, flowb.build());
     }
 
 }

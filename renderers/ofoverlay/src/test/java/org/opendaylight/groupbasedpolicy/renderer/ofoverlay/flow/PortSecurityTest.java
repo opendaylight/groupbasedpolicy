@@ -17,7 +17,7 @@ import java.util.Set;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Address;
@@ -56,7 +56,7 @@ public class PortSecurityTest extends FlowTableTest {
 
     @Test
     public void testDefaultDeny() throws Exception {
-        FlowMap fm = dosync(null);
+        OfWriter fm = dosync(null);
         int count = 0;
         Map<String, Flow> flowMap = new HashMap<>();
         for (Flow f : fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow()) {
@@ -88,7 +88,7 @@ public class PortSecurityTest extends FlowTableTest {
                                    .setTunnelType(TunnelTypeVxlan.class)
                                    .setNodeConnectorId(new NodeConnectorId("openflow:1:1"))
                                    .build())).build());
-        FlowMap fm = dosync(null);
+        OfWriter fm = dosync(null);
         assertNotEquals(0 ,fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow().size());
 
         int count = 0;
@@ -120,7 +120,7 @@ public class PortSecurityTest extends FlowTableTest {
 
         endpointManager.addEndpoint(ep);
 
-        FlowMap fm = dosync(null);
+        OfWriter fm = dosync(null);
         assertNotEquals(0 ,fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow().size());
 
         int count = 0;
@@ -159,7 +159,7 @@ public class PortSecurityTest extends FlowTableTest {
 
         endpointManager.addEndpoint(ep);
 
-        FlowMap fm = dosync(null);
+        OfWriter fm = dosync(null);
         assertNotEquals(0 ,fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow().size());
 
         int count = 0;

@@ -10,7 +10,6 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -21,9 +20,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.EndpointManager;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
@@ -43,7 +42,7 @@ public class IngressNatMapperTest {
 
     private NodeId nodeId;
     private PolicyInfo policyInfo;
-    private FlowMap flowMap;
+    private OfWriter ofWriter;
 
     private IpAddress ipAddressNapt;
     private IpAddress ipAddressL3Ep;
@@ -104,7 +103,7 @@ public class IngressNatMapperTest {
 
         nodeId = mock(NodeId.class);
         policyInfo = mock(PolicyInfo.class);
-        flowMap = mock(FlowMap.class);
+        ofWriter = mock(OfWriter.class);
 
         mapper = new IngressNatMapper(ctx, TABLE_ID);
     }
@@ -116,15 +115,15 @@ public class IngressNatMapperTest {
 
     @Test
     public void syncTestIpv4() throws Exception {
-        mapper.sync(nodeId, policyInfo, flowMap);
-        verify(flowMap).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
+        mapper.sync(nodeId, policyInfo, ofWriter);
+        verify(ofWriter).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
     }
 
     @Test
     public void syncTestIpv6() throws Exception {
         when(ipAddressL3Ep.getIpv4Address()).thenReturn(null);
-        mapper.sync(nodeId, policyInfo, flowMap);
-        verify(flowMap).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
+        mapper.sync(nodeId, policyInfo, ofWriter);
+        verify(ofWriter).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
     }
 
 }

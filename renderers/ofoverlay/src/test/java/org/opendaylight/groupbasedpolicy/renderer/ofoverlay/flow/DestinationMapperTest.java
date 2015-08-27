@@ -15,9 +15,8 @@ import java.util.List;
 import java.util.Objects;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Address;
@@ -64,14 +63,14 @@ public class DestinationMapperTest extends FlowTableTest {
 
     @Test
     public void testNoEps() throws Exception {
-        FlowMap fm = dosync(null);
+        OfWriter fm = dosync(null);
         assertEquals(1, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER()).getFlow().size());
     }
 
     private void verifyDMap(Endpoint remoteEp,
             Endpoint localEp) throws Exception {
 
-        FlowMap fm = dosync(null);
+        OfWriter fm = dosync(null);
         assertNotEquals(0, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER()).getFlow().size());
 
         // presumably counts flows that have correct matches set up

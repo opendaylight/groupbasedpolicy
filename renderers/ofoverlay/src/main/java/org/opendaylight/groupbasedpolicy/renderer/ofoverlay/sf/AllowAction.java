@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.NetworkElements;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.PolicyPair;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
@@ -61,7 +61,7 @@ public class AllowAction extends Action {
                                             Integer order,
                                             NetworkElements netElements,
                                             PolicyPair policyPair,
-                                            FlowMap flowMap,
+                                            OfWriter ofWriter,
                                             OfContext ctx,
                                             Direction direction) {
         /*

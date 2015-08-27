@@ -225,6 +225,10 @@ public final class FlowUtils {
             .build();
     }
 
+    public static InstanceIdentifier<Group> createGroupPath(final NodeId nodeId, final Long groupId) {
+        return createGroupPath(nodeId, new GroupId(groupId));
+    }
+
     /**
      * Creates a group path from a node ID and group ID
      *

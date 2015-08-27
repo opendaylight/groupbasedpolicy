@@ -29,8 +29,8 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.EndpointManager;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.NetworkElements;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.PolicyPair;
@@ -120,11 +120,12 @@ public class ChainActionTest {
         String chainName = "chainName";
         params.put(ChainAction.SFC_CHAIN_NAME, chainName);
         Integer order = Integer.valueOf(0);
-        FlowMap flowMap = mock(FlowMap.class);
+        OfWriter ofWriter = mock(OfWriter.class);
 
         doReturn(sfcPath).when(chainAction).getSfcPath(chainName);
 
-        List<ActionBuilder> result = chainAction.updateAction(actions, params, order, netElements, policyPair, flowMap,
+        List<ActionBuilder> result = chainAction.updateAction(actions, params, order, netElements, policyPair,
+                ofWriter,
                 ctx, Direction.Out);
         Assert.assertNull(result);
     }
@@ -134,9 +135,10 @@ public class ChainActionTest {
         ActionBuilder actionBuilder = mock(ActionBuilder.class);
         List<ActionBuilder> actions = Arrays.asList(actionBuilder);
         Integer order = Integer.valueOf(0);
-        FlowMap flowMap = mock(FlowMap.class);
+        OfWriter ofWriter = mock(OfWriter.class);
 
-        List<ActionBuilder> result = chainAction.updateAction(actions, null, order, netElements, policyPair, flowMap,
+        List<ActionBuilder> result = chainAction.updateAction(actions, null, order, netElements, policyPair,
+                ofWriter,
                 ctx, Direction.In);
         Assert.assertNull(result);
     }
@@ -150,9 +152,9 @@ public class ChainActionTest {
         Integer order = Integer.valueOf(0);
         NetworkElements netElements = mock(NetworkElements.class);
         PolicyPair policyPair = mock(PolicyPair.class);
-        FlowMap flowMap = mock(FlowMap.class);
+        OfWriter ofWriter = mock(OfWriter.class);
 
-        chainAction.updateAction(actions, params, order, netElements, policyPair, flowMap, ctx, Direction.In);
+        chainAction.updateAction(actions, params, order, netElements, policyPair, ofWriter, ctx, Direction.In);
     }
 
     @Test
@@ -163,12 +165,13 @@ public class ChainActionTest {
         String chainName = "chainName";
         params.put(ChainAction.SFC_CHAIN_NAME, chainName);
         Integer order = Integer.valueOf(0);
-        FlowMap flowMap = mock(FlowMap.class);
+        OfWriter ofWriter = mock(OfWriter.class);
 
         doReturn(sfcPath).when(chainAction).getSfcPath(chainName);
         when(sfcPath.getName()).thenReturn(null);
 
-        List<ActionBuilder> result = chainAction.updateAction(actions, params, order, netElements, policyPair, flowMap,
+        List<ActionBuilder> result = chainAction.updateAction(actions, params, order, netElements, policyPair,
+                ofWriter,
                 ctx, Direction.Out);
         Assert.assertNull(result);
     }

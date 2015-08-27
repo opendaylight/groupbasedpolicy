@@ -12,26 +12,13 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.instructions;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxOutputRegAction;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Action;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.AllowAction;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer3Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlanGpe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,20 +43,20 @@ public class ExternalMapper extends FlowTable {
     }
 
     @Override
-    public void sync(NodeId nodeId, PolicyInfo policyInfo, FlowMap flowMap) throws Exception {
+    public void sync(NodeId nodeId, PolicyInfo policyInfo, OfWriter ofWriter) throws Exception {
 
         if (ctx.getSwitchManager().getExternalPorts(nodeId) == null) {
             LOG.trace("No external ports found for node: {}", nodeId);
             return;
         }
         // Default drop all
-        flowMap.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
+        ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
         /*
          *  Default Egress flow. Other methods may write to this table to augment egress
          *  functionality, such as bypassing/utilising the NAT table, or ServiceFunctionChaining
          */
-        flowMap.writeFlow(nodeId, TABLE_ID, defaultFlow());
+        ofWriter.writeFlow(nodeId, TABLE_ID, defaultFlow());
 
     }
 

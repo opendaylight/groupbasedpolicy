@@ -19,7 +19,7 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import java.math.BigInteger;
 
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.NetworkElements;
@@ -51,7 +51,7 @@ public class ChainActionFlows {
 
     }
 
-    public static void createChainTunnelFlows(SfcNshHeader sfcNshHeader, NetworkElements netElements, FlowMap flowMap,
+    public static void createChainTunnelFlows(SfcNshHeader sfcNshHeader, NetworkElements netElements, OfWriter ofWriter,
             OfContext ctx) {
 
         NodeId localNodeId = netElements.getLocalNodeId();
@@ -65,25 +65,25 @@ public class ChainActionFlows {
                     destNodeId);
             return;
         }
-        flowMap.writeFlow(localNodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY(),
+        ofWriter.writeFlow(localNodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY(),
                 allowFromChainPort(localNodeTunPort, ctx.getPolicyManager().getTABLEID_PORTSECURITY(), ctx));
 
-        flowMap.writeFlow(localNodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER(),
+        ofWriter.writeFlow(localNodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER(),
                 allowFromChainTunnel(localNodeTunPort, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()));
 
-        flowMap.writeFlow(
+        ofWriter.writeFlow(
                 localNodeId,
                 ctx.getPolicyManager().getTABLEID_EXTERNAL_MAPPER(),
                 createExternalFlow(sfcNshHeader, localNodeTunPort, netElements, ctx.getPolicyManager()
                     .getTABLEID_EXTERNAL_MAPPER(), ctx));
 
-        flowMap.writeFlow(
+        ofWriter.writeFlow(
                 destNodeId,
                 ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER(),
                 createChainTunnelFlow(sfcNshHeader, destNodeTunPort, epOrds, ctx.getPolicyManager()
                     .getTABLEID_SOURCE_MAPPER(), ctx));
 
-        flowMap.writeFlow(
+        ofWriter.writeFlow(
                 destNodeId,
                 ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER(),
                 createChainBroadcastFlow(sfcNshHeader, destNodeTunPort, epOrds, ctx.getPolicyManager()
