@@ -13,8 +13,9 @@
 
     <!-- Repos needed by all -->
     <repository>mvn:org.opendaylight.yangtools/features-yangtools/${yangtools.version}/xml/features</repository>
-    <repository>mvn:org.opendaylight.controller/features-mdsal/${mdsal.version}/xml/features</repository>
-
+    <repository>mvn:org.opendaylight.mdsal/features-mdsal/${mdsal.version}/xml/features</repository>
+    <repository>mvn:org.opendaylight.controller/features-mdsal/${controller.mdsal.version}/xml/features</repository>
+    <repository>mvn:org.opendaylight.mdsal.model/features-mdsal-model/${mdsal.model.version}/xml/features</repository>
     <!-- Repos needed by the OpenFlow Overlay renderer -->
     <repository>mvn:org.opendaylight.openflowplugin/features-openflowplugin/${openflowplugin.version}/xml/features</repository>
     <repository>mvn:org.opendaylight.openflowplugin/features-openflowplugin-extension/${openflowplugin.version}/xml/features</repository>
@@ -29,7 +30,7 @@
     <repository>mvn:org.opendaylight.sfc/features-sfc-netconf/${sfc.version}/xml/features</repository>
     <!-- Repos needed by the UI Backend -->
     <repository>mvn:org.opendaylight.netconf/features-restconf/${restconf.version}/xml/features</repository>
-	
+
 	<!-- Repos needed by the UI -->
     <repository>mvn:org.opendaylight.dlux/features-dlux/${dlux.version}/xml/features</repository>
 
@@ -37,9 +38,9 @@
     <repository>mvn:org.opendaylight.sfc/features-sfcofl2/${sfc.version}/xml/features</repository>
     <!-- The common GBP components -->
     <feature name='odl-groupbasedpolicy-base' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Base Copmonents'>
-        <feature version="${mdsal.version}">odl-mdsal-broker</feature>
-        <feature version='${yangtools.version}'>odl-yangtools-binding</feature>
-        <feature version='${yangtools.version}'>odl-yangtools-models</feature>
+        <feature version="${controller.mdsal.version}">odl-mdsal-broker</feature>
+        <feature version='${mdsal.version}'>odl-mdsal-binding-base</feature>
+        <feature version='${mdsal.model.version}'>odl-mdsal-models</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy/${project.version}</bundle>
     </feature>
 
@@ -85,7 +86,7 @@
          The Neutron provider
     -->
     <feature name='odl-groupbasedpolicy-neutronmapper' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Neutron Mapper mapps neutron APIs to GBP APIs '>
-        <feature version="${mdsal.version}">odl-mdsal-broker</feature>
+        <feature version="${controller.mdsal.version}">odl-mdsal-broker</feature>
         <feature version="${neutron.version}">odl-neutron-service</feature>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <feature version="${project.version}">odl-groupbasedpolicy-ofoverlay</feature>
@@ -99,13 +100,13 @@
          The UI Backend
     -->
     <feature name='odl-groupbasedpolicy-uibackend' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: UI Backend provides APIs for UI '>
-        <feature version="${mdsal.version}">odl-mdsal-broker</feature>
+        <feature version="${controller.mdsal.version}">odl-mdsal-broker</feature>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <feature version="${restconf.version}">odl-restconf</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/ui-backend/${project.version}</bundle>
         <configfile finalname="${config.configfile.directory}/${config.groupbasedpolicy.uibackendconfigfile}">mvn:org.opendaylight.groupbasedpolicy/ui-backend-config/${project.version}/xml/config</configfile>
     </feature>
-	
+
     <!--
          UI
     -->
