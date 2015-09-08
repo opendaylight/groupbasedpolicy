@@ -270,7 +270,7 @@ public class InventoryHelper {
             ofOverlayNodeConfigBuilder.setTunnel(new ArrayList<Tunnel>(existingTunnels));
         }
         OfOverlayNodeConfig newConfig = ofOverlayNodeConfigBuilder.build();
-        if (addTunnelsOfOverlayConfig(newConfig.getTunnel(), new NodeId(nodeIdString), dataBroker)) {
+        if (addOfOverlayConfig(newConfig, new NodeId(nodeIdString), dataBroker)) {
             LOG.trace("updateOfOverlayConfig - Added Tunnel: {} to Node: {} at NodeConnector: {}",tunnelBuilder.build(), nodeIdString, nodeConnectorIdString);
             return;
         } else {
@@ -314,6 +314,17 @@ public class InventoryHelper {
             }
             submitToDs(wTx);
         }
+    }
+
+    private static boolean addOfOverlayConfig(OfOverlayNodeConfig newConfig, NodeId nodeId, DataBroker dataBroker) {
+        ReadWriteTransaction wTx = dataBroker.newReadWriteTransaction();
+        InstanceIdentifier<OfOverlayNodeConfig> ofOverlayNodeIid = InstanceIdentifier.builder(Nodes.class)
+            .child(Node.class, new NodeKey(nodeId))
+            .augmentation(OfOverlayNodeConfig.class)
+            .build();
+        wTx.put(LogicalDatastoreType.CONFIGURATION, ofOverlayNodeIid, newConfig, true);
+        LOG.trace("Adding tunnel: {} to node {}", newConfig, nodeId.getValue());
+        return submitToDs(wTx);
     }
 
     private static boolean addTunnelsOfOverlayConfig(List<Tunnel> tunnels, NodeId nodeId, DataBroker dataBroker) {
