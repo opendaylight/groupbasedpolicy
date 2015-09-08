@@ -451,7 +451,6 @@ public class PolicyEnforcer extends FlowTable {
                     actionBuilderList = action.updateAction(actionBuilderList, params, actionRule.getOrder(), netElements, policyPair,
                             ofWriter, ctx, direction);
                 }
-
             }
         }
         FlowBuilder flow = base().setPriority(Integer.valueOf(priority));
@@ -469,6 +468,10 @@ public class PolicyEnforcer extends FlowTable {
 
             if (ctx.getEndpointManager().isExternal(netElements.getDstEp())) {
                 flow.setInstructions(instructions(getGotoEgressNatInstruction()));
+            } else if (actionBuilderList == null) {
+                //TODO - analyse, what happen for unknown action, SFC, etc.
+                LOG.warn("Action builder list not found, partially flow which is not created: {}", flow.build());
+                continue;
             } else if (actionBuilderList.isEmpty()) {
                 flow.setInstructions(instructions(getGotoExternalInstruction()));
             } else {
