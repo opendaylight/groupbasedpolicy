@@ -28,7 +28,7 @@
     <repository>mvn:org.opendaylight.sfc/features-sfc-sb-rest/${sfc.version}/xml/features</repository>
     <repository>mvn:org.opendaylight.sfc/features-sfc-netconf/${sfc.version}/xml/features</repository>
     <!-- Repos needed by the UI Backend -->
-    <repository>mvn:org.opendaylight.controller/features-restconf/${restconf.version}/xml/features</repository>
+    <repository>mvn:org.opendaylight.netconf/features-restconf/${restconf.version}/xml/features</repository>
 	
 	<!-- Repos needed by the UI -->
     <repository>mvn:org.opendaylight.dlux/features-dlux/${dlux.version}/xml/features</repository>
