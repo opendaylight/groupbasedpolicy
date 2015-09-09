@@ -223,6 +223,7 @@ public class OfTableTest {
                 .setClassifierRef(ImmutableList.of(new ClassifierRefBuilder()
                     .setName(new ClassifierName("tcp_dst_80"))
                     .setDirection(direction)
+                    .setInstanceName(new ClassifierName("tcp_dst_80"))
                     .build()))
                 .build()));
     }
@@ -237,6 +238,7 @@ public class OfTableTest {
         for (String refName : refNamesAndDirections.keySet()) {
             refs.add(new ClassifierRefBuilder().setName(new ClassifierName(refName))
                 .setDirection(refNamesAndDirections.get(refName))
+                .setInstanceName(new ClassifierName(refName))
                 .build());
         }
         return refs;

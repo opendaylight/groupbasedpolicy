@@ -323,10 +323,10 @@ public class PolicyEnforcer extends FlowTable {
             // extension and data plane support - in 2.4. Will need to handle
             // case where we are working with mix of nodes.
 
-            ClassifierInstance ci = contractTenant.getClassifier(cr.getName());
+            ClassifierInstance ci = contractTenant.getClassifier(cr.getInstanceName());
             if (ci == null) {
                 // XXX TODO fail the match and raise an exception
-                LOG.warn("Classifier instance {} not found", cr.getName().getValue());
+                LOG.warn("Classifier instance {} not found", cr.getInstanceName().getValue());
                 return;
             }
             Classifier cfier = SubjectFeatures.getClassifier(ci.getClassifierDefinitionId());
