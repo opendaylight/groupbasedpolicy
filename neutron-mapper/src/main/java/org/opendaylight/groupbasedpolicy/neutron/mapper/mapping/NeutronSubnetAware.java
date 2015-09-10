@@ -68,13 +68,12 @@ public class NeutronSubnetAware implements INeutronSubnetAware {
         Subnet subnet = createSubnet(neutronSubnet);
         rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.subnetIid(tenantId, subnetId), subnet, true);
         DataStoreHelper.submitToDs(rwTx);
+
         rwTx = dataProvider.newReadWriteTransaction();
-
-        L2FloodDomainId l2FdId = new L2FloodDomainId(subnet.getParent().getValue());
-        ForwardingCtx fwCtx = MappingUtils.createForwardingContext(tenantId, l2FdId, rwTx);
-
         if (isExternalNetwork(subnet.getParent(), rwTx)) {
             LOG.trace("neutronSubnetCreated - adding L3 Endpoint");
+            L2FloodDomainId l2FdId = new L2FloodDomainId(subnet.getParent().getValue());
+            ForwardingCtx fwCtx = MappingUtils.createForwardingContext(tenantId, l2FdId, rwTx);
             IpAddress defaultGateway = Utils.createIpAddress(neutronSubnet.getGatewayIP());
             //Create L3Endpoint for defaultGateway and write to externalGateways to L3Endpoints in neutron-gbp datastore
             NetworkDomainId containment = new NetworkDomainId(neutronSubnet.getID());

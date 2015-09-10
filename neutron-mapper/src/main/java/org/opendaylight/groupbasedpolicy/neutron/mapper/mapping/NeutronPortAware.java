@@ -504,16 +504,19 @@ public class NeutronPortAware implements INeutronPortAware {
             return;
         }
 
-        EndpointKey epKey = new EndpointKey(fwCtx.getL2BridgeDomain().getId(), new MacAddress(port.getMacAddress()));
-        deleteNeutronGbpMapping(port, epKey, rwTx);
         UnregisterEndpointInput unregisterEpRpcInput = createUnregisterEndpointInput(port, fwCtx);
+        boolean isEndpointUnregistered = false;
         try {
-            RpcResult<Void> rpcResult = epService.unregisterEndpoint(unregisterEpRpcInput).get();
-            if (!rpcResult.isSuccessful()) {
-                LOG.warn("Illegal state - RPC unregisterEndpoint failed. Input of RPC: {}", unregisterEpRpcInput);
-            }
+            isEndpointUnregistered = epService.unregisterEndpoint(unregisterEpRpcInput).get().isSuccessful();
         } catch (InterruptedException | ExecutionException e) {
-            LOG.error("addPort - RPC invocation failed.", e);
+            LOG.error("unregisterEndpoint - RPC invocation failed.", e);
+        }
+        if (isEndpointUnregistered) {
+            EndpointKey epKey = new EndpointKey(fwCtx.getL2BridgeDomain().getId(), new MacAddress(port.getMacAddress()));
+            deleteNeutronGbpMapping(port, epKey, rwTx);
+            DataStoreHelper.submitToDs(rwTx);
+        } else {
+            LOG.warn("Illegal state - RPC unregisterEndpoint failed. Input of RPC: {}", unregisterEpRpcInput);
             rwTx.cancel();
         }
     }

@@ -194,8 +194,9 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         TenantId tenantId = new TenantId(Utils.normalizeUuid(network.getTenantID()));
         L2FloodDomainId l2FdId = new L2FloodDomainId(network.getID());
+        InstanceIdentifier<NetworkMapping> networkMappingIid = NeutronMapperIidFactory.networkMappingIid(l2FdId);
         Optional<NetworkMapping> potentionalNetworkMapping = DataStoreHelper.readFromDs(
-                LogicalDatastoreType.OPERATIONAL, NeutronMapperIidFactory.networkMappingIid(l2FdId), rwTx);
+                LogicalDatastoreType.OPERATIONAL, networkMappingIid, rwTx);
         if (!potentionalNetworkMapping.isPresent()) {
             LOG.warn("Illegal state - network-mapping {} does not exist.", l2FdId.getValue());
             rwTx.cancel();
@@ -235,7 +236,8 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
             return;
         }
 
+        rwTx.delete(LogicalDatastoreType.OPERATIONAL, networkMappingIid);
+
         DataStoreHelper.submitToDs(rwTx);
     }
-
 }
