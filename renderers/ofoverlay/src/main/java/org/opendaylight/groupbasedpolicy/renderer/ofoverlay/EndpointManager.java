@@ -283,7 +283,6 @@ public class EndpointManager implements AutoCloseable, DataChangeListener {
      * Get the endpoints container from datastore.
      * Note: There are maps maintained by listener when higher performance is required.
      *
-     * @param
      * @return the {@link Endpoints}
      */
     public Endpoints getEndpointsFromDataStore() {
@@ -312,7 +311,6 @@ public class EndpointManager implements AutoCloseable, DataChangeListener {
     /**
      * Return all L3Prefix Endpoints from datastore.
      *
-     * @param
      * @return the {@link EndpointL3Prefix}
      */
     public Collection<EndpointL3Prefix> getEndpointsL3Prefix() {
@@ -327,7 +325,6 @@ public class EndpointManager implements AutoCloseable, DataChangeListener {
     /**
      * Return all L3Endpoints from datastore.
      *
-     * @param
      * @return the {@link EndpointL3}
      */
     public Collection<EndpointL3> getL3Endpoints() {
@@ -460,6 +457,9 @@ public class EndpointManager implements AutoCloseable, DataChangeListener {
 
     /**
      * Update the endpointL3 indexes. Set newEp to null to remove.
+     *
+     * @param oldL3Ep the old L3 endpoint
+     * @param newL3Ep the new L3 endpoint
      */
     protected synchronized void updateEndpointL3(EndpointL3 oldL3Ep, EndpointL3 newL3Ep) {
         // TODO Bug 3543 - complete
@@ -507,6 +507,9 @@ public class EndpointManager implements AutoCloseable, DataChangeListener {
 
     /**
      * Update the endpoint indexes. Set newEp to null to remove.
+     *
+     * @param oldEp the old endpoint
+     * @param newEp the new endpoint
      */
     protected synchronized void updateEndpoint(Endpoint oldEp, Endpoint newEp) {
         // TODO Be alagalah From Helium only keep track of endpoints that are

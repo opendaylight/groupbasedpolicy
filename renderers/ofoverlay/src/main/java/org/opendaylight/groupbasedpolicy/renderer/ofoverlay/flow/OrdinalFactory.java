@@ -52,10 +52,10 @@ public class OrdinalFactory {
      * Creates an ordinal for the OfOverlay pipeline comparison, based on @TenantId and a
      * uniqueID (UUID) associated with any other attribute.
      *
-     * @param tenantId
-     * @param id
-     * @return
-     * @throws Exception
+     * @param tenantId the tenant id
+     * @param id a unique id
+     * @return the ordinal
+     * @throws Exception throws all exception
      */
     public static int getContextOrdinal(final TenantId tenantId, final UniqueId id) throws Exception {
         if (tenantId == null || id == null)
@@ -91,7 +91,7 @@ public class OrdinalFactory {
      * @param destNode
      *        destination node ID
      * @return the 32-bit ordinal value
-     * @throws Exception
+     * @throws Exception throws all exception
      */
 
     public static int getContextOrdinal(NodeId destNode) throws Exception {

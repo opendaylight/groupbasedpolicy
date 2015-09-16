@@ -43,9 +43,15 @@ public abstract class Action implements ActionInstanceValidator{
      * Construct a set of actions that will apply to the traffic.  Augment
      * the existing list of actions or add new actions.  It's important
      * that the order of the returned list be consistent however
+     *
      * @param actions The existing actions
      * @param params the parameters for the action instance
-     * @param direction
+     * @param order the order of the list of actions
+     * @param netElements the network elements
+     * @param policyPair the {@link PolicyPair}
+     * @param ofWriter the {@link OfWriter}
+     * @param ctx the OfContext
+     * @param direction the direction of traffic
      * @return the updated list of actions (may be a different length)
      */
     public abstract List<ActionBuilder> updateAction(List<ActionBuilder> actions,

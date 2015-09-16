@@ -30,6 +30,9 @@ public class ArpUtils {
 
     /**
      * Returns Ethernet and ARP in readable string format
+     *
+     * @param eth {@link Ethernet}
+     * @return returns Ethernet and ARP in readable string format
      */
     public static String getArpFrameToStringFormat(Ethernet eth) {
         String ethernetString = "Ethernet [getEtherType()="
@@ -49,6 +52,9 @@ public class ArpUtils {
 
     /**
      * Returns ARP in readable string format
+     *
+     * @param arp {@link Arp}
+     * @return returns ARP in readable string format
      */
     public static String getArpToStringFormat(Arp arp) {
         try {

@@ -50,9 +50,10 @@ public class OvsdbHelper {
 
     /**
      * Look up the {@link OvsdbBridgeAugmentation} from the data store
-     * given a child {@link InstanceIdentifier<OvsdbTerminationPointAugmentation>}
+     * given a child {@link InstanceIdentifier} of {@link OvsdbTerminationPointAugmentation}
      *
-     * @param tpId The InstanceIdentifier for a child TerminationPoint augmentation
+     * @param tpIid The InstanceIdentifier for a child TerminationPoint augmentation
+     * @param dataBroker the {@link DataBroker}
      * @return the {@link OvsdbBridgeAugmentation}, null if the augmentation isn't present
      */
     public static OvsdbBridgeAugmentation getOvsdbBridgeFromTerminationPoint(
@@ -183,8 +184,8 @@ public class OvsdbHelper {
     /**
      * Get the manager node for this bridge node
      *
-     * @param bridge
-     * @param dataBroker
+     * @param bridge the bridge node
+     * @param dataBroker the {@link DataBroker}
      * @return The {@link OvsdbBridgeAugmentation} for the manager node, null
      *         if not found or if it already is the manager node
      */
@@ -224,9 +225,10 @@ public class OvsdbHelper {
      * Use OVSDB CRUD to create any missing tunnels on a given
      * Inventory Node.
      *
-     * @param nodeIid
-     * @param node
-     * @param tunnelType
+     * @param nodeIid the node instance identifier
+     * @param node the inventory node
+     * @param tunnelType the tunnel type
+     * @param dataBroker the {@link DataBroker}
      */
     public static void createTunnelPort(InstanceIdentifier<Node> nodeIid,
             Node node, AbstractTunnelType tunnelType, DataBroker dataBroker) {

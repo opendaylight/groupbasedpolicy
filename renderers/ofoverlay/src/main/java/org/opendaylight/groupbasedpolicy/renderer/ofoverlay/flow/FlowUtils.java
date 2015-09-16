@@ -190,8 +190,8 @@ public final class FlowUtils {
     /**
      * Creates an Instance Identifier (path) for node with specified id
      *
-     * @param nodeId
-     * @return
+     * @param nodeId the ID of the node
+     * @return the {@link InstanceIdentifier}
      */
     public static final InstanceIdentifier<Node> createNodePath(final NodeId nodeId) {
         return InstanceIdentifier.builder(Nodes.class).child(Node.class, new NodeKey(nodeId)).build();
@@ -251,9 +251,9 @@ public final class FlowUtils {
      * Creates a path for particular flow, by appending flow-specific information
      * to table path.
      *
-     * @param table
-     * @param flowKey
-     * @return
+     * @param table the table iid
+     * @param flowKey the flow key
+     * @return the {@link InstanceIdentifier}
      */
     public static InstanceIdentifier<Flow> createFlowPath(final InstanceIdentifier<Table> table, final FlowKey flowKey) {
         return table.child(Flow.class, flowKey);
@@ -263,9 +263,9 @@ public final class FlowUtils {
      * Creates a path for particular flow, by appending flow-specific information
      * to table path.
      *
-     * @param table
-     * @param flowId
-     * @return
+     * @param table the table iid
+     * @param flowId the flow id
+     * @return the {@link InstanceIdentifier}
      */
     public static InstanceIdentifier<Flow> createFlowPath(final InstanceIdentifier<Table> table, final FlowId flowId) {
         return createFlowPath(table, new FlowKey(flowId));

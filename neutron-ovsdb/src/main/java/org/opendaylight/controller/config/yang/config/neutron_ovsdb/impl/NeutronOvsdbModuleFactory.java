@@ -17,7 +17,7 @@ import org.osgi.framework.BundleContext;
 public class NeutronOvsdbModuleFactory extends org.opendaylight.controller.config.yang.config.neutron_ovsdb.impl.AbstractNeutronOvsdbModuleFactory {
 
     /**
-     * @see org.opendaylight.controller.config.yang.config.neutron_mapper.impl.AbstractNeutronOvsdbModuleFactory#createModule(java.lang.String, org.opendaylight.controller.config.api.DependencyResolver, org.osgi.framework.BundleContext)
+     * @see org.opendaylight.controller.config.yang.config.neutron_ovsdb.impl.AbstractNeutronOvsdbModuleFactory#createModule(java.lang.String, org.opendaylight.controller.config.api.DependencyResolver, org.osgi.framework.BundleContext)
      */
     @Override
     public Module createModule(String instanceName, DependencyResolver dependencyResolver, BundleContext bundleContext) {
@@ -27,7 +27,7 @@ public class NeutronOvsdbModuleFactory extends org.opendaylight.controller.confi
     }
 
     /**
-     * @see org.opendaylight.controller.config.yang.config.neutron_mapper.impl.AbstractNeutronOvsdbModuleFactory#createModule(java.lang.String, org.opendaylight.controller.config.api.DependencyResolver, org.opendaylight.controller.config.api.DynamicMBeanWithInstance, org.osgi.framework.BundleContext)
+     * @see org.opendaylight.controller.config.yang.config.neutron_ovsdb.impl.AbstractNeutronOvsdbModuleFactory#createModule(java.lang.String, org.opendaylight.controller.config.api.DependencyResolver, org.opendaylight.controller.config.api.DynamicMBeanWithInstance, org.osgi.framework.BundleContext)
      */
     @Override
     public Module createModule(String instanceName, DependencyResolver dependencyResolver, DynamicMBeanWithInstance old,

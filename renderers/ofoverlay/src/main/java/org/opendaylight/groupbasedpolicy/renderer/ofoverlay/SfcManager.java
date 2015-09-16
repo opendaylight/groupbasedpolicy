@@ -382,8 +382,8 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
     /**
      * Return the first hop information for the Rendered Service Path
      *
-     * @param rspName
-     * @return
+     * @param rspName the Rendered Service Path
+     * @return the first hop information for the Rendered Service Path
      */
     public RenderedServicePathFirstHop getRspFirstHop(String rspName) {
         return rspMap.get(rspName);

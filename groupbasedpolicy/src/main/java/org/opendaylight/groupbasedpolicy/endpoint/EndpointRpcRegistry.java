@@ -118,7 +118,7 @@ public class EndpointRpcRegistry implements EndpointService {
 
     /**
      *
-     * @param regImp
+     * @param regImp the endpoint augmentation
      * @throws Exception
      */
     public static void unregister(EpRendererAugmentation regImp)
@@ -167,9 +167,9 @@ public class EndpointRpcRegistry implements EndpointService {
     /**
      * Constructor
      *
-     * @param dataProvider
-     * @param rpcRegistry
-     * @param executor
+     * @param dataProvider the {@link DataBroker}
+     * @param rpcRegistry  the {@link RpcProviderRegistry}
+     * @param executor     the {@link ScheduledExecutorService}
      */
     private EndpointRpcRegistry(DataBroker dataProvider,
             RpcProviderRegistry rpcRegistry,
