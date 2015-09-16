@@ -139,7 +139,9 @@ public class IpProtoClassifier extends Classifier {
     }
 
     /**
-     * May return null.
+     * Return the IpProtocol value. May return null.
+     * @param params the parameters of classifier-instance inserted by user
+     * @return the IpProtocol value
      */
     public static Long getIpProtoValue(Map<String, ParameterValue> params) {
         if (params == null) {

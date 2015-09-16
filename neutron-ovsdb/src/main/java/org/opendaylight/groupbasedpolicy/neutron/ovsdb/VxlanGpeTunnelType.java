@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2015 Cisco Systems, Inc. and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -40,18 +40,17 @@ public class VxlanGpeTunnelType extends AbstractTunnelType {
     private static final String DESTPORT_KEY = "dst_port";
     private static final String DESTPORT_VALUE = VXLAN_GPE_PORT_NUMBER.toString();
 
-
-	private final PortNumber udpTunnelPort;
+    private final PortNumber udpTunnelPort;
     private final List<Options> optionsList;
     private static final Class<? extends TunnelTypeBase> tunnelType = TunnelTypeVxlanGpe.class;
 
-	public VxlanGpeTunnelType() {
-		optionsList = createOptionsList(optsMap);
-		udpTunnelPort = new PortNumber(VXLAN_GPE_PORT_NUMBER);
-	}
+    public VxlanGpeTunnelType() {
+        optionsList = createOptionsList(optsMap);
+        udpTunnelPort = new PortNumber(VXLAN_GPE_PORT_NUMBER);
+    }
 
-	private static final Map<String, String> optsMap;
-	static {
+    private static final Map<String, String> optsMap;
+    static {
         Map<String, String> opts = new HashMap<String, String>();
         opts.put(VNID_KEY, VNID_VALUE);
         opts.put(REMOTE_IP_KEY, REMOTE_IP_VALUE);
@@ -65,37 +64,37 @@ public class VxlanGpeTunnelType extends AbstractTunnelType {
         optsMap = Collections.unmodifiableMap(opts);
     }
 
-	@Override
+    @Override
     public List<Options> getOptions() {
         return optionsList;
     }
 
-	@Override
+    @Override
     public Class<? extends TunnelTypeBase> getTunnelType() {
         return tunnelType;
     }
 
-	@Override
+    @Override
     public PortNumber getPortNumber() {
         return udpTunnelPort;
     }
 
-	@Override
+    @Override
     public String getTunnelPrefix() {
         return VXLAN_GPE_TUNNEL_PREFIX;
-	}
+    }
 
-	/**
+    /**
      * Check if a TerminationPoint is a tunnel port that meets
      * requirements for the Service Function Chaining with NSH
      * encapsulation. The tunnel port must support setting the
      * VNID, destination Tunnel IP address, NSI, NSP, and all
      * four NSHC fields from flow-mods, and use VXLAN encapsulation.
      *
-     * @param tpAugmentation
+     * @param tpAugmentation the {@link OvsdbTerminationPointAugmentation}
      * @return true if it can be an SFC NSH tunnel port, false if not
      */
-	@Override
+    @Override
     public boolean isValidTunnelPort(OvsdbTerminationPointAugmentation tpAugmentation) {
         if (hasTunnelOptions(tpAugmentation, optsMap)
                 && InterfaceTypeVxlan.class.equals(tpAugmentation.getInterfaceType())

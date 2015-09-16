@@ -257,7 +257,7 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
      * removes attached tunnels (namely Vxlan-type) from OVSDB bridge;
      * else removes location info from TP
      *
-     * @param ovsdbBridge {@link OvsdbBridgeAugmentation}
+     * @param nodeId {@link NodeId}
      * @param ovsdbTp {@link OvsdbTerminationPointAugmentation}
      * @param ovsdbTpIid termination point's IID {@link InstanceIdentifier}
      */
@@ -342,7 +342,7 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
      * Get the Neutron Port UUID from an {@link OvsdbTerminationPointAugmentation}.
      * The Neutron Port UUID is stored as an "external-id" in the termination point.
      *
-     * @param ovsdbTp The OVSDB Termination Point augmentation
+     * @param ovsdbTp The {@link OvsdbTerminationPointAugmentation}
      * @return The String representation of the Neutron Port UUID, null if not present
      */
     private String getNeutronPortUuid(OvsdbTerminationPointAugmentation ovsdbTp) {

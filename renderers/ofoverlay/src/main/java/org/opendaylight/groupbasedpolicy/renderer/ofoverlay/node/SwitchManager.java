@@ -309,6 +309,11 @@ public class SwitchManager implements AutoCloseable {
 
         /**
          * Constructor used for tests
+         *
+         * @param node the node id
+         * @param tunnelPort the tunnel port
+         * @param externalPorts the set of expternal ports
+         * @param nodeConfig the ofoverlay node config
          */
         public SwitchState(NodeId node, NodeConnectorId tunnelPort, Set<NodeConnectorId> externalPorts,
                 OfOverlayNodeConfig nodeConfig) {

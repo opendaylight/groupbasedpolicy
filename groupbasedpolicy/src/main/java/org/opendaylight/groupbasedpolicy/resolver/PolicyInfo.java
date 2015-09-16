@@ -69,9 +69,9 @@ public class PolicyInfo {
 
     /**
      * Get the condition group as it applies to the given list of conditions
-     * @param eg
-     * @param conditions
-     * @return
+     * @param eg the endpoint group key
+     * @param conditions the list of conditions
+     * @return the {@link ConditionGroup}
      */
     public ConditionGroup getEgCondGroup(EgKey eg,
                                          List<ConditionName> conditions) {

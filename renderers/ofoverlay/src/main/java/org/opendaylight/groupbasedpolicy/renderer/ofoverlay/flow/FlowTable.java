@@ -50,12 +50,18 @@ public abstract class FlowTable extends OfTable {
 
     /**
      * Sync flow state using the flow map
-     * @throws Exception
+     *
+     * @param nodeId the node id
+     * @param policyInfo the current policy snapshot
+     * @param ofWriter the {@link OfWriter}
+     * @throws Exception throws all exception
      */
     public abstract void sync(NodeId nodeId, PolicyInfo policyInfo, OfWriter ofWriter) throws Exception;
 
     /**
      * Get the table ID being manipulated
+     *
+     * @return the table id
      */
     public abstract short getTableId();
 
@@ -65,6 +71,8 @@ public abstract class FlowTable extends OfTable {
 
     /**
      * Get a base flow builder with some common features already set
+     *
+     * @return {@link FlowBuilder}
      */
     protected FlowBuilder base() {
         return new FlowBuilder()
@@ -77,6 +85,11 @@ public abstract class FlowTable extends OfTable {
     /**
      * Write a drop flow for the given ethertype at the given priority.
      * If the ethertype is null, then drop all traffic
+     *
+     * @param priority the priority
+     * @param etherType the ethertype
+     * @param tableId the table id
+     * @return a drop flow for the given ethertype at the given priority.
      */
     public Flow dropFlow(Integer priority, Long etherType, Short tableId) {
         FlowId flowid;

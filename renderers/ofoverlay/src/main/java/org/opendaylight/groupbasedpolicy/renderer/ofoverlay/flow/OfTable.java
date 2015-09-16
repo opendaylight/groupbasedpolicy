@@ -40,9 +40,9 @@ public abstract class OfTable {
     /**
      * Update the relevant flow table for the node
      * @param nodeId the node to update
-     * @param policyInfo
-     * @param ofWriter
-     * @throws Exception
+     * @param policyInfo the current policy snapshot
+     * @param ofWriter the {@link OfWriter}
+     * @throws Exception throws all exception
      */
     public abstract void update(NodeId nodeId,
                                 PolicyInfo policyInfo,

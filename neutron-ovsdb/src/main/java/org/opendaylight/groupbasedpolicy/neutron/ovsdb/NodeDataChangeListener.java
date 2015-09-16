@@ -169,7 +169,8 @@ public class NodeDataChangeListener implements DataChangeListener, AutoCloseable
      * Get the DPID and OpenFlow port of the bridge that owns the {@link TerminationPoint} in the
      * provider mapping
      *
-     * @return
+     * @return the DPID and OpenFlow port of the bridge that owns the {@link TerminationPoint} in
+     * the provider mapping
      */
     private static String getInventoryNodeId(OvsdbNodeAugmentation ovsdbNode, String externalPortName) {
         List<ManagedNodeEntry> ovsdbNodes = ovsdbNode.getManagedNodeEntry();

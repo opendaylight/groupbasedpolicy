@@ -100,12 +100,9 @@ public class SfcNshHeader {
             SfcNshHeader sfcNshHeader = new SfcNshHeader(this);
             return sfcNshHeader;
         }
+
         /**
          * SfcNshHeaderBuilder requires following in constructor:
-         *
-         * @param nshNspToChain
-         * @param nshNsiToChain
-         * @param nshTunIpDst
          */
         public SfcNshHeaderBuilder() {
 

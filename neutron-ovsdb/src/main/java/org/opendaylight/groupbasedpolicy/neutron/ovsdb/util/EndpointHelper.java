@@ -36,7 +36,7 @@ public class EndpointHelper {
      * Look up the {@link Endpoint} from the Endpoint Registry.
      *
      * @param epKey The {@link EndpointKey} to look up
-     * @param dataBroker The {@link DataBroker} to use for the transaction
+     * @param transaction The {@link ReadOnlyTransaction}
      * @return The corresponding {@link Endpoint}, null if not found
      */
     public static Endpoint lookupEndpoint(EndpointKey epKey, ReadOnlyTransaction transaction) {
@@ -54,10 +54,10 @@ public class EndpointHelper {
      * Note this updates the datastore directly. It does not use the Endpoint RPC, as this has
      * unfortunate side-effects on EndpointL3 augmentations.
      *
-     * @param endpoint
-     * @param nodeIdString
-     * @param nodeConnectorIdString
-     * @param rwTx
+     * @param endpoint               the network endpoint
+     * @param nodeIdString           the string representation of the inventory NodeId
+     * @param nodeConnectorIdString  the string representation of the inventory NodeConnectorId
+     * @param rwTx                   a reference to ReadWriteTransaction object
      */
     public static void updateEndpointWithLocation(Endpoint endpoint, String nodeIdString,
         String nodeConnectorIdString, ReadWriteTransaction rwTx) {

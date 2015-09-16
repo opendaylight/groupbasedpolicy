@@ -169,8 +169,8 @@ public class PolicyManager
     }
 
     /**
-     * @param tableOffset - new offset value
-     * @return ListenableFuture<List> - to indicate that tables have been synced
+     * @param tableOffset the new offset value
+     * @return {@link ListenableFuture} to indicate that tables have been synced
      */
     public ListenableFuture<Void> changeOpenFlowTableOffset(final short tableOffset) {
         try {

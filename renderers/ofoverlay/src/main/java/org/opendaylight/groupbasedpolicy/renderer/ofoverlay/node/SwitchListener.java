@@ -26,11 +26,11 @@ public interface SwitchListener {
      * @param sw the ID for the switch
      */
     public void switchRemoved(NodeId sw);
-    
-    /**
+
+       /**
      * Indicated that the switch configuration, tunnel port, or external ports
      * have changed
-     * @param sw
+     * @param sw the ID for the switch
      */
     public void switchUpdated(NodeId sw);
 }

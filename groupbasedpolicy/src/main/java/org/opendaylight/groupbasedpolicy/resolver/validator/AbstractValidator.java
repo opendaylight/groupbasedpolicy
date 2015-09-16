@@ -106,7 +106,6 @@ public abstract class AbstractValidator<U extends DataContainer> implements Vali
      * Individual validators must override this method, if they want to execute
      * validation on their children.
      *
-     * @param <T>
      * @param objectToValidate Object that is validated by this validator
      * @return List of child objects associated to {@code objectToValidate}. If
      * there is not any child, return empty list or {@code null}.

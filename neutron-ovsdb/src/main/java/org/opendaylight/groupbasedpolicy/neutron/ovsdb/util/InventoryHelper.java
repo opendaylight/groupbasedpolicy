@@ -71,7 +71,9 @@ public class InventoryHelper {
      * augmentation, converting that to a Long, and prepending it with the
      * "openflow:" prefix.
      *
-     * @param ovsdbBridge The OVSDB bridge augmentation
+     * @param ovsdbBridge The {@link OvsdbBridgeAugmentation}
+     * @param ovsdbTpIid the {@link OvsdbTerminationPointAugmentation}
+     * @param dataBroker the {@link DataBroker}
      * @return String representation of the Inventory NodeId, null if it fails
      */
     public static String getInventoryNodeIdString(OvsdbBridgeAugmentation ovsdbBridge,
@@ -102,6 +104,8 @@ public class InventoryHelper {
      *
      * @param inventoryNodeId The string representation of the Inventory NodeId
      * @param ovsdbTp The {@link OvsdbTerminationPointAugmentation}
+     * @param tpIid the InstanceIdentifier for OvsdbTerminationPointAugmentation
+     * @param dataBroker the {@link DataBroker}
      * @return String representation of the Inventory NodeConnectorId, null if it fails
      */
     public static String getInventoryNodeConnectorIdString(String inventoryNodeId,
@@ -136,6 +140,9 @@ public class InventoryHelper {
      * Inventory Node, and verify that the tunnel types we need
      * are present
      *
+     * @param nodeIdString The inventory node id string
+     * @param requiredTunnelTypes the list of tunnel types
+     * @param dataBroker the {@link DataBroker}
      * @return true if tunnel types are present, false otherwise
      */
     public static boolean checkOfOverlayConfig(String nodeIdString, List<AbstractTunnelType> requiredTunnelTypes,
@@ -198,14 +205,14 @@ public class InventoryHelper {
     }
 
     /**
-     * Update the {@link OfOverlayConfig} of an Inventory Node
+     * Update the {@link OfOverlayNodeConfig} of an Inventory Node
      * using the new tunnel state.
      *
-     * @param ip
-     * @param nodeIdString
-     * @param nodeConnectorIdString
-     * @param tunnelType
-     * @param dataBroker
+     * @param ip the ipaddress
+     * @param nodeIdString the string representation of the inventory NodeId
+     * @param nodeConnectorIdString the string representation of the inventory NodeConnectorId
+     * @param tunnelType the tunnel type
+     * @param dataBroker the {@link DataBroker}
      */
     public static void updateOfOverlayConfig(IpAddress ip, String nodeIdString, String nodeConnectorIdString,
             AbstractTunnelType tunnelType, DataBroker dataBroker) {
