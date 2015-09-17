@@ -209,7 +209,7 @@ public class OrdinalFactory {
             // TODO: alagalah: I have a draft to address structure of mEPG
             // conditions, but
             // out of scope until broader bugs with conditions are fixed.
-            List<ConditionName> conds = ctx.getEndpointManager().getCondsForEndpoint(ep);
+            List<ConditionName> conds = ctx.getEndpointManager().getConditionsForEndpoint(ep);
             ConditionGroup cg = policyInfo.getEgCondGroup(new EgKey(ep.getTenant(), ep.getEndpointGroup()), conds);
             this.cgId = getCondGroupOrdinal(cg);
 

@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
+package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint;
 
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 
@@ -21,6 +21,6 @@ public class MockEndpointManager extends EndpointManager {
     }
 
     public void addEndpoint(Endpoint ep) {
-        updateEndpoint(null, ep);
+        processEndpoint(null, ep);
     }
 }

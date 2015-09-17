@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
+package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -17,9 +17,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +43,7 @@ import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFaile
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.EndpointListener;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
@@ -84,38 +84,24 @@ import com.google.common.util.concurrent.CheckedFuture;
 public class EndpointManagerTest {
 
     private EndpointManager manager;
-
     private DataBroker dataProvider;
     private RpcProviderRegistry rpcRegistry;
     private NotificationService notificationService;
     private ScheduledExecutorService executor;
     private SwitchManager switchManager;
-    private BindingAwareBroker.RpcRegistration<EndpointService> rpcRegistration;
     private ListenerRegistration<DataChangeListener> listenerReg;
-
     private EndpointListener endpointListener;
-
-    private WriteTransaction writeTransaction;
-    private CheckedFuture<Void, TransactionCommitFailedException> checkedFutureWrite;
-
     private Endpoint endpoint1;
     private Endpoint endpoint2;
     private TenantId tenantId;
     private EndpointGroupId endpointGroupId;
     private L2BridgeDomainId l2BridgeDomainId;
-    private MacAddress macAddress;
     private OfOverlayContext context1;
     private OfOverlayContext context2;
     private NodeId nodeId1;
     private NodeId nodeId2;
-
-    private AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change;
-    private InstanceIdentifier<DataObject> endpointId;
-
     private EndpointL3 oldL3Ep;
     private EndpointL3 newL3Ep;
-
-    private ReadOnlyTransaction readTransaction;
     private Optional<Endpoints> optionalRead;
 
     @SuppressWarnings("unchecked")
@@ -126,11 +112,11 @@ public class EndpointManagerTest {
         notificationService = mock(NotificationService.class);
         executor = mock(ScheduledExecutorService.class);
         switchManager = mock(SwitchManager.class);
-        writeTransaction = mock(WriteTransaction.class);
+        WriteTransaction writeTransaction = mock(WriteTransaction.class);
         when(dataProvider.newWriteOnlyTransaction()).thenReturn(writeTransaction);
-        checkedFutureWrite = mock(CheckedFuture.class);
+        CheckedFuture<Void, TransactionCommitFailedException> checkedFutureWrite = mock(CheckedFuture.class);
         when(writeTransaction.submit()).thenReturn(checkedFutureWrite);
-        rpcRegistration = mock(BindingAwareBroker.RpcRegistration.class);
+        BindingAwareBroker.RpcRegistration<EndpointService> rpcRegistration = mock(BindingAwareBroker.RpcRegistration.class);
         listenerReg = mock(ListenerRegistration.class);
         when(
                 dataProvider.registerDataChangeListener(any(LogicalDatastoreType.class), any(InstanceIdentifier.class),
@@ -146,7 +132,7 @@ public class EndpointManagerTest {
         tenantId = mock(TenantId.class);
         endpointGroupId = mock(EndpointGroupId.class);
         l2BridgeDomainId = mock(L2BridgeDomainId.class);
-        macAddress = mock(MacAddress.class);
+        MacAddress macAddress = mock(MacAddress.class);
         when(endpoint1.getTenant()).thenReturn(tenantId);
         when(endpoint1.getEndpointGroup()).thenReturn(endpointGroupId);
         when(endpoint1.getL2Context()).thenReturn(l2BridgeDomainId);
@@ -167,9 +153,9 @@ public class EndpointManagerTest {
         when(nodeId2.getValue()).thenReturn("nodeValue2");
 
         // onDataChanged
-        change = mock(AsyncDataChangeEvent.class);
-        endpointId = mock(InstanceIdentifier.class);
-        Set<InstanceIdentifier<?>> removedPaths = new HashSet<InstanceIdentifier<?>>();
+        AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change = mock(AsyncDataChangeEvent.class);
+        InstanceIdentifier<DataObject> endpointId = mock(InstanceIdentifier.class);
+        Set<InstanceIdentifier<?>> removedPaths = new HashSet<>();
         removedPaths.add(endpointId);
         when(change.getRemovedPaths()).thenReturn(removedPaths);
 
@@ -178,7 +164,7 @@ public class EndpointManagerTest {
         newL3Ep = mock(EndpointL3.class);
 
         // getEndpointsFromDataStore
-        readTransaction = mock(ReadOnlyTransaction.class);
+        ReadOnlyTransaction readTransaction = mock(ReadOnlyTransaction.class);
         when(dataProvider.newReadOnlyTransaction()).thenReturn(readTransaction);
         CheckedFuture<Optional<Endpoints>, ReadFailedException> checkedFutureRead = mock(CheckedFuture.class);
         when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
@@ -196,7 +182,7 @@ public class EndpointManagerTest {
     @Test
     public void getGroupsForNodeTest() {
         Assert.assertTrue(manager.getGroupsForNode(nodeId1).isEmpty());
-        manager.updateEndpoint(null, endpoint1);
+        manager.processEndpoint(null, endpoint1);
         Assert.assertFalse(manager.getGroupsForNode(nodeId1).isEmpty());
     }
 
@@ -212,21 +198,21 @@ public class EndpointManagerTest {
     public void getEndpointsForNodeTestNodeIdEgKey() {
         EgKey egKey = new EgKey(tenantId, endpointGroupId);
         Assert.assertTrue(manager.getEndpointsForNode(nodeId1, egKey).isEmpty());
-        manager.updateEndpoint(null, endpoint1);
+        manager.processEndpoint(null, endpoint1);
         Assert.assertFalse(manager.getEndpointsForNode(nodeId1, egKey).isEmpty());
     }
 
     @Test
     public void getEndpointsForNodeTestNodeId() {
         Assert.assertTrue(manager.getEndpointsForNode(nodeId1).isEmpty());
-        manager.updateEndpoint(null, endpoint1);
+        manager.processEndpoint(null, endpoint1);
         Assert.assertFalse(manager.getEndpointsForNode(nodeId1).isEmpty());
     }
 
     @Test
     public void getEndpoint() {
         EpKey epKey = new EpKey(endpoint1.getL2Context(), endpoint1.getMacAddress());
-        manager.updateEndpoint(null, endpoint1);
+        manager.processEndpoint(null, endpoint1);
         Assert.assertEquals(endpoint1, manager.getEndpoint(epKey));
     }
 
@@ -244,7 +230,7 @@ public class EndpointManagerTest {
         Endpoints endpoints = mock(Endpoints.class);
         when(optional.get()).thenReturn(endpoints);
         EndpointL3Prefix endpointL3Prefix = mock(EndpointL3Prefix.class);
-        when(endpoints.getEndpointL3Prefix()).thenReturn(Arrays.asList(endpointL3Prefix));
+        when(endpoints.getEndpointL3Prefix()).thenReturn(Collections.singletonList(endpointL3Prefix));
         when(endpointL3Prefix.getTenant()).thenReturn(tenantId);
 
         Collection<EndpointL3Prefix> result = manager.getEndpointsL3PrefixForTenant(tenantId);
@@ -292,7 +278,7 @@ public class EndpointManagerTest {
         when(optionalRead.isPresent()).thenReturn(true);
         Endpoints endpoints = mock(Endpoints.class);
         when(optionalRead.get()).thenReturn(endpoints);
-        List<EndpointL3> endpointL3List = Arrays.asList(mock(EndpointL3.class));
+        List<EndpointL3> endpointL3List = Collections.singletonList(mock(EndpointL3.class));
         when(endpoints.getEndpointL3()).thenReturn(endpointL3List);
 
         Assert.assertEquals(endpointL3List, manager.getL3Endpoints());
@@ -304,14 +290,14 @@ public class EndpointManagerTest {
         Endpoints endpoints = mock(Endpoints.class);
         when(optionalRead.get()).thenReturn(endpoints);
         EndpointL3 endpointL3 = mock(EndpointL3.class);
-        List<EndpointL3> endpointL3List = Arrays.asList(endpointL3);
+        List<EndpointL3> endpointL3List = Collections.singletonList(endpointL3);
         when(endpoints.getEndpointL3()).thenReturn(endpointL3List);
 
         OfOverlayL3Nat overlayL3Nat = mock(OfOverlayL3Nat.class);
         when(endpointL3.getAugmentation(OfOverlayL3Nat.class)).thenReturn(overlayL3Nat);
         NaptTranslations naptTranslations = mock(NaptTranslations.class);
         when(overlayL3Nat.getNaptTranslations()).thenReturn(mock(NaptTranslations.class));
-        when(naptTranslations.getNaptTranslation()).thenReturn(Arrays.asList(mock(NaptTranslation.class)));
+        when(naptTranslations.getNaptTranslation()).thenReturn(Collections.singletonList(mock(NaptTranslation.class)));
 
         when(endpointL3.getL2Context()).thenReturn(mock(L2BridgeDomainId.class));
         when(endpointL3.getMacAddress()).thenReturn(mock(MacAddress.class));
@@ -332,14 +318,14 @@ public class EndpointManagerTest {
         Endpoints endpoints = mock(Endpoints.class);
         when(optionalRead.get()).thenReturn(endpoints);
         EndpointL3 endpointL3 = mock(EndpointL3.class);
-        List<EndpointL3> endpointL3List = Arrays.asList(endpointL3);
+        List<EndpointL3> endpointL3List = Collections.singletonList(endpointL3);
         when(endpoints.getEndpointL3()).thenReturn(endpointL3List);
 
         OfOverlayL3Nat overlayL3Nat = mock(OfOverlayL3Nat.class);
         when(endpointL3.getAugmentation(OfOverlayL3Nat.class)).thenReturn(overlayL3Nat);
         NaptTranslations naptTranslations = mock(NaptTranslations.class);
         when(overlayL3Nat.getNaptTranslations()).thenReturn(mock(NaptTranslations.class));
-        when(naptTranslations.getNaptTranslation()).thenReturn(Arrays.asList(mock(NaptTranslation.class)));
+        when(naptTranslations.getNaptTranslation()).thenReturn(Collections.singletonList(mock(NaptTranslation.class)));
 
         when(endpointL3.getL2Context()).thenReturn(mock(L2BridgeDomainId.class));
         when(endpointL3.getMacAddress()).thenReturn(null);
@@ -354,14 +340,14 @@ public class EndpointManagerTest {
         Endpoints endpoints = mock(Endpoints.class);
         when(optionalRead.get()).thenReturn(endpoints);
         EndpointL3 endpointL3 = mock(EndpointL3.class);
-        List<EndpointL3> endpointL3List = Arrays.asList(endpointL3);
+        List<EndpointL3> endpointL3List = Collections.singletonList(endpointL3);
         when(endpoints.getEndpointL3()).thenReturn(endpointL3List);
 
         OfOverlayL3Nat overlayL3Nat = mock(OfOverlayL3Nat.class);
         when(endpointL3.getAugmentation(OfOverlayL3Nat.class)).thenReturn(overlayL3Nat);
         NaptTranslations naptTranslations = mock(NaptTranslations.class);
         when(overlayL3Nat.getNaptTranslations()).thenReturn(mock(NaptTranslations.class));
-        when(naptTranslations.getNaptTranslation()).thenReturn(Arrays.asList(mock(NaptTranslation.class)));
+        when(naptTranslations.getNaptTranslation()).thenReturn(Collections.singletonList(mock(NaptTranslation.class)));
 
         when(endpointL3.getL2Context()).thenReturn(null);
         when(endpointL3.getMacAddress()).thenReturn(mock(MacAddress.class));
@@ -379,8 +365,7 @@ public class EndpointManagerTest {
         NaptTranslations naptTranslations = mock(NaptTranslations.class);
         when(ofOverlayL3Nat.getNaptTranslations()).thenReturn(naptTranslations);
         when(naptTranslations.getNaptTranslation()).thenReturn(null);
-        NaptTranslation naptTranslation = mock(NaptTranslation.class);
-        when(naptTranslations.getNaptTranslation()).thenReturn(Arrays.asList(mock(NaptTranslation.class)));
+        when(naptTranslations.getNaptTranslation()).thenReturn(Collections.singletonList(mock(NaptTranslation.class)));
 
         Assert.assertNotNull(manager.getNaptAugL3Endpoint(endpointL3));
     }
@@ -403,22 +388,22 @@ public class EndpointManagerTest {
     }
 
     @Test
-    public void getEnpointsForGroupTest() {
+    public void getEndpointsForGroupTest() {
         EgKey newEgKey = new EgKey(tenantId, endpointGroupId);
         Assert.assertTrue(manager.getEndpointsForGroup(newEgKey).isEmpty());
-        manager.updateEndpoint(null, endpoint1);
+        manager.processEndpoint(null, endpoint1);
         Assert.assertFalse(manager.getEndpointsForGroup(newEgKey).isEmpty());
     }
 
     @Test
-    public void getCondsForEndpoint() {
+    public void getConditionsForEndpoint() {
         Endpoint endpoint = mock(Endpoint.class);
         when(endpoint.getCondition()).thenReturn(null);
-        Assert.assertTrue(manager.getCondsForEndpoint(endpoint).isEmpty());
+        Assert.assertTrue(manager.getConditionsForEndpoint(endpoint).isEmpty());
 
-        List<ConditionName> conditionNameList = Arrays.asList(mock(ConditionName.class));
+        List<ConditionName> conditionNameList = Collections.singletonList(mock(ConditionName.class));
         when(endpoint.getCondition()).thenReturn(conditionNameList);
-        Assert.assertEquals(conditionNameList, manager.getCondsForEndpoint(endpoint));
+        Assert.assertEquals(conditionNameList, manager.getConditionsForEndpoint(endpoint));
     }
 
     @Test
@@ -440,7 +425,7 @@ public class EndpointManagerTest {
         IpAddress ipAddress = mock(IpAddress.class);
         when(endpointL3Key.getIpAddress()).thenReturn(ipAddress);
 
-        manager.updateEndpointL3(null, newL3Ep);
+        manager.processL3Endpoint(null, newL3Ep);
         verify(endpointListener,never()).endpointUpdated(any(EpKey.class));
     }
 
@@ -462,7 +447,7 @@ public class EndpointManagerTest {
         IpAddress ipAddress = mock(IpAddress.class);
         when(endpointL3Key.getIpAddress()).thenReturn(ipAddress);
 
-        manager.updateEndpointL3(null, newL3Ep);
+        manager.processL3Endpoint(null, newL3Ep);
         verify(endpointListener,never()).endpointUpdated(any(EpKey.class));
     }
 
@@ -482,7 +467,7 @@ public class EndpointManagerTest {
         when(newL3Ep.getL2Context()).thenReturn(mock(L2BridgeDomainId.class));
         when(newL3Ep.getMacAddress()).thenReturn(mock(MacAddress.class));
 
-        manager.updateEndpointL3(null, newL3Ep);
+        manager.processL3Endpoint(null, newL3Ep);
         verify(endpointListener).endpointUpdated(any(EpKey.class));
     }
 
@@ -493,26 +478,26 @@ public class EndpointManagerTest {
         when(newL3Ep.getL3Context()).thenReturn(mock(L3ContextId.class));
         when(newL3Ep.getIpAddress()).thenReturn(null);
 
-        manager.updateEndpointL3(null, newL3Ep);
+        manager.processL3Endpoint(null, newL3Ep);
         verify(endpointListener,never()).endpointUpdated(any(EpKey.class));
     }
 
     @Test
     public void updateEndpointL3TestDelete() throws Exception {
-        manager.updateEndpointL3(oldL3Ep, null);
+        manager.processL3Endpoint(oldL3Ep, null);
         verify(endpointListener).endpointUpdated(any(EpKey.class));
     }
 
     @Test
     public void updateEndpointTestNewEndpointRemove() {
         Collection<Endpoint> collection;
-        manager.updateEndpoint(null, endpoint2);
+        manager.processEndpoint(null, endpoint2);
         verify(endpointListener).endpointUpdated(any(EpKey.class));
         verify(endpointListener).nodeEndpointUpdated(any(NodeId.class), any(EpKey.class));
         collection = manager.getEndpointsForGroup(new EgKey(tenantId, endpointGroupId));
         Assert.assertFalse(collection.isEmpty());
 
-        manager.updateEndpoint(endpoint2, null);
+        manager.processEndpoint(endpoint2, null);
         verify(endpointListener, times(2)).endpointUpdated(any(EpKey.class));
         verify(endpointListener, times(2)).nodeEndpointUpdated(any(NodeId.class), any(EpKey.class));
         collection = manager.getEndpointsForGroup(new EgKey(tenantId, endpointGroupId));
@@ -520,43 +505,43 @@ public class EndpointManagerTest {
     }
 
     @Test
-    public void updateEndpointTestnewLocNulloldLocNullOfOverlayContextAugmentationNulll() {
+    public void updateEndpointTestNewLocNullOldLocNullOfOverlayContextAugmentationNull() {
         when(endpoint1.getAugmentation(OfOverlayContext.class)).thenReturn(null);
         when(endpoint2.getAugmentation(OfOverlayContext.class)).thenReturn(null);
 
-        manager.updateEndpoint(endpoint1, endpoint2);
+        manager.processEndpoint(endpoint1, endpoint2);
         verify(endpointListener, never()).endpointUpdated(any(EpKey.class));
         verify(endpointListener, never()).nodeEndpointUpdated(any(NodeId.class), any(EpKey.class));
     }
 
     @Test
-    public void updateEndpointTestnewLocNulloldLocNull() {
+    public void updateEndpointTestNewLocNullOldLocNull() {
         when(context1.getNodeId()).thenReturn(null);
         when(context2.getNodeId()).thenReturn(null);
         when(context1.getLocationType()).thenReturn(LocationType.External);
         when(context2.getLocationType()).thenReturn(LocationType.External);
 
-        manager.updateEndpoint(endpoint1, endpoint2);
+        manager.processEndpoint(endpoint1, endpoint2);
         verify(endpointListener, never()).endpointUpdated(any(EpKey.class));
         verify(endpointListener, never()).nodeEndpointUpdated(any(NodeId.class), any(EpKey.class));
     }
 
     @Test
-    public void updateEndpointTestnewLocNulloldLocNullExternalPut() {
+    public void updateEndpointTestNewLocNullOldLocNullExternalPut() {
         when(endpoint1.getAugmentation(OfOverlayContext.class)).thenReturn(null);
         when(endpoint2.getAugmentation(OfOverlayContext.class)).thenReturn(null);
 
-        manager.updateEndpoint(endpoint1, endpoint2);
+        manager.processEndpoint(endpoint1, endpoint2);
         verify(endpointListener, never()).endpointUpdated(any(EpKey.class));
         verify(endpointListener, never()).nodeEndpointUpdated(any(NodeId.class), any(EpKey.class));
     }
 
     @Test
-    public void updateEndpointTestnewLocNulloldLocNullExternalRemove() {
+    public void updateEndpointTestNewLocNullOldLocNullExternalRemove() {
         when(context1.getNodeId()).thenReturn(null);
         when(context1.getLocationType()).thenReturn(LocationType.External);
 
-        manager.updateEndpoint(endpoint1, null);
+        manager.processEndpoint(endpoint1, null);
         verify(endpointListener, never()).endpointUpdated(any(EpKey.class));
         verify(endpointListener, never()).nodeEndpointUpdated(any(NodeId.class), any(EpKey.class));
     }
@@ -566,7 +551,7 @@ public class EndpointManagerTest {
         Collection<Endpoint> collection;
         when(nodeId2.getValue()).thenReturn("nodeValue1");
 
-        manager.updateEndpoint(endpoint1, endpoint2);
+        manager.processEndpoint(endpoint1, endpoint2);
         verify(endpointListener).endpointUpdated(any(EpKey.class));
         verify(endpointListener).nodeEndpointUpdated(any(NodeId.class), any(EpKey.class));
         collection = manager.getEndpointsForGroup(new EgKey(tenantId, endpointGroupId));
@@ -590,7 +575,7 @@ public class EndpointManagerTest {
         when(optional.get()).thenReturn(tenant);
 
         L2BridgeDomain l2BridgeDomain = mock(L2BridgeDomain.class);
-        when(tenant.getL2BridgeDomain()).thenReturn(Arrays.asList(l2BridgeDomain));
+        when(tenant.getL2BridgeDomain()).thenReturn(Collections.singletonList(l2BridgeDomain));
         L2BridgeDomainId l2BridgeDomainId = mock(L2BridgeDomainId.class);
         when(l2BridgeDomain.getId()).thenReturn(l2BridgeDomainId);
         String l2bdValue = UUID.randomUUID().toString();
@@ -676,58 +661,9 @@ public class EndpointManagerTest {
         verify(listenerReg, times(1)).close();
     }
 
-    // ******************
-    // DataChangeListener
-    // ******************
-
-    @Test
-    public void onDataChangeTestEndpoint() {
-        DataObject endpoint = mock(Endpoint.class);
-
-        Map<InstanceIdentifier<?>, DataObject> testData = new HashMap<InstanceIdentifier<?>, DataObject>();
-        testData.put(endpointId, endpoint);
-        when(change.getCreatedData()).thenReturn(testData);
-        when(change.getOriginalData()).thenReturn(testData);
-        when(change.getUpdatedData()).thenReturn(testData);
-
-        manager.onDataChanged(change);
-        verify(manager, times(3)).updateEndpoint(any(Endpoint.class), any(Endpoint.class));
-        verify(manager, never()).updateEndpointL3(any(EndpointL3.class), any(EndpointL3.class));
-    }
-
-    @Test
-    public void onDataChangeTestEndpointL3() {
-        DataObject endpoint = mock(EndpointL3.class);
-
-        Map<InstanceIdentifier<?>, DataObject> testData = new HashMap<InstanceIdentifier<?>, DataObject>();
-        testData.put(endpointId, endpoint);
-        when(change.getCreatedData()).thenReturn(testData);
-        when(change.getOriginalData()).thenReturn(testData);
-        when(change.getUpdatedData()).thenReturn(testData);
-
-        manager.onDataChanged(change);
-        verify(manager, never()).updateEndpoint(any(Endpoint.class), any(Endpoint.class));
-        verify(manager, times(3)).updateEndpointL3(any(EndpointL3.class), any(EndpointL3.class));
-    }
-
-    @Test
-    public void onDataChangeTestEndpointL3Prefix() {
-        DataObject endpoint = mock(EndpointL3Prefix.class);
-
-        Map<InstanceIdentifier<?>, DataObject> testData = new HashMap<InstanceIdentifier<?>, DataObject>();
-        testData.put(endpointId, endpoint);
-        when(change.getCreatedData()).thenReturn(testData);
-        when(change.getOriginalData()).thenReturn(testData);
-        when(change.getUpdatedData()).thenReturn(testData);
-
-        manager.onDataChanged(change);
-        verify(manager, never()).updateEndpoint(any(Endpoint.class), any(Endpoint.class));
-        verify(manager, never()).updateEndpointL3(any(EndpointL3.class), any(EndpointL3.class));
-    }
-
-    // **************
-    // Helper Functions
-    // **************
+     //**************
+     //Helper Functions
+     //**************
 
     @Test
     public void getEgKeyTest() {
@@ -772,7 +708,7 @@ public class EndpointManagerTest {
         Assert.assertEquals(1, egKeys.size());
 
         EndpointGroupId epgId = mock(EndpointGroupId.class);
-        List<EndpointGroupId> endpointGroups = Arrays.asList(epgId);
+        List<EndpointGroupId> endpointGroups = Collections.singletonList(epgId);
         when(endpoint.getEndpointGroups()).thenReturn(endpointGroups);
         egKeys = manager.getEgKeysForEndpoint(endpoint);
         Assert.assertEquals(2, egKeys.size());
@@ -782,21 +718,21 @@ public class EndpointManagerTest {
     public void isExternalIsInternalTest() {
         Endpoint endpoint = mock(Endpoint.class);
         when(endpoint.getAugmentation(OfOverlayContext.class)).thenReturn(null);
-        Assert.assertFalse(EndpointManager.isExternal(endpoint));
-        Assert.assertTrue(EndpointManager.isInternal(endpoint));
+        Assert.assertFalse(manager.isExternal(endpoint));
+        Assert.assertTrue(manager.isInternal(endpoint));
 
         OfOverlayContext ofc = mock(OfOverlayContext.class);
         when(endpoint.getAugmentation(OfOverlayContext.class)).thenReturn(ofc);
         when(ofc.getLocationType()).thenReturn(null);
-        Assert.assertFalse(EndpointManager.isExternal(endpoint));
-        Assert.assertTrue(EndpointManager.isInternal(endpoint));
+        Assert.assertFalse(manager.isExternal(endpoint));
+        Assert.assertTrue(manager.isInternal(endpoint));
 
         when(ofc.getLocationType()).thenReturn(LocationType.Internal);
-        Assert.assertFalse(EndpointManager.isExternal(endpoint));
-        Assert.assertTrue(EndpointManager.isInternal(endpoint));
+        Assert.assertFalse(manager.isExternal(endpoint));
+        Assert.assertTrue(manager.isInternal(endpoint));
 
         when(ofc.getLocationType()).thenReturn(LocationType.External);
-        Assert.assertTrue(EndpointManager.isExternal(endpoint));
-        Assert.assertFalse(EndpointManager.isInternal(endpoint));
+        Assert.assertTrue(manager.isExternal(endpoint));
+        Assert.assertFalse(manager.isInternal(endpoint));
     }
 }
