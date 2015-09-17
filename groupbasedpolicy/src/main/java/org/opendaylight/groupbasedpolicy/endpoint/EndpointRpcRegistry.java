@@ -132,8 +132,8 @@ public class EndpointRpcRegistry implements EndpointService {
         LOG.info("Unregistered {}", regImp.getClass().getName());
         if (registeredRenderers.isEmpty() && endpointRpcRegistry != null) {
             synchronized (EndpointRpcRegistry.class) {
-                if (registeredRenderers.isEmpty()
-                        && endpointRpcRegistry != null) {
+                if (registeredRenderers.isEmpty() && endpointRpcRegistry != null
+                        && endpointRpcRegistry.rpcRegistration != null) {
                     endpointRpcRegistry.rpcRegistration.close();
                     endpointRpcRegistry.executor.shutdown();
                     endpointRpcRegistry = null;

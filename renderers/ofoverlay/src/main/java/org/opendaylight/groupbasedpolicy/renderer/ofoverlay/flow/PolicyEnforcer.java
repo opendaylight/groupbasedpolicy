@@ -8,7 +8,6 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.EndpointManager.isExternal;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.addNxRegMatch;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.applyActionIns;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.gotoTableIns;
@@ -468,7 +467,7 @@ public class PolicyEnforcer extends FlowTable {
              * ExternalMapper table.
              */
 
-            if (isExternal(netElements.getDstEp())) {
+            if (ctx.getEndpointManager().isExternal(netElements.getDstEp())) {
                 flow.setInstructions(instructions(getGotoEgressNatInstruction()));
             } else if (actionBuilderList.isEmpty()) {
                 flow.setInstructions(instructions(getGotoExternalInstruction()));

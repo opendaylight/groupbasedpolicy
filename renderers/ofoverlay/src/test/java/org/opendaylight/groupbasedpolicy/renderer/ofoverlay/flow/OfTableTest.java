@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockEndpointManager;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.MockEndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockPolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.MockSwitchManager;
