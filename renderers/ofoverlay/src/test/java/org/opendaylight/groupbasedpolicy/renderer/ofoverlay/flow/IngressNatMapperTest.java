@@ -117,14 +117,14 @@ public class IngressNatMapperTest {
     @Test
     public void syncTestIpv4() throws Exception {
         mapper.sync(nodeId, policyInfo, flowMap);
-        verify(flowMap, times(3)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
+        verify(flowMap).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
     }
 
     @Test
     public void syncTestIpv6() throws Exception {
         when(ipAddressL3Ep.getIpv4Address()).thenReturn(null);
         mapper.sync(nodeId, policyInfo, flowMap);
-        verify(flowMap, times(3)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
+        verify(flowMap).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
     }
 
 }

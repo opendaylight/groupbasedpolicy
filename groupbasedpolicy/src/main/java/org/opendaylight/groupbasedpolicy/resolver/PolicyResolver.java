@@ -336,7 +336,8 @@ public class PolicyResolver implements AutoCloseable {
             @Override
             public void onSuccess(Optional<Tenant> result) {
                 if(result.isPresent()){
-                    unsubscribeTenant(tenantId);
+                    TenantContext tenantContext = resolvedTenants.get(tenantId);
+                    tenantContext.tenant.set(null);
                     rwTx.delete(LogicalDatastoreType.OPERATIONAL, tiid);
                     rwTx.submit();
                     updatePolicy();

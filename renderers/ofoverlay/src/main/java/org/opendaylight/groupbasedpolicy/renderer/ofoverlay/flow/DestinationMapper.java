@@ -183,6 +183,11 @@ public class DestinationMapper extends FlowTable {
                         // Process subnets and flood-domains for epPeer
                         EndpointFwdCtxOrdinals epOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo,
                                 peerEp);
+                        if (epOrds == null) {
+                            LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", peerEp);
+                            continue;
+                        }
+
                         epOrdSet.add(epOrds);
                     }
                 }
@@ -274,6 +279,10 @@ public class DestinationMapper extends FlowTable {
         }
         Endpoint l2Ep = optL2Ep.get();
         EndpointFwdCtxOrdinals epFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, l2Ep);
+        if (epFwdCtxOrds == null) {
+            LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", l2Ep);
+            return null;
+        }
 
         NetworkDomainId epNetworkContainment = getEPNetworkContainment(l2Ep);
 
@@ -601,10 +610,25 @@ public class DestinationMapper extends FlowTable {
     private void syncEP(FlowMap flowMap, NodeId nodeId, PolicyInfo policyInfo, Endpoint srcEp, Endpoint destEp)
             throws Exception {
 
+        if (ctx.getPolicyResolver().getTenant(srcEp.getTenant()) == null
+                || ctx.getPolicyResolver().getTenant(destEp.getTenant()) == null) {
+            LOG.debug("Source or destination EP references empty tenant srcEp:{} destEp:{}", srcEp, destEp);
+            return;
+        }
+
         // TODO: Conditions messed up, but for now, send policyInfo until this
         // is fixed.
         EndpointFwdCtxOrdinals destEpFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, destEp);
+        if (destEpFwdCtxOrds == null) {
+            LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", destEp);
+            return;
+        }
         EndpointFwdCtxOrdinals srcEpFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, srcEp);
+        if (srcEpFwdCtxOrds == null) {
+            LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", srcEp);
+            return;
+        }
+
 
         if (destEp.getTenant() == null || (destEp.getEndpointGroup() == null && destEp.getEndpointGroups() == null)) {
             if (destEp.getTenant() == null) {

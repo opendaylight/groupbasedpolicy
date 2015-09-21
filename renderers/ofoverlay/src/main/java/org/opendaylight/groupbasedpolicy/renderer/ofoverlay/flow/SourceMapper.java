@@ -88,6 +88,10 @@ public class SourceMapper extends FlowTable {
                 continue;
 
             EndpointFwdCtxOrdinals epFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, ep);
+            if (epFwdCtxOrds == null) {
+                LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", ep);
+                continue;
+            }
 
             createRemoteTunnels(flowMap, nodeId, ep, policyInfo, epFwdCtxOrds);
 
