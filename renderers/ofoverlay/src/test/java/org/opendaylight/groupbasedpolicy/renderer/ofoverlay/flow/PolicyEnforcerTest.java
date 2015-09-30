@@ -285,9 +285,9 @@ public class PolicyEnforcerTest extends FlowTableTest {
         policyResolver.addTenant(tb.build());
 
         PolicyInfo policy = policyResolver.getCurrentPolicy();
-        List<ConditionName> ep1c = endpointManager.getCondsForEndpoint(ep1);
+        List<ConditionName> ep1c = endpointManager.getConditionsForEndpoint(ep1);
         ConditionGroup cg1 = policy.getEgCondGroup(new EgKey(tb.getId(), ep1.getEndpointGroup()), ep1c);
-        List<ConditionName> ep2c = endpointManager.getCondsForEndpoint(ep2);
+        List<ConditionName> ep2c = endpointManager.getConditionsForEndpoint(ep2);
         ConditionGroup cg2 = policy.getEgCondGroup(new EgKey(tb.getId(), ep2.getEndpointGroup()), ep2c);
         int cg1Id = OrdinalFactory.getCondGroupOrdinal(cg1);
         int cg2Id = OrdinalFactory.getCondGroupOrdinal(cg2);

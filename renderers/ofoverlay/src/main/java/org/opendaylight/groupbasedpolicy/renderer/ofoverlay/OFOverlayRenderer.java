@@ -26,6 +26,9 @@ import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataCh
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.OfOverlayAug;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.OfOverlayL3NatAug;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
@@ -55,6 +58,8 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     private final SwitchManager switchManager;
     private final EndpointManager endpointManager;
     private final PolicyManager policyManager;
+    private final OfOverlayAug ofOverlayAug;
+    private final OfOverlayL3NatAug ofOverlayL3NatAug;
 
     private final ScheduledExecutorService executor;
 
@@ -86,6 +91,8 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
                                           rpcRegistry,
                                           executor,
                                           tableOffset);
+        ofOverlayAug = new OfOverlayAug(dataProvider, rpcRegistry);
+        ofOverlayL3NatAug = new OfOverlayL3NatAug(dataProvider, rpcRegistry);
             Optional<OfOverlayConfig> config = readConfig();
             OfOverlayConfigBuilder configBuilder = new OfOverlayConfigBuilder();
             if (config.isPresent()) {
@@ -109,6 +116,8 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
         if (policyResolver != null) policyResolver.close();
         if (switchManager != null) switchManager.close();
         if (endpointManager != null) endpointManager.close();
+        if (ofOverlayAug != null) ofOverlayAug.close();
+        if (ofOverlayL3NatAug != null) ofOverlayL3NatAug.close();
     }
 
     // ******************
@@ -173,7 +182,7 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
         endpointManager.setLearningMode(config.getLearningMode());
         policyManager.setLearningMode(config.getLearningMode());
         if (config.getGbpOfoverlayTableOffset() != null) {
-            configFutures.add(policyManager.changeOpenFlowTableOffset(config.getGbpOfoverlayTableOffset().shortValue()));
+            configFutures.add(policyManager.changeOpenFlowTableOffset(config.getGbpOfoverlayTableOffset()));
         }
         return Futures.allAsList(configFutures);
     }
