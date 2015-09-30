@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Copyright (c) 2015 Cisco Systems, Inc. and others. All rights reserved. 
-  This program and the accompanying materials are made available under the 
-  terms of the Eclipse Public License v1.0 which accompanies this distribution, 
+<!-- Copyright (c) 2015 Cisco Systems, Inc. and others. All rights reserved.
+  This program and the accompanying materials are made available under the
+  terms of the Eclipse Public License v1.0 which accompanies this distribution,
   and is available at http://www.eclipse.org/legal/epl-v10.html -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -74,9 +74,9 @@
 
   <!-- project build -->
   <build>
-    <!-- We use the maven-resources-plugin to copy a class from the groupbasepolicy 
-      bundle that we need in order to run some unit tests in the renderer (classes 
-      in the test directory aren't packaged in bundles, and instead of keeping 
+    <!-- We use the maven-resources-plugin to copy a class from the groupbasepolicy
+      bundle that we need in order to run some unit tests in the renderer (classes
+      in the test directory aren't packaged in bundles, and instead of keeping
       separate copies, we just copy the file(s) needed in order to run the test). -->
     <plugins>
       <plugin>
@@ -125,32 +125,6 @@
         <configuration>
           <redirectTestOutputToFile>true</redirectTestOutputToFile>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.jacoco</groupId>
-        <artifactId>jacoco-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>prepare-ut-agent</id>
-            <phase>process-test-classes</phase>
-            <goals>
-              <goal>prepare-agent</goal>
-            </goals>
-            <configuration>
-              <destFile>${sonar.jacoco.reportPath}</destFile>
-            </configuration>
-          </execution>
-          <execution>
-            <id>prepare-it-agent</id>
-            <phase>pre-integration-test</phase>
-            <goals>
-              <goal>prepare-agent</goal>
-            </goals>
-            <configuration>
-              <destFile>${sonar.jacoco.itReportPath}</destFile>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
     <pluginManagement>
