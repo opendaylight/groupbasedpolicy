@@ -11,14 +11,14 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.times;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -33,7 +33,7 @@ import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager.FlowMap;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
 import org.opendaylight.groupbasedpolicy.resolver.ActionInstanceValidator;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
@@ -131,7 +131,7 @@ public class PolicyManagerTest {
     @SuppressWarnings("unchecked")
     @Test
     public void flowMapTestAddition() throws Exception {
-        FlowMap flowMap = manager.new FlowMap();
+        OfWriter flowMap = new OfWriter();
         flowMap.writeFlow(nodeId, tableId, flow);
 
         Optional<Table> optional = mock(Optional.class);
@@ -146,7 +146,7 @@ public class PolicyManagerTest {
         CheckedFuture<Void, TransactionCommitFailedException> submitFuture = mock(CheckedFuture.class);
         when(readWriteTransaction.submit()).thenReturn(submitFuture);
 
-        flowMap.commitToDataStore();
+        flowMap.commitToDataStore(dataBroker);
 
         InOrder orderCheck = inOrder(readWriteTransaction);
         orderCheck.verify(readWriteTransaction).read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class));
