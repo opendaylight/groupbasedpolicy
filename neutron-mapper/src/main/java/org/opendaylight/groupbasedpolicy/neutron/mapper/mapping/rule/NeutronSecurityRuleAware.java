@@ -101,12 +101,11 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
         EndpointGroupId providerEpgId = SecRuleEntityDecoder.getProviderEpgId(secRule);
         secRuleDao.addSecRule(secRule);
 
-        Description contractDescription =
-                new Description(CONTRACT_PROVIDER + secGroupDao.getNameOrIdOfSecGroup(providerEpgId));
+        Description contractDescription = new Description(CONTRACT_PROVIDER
+                + secGroupDao.getNameOrIdOfSecGroup(providerEpgId));
         SingleRuleContract singleRuleContract = createSingleRuleContract(secRule, contractDescription);
         Contract contract = singleRuleContract.getContract();
-        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.contractIid(tenantId, contract.getId()), contract,
-                true);
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.contractIid(tenantId, contract.getId()), contract, true);
         SelectorName providerSelector = getSelectorNameWithConsumer(secRule);
         writeProviderNamedSelectorToEpg(providerSelector, contract.getId(), new EgKey(tenantId, providerEpgId), rwTx);
 
@@ -175,8 +174,9 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
         ProviderNamedSelector providerNamedSelector = new ProviderNamedSelectorBuilder().setName(providerSelector)
             .setContract(ImmutableList.of(contractId))
             .build();
-        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.providerNamedSelectorIid(epgKey.getTenantId(),
-                epgKey.getEgId(), providerNamedSelector.getName()), providerNamedSelector, true);
+        wTx.put(LogicalDatastoreType.CONFIGURATION,
+                IidFactory.providerNamedSelectorIid(epgKey.getTenantId(), epgKey.getEgId(),
+                        providerNamedSelector.getName()), providerNamedSelector, true);
     }
 
     private void writeConsumerNamedSelectorToEpg(SelectorName consumerSelector, ContractId contractId, EgKey epgKey,
@@ -184,15 +184,16 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
         ConsumerNamedSelector consumerNamedSelector = new ConsumerNamedSelectorBuilder().setName(consumerSelector)
             .setContract(ImmutableList.of(contractId))
             .build();
-        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.consumerNamedSelectorIid(epgKey.getTenantId(),
-                epgKey.getEgId(), consumerNamedSelector.getName()), consumerNamedSelector, true);
+        wTx.put(LogicalDatastoreType.CONFIGURATION,
+                IidFactory.consumerNamedSelectorIid(epgKey.getTenantId(), epgKey.getEgId(),
+                        consumerNamedSelector.getName()), consumerNamedSelector, true);
     }
 
     @VisibleForTesting
     void createClassifierInstanceIfNotExists(TenantId tenantId, ClassifierInstance classifierInstance,
             WriteTransaction wTx) {
-        InstanceIdentifier<ClassifierInstance> classifierInstanceIid =
-                IidFactory.classifierInstanceIid(tenantId, classifierInstance.getName());
+        InstanceIdentifier<ClassifierInstance> classifierInstanceIid = IidFactory.classifierInstanceIid(tenantId,
+                classifierInstance.getName());
         if (!createdClassifierInstances.contains(classifierInstanceIid)) {
             wTx.put(LogicalDatastoreType.CONFIGURATION, classifierInstanceIid, classifierInstance, true);
         }
@@ -201,8 +202,8 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
 
     @VisibleForTesting
     void createAllowActionInstanceIfNotExists(TenantId tenantId, ReadWriteTransaction rwTx) {
-        InstanceIdentifier<ActionInstance> actionInstanceIid =
-                IidFactory.actionInstanceIid(tenantId, MappingUtils.ACTION_ALLOW.getName());
+        InstanceIdentifier<ActionInstance> actionInstanceIid = IidFactory.actionInstanceIid(tenantId,
+                MappingUtils.ACTION_ALLOW.getName());
         if (!createdActionInstances.contains(actionInstanceIid)) {
             rwTx.put(LogicalDatastoreType.CONFIGURATION, actionInstanceIid, MappingUtils.ACTION_ALLOW, true);
         }
@@ -211,18 +212,16 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
 
     @Override
     public int canUpdateNeutronSecurityRule(NeutronSecurityRule delta, NeutronSecurityRule original) {
-        LOG.warn(
-                "canUpdateNeutronSecurityRule - Never should be called "
-                        + "- neutron API does not allow UPDATE on neutron security group rule. \nDelta: {} \nOriginal: {}",
+        LOG.warn("canUpdateNeutronSecurityRule - Never should be called "
+                + "- neutron API does not allow UPDATE on neutron security group rule. \nDelta: {} \nOriginal: {}",
                 delta, original);
         return StatusCode.BAD_REQUEST;
     }
 
     @Override
     public void neutronSecurityRuleUpdated(NeutronSecurityRule securityRule) {
-        LOG.warn(
-                "neutronSecurityRuleUpdated - Never should be called "
-                        + "- neutron API does not allow UPDATE on neutron security group rule. \nSecurity group rule: {}",
+        LOG.warn("neutronSecurityRuleUpdated - Never should be called "
+                + "- neutron API does not allow UPDATE on neutron security group rule. \nSecurity group rule: {}",
                 securityRule);
     }
 
@@ -278,8 +277,7 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
         Set<NeutronSecurityRule> provSecRules = getProvidedSecRulesBetween(provEpgId, consEpgId);
         Set<NeutronSecurityRule> consSecRules = getProvidedSecRulesBetween(consEpgId, provEpgId);
         for (NeutronSecurityRule provSecRule : provSecRules) {
-            if (isProvidersSecRuleSuitableForConsumersSecRulesAndGoodToRemove(provSecRule, consSecRules,
-                    removedSecRule)) {
+            if (isProvidersSecRuleSuitableForConsumersSecRulesAndGoodToRemove(provSecRule, consSecRules, removedSecRule)) {
                 SelectorName consumerSelector = getSelectorNameWithProvider(provSecRule);
                 deleteConsumerNamedSelector(consumerSelector, new EgKey(tenantId, consEpgId), rwTx);
             }
@@ -310,23 +308,24 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
         return one.getSecurityRuleUUID().equals(two.getSecurityRuleUUID());
     }
 
-    private void deleteProviderNamedSelectorFromEpg(SelectorName providerSelector, EgKey epgKey, WriteTransaction wTx) {
-        InstanceIdentifier<ProviderNamedSelector> providerSelectorIid =
-                IidFactory.providerNamedSelectorIid(epgKey.getTenantId(), epgKey.getEgId(), providerSelector);
-        wTx.delete(LogicalDatastoreType.CONFIGURATION, providerSelectorIid);
+    private void deleteProviderNamedSelectorFromEpg(SelectorName providerSelector, EgKey providerEpgKey,
+            ReadWriteTransaction rwTx) {
+        InstanceIdentifier<ProviderNamedSelector> providerSelectorIid = IidFactory.providerNamedSelectorIid(
+                providerEpgKey.getTenantId(), providerEpgKey.getEgId(), providerSelector);
+        DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION, providerSelectorIid, rwTx);
     }
 
     private void deleteConsumerNamedSelector(SelectorName consumerSelector, EgKey consumerEpgKey,
-            WriteTransaction wTx) {
-        InstanceIdentifier<ConsumerNamedSelector> consumerSelectorIid = IidFactory
-            .consumerNamedSelectorIid(consumerEpgKey.getTenantId(), consumerEpgKey.getEgId(), consumerSelector);
-        wTx.delete(LogicalDatastoreType.CONFIGURATION, consumerSelectorIid);
+            ReadWriteTransaction rwTx) {
+        InstanceIdentifier<ConsumerNamedSelector> consumerSelectorIid = IidFactory.consumerNamedSelectorIid(
+                consumerEpgKey.getTenantId(), consumerEpgKey.getEgId(), consumerSelector);
+        DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION, consumerSelectorIid, rwTx);
     }
 
     private void deleteClassifierInstanceIfNotUsed(TenantId tenantId, ClassifierInstance classifierInstance,
             ReadWriteTransaction rwTx) {
-        InstanceIdentifier<ClassifierInstance> classifierInstanceIid =
-                IidFactory.classifierInstanceIid(tenantId, classifierInstance.getName());
+        InstanceIdentifier<ClassifierInstance> classifierInstanceIid = IidFactory.classifierInstanceIid(tenantId,
+                classifierInstance.getName());
         createdClassifierInstances.remove(classifierInstanceIid);
         if (!createdClassifierInstances.contains(classifierInstanceIid)) {
             DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION, classifierInstanceIid, rwTx);
@@ -335,8 +334,8 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
 
     @VisibleForTesting
     void deleteAllowActionInstanceIfNotUsed(TenantId tenantId, ReadWriteTransaction rwTx) {
-        InstanceIdentifier<ActionInstance> actionInstanceIid =
-                IidFactory.actionInstanceIid(tenantId, MappingUtils.ACTION_ALLOW.getName());
+        InstanceIdentifier<ActionInstance> actionInstanceIid = IidFactory.actionInstanceIid(tenantId,
+                MappingUtils.ACTION_ALLOW.getName());
         createdActionInstances.remove(actionInstanceIid);
         if (!createdActionInstances.contains(actionInstanceIid)) {
             DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION, actionInstanceIid, rwTx);
@@ -389,8 +388,8 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
 
     @VisibleForTesting
     static boolean isOneGroupIdWithinTwoRemoteGroupId(NeutronSecurityRule one, NeutronSecurityRule two) {
-        return (Strings.isNullOrEmpty(two.getSecurityRemoteGroupID())
-                || two.getSecurityRemoteGroupID().equals(one.getSecurityRuleGroupID()));
+        return (Strings.isNullOrEmpty(two.getSecurityRemoteGroupID()) || two.getSecurityRemoteGroupID().equals(
+                one.getSecurityRuleGroupID()));
     }
 
 }
