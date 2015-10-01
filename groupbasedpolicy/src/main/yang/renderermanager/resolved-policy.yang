@@ -6,11 +6,11 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-module resolved-policy-info {
+module resolved-policy {
     yang-version 1;
 
-    namespace "urn:opendaylight:groupbasedpolicy:resolved-policy-info";
-    prefix "resolved-policy-info";
+    namespace "urn:opendaylight:groupbasedpolicy:resolved-policy";
+    prefix "resolved-policy";
 
     import ietf-inet-types { prefix "inet"; revision-date 2010-09-24; }
 
@@ -27,8 +27,8 @@ module resolved-policy-info {
                 "Initial revision.";
     }
 
-    grouping condition-set-group {
-        container endpoint-condition-set {
+    grouping has-endpoint-conditions {
+        container endpoint-conditions {
             description "A set of conditions for endpoint.";
             list all-condition {
                 description "All specified conditions must match.";
@@ -56,12 +56,10 @@ module resolved-policy-info {
         }
     }
 
-    grouping ep-constraint-group {
-        container ep-constraint {
-            description "constraints for an endpoint";
-            uses condition-set-group;
-            uses policy:has-endpoint-identification-constraints;
-        }
+    grouping has-endpoint-constraints {
+        description "Constraints for an endpoint.";
+        uses has-endpoint-conditions;
+        uses policy:has-endpoint-identification-constraints;
     }
 
     grouping has-classifiers {
@@ -123,80 +121,98 @@ module resolved-policy-info {
         }
     }
 
-    container tenants-policy-map {
-        list policy-map {
-           config false;
+    grouping has-consumer-epg-key {
+        leaf consumer-tenant-id {
+            description "The consumer tenant id";
+            mandatory true;
+            type gbp-common:tenant-id;
+        }
+
+        leaf consumer-epg-id {
+            description "The consumer endpoint group id";
+            mandatory true;
+            type gbp-common:endpoint-group-id;
+        }
+    }
+
+    grouping has-provider-epg-key {
+        leaf provider-tenant-id {
+            description "The provider tenant id";
+            mandatory true;
+            type gbp-common:tenant-id;
+        }
+
+        leaf provider-epg-id {
+            description "The provider endpoint group id";
+            mandatory true;
+            type gbp-common:endpoint-group-id;
+        }
+    }
+
+    grouping has-resolved-rules {
+        list resolved-rule {
+            key name;
+            leaf name {
+                description "A name for the rule";
+                type gbp-common:rule-name;
+                 mandatory true;
+             }
+             uses has-classifiers;
+             uses has-actions;
+             uses policy:has-order;
+        }
+    }
+
+    grouping has-contract-key {
+        leaf tenant-id {
+            description "Related tenant id";
+            type gbp-common:tenant-id;
+        }
+
+        leaf contract-id {
+            description "Related contract id";
+            type gbp-common:contract-id;
+        }
+    }
+
+    grouping has-subject-key {
+        uses has-contract-key;
+
+        leaf subject-name {
+            description "Related subject name.";
+            type gbp-common:subject-name;
+        }
+    }
+
+    container resolved-policies {
+        config false;
+        list resolved-policy {
            description "Policies between consumer endpoint groups and provider
                         endpoint groups";
            key "consumer-tenant-id consumer-epg-id provider-tenant-id provider-epg-id";
-
-           leaf consumer-tenant-id {
-               description "The consumer tenant id";
-               mandatory true;
-               type gbp-common:tenant-id;
-           }
-
-           leaf consumer-epg-id {
-               description "The consumer endpoint group id";
-               mandatory true;
-               type gbp-common:endpoint-group-id;
-           }
-
-           leaf provider-tenant-id {
-               description "The provider tenant id";
-               mandatory true;
-               type gbp-common:tenant-id;
-            }
-
-            leaf provider-epg-id {
-               description "The provider endpoint group id";
-               mandatory true;
-               type gbp-common:endpoint-group-id;
-            }
+           uses has-consumer-epg-key;
+           uses has-provider-epg-key;
 
             list policy-rule-group-with-endpoint-constraints {
                description "The policy rule groups that apply to a single pair of endpoint
                             groups";
 
-               container consumer-endpoint-constraint {
-                   description "constraints for consumer endpoints";
-                   uses ep-constraint-group;
+               container consumer-endpoint-constraints {
+                   description "Constraints for consumer endpoints";
+                   uses has-endpoint-constraints;
                }
 
-               container provider-endpoint-constraint {
-                   description "constraints for consumer endpoints";
-                   uses ep-constraint-group;
+               container provider-endpoint-constraints {
+                   description "Constraints for provider endpoints";
+                   uses has-endpoint-constraints;
                }
 
                list policy-rule-group {
-                   description "A specific policy rule group that apply to each pair of endpoints meeting constraints.";
-                   key "related-contract-tenant related-contract-id related-subject-name";
-                   leaf related-contract-tenant {
-                       description "related contract tenant";
-                       type gbp-common:tenant-id;
-                   }
-
-                   leaf related-contract-id {
-                       description "related contract id";
-                       type gbp-common:contract-id;
-                   }
-
-                   leaf related-subject-name {
-                       description "related subject name";
-                       type gbp-common:subject-name;
-                   }
-
-                   list rule {
-                       key name;
-                       leaf name {
-                           description "A name for the rule";
-                           type gbp-common:rule-name;
-                            mandatory true;
-                        }
-                        uses has-classifiers;
-                        uses has-actions;
-                        uses policy:has-order;
-                   }
+                   description "A specific policy rule group that apply to each pair of endpoints meeting constraints.
+                       The policy rule group represents the subject with resolved rules.";
+                   key "tenant-id contract-id subject-name";
+                   uses has-subject-key;
+                   uses has-resolved-rules;
                }
            }
        }
