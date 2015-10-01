@@ -1,0 +1,204 @@
+/*
+ * Copyright (c) 2015 Huawei Technologies and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
+module resolved-policy-info {
+    yang-version 1;
+
+    namespace "urn:opendaylight:groupbasedpolicy:resolved-policy-info";
+    prefix "resolved-policy-info";
+
+    import ietf-inet-types { prefix "inet"; revision-date 2010-09-24; }
+
+    import gbp-common { prefix gbp-common; }
+    import endpoint { prefix endpoint; }
+    import policy { prefix policy; }
+
+    description
+        "This module defines the resolved policy for all tenants in interest
+        for renderers.";
+
+    revision "2015-08-28" {
+        description
+                "Initial revision.";
+    }
+
+    grouping condition-set-group {
+        container endpoint-condition-set {
+            description "A set of conditions for endpoint.";
+            list all-condition {
+                description "All specified conditions must match.";
+                key name;
+                leaf name {
+                    description "A user-visible name for the condition.";
+                    type gbp-common:condition-name;
+                }
+            }
+            list none-condition {
+                description "None of the specified conditions can match.";
+                key name;
+                leaf name {
+                    description "A user-visible name for the condition.";
+                    type gbp-common:condition-name;
+                }
+            }
+            list any-condition {
+                description "At least one of the specified conditions must match.";
+                leaf name {
+                    description "A user-visible name for the condition.";
+                    type gbp-common:condition-name;
+                }
+            }
+        }
+    }
+
+    grouping ep-constraint-group {
+        container ep-constraint {
+            description "constraints for an endpoint";
+            uses condition-set-group;
+            uses policy:has-endpoint-identification-constraints;
+        }
+    }
+
+    grouping has-classifiers {
+        list classifier {
+            key name;
+            leaf name {
+                description "A name for the classifier instance";
+                type gbp-common:classifier-name;
+                mandatory true;
+            }
+            leaf classifier-definition-id {
+                type leafref {
+                    path "/policy:subject-feature-definitions/policy:classifier-definition/policy:id";
+                }
+            }
+            leaf connection-tracking {
+                description
+                    "Set up connection tracking for this classifier,
+                     which allows the traffic in the reverse direction
+                     as connections are established.  This enables
+                     rules that allow connections to be initiated only
+                     from one side, but once initiated the two sides
+                     can communicate for that connection.";
+
+                default normal;
+                type enumeration {
+                    enum normal {
+                        description
+                            "Match only traffic matching the classifier
+                             strictly";
+                    }
+                    enum reflexive {
+                        description
+                            "Additionally match reverse traffic for
+                             connections";
+                    }
+                }
+            }
+            uses policy:has-direction;
+            uses policy:subject-feature-instance;
+        }
+    }
+
+    grouping has-actions {
+        list action {
+            key "name";
+            leaf name {
+                description "A name for the action.";
+                type gbp-common:action-name;
+                mandatory true;
+            }
+            leaf action-definition-id {
+                type leafref {
+                    path "/policy:subject-feature-definitions/policy:action-definition/policy:id";
+                }
+            }
+            uses policy:has-order;
+            uses policy:subject-feature-instance;
+        }
+    }
+
+    container tenants-policy-map {
+        list policy-map {
+           config false;
+           description "Policies between consumer endpoint groups and provider
+                        endpoint groups";
+           key "consumer-tenant-id consumer-epg-id provider-tenant-id provider-epg-id";
+
+           leaf consumer-tenant-id {
+               description "The consumer tenant id";
+               mandatory true;
+               type gbp-common:tenant-id;
+           }
+
+           leaf consumer-epg-id {
+               description "The consumer endpoint group id";
+               mandatory true;
+               type gbp-common:endpoint-group-id;
+           }
+
+           leaf provider-tenant-id {
+               description "The provider tenant id";
+               mandatory true;
+               type gbp-common:tenant-id;
+            }
+
+            leaf provider-epg-id {
+               description "The provider endpoint group id";
+               mandatory true;
+               type gbp-common:endpoint-group-id;
+            }
+
+            list policy-rule-group-with-endpoint-constraints {
+               description "The policy rule groups that apply to a single pair of endpoint
+                            groups";
+
+               container consumer-endpoint-constraint {
+                   description "constraints for consumer endpoints";
+                   uses ep-constraint-group;
+               }
+
+               container provider-endpoint-constraint {
+                   description "constraints for consumer endpoints";
+                   uses ep-constraint-group;
+               }
+
+               list policy-rule-group {
+                   description "A specific policy rule group that apply to each pair of endpoints meeting constraints.";
+                   key "related-contract-tenant related-contract-id related-subject-name";
+                   leaf related-contract-tenant {
+                       description "related contract tenant";
+                       type gbp-common:tenant-id;
+                   }
+
+                   leaf related-contract-id {
+                       description "related contract id";
+                       type gbp-common:contract-id;
+                   }
+
+                   leaf related-subject-name {
+                       description "related subject name";
+                       type gbp-common:subject-name;
+                   }
+
+                   list rule {
+                       key name;
+                       leaf name {
+                           description "A name for the rule";
+                           type gbp-common:rule-name;
+                            mandatory true;
+                        }
+                        uses has-classifiers;
+                        uses has-actions;
+                        uses policy:has-order;
+                   }
+               }
+           }
+       }
+   }
+}
