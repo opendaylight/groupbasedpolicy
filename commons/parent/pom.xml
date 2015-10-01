@@ -28,14 +28,16 @@
     <generated.sources.sal>${project.build.directory}/generated-sources/sal</generated.sources.sal>
     <generated.sources.config>${project.build.directory}/generated-sources/config</generated.sources.config>
     <generated.yang.docs>${project.build.directory}/site/models</generated.yang.docs>
-    <config.version>0.4.0-SNAPSHOT</config.version>
-    <mdsal.version>1.3.0-SNAPSHOT</mdsal.version>
+    <yangtools.version>0.8.0-SNAPSHOT</yangtools.version>
+    <mdsal.version>2.0.0-SNAPSHOT</mdsal.version>
+    <mdsal.model.version>0.8.0-SNAPSHOT</mdsal.model.version>
+    <controller.mdsal.version>1.3.0-SNAPSHOT</controller.mdsal.version>
+    <controller.config.version>0.4.0-SNAPSHOT</controller.config.version>
+    <openflowplugin.version>0.2.0-SNAPSHOT</openflowplugin.version>
+    <ovsdb.southbound.version>1.2.1-SNAPSHOT</ovsdb.southbound.version>
+    <neutron.version>0.6.0-SNAPSHOT</neutron.version>
     <sfc.version>0.2.0-SNAPSHOT</sfc.version>
     <restconf.version>1.3.0-SNAPSHOT</restconf.version>
-    <yangtools.version>0.8.0-SNAPSHOT</yangtools.version>
-    <openflowplugin.version>0.2.0-SNAPSHOT</openflowplugin.version>
-    <neutron.version>0.6.0-SNAPSHOT</neutron.version>
-    <ovsdb.southbound.version>1.2.1-SNAPSHOT</ovsdb.southbound.version>
     <dlux.version>0.3.0-SNAPSHOT</dlux.version>
     <liblldp.version>0.10.0-SNAPSHOT</liblldp.version>
     <apache.felix.osgi.compendium.version>1.4.0</apache.felix.osgi.compendium.version>
@@ -46,75 +48,52 @@
       <!-- GBP modules -->
       <dependency>
         <groupId>org.opendaylight.groupbasedpolicy</groupId>
-        <artifactId>groupbasedpolicy</artifactId>
+        <artifactId>groupbasedpolicy-artifacts</artifactId>
         <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.opendaylight.groupbasedpolicy</groupId>
-        <artifactId>opflex-renderer</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.opendaylight.groupbasedpolicy</groupId>
-        <artifactId>ofoverlay-renderer</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.opendaylight.groupbasedpolicy</groupId>
-        <artifactId>neutron-mapper</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.opendaylight.groupbasedpolicy</groupId>
-        <artifactId>neutron-ovsdb</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.opendaylight.groupbasedpolicy</groupId>
-        <artifactId>ui-backend</artifactId>
-        <version>${project.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
 
-      <!-- Yangtools and Controller infrastructure -->
+      <!-- YANG tools -->
       <dependency>
         <groupId>org.opendaylight.yangtools</groupId>
         <artifactId>yangtools-artifacts</artifactId>
         <version>${yangtools.version}</version>
-        <type>pom</type>
         <scope>import</scope>
+        <type>pom</type>
       </dependency>
 
+      <!-- Controller infrastructure -->
       <dependency>
         <groupId>org.opendaylight.mdsal</groupId>
         <artifactId>mdsal-artifacts</artifactId>
-        <version>2.0.0-SNAPSHOT</version>
-        <type>pom</type>
+        <version>${mdsal.version}</version>
         <scope>import</scope>
+        <type>pom</type>
       </dependency>
       <dependency>
         <groupId>org.opendaylight.mdsal.model</groupId>
         <artifactId>mdsal-model-artifacts</artifactId>
-        <version>0.8.0-SNAPSHOT</version>
-        <type>pom</type>
+        <version>${mdsal.model.version}</version>
         <scope>import</scope>
-      </dependency>
-
-      <dependency>
-        <groupId>org.opendaylight.controller</groupId>
-        <artifactId>config-artifacts</artifactId>
-        <version>${config.version}</version>
         <type>pom</type>
-        <scope>import</scope>
       </dependency>
       <dependency>
         <groupId>org.opendaylight.controller</groupId>
         <artifactId>mdsal-artifacts</artifactId>
-        <version>1.3.0-SNAPSHOT</version>
-        <type>pom</type>
+        <version>${controller.mdsal.version}</version>
         <scope>import</scope>
+        <type>pom</type>
+      </dependency>
+      <dependency>
+        <groupId>org.opendaylight.controller</groupId>
+        <artifactId>config-artifacts</artifactId>
+        <version>${controller.config.version}</version>
+        <scope>import</scope>
+        <type>pom</type>
       </dependency>
 
-      <!-- Openflowplugin -->
+      <!-- Openflow plugin -->
       <dependency>
         <groupId>org.opendaylight.openflowplugin</groupId>
         <artifactId>openflowplugin-extension-nicira</artifactId>
@@ -127,7 +106,6 @@
         <artifactId>southbound-api</artifactId>
         <version>${ovsdb.southbound.version}</version>
       </dependency>
-
       <dependency>
         <groupId>org.opendaylight.ovsdb</groupId>
         <artifactId>southbound-impl</artifactId>
@@ -213,7 +191,7 @@
             <dependency>
               <groupId>org.opendaylight.controller</groupId>
               <artifactId>yang-jmx-generator-plugin</artifactId>
-              <version>${config.version}</version>
+              <version>${controller.config.version}</version>
             </dependency>
             <dependency>
               <groupId>org.opendaylight.mdsal</groupId>

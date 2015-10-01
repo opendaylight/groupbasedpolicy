@@ -21,6 +21,7 @@
   </prerequisites>
 
   <modules>
+    <module>artifacts</module>
     <module>commons/parent</module>
     <module>groupbasedpolicy</module>
     <module>renderers</module>
