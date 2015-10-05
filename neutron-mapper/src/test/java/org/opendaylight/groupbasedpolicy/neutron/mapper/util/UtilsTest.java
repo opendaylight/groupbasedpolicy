@@ -62,7 +62,7 @@ public class UtilsTest {
         Assert.assertNull(ipAddress.getIpv6Address());
         assertEquals(ipv4Address, ipAddress.getIpv4Address().getValue());
     }
-    
+
     @Test
     public final void testCreateIpAddress_ipv6() {
         String ipv6Address = "2001:db8::211:22ff:fe33:4455";
@@ -93,13 +93,14 @@ public class UtilsTest {
     @Test
     public final void testGetStringIpPrefix_ipv4() {
         String ipv4Prefix = "1.1.1.1/8";
-        assertEquals(ipv4Prefix, Utils.getStringIpPrefix(new IpPrefix(new Ipv4Prefix(ipv4Prefix))));
+        assertEquals(ipv4Prefix.replace('/', '_'), Utils.getStringIpPrefix(new IpPrefix(new Ipv4Prefix(ipv4Prefix))));
     }
 
     @Test
     public final void testGetStringIpPrefix_ipv6() {
         String ipv6Prefix = "fd1c:29d6:85d1::/48";
-        assertEquals(ipv6Prefix, Utils.getStringIpPrefix(new IpPrefix(new Ipv6Prefix(ipv6Prefix))));
+        assertEquals(ipv6Prefix.replace('/', '_').replace(':', '.'),
+            Utils.getStringIpPrefix(new IpPrefix(new Ipv6Prefix(ipv6Prefix))));
     }
 
     @Test
@@ -107,7 +108,7 @@ public class UtilsTest {
         thrown.expect(NullPointerException.class);
         Utils.getStringIpPrefix(null);
     }
-    
+
     @Test
     public final void testGetStringIpAddress_ipv4() {
         String ipv4Address = "1.1.1.1";
@@ -129,19 +130,19 @@ public class UtilsTest {
     @Test
     public final void testNormalizeUuid_lowercaseUuid() {
         assertEquals("01234567-abcd-ef01-0123-0123456789ab",
-                Utils.normalizeUuid("01234567-abcd-ef01-0123-0123456789ab"));
+            Utils.normalizeUuid("01234567-abcd-ef01-0123-0123456789ab"));
     }
 
     @Test
     public final void testNormalizeUuid_uppercaseUuid() {
         assertEquals("01234567-ABCD-EF01-0123-0123456789AB",
-                Utils.normalizeUuid("01234567-ABCD-EF01-0123-0123456789AB"));
+            Utils.normalizeUuid("01234567-ABCD-EF01-0123-0123456789AB"));
     }
 
     @Test
     public final void testNormalizeUuid_mixUuid() {
         assertEquals("01234567-ABCD-ef01-0123-0123456789Ab",
-                Utils.normalizeUuid("01234567-ABCD-ef01-0123-0123456789Ab"));
+            Utils.normalizeUuid("01234567-ABCD-ef01-0123-0123456789Ab"));
     }
 
     @Test
