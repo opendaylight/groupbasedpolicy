@@ -113,4 +113,16 @@ public class ConditionSet {
         return "ConditionSet [all=" + all + ", none=" + none + ", any=" +
                any + "]";
     }
+
+    public final Set<ConditionName> getTypeAll() {
+        return all;
+    }
+
+    public final Set<ConditionName> getTypeNone() {
+        return none;
+    }
+
+    public final Set<? extends Set<ConditionName>> getTypeAny() {
+        return any;
+    }
 }

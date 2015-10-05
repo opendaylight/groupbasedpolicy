@@ -33,6 +33,8 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.ResolvedPolicies;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.ResolvedPoliciesBuilder;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -47,8 +49,10 @@ import com.google.common.collect.Table.Cell;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+
 import org.opendaylight.groupbasedpolicy.resolver.validator.PolicyValidator;
 import org.opendaylight.groupbasedpolicy.resolver.validator.ValidationResult;
+import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 
 /**
  * The policy resolver is a utility for renderers to help in resolving
@@ -359,13 +363,31 @@ public class PolicyResolver implements AutoCloseable {
             Set<IndexedTenant> indexedTenants = getIndexedTenants(resolvedTenants.values());
             Table<EgKey, EgKey, Policy> policyMap = PolicyResolverUtils.resolvePolicy(indexedTenants, egConditions);
             Set<EgKey> updatedGroups = updatePolicy(policyMap, egConditions, policyListenerScopes);
-
+            updatePolicyInDataStore(policyMap);
+            //TODO the following will be removed when the policyInfo datastore is completed
             notifyListeners(updatedGroups);
         } catch (Exception e) {
             LOG.error("Failed to update policy", e);
         }
     }
 
+    private void updatePolicyInDataStore(Table<EgKey, EgKey, Policy> policyMap) {
+        if (dataProvider == null) {
+            LOG.error("Couldn't Write Resolved Tenants Policy Info to Datastore because dataProvider is NULL");
+            return;
+        }
+        ResolvedPolicies resolvedPolicies = new ResolvedPoliciesBuilder().setResolvedPolicy(
+                PolicyInfoUtils.buildResolvedPolicy(policyMap)).build();
+
+        WriteTransaction t = dataProvider.newWriteOnlyTransaction();
+        t.put(LogicalDatastoreType.OPERATIONAL, InstanceIdentifier.builder(ResolvedPolicies.class).build(),
+                resolvedPolicies, true);
+        if (DataStoreHelper.submitToDs(t)) {
+            LOG.debug("Wrote resolved policies to Datastore");
+        } else {
+            LOG.error("Failed to write resolved policies to Datastore.");
+        }
+    }
     private Set<IndexedTenant> getIndexedTenants(Collection<TenantContext> tenantCtxs) {
         Set<IndexedTenant> result = new HashSet<>();
         for (TenantContext tenant : tenantCtxs) {
