@@ -338,10 +338,10 @@ public class EndpointManager implements AutoCloseable {
 
         //update endpoint
         if (oldEp != null && newEp != null && oldEpKey != null && newEpKey != null &&
-                newLoc != null && (oldEpKey.toString().equals(newEpKey.toString()))) {
+                (oldEpKey.toString().equals(newEpKey.toString()))) {
 
             //endpoint was moved, new location exists but is different from old one
-            if (oldLoc != null && !(oldLoc.getValue().equals(newLoc.getValue()))) {
+            if (oldLoc != null && newLoc != null && !(oldLoc.getValue().equals(newLoc.getValue()))) {
                 //remove old endpoint
                 removeEndpoint(oldEp, oldLoc, oldEpKey, oldEpgIds);
                 notifyOldLoc = true;
