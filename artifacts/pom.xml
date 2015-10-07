@@ -15,11 +15,6 @@
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
-        <artifactId>opflex-renderer</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>${project.groupId}</groupId>
         <artifactId>ofoverlay-renderer</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -53,13 +48,6 @@
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>groupbasedpolicy-ofoverlay-config</artifactId>
-        <version>${project.version}</version>
-        <type>xml</type>
-        <classifier>config</classifier>
-      </dependency>
-      <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>groupbasedpolicy-opflex-config</artifactId>
         <version>${project.version}</version>
         <type>xml</type>
         <classifier>config</classifier>

@@ -200,10 +200,6 @@
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
-      <artifactId>opflex-renderer</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>ofoverlay-renderer</artifactId>
     </dependency>
     <dependency>
@@ -227,12 +223,6 @@
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>groupbasedpolicy-ofoverlay-config</artifactId>
-      <type>xml</type>
-      <classifier>config</classifier>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.groupbasedpolicy</groupId>
-      <artifactId>groupbasedpolicy-opflex-config</artifactId>
       <type>xml</type>
       <classifier>config</classifier>
     </dependency>

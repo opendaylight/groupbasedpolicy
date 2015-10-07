@@ -62,21 +62,6 @@
     </feature>
 
     <!--
-        The OpFlex renderer.
-
-        This can be added to the base to enable an
-        OpFlex renderer in the controller
-    -->
-    <feature name='odl-groupbasedpolicy-opflex' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: OpFlex Renderer'>
-        <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
-        <bundle start="true">mvn:com.fasterxml.jackson.core/jackson-annotations/{{VERSION}}</bundle>
-        <bundle start="true">mvn:com.fasterxml.jackson.core/jackson-core/{{VERSION}}</bundle>
-        <bundle start="true">mvn:com.fasterxml.jackson.core/jackson-databind/{{VERSION}}</bundle>
-        <bundle>mvn:org.opendaylight.groupbasedpolicy/opflex-renderer/{{VERSION}}</bundle>
-        <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-opflex.xml">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-opflex-config/{{VERSION}}/xml/config</configfile>
-    </feature>
-
-    <!--
          The Neutron provider
     -->
     <feature name='odl-groupbasedpolicy-neutronmapper' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Neutron Mapper mapps neutron APIs to GBP APIs '>
