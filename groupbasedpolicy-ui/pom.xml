@@ -12,7 +12,7 @@
   <parent>
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>commons.groupbasedpolicy</artifactId>
-    <version>0.2.2-SNAPSHOT</version>
+    <version>0.2.2-Lithium-SR2</version>
     <relativePath>../commons/parent</relativePath>
   </parent>
 
