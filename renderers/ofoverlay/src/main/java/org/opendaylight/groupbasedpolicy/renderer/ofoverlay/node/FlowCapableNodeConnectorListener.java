@@ -1,12 +1,8 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-
+import com.google.common.base.Objects;
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.Futures;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
@@ -19,8 +15,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.Fl
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Name;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayL3Context;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayL3ContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
@@ -34,9 +33,12 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Objects;
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.Futures;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 public class FlowCapableNodeConnectorListener implements DataChangeListener, AutoCloseable {
 
@@ -64,7 +66,11 @@ public class FlowCapableNodeConnectorListener implements DataChangeListener, Aut
     @Override
     public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
+
+        //endpoint and endpoint L3 maps
         Map<Name, Endpoint> epWithOfOverlayAugByPortName = readEpsWithOfOverlayAugByPortName(rwTx);
+        Map<Name, EndpointL3> l3EpWithOfOverlayAugByPortName = readL3EpsWithOfOverlayAugByPortName(rwTx);
+
         boolean isDataPutToTx = false;
         for (Entry<InstanceIdentifier<?>, DataObject> fcncEntry : change.getCreatedData().entrySet()) {
             if (FlowCapableNodeConnector.class.equals(fcncEntry.getKey().getTargetType())) {
@@ -77,7 +83,8 @@ public class FlowCapableNodeConnectorListener implements DataChangeListener, Aut
                 switchManager.updateSwitchNodeConnectorConfig(ncIid, fcnc);
                 Name portName = getPortName(fcnc);
                 boolean updated = updateEpWithNodeConnectorInfo(epWithOfOverlayAugByPortName.get(portName), ncIid, rwTx);
-                if (updated == true) {
+                boolean l3Updated = updateL3EpWithNodeConnectorInfo(l3EpWithOfOverlayAugByPortName.get(portName), ncIid, rwTx);
+                if (updated || l3Updated) {
                     isDataPutToTx = true;
                 }
             }
@@ -93,17 +100,20 @@ public class FlowCapableNodeConnectorListener implements DataChangeListener, Aut
                 switchManager.updateSwitchNodeConnectorConfig(ncIid, fcnc);
                 Name portName = getPortName(fcnc);
                 boolean updated = updateEpWithNodeConnectorInfo(epWithOfOverlayAugByPortName.get(portName), ncIid, rwTx);
-                if (updated == true) {
+                boolean l3Updated = updateL3EpWithNodeConnectorInfo(l3EpWithOfOverlayAugByPortName.get(portName), ncIid, rwTx);
+                if (updated || l3Updated) {
                     isDataPutToTx = true;
                 }
                 FlowCapableNodeConnector originalFcnc = (FlowCapableNodeConnector) change.getOriginalData().get(
                         fcncEntry.getKey());
                 Name portNameFromOriginalFcnc = getPortName(originalFcnc);
-                // portname already existed and then was changed
+                // port name already existed and then was changed
                 if (portNameFromOriginalFcnc != null && !Objects.equal(portNameFromOriginalFcnc, portName)) {
-                    updated = updateEpWithNodeConnectorInfo(epWithOfOverlayAugByPortName.get(portNameFromOriginalFcnc),
-                            null, rwTx);
-                    if (updated == true) {
+                    updated = updateEpWithNodeConnectorInfo(epWithOfOverlayAugByPortName
+                            .get(portNameFromOriginalFcnc), null, rwTx);
+                    l3Updated = updateL3EpWithNodeConnectorInfo(l3EpWithOfOverlayAugByPortName
+                            .get(portNameFromOriginalFcnc), null, rwTx);
+                    if (updated || l3Updated) {
                         isDataPutToTx = true;
                     }
                 }
@@ -119,9 +129,9 @@ public class FlowCapableNodeConnectorListener implements DataChangeListener, Aut
                         ncIid.firstKeyOf(NodeConnector.class, NodeConnectorKey.class).getId().getValue());
                 switchManager.updateSwitchNodeConnectorConfig(ncIid, null);
                 Name portNameFromOriginalFcnc = getPortName(originalFcnc);
-                boolean updated = updateEpWithNodeConnectorInfo(
-                        epWithOfOverlayAugByPortName.get(portNameFromOriginalFcnc), null, rwTx);
-                if (updated == true) {
+                boolean updated = updateEpWithNodeConnectorInfo(epWithOfOverlayAugByPortName.get(portNameFromOriginalFcnc), null, rwTx);
+                boolean l3Updated = updateL3EpWithNodeConnectorInfo(l3EpWithOfOverlayAugByPortName.get(portNameFromOriginalFcnc), null, rwTx);
+                if (updated || l3Updated) {
                     isDataPutToTx = true;
                 }
             }
@@ -133,6 +143,7 @@ public class FlowCapableNodeConnectorListener implements DataChangeListener, Aut
         }
     }
 
+    //read endpoints from listener entry
     private Map<Name, Endpoint> readEpsWithOfOverlayAugByPortName(ReadTransaction rTx) {
         Optional<Endpoints> potentialEps = Futures.getUnchecked(rTx.read(LogicalDatastoreType.OPERATIONAL, endpointsIid));
         if (!potentialEps.isPresent() || potentialEps.get().getEndpoint() == null) {
@@ -148,6 +159,22 @@ public class FlowCapableNodeConnectorListener implements DataChangeListener, Aut
         return epsByPortName;
     }
 
+    //read l3 endpoint from listener entry
+    private Map<Name, EndpointL3> readL3EpsWithOfOverlayAugByPortName(ReadTransaction rTx) {
+        Optional<Endpoints> potentialEps = Futures.getUnchecked(rTx.read(LogicalDatastoreType.OPERATIONAL, endpointsIid));
+        if (!potentialEps.isPresent() || potentialEps.get().getEndpoint() == null) {
+            return Collections.emptyMap();
+        }
+        Map<Name, EndpointL3> epsByPortName = new HashMap<>();
+        for (EndpointL3 epL3 : potentialEps.get().getEndpointL3()) {
+            OfOverlayL3Context ofOverlayL3Ep = epL3.getAugmentation(OfOverlayL3Context.class);
+            if (ofOverlayL3Ep != null && ofOverlayL3Ep.getPortName() != null) {
+                epsByPortName.put(ofOverlayL3Ep.getPortName(), epL3);
+            }
+        }
+        return epsByPortName;
+    }
+
     private Name getPortName(FlowCapableNodeConnector fcnc) {
         if (fcnc == null || fcnc.getName() == null) {
             return null;
@@ -156,7 +183,7 @@ public class FlowCapableNodeConnectorListener implements DataChangeListener, Aut
     }
 
     /**
-     * @return {@code true} if data was put to the transaction; {@code false} otherwise
+     * @return {@code true} if data (Endpoint) was put to the transaction; {@code false} otherwise
      */
     private boolean updateEpWithNodeConnectorInfo(Endpoint epWithOfOverlayAug, InstanceIdentifier<NodeConnector> ncIid,
             WriteTransaction tx) {
@@ -176,12 +203,50 @@ public class FlowCapableNodeConnectorListener implements DataChangeListener, Aut
             NodeId nodeId = ncIid.firstKeyOf(Node.class, NodeKey.class).getId();
             newOfOverlayAug.setNodeId(nodeId);
             newOfOverlayAug.setNodeConnectorId(ncId);
+        } else {
+            //when nodeId is null, remove info about that node from endpoint
+            newOfOverlayAug.setNodeId(null);
+            newOfOverlayAug.setNodeConnectorId(null);
         }
         InstanceIdentifier<OfOverlayContext> epOfOverlayAugIid = InstanceIdentifier.builder(Endpoints.class)
             .child(Endpoint.class, epWithOfOverlayAug.getKey())
             .augmentation(OfOverlayContext.class)
             .build();
         tx.put(LogicalDatastoreType.OPERATIONAL, epOfOverlayAugIid, newOfOverlayAug.build());
+        return true;
+    }
+
+    /**
+     * @return {@code true} if data (EndpointL3) was put to the transaction; {@code false} otherwise
+     */
+    private boolean updateL3EpWithNodeConnectorInfo(EndpointL3 epWithOfOverlayL3Aug,
+            InstanceIdentifier<NodeConnector> ncIid, WriteTransaction tx) {
+        if (epWithOfOverlayL3Aug == null) {
+            return false;
+        }
+        OfOverlayL3Context oldOfOverlayL3Aug = epWithOfOverlayL3Aug.getAugmentation(OfOverlayL3Context.class);
+        OfOverlayL3ContextBuilder newOfOverlayL3Aug = new OfOverlayL3ContextBuilder(oldOfOverlayL3Aug);
+        if (ncIid == null && oldOfOverlayL3Aug.getNodeConnectorId() == null) {
+            return false;
+        }
+        if (ncIid != null) {
+            NodeConnectorId ncId = ncIid.firstKeyOf(NodeConnector.class, NodeConnectorKey.class).getId();
+            if (ncId.equals(oldOfOverlayL3Aug.getNodeConnectorId())) {
+                return false;
+            }
+            NodeId nodeId = ncIid.firstKeyOf(Node.class, NodeKey.class).getId();
+            newOfOverlayL3Aug.setNodeId(nodeId);
+            newOfOverlayL3Aug.setNodeConnectorId(ncId);
+        } else {
+            // remove node info
+            newOfOverlayL3Aug.setNodeId(null);
+            newOfOverlayL3Aug.setNodeConnectorId(null);
+        }
+        InstanceIdentifier<OfOverlayL3Context> epOfOverlayAugIid = InstanceIdentifier.builder(Endpoints.class)
+                .child(EndpointL3.class, epWithOfOverlayL3Aug.getKey())
+                .augmentation(OfOverlayL3Context.class)
+                .build();
+        tx.put(LogicalDatastoreType.OPERATIONAL, epOfOverlayAugIid, newOfOverlayL3Aug.build());
         return true;
     }
 
