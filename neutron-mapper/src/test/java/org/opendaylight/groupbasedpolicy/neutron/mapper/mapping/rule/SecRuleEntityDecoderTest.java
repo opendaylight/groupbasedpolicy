@@ -35,7 +35,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.ConsumerMatchers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ClassifierInstance;
 
-public class SecRuleDecoderTest {
+public class SecRuleEntityDecoderTest {
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
@@ -50,37 +50,43 @@ public class SecRuleDecoderTest {
     @Test
     public final void testGetTenantId_lowercaseUuidTenantID() {
         secRule.setSecurityRuleTenantID("01234567-abcd-ef01-0123-0123456789ab");
-        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab", SecRuleEntityDecoder.getTenantId(secRule).getValue());
+        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab", SecRuleEntityDecoder.getTenantId(secRule)
+            .getValue());
     }
 
     @Test
     public final void testGetTenantId_uppercaseUuidTenantID() {
         secRule.setSecurityRuleTenantID("01234567-ABCD-EF01-0123-0123456789AB");
-        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB", SecRuleEntityDecoder.getTenantId(secRule).getValue());
+        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB", SecRuleEntityDecoder.getTenantId(secRule)
+            .getValue());
     }
 
     @Test
     public final void testGetTenantId_mixUuidTenantID() {
         secRule.setSecurityRuleTenantID("01234567-ABCD-ef01-0123-0123456789Ab");
-        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab", SecRuleEntityDecoder.getTenantId(secRule).getValue());
+        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab", SecRuleEntityDecoder.getTenantId(secRule)
+            .getValue());
     }
 
     @Test
     public final void testGetTenantId_noSlashLowercaseUuidTenantID() {
         secRule.setSecurityRuleTenantID("01234567abcdef0101230123456789ab");
-        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab", SecRuleEntityDecoder.getTenantId(secRule).getValue());
+        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab", SecRuleEntityDecoder.getTenantId(secRule)
+            .getValue());
     }
 
     @Test
     public final void testGetTenantId_noSlashUppercaseUuidTenantID() {
         secRule.setSecurityRuleTenantID("01234567ABCDEF0101230123456789AB");
-        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB", SecRuleEntityDecoder.getTenantId(secRule).getValue());
+        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB", SecRuleEntityDecoder.getTenantId(secRule)
+            .getValue());
     }
 
     @Test
     public final void testGetTenantId_noSlashMixUuidTenantID() {
         secRule.setSecurityRuleTenantID("01234567ABCDef0101230123456789Ab");
-        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab", SecRuleEntityDecoder.getTenantId(secRule).getValue());
+        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab", SecRuleEntityDecoder.getTenantId(secRule)
+            .getValue());
     }
 
     @Test
@@ -114,43 +120,43 @@ public class SecRuleDecoderTest {
     @Test
     public final void testGetProviderEpgId_lowercaseUuidGroupID() {
         secRule.setSecurityRuleGroupID("01234567-abcd-ef01-0123-0123456789ab");
-        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab",
-                SecRuleEntityDecoder.getProviderEpgId(secRule).getValue());
+        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab", SecRuleEntityDecoder.getProviderEpgId(secRule)
+            .getValue());
     }
 
     @Test
     public final void testGetProviderEpgId_uppercaseUuidGroupID() {
         secRule.setSecurityRuleGroupID("01234567-ABCD-EF01-0123-0123456789AB");
-        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB",
-                SecRuleEntityDecoder.getProviderEpgId(secRule).getValue());
+        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB", SecRuleEntityDecoder.getProviderEpgId(secRule)
+            .getValue());
     }
 
     @Test
     public final void testGetProviderEpgId_mixUuidGroupID() {
         secRule.setSecurityRuleGroupID("01234567-ABCD-ef01-0123-0123456789Ab");
-        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab",
-                SecRuleEntityDecoder.getProviderEpgId(secRule).getValue());
+        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab", SecRuleEntityDecoder.getProviderEpgId(secRule)
+            .getValue());
     }
 
     @Test
     public final void testGetProviderEpgId_noSlashLowercaseUuidGroupID() {
         secRule.setSecurityRuleGroupID("01234567abcdef0101230123456789ab");
-        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab",
-                SecRuleEntityDecoder.getProviderEpgId(secRule).getValue());
+        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab", SecRuleEntityDecoder.getProviderEpgId(secRule)
+            .getValue());
     }
 
     @Test
     public final void testGetProviderEpgId_noSlashUppercaseUuidGroupID() {
         secRule.setSecurityRuleGroupID("01234567ABCDEF0101230123456789AB");
-        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB",
-                SecRuleEntityDecoder.getProviderEpgId(secRule).getValue());
+        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB", SecRuleEntityDecoder.getProviderEpgId(secRule)
+            .getValue());
     }
 
     @Test
     public final void testGetProviderEpgId_noSlashMixUuidGroupID() {
         secRule.setSecurityRuleGroupID("01234567ABCDef0101230123456789Ab");
-        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab",
-                SecRuleEntityDecoder.getProviderEpgId(secRule).getValue());
+        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab", SecRuleEntityDecoder.getProviderEpgId(secRule)
+            .getValue());
     }
 
     @Test
@@ -184,43 +190,43 @@ public class SecRuleDecoderTest {
     @Test
     public final void testGetConsumerEpgId_lowercaseUuidRemoteGroupID() {
         secRule.setSecurityRemoteGroupID("01234567-abcd-ef01-0123-0123456789ab");
-        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab",
-                SecRuleEntityDecoder.getConsumerEpgId(secRule).getValue());
+        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab", SecRuleEntityDecoder.getConsumerEpgId(secRule)
+            .getValue());
     }
 
     @Test
     public final void testGetConsumerEpgId_uppercaseUuidRemoteGroupID() {
         secRule.setSecurityRemoteGroupID("01234567-ABCD-EF01-0123-0123456789AB");
-        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB",
-                SecRuleEntityDecoder.getConsumerEpgId(secRule).getValue());
+        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB", SecRuleEntityDecoder.getConsumerEpgId(secRule)
+            .getValue());
     }
 
     @Test
     public final void testGetConsumerEpgId_mixUuidRemoteGroupID() {
         secRule.setSecurityRemoteGroupID("01234567-ABCD-ef01-0123-0123456789Ab");
-        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab",
-                SecRuleEntityDecoder.getConsumerEpgId(secRule).getValue());
+        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab", SecRuleEntityDecoder.getConsumerEpgId(secRule)
+            .getValue());
     }
 
     @Test
     public final void testGetConsumerEpgId_noSlashLowercaseUuidRemoteGroupID() {
         secRule.setSecurityRemoteGroupID("01234567abcdef0101230123456789ab");
-        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab",
-                SecRuleEntityDecoder.getConsumerEpgId(secRule).getValue());
+        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab", SecRuleEntityDecoder.getConsumerEpgId(secRule)
+            .getValue());
     }
 
     @Test
     public final void testGetConsumerEpgId_noSlashUppercaseUuidRemoteGroupID() {
         secRule.setSecurityRemoteGroupID("01234567ABCDEF0101230123456789AB");
-        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB",
-                SecRuleEntityDecoder.getConsumerEpgId(secRule).getValue());
+        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB", SecRuleEntityDecoder.getConsumerEpgId(secRule)
+            .getValue());
     }
 
     @Test
     public final void testGetConsumerEpgId_noSlashMixUuidRemoteGroupID() {
         secRule.setSecurityRemoteGroupID("01234567ABCDef0101230123456789Ab");
-        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab",
-                SecRuleEntityDecoder.getConsumerEpgId(secRule).getValue());
+        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab", SecRuleEntityDecoder.getConsumerEpgId(secRule)
+            .getValue());
     }
 
     @Test
@@ -252,37 +258,43 @@ public class SecRuleDecoderTest {
     @Test
     public final void testGetContractId_lowercaseUuidID() {
         secRule.setSecurityRuleUUID("01234567-abcd-ef01-0123-0123456789ab");
-        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab", SecRuleEntityDecoder.getContractId(secRule).getValue());
+        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab", SecRuleEntityDecoder.getContractId(secRule)
+            .getValue());
     }
 
     @Test
     public final void testGetContractId_uppercaseUuidID() {
         secRule.setSecurityRuleUUID("01234567-ABCD-EF01-0123-0123456789AB");
-        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB", SecRuleEntityDecoder.getContractId(secRule).getValue());
+        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB", SecRuleEntityDecoder.getContractId(secRule)
+            .getValue());
     }
 
     @Test
     public final void testGetContractId_mixUuidID() {
         secRule.setSecurityRuleUUID("01234567-ABCD-ef01-0123-0123456789Ab");
-        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab", SecRuleEntityDecoder.getContractId(secRule).getValue());
+        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab", SecRuleEntityDecoder.getContractId(secRule)
+            .getValue());
     }
 
     @Test
     public final void testGetContractId_noSlashLowercaseUuidID() {
         secRule.setSecurityRuleUUID("01234567abcdef0101230123456789ab");
-        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab", SecRuleEntityDecoder.getContractId(secRule).getValue());
+        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab", SecRuleEntityDecoder.getContractId(secRule)
+            .getValue());
     }
 
     @Test
     public final void testGetContractId_noSlashUppercaseUuidID() {
         secRule.setSecurityRuleUUID("01234567ABCDEF0101230123456789AB");
-        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB", SecRuleEntityDecoder.getContractId(secRule).getValue());
+        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB", SecRuleEntityDecoder.getContractId(secRule)
+            .getValue());
     }
 
     @Test
     public final void testGetContractId_noSlashMixUuidID() {
         secRule.setSecurityRuleUUID("01234567ABCDef0101230123456789Ab");
-        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab", SecRuleEntityDecoder.getContractId(secRule).getValue());
+        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab", SecRuleEntityDecoder.getContractId(secRule)
+            .getValue());
     }
 
     @Test
@@ -530,11 +542,9 @@ public class SecRuleDecoderTest {
         Assert.assertNotNull(consumerMatchers);
         Assert.assertNull(consumerMatchers.getConditionMatcher());
         Assert.assertNull(consumerMatchers.getGroupIdentificationConstraints());
-        EndpointIdentificationConstraints endpointIdentificationConstraints =
-                consumerMatchers.getEndpointIdentificationConstraints();
+        EndpointIdentificationConstraints endpointIdentificationConstraints = consumerMatchers.getEndpointIdentificationConstraints();
         Assert.assertNotNull(endpointIdentificationConstraints);
-        L3EndpointIdentificationConstraints l3EndpointIdentificationConstraints =
-                endpointIdentificationConstraints.getL3EndpointIdentificationConstraints();
+        L3EndpointIdentificationConstraints l3EndpointIdentificationConstraints = endpointIdentificationConstraints.getL3EndpointIdentificationConstraints();
         Assert.assertNotNull(l3EndpointIdentificationConstraints);
         List<PrefixConstraint> prefixConstraints = l3EndpointIdentificationConstraints.getPrefixConstraint();
         Assert.assertNotNull(prefixConstraints);
@@ -755,5 +765,4 @@ public class SecRuleDecoderTest {
         thrown.expect(IllegalArgumentException.class);
         SecRuleEntityDecoder.getProtocol(secRule);
     }
-
 }
