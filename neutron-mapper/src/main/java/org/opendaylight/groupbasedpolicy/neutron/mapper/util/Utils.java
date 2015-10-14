@@ -67,9 +67,11 @@ public class Utils {
     public static String getStringIpPrefix(IpPrefix ipPrefix) {
         Preconditions.checkNotNull(ipPrefix);
         if (ipPrefix.getIpv4Prefix() != null) {
-            return ipPrefix.getIpv4Prefix().getValue();
+            String ipPrefixIpv4 = ipPrefix.getIpv4Prefix().getValue();
+            return ipPrefixIpv4.replace('/', '_');
         }
-        return ipPrefix.getIpv6Prefix().getValue();
+        String ipPrefixIpv6 = ipPrefix.getIpv6Prefix().getValue();
+        return ipPrefixIpv6.replace('/', '_').replace(':', '.');
     }
 
     public static String getStringIpAddress(IpAddress ipAddress) {

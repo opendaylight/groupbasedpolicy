@@ -18,6 +18,7 @@ import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
@@ -162,7 +163,7 @@ public final class PolicyAssert {
         assertEquals(intraGroupPolicy, epg.get().getIntraGroupPolicy());
     }
 
-    // asserts for enpoint group selectors
+    // asserts for endpoint group selectors
 
     public static void assertNoProviderNamedSelectors(DataBroker dataBroker, String tenantId, String secGroupId)
             throws Exception {
@@ -218,6 +219,13 @@ public final class PolicyAssert {
         assertTrue(readClsfInstance.isPresent());
     }
 
+    public static void assertClassifierInstanceExists(DataBroker dataBroker, String tenantId, String classifierName)
+            throws Exception {
+        Optional<ClassifierInstance> classifierInstance = ConfigDataStoreReader.readClassifierInstance(dataBroker,
+                tenantId, new ClassifierName(classifierName));
+        assertTrue(classifierInstance.isPresent());
+    }
+
     public static void assertClassifierInstanceNotExists(DataBroker dataBroker, NeutronSecurityRule secRule)
             throws Exception {
         ClassifierInstance clsfInstance = SecRuleEntityDecoder.getClassifierInstance(secRule);
@@ -252,6 +260,11 @@ public final class PolicyAssert {
         assertEquals(SecRuleNameDecoder.getSubjectName(secRule), subjectRef);
     }
 
+    public static void assertClauseExists(DataBroker dataBroker, String tenantId, String contractId, String clauseName) {
+        Optional<Clause> clause = ConfigDataStoreReader.readClause(dataBroker, tenantId, contractId, clauseName);
+        assertTrue(clause.isPresent());
+    }
+
     // asserts for subject
 
     public static void assertSubjectWithOneRule(Subject subject, NeutronSecurityRule secRule) {
@@ -277,9 +290,19 @@ public final class PolicyAssert {
         assertEquals(order, rule.getOrder().intValue());
     }
 
-    private static final <T> T assertOneItem(Collection<T> c) {
+    private static <T> T assertOneItem(Collection<T> c) {
         assertNotNull(c);
         assertTrue(c.size() == 1);
         return c.iterator().next();
     }
+
+    // asserts for selector
+
+    public static void assertConsumerNamedSelectorExists(DataBroker dataBroker, String tenantId, String egId,
+                                                         String selectorName) {
+        Optional<ConsumerNamedSelector> potentialCns = ConfigDataStoreReader.readConsumerNamedSelector(dataBroker,
+                tenantId, egId, selectorName);
+        assertTrue(potentialCns.isPresent());
+    }
+
 }
