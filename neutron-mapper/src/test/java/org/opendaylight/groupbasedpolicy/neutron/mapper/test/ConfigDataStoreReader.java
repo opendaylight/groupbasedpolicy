@@ -7,12 +7,16 @@ import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClauseName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SelectorName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Clause;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ConsumerNamedSelector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ClassifierInstance;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -62,6 +66,23 @@ public final class ConfigDataStoreReader {
         InstanceIdentifier<ActionInstance> actionIid = IidFactory.actionInstanceIid(new TenantId(tenantId), actionName);
         try (ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction()) {
             return DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, actionIid, rTx);
+        }
+    }
+
+    public static Optional<ConsumerNamedSelector> readConsumerNamedSelector(DataBroker dataBroker, String tenantId, String egId,
+                                                                            String selectorName) {
+        InstanceIdentifier<ConsumerNamedSelector> cnsIid = IidFactory.consumerNamedSelectorIid(new TenantId(tenantId),
+                new EndpointGroupId(egId), new SelectorName(selectorName));
+        try (ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction()) {
+            return DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, cnsIid, rTx);
+        }
+    }
+
+    public static Optional<Clause> readClause(DataBroker dataBroker, String tenantId, String contractId, String clauseName) {
+        InstanceIdentifier<Clause> clauseIid = IidFactory.clauseIid(new TenantId(tenantId), new ContractId(contractId),
+                new ClauseName(clauseName));
+        try (ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction()) {
+            return DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, clauseIid, rTx);
         }
     }
 }
