@@ -277,55 +277,6 @@ public class SecRuleEntityDecoderTest {
     }
 
     @Test
-    public final void testGetContractId_noSlashLowercaseUuidID() {
-        secRule.setSecurityRuleUUID("01234567abcdef0101230123456789ab");
-        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab", SecRuleEntityDecoder.getContractId(secRule)
-            .getValue());
-    }
-
-    @Test
-    public final void testGetContractId_noSlashUppercaseUuidID() {
-        secRule.setSecurityRuleUUID("01234567ABCDEF0101230123456789AB");
-        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB", SecRuleEntityDecoder.getContractId(secRule)
-            .getValue());
-    }
-
-    @Test
-    public final void testGetContractId_noSlashMixUuidID() {
-        secRule.setSecurityRuleUUID("01234567ABCDef0101230123456789Ab");
-        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab", SecRuleEntityDecoder.getContractId(secRule)
-            .getValue());
-    }
-
-    @Test
-    public final void testGetContractId_emptyUuidID() {
-        secRule.setSecurityRuleUUID("");
-        thrown.expect(IllegalArgumentException.class);
-        SecRuleEntityDecoder.getContractId(secRule);
-    }
-
-    @Test
-    public final void testGetContractId_badLengthUuidID() {
-        secRule.setSecurityRuleUUID("abcdxy");
-        thrown.expect(IllegalArgumentException.class);
-        SecRuleEntityDecoder.getContractId(secRule);
-    }
-
-    @Test
-    public final void testGetContractId_badContentUuidID() {
-        secRule.setSecurityRuleUUID("xyz34567-abcd-ef01-0123-0123456789ab");
-        thrown.expect(IllegalArgumentException.class);
-        SecRuleEntityDecoder.getContractId(secRule);
-    }
-
-    @Test
-    public final void testGetContractId_nullUuidID() {
-        secRule.setSecurityRuleUUID(null);
-        thrown.expect(NullPointerException.class);
-        SecRuleEntityDecoder.getContractId(secRule);
-    }
-
-    @Test
     public final void testGetClassifierInstance_onlyEthertype() {
         secRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
         ClassifierInstance ci = SecRuleEntityDecoder.getClassifierInstance(secRule);

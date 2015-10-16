@@ -12,7 +12,6 @@ import org.opendaylight.yangtools.yang.binding.util.BindingReflections;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 
-// TODO this class exists b/c https://bugs.opendaylight.org/show_bug.cgi?id=4281
 /**
  * Loads only modules of GBP and it's dependencies for data broker.
  * <br>Therefore this implementation is faster than {@link AbstractDataBrokerTest}
