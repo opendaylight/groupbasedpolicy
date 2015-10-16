@@ -18,6 +18,7 @@ import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.neutron.gbp.util.NeutronGbpIidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.NetworkClient;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.NetworkService;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.Router;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronMapperIidFactory;
@@ -54,7 +55,7 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(NeutronNetworkAware.class);
     private final DataBroker dataProvider;
-    private Set<TenantId> tenantsWithRouterEntities = new HashSet<>();
+    private final Set<TenantId> tenantsWithRouterAndNetworkSeviceEntities = new HashSet<>();
 
     public NeutronNetworkAware(DataBroker dataProvider) {
         this.dataProvider = checkNotNull(dataProvider);
@@ -116,11 +117,17 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
             .build();
         rwTx.put(LogicalDatastoreType.OPERATIONAL, NeutronMapperIidFactory.networkMappingIid(l2FdId), networkMapping, true);
 
-        if (!tenantsWithRouterEntities.contains(tenantId)) {
-            tenantsWithRouterEntities.add(tenantId);
+        if (!tenantsWithRouterAndNetworkSeviceEntities.contains(tenantId)) {
+            tenantsWithRouterAndNetworkSeviceEntities.add(tenantId);
             Router.writeRouterEntitiesToTenant(tenantId, rwTx);
             Router.writeRouterClauseWithConsProvEic(tenantId, null, rwTx);
+            NetworkService.writeNetworkServiceEntitiesToTenant(tenantId, rwTx);
+            NetworkService.writeDhcpClauseWithConsProvEic(tenantId, null, rwTx);
+            NetworkService.writeDnsClauseWithConsProvEic(tenantId, null, rwTx);
+            NetworkClient.writeNetworkClientEntitiesToTenant(tenantId, rwTx);
             NetworkClient.writeConsumerNamedSelector(tenantId, Router.CONTRACT_CONSUMER_SELECTOR, rwTx);
+            NetworkClient.writeConsumerNamedSelector(tenantId, NetworkService.DHCP_CONTRACT_CONSUMER_SELECTOR, rwTx);
+            NetworkClient.writeConsumerNamedSelector(tenantId, NetworkService.DNS_CONTRACT_CONSUMER_SELECTOR, rwTx);
         }
         if (network.getRouterExternal() != null && network.getRouterExternal() == true) {
             addEpgExternalIfMissing(tenantId, rwTx);
