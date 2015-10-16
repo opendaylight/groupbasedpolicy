@@ -106,7 +106,6 @@ public class NeutronPortAware implements INeutronPortAware {
     private final NeutronSecurityRuleAware secRuleAware;
     private final NeutronSecurityGroupAware secGrpAware;
     private final static Map<String, UniqueId> floatingIpPortByDeviceId = new HashMap<>();
-    private final Set<TenantId> tenantsWithNetworkSeviceEntities = new HashSet<>();
 
     public NeutronPortAware(DataBroker dataProvider, EndpointService epService, NeutronSecurityRuleAware secRuleAware, NeutronSecurityGroupAware secGrpAware) {
         this.dataProvider = checkNotNull(dataProvider);
@@ -160,15 +159,6 @@ public class NeutronPortAware implements INeutronPortAware {
                 LOG.warn("Illegal state - DHCP port does not have an IP address.");
                 rwTx.cancel();
                 return;
-            }
-            if (!tenantsWithNetworkSeviceEntities.contains(tenantId)) {
-                tenantsWithNetworkSeviceEntities.add(tenantId);
-                NetworkService.writeNetworkServiceEntitiesToTenant(tenantId, rwTx);
-                NetworkService.writeDhcpClauseWithConsProvEic(tenantId, null, rwTx);
-                NetworkService.writeDnsClauseWithConsProvEic(tenantId, null, rwTx);
-                NetworkClient.writeNetworkClientEntitiesToTenant(tenantId, rwTx);
-                NetworkClient.writeConsumerNamedSelector(tenantId, NetworkService.DHCP_CONTRACT_CONSUMER_SELECTOR, rwTx);
-                NetworkClient.writeConsumerNamedSelector(tenantId, NetworkService.DNS_CONTRACT_CONSUMER_SELECTOR, rwTx);
             }
         } else {
             // this is here b/c stable/kilo sends sec-groups only with port

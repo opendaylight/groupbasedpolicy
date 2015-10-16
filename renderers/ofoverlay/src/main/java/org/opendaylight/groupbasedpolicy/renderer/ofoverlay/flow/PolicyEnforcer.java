@@ -210,6 +210,10 @@ public class PolicyEnforcer extends FlowTable {
                 IndexedTenant tenant = ctx.getPolicyResolver().getTenant(srcEpgKey.getTenantId());
                 if (tenant != null) {
                     EndpointGroup group = tenant.getEndpointGroup(srcEpgKey.getEgId());
+                    if (group == null) {
+                        LOG.debug("EPG {} does not exit and is used in EP {}", srcEpgKey, srcEp.getKey());
+                        continue;
+                    }
                     IntraGroupPolicy igp = group.getIntraGroupPolicy();
 
                     if (igp == null || igp.equals(IntraGroupPolicy.Allow)) {
