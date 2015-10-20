@@ -10,6 +10,9 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.RspName;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.SfcName;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.SfpName;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.paths.RenderedServicePath;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfc.rev140701.service.function.chain.grouping.ServiceFunctionChain;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.service.function.paths.ServiceFunctionPath;
@@ -19,7 +22,7 @@ public class SfcIidFactoryTest {
 
     @Test
     public void sfcIidTest() {
-        String sfcName = "sfcName";
+        SfcName sfcName = new SfcName("sfcName");
         InstanceIdentifier<ServiceFunctionChain> identifier = SfcIidFactory.sfcIid(sfcName);
         Assert.assertFalse(identifier.isWildcarded());
         Assert.assertEquals(sfcName, InstanceIdentifier.keyOf(identifier).getName());
@@ -27,7 +30,7 @@ public class SfcIidFactoryTest {
 
     @Test
     public void sfpIidTest() {
-        String sfpName = "sfpName";
+        SfpName sfpName = new SfpName("sfpName");
         InstanceIdentifier<ServiceFunctionPath> identifier = SfcIidFactory.sfpIid(sfpName);
         Assert.assertFalse(identifier.isWildcarded());
         Assert.assertEquals(sfpName, InstanceIdentifier.keyOf(identifier).getName());
@@ -35,7 +38,7 @@ public class SfcIidFactoryTest {
 
     @Test
     public void rspIidTest() {
-        String rspName = "rspName";
+        RspName rspName = new RspName("rspName");
         InstanceIdentifier<RenderedServicePath> identifier = SfcIidFactory.rspIid(rspName);
         Assert.assertFalse(identifier.isWildcarded());
         Assert.assertEquals(rspName, InstanceIdentifier.keyOf(identifier).getName());

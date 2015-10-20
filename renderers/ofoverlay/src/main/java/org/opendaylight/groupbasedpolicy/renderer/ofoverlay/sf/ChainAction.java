@@ -36,6 +36,8 @@ import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.sfc.provider.api.SfcProviderRenderedPathAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServiceChainAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServicePathAPI;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.RspName;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.SfcName;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.CreateRenderedPathInput;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.CreateRenderedPathInputBuilder;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.path.first.hop.info.RenderedServicePathFirstHop;
@@ -143,13 +145,13 @@ public class ChainAction extends Action {
          * if srcEp is in consumer EPG use "rspName"
          * else srcEp is in provider EPG, "rspName-Reverse".
          */
-        ServiceFunctionPath sfcPath = getSfcPath(chainName);
+        ServiceFunctionPath sfcPath = getSfcPath(new SfcName(chainName));
         if (sfcPath == null || sfcPath.getName() == null) {
             LOG.error("updateAction: SFC Path was invalid. Either null or name was null.", sfcPath);
             return null;
         }
         // Find existing RSP based on following naming convention, else create it.
-        String rspName = sfcPath.getName() + "-gbp-rsp";
+        RspName rspName = new RspName(sfcPath.getName() + "-gbp-rsp");
         ReadOnlyTransaction rTx = ctx.getDataBroker().newReadOnlyTransaction();
         RenderedServicePath renderedServicePath;
         RenderedServicePath rsp = getRspByName(rspName, rTx);
@@ -167,7 +169,7 @@ public class ChainAction extends Action {
 
         try {
             if (sfcPath.isSymmetric() && direction.equals(Direction.Out)){
-                rspName = rspName + "-Reverse";
+                rspName = new RspName(rspName.getValue() + "-Reverse");
                 rsp = getRspByName(rspName, rTx);
                 if (rsp == null) {
                     LOG.info("updateAction: Could not find Reverse RSP {} for Chain {}", rspName, chainName);
@@ -223,10 +225,10 @@ public class ChainAction extends Action {
         return actions;
     }
 
-    private RenderedServicePath createRsp(ServiceFunctionPath sfcPath, String rspName) {
+    private RenderedServicePath createRsp(ServiceFunctionPath sfcPath, RspName rspName) {
         CreateRenderedPathInput rspInput = new CreateRenderedPathInputBuilder().setParentServiceFunctionPath(
-                sfcPath.getName())
-            .setName(rspName)
+                sfcPath.getName().getValue())
+            .setName(rspName.getValue())
             .setSymmetric(sfcPath.isSymmetric())
             .build();
          return SfcProviderRenderedPathAPI.createRenderedServicePathAndState(sfcPath, rspInput);
@@ -265,7 +267,7 @@ public class ChainAction extends Action {
         return valid;
     }
 
-    private RenderedServicePath getRspByName(String rspName, ReadOnlyTransaction rTx) {
+    private RenderedServicePath getRspByName(RspName rspName, ReadOnlyTransaction rTx) {
         Optional<RenderedServicePath> optRsp = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
                 SfcIidFactory.rspIid(rspName), rTx);
         if (optRsp.isPresent()) {
@@ -284,12 +286,13 @@ public class ChainAction extends Action {
         if (pv == null) {
             return false;
         }
+        SfcName sfcName = new SfcName(pv.getStringValue());
         LOG.trace("isValidGbpChain: Invoking RPC for chain {}", pv.getStringValue());
-        ServiceFunctionChain chain = SfcProviderServiceChainAPI.readServiceFunctionChain(pv.getStringValue());
+        ServiceFunctionChain chain = SfcProviderServiceChainAPI.readServiceFunctionChain(sfcName);
         return (chain != null);
     }
 
-    public ServiceFunctionPath getSfcPath(String chainName) {
+    public ServiceFunctionPath getSfcPath(SfcName chainName) {
         ServiceFunctionPaths paths = SfcProviderServicePathAPI.readAllServiceFunctionPaths();
         for (ServiceFunctionPath path : paths.getServiceFunctionPath()) {
             if (path.getServiceChainName().equals(chainName)) {

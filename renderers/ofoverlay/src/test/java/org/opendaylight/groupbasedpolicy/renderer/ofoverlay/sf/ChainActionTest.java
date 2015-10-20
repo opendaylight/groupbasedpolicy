@@ -35,6 +35,8 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.NetworkElements;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.PolicyPair;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.SfcName;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.SfpName;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.paths.RenderedServicePath;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.service.function.paths.ServiceFunctionPath;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
@@ -72,7 +74,7 @@ public class ChainActionTest {
         chainAction = spy(new ChainAction());
 
         sfcPath = mock(ServiceFunctionPath.class);
-        when(sfcPath.getName()).thenReturn("sfcPathName");
+        when(sfcPath.getName()).thenReturn(new SfpName("sfcPathName"));
         when(sfcPath.isSymmetric()).thenReturn(true);
 
         ctx = mock(OfContext.class);
@@ -122,7 +124,7 @@ public class ChainActionTest {
         Integer order = Integer.valueOf(0);
         OfWriter ofWriter = mock(OfWriter.class);
 
-        doReturn(sfcPath).when(chainAction).getSfcPath(chainName);
+        doReturn(sfcPath).when(chainAction).getSfcPath(new SfcName(chainName));
 
         List<ActionBuilder> result = chainAction.updateAction(actions, params, order, netElements, policyPair,
                 ofWriter,
@@ -167,7 +169,7 @@ public class ChainActionTest {
         Integer order = Integer.valueOf(0);
         OfWriter ofWriter = mock(OfWriter.class);
 
-        doReturn(sfcPath).when(chainAction).getSfcPath(chainName);
+        doReturn(sfcPath).when(chainAction).getSfcPath(new SfcName(chainName));
         when(sfcPath.getName()).thenReturn(null);
 
         List<ActionBuilder> result = chainAction.updateAction(actions, params, order, netElements, policyPair,

@@ -8,6 +8,9 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils;
 
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.RspName;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.SfcName;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.SfpName;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.RenderedServicePaths;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.paths.RenderedServicePath;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.paths.RenderedServicePathKey;
@@ -25,7 +28,7 @@ public class SfcIidFactory {
         throw new UnsupportedOperationException();
     }
 
-    public static InstanceIdentifier<ServiceFunctionChain> sfcIid(String sfcName) {
+    public static InstanceIdentifier<ServiceFunctionChain> sfcIid(SfcName sfcName) {
 
         ServiceFunctionChainKey serviceFunctionChainKey =
                 new ServiceFunctionChainKey(sfcName);
@@ -33,14 +36,14 @@ public class SfcIidFactory {
                 .child(ServiceFunctionChain.class, serviceFunctionChainKey).build();
     }
 
-    public static InstanceIdentifier<ServiceFunctionPath> sfpIid(String sfpName) {
+    public static InstanceIdentifier<ServiceFunctionPath> sfpIid(SfpName sfpName) {
 
         ServiceFunctionPathKey serviceFunctionPathKey = new ServiceFunctionPathKey(sfpName);
         return InstanceIdentifier.builder(ServiceFunctionPaths.class)
                 .child(ServiceFunctionPath.class, serviceFunctionPathKey).build();
     }
 
-    public static InstanceIdentifier<RenderedServicePath> rspIid(String rspName) {
+    public static InstanceIdentifier<RenderedServicePath> rspIid(RspName rspName) {
 
         RenderedServicePathKey rspKey = new RenderedServicePathKey(rspName);
         return InstanceIdentifier.builder(RenderedServicePaths.class)

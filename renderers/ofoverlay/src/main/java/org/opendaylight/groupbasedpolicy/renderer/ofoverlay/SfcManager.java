@@ -21,6 +21,7 @@ import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
 import org.opendaylight.sfc.provider.SfcProviderRpc;
 import org.opendaylight.sfc.provider.api.SfcProviderServiceChainAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServicePathAPI;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.SfcName;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.ReadRenderedServicePathFirstHopInputBuilder;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.ReadRenderedServicePathFirstHopOutput;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.path.first.hop.info.RenderedServicePathFirstHop;
@@ -368,8 +369,8 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
             if (pv == null) return;
 
             LOG.trace("Invoking RPC for chain {}", pv.getStringValue());
-            String chainName=pv.getStringValue();
-            ServiceFunctionChain chain = SfcProviderServiceChainAPI.readServiceFunctionChain(pv.getStringValue());
+            SfcName chainName=new SfcName(pv.getStringValue());
+            ServiceFunctionChain chain = SfcProviderServiceChainAPI.readServiceFunctionChain(chainName);
             ServiceFunctionPaths paths = SfcProviderServicePathAPI.readAllServiceFunctionPaths();
             for(ServiceFunctionPath path: paths.getServiceFunctionPath()) {
                 if(path.getServiceChainName().equals(chainName)) {
