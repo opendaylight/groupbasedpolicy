@@ -4,8 +4,14 @@ module fault-instance {
     prefix "fault-instance";
 
     import gbp-common {prefix gbp-common;}
-    import ietf-inet-types {prefix inet;}
-    import ietf-yang-types {prefix yang;}
+    import ietf-inet-types {
+        prefix inet;
+        revision-date 2010-09-24;
+    }
+    import ietf-yang-types {
+        prefix yang;
+        revision-date 2010-09-24;
+    }
     import fault-rule {prefix fault-rule;}
 
     revision 2015-04-28 {

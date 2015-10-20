@@ -6,7 +6,10 @@ module neutron-gbp-mapper {
 
     import gbp-common {prefix gbp-common;}
     import endpoint {prefix gbp-endpoint;}
-    import ietf-inet-types {prefix inet;}
+    import ietf-inet-types {
+        prefix inet;
+        revision-date 2010-09-24;
+    }
 
     description 
         "This module defines the mapping model between Neutron entities and GBP entities.";
