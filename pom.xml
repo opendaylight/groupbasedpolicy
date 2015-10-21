@@ -26,6 +26,7 @@
     <module>groupbasedpolicy</module>
     <module>renderers</module>
     <module>groupbasedpolicy-ofoverlay-config</module>
+    <module>groupbasedpolicy-faas-config</module>
     <module>neutron-mapper</module>
     <module>neutron-mapper-config</module>
     <module>neutron-ovsdb</module>

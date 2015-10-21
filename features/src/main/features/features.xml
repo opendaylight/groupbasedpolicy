@@ -62,6 +62,20 @@
     </feature>
 
     <!--
+        The FAAS renderer.
+
+        This renderer maps GBP service model to the common abstraction logical network models
+        of the Fabric As A Service (FAAS). In turns, FAAS maps those abstraction
+        models to the physical networks.
+    -->
+    <feature name='odl-groupbasedpolicy-faas' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Fabric As A Service Renderer'>
+        <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
+        <feature version='${openflowplugin.version}'>odl-openflowplugin-nxm-extensions</feature>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/faas-renderer/{{VERSION}}</bundle>
+        <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-faas.xml">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-faas-config/{{VERSION}}/xml/config</configfile>
+    </feature>
+
+    <!--
          The Neutron provider
     -->
     <feature name='odl-groupbasedpolicy-neutronmapper' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Neutron Mapper mapps neutron APIs to GBP APIs '>

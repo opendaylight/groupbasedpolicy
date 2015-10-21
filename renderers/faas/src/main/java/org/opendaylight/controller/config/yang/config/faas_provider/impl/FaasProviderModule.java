@@ -1,0 +1,31 @@
+package org.opendaylight.controller.config.yang.config.faas_provider.impl;
+
+import org.opendaylight.groupbasedpolicy.renderer.faas.FaasRenderer;
+
+public class FaasProviderModule extends
+        org.opendaylight.controller.config.yang.config.faas_provider.impl.AbstractFaasProviderModule {
+
+    public FaasProviderModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier,
+            org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {
+        super(identifier, dependencyResolver);
+    }
+
+    public FaasProviderModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier,
+            org.opendaylight.controller.config.api.DependencyResolver dependencyResolver,
+            org.opendaylight.controller.config.yang.config.faas_provider.impl.FaasProviderModule oldModule,
+            java.lang.AutoCloseable oldInstance) {
+        super(identifier, dependencyResolver, oldModule, oldInstance);
+    }
+
+    @Override
+    public void customValidation() {
+        // add custom validation form module attributes here.
+    }
+
+    @Override
+    public java.lang.AutoCloseable createInstance() {
+        return new FaasRenderer(getDataBrokerDependency(), getRpcRegistryDependency(),
+                getNotificationAdapterDependency());
+    }
+
+}

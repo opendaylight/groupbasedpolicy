@@ -19,6 +19,7 @@
 
   <modules>
     <module>ofoverlay</module>
+    <module>faas</module>
   </modules>
 
   <dependencies>

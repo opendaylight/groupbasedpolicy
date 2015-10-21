@@ -1,0 +1,81 @@
+/*
+ * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
+module faas {
+    yang-version 1;
+
+    namespace "urn:opendaylight:groupbasedpolicy:faas";
+    prefix "faas";
+
+    import gbp-common { prefix gbp-common; }
+    import endpoint { prefix endpoint; }
+    import resolved-policy { prefix resolved-policy; }
+
+    description
+        "This module defines the group-based policy faas renderer model.";
+
+    revision "2015-10-09" {
+        description
+                "Initial revision.";
+    }
+
+    grouping has-contract-key {
+        leaf contract-tenant-id {
+            description "Related tenant id";
+            type gbp-common:tenant-id;
+        }
+
+        leaf contract-id {
+            description "Related contract id";
+            type gbp-common:contract-id;
+        }
+    }
+
+    container mapped-service-profiles {
+        description "The list of mapped services";
+
+        config false;
+
+        list mapped-service-profile {
+            description "a service is an EPG-Contract-EPG";
+
+            key "consumer-epg-id contract-id provider-epg-id";
+
+            uses resolved-policy:has-consumer-epg-key;
+            uses has-contract-key;
+            uses resolved-policy:has-provider-epg-key;
+            leaf faas-security-rules-groups {
+                description "Faas rules generated from GBP contract";
+                type gbp-common:uuid;
+            }
+            leaf-list faas-routers {
+                description "Faas logical routers";
+                type gbp-common:uuid;
+            }
+            leaf-list faas-switches {
+                description "Faas logical switches";
+                type gbp-common:uuid;
+            }
+            leaf-list faas-ports {
+                description "Faas logical ports";
+                type gbp-common:uuid;
+            }
+            leaf-list faas-subnets {
+                description "Faas subnets";
+                type gbp-common:uuid;
+            }
+        }
+        list mapped-endpoints {
+            uses endpoint:l2-key;
+            leaf-list faas-ports {
+                description "Faas logical ports";
+                type gbp-common:uuid;
+            }
+        }
+    }
+}

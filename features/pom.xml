@@ -204,6 +204,10 @@
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>faas-renderer</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>neutron-mapper</artifactId>
     </dependency>
     <dependency>
@@ -223,6 +227,12 @@
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>groupbasedpolicy-ofoverlay-config</artifactId>
+      <type>xml</type>
+      <classifier>config</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>groupbasedpolicy-faas-config</artifactId>
       <type>xml</type>
       <classifier>config</classifier>
     </dependency>

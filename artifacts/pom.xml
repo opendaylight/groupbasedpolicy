@@ -20,6 +20,11 @@
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
+        <artifactId>faas-renderer</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
         <artifactId>neutron-mapper</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -48,6 +53,13 @@
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>groupbasedpolicy-ofoverlay-config</artifactId>
+        <version>${project.version}</version>
+        <type>xml</type>
+        <classifier>config</classifier>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>groupbasedpolicy-faas-config</artifactId>
         <version>${project.version}</version>
         <type>xml</type>
         <classifier>config</classifier>
