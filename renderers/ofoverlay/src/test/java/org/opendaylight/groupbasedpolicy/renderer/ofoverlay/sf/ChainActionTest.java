@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2015 Cisco Systems, Inc. and others. All rights reserved.
- * 
+ *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -28,13 +28,14 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.NetworkElements;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.PolicyPair;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
+import org.opendaylight.groupbasedpolicy.sf.actions.ChainActionDefinition;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.SfcName;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.SfpName;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.paths.RenderedServicePath;
@@ -120,7 +121,7 @@ public class ChainActionTest {
         List<ActionBuilder> actions = Arrays.asList(actionBuilder);
         Map<String, Object> params = new HashMap<String, Object>();
         String chainName = "chainName";
-        params.put(ChainAction.SFC_CHAIN_NAME, chainName);
+        params.put(ChainActionDefinition.SFC_CHAIN_NAME, chainName);
         Integer order = Integer.valueOf(0);
         OfWriter ofWriter = mock(OfWriter.class);
 
@@ -150,7 +151,7 @@ public class ChainActionTest {
         ActionBuilder actionBuilder = mock(ActionBuilder.class);
         List<ActionBuilder> actions = Arrays.asList(actionBuilder);
         Map<String, Object> params = new HashMap<String, Object>();
-        params.put(ChainAction.SFC_CHAIN_NAME, null);
+        params.put(ChainActionDefinition.SFC_CHAIN_NAME, null);
         Integer order = Integer.valueOf(0);
         NetworkElements netElements = mock(NetworkElements.class);
         PolicyPair policyPair = mock(PolicyPair.class);
@@ -165,7 +166,7 @@ public class ChainActionTest {
         List<ActionBuilder> actions = Arrays.asList(actionBuilder);
         Map<String, Object> params = new HashMap<String, Object>();
         String chainName = "chainName";
-        params.put(ChainAction.SFC_CHAIN_NAME, chainName);
+        params.put(ChainActionDefinition.SFC_CHAIN_NAME, chainName);
         Integer order = Integer.valueOf(0);
         OfWriter ofWriter = mock(OfWriter.class);
 

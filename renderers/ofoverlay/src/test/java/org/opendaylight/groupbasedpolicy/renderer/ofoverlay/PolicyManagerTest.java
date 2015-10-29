@@ -117,15 +117,10 @@ public class PolicyManagerTest {
         WriteTransaction ctorWriteTransaction = mock(WriteTransaction.class);
         when(dataBroker.newWriteOnlyTransaction()).thenReturn(ctorWriteTransaction);
         PolicyResolver ctorPolicyResolver = mock(PolicyResolver.class);
-        doNothing().when(ctorWriteTransaction).put(any(LogicalDatastoreType.class),
-                any(InstanceIdentifier.class), any(SubjectFeatureDefinitions.class));
         PolicyManager ctorPolicyManager = new PolicyManager(dataBroker, ctorPolicyResolver,
                 switchManager, endpointManager, rpcRegistry, executor, tableOffset);
         verify(ctorPolicyResolver, atLeastOnce()).registerActionDefinitions(any(ActionDefinitionId.class),
                 any(ActionInstanceValidator.class));
-        verify(ctorWriteTransaction).put(any(LogicalDatastoreType.class),
-                any(InstanceIdentifier.class), any(SubjectFeatureDefinitions.class));
-        verify(ctorWriteTransaction).submit();
     }
 
     @SuppressWarnings("unchecked")

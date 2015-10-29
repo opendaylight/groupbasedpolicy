@@ -13,7 +13,7 @@ import java.util.List;
 import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronPortAware;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.AllowAction;
+import org.opendaylight.groupbasedpolicy.sf.actions.AllowActionDefinition;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.neutron.spi.Neutron_IPs;
@@ -41,7 +41,7 @@ public final class MappingUtils {
     public static final String NEUTRON_GROUP = "neutron_group-";
     public static final ActionInstance ACTION_ALLOW = new ActionInstanceBuilder().setName(
             new ActionName("Allow"))
-        .setActionDefinitionId(AllowAction.DEFINITION.getId())
+        .setActionDefinitionId(AllowActionDefinition.DEFINITION.getId())
         .build();
     public static final List<ActionRef> ACTION_REF_ALLOW =
             ImmutableList.of(new ActionRefBuilder().setName(ACTION_ALLOW.getName()).setOrder(0).build());

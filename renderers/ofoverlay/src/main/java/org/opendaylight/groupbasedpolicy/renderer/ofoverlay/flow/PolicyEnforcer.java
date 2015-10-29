@@ -25,12 +25,13 @@ import java.util.Set;
 
 import javax.annotation.concurrent.Immutable;
 
+import org.opendaylight.groupbasedpolicy.sf.actions.AllowActionDefinition;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Action;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.AllowAction;
+//import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.AllowAction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ClassificationResult;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Classifier;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ParamDerivator;
@@ -97,9 +98,9 @@ public class PolicyEnforcer extends FlowTable {
 
     public PolicyEnforcer(OfContext ctx, short tableId) {
         super(ctx);
-        this.TABLE_ID = tableId;
-        this.gotoEgressNatInstruction = gotoTableIns(ctx.getPolicyManager().getTABLEID_EGRESS_NAT());
-        this.gotoExternalInstruction = gotoTableIns(ctx.getPolicyManager().getTABLEID_EXTERNAL_MAPPER());
+        PolicyEnforcer.TABLE_ID = tableId;
+        PolicyEnforcer.gotoEgressNatInstruction = gotoTableIns(ctx.getPolicyManager().getTABLEID_EGRESS_NAT());
+        PolicyEnforcer.gotoExternalInstruction = gotoTableIns(ctx.getPolicyManager().getTABLEID_EXTERNAL_MAPPER());
     }
 
     @Override
@@ -451,7 +452,7 @@ public class PolicyEnforcer extends FlowTable {
                 /*
                  * Convert the GBP Action to one or more OpenFlow Actions
                  */
-                if (!(actionRefList.indexOf(actionRule) == (actionRefList.size() - 1) && action.equals(SubjectFeatures.getAction(AllowAction.DEFINITION.getId())))) {
+                if (!(actionRefList.indexOf(actionRule) == (actionRefList.size() - 1) && action.equals(SubjectFeatures.getAction(AllowActionDefinition.DEFINITION.getId())))) {
                     actionBuilderList = action.updateAction(actionBuilderList, params, actionRule.getOrder(), netElements, policyPair,
                             ofWriter, ctx, direction);
                 }

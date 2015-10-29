@@ -34,6 +34,7 @@
         <feature version='${mdsal.version}'>odl-mdsal-binding-base</feature>
         <feature version='${mdsal.model.version}'>odl-mdsal-models</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy/{{VERSION}}</bundle>
+        <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-base.xml">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy/{{VERSION}}/xml/config</configfile>
     </feature>
 
     <!--

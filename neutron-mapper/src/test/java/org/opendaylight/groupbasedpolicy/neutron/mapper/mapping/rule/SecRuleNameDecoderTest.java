@@ -4,12 +4,11 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Before;
 import org.junit.Test;
-
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronUtils;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.EtherTypeClassifier;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.IpProtoClassifier;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.L4Classifier;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.EtherTypeClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.IpProtoClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.L4ClassifierDefinition;
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClauseName;
@@ -45,9 +44,9 @@ public class SecRuleNameDecoderTest {
         secRule.setSecurityRulePortMin(8010);
         secRule.setSecurityRulePortMax(8020);
         StringBuilder frmtBuilder = new StringBuilder();
-        frmtBuilder.append(L4Classifier.DEFINITION.getName().getValue())
+        frmtBuilder.append(L4ClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_DELIMETER)
-            .append(L4Classifier.DST_PORT_RANGE_PARAM)
+            .append(L4ClassifierDefinition.DST_PORT_RANGE_PARAM)
             .append(SecRuleNameDecoder.MIN_PORT)
             .append(MappingUtils.NAME_VALUE_DELIMETER)
             .append("%d")
@@ -55,11 +54,11 @@ public class SecRuleNameDecoderTest {
             .append(MappingUtils.NAME_VALUE_DELIMETER)
             .append("%d")
             .append(MappingUtils.NAME_DOUBLE_DELIMETER)
-            .append(IpProtoClassifier.DEFINITION.getName().getValue())
+            .append(IpProtoClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_VALUE_DELIMETER)
             .append("%s")
             .append(MappingUtils.NAME_DOUBLE_DELIMETER)
-            .append(EtherTypeClassifier.DEFINITION.getName().getValue())
+            .append(EtherTypeClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_VALUE_DELIMETER)
             .append("%s");
         String frmtClsfName = String.format(frmtBuilder.toString(), 8010, 8020, secRule.getSecurityRuleProtocol(),

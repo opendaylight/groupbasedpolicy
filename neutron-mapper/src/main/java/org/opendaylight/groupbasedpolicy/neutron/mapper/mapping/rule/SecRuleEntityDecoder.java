@@ -18,8 +18,9 @@ import javax.annotation.Nullable;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.EtherTypeClassifier;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.IpProtoClassifier;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.L4Classifier;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.EtherTypeClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.IpProtoClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.L4ClassifierDefinition;
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
@@ -84,13 +85,13 @@ public class SecRuleEntityDecoder {
         Integer portMin = secRule.getSecurityRulePortMin();
         Integer portMax = secRule.getSecurityRulePortMax();
         if (portMin != null && portMax != null) {
-            classifierBuilder.setClassifierDefinitionId(L4Classifier.DEFINITION.getId());
+            classifierBuilder.setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId());
             if (portMin.equals(portMax)) {
-                params.add(new ParameterValueBuilder().setName(new ParameterName(L4Classifier.DST_PORT_PARAM))
+                params.add(new ParameterValueBuilder().setName(new ParameterName(L4ClassifierDefinition.DST_PORT_PARAM))
                     .setIntValue(portMin.longValue())
                     .build());
             } else {
-                params.add(new ParameterValueBuilder().setName(new ParameterName(L4Classifier.DST_PORT_RANGE_PARAM))
+                params.add(new ParameterValueBuilder().setName(new ParameterName(L4ClassifierDefinition.DST_PORT_RANGE_PARAM))
                     .setRangeValue(
                             new RangeValueBuilder().setMin(portMin.longValue()).setMax(portMax.longValue()).build())
                     .build());
@@ -99,18 +100,18 @@ public class SecRuleEntityDecoder {
         Long protocol = getProtocol(secRule);
         if (protocol != null) {
             if (classifierBuilder.getClassifierDefinitionId() == null) {
-                classifierBuilder.setClassifierDefinitionId(IpProtoClassifier.DEFINITION.getId());
+                classifierBuilder.setClassifierDefinitionId(IpProtoClassifierDefinition.DEFINITION.getId());
             }
-            params.add(new ParameterValueBuilder().setName(new ParameterName(IpProtoClassifier.PROTO_PARAM))
+            params.add(new ParameterValueBuilder().setName(new ParameterName(IpProtoClassifierDefinition.PROTO_PARAM))
                 .setIntValue(protocol)
                 .build());
         }
         Long ethertype = getEtherType(secRule);
         if (ethertype != null) {
             if (classifierBuilder.getClassifierDefinitionId() == null) {
-                classifierBuilder.setClassifierDefinitionId(EtherTypeClassifier.DEFINITION.getId());
+                classifierBuilder.setClassifierDefinitionId(EtherTypeClassifierDefinition.DEFINITION.getId());
             }
-            params.add(new ParameterValueBuilder().setName(new ParameterName(EtherTypeClassifier.ETHERTYPE_PARAM))
+            params.add(new ParameterValueBuilder().setName(new ParameterName(EtherTypeClassifierDefinition.ETHERTYPE_PARAM))
                 .setIntValue(ethertype)
                 .build());
         }
@@ -214,8 +215,8 @@ public class SecRuleEntityDecoder {
     /**
      * @param secRule
      * @return {@code null} if {@link NeutronSecurityRule#getSecurityRuleEthertype()} is null or
-     *         empty; value of {@link EtherTypeClassifier#IPv4_VALUE} or
-     *         {@link EtherTypeClassifier#IPv6_VALUE}
+     *         empty; value of {@link EtherTypeClassifierDefinition#IPv4_VALUE} or
+     *         {@link EtherTypeClassifierDefinition#IPv6_VALUE}
      * @throws IllegalArgumentException if return value of
      *         {@link NeutronSecurityRule#getSecurityRuleEthertype()} is not empty/null and is other
      *         than "IPv4" or "IPv6"
@@ -226,10 +227,10 @@ public class SecRuleEntityDecoder {
             return null;
         }
         if (NeutronUtils.IPv4.equals(ethertype)) {
-            return EtherTypeClassifier.IPv4_VALUE;
+            return EtherTypeClassifierDefinition.IPv4_VALUE;
         }
         if (NeutronUtils.IPv6.equals(ethertype)) {
-            return EtherTypeClassifier.IPv6_VALUE;
+            return EtherTypeClassifierDefinition.IPv6_VALUE;
         }
         throw new IllegalArgumentException("Ethertype " + ethertype + " is not supported.");
     }
@@ -248,15 +249,14 @@ public class SecRuleEntityDecoder {
             return null;
         }
         if (NeutronUtils.TCP.equals(protocol)) {
-            return IpProtoClassifier.TCP_VALUE;
+            return IpProtoClassifierDefinition.TCP_VALUE;
         }
         if (NeutronUtils.UDP.equals(protocol)) {
-            return IpProtoClassifier.UDP_VALUE;
+            return IpProtoClassifierDefinition.UDP_VALUE;
         }
         if (NeutronUtils.ICMP.equals(protocol)) {
-            return IpProtoClassifier.ICMP_VALUE;
+            return IpProtoClassifierDefinition.ICMP_VALUE;
         }
         throw new IllegalArgumentException("Protocol " + protocol + " is not supported.");
     }
-
 }

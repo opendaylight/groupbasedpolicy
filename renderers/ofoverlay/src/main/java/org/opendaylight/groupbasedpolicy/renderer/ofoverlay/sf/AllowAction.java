@@ -13,46 +13,34 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import java.util.List;
 import java.util.Map;
 
+import org.opendaylight.groupbasedpolicy.sf.actions.AllowActionDefinition;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.NetworkElements;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.PolicyPair;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ActionDefinition;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ActionDefinitionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
-
 
 /**
  * Allow action
  */
 public class AllowAction extends Action {
 
-    protected static final ActionDefinitionId ID = new ActionDefinitionId("f942e8fd-e957-42b7-bd18-f73d11266d17");
-    /**
-     * Access control - allow action-definition
-     */
-    public static final ActionDefinition DEFINITION = new ActionDefinitionBuilder().setId(ID)
-        .setName(new ActionName("allow"))
-        .setDescription(new Description("Allow the specified traffic to pass"))
-        .build();
-
     // How allow is implemented in the PolicyEnforcer table
     private final org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action allow = nxOutputRegAction(NxmNxReg7.class);
 
     @Override
     public ActionDefinitionId getId() {
-        return ID;
+        return AllowActionDefinition.ID;
     }
 
     @Override
     public ActionDefinition getActionDef() {
-        return DEFINITION;
+        return AllowActionDefinition.DEFINITION;
     }
 
     @Override
@@ -79,5 +67,4 @@ public class AllowAction extends Action {
     public boolean isValid(ActionInstance actionInstance) {
         return true;
     }
-
 }

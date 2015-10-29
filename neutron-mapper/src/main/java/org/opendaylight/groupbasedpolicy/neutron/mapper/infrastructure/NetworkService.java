@@ -20,8 +20,10 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.EtherTypeClassifier;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.IpProtoClassifier;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.L4Classifier;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.EtherTypeClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.IpProtoClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.L4ClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
@@ -425,32 +427,32 @@ public class NetworkService {
     // ###################### DHCP
     private static ClassifierInstance createDhcpIpv4ClientServer() {
         return new ClassifierInstanceBuilder().setName(DHCP_IPV4_CLIENT_SERVER_NAME)
-            .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
-            .setParameterValue(createParams(EtherTypeClassifier.IPv4_VALUE, IpProtoClassifier.UDP_VALUE,
+            .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
+            .setParameterValue(createParams(EtherTypeClassifierDefinition.IPv4_VALUE, IpProtoClassifierDefinition.UDP_VALUE,
                     DHCP_IPV4_CLIENT_PORT, DHCP_IPV4_SERVER_PORT))
             .build();
     }
 
     private static ClassifierInstance createDhcpIpv4ServerClient() {
         return new ClassifierInstanceBuilder().setName(DHCP_IPV4_SERVER_CLIENT_NAME)
-            .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
-            .setParameterValue(createParams(EtherTypeClassifier.IPv4_VALUE, IpProtoClassifier.UDP_VALUE,
+            .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
+            .setParameterValue(createParams(EtherTypeClassifierDefinition.IPv4_VALUE, IpProtoClassifierDefinition.UDP_VALUE,
                     DHCP_IPV4_SERVER_PORT, DHCP_IPV4_CLIENT_PORT))
             .build();
     }
 
     private static ClassifierInstance createDhcpIpv6ClientServer() {
         return new ClassifierInstanceBuilder().setName(DHCP_IPV6_CLIENT_SERVER_NAME)
-            .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
-            .setParameterValue(createParams(EtherTypeClassifier.IPv6_VALUE, IpProtoClassifier.UDP_VALUE,
+            .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
+            .setParameterValue(createParams(EtherTypeClassifierDefinition.IPv6_VALUE, IpProtoClassifierDefinition.UDP_VALUE,
                     DHCP_IPV6_CLIENT_PORT, DHCP_IPV6_SERVER_PORT))
             .build();
     }
 
     private static ClassifierInstance createDhcpIpv6ServerClient() {
         return new ClassifierInstanceBuilder().setName(DHCP_IPV6_SERVER_CLIENT_NAME)
-            .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
-            .setParameterValue(createParams(EtherTypeClassifier.IPv6_VALUE, IpProtoClassifier.UDP_VALUE,
+            .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
+            .setParameterValue(createParams(EtherTypeClassifierDefinition.IPv6_VALUE, IpProtoClassifierDefinition.UDP_VALUE,
                     DHCP_IPV6_SERVER_PORT, DHCP_IPV6_CLIENT_PORT))
             .build();
     }
@@ -458,114 +460,114 @@ public class NetworkService {
     // ###################### DNS UDP
     private static ClassifierInstance createDnsUdpIpv4ClientServer() {
         return new ClassifierInstanceBuilder().setName(DNS_UDP_IPV4_CLIENT_SERVER_NAME)
-            .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
+            .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
             .setParameterValue(
-                    createParams(EtherTypeClassifier.IPv4_VALUE, IpProtoClassifier.UDP_VALUE, null, DNS_SERVER_PORT))
+                    createParams(EtherTypeClassifierDefinition.IPv4_VALUE, IpProtoClassifierDefinition.UDP_VALUE, null, DNS_SERVER_PORT))
             .build();
     }
 
     private static ClassifierInstance createDnsUdpIpv4ServerClient() {
         return new ClassifierInstanceBuilder().setName(DNS_UDP_IPV4_SERVER_CLIENT_NAME)
-            .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
+            .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
             .setParameterValue(
-                    createParams(EtherTypeClassifier.IPv4_VALUE, IpProtoClassifier.UDP_VALUE, DNS_SERVER_PORT, null))
+                    createParams(EtherTypeClassifierDefinition.IPv4_VALUE, IpProtoClassifierDefinition.UDP_VALUE, DNS_SERVER_PORT, null))
             .build();
     }
 
     private static ClassifierInstance createDnsUdpIpv6ClientServer() {
         return new ClassifierInstanceBuilder().setName(DNS_UDP_IPV6_CLIENT_SERVER_NAME)
-            .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
+            .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
             .setParameterValue(
-                    createParams(EtherTypeClassifier.IPv6_VALUE, IpProtoClassifier.UDP_VALUE, null, DNS_SERVER_PORT))
+                    createParams(EtherTypeClassifierDefinition.IPv6_VALUE, IpProtoClassifierDefinition.UDP_VALUE, null, DNS_SERVER_PORT))
             .build();
     }
 
     private static ClassifierInstance createDnsUdpIpv6ServerClient() {
         return new ClassifierInstanceBuilder().setName(DNS_UDP_IPV6_SERVER_CLIENT_NAME)
-            .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
+            .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
             .setParameterValue(
-                    createParams(EtherTypeClassifier.IPv6_VALUE, IpProtoClassifier.UDP_VALUE, DNS_SERVER_PORT, null))
+                    createParams(EtherTypeClassifierDefinition.IPv6_VALUE, IpProtoClassifierDefinition.UDP_VALUE, DNS_SERVER_PORT, null))
             .build();
     }
 
     // ###################### DNS TCP
     private static ClassifierInstance createDnsTcpIpv4ClientServer() {
         return new ClassifierInstanceBuilder().setName(DNS_TCP_IPV4_CLIENT_SERVER_NAME)
-            .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
+            .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
             .setParameterValue(
-                    createParams(EtherTypeClassifier.IPv4_VALUE, IpProtoClassifier.TCP_VALUE, null, DNS_SERVER_PORT))
+                    createParams(EtherTypeClassifierDefinition.IPv4_VALUE, IpProtoClassifierDefinition.TCP_VALUE, null, DNS_SERVER_PORT))
             .build();
     }
 
     private static ClassifierInstance createDnsTcpIpv4ServerClient() {
         return new ClassifierInstanceBuilder().setName(DNS_TCP_IPV4_SERVER_CLIENT_NAME)
-            .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
+            .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
             .setParameterValue(
-                    createParams(EtherTypeClassifier.IPv4_VALUE, IpProtoClassifier.TCP_VALUE, DNS_SERVER_PORT, null))
+                    createParams(EtherTypeClassifierDefinition.IPv4_VALUE, IpProtoClassifierDefinition.TCP_VALUE, DNS_SERVER_PORT, null))
             .build();
     }
 
     private static ClassifierInstance createDnsTcpIpv6ClientServer() {
         return new ClassifierInstanceBuilder().setName(DNS_TCP_IPV6_CLIENT_SERVER_NAME)
-            .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
+            .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
             .setParameterValue(
-                    createParams(EtherTypeClassifier.IPv6_VALUE, IpProtoClassifier.TCP_VALUE, null, DNS_SERVER_PORT))
+                    createParams(EtherTypeClassifierDefinition.IPv6_VALUE, IpProtoClassifierDefinition.TCP_VALUE, null, DNS_SERVER_PORT))
             .build();
     }
 
     private static ClassifierInstance createDnsTcpIpv6ServerClient() {
         return new ClassifierInstanceBuilder().setName(DNS_TCP_IPV6_SERVER_CLIENT_NAME)
-            .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
+            .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
             .setParameterValue(
-                    createParams(EtherTypeClassifier.IPv6_VALUE, IpProtoClassifier.TCP_VALUE, DNS_SERVER_PORT, null))
+                    createParams(EtherTypeClassifierDefinition.IPv6_VALUE, IpProtoClassifierDefinition.TCP_VALUE, DNS_SERVER_PORT, null))
             .build();
     }
 
     // ###################### SSH TCP
     private static ClassifierInstance createSshTcpIpv4ClientServer() {
         return new ClassifierInstanceBuilder().setName(SSH_IPV4_CLIENT_TO_SERVER_NAME)
-            .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
+            .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
             .setParameterValue(
-                    createParams(EtherTypeClassifier.IPv4_VALUE, IpProtoClassifier.TCP_VALUE, SSH_TCP_PORT, null))
+                    createParams(EtherTypeClassifierDefinition.IPv4_VALUE, IpProtoClassifierDefinition.TCP_VALUE, SSH_TCP_PORT, null))
             .build();
     }
 
     private static ClassifierInstance createSshTcpIpv4ServerClient() {
         return new ClassifierInstanceBuilder().setName(SSH_IPV4_SERVER_TO_CLIENT_NAME)
-            .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
+            .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
             .setParameterValue(
-                    createParams(EtherTypeClassifier.IPv4_VALUE, IpProtoClassifier.TCP_VALUE, null, SSH_TCP_PORT))
+                    createParams(EtherTypeClassifierDefinition.IPv4_VALUE, IpProtoClassifierDefinition.TCP_VALUE, null, SSH_TCP_PORT))
             .build();
     }
 
     private static ClassifierInstance createSshTcpIpv6ClientServer() {
         return new ClassifierInstanceBuilder().setName(SSH_IPV6_CLIENT_TO_SERVER_NAME)
-            .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
+            .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
             .setParameterValue(
-                    createParams(EtherTypeClassifier.IPv6_VALUE, IpProtoClassifier.TCP_VALUE, SSH_TCP_PORT, null))
+                    createParams(EtherTypeClassifierDefinition.IPv6_VALUE, IpProtoClassifierDefinition.TCP_VALUE, SSH_TCP_PORT, null))
             .build();
     }
 
     private static ClassifierInstance createSshTcpIpv6ServerClient() {
         return new ClassifierInstanceBuilder().setName(SSH_IPV6_SERVER_TO_CLIENT_NAME)
-            .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
+            .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
             .setParameterValue(
-                    createParams(EtherTypeClassifier.IPv6_VALUE, IpProtoClassifier.TCP_VALUE, null, SSH_TCP_PORT))
+                    createParams(EtherTypeClassifierDefinition.IPv6_VALUE, IpProtoClassifierDefinition.TCP_VALUE, null, SSH_TCP_PORT))
             .build();
     }
 
     // ###################### ICMP
     private static ClassifierInstance createIcmpIpv4() {
         return new ClassifierInstanceBuilder().setName(ICMP_IPV4_BETWEEN_SERVER_CLIENT_NAME)
-            .setClassifierDefinitionId(IpProtoClassifier.DEFINITION.getId())
-            .setParameterValue(createParams(EtherTypeClassifier.IPv4_VALUE, IpProtoClassifier.ICMP_VALUE, null, null))
+            .setClassifierDefinitionId(IpProtoClassifierDefinition.DEFINITION.getId())
+            .setParameterValue(createParams(EtherTypeClassifierDefinition.IPv4_VALUE, IpProtoClassifierDefinition.ICMP_VALUE, null, null))
             .build();
     }
 
     private static ClassifierInstance createIcmpIpv6() {
         return new ClassifierInstanceBuilder().setName(ICMP_IPV6_BETWEEN_SERVER_CLIENT_NAME)
-            .setClassifierDefinitionId(IpProtoClassifier.DEFINITION.getId())
-            .setParameterValue(createParams(EtherTypeClassifier.IPv6_VALUE, IpProtoClassifier.ICMP_VALUE, null, null))
+            .setClassifierDefinitionId(IpProtoClassifierDefinition.DEFINITION.getId())
+            .setParameterValue(createParams(EtherTypeClassifierDefinition.IPv6_VALUE, IpProtoClassifierDefinition.ICMP_VALUE, null, null))
             .build();
     }
 
@@ -573,22 +575,21 @@ public class NetworkService {
             @Nullable Long dstPort) {
         List<ParameterValue> params = new ArrayList<>();
         if (srcPort != null) {
-            params.add(new ParameterValueBuilder().setName(new ParameterName(L4Classifier.SRC_PORT_PARAM))
+            params.add(new ParameterValueBuilder().setName(new ParameterName(L4ClassifierDefinition.SRC_PORT_PARAM))
                 .setIntValue(srcPort)
                 .build());
         }
         if (dstPort != null) {
-            params.add(new ParameterValueBuilder().setName(new ParameterName(L4Classifier.DST_PORT_PARAM))
+            params.add(new ParameterValueBuilder().setName(new ParameterName(L4ClassifierDefinition.DST_PORT_PARAM))
                 .setIntValue(dstPort)
                 .build());
         }
-        params.add(new ParameterValueBuilder().setName(new ParameterName(IpProtoClassifier.PROTO_PARAM))
+        params.add(new ParameterValueBuilder().setName(new ParameterName(IpProtoClassifierDefinition.PROTO_PARAM))
             .setIntValue(proto)
             .build());
-        params.add(new ParameterValueBuilder().setName(new ParameterName(EtherTypeClassifier.ETHERTYPE_PARAM))
+        params.add(new ParameterValueBuilder().setName(new ParameterName(EtherTypeClassifierDefinition.ETHERTYPE_PARAM))
             .setIntValue(etherType)
             .build());
         return params;
     }
-
 }

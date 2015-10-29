@@ -9,9 +9,9 @@
 package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule;
 
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.EtherTypeClassifier;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.IpProtoClassifier;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.L4Classifier;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.EtherTypeClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.IpProtoClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.L4ClassifierDefinition;
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClauseName;
@@ -57,15 +57,15 @@ public class SecRuleNameDecoder {
         Integer portMin = secRule.getSecurityRulePortMin();
         Integer portMax = secRule.getSecurityRulePortMax();
         if (portMin != null && portMax != null) {
-            keyBuilder.append(L4Classifier.DEFINITION.getName().getValue());
+            keyBuilder.append(L4ClassifierDefinition.DEFINITION.getName().getValue());
             if (portMin.equals(portMax)) {
                 keyBuilder.append(MappingUtils.NAME_DELIMETER)
-                    .append(L4Classifier.DST_PORT_PARAM)
+                    .append(L4ClassifierDefinition.DST_PORT_PARAM)
                     .append(MappingUtils.NAME_VALUE_DELIMETER)
                     .append(portMin.longValue());
             } else {
                 keyBuilder.append(MappingUtils.NAME_DELIMETER)
-                    .append(L4Classifier.DST_PORT_RANGE_PARAM)
+                    .append(L4ClassifierDefinition.DST_PORT_RANGE_PARAM)
                     .append(MIN_PORT)
                     .append(MappingUtils.NAME_VALUE_DELIMETER)
                     .append(portMin.longValue())
@@ -79,7 +79,7 @@ public class SecRuleNameDecoder {
             if (keyBuilder.length() > 0) {
                 keyBuilder.append(MappingUtils.NAME_DOUBLE_DELIMETER);
             }
-            keyBuilder.append(IpProtoClassifier.DEFINITION.getName().getValue())
+            keyBuilder.append(IpProtoClassifierDefinition.DEFINITION.getName().getValue())
                 .append(MappingUtils.NAME_VALUE_DELIMETER)
                 .append(protocol);
         }
@@ -88,7 +88,7 @@ public class SecRuleNameDecoder {
             if (keyBuilder.length() > 0) {
                 keyBuilder.append(MappingUtils.NAME_DOUBLE_DELIMETER);
             }
-            keyBuilder.append(EtherTypeClassifier.DEFINITION.getName().getValue())
+            keyBuilder.append(EtherTypeClassifierDefinition.DEFINITION.getName().getValue())
                 .append(MappingUtils.NAME_VALUE_DELIMETER)
                 .append(ethertype);
         }

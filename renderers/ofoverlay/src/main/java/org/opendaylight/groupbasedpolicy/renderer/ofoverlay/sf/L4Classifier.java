@@ -14,16 +14,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.opendaylight.groupbasedpolicy.sf.classifiers.IpProtoClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.L4ClassifierDefinition;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.PortNumber;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definition.Parameter.Type;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definition.ParameterBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinition;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinitionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.parameter.value.RangeValue;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer4Match;
@@ -34,58 +30,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._4.match.UdpMatch;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._4.match.UdpMatchBuilder;
 
-import com.google.common.collect.ImmutableList;
-
 /**
  * Match against TCP or UDP, and source and/or destination ports
  */
 public class L4Classifier extends Classifier {
-
-    /**
-     * Source port parameter name
-     */
-    public static final String SRC_PORT_PARAM = "sourceport";
-    /**
-     * Source port range parameter name
-     */
-    public static final String SRC_PORT_RANGE_PARAM = "sourceport_range";
-    /**
-     * Destination port parameter name
-     */
-    public static final String DST_PORT_PARAM = "destport";
-    /**
-     * Destination port range parameter name
-     */
-    public static final String DST_PORT_RANGE_PARAM = "destport_range";
-
-    protected static final ClassifierDefinitionId ID = new ClassifierDefinitionId(
-            "4250ab32-e8b8-445a-aebb-e1bd2cdd291f");
-    /**
-     * Layer 4 classifier-definition
-     */
-    public static final ClassifierDefinition DEFINITION = new ClassifierDefinitionBuilder().setId(
-            new ClassifierDefinitionId("4250ab32-e8b8-445a-aebb-e1bd2cdd291f"))
-        .setParent(IpProtoClassifier.ID)
-        .setName(new ClassifierName("l4"))
-        .setDescription(new Description("Match on the port number of UDP or TCP traffic"))
-        .setParameter(
-                ImmutableList.of(
-                        new ParameterBuilder().setName(new ParameterName(SRC_PORT_PARAM))
-                            .setDescription(new Description("The source port number to match against"))
-                            .setType(Type.Int)
-                            .build(),
-                        new ParameterBuilder().setName(new ParameterName(SRC_PORT_RANGE_PARAM))
-                            .setDescription(new Description("The source port range to match against"))
-                            .setType(Type.Range)
-                            .build(),
-                        new ParameterBuilder().setName(new ParameterName(DST_PORT_PARAM))
-                            .setDescription(new Description("The destination port number to match against"))
-                            .setType(Type.Int)
-                            .build(), new ParameterBuilder().setName(new ParameterName(DST_PORT_RANGE_PARAM))
-                            .setDescription(new Description("The destination port range to match against"))
-                            .setType(Type.Range)
-                            .build()))
-        .build();
 
     protected L4Classifier(Classifier parent) {
         super(parent);
@@ -93,20 +41,20 @@ public class L4Classifier extends Classifier {
 
     @Override
     public ClassifierDefinitionId getId() {
-        return ID;
+        return L4ClassifierDefinition.ID;
     }
 
     @Override
     public ClassifierDefinition getClassDef() {
-        return DEFINITION;
+        return L4ClassifierDefinition.DEFINITION;
     }
 
     @Override
     protected void checkPresenceOfRequiredParams(Map<String, ParameterValue> params) {
-        validatePortParam(params, SRC_PORT_PARAM, SRC_PORT_RANGE_PARAM);
-        validatePortParam(params, DST_PORT_PARAM, DST_PORT_RANGE_PARAM);
-        validateRange(params, SRC_PORT_RANGE_PARAM);
-        validateRange(params, DST_PORT_RANGE_PARAM);
+        validatePortParam(params, L4ClassifierDefinition.SRC_PORT_PARAM, L4ClassifierDefinition.SRC_PORT_RANGE_PARAM);
+        validatePortParam(params, L4ClassifierDefinition.DST_PORT_PARAM, L4ClassifierDefinition.DST_PORT_RANGE_PARAM);
+        validateRange(params, L4ClassifierDefinition.SRC_PORT_RANGE_PARAM);
+        validateRange(params, L4ClassifierDefinition.DST_PORT_RANGE_PARAM);
     }
 
     private void validatePortParam(Map<String, ParameterValue> params, String portParam, String portRangeParam) {
@@ -150,8 +98,8 @@ public class L4Classifier extends Classifier {
     public List<MatchBuilder> update(List<MatchBuilder> matches, Map<String, ParameterValue> params) {
         Set<Long> sPorts = new HashSet<>();
         Set<Long> dPorts = new HashSet<>();
-        addToPortSet(params, SRC_PORT_PARAM, SRC_PORT_RANGE_PARAM, sPorts);
-        addToPortSet(params, DST_PORT_PARAM, DST_PORT_RANGE_PARAM, dPorts);
+        addToPortSet(params, L4ClassifierDefinition.SRC_PORT_PARAM, L4ClassifierDefinition.SRC_PORT_RANGE_PARAM, sPorts);
+        addToPortSet(params, L4ClassifierDefinition.DST_PORT_PARAM, L4ClassifierDefinition.DST_PORT_RANGE_PARAM, dPorts);
         List<MatchBuilder> newMatches = new ArrayList<>();
         for (MatchBuilder matchBuilder : matches) {
             Layer4Match l4Match = matchBuilder.getLayer4Match();
@@ -178,16 +126,16 @@ public class L4Classifier extends Classifier {
     private Layer4Match resolveL4Match(Map<String, ParameterValue> params) {
         Long ipProto = IpProtoClassifier.getIpProtoValue(params);
         if (ipProto == null) {
-            throw new IllegalArgumentException("Parameter " + IpProtoClassifier.PROTO_PARAM + " is missing.");
+            throw new IllegalArgumentException("Parameter " + IpProtoClassifierDefinition.PROTO_PARAM + " is missing.");
         }
-        if (IpProtoClassifier.UDP_VALUE.equals(ipProto)) {
+        if (IpProtoClassifierDefinition.UDP_VALUE.equals(ipProto)) {
             return new UdpMatchBuilder().build();
-        } else if (IpProtoClassifier.TCP_VALUE.equals(ipProto)) {
+        } else if (IpProtoClassifierDefinition.TCP_VALUE.equals(ipProto)) {
             return new TcpMatchBuilder().build();
-        } else if (IpProtoClassifier.SCTP_VALUE.equals(ipProto)) {
+        } else if (IpProtoClassifierDefinition.SCTP_VALUE.equals(ipProto)) {
             return new SctpMatchBuilder().build();
         }
-        throw new IllegalArgumentException("Parameter " + IpProtoClassifier.PROTO_PARAM + ": value " + ipProto
+        throw new IllegalArgumentException("Parameter " + IpProtoClassifierDefinition.PROTO_PARAM + ": value " + ipProto
                 + " is not supported.");
     }
 
@@ -314,11 +262,11 @@ public class L4Classifier extends Classifier {
             try {
                 proto = Long.valueOf(match.getIpMatch().getIpProtocol().longValue());
             } catch (NullPointerException e) {
-                throw new IllegalArgumentException("Parameter " + IpProtoClassifier.PROTO_PARAM + " is missing.");
+                throw new IllegalArgumentException("Parameter " + IpProtoClassifierDefinition.PROTO_PARAM + " is missing.");
             }
-            if (!IpProtoClassifier.TCP_VALUE.equals(proto) && !IpProtoClassifier.UDP_VALUE.equals(proto)
-                    && !IpProtoClassifier.SCTP_VALUE.equals(proto)) {
-                throw new IllegalArgumentException("Value of parameter " + IpProtoClassifier.PROTO_PARAM
+            if (!IpProtoClassifierDefinition.TCP_VALUE.equals(proto) && !IpProtoClassifierDefinition.UDP_VALUE.equals(proto)
+                    && !IpProtoClassifierDefinition.SCTP_VALUE.equals(proto)) {
+                throw new IllegalArgumentException("Value of parameter " + IpProtoClassifierDefinition.PROTO_PARAM
                         + " is not supported.");
             }
         }

@@ -11,13 +11,11 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.SecRuleEntityDecoder;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.SecRuleNameDecoder;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronUtils;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.EtherTypeClassifier;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.IpProtoClassifier;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.L4Classifier;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.EtherTypeClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.IpProtoClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.L4ClassifierDefinition;
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
@@ -280,9 +278,9 @@ public class SecRuleEntityDecoderTest {
     public final void testGetClassifierInstance_onlyEthertype() {
         secRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
         ClassifierInstance ci = SecRuleEntityDecoder.getClassifierInstance(secRule);
-        Assert.assertEquals(EtherTypeClassifier.DEFINITION.getId(), ci.getClassifierDefinitionId());
+        Assert.assertEquals(EtherTypeClassifierDefinition.DEFINITION.getId(), ci.getClassifierDefinitionId());
         // name is ether_type_IPv4
-        String expectedName = new StringBuilder().append(EtherTypeClassifier.DEFINITION.getName().getValue())
+        String expectedName = new StringBuilder().append(EtherTypeClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_VALUE_DELIMETER)
             .append(NeutronUtils.IPv4)
             .toString();
@@ -292,8 +290,8 @@ public class SecRuleEntityDecoderTest {
         Assert.assertNotNull(parameterValues);
         Assert.assertEquals(1, parameterValues.size());
         ParameterValue parameter = parameterValues.get(0);
-        Assert.assertEquals(EtherTypeClassifier.ETHERTYPE_PARAM, parameter.getName().getValue());
-        assertClassifierParameterValue(parameter, EtherTypeClassifier.IPv4_VALUE, null, null);
+        Assert.assertEquals(EtherTypeClassifierDefinition.ETHERTYPE_PARAM, parameter.getName().getValue());
+        assertClassifierParameterValue(parameter, EtherTypeClassifierDefinition.IPv4_VALUE, null, null);
     }
 
     @Test
@@ -301,13 +299,13 @@ public class SecRuleEntityDecoderTest {
         secRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
         secRule.setSecurityRuleProtocol(NeutronUtils.TCP);
         ClassifierInstance ci = SecRuleEntityDecoder.getClassifierInstance(secRule);
-        Assert.assertEquals(IpProtoClassifier.DEFINITION.getId(), ci.getClassifierDefinitionId());
+        Assert.assertEquals(IpProtoClassifierDefinition.DEFINITION.getId(), ci.getClassifierDefinitionId());
         // name is ip_proto_tcp__ether_type_IPv4
-        String expectedName = new StringBuilder().append(IpProtoClassifier.DEFINITION.getName().getValue())
+        String expectedName = new StringBuilder().append(IpProtoClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_VALUE_DELIMETER)
             .append(NeutronUtils.TCP)
             .append(MappingUtils.NAME_DOUBLE_DELIMETER)
-            .append(EtherTypeClassifier.DEFINITION.getName().getValue())
+            .append(EtherTypeClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_VALUE_DELIMETER)
             .append(NeutronUtils.IPv4)
             .toString();
@@ -320,12 +318,12 @@ public class SecRuleEntityDecoderTest {
         for (ParameterValue parameter : parameterValues) {
             ParameterName parameterName = parameter.getName();
             Assert.assertNotNull(parameterName);
-            if (EtherTypeClassifier.ETHERTYPE_PARAM.equals(parameterName.getValue())) {
+            if (EtherTypeClassifierDefinition.ETHERTYPE_PARAM.equals(parameterName.getValue())) {
                 containsEthertypeParam = true;
-                assertClassifierParameterValue(parameter, EtherTypeClassifier.IPv4_VALUE, null, null);
-            } else if (IpProtoClassifier.PROTO_PARAM.equals(parameterName.getValue())) {
+                assertClassifierParameterValue(parameter, EtherTypeClassifierDefinition.IPv4_VALUE, null, null);
+            } else if (IpProtoClassifierDefinition.PROTO_PARAM.equals(parameterName.getValue())) {
                 containsProtoParam = true;
-                assertClassifierParameterValue(parameter, IpProtoClassifier.TCP_VALUE, null, null);
+                assertClassifierParameterValue(parameter, IpProtoClassifierDefinition.TCP_VALUE, null, null);
             } else {
                 fail("This parameter is not expected: " + parameter);
             }
@@ -341,19 +339,19 @@ public class SecRuleEntityDecoderTest {
         secRule.setSecurityRulePortMin(5);
         secRule.setSecurityRulePortMax(5);
         ClassifierInstance ci = SecRuleEntityDecoder.getClassifierInstance(secRule);
-        Assert.assertEquals(L4Classifier.DEFINITION.getId(), ci.getClassifierDefinitionId());
+        Assert.assertEquals(L4ClassifierDefinition.DEFINITION.getId(), ci.getClassifierDefinitionId());
         // name is l4_destport-5__ip_proto-tcp__ether_type-IPv4
-        String expectedName = new StringBuilder().append(L4Classifier.DEFINITION.getName().getValue())
+        String expectedName = new StringBuilder().append(L4ClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_DELIMETER)
-            .append(L4Classifier.DST_PORT_PARAM)
+            .append(L4ClassifierDefinition.DST_PORT_PARAM)
             .append(MappingUtils.NAME_VALUE_DELIMETER)
             .append(secRule.getSecurityRulePortMin())
             .append(MappingUtils.NAME_DOUBLE_DELIMETER)
-            .append(IpProtoClassifier.DEFINITION.getName().getValue())
+            .append(IpProtoClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_VALUE_DELIMETER)
             .append(NeutronUtils.TCP)
             .append(MappingUtils.NAME_DOUBLE_DELIMETER)
-            .append(EtherTypeClassifier.DEFINITION.getName().getValue())
+            .append(EtherTypeClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_VALUE_DELIMETER)
             .append(NeutronUtils.IPv4)
             .toString();
@@ -367,13 +365,13 @@ public class SecRuleEntityDecoderTest {
         for (ParameterValue parameter : parameterValues) {
             ParameterName parameterName = parameter.getName();
             Assert.assertNotNull(parameterName);
-            if (EtherTypeClassifier.ETHERTYPE_PARAM.equals(parameterName.getValue())) {
+            if (EtherTypeClassifierDefinition.ETHERTYPE_PARAM.equals(parameterName.getValue())) {
                 containsEthertypeParam = true;
-                assertClassifierParameterValue(parameter, EtherTypeClassifier.IPv4_VALUE, null, null);
-            } else if (IpProtoClassifier.PROTO_PARAM.equals(parameterName.getValue())) {
+                assertClassifierParameterValue(parameter, EtherTypeClassifierDefinition.IPv4_VALUE, null, null);
+            } else if (IpProtoClassifierDefinition.PROTO_PARAM.equals(parameterName.getValue())) {
                 containsProtoParam = true;
-                assertClassifierParameterValue(parameter, IpProtoClassifier.TCP_VALUE, null, null);
-            } else if (L4Classifier.DST_PORT_PARAM.equals(parameterName.getValue())) {
+                assertClassifierParameterValue(parameter, IpProtoClassifierDefinition.TCP_VALUE, null, null);
+            } else if (L4ClassifierDefinition.DST_PORT_PARAM.equals(parameterName.getValue())) {
                 containsDstPortParam = true;
                 assertClassifierParameterValue(parameter, 5L, null, null);
             } else {
@@ -399,11 +397,11 @@ public class SecRuleEntityDecoderTest {
         secRule.setSecurityRulePortMin(5);
         secRule.setSecurityRulePortMax(10);
         ClassifierInstance ci = SecRuleEntityDecoder.getClassifierInstance(secRule);
-        Assert.assertEquals(L4Classifier.DEFINITION.getId(), ci.getClassifierDefinitionId());
+        Assert.assertEquals(L4ClassifierDefinition.DEFINITION.getId(), ci.getClassifierDefinitionId());
         // name is l4_destport_range_min-5_max-10__ip_proto-tcp__ether_type-IPv4
-        String expectedName = new StringBuilder().append(L4Classifier.DEFINITION.getName().getValue())
+        String expectedName = new StringBuilder().append(L4ClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_DELIMETER)
-            .append(L4Classifier.DST_PORT_RANGE_PARAM)
+            .append(L4ClassifierDefinition.DST_PORT_RANGE_PARAM)
             .append(SecRuleNameDecoder.MIN_PORT)
             .append(MappingUtils.NAME_VALUE_DELIMETER)
             .append(secRule.getSecurityRulePortMin())
@@ -411,11 +409,11 @@ public class SecRuleEntityDecoderTest {
             .append(MappingUtils.NAME_VALUE_DELIMETER)
             .append(secRule.getSecurityRulePortMax())
             .append(MappingUtils.NAME_DOUBLE_DELIMETER)
-            .append(IpProtoClassifier.DEFINITION.getName().getValue())
+            .append(IpProtoClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_VALUE_DELIMETER)
             .append(NeutronUtils.TCP)
             .append(MappingUtils.NAME_DOUBLE_DELIMETER)
-            .append(EtherTypeClassifier.DEFINITION.getName().getValue())
+            .append(EtherTypeClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_VALUE_DELIMETER)
             .append(NeutronUtils.IPv4)
             .toString();
@@ -652,13 +650,13 @@ public class SecRuleEntityDecoderTest {
     @Test
     public final void testGetEtherType_ethertypeIPv4() {
         secRule.setSecurityRuleEthertype("IPv4");
-        Assert.assertEquals(EtherTypeClassifier.IPv4_VALUE, SecRuleEntityDecoder.getEtherType(secRule));
+        Assert.assertEquals(EtherTypeClassifierDefinition.IPv4_VALUE, SecRuleEntityDecoder.getEtherType(secRule));
     }
 
     @Test
     public final void testGetEtherType_ethertypeIPv6() {
         secRule.setSecurityRuleEthertype("IPv6");
-        Assert.assertEquals(EtherTypeClassifier.IPv6_VALUE, SecRuleEntityDecoder.getEtherType(secRule));
+        Assert.assertEquals(EtherTypeClassifierDefinition.IPv6_VALUE, SecRuleEntityDecoder.getEtherType(secRule));
     }
 
     @Test
@@ -683,19 +681,19 @@ public class SecRuleEntityDecoderTest {
     @Test
     public final void testGetProtocol_protoTcp() {
         secRule.setSecurityRuleProtocol("tcp");
-        Assert.assertEquals(IpProtoClassifier.TCP_VALUE, SecRuleEntityDecoder.getProtocol(secRule));
+        Assert.assertEquals(IpProtoClassifierDefinition.TCP_VALUE, SecRuleEntityDecoder.getProtocol(secRule));
     }
 
     @Test
     public final void testGetProtocol_protoUdp() {
         secRule.setSecurityRuleProtocol("udp");
-        Assert.assertEquals(IpProtoClassifier.UDP_VALUE, SecRuleEntityDecoder.getProtocol(secRule));
+        Assert.assertEquals(IpProtoClassifierDefinition.UDP_VALUE, SecRuleEntityDecoder.getProtocol(secRule));
     }
 
     @Test
     public final void testGetProtocol_protoIcmp() {
         secRule.setSecurityRuleProtocol("icmp");
-        Assert.assertEquals(IpProtoClassifier.ICMP_VALUE, SecRuleEntityDecoder.getProtocol(secRule));
+        Assert.assertEquals(IpProtoClassifierDefinition.ICMP_VALUE, SecRuleEntityDecoder.getProtocol(secRule));
     }
 
     @Test

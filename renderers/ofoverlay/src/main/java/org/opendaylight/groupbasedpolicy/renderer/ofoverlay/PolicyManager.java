@@ -122,15 +122,16 @@ public class PolicyManager
                     + "Max. table ID would be out of range. Check config-subsystem.\n{}", e);
         }
 
-        if (dataBroker != null) {
-            WriteTransaction t = dataBroker.newWriteOnlyTransaction();
-            t.put(LogicalDatastoreType.OPERATIONAL,
-                  InstanceIdentifier
-                      .builder(SubjectFeatureDefinitions.class)
-                      .build(),
-                  SubjectFeatures.OF_OVERLAY_FEATURES);
-            t.submit();
-        }
+        // TODO this will be writing to capabilities in DS
+//        if (dataBroker != null) {
+//            WriteTransaction t = dataBroker.newWriteOnlyTransaction();
+//            t.put(LogicalDatastoreType.OPERATIONAL,
+//                  InstanceIdentifier
+//                      .builder(SubjectFeatureDefinitions.class)
+//                      .build(),
+//                  SubjectFeatures.OF_OVERLAY_FEATURES);
+//            t.submit();
+//        }
 
         for(Entry<ActionDefinitionId, Action> entry : SubjectFeatures.getActions().entrySet()) {
             policyResolver.registerActionDefinitions(entry.getKey(), entry.getValue());

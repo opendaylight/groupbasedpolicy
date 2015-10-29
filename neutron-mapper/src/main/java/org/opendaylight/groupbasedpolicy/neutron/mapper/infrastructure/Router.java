@@ -19,7 +19,7 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.EtherTypeClassifier;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.EtherTypeClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
@@ -234,24 +234,23 @@ public class Router {
 
     private static ClassifierInstance createIpv4() {
         return new ClassifierInstanceBuilder().setName(IPV4_NAME)
-            .setClassifierDefinitionId(EtherTypeClassifier.DEFINITION.getId())
-            .setParameterValue(createParams(EtherTypeClassifier.IPv4_VALUE))
+            .setClassifierDefinitionId(EtherTypeClassifierDefinition.DEFINITION.getId())
+            .setParameterValue(createParams(EtherTypeClassifierDefinition.IPv4_VALUE))
             .build();
     }
 
     private static ClassifierInstance createIpv6() {
         return new ClassifierInstanceBuilder().setName(IPV6_NAME)
-            .setClassifierDefinitionId(EtherTypeClassifier.DEFINITION.getId())
-            .setParameterValue(createParams(EtherTypeClassifier.IPv6_VALUE))
+            .setClassifierDefinitionId(EtherTypeClassifierDefinition.DEFINITION.getId())
+            .setParameterValue(createParams(EtherTypeClassifierDefinition.IPv6_VALUE))
             .build();
     }
 
     private static List<ParameterValue> createParams(long etherType) {
         List<ParameterValue> params = new ArrayList<>();
-        params.add(new ParameterValueBuilder().setName(new ParameterName(EtherTypeClassifier.ETHERTYPE_PARAM))
+        params.add(new ParameterValueBuilder().setName(new ParameterName(EtherTypeClassifierDefinition.ETHERTYPE_PARAM))
             .setIntValue(etherType)
             .build());
         return params;
     }
-
 }

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
- * 
+ *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.EtherTypeClassifierDefinition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValueBuilder;
 
@@ -39,12 +40,12 @@ public abstract class ParamDerivator {
         @Override
         public List<Map<String, ParameterValue>> deriveParameter(Map<String, ParameterValue> params) {
 
-            if (!params.containsKey(EtherTypeClassifier.ETHERTYPE_PARAM)) {
+            if (!params.containsKey(EtherTypeClassifierDefinition.ETHERTYPE_PARAM)) {
                 Map<String, ParameterValue> ipv4Params = new HashMap<>(params);
                 Map<String, ParameterValue> ipv6Params = new HashMap<>(params);
-                ipv4Params.put(EtherTypeClassifier.ETHERTYPE_PARAM, new ParameterValueBuilder().setIntValue(FlowUtils.IPv4)
+                ipv4Params.put(EtherTypeClassifierDefinition.ETHERTYPE_PARAM, new ParameterValueBuilder().setIntValue(FlowUtils.IPv4)
                     .build());
-                ipv6Params.put(EtherTypeClassifier.ETHERTYPE_PARAM, new ParameterValueBuilder().setIntValue(FlowUtils.IPv6)
+                ipv6Params.put(EtherTypeClassifierDefinition.ETHERTYPE_PARAM, new ParameterValueBuilder().setIntValue(FlowUtils.IPv6)
                     .build());
                 List<Map<String, ParameterValue>> derivedParams = new ArrayList<>();
                 derivedParams.add(ipv4Params);

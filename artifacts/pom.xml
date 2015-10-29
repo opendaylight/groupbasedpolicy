@@ -61,6 +61,13 @@
 
       <!-- GBP configuration -->
       <dependency>
+        <groupId>org.opendaylight.groupbasedpolicy</groupId>
+        <artifactId>groupbasedpolicy</artifactId>
+        <version>${project.version}</version>
+        <type>xml</type>
+        <classifier>config</classifier>
+      </dependency>
+      <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>ofoverlay-renderer</artifactId>
         <version>${project.version}</version>
@@ -80,14 +87,14 @@
         <version>${project.version}</version>
         <type>xml</type>
         <classifier>config</classifier>
-      </dependency>      
+      </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>iovisor-renderer</artifactId>
         <version>${project.version}</version>
         <type>xml</type>
         <classifier>config</classifier>
-      </dependency>      
+      </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>netconf-renderer</artifactId>

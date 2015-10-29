@@ -680,14 +680,6 @@ module policy {
                     "A user-visible name for the classifier definition";
                 type gbp-common:classifier-name;
             }
-
-            leaf parent {
-                description
-                    "Parent classifier definition from which we inherit";
-                type leafref {
-                    path "/subject-feature-definitions/classifier-definition/id";
-                }
-            }
         }
 
         list action-definition {
@@ -709,14 +701,6 @@ module policy {
             leaf name {
                 description "A user-visible name for the action";
                 type gbp-common:action-name;
-            }
-
-            leaf parent {
-                description
-                    "Parent action definition from which we inherit";
-                type leafref {
-                    path "/subject-feature-definitions/action-definition/id";
-                }
             }
         }
     }
@@ -843,7 +827,7 @@ module policy {
                 }
                 list gateways {
                     description
-                        "External gateways for subnets we serve, 
+                        "External gateways for subnets we serve,
                         includes prefixes for static routing";
                     key "gateway";
                     leaf gateway {
@@ -855,7 +839,7 @@ module policy {
                             type inet:ip-prefix;
                         }
                     }
-                    
+
                 }
             }
 

@@ -16,7 +16,7 @@
 
   <groupId>org.opendaylight.groupbasedpolicy</groupId>
   <artifactId>groupbasedpolicy</artifactId>
-  <version>0.3.0-SNAPSHOT</version> 
+  <version>0.3.0-SNAPSHOT</version>
   <packaging>bundle</packaging>
   <name>groupbasedpolicy-base</name>
 
@@ -57,6 +57,8 @@
               org.opendaylight.controller.config.yang.config.endpoint_provider,
               org.opendaylight.groupbasedpolicy.endpoint,
               org.opendaylight.groupbasedpolicy.resolver.*,
+              org.opendaylight.groupbasedpolicy.sf.actions.*,
+              org.opendaylight.groupbasedpolicy.sf.classifiers.*,
               org.opendaylight.groupbasedpolicy.util,
             </Export-Package>
           </instructions>

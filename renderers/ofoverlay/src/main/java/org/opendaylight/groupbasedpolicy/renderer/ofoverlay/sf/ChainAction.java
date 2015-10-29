@@ -8,14 +8,6 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf;
 
-/*
- * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License v1.0 which accompanies this distribution,
- * and is available at http://www.eclipse.org/legal/epl-v10.html
- */
-
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.ChainActionFlows.createChainTunnelFlows;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxSetNsiAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxSetNspAction;
@@ -25,6 +17,7 @@ import java.util.Map;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.sf.actions.ChainActionDefinition;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.NetworkElements;
@@ -49,15 +42,8 @@ import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev1407
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definition.Parameter.IsRequired;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definition.Parameter.Type;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definition.ParameterBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ActionDefinition;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ActionDefinitionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
@@ -66,7 +52,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
 /**
@@ -78,36 +63,14 @@ public class ChainAction extends Action {
 
     private static final Logger LOG = LoggerFactory.getLogger(ChainAction.class);
 
-    public static final ActionDefinitionId ID = new ActionDefinitionId("3d886be7-059f-4c4f-bbef-0356bea40933");
-
-    public static final Integer CHAIN_CONDITION_GROUP = 0xfffffe;
-
-    protected static final String TYPE = "type";
-
-    // the chain action
-    public static final String SFC_CHAIN_ACTION = "chain";
-    // the parameter used for storing the chain name
-    public static final String SFC_CHAIN_NAME = "sfc-chain-name";
-
-    protected static final ActionDefinition DEF = new ActionDefinitionBuilder().setId(ID)
-        .setName(new ActionName(SFC_CHAIN_ACTION))
-        .setDescription(new Description("Send the traffic through a Service Function Chain"))
-        .setParameter(
-                (ImmutableList.of(new ParameterBuilder().setName(new ParameterName(SFC_CHAIN_NAME))
-                    .setDescription(new Description("The named chain to match against"))
-                    .setIsRequired(IsRequired.Required)
-                    .setType(Type.String)
-                    .build())))
-        .build();
-
     @Override
     public ActionDefinitionId getId() {
-        return ID;
+        return ChainActionDefinition.ID;
     }
 
     @Override
     public ActionDefinition getActionDef() {
-        return DEF;
+        return ChainActionDefinition.DEFINITION;
     }
 
     @Override
@@ -121,7 +84,7 @@ public class ChainAction extends Action {
             LOG.debug("updateAction: Searching for named chain");
             for (String name : params.keySet()) {
                 if (name instanceof String) {
-                    if (name.equals(SFC_CHAIN_NAME)) {
+                    if (name.equals(ChainActionDefinition.SFC_CHAIN_NAME)) {
                         chainName = (String) params.get(name);
                         if (chainName == null) {
                             LOG.error("updateAction: Chain name was null");
@@ -306,7 +269,7 @@ public class ChainAction extends Action {
         if (paramValueList == null)
             return null;
         for (ParameterValue pv : paramValueList) {
-            if (pv.getName().getValue().equals(SFC_CHAIN_NAME)) {
+            if (pv.getName().getValue().equals(ChainActionDefinition.SFC_CHAIN_NAME)) {
                 return pv;
             }
         }

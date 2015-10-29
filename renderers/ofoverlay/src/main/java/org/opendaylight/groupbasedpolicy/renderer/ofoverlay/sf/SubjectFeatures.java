@@ -11,6 +11,12 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf;
 import java.util.List;
 import java.util.Map;
 
+import org.opendaylight.groupbasedpolicy.sf.classifiers.EtherTypeClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.IpProtoClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.L4ClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.sf.actions.AllowActionDefinition;
+import org.opendaylight.groupbasedpolicy.sf.actions.ChainActionDefinition;
+
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.SubjectFeatureDefinitions;
@@ -29,9 +35,9 @@ import com.google.common.collect.ImmutableMap;
 public class SubjectFeatures {
     private static final Map<ClassifierDefinitionId, Classifier> classifiers =
             ImmutableMap.<ClassifierDefinitionId, Classifier>
-                of(EtherTypeClassifier.ID, Classifier.ETHER_TYPE_CL,
-                   IpProtoClassifier.ID, Classifier.IP_PROTO_CL,
-                   L4Classifier.ID, Classifier.L4_CL);
+                of(EtherTypeClassifierDefinition.ID, Classifier.ETHER_TYPE_CL,
+                   IpProtoClassifierDefinition.ID, Classifier.IP_PROTO_CL,
+                   L4ClassifierDefinition.ID, Classifier.L4_CL);
 
     private static final List<ClassifierDefinition> classifierDefs =
             ImmutableList.copyOf(Collections2.transform(classifiers.values(),
@@ -45,8 +51,8 @@ public class SubjectFeatures {
 
     private static final Map<ActionDefinitionId, Action> actions =
             ImmutableMap.<ActionDefinitionId, Action>
-                of(AllowAction.ID, new AllowAction(),
-                   ChainAction.ID, new ChainAction());
+                of(AllowActionDefinition.ID, new AllowAction(),
+                   ChainActionDefinition.ID, new ChainAction());
 
     private static final List<ActionDefinition> actionDefs =
             ImmutableList.copyOf(Collections2.transform(actions.values(),

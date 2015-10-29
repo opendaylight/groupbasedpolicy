@@ -12,14 +12,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.MockEndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockPolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.MockEndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.MockSwitchManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.AllowAction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Classifier;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.L4Classifier;
 import org.opendaylight.groupbasedpolicy.resolver.MockPolicyResolver;
+import org.opendaylight.groupbasedpolicy.sf.classifiers.L4ClassifierDefinition;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
@@ -159,7 +159,7 @@ public class OfTableTest {
             .setSubjectFeatureInstances(new SubjectFeatureInstancesBuilder()
                 .setClassifierInstance(ImmutableList.of(new ClassifierInstanceBuilder()
                      .setName(new ClassifierName("tcp_dst_80"))
-                     .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
+                     .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
                      .setParameterValue(ImmutableList.of(new ParameterValueBuilder()
                               .setName(new ParameterName("destport"))
                               .setIntValue(Long.valueOf(80))
