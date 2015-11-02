@@ -20,3 +20,6 @@ MANIFEST.MF
 renderers/ofoverlay/src/test/java/org/opendaylight/groupbasedpolicy/resolver/
 .gitignore
 .checkstyle
+yang-gen-config/
+yang-gen-sal/
+maven-metadata-local
