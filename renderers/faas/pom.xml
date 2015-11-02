@@ -17,6 +17,10 @@
   <artifactId>faas-renderer</artifactId>
   <packaging>bundle</packaging>
 
+  <properties>
+    <openflowplugin.version>0.2.0-SNAPSHOT</openflowplugin.version>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.opendaylight.mdsal.model</groupId>
@@ -25,6 +29,7 @@
     <dependency>
       <groupId>org.opendaylight.openflowplugin</groupId>
       <artifactId>openflowplugin-extension-nicira</artifactId>
+      <version>${openflowplugin.version}</version>
     </dependency>
     <!-- testing dependencies -->
     <dependency>

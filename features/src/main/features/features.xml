@@ -58,7 +58,7 @@
         <feature version='${sfc.version}'>odl-sfc-ui</feature>
         <bundle>mvn:commons-net/commons-net/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/ofoverlay-renderer/{{VERSION}}</bundle>
-        <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-ofoverlay.xml">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-ofoverlay-config/{{VERSION}}/xml/config</configfile>
+        <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-ofoverlay.xml">mvn:org.opendaylight.groupbasedpolicy/ofoverlay-renderer/{{VERSION}}/xml/config</configfile>
     </feature>
 
     <!--
@@ -72,7 +72,7 @@
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <feature version='${openflowplugin.version}'>odl-openflowplugin-nxm-extensions</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/faas-renderer/{{VERSION}}</bundle>
-        <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-faas.xml">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-faas-config/{{VERSION}}/xml/config</configfile>
+        <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-faas.xml">mvn:org.opendaylight.groupbasedpolicy/faas-renderer/{{VERSION}}/xml/config</configfile>
     </feature>
 
     <!--
@@ -85,8 +85,8 @@
         <feature version="${project.version}">odl-groupbasedpolicy-ofoverlay</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/neutron-mapper/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/neutron-ovsdb/{{VERSION}}</bundle>
-        <configfile finalname="${config.configfile.directory}/15-neutron-mapper.xml">mvn:org.opendaylight.groupbasedpolicy/neutron-mapper-config/{{VERSION}}/xml/config</configfile>
-        <configfile finalname="${config.configfile.directory}/15-neutron-ovsdb.xml">mvn:org.opendaylight.groupbasedpolicy/neutron-ovsdb-config/{{VERSION}}/xml/config</configfile>
+        <configfile finalname="${config.configfile.directory}/15-neutron-mapper.xml">mvn:org.opendaylight.groupbasedpolicy/neutron-mapper/{{VERSION}}/xml/config</configfile>
+        <configfile finalname="${config.configfile.directory}/15-neutron-ovsdb.xml">mvn:org.opendaylight.groupbasedpolicy/neutron-ovsdb/{{VERSION}}/xml/config</configfile>
     </feature>
 
     <!--
@@ -97,7 +97,7 @@
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <feature version="${restconf.version}">odl-restconf</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/ui-backend/{{VERSION}}</bundle>
-        <configfile finalname="${config.configfile.directory}/15-ui-backend.xml">mvn:org.opendaylight.groupbasedpolicy/ui-backend-config/{{VERSION}}/xml/config</configfile>
+        <configfile finalname="${config.configfile.directory}/15-ui-backend.xml">mvn:org.opendaylight.groupbasedpolicy/ui-backend/{{VERSION}}/xml/config</configfile>
     </feature>
 
     <!--

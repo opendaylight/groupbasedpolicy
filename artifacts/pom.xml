@@ -52,35 +52,35 @@
       <!-- GBP configuration -->
       <dependency>
         <groupId>${project.groupId}</groupId>
-        <artifactId>groupbasedpolicy-ofoverlay-config</artifactId>
+        <artifactId>ofoverlay-renderer</artifactId>
         <version>${project.version}</version>
         <type>xml</type>
         <classifier>config</classifier>
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
-        <artifactId>groupbasedpolicy-faas-config</artifactId>
+        <artifactId>faas-renderer</artifactId>
         <version>${project.version}</version>
         <type>xml</type>
         <classifier>config</classifier>
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
-        <artifactId>neutron-mapper-config</artifactId>
+        <artifactId>neutron-mapper</artifactId>
         <version>${project.version}</version>
         <type>xml</type>
         <classifier>config</classifier>
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
-        <artifactId>neutron-ovsdb-config</artifactId>
+        <artifactId>neutron-ovsdb</artifactId>
         <version>${project.version}</version>
         <type>xml</type>
         <classifier>config</classifier>
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
-        <artifactId>ui-backend-config</artifactId>
+        <artifactId>ui-backend</artifactId>
         <version>${project.version}</version>
         <type>xml</type>
         <classifier>config</classifier>

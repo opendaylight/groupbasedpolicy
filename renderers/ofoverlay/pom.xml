@@ -17,6 +17,13 @@
   <artifactId>ofoverlay-renderer</artifactId>
   <packaging>bundle</packaging>
 
+  <properties>
+    <ovsdb.version>1.2.1-SNAPSHOT</ovsdb.version>
+    <openflowplugin.version>0.2.0-SNAPSHOT</openflowplugin.version>
+    <liblldp.version>0.10.0-SNAPSHOT</liblldp.version>
+    <sfc.version>0.2.0-SNAPSHOT</sfc.version>
+  </properties>
+
   <dependencies>
     <!-- model dependencies -->
     <dependency>
@@ -26,16 +33,18 @@
   <dependency>
     <groupId>org.opendaylight.ovsdb</groupId>
     <artifactId>southbound-api</artifactId>
+    <version>${ovsdb.version}</version>
   </dependency>
-
     <!-- project specific dependencies -->
     <dependency>
       <groupId>org.opendaylight.openflowplugin</groupId>
       <artifactId>openflowplugin-extension-nicira</artifactId>
+      <version>${openflowplugin.version}</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.controller</groupId>
       <artifactId>liblldp</artifactId>
+      <version>${liblldp.version}</version>
     </dependency>
     <dependency>
       <groupId>commons-net</groupId>

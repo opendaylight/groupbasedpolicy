@@ -1,5 +1,3 @@
-package org.opendaylight.groupbasedpolicy.renderer.faas;
-
 /*
  * Copyright (c) 2015 Huawei Technologies and others. All rights reserved.
  *
@@ -7,6 +5,8 @@ package org.opendaylight.groupbasedpolicy.renderer.faas;
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
+
+package org.opendaylight.groupbasedpolicy.renderer.faas;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;

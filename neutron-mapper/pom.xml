@@ -9,23 +9,31 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>org.opendaylight.groupbasedpolicy</groupId>
-    <artifactId>groupbasedpolicy.project</artifactId>
-    <version>0.3.0-SNAPSHOT</version>
-    <relativePath>../</relativePath>
+    <groupId>org.opendaylight.controller</groupId>
+    <artifactId>config-parent</artifactId>
+    <version>0.4.0-SNAPSHOT</version>
+    <relativePath/>
   </parent>
 
+  <groupId>org.opendaylight.groupbasedpolicy</groupId>
   <artifactId>neutron-mapper</artifactId>
+  <version>0.3.0-SNAPSHOT</version>
   <packaging>bundle</packaging>
+
+  <properties>
+    <neutron.version>0.6.0-SNAPSHOT</neutron.version>
+  </properties>
 
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>groupbasedpolicy</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>ofoverlay-renderer</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.neutron</groupId>

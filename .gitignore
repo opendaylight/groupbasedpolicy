@@ -22,4 +22,4 @@ renderers/ofoverlay/src/test/java/org/opendaylight/groupbasedpolicy/resolver/
 .checkstyle
 yang-gen-config/
 yang-gen-sal/
-maven-metadata-local
+maven-metadata-local.xml

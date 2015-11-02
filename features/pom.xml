@@ -226,31 +226,31 @@
     <!-- GBP configuration -->
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
-      <artifactId>groupbasedpolicy-ofoverlay-config</artifactId>
+      <artifactId>ofoverlay-renderer</artifactId>
       <type>xml</type>
       <classifier>config</classifier>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
-      <artifactId>groupbasedpolicy-faas-config</artifactId>
+      <artifactId>faas-renderer</artifactId>
       <type>xml</type>
       <classifier>config</classifier>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
-      <artifactId>neutron-mapper-config</artifactId>
+      <artifactId>neutron-mapper</artifactId>
       <type>xml</type>
       <classifier>config</classifier>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
-      <artifactId>neutron-ovsdb-config</artifactId>
+      <artifactId>neutron-ovsdb</artifactId>
       <type>xml</type>
       <classifier>config</classifier>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
-      <artifactId>ui-backend-config</artifactId>
+      <artifactId>ui-backend</artifactId>
       <type>xml</type>
       <classifier>config</classifier>
     </dependency>

@@ -9,27 +9,36 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>org.opendaylight.groupbasedpolicy</groupId>
-    <artifactId>groupbasedpolicy.project</artifactId>
-    <version>0.3.0-SNAPSHOT</version>
-    <relativePath>../</relativePath>
+    <groupId>org.opendaylight.controller</groupId>
+    <artifactId>config-parent</artifactId>
+    <version>0.4.0-SNAPSHOT</version>
+    <relativePath/>
   </parent>
 
+  <groupId>org.opendaylight.groupbasedpolicy</groupId>
   <artifactId>neutron-ovsdb</artifactId>
+  <version>0.3.0-SNAPSHOT</version>
   <packaging>bundle</packaging>
+
+  <properties>
+    <ovsdb.version>1.2.1-SNAPSHOT</ovsdb.version>
+  </properties>
 
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>groupbasedpolicy</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>ofoverlay-renderer</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>neutron-mapper</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.controller</groupId>
@@ -46,10 +55,12 @@
     <dependency>
       <groupId>org.opendaylight.ovsdb</groupId>
       <artifactId>southbound-api</artifactId>
+      <version>${ovsdb.version}</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.ovsdb</groupId>
       <artifactId>southbound-impl</artifactId>
+      <version>${ovsdb.version}</version>
     </dependency>
     <dependency>
       <groupId>org.osgi</groupId>
