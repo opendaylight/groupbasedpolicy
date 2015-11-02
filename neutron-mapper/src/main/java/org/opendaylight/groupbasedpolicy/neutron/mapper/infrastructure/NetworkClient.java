@@ -1,3 +1,11 @@
+/*
+ * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
 package org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure;
 
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
@@ -41,7 +49,7 @@ public class NetworkClient {
 
     /**
      * Puts {@link #EPG} to {@link LogicalDatastoreType#CONFIGURATION}
-     * 
+     *
      * @param tenantId location of {@link #EPG}
      * @param wTx transaction where {@link #EPG} is written
      */
@@ -51,7 +59,7 @@ public class NetworkClient {
 
     /**
      * Puts consumer-named-selector to {@link #EPG} in {@link LogicalDatastoreType#CONFIGURATION}
-     * 
+     *
      * @param tenantId tenantId location of {@link #EPG}
      * @param consumerNamedSelector is added to {@link #EPG}
      * @param wTx transaction where the given consumer-named-selector is written

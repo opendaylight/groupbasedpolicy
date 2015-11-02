@@ -1,3 +1,11 @@
+/*
+ * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
 package org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure;
 
 import java.util.ArrayList;
@@ -225,7 +233,7 @@ public class NetworkService {
     /**
      * puts clause with {@link L3EndpointIdentificationConstraints} in {@link ConsumerMatchers}
      * and {@link ProviderMatchers}. This clause points to subject in {@link #DHCP_CONTRACT}.
-     * 
+     *
      * @param tenantId location of {@link #DHCP_CONTRACT}
      * @param ipPrefix used in {@link L3EndpointIdentificationConstraints}
      * @param wTx transaction where entities are written
@@ -240,7 +248,7 @@ public class NetworkService {
     /**
      * puts clause with {@link L3EndpointIdentificationConstraints} in {@link ConsumerMatchers}
      * and {@link ProviderMatchers}. This clause points to subject in {@link #DNS_CONTRACT}.
-     * 
+     *
      * @param tenantId location of {@link #DNS_CONTRACT}
      * @param ipPrefix used in {@link L3EndpointIdentificationConstraints}
      * @param wTx transaction where entities are written
@@ -289,7 +297,7 @@ public class NetworkService {
      * Puts network service entities (classifier-instances, {@link #DHCP_CONTRACT},
      * {@link #DNS_CONTRACT}, and {@link #EPG}) to
      * {@link LogicalDatastoreType#CONFIGURATION}
-     * 
+     *
      * @param tenantId location of network-service entities
      * @param wTx transaction where network-service entities are written
      */

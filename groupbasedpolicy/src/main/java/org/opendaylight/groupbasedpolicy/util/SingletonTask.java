@@ -1,5 +1,5 @@
 /*
- * Copyright 2011, Big Switch Networks, Inc. 
+ * Copyright (c) 2011 Big Switch Networks, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -16,25 +16,25 @@ import org.slf4j.LoggerFactory;
 
 /**
  * This allows you to represent a task that should be queued for future execution
- * but where you only want the task to complete once in response to some sequence 
+ * but where you only want the task to complete once in response to some sequence
  * of events.  For example, if you get a change notification and want to reload state,
  * you only want to reload the state once, at the end, and don't want to queue
  * an update for every notification that might come in.
- * 
+ *
  * The semantics are as follows:
  * * If the task hasn't begun yet, do not queue a new task
  * * If the task has begun, set a bit to restart it after the current task finishes
  */
 public class SingletonTask {
-    protected static final Logger LOG = 
+    protected static final Logger LOG =
             LoggerFactory.getLogger(SingletonTask.class);
-            
+
     protected static class SingletonTaskContext  {
         protected boolean taskShouldRun = false;
         protected boolean taskRunning = false;
 
         protected SingletonTaskWorker waitingTask = null;
-        
+
     }
     protected static class SingletonTaskWorker implements Runnable  {
         SingletonTask parent;
@@ -70,8 +70,8 @@ public class SingletonTask {
                     if ((nextschedule <= 0 || (nextschedule - now) <= 0)) {
                         parent.ses.execute(this);
                     } else {
-                        parent.ses.schedule(this, 
-                                            nextschedule-now, 
+                        parent.ses.schedule(this,
+                                            nextschedule-now,
                                             TimeUnit.NANOSECONDS);
                     }
                 }
@@ -104,7 +104,7 @@ public class SingletonTask {
      * cancel that task and reschedule it to run at the given time.  If the
      * task is already started, it will cause the task to be rescheduled once
      * it completes to run after delay from the time of reschedule.
-     * 
+     *
      * @param delay the delay in scheduling
      * @param unit the timeunit of the delay
      */
@@ -118,7 +118,7 @@ public class SingletonTask {
                     // schedule to restart at the right time
                     if (delay > 0) {
                         long now = System.nanoTime();
-                        long then = 
+                        long then =
                             now + TimeUnit.NANOSECONDS.convert(delay, unit);
                         context.waitingTask.nextschedule = then;
                     } else {
