@@ -27,14 +27,10 @@
   <dependencies>
     <!-- model dependencies -->
     <dependency>
-      <groupId>org.opendaylight.mdsal.model</groupId>
-      <artifactId>yang-ext</artifactId>
+      <groupId>org.opendaylight.ovsdb</groupId>
+      <artifactId>southbound-api</artifactId>
+      <version>${ovsdb.version}</version>
     </dependency>
-  <dependency>
-    <groupId>org.opendaylight.ovsdb</groupId>
-    <artifactId>southbound-api</artifactId>
-    <version>${ovsdb.version}</version>
-  </dependency>
     <!-- project specific dependencies -->
     <dependency>
       <groupId>org.opendaylight.openflowplugin</groupId>
@@ -65,13 +61,6 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-all</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <!-- Sonar -->
-    <dependency>
-      <groupId>org.codehaus.sonar-plugins.java</groupId>
-      <artifactId>sonar-jacoco-listeners</artifactId>
-      <version>${sonar-jacoco-listeners.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -116,49 +105,8 @@
               org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.*
             </Export-Package>
           </instructions>
-          <manifestLocation>${project.basedir}/META-INF</manifestLocation>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.opendaylight.yangtools</groupId>
-        <artifactId>yang-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <redirectTestOutputToFile>true</redirectTestOutputToFile>
         </configuration>
       </plugin>
     </plugins>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <groupId>org.eclipse.m2e</groupId>
-          <artifactId>lifecycle-mapping</artifactId>
-          <version>1.0.0</version>
-          <configuration>
-            <lifecycleMappingMetadata>
-              <pluginExecutions>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.jacoco</groupId>
-                    <artifactId>jacoco-maven-plugin</artifactId>
-                    <versionRange>[0.6,)</versionRange>
-                    <goals>
-                      <goal>prepare-agent</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore />
-                  </action>
-                </pluginExecution>
-	      </pluginExecutions>
-            </lifecycleMappingMetadata>
-	  </configuration>
-        </plugin>
-      </plugins>
-    </pluginManagement>
   </build>
 </project>
-

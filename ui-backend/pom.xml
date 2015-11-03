@@ -16,6 +16,14 @@
   <version>0.3.0-SNAPSHOT</version>
   <packaging>bundle</packaging>
 
+  <dependencies>
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>groupbasedpolicy</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
+
   <!-- project build -->
   <build>
     <plugins>
@@ -31,25 +39,6 @@
           <manifestLocation>${project.basedir}/META-INF</manifestLocation>
         </configuration>
       </plugin>
-      <plugin>
-        <groupId>org.opendaylight.yangtools</groupId>
-        <artifactId>yang-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <redirectTestOutputToFile>true</redirectTestOutputToFile>
-        </configuration>
-      </plugin>
     </plugins>
   </build>
-
-  <dependencies>
-    <dependency>
-      <groupId>org.opendaylight.groupbasedpolicy</groupId>
-      <artifactId>groupbasedpolicy</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-  </dependencies>
 </project>

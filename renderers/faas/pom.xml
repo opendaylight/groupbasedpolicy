@@ -23,10 +23,6 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.opendaylight.mdsal.model</groupId>
-      <artifactId>yang-ext</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.opendaylight.openflowplugin</groupId>
       <artifactId>openflowplugin-extension-nicira</artifactId>
       <version>${openflowplugin.version}</version>
@@ -44,7 +40,7 @@
     </dependency>
   </dependencies>
 
-  <!-- project build -->
+ <!-- project build -->
   <build>
     <plugins>
       <plugin>
@@ -57,12 +53,7 @@
               org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.faas.rev151009.*
             </Export-Package>
           </instructions>
-          <manifestLocation>${project.basedir}/META-INF</manifestLocation>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.opendaylight.yangtools</groupId>
-        <artifactId>yang-maven-plugin</artifactId>
       </plugin>
     </plugins>
   </build>

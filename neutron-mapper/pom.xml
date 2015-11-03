@@ -25,6 +25,7 @@
   </properties>
 
   <dependencies>
+    <!-- project specific dependencies -->
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>groupbasedpolicy</artifactId>
@@ -39,22 +40,6 @@
       <groupId>org.opendaylight.neutron</groupId>
       <artifactId>neutron-spi</artifactId>
       <version>${neutron.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.controller</groupId>
-      <artifactId>config-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.controller</groupId>
-      <artifactId>sal-binding-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.controller</groupId>
-      <artifactId>sal-binding-config</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.osgi</groupId>
-      <artifactId>org.osgi.core</artifactId>
     </dependency>
     <!-- testing dependencies -->
     <dependency>
@@ -73,16 +58,9 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
-    <!-- Sonar -->
-    <dependency>
-      <groupId>org.codehaus.sonar-plugins.java</groupId>
-      <artifactId>sonar-jacoco-listeners</artifactId>
-      <version>${sonar-jacoco-listeners.version}</version>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
 
-  <build>
+ <build>
     <plugins>
       <plugin>
         <groupId>org.apache.felix</groupId>
@@ -97,38 +75,6 @@
           </instructions>
         </configuration>
       </plugin>
-      <plugin>
-        <groupId>org.opendaylight.yangtools</groupId>
-        <artifactId>yang-maven-plugin</artifactId>
-      </plugin>
     </plugins>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <groupId>org.eclipse.m2e</groupId>
-          <artifactId>lifecycle-mapping</artifactId>
-          <version>1.0.0</version>
-          <configuration>
-            <lifecycleMappingMetadata>
-              <pluginExecutions>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.jacoco</groupId>
-                    <artifactId>jacoco-maven-plugin</artifactId>
-                    <versionRange>[0.6,)</versionRange>
-                    <goals>
-                      <goal>prepare-agent</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore />
-                  </action>
-                </pluginExecution>
-	      </pluginExecutions>
-            </lifecycleMappingMetadata>
-	  </configuration>
-        </plugin>
-      </plugins>
-    </pluginManagement>
   </build>
 </project>
