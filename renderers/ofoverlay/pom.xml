@@ -53,11 +53,6 @@
     <!-- SFC -->
     <dependency>
       <groupId>org.opendaylight.sfc</groupId>
-      <artifactId>sfc-model</artifactId>
-      <version>${sfc.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.sfc</groupId>
       <artifactId>sfc-provider</artifactId>
       <version>${sfc.version}</version>
     </dependency>
