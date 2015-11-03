@@ -28,6 +28,17 @@
     <sfc.version>0.2.0-SNAPSHOT</sfc.version>
   </properties>
 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>groupbasedpolicy-artifacts</artifactId>
+        <version>${project.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
   <dependencies>
     <dependency>
       <!-- scope is compile so all features (there is only one) are installed 
@@ -41,47 +52,6 @@
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>features-groupbasedpolicy</artifactId>
-      <version>${groupbasedpolicy.project.version}</version>
-      <classifier>features</classifier>
-      <type>xml</type>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.sfc</groupId>
-      <artifactId>features-sfc</artifactId>
-      <version>${sfc.version}</version>
-      <classifier>features</classifier>
-      <type>xml</type>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.sfc</groupId>
-      <artifactId>features-sfc-sb-rest</artifactId>
-      <version>${sfc.version}</version>
-      <classifier>features</classifier>
-      <type>xml</type>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.sfc</groupId>
-      <artifactId>features-sfc-ovs</artifactId>
-      <version>${sfc.version}</version>
-      <classifier>features</classifier>
-      <type>xml</type>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.sfc</groupId>
-      <artifactId>features-sfcofl2</artifactId>
-      <version>${sfc.version}</version>
-      <classifier>features</classifier>
-      <type>xml</type>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.sfc</groupId>
-      <artifactId>features-sfc-netconf</artifactId>
-      <version>${sfc.version}</version>
       <classifier>features</classifier>
       <type>xml</type>
       <scope>runtime</scope>
