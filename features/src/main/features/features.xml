@@ -55,6 +55,24 @@
     </feature>
 
     <!--
+        The OpenFlow Overlay renderer with SFC.
+
+        This can be added to the base to enable a
+        Network Virtualization behavior using OpenFlow that integrates with the SFC project
+    -->
+    <feature name='odl-groupbasedpolicy-ovssfc' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: OpenFlow Overlay SFC Renderer'>
+        <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
+        <feature version="${openflowplugin.version}">odl-openflowplugin-flow-services</feature>
+        <feature version='${openflowplugin.version}'>odl-openflowplugin-nxm-extensions</feature>
+        <feature version='${ovsdb.southbound.version}'>odl-ovsdb-southbound-impl</feature>
+        <feature version='${sfc.version}'>odl-sfcofl2</feature>
+        <feature version='${sfc.version}'>odl-sfc-ui</feature>
+        <bundle>mvn:commons-net/commons-net/{{VERSION}}</bundle>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/ovssfc-renderer/{{VERSION}}</bundle>
+        <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-ovssfc.xml">mvn:org.opendaylight.groupbasedpolicy/ovssfc-renderer/{{VERSION}}/xml/config</configfile>
+    </feature>
+
+    <!--
         The FAAS renderer.
 
         This renderer maps GBP service model to the common abstraction logical network models
@@ -67,6 +85,29 @@
         <bundle>mvn:org.opendaylight.groupbasedpolicy/faas-renderer/{{VERSION}}</bundle>
         <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-faas.xml">mvn:org.opendaylight.groupbasedpolicy/faas-renderer/{{VERSION}}/xml/config</configfile>
     </feature>
+
+    <!--
+        The IOVisor renderer.
+
+        This renderer maps GBP service model to agents of the IOVisor Linux Foundation project.
+    -->
+    <feature name='odl-groupbasedpolicy-iovisor' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: IOVisor Renderer'>
+        <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/iovisor-renderer/{{VERSION}}</bundle>
+        <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-iovisor.xml">mvn:org.opendaylight.groupbasedpolicy/iovisor-renderer/{{VERSION}}/xml/config</configfile>
+    </feature>
+
+    <!--
+        The NETCONF renderer.
+
+        This renderer maps GBP service model to NETCONF based network elements.
+    -->
+    <feature name='odl-groupbasedpolicy-netconf' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: NETCONF Renderer'>
+        <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/netconf-renderer/{{VERSION}}</bundle>
+        <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-netconf.xml">mvn:org.opendaylight.groupbasedpolicy/netconf-renderer/{{VERSION}}/xml/config</configfile>
+    </feature>
+
 
     <!--
          The Neutron provider
