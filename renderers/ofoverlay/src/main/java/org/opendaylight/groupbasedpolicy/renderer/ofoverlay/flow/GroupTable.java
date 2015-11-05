@@ -14,10 +14,12 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadTunIPv4Action;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.outputAction;
 
-import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import com.google.common.base.Optional;
+
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
@@ -30,7 +32,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.acti
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.BucketId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.GroupId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.group.buckets.Bucket;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.group.buckets.BucketBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
@@ -104,30 +105,31 @@ public class GroupTable extends OfTable {
 
                 // we'll use the fdId with the high bit set for remote bucket
                 // and just the local port number for local bucket
-                for (NodeId destNode : ctx.getEndpointManager().getNodesForGroup(epg)) {
+                for (NodeId destNode : findPeerNodesForGroup(policyInfo, epg)) {
                     if (nodeId.equals(destNode))
                         continue;
 
-                    long bucketId = OrdinalFactory.getContextOrdinal(destNode);
-                    bucketId |= 1L << 31;
+                    if(isFloodDomainOnNode(localEpFwdCtxOrds.getFdId(), destNode, policyInfo)) {
+                        long bucketId = OrdinalFactory.getContextOrdinal(destNode);
+                        bucketId |= 1L << 31;
 
-                    IpAddress tunDst = ctx.getSwitchManager().getTunnelIP(destNode, TunnelTypeVxlan.class);
-                    NodeConnectorId tunPort = ctx.getSwitchManager().getTunnelPort(nodeId, TunnelTypeVxlan.class);
-                    if (tunDst == null || tunPort == null)
-                        continue;
-                    Action tundstAction = null;
-                    if (tunDst.getIpv4Address() != null) {
-                        String nextHop = tunDst.getIpv4Address().getValue();
-                        tundstAction = nxLoadTunIPv4Action(nextHop, true);
-                    } else {
-                        LOG.error("IPv6 tunnel destination {} for {} not supported", tunDst.getIpv6Address().getValue(),
-                                destNode);
-                        continue;
+                        IpAddress tunDst = ctx.getSwitchManager().getTunnelIP(destNode, TunnelTypeVxlan.class);
+                        NodeConnectorId tunPort = ctx.getSwitchManager().getTunnelPort(nodeId, TunnelTypeVxlan.class);
+                        if (tunDst == null || tunPort == null)
+                            continue;
+                        Action tundstAction = null;
+                        if (tunDst.getIpv4Address() != null) {
+                            String nextHop = tunDst.getIpv4Address().getValue();
+                            tundstAction = nxLoadTunIPv4Action(nextHop, true);
+                        } else {
+                            LOG.error("IPv6 tunnel destination {} for {} not supported", tunDst.getIpv6Address().getValue(),
+                                    destNode);
+                            continue;
+                        }
+                        BucketBuilder bb = new BucketBuilder().setBucketId(new BucketId(Long.valueOf(bucketId)))
+                                .setAction(actionList(tundstAction, outputAction(tunPort)));
+                        ofWriter.writeBucket(nodeId, gid, bb.build());
                     }
-                    BucketBuilder bb = new BucketBuilder().setBucketId(new BucketId(Long.valueOf(bucketId)))
-                            .setAction(actionList(tundstAction, outputAction(tunPort)));
-
-                    ofWriter.writeBucket(nodeId, gid, bb.build());
                 }
                 OfOverlayContext ofc = localEp.getAugmentation(OfOverlayContext.class);
                 if (ofc == null || ofc.getNodeConnectorId() == null ||
@@ -150,4 +152,28 @@ public class GroupTable extends OfTable {
         }
     }
 
+    /**
+     * @param policyInfo to read peer groups for a group
+     * @param sourceEpgKey a key of source group
+     * @return all the nodes on which endpoints are either in groups that have policy with source
+     *         group, or are in the source group
+     */
+    private Set<NodeId> findPeerNodesForGroup(PolicyInfo policyInfo, EgKey sourceEpgKey) {
+        Set<NodeId> nodes = new HashSet<NodeId>();
+        nodes.addAll(ctx.getEndpointManager().getNodesForGroup(sourceEpgKey));
+        for (EgKey dstEpgs : policyInfo.getPeers(sourceEpgKey)) {
+            nodes.addAll(ctx.getEndpointManager().getNodesForGroup(dstEpgs));
+        }
+        return nodes;
+    }
+
+    private boolean isFloodDomainOnNode(int fdId, NodeId node, PolicyInfo policyInfo) throws Exception {
+        for (Endpoint ep : ctx.getEndpointManager().getEndpointsForNode(node)) {
+            int epFdId = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, ep).getFdId();
+            if (fdId == epFdId) {
+                return true;
+            }
+        }
+        return false;
+    }
 }
