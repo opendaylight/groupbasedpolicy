@@ -25,6 +25,21 @@
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
+        <artifactId>iovisor-renderer</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>netconf-renderer</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>ovssfc-renderer</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
         <artifactId>neutron-mapper</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -60,6 +75,27 @@
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>faas-renderer</artifactId>
+        <version>${project.version}</version>
+        <type>xml</type>
+        <classifier>config</classifier>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>ovssfc-renderer</artifactId>
+        <version>${project.version}</version>
+        <type>xml</type>
+        <classifier>config</classifier>
+      </dependency>      
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>iovisor-renderer</artifactId>
+        <version>${project.version}</version>
+        <type>xml</type>
+        <classifier>config</classifier>
+      </dependency>      
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>netconf-renderer</artifactId>
         <version>${project.version}</version>
         <type>xml</type>
         <classifier>config</classifier>
