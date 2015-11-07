@@ -41,6 +41,7 @@ import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev1
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.paths.RenderedServicePath;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.service.function.paths.ServiceFunctionPath;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstance;
@@ -68,6 +69,7 @@ public class ChainActionTest {
     private PolicyPair policyPair;
     private EndpointManager endpointManager;
     private EgKey egKey;
+    private TenantId tenant = new TenantId("e09a2308-6ffa-40af-92a2-69f54b2cf3e4");
 
     @SuppressWarnings("unchecked")
     @Before
@@ -98,6 +100,7 @@ public class ChainActionTest {
         when(netElements.getSrcEpOrds()).thenReturn(endpointFwdCtxOrdinals);
         endpoint = mock(Endpoint.class);
         when(netElements.getSrcEp()).thenReturn(endpoint);
+        when(netElements.getSrcEp().getTenant()).thenReturn(tenant);
         policyPair = mock(PolicyPair.class);
         when(policyPair.getConsumerEpgId()).thenReturn(Integer.valueOf(5));
 
@@ -127,9 +130,8 @@ public class ChainActionTest {
 
         doReturn(sfcPath).when(chainAction).getSfcPath(new SfcName(chainName));
 
-        List<ActionBuilder> result = chainAction.updateAction(actions, params, order, netElements, policyPair,
-                ofWriter,
-                ctx, Direction.Out);
+        List<ActionBuilder> result =
+                chainAction.updateAction(actions, params, order, netElements, policyPair, ofWriter, ctx, Direction.Out);
         Assert.assertNull(result);
     }
 
@@ -140,9 +142,8 @@ public class ChainActionTest {
         Integer order = Integer.valueOf(0);
         OfWriter ofWriter = mock(OfWriter.class);
 
-        List<ActionBuilder> result = chainAction.updateAction(actions, null, order, netElements, policyPair,
-                ofWriter,
-                ctx, Direction.In);
+        List<ActionBuilder> result =
+                chainAction.updateAction(actions, null, order, netElements, policyPair, ofWriter, ctx, Direction.In);
         Assert.assertNull(result);
     }
 
@@ -173,15 +174,14 @@ public class ChainActionTest {
         doReturn(sfcPath).when(chainAction).getSfcPath(new SfcName(chainName));
         when(sfcPath.getName()).thenReturn(null);
 
-        List<ActionBuilder> result = chainAction.updateAction(actions, params, order, netElements, policyPair,
-                ofWriter,
-                ctx, Direction.Out);
+        List<ActionBuilder> result =
+                chainAction.updateAction(actions, params, order, netElements, policyPair, ofWriter, ctx, Direction.Out);
         Assert.assertNull(result);
     }
 
-     @Test
+    @Test
     public void isValidTestParameterValueNull() {
-         ActionInstance actionInstance = mock(ActionInstance.class);
-         Assert.assertFalse(chainAction.isValid(actionInstance));
+        ActionInstance actionInstance = mock(ActionInstance.class);
+        Assert.assertFalse(chainAction.isValid(actionInstance));
     }
 }

@@ -17,14 +17,14 @@ import java.util.Map;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.groupbasedpolicy.sf.actions.ChainActionDefinition;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.NetworkElements;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.PolicyPair;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcIidFactory;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcNshHeader;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcNshHeader.SfcNshHeaderBuilder;
+import org.opendaylight.groupbasedpolicy.sf.actions.ChainActionDefinition;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.sfc.provider.api.SfcProviderRenderedPathAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServiceChainAPI;
@@ -117,8 +117,12 @@ public class ChainAction extends Action {
             LOG.error("updateAction: SFC Path was invalid. Either null or name was null.", sfcPath);
             return null;
         }
+        // TODO Need helper function to get getTenantName() that returns Name or UUID if Name is
+        // null
+
+        String tenantName = netElements.getSrcEp().getTenant().getValue();
         // Find existing RSP based on following naming convention, else create it.
-        RspName rspName = new RspName(sfcPath.getName() + "-gbp-rsp");
+        RspName rspName = new RspName(sfcPath.getName().getValue() + tenantName + "-gbp-rsp");
         ReadOnlyTransaction rTx = ctx.getDataBroker().newReadOnlyTransaction();
         RenderedServicePath renderedServicePath;
         RenderedServicePath rsp = getRspByName(rspName, rTx);
@@ -135,7 +139,7 @@ public class ChainAction extends Action {
         }
 
         try {
-            if (sfcPath.isSymmetric() && direction.equals(Direction.Out)){
+            if (sfcPath.isSymmetric() && direction.equals(Direction.Out)) {
                 rspName = new RspName(rspName.getValue() + "-Reverse");
                 rsp = getRspByName(rspName, rTx);
                 if (rsp == null) {
@@ -150,7 +154,8 @@ public class ChainAction extends Action {
                 }
             }
         } catch (Exception e) {
-            LOG.error("updateAction: Attemping to determine if srcEp {} was consumer.", netElements.getSrcEp().getKey(), e);
+            LOG.error("updateAction: Attemping to determine if srcEp {} was consumer.", netElements.getSrcEp().getKey(),
+                    e);
             return null;
         }
 
@@ -160,7 +165,7 @@ public class ChainAction extends Action {
             return null;
         }
 
-        NodeId tunnelDestNodeId=netElements.getDstNodeId();
+        NodeId tunnelDestNodeId = netElements.getDstNodeId();
 
         Long returnVnid = (long) netElements.getSrcEpOrds().getTunnelId();
 
@@ -193,12 +198,12 @@ public class ChainAction extends Action {
     }
 
     private RenderedServicePath createRsp(ServiceFunctionPath sfcPath, RspName rspName) {
-        CreateRenderedPathInput rspInput = new CreateRenderedPathInputBuilder().setParentServiceFunctionPath(
-                sfcPath.getName().getValue())
-            .setName(rspName.getValue())
-            .setSymmetric(sfcPath.isSymmetric())
-            .build();
-         return SfcProviderRenderedPathAPI.createRenderedServicePathAndState(sfcPath, rspInput);
+        CreateRenderedPathInput rspInput =
+                new CreateRenderedPathInputBuilder().setParentServiceFunctionPath(sfcPath.getName().getValue())
+                    .setName(rspName.getValue())
+                    .setSymmetric(sfcPath.isSymmetric())
+                    .build();
+        return SfcProviderRenderedPathAPI.createRenderedServicePathAndState(sfcPath, rspInput);
     }
 
     private RenderedServicePath createSymmetricRsp(RenderedServicePath rsp) {
@@ -235,8 +240,8 @@ public class ChainAction extends Action {
     }
 
     private RenderedServicePath getRspByName(RspName rspName, ReadOnlyTransaction rTx) {
-        Optional<RenderedServicePath> optRsp = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
-                SfcIidFactory.rspIid(rspName), rTx);
+        Optional<RenderedServicePath> optRsp =
+                DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL, SfcIidFactory.rspIid(rspName), rTx);
         if (optRsp.isPresent()) {
             return optRsp.get();
         }
