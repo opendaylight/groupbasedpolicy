@@ -86,36 +86,28 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
                 name = new Name(network.getNetworkName());
             } catch (Exception e) {
                 name = null;
-                LOG.info("Name of Neutron Network '{}' is ignored.",
-                        network.getNetworkName());
+                LOG.info("Name of Neutron Network '{}' is ignored.", network.getNetworkName());
                 LOG.debug("Name exception", e);
             }
         }
 
         L3ContextId l3ContextId = new L3ContextId(UUID.randomUUID().toString());
-        L3Context l3Context = new L3ContextBuilder().setId(l3ContextId)
-            .setName(name)
-            .build();
+        L3Context l3Context = new L3ContextBuilder().setId(l3ContextId).setName(name).build();
         rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l3ContextIid(tenantId, l3ContextId), l3Context, true);
 
         L2BridgeDomainId l2BdId = new L2BridgeDomainId(UUID.randomUUID().toString());
-        L2BridgeDomain l2Bd = new L2BridgeDomainBuilder().setId(l2BdId)
-            .setParent(l3ContextId)
-            .setName(name)
-            .build();
+        L2BridgeDomain l2Bd = new L2BridgeDomainBuilder().setId(l2BdId).setParent(l3ContextId).setName(name).build();
         rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l2BridgeDomainIid(tenantId, l2BdId), l2Bd, true);
 
-        L2FloodDomain l2Fd = new L2FloodDomainBuilder().setId(l2FdId)
-            .setParent(l2BdId)
-            .setName(name)
-            .build();
+        L2FloodDomain l2Fd = new L2FloodDomainBuilder().setId(l2FdId).setParent(l2BdId).setName(name).build();
         rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l2FloodDomainIid(tenantId, l2FdId), l2Fd, true);
 
         NetworkMapping networkMapping = new NetworkMappingBuilder().setNetworkId(l2FdId)
             .setL2BridgeDomainId(l2BdId)
             .setL3ContextId(l3ContextId)
             .build();
-        rwTx.put(LogicalDatastoreType.OPERATIONAL, NeutronMapperIidFactory.networkMappingIid(l2FdId), networkMapping, true);
+        rwTx.put(LogicalDatastoreType.OPERATIONAL, NeutronMapperIidFactory.networkMappingIid(l2FdId), networkMapping,
+                true);
 
         if (!tenantsWithRouterAndNetworkSeviceEntities.contains(tenantId)) {
             tenantsWithRouterAndNetworkSeviceEntities.add(tenantId);
@@ -124,10 +116,12 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
             NetworkService.writeNetworkServiceEntitiesToTenant(tenantId, rwTx);
             NetworkService.writeDhcpClauseWithConsProvEic(tenantId, null, rwTx);
             NetworkService.writeDnsClauseWithConsProvEic(tenantId, null, rwTx);
+            NetworkService.writeMgmtClauseWithConsProvEic(tenantId, null, rwTx);
             NetworkClient.writeNetworkClientEntitiesToTenant(tenantId, rwTx);
             NetworkClient.writeConsumerNamedSelector(tenantId, Router.CONTRACT_CONSUMER_SELECTOR, rwTx);
             NetworkClient.writeConsumerNamedSelector(tenantId, NetworkService.DHCP_CONTRACT_CONSUMER_SELECTOR, rwTx);
             NetworkClient.writeConsumerNamedSelector(tenantId, NetworkService.DNS_CONTRACT_CONSUMER_SELECTOR, rwTx);
+            NetworkClient.writeConsumerNamedSelector(tenantId, NetworkService.MGMT_CONTRACT_CONSUMER_SELECTOR, rwTx);
         }
         if (network.getRouterExternal() != null && network.getRouterExternal() == true) {
             addEpgExternalIfMissing(tenantId, rwTx);
@@ -137,14 +131,15 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
     }
 
     private void addExternalNetworkIfMissing(L2FloodDomainId l2FdId, ReadWriteTransaction rwTx) {
-        InstanceIdentifier<ExternalNetworkByL2FloodDomain> iid = NeutronGbpIidFactory.externalNetworkByL2FloodDomain(l2FdId);
-        Optional<ExternalNetworkByL2FloodDomain> externalPresent = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
-                iid, rwTx);
+        InstanceIdentifier<ExternalNetworkByL2FloodDomain> iid =
+                NeutronGbpIidFactory.externalNetworkByL2FloodDomain(l2FdId);
+        Optional<ExternalNetworkByL2FloodDomain> externalPresent =
+                DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, iid, rwTx);
         if (!externalPresent.isPresent()) {
-            ExternalNetworkByL2FloodDomainBuilder builder = new ExternalNetworkByL2FloodDomainBuilder()
-                .setL2FloodDomainId(l2FdId);
-            rwTx.put(LogicalDatastoreType.OPERATIONAL,
-                    NeutronGbpIidFactory.externalNetworkByL2FloodDomain(l2FdId), builder.build(), true);
+            ExternalNetworkByL2FloodDomainBuilder builder =
+                    new ExternalNetworkByL2FloodDomainBuilder().setL2FloodDomainId(l2FdId);
+            rwTx.put(LogicalDatastoreType.OPERATIONAL, NeutronGbpIidFactory.externalNetworkByL2FloodDomain(l2FdId),
+                    builder.build(), true);
         }
     }
 
@@ -152,8 +147,7 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
         Optional<EndpointGroup> potentialEpgExternal = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.endpointGroupIid(tenantId, MappingUtils.EPG_EXTERNAL_ID), rwTx);
         if (!potentialEpgExternal.isPresent()) {
-            EndpointGroup epgExternal = new EndpointGroupBuilder()
-                .setId(MappingUtils.EPG_EXTERNAL_ID)
+            EndpointGroup epgExternal = new EndpointGroupBuilder().setId(MappingUtils.EPG_EXTERNAL_ID)
                 .setName(new Name("EXTERNAL_group"))
                 .setDescription(new Description(MappingUtils.NEUTRON_EXTERNAL + "epg_external_networks"))
                 .build();
@@ -202,8 +196,8 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
         TenantId tenantId = new TenantId(Utils.normalizeUuid(network.getTenantID()));
         L2FloodDomainId l2FdId = new L2FloodDomainId(network.getID());
         InstanceIdentifier<NetworkMapping> networkMappingIid = NeutronMapperIidFactory.networkMappingIid(l2FdId);
-        Optional<NetworkMapping> potentionalNetworkMapping = DataStoreHelper.readFromDs(
-                LogicalDatastoreType.OPERATIONAL, networkMappingIid, rwTx);
+        Optional<NetworkMapping> potentionalNetworkMapping =
+                DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL, networkMappingIid, rwTx);
         if (!potentionalNetworkMapping.isPresent()) {
             LOG.warn("Illegal state - network-mapping {} does not exist.", l2FdId.getValue());
             rwTx.cancel();

@@ -5,7 +5,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -22,14 +21,14 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 
 public class NetworkServiceTest extends GbpDataBrokerTest {
 
-    //dhcp
+    // dhcp
     private static final SubjectName DHCP_SUBJECT_NAME = new SubjectName("ALLOW_DHCP");
     private static final String DHCP_IPV4_CLIENT_SERVER_NAME = "DHCP_IPv4_FROM_CLIENT_TO_SERVER";
     private static final String DHCP_IPV4_SERVER_CLIENT_NAME = "DHCP_IPv4_FROM_SERVER_TO_CLIENT";
     private static final String DHCP_IPV6_CLIENT_SERVER_NAME = "DHCP_IPv6_FROM_CLIENT_TO_SERVER";
     private static final String DHCP_IPV6_SERVER_CLIENT_NAME = "DHCP_IPv6_FROM_SERVER_TO_CLIENT";
 
-    //dns
+    // dns
     private static final SubjectName DNS_SUBJECT_NAME = new SubjectName("ALLOW_DNS");
     private static final String DNS_UDP_IPV4_CLIENT_SERVER_NAME = "DNS_UDP_IPv4_FROM_CLIENT_TO_SERVER";
     private static final String DNS_UDP_IPV4_SERVER_CLIENT_NAME = "DNS_UDP_IPv4_FROM_SERVER_TO_CLIENT";
@@ -39,6 +38,15 @@ public class NetworkServiceTest extends GbpDataBrokerTest {
     private static final String DNS_TCP_IPV4_SERVER_CLIENT_NAME = "DNS_TCP_IPv4_FROM_SERVER_TO_CLIENT";
     private static final String DNS_TCP_IPV6_CLIENT_SERVER_NAME = "DNS_TCP_IPv6_FROM_CLIENT_TO_SERVER";
     private static final String DNS_TCP_IPV6_SERVER_CLIENT_NAME = "DNS_TCP_IPv6_FROM_SERVER_TO_CLIENT";
+
+    // mgmt
+    private static final SubjectName MGMT_SUBJECT_NAME = new SubjectName("ALLOW_MGMT");
+    private static final String SSH_IPV4_SERVER_TO_CLIENT_NAME = "SSH_IPV4_FROM_SERVER_TO_CLIENT";
+    private static final String SSH_IPV6_SERVER_TO_CLIENT_NAME = "SSH_IPV6_FROM_SERVER_TO_CLIENT";
+    private static final String SSH_IPV4_CLIENT_TO_SERVER_NAME = "SSH_IPV4_FROM_CLIENT_TO_SERVER";
+    private static final String SSH_IPV6_CLIENT_TO_SERVER_NAME = "SSH_IPV6_FROM_CLIENT_TO_SERVER";
+    private static final String ICMP_IPV4_BETWEEN_SERVER_CLIENT_NAME = "ICMP_IPV4_BETWEEN_SERVER_CLIENT";
+    private static final String ICMP_IPV6_BETWEEN_SERVER_CLIENT_NAME = "ICMP_IPV6_BETWEEN_SERVER_CLIENT";
 
     private final String tenantId = "00000000-0000-0000-0000-000000000001";
     private final IpPrefix ipv4Prefix = new IpPrefix(new Ipv4Prefix("170.0.0.1/8"));
@@ -57,7 +65,7 @@ public class NetworkServiceTest extends GbpDataBrokerTest {
         NetworkService.writeDhcpClauseWithConsProvEic(new TenantId(tenantId), ipv4Prefix, rwTx);
         rwTx.submit().get();
 
-        //expected clause name
+        // expected clause name
         String clauseNameIpV4 = DHCP_SUBJECT_NAME.getValue() + MappingUtils.NAME_DOUBLE_DELIMETER
                 + ipv4Prefix.getIpv4Prefix().getValue();
         clauseNameIpV4 = clauseNameIpV4.replace('/', '_');
@@ -73,7 +81,7 @@ public class NetworkServiceTest extends GbpDataBrokerTest {
         NetworkService.writeDhcpClauseWithConsProvEic(new TenantId(tenantId), ipv6Prefix, rwTx);
         rwTx.submit().get();
 
-        //expected clause name
+        // expected clause name
         String clauseNameIpV6 = DHCP_SUBJECT_NAME.getValue() + MappingUtils.NAME_DOUBLE_DELIMETER
                 + ipv6Prefix.getIpv6Prefix().getValue();
         clauseNameIpV6 = clauseNameIpV6.replace('/', '_').replace(':', '.');
@@ -84,14 +92,15 @@ public class NetworkServiceTest extends GbpDataBrokerTest {
 
     @Test
     public void testWriteDnsClauseWithConsProvEicIpv4() throws Exception {
-        //ipv4
+        // ipv4
         DataBroker dataBroker = getDataBroker();
         ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
         NetworkService.writeDnsClauseWithConsProvEic(new TenantId(tenantId), ipv4Prefix, rwTx);
         rwTx.submit().get();
 
-        //expected clause name
-        String clauseNameIpV4 = DNS_SUBJECT_NAME.getValue() + MappingUtils.NAME_DOUBLE_DELIMETER + ipv4Prefix.getIpv4Prefix().getValue();
+        // expected clause name
+        String clauseNameIpV4 = DNS_SUBJECT_NAME.getValue() + MappingUtils.NAME_DOUBLE_DELIMETER
+                + ipv4Prefix.getIpv4Prefix().getValue();
         clauseNameIpV4 = clauseNameIpV4.replace('/', '_');
 
         PolicyAssert.assertClauseExists(dataBroker, tenantId, NetworkService.DNS_CONTRACT_ID.getValue(),
@@ -100,14 +109,15 @@ public class NetworkServiceTest extends GbpDataBrokerTest {
 
     @Test
     public void testWriteDnsClauseWithConsProvEicIpv6() throws Exception {
-        //ipv6
+        // ipv6
         DataBroker dataBroker = getDataBroker();
         ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
         NetworkService.writeDnsClauseWithConsProvEic(new TenantId(tenantId), ipv6Prefix, rwTx);
         rwTx.submit().get();
 
-        //expected clause name
-        String clauseNameIpV6 = DNS_SUBJECT_NAME.getValue() + MappingUtils.NAME_DOUBLE_DELIMETER + ipv6Prefix.getIpv6Prefix().getValue();
+        // expected clause name
+        String clauseNameIpV6 = DNS_SUBJECT_NAME.getValue() + MappingUtils.NAME_DOUBLE_DELIMETER
+                + ipv6Prefix.getIpv6Prefix().getValue();
         clauseNameIpV6 = clauseNameIpV6.replace('/', '_').replace(':', '.');
 
         PolicyAssert.assertClauseExists(dataBroker, tenantId, NetworkService.DNS_CONTRACT_ID.getValue(),
@@ -116,13 +126,13 @@ public class NetworkServiceTest extends GbpDataBrokerTest {
 
     @Test
     public void testWriteNetworkServiceEntitiesToTenant() throws Exception {
-        //write everything
+        // write everything
         DataBroker dataBroker = getDataBroker();
         ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
         NetworkService.writeNetworkServiceEntitiesToTenant(new TenantId(tenantId), rwTx);
         rwTx.submit().get();
 
-        //read classifier instances
+        // read classifier instances
         PolicyAssert.assertClassifierInstanceExists(dataBroker, tenantId, DHCP_IPV4_CLIENT_SERVER_NAME);
         PolicyAssert.assertClassifierInstanceExists(dataBroker, tenantId, DHCP_IPV4_SERVER_CLIENT_NAME);
         PolicyAssert.assertClassifierInstanceExists(dataBroker, tenantId, DHCP_IPV6_CLIENT_SERVER_NAME);
@@ -135,12 +145,19 @@ public class NetworkServiceTest extends GbpDataBrokerTest {
         PolicyAssert.assertClassifierInstanceExists(dataBroker, tenantId, DNS_TCP_IPV4_SERVER_CLIENT_NAME);
         PolicyAssert.assertClassifierInstanceExists(dataBroker, tenantId, DNS_TCP_IPV6_CLIENT_SERVER_NAME);
         PolicyAssert.assertClassifierInstanceExists(dataBroker, tenantId, DNS_TCP_IPV6_SERVER_CLIENT_NAME);
+        PolicyAssert.assertClassifierInstanceExists(dataBroker, tenantId, SSH_IPV4_SERVER_TO_CLIENT_NAME);
+        PolicyAssert.assertClassifierInstanceExists(dataBroker, tenantId, SSH_IPV6_SERVER_TO_CLIENT_NAME);
+        PolicyAssert.assertClassifierInstanceExists(dataBroker, tenantId, SSH_IPV4_CLIENT_TO_SERVER_NAME);
+        PolicyAssert.assertClassifierInstanceExists(dataBroker, tenantId, SSH_IPV6_CLIENT_TO_SERVER_NAME);
+        PolicyAssert.assertClassifierInstanceExists(dataBroker, tenantId, ICMP_IPV4_BETWEEN_SERVER_CLIENT_NAME);
+        PolicyAssert.assertClassifierInstanceExists(dataBroker, tenantId, ICMP_IPV6_BETWEEN_SERVER_CLIENT_NAME);
 
-        //read contracts
+        // read contracts
         PolicyAssert.assertContractExists(dataBroker, tenantId, NetworkService.DHCP_CONTRACT_ID.getValue());
         PolicyAssert.assertContractExists(dataBroker, tenantId, NetworkService.DNS_CONTRACT_ID.getValue());
+        PolicyAssert.assertContractExists(dataBroker, tenantId, NetworkService.MGMT_CONTRACT_ID.getValue());
 
-        //read group id
+        // read group id
         PolicyAssert.assertEndpointGroupExists(dataBroker, tenantId, NetworkService.EPG_ID.getValue());
     }
 
@@ -149,7 +166,7 @@ public class NetworkServiceTest extends GbpDataBrokerTest {
         Set<ClassifierInstance> classifierInstances = NetworkService.getAllClassifierInstances();
         assertNotNull(classifierInstances);
         assertFalse(classifierInstances.isEmpty());
-        assertEquals(classifierInstances.size(), 12);
+        assertEquals(classifierInstances.size(), 18);
     }
 
 }

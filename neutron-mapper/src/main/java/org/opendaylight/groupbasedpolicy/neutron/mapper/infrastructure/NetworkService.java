@@ -70,6 +70,9 @@ import com.google.common.collect.ImmutableList;
 
 public class NetworkService {
 
+    /**
+     * Unit tests {@link NetworkServiceTest}
+     */
     // ########### DHCP
     private static final long DHCP_IPV4_SERVER_PORT = 67;
     private static final long DHCP_IPV4_CLIENT_PORT = 68;
@@ -86,6 +89,7 @@ public class NetworkService {
     private static final SubjectName DHCP_SUBJECT_NAME = new SubjectName("ALLOW_DHCP");
     private static final Description DHCP_CONTRACT_DESC =
             new Description("Allow DHCP communication between client and server.");
+
     /**
      * Id of {@link #DHCP_CONTRACT}
      */
@@ -135,6 +139,39 @@ public class NetworkService {
      */
     public static final ConsumerNamedSelector DNS_CONTRACT_CONSUMER_SELECTOR;
 
+    // ########### SSH and ICMP management
+    private static final long SSH_TCP_PORT = 22;
+    private static final ClassifierName SSH_IPV4_SERVER_TO_CLIENT_NAME =
+            new ClassifierName("SSH_IPV4_FROM_SERVER_TO_CLIENT");
+    private static final ClassifierName SSH_IPV6_SERVER_TO_CLIENT_NAME =
+            new ClassifierName("SSH_IPV6_FROM_SERVER_TO_CLIENT");
+    private static final ClassifierName SSH_IPV4_CLIENT_TO_SERVER_NAME =
+            new ClassifierName("SSH_IPV4_FROM_CLIENT_TO_SERVER");
+    private static final ClassifierName SSH_IPV6_CLIENT_TO_SERVER_NAME =
+            new ClassifierName("SSH_IPV6_FROM_CLIENT_TO_SERVER");
+    private static final ClassifierName ICMP_IPV4_BETWEEN_SERVER_CLIENT_NAME =
+            new ClassifierName("ICMP_IPV4_BETWEEN_SERVER_CLIENT");
+    private static final ClassifierName ICMP_IPV6_BETWEEN_SERVER_CLIENT_NAME =
+            new ClassifierName("ICMP_IPV6_BETWEEN_SERVER_CLIENT");
+    private static final SubjectName MGMT_SUBJECT_NAME = new SubjectName("ALLOW_MGMT");
+    private static final Description MGMT_CONTRACT_DESC =
+            new Description("Allow ICMP and SSH management communication between server and client.");
+
+    /**
+     * Id of {@link #MGMT_CONTRACT}
+     */
+    public static final ContractId MGMT_CONTRACT_ID = new ContractId("33318d2e-dddd-11e5-885d-feff819cdc9f");
+    /**
+     * Contains rules with action {@link MappingUtils#ACTION_REF_ALLOW} matching ICMP and SSH
+     * communication
+     * between Client and Server.
+     */
+    public static final Contract MGMT_CONTRACT;
+    /**
+     * {@link ConsumerNamedSelector} pointing to {@link #MGMT_CONTRACT}
+     */
+    public static final ConsumerNamedSelector MGMT_CONTRACT_CONSUMER_SELECTOR;
+
     // ########### NETWORK-SERVICE ENDPOINT-GROUP
     private static final Name NETWORK_SERVICE_EPG_NAME = new Name("NETWORK_SERVICE");
     private static final Description NETWORK_SERVICE_EPG_DESC = new Description("Represents DHCP and DNS servers.");
@@ -152,15 +189,18 @@ public class NetworkService {
         DHCP_CONTRACT_CONSUMER_SELECTOR = createConsumerSelector(DHCP_CONTRACT);
         DNS_CONTRACT = createContractDns();
         DNS_CONTRACT_CONSUMER_SELECTOR = createConsumerSelector(DNS_CONTRACT);
+        MGMT_CONTRACT = createContractMgmt();
+        MGMT_CONTRACT_CONSUMER_SELECTOR = createConsumerSelector(MGMT_CONTRACT);
         EPG = createNetworkServiceEpg();
     }
 
     private static EndpointGroup createNetworkServiceEpg() {
         ProviderNamedSelector dhcpProviderSelector = createProviderSelector(DHCP_CONTRACT);
         ProviderNamedSelector dnsProviderSelector = createProviderSelector(DNS_CONTRACT);
+        ProviderNamedSelector mgmtProviderSelector = createProviderSelector(MGMT_CONTRACT);
         return new EndpointGroupBuilder().setId(EPG_ID)
             .setName(NETWORK_SERVICE_EPG_NAME)
-            .setProviderNamedSelector(ImmutableList.of(dhcpProviderSelector, dnsProviderSelector))
+            .setProviderNamedSelector(ImmutableList.of(dhcpProviderSelector, dnsProviderSelector, mgmtProviderSelector))
             .setIntraGroupPolicy(IntraGroupPolicy.RequireContract)
             .setDescription(NETWORK_SERVICE_EPG_DESC)
             .build();
@@ -217,6 +257,28 @@ public class NetworkService {
             .build();
     }
 
+    private static Contract createContractMgmt() {
+        Rule serverClientSshIpv4Rule = createRuleAllow(SSH_IPV4_SERVER_TO_CLIENT_NAME, Direction.Out);
+        Rule serverClientSshIpv6Rule = createRuleAllow(SSH_IPV6_SERVER_TO_CLIENT_NAME, Direction.Out);
+        Rule clientServerSshIpv4Rule = createRuleAllow(SSH_IPV4_CLIENT_TO_SERVER_NAME, Direction.In);
+        Rule clientServerSshIpv6Rule = createRuleAllow(SSH_IPV6_CLIENT_TO_SERVER_NAME, Direction.In);
+        Rule serverClientIcmpIpv4Rule = createRuleAllow(ICMP_IPV4_BETWEEN_SERVER_CLIENT_NAME, Direction.Out);
+        Rule serverClientIcmpIpv6Rule = createRuleAllow(ICMP_IPV6_BETWEEN_SERVER_CLIENT_NAME, Direction.Out);
+        Rule clientServerIcmpIpv4Rule = createRuleAllow(ICMP_IPV4_BETWEEN_SERVER_CLIENT_NAME, Direction.In);
+        Rule clientServerIcmpIpv6Rule = createRuleAllow(ICMP_IPV6_BETWEEN_SERVER_CLIENT_NAME, Direction.In);
+
+        Subject subject = new SubjectBuilder().setName(MGMT_SUBJECT_NAME)
+            .setOrder(0)
+            .setRule(ImmutableList.of(serverClientSshIpv4Rule, serverClientSshIpv6Rule, clientServerSshIpv4Rule,
+                    clientServerSshIpv6Rule, clientServerIcmpIpv4Rule, clientServerIcmpIpv6Rule,
+                    serverClientIcmpIpv4Rule, serverClientIcmpIpv6Rule))
+            .build();
+        return new ContractBuilder().setId(MGMT_CONTRACT_ID)
+            .setSubject(ImmutableList.of(subject))
+            .setDescription(MGMT_CONTRACT_DESC)
+            .build();
+    }
+
     private static Rule createRuleAllow(ClassifierName classifierName, Direction direction) {
         ClassifierName name =
                 new ClassifierName(direction.name() + MappingUtils.NAME_DOUBLE_DELIMETER + classifierName.getValue());
@@ -241,8 +303,8 @@ public class NetworkService {
     public static void writeDhcpClauseWithConsProvEic(TenantId tenantId, @Nullable IpPrefix ipPrefix,
             WriteTransaction wTx) {
         Clause clause = createClauseWithConsProvEic(ipPrefix, DHCP_SUBJECT_NAME);
-        wTx.put(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.clauseIid(tenantId, DHCP_CONTRACT_ID, clause.getName()), clause, true);
+        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.clauseIid(tenantId, DHCP_CONTRACT_ID, clause.getName()),
+                clause, true);
     }
 
     /**
@@ -256,8 +318,23 @@ public class NetworkService {
     public static void writeDnsClauseWithConsProvEic(TenantId tenantId, @Nullable IpPrefix ipPrefix,
             WriteTransaction wTx) {
         Clause clause = createClauseWithConsProvEic(ipPrefix, DNS_SUBJECT_NAME);
-        wTx.put(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.clauseIid(tenantId, DNS_CONTRACT_ID, clause.getName()), clause, true);
+        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.clauseIid(tenantId, DNS_CONTRACT_ID, clause.getName()),
+                clause, true);
+    }
+
+    /**
+     * puts clause with {@link L3EndpointIdentificationConstraints} in {@link ConsumerMatchers}
+     * and {@link ProviderMatchers}. This clause points to subject in {@link #MGMT_CONTRACT}.
+     *
+     * @param tenantId location of {@link #MGMT_CONTRACT}
+     * @param ipPrefix used in {@link L3EndpointIdentificationConstraints}
+     * @param wTx transaction where entities are written
+     */
+    public static void writeMgmtClauseWithConsProvEic(TenantId tenantId, @Nullable IpPrefix ipPrefix,
+            WriteTransaction wTx) {
+        Clause clause = createClauseWithConsProvEic(ipPrefix, MGMT_SUBJECT_NAME);
+        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.clauseIid(tenantId, MGMT_CONTRACT_ID, clause.getName()),
+                clause, true);
     }
 
     private static Clause createClauseWithConsProvEic(@Nullable IpPrefix ipPrefix, SubjectName subjectName) {
@@ -295,7 +372,7 @@ public class NetworkService {
 
     /**
      * Puts network service entities (classifier-instances, {@link #DHCP_CONTRACT},
-     * {@link #DNS_CONTRACT}, and {@link #EPG}) to
+     * {@link #DNS_CONTRACT}, {@link #MGMT_CONTRACT} and {@link #EPG}) to
      * {@link LogicalDatastoreType#CONFIGURATION}
      *
      * @param tenantId location of network-service entities
@@ -311,11 +388,14 @@ public class NetworkService {
                 true);
         wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.contractIid(tenantId, DNS_CONTRACT_ID), DNS_CONTRACT,
                 true);
+        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.contractIid(tenantId, MGMT_CONTRACT_ID), MGMT_CONTRACT,
+                true);
         wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.endpointGroupIid(tenantId, EPG_ID), EPG, true);
     }
 
     /**
-     * @return All classifier-instances used in {@link #DHCP_CONTRACT} and {@link #DNS_CONTRACT}
+     * @return All classifier-instances used in {@link #DHCP_CONTRACT}, {@link #DNS_CONTRACT} and
+     *         {@link #MGMT_CONTRACT}
      */
     public static Set<ClassifierInstance> getAllClassifierInstances() {
         HashSet<ClassifierInstance> cis = new HashSet<>();
@@ -331,6 +411,14 @@ public class NetworkService {
         cis.add(createDnsTcpIpv4ServerClient());
         cis.add(createDnsTcpIpv6ClientServer());
         cis.add(createDnsTcpIpv6ServerClient());
+        // MGMT
+        cis.add(createSshTcpIpv4ServerClient());
+        cis.add(createSshTcpIpv6ServerClient());
+        cis.add(createSshTcpIpv4ClientServer());
+        cis.add(createSshTcpIpv6ClientServer());
+        cis.add(createIcmpIpv4());
+        cis.add(createIcmpIpv6());
+
         return cis;
     }
 
@@ -430,6 +518,54 @@ public class NetworkService {
             .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
             .setParameterValue(
                     createParams(EtherTypeClassifier.IPv6_VALUE, IpProtoClassifier.TCP_VALUE, DNS_SERVER_PORT, null))
+            .build();
+    }
+
+    // ###################### SSH TCP
+    private static ClassifierInstance createSshTcpIpv4ClientServer() {
+        return new ClassifierInstanceBuilder().setName(SSH_IPV4_CLIENT_TO_SERVER_NAME)
+            .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
+            .setParameterValue(
+                    createParams(EtherTypeClassifier.IPv4_VALUE, IpProtoClassifier.TCP_VALUE, SSH_TCP_PORT, null))
+            .build();
+    }
+
+    private static ClassifierInstance createSshTcpIpv4ServerClient() {
+        return new ClassifierInstanceBuilder().setName(SSH_IPV4_SERVER_TO_CLIENT_NAME)
+            .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
+            .setParameterValue(
+                    createParams(EtherTypeClassifier.IPv4_VALUE, IpProtoClassifier.TCP_VALUE, null, SSH_TCP_PORT))
+            .build();
+    }
+
+    private static ClassifierInstance createSshTcpIpv6ClientServer() {
+        return new ClassifierInstanceBuilder().setName(SSH_IPV6_CLIENT_TO_SERVER_NAME)
+            .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
+            .setParameterValue(
+                    createParams(EtherTypeClassifier.IPv6_VALUE, IpProtoClassifier.TCP_VALUE, SSH_TCP_PORT, null))
+            .build();
+    }
+
+    private static ClassifierInstance createSshTcpIpv6ServerClient() {
+        return new ClassifierInstanceBuilder().setName(SSH_IPV6_SERVER_TO_CLIENT_NAME)
+            .setClassifierDefinitionId(L4Classifier.DEFINITION.getId())
+            .setParameterValue(
+                    createParams(EtherTypeClassifier.IPv6_VALUE, IpProtoClassifier.TCP_VALUE, null, SSH_TCP_PORT))
+            .build();
+    }
+
+    // ###################### ICMP
+    private static ClassifierInstance createIcmpIpv4() {
+        return new ClassifierInstanceBuilder().setName(ICMP_IPV4_BETWEEN_SERVER_CLIENT_NAME)
+            .setClassifierDefinitionId(IpProtoClassifier.DEFINITION.getId())
+            .setParameterValue(createParams(EtherTypeClassifier.IPv4_VALUE, IpProtoClassifier.ICMP_VALUE, null, null))
+            .build();
+    }
+
+    private static ClassifierInstance createIcmpIpv6() {
+        return new ClassifierInstanceBuilder().setName(ICMP_IPV6_BETWEEN_SERVER_CLIENT_NAME)
+            .setClassifierDefinitionId(IpProtoClassifier.DEFINITION.getId())
+            .setParameterValue(createParams(EtherTypeClassifier.IPv6_VALUE, IpProtoClassifier.ICMP_VALUE, null, null))
             .build();
     }
 
