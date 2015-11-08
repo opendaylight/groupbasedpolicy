@@ -224,7 +224,7 @@ public class PolicyResolver implements PolicyValidatorRegistry, AutoCloseable {
         Table<EgKey, EgKey, org.opendaylight.groupbasedpolicy.dto.Policy> policyMap =
                 PolicyResolverUtils.resolvePolicy(indexedTenants);
         ResolvedPolicies resolvedPolicies =
-                new ResolvedPoliciesBuilder().setResolvedPolicy(PolicyInfoUtils.buildResolvedPolicy(policyMap)).build();
+                new ResolvedPoliciesBuilder().setResolvedPolicy(PolicyInfoUtils.buildResolvedPolicy(policyMap, resolvedTenants)).build();
 
         wTx.put(LogicalDatastoreType.OPERATIONAL, InstanceIdentifier.builder(ResolvedPolicies.class).build(),
                 resolvedPolicies, true);

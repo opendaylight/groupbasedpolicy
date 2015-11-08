@@ -19,6 +19,8 @@
     <repository>mvn:org.opendaylight.openflowplugin/features-openflowplugin/{{VERSION}}/xml/features</repository>
     <repository>mvn:org.opendaylight.openflowplugin/features-openflowplugin-extension/{{VERSION}}/xml/features</repository>
     <repository>mvn:org.opendaylight.ovsdb/southbound-features/{{VERSION}}/xml/features</repository>
+    <!-- Repos needed by the Fabric As A Service (FAAS) renderer -->
+    <repository>mvn:org.opendaylight.faas/features-faas/{{VERSION}}/xml/features</repository>
     <!-- Repos needed by the Neutron Mapper -->
     <repository>mvn:org.opendaylight.neutron/features-neutron/{{VERSION}}/xml/features</repository>
     <!-- Repos needed by ofoverlay for SFC -->
@@ -84,7 +86,7 @@
     -->
     <feature name='odl-groupbasedpolicy-faas' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Fabric As A Service Renderer'>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
-        <feature version='${openflowplugin.version}'>odl-openflowplugin-nxm-extensions</feature>
+        <feature version='${faas.version}'>odl-faas-uln-mapper</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/faas-renderer/{{VERSION}}</bundle>
         <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-faas.xml">mvn:org.opendaylight.groupbasedpolicy/faas-renderer/{{VERSION}}/xml/config</configfile>
     </feature>

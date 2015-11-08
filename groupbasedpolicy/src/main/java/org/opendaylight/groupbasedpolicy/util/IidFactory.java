@@ -116,6 +116,14 @@ public class IidFactory {
             .build();
     }
 
+    public static InstanceIdentifier<Contract> contractWildcardIid(TenantId tenantId) {
+        return InstanceIdentifier.builder(Tenants.class)
+            .child(Tenant.class, new TenantKey(tenantId))
+            .child(Policy.class)
+            .child(Contract.class)
+            .build();
+    }
+
     public static InstanceIdentifier<Subject> subjectIid(TenantId tenantId, ContractId contractId,
             SubjectName subjectName) {
         return InstanceIdentifier.builder(Tenants.class)
@@ -281,6 +289,14 @@ public class IidFactory {
             .build();
     }
 
+    public static InstanceIdentifier<Subnet> subnetWildcardIid(TenantId tenantId) {
+        return InstanceIdentifier.builder(Tenants.class)
+            .child(Tenant.class, new TenantKey(tenantId))
+            .child(ForwardingContext.class)
+            .child(Subnet.class)
+            .build();
+    }
+
     public static InstanceIdentifier<FollowedEndpointGroup> followedEndpointgroupIid(RendererName rendererName,
             TenantId tenantId, EndpointGroupId epgId) {
         return InstanceIdentifier.builder(Renderers.class)
@@ -306,5 +322,22 @@ public class IidFactory {
             .child(Capabilities.class)
             .child(SupportedClassifierDefinition.class)
             .build();
+    }
+
+    public static InstanceIdentifier<FollowedTenant> followedTenantIid(RendererName rendererName, TenantId tenantId) {
+        return InstanceIdentifier.builder(Renderers.class)
+            .child(Renderer.class, new RendererKey(rendererName))
+            .child(Interests.class)
+            .child(FollowedTenants.class)
+            .child(FollowedTenant.class, new FollowedTenantKey(tenantId))
+            .build();
+    }
+
+    public static InstanceIdentifier<Renderer> rendererIid(RendererName rendererName) {
+        return InstanceIdentifier.builder(Renderers.class).child(Renderer.class, new RendererKey(rendererName)).build();
+    }
+
+    public static InstanceIdentifier<Renderers> renderersIid() {
+        return InstanceIdentifier.builder(Renderers.class).build();
     }
 }

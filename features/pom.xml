@@ -31,6 +31,7 @@
     <openflowplugin.version>0.2.0-SNAPSHOT</openflowplugin.version>
     <ovsdb.southbound.version>1.2.1-SNAPSHOT</ovsdb.southbound.version>
     <neutron.version>0.6.0-SNAPSHOT</neutron.version>
+    <faas.version>1.0.0-SNAPSHOT</faas.version>
     <sfc.version>0.2.0-SNAPSHOT</sfc.version>
     <restconf.version>1.3.0-SNAPSHOT</restconf.version>
     <dlux.version>0.3.0-SNAPSHOT</dlux.version>
@@ -135,6 +136,15 @@
       <artifactId>features-neutron</artifactId>
       <classifier>features</classifier>
       <version>${neutron.version}</version>
+      <type>xml</type>
+    </dependency>
+ 
+    <!-- Faas -->
+    <dependency>
+      <groupId>org.opendaylight.faas</groupId>
+      <artifactId>features-faas</artifactId>
+      <classifier>features</classifier>
+      <version>${faas.version}</version>
       <type>xml</type>
     </dependency>
 

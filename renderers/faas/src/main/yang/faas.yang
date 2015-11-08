@@ -12,9 +12,10 @@ module faas {
     namespace "urn:opendaylight:groupbasedpolicy:faas";
     prefix "faas";
 
-    import gbp-common { prefix gbp-common; }
-    import endpoint { prefix endpoint; }
-    import resolved-policy { prefix resolved-policy; }
+    import gbp-common { prefix gbp-common; revision-date 2014-04-21; }
+    import faas-common { prefix faas-common; revision-date 2015-10-13; }
+    import endpoint { prefix endpoint; revision-date 2014-04-21; }
+    import resolved-policy { prefix resolved-policy; revision-date 2015-08-28; }
 
     description
         "This module defines the group-based policy faas renderer model.";
@@ -24,6 +25,29 @@ module faas {
                 "Initial revision.";
     }
 
+    typedef scope-type {
+        type enumeration {
+            enum private {
+                description "private scope within a tenant domain";
+            }
+            enum public {
+                description "public scope that is exposed outside the tenant domain such as the Internet";
+            }
+        }
+    }
+    typedef service-communication-layer {
+        type enumeration {
+            enum layer-undefined {
+                description "Undefined layer";
+            }
+            enum layer-2 {
+                description "layer 2";
+            }
+            enum layer-3 {
+                description "layer 3";
+            }
+        }
+    }
     grouping has-contract-key {
         leaf contract-tenant-id {
             description "Related tenant id";
@@ -36,45 +60,99 @@ module faas {
         }
     }
 
-    container mapped-service-profiles {
-        description "The list of mapped services";
+    grouping has-logical-entity {
+        leaf logical-router-id {
+            type faas-common:uuid;
+        }
+        leaf logical-switch-id {
+            type faas-common:uuid;
+        }
+        leaf-list gbp-subnet-id {
+            type gbp-common:subnet-id;
+        }
+    }
+
+    container logical-networks {
+        description "The mapped logical networks based on GBP resolved services";
 
         config false;
 
-        list mapped-service-profile {
-            description "a service is an EPG-Contract-EPG";
+        list logical-network {
+            description "Mapped logical network for an EPG-Contract-EPG service";
 
-            key "consumer-epg-id contract-id provider-epg-id";
+            key "consumer-epg-id contract-id provider-epg-id consumer-tenant-id provider-tenant-id";
 
             uses resolved-policy:has-consumer-epg-key;
             uses has-contract-key;
             uses resolved-policy:has-provider-epg-key;
-            leaf faas-security-rules-groups {
-                description "Faas rules generated from GBP contract";
-                type gbp-common:uuid;
+            leaf communication-layer {
+                description "logical network communication layer";
+                type service-communication-layer;
             }
-            leaf-list faas-routers {
-                description "Faas logical routers";
-                type gbp-common:uuid;
+            container consumer-network {
+                uses has-logical-entity;
+                leaf network-scope-type {
+                    description "if public, it means the router has a public access port";
+                    default private;
+                    type scope-type;
+                }
             }
-            leaf-list faas-switches {
-                description "Faas logical switches";
-                type gbp-common:uuid;
-            }
-            leaf-list faas-ports {
-                description "Faas logical ports";
-                type gbp-common:uuid;
-            }
-            leaf-list faas-subnets {
-                description "Faas subnets";
-                type gbp-common:uuid;
+            container provider-network {
+                uses has-logical-entity;
+                leaf network-scope-type {
+                    description "if public, it means the router has a public access port";
+                    default private;
+                    type scope-type;
+                }
             }
         }
-        list mapped-endpoints {
-            uses endpoint:l2-key;
-            leaf-list faas-ports {
-                description "Faas logical ports";
-                type gbp-common:uuid;
+    }
+
+    grouping tenant-pair-id {
+        leaf gbp-tenant-id {
+            type gbp-common:tenant-id;
+        }
+        leaf faas-tenant-id {
+            type faas-common:uuid;
+        }
+    }
+    container mapped-tenants-entities {
+
+        config false;
+
+        list mapped-tenant {
+            key "gbp-tenant-id";
+            uses tenant-pair-id;
+        }
+        list mapped-entity {
+            key "gbp-tenant-id";
+            leaf gbp-tenant-id {
+                type gbp-common:tenant-id;
+            }
+            list mapped-contract {
+                key "gbp-contract-id";
+                leaf gbp-contract-id {
+                    type gbp-common:contract-id;
+                }
+                leaf faas-security-rules-id {
+                    type faas-common:uuid;
+                }
+            }
+            list mapped-subnet {
+                key "gbp-subnet-id";
+                leaf gbp-subnet-id {
+                    type gbp-common:subnet-id;
+                }
+                leaf faas-subnet-id {
+                    type faas-common:uuid;
+                }
+            }
+            list mapped-endpoint {
+                key "l2-context mac-address";
+                uses endpoint:l2-key;
+                leaf endpoint-location {
+                    type faas-common:uuid;
+                }
             }
         }
     }

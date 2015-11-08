@@ -19,13 +19,14 @@
 
   <properties>
     <openflowplugin.version>0.2.0-SNAPSHOT</openflowplugin.version>
+    <faas.version>1.0.0-SNAPSHOT</faas.version>
   </properties>
 
   <dependencies>
     <dependency>
-      <groupId>org.opendaylight.openflowplugin</groupId>
-      <artifactId>openflowplugin-extension-nicira</artifactId>
-      <version>${openflowplugin.version}</version>
+      <groupId>org.opendaylight.faas</groupId>
+      <artifactId>uln-mapper-model</artifactId>
+      <version>${faas.version}</version>
     </dependency>
     <!-- testing dependencies -->
     <dependency>

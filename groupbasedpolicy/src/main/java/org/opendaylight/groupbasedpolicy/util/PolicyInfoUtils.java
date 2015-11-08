@@ -12,15 +12,19 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 
 import org.opendaylight.groupbasedpolicy.dto.ConditionSet;
 import org.opendaylight.groupbasedpolicy.dto.EgKey;
 import org.opendaylight.groupbasedpolicy.dto.EndpointConstraint;
+import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.dto.Policy;
 import org.opendaylight.groupbasedpolicy.dto.RuleGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef.ConnectionTracking;
@@ -50,6 +54,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.p
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.resolved.rules.ResolvedRuleBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.resolved.rules.ResolvedRuleKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.ResolvedPolicy;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.ResolvedPolicy.ExternalImplicitGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.ResolvedPolicyBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.PolicyRuleGroupWithEndpointConstraints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.PolicyRuleGroupWithEndpointConstraintsBuilder;
@@ -57,17 +62,20 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.p
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.policy.rule.group.with.endpoint.constraints.PolicyRuleGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.policy.rule.group.with.endpoint.constraints.PolicyRuleGroupBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.policy.rule.group.with.endpoint.constraints.ProviderEndpointConstraintsBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
 
 public class PolicyInfoUtils {
-
+    private static final Logger LOG = LoggerFactory.getLogger(PolicyInfoUtils.class);
     private PolicyInfoUtils() {
         throw new UnsupportedOperationException("Cannot create an instance");
     }
 
-    public static List<ResolvedPolicy> buildResolvedPolicy(Table<EgKey, EgKey, Policy> policyMap) {
+    public static List<ResolvedPolicy> buildResolvedPolicy(Table<EgKey, EgKey, Policy> policyMap,
+            ConcurrentMap<TenantId, IndexedTenant> resolvedTenants) {
         List<ResolvedPolicy> resolvedPolicies = new ArrayList<>();
         for (Cell<EgKey, EgKey, Policy> policyCell : policyMap.cellSet()) {
             ResolvedPolicyBuilder resolvedPolicyBuilder = new ResolvedPolicyBuilder();
@@ -77,9 +85,33 @@ public class PolicyInfoUtils {
             resolvedPolicyBuilder.setProviderTenantId(policyCell.getColumnKey().getTenantId());
             resolvedPolicyBuilder.setPolicyRuleGroupWithEndpointConstraints(
                     buildPolicyRuleGroupWithEndpointConstraints(policyCell.getValue()));
+            Tenant consTenant = resolvedTenants.get(policyCell.getRowKey().getTenantId()).getTenant();
+            Tenant provTenant = resolvedTenants.get(policyCell.getColumnKey().getTenantId()).getTenant();
+            if (isExternalImplicitGroup(consTenant, policyCell.getRowKey().getEgId())) {
+                resolvedPolicyBuilder.setExternalImplicitGroup(ExternalImplicitGroup.ConsumerEpg);
+            } else if (isExternalImplicitGroup(provTenant, policyCell.getColumnKey().getEgId())) {
+                resolvedPolicyBuilder.setExternalImplicitGroup(ExternalImplicitGroup.ProviderEpg);
+            }
             resolvedPolicies.add(resolvedPolicyBuilder.build());
         }
         return resolvedPolicies;
+    }
+
+    private static boolean isExternalImplicitGroup(Tenant tenant, EndpointGroupId epgId) {
+        if (tenant == null || epgId == null || tenant.getPolicy() == null
+                || tenant.getPolicy().getExternalImplicitGroup() == null) {
+            return false;
+        }
+        LOG.trace("Found External EPGs in Tenant {}", tenant.getId().getValue());
+        for (org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ExternalImplicitGroup eig : tenant.getPolicy()
+            .getExternalImplicitGroup()) {
+            if (eig.getId().equals(epgId)) {
+                LOG.trace("EPG {} is External Implicit Group", epgId.getValue());
+                return true;
+            }
+        }
+        LOG.trace("EPG {} is NOT External Implicit Group", epgId.getValue());
+        return false;
     }
 
     private static List<PolicyRuleGroupWithEndpointConstraints> buildPolicyRuleGroupWithEndpointConstraints(

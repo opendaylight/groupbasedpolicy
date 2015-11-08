@@ -134,6 +134,7 @@ public class InheritanceUtils {
             .setPolicy(new PolicyBuilder().setEndpointGroup(ImmutableList.copyOf(resolvedEgs.values()))
                 .setContract(ImmutableList.copyOf(resolvedContracts.values()))
                 .setContractRef(unresolvedPolicy.getContractRef())
+                .setExternalImplicitGroup(unresolvedPolicy.getExternalImplicitGroup())
                 .setSubjectFeatureInstances(unresolvedPolicy.getSubjectFeatureInstances())
                 .build());
         }

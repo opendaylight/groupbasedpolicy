@@ -12,44 +12,26 @@ module faas-endpoint {
     prefix "faas-endpoint";
 
     import yang-ext { prefix ext; revision-date "2013-07-09"; }
-    import opendaylight-inventory { prefix inv; revision-date "2013-08-19"; }
-    import gbp-common { prefix gbp-common; }
-    import endpoint { prefix endpoint; }
+    import endpoint { prefix endpoint; revision-date 2014-04-21; }
+    import faas-common { prefix faas-common; revision-date 2015-10-13; }
 
     revision 2015-10-09 {
         description "Initial revision";
     }
 
-    grouping switch-attach-location {
-        description
-                "The switch attachment for this endpoint";
-
-        leaf node-id {
-            description "The switch for this attached point";
-            type inv:node-id;
-        }
-
-        leaf node-connector-id {
-            description "The node connector that this point is attached to";
-            type inv:node-connector-id;
+    grouping faas-port-ref {
+        leaf faas-port-ref-id {
+            description "faas port cross reference";
+            type faas-common:uuid;
         }
     }
-
-    grouping endpoint-ext-fields {
-        leaf subnet-id {
-            description "The subnet Id";
-            type gbp-common:unique-id;
-        }
-        uses switch-attach-location;
-    }
-
     augment "/endpoint:endpoints/endpoint:endpoint" {
         ext:augment-identifier "faas-endpoint-context";
-        uses endpoint-ext-fields;
+        uses faas-port-ref;
     }
 
     augment "/endpoint:register-endpoint/endpoint:input" {
         ext:augment-identifier "faas-endpoint-context-input";
-        uses endpoint-ext-fields;
+        uses faas-port-ref;
     }
 }
