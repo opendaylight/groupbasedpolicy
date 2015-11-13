@@ -14,14 +14,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableList;
 import org.opendaylight.groupbasedpolicy.sf.classifiers.IpProtoClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.sf.classifiers.L4ClassifierDefinition;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.PortNumber;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.parameter.value.RangeValue;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.parameters.type.parameter.type.IntBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.capabilities.supported.classifier.definition.SupportedParameterValues;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.capabilities.supported.classifier.definition.SupportedParameterValuesBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.supported._int.value.fields.SupportedIntValueInRange;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.supported._int.value.fields.SupportedIntValueInRangeBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.supported.range.value.fields.SupportedRangeValue;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.supported.range.value.fields.SupportedRangeValueBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer4Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._4.match.SctpMatch;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._4.match.SctpMatchBuilder;
@@ -45,8 +54,39 @@ public class L4Classifier extends Classifier {
     }
 
     @Override
-    public ClassifierDefinition getClassDef() {
+    public ClassifierDefinition getClassifierDefinition() {
         return L4ClassifierDefinition.DEFINITION;
+    }
+
+    @Override
+    public List<SupportedParameterValues> getSupportedParameterValues() {
+        List<SupportedIntValueInRange> allPossiblePortsIntInRange = ImmutableList.of(
+                new SupportedIntValueInRangeBuilder().setMin(1L).setMax(65535L).build());
+        List<SupportedRangeValue> allPossiblePortsRange = ImmutableList.of(
+                new SupportedRangeValueBuilder().setMin(1L).setMax(65535L).build());
+
+        SupportedParameterValuesBuilder srcPorts = new SupportedParameterValuesBuilder();
+        srcPorts.setParameterName(new ParameterName(L4ClassifierDefinition.SRC_PORT_PARAM));
+        srcPorts.setParameterType(
+                new IntBuilder().setSupportedIntValueInRange(allPossiblePortsIntInRange).build());
+
+        SupportedParameterValuesBuilder dstPorts = new SupportedParameterValuesBuilder();
+        dstPorts.setParameterName(new ParameterName(L4ClassifierDefinition.DST_PORT_PARAM));
+        dstPorts.setParameterType(
+                new IntBuilder().setSupportedIntValueInRange(allPossiblePortsIntInRange).build());
+
+        SupportedParameterValuesBuilder srcPortsRange = new SupportedParameterValuesBuilder();
+        srcPorts.setParameterName(new ParameterName(L4ClassifierDefinition.SRC_PORT_RANGE_PARAM));
+        srcPorts.setParameterType(
+                new IntBuilder().setSupportedIntValueInRange(allPossiblePortsIntInRange).build());
+
+        SupportedParameterValuesBuilder dstPortsRange = new SupportedParameterValuesBuilder();
+        dstPorts.setParameterName(new ParameterName(L4ClassifierDefinition.DST_PORT_RANGE_PARAM));
+        dstPorts.setParameterType(
+                new IntBuilder().setSupportedIntValueInRange(allPossiblePortsIntInRange).build());
+
+        return ImmutableList.of(srcPorts.build(), dstPorts.build(), srcPortsRange.build(),
+                dstPortsRange.build());
     }
 
     @Override

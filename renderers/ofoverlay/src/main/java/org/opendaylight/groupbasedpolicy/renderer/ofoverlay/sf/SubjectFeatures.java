@@ -33,26 +33,25 @@ import com.google.common.collect.ImmutableMap;
  * Defines the subject features that are supported by the OF overlay renderer
  */
 public class SubjectFeatures {
-    private static final Map<ClassifierDefinitionId, Classifier> classifiers =
-            ImmutableMap.<ClassifierDefinitionId, Classifier>
-                of(EtherTypeClassifierDefinition.ID, Classifier.ETHER_TYPE_CL,
-                   IpProtoClassifierDefinition.ID, Classifier.IP_PROTO_CL,
-                   L4ClassifierDefinition.ID, Classifier.L4_CL);
+
+    private static final Map<ClassifierDefinitionId, Classifier> classifiers = ImmutableMap.
+            of(EtherTypeClassifierDefinition.ID, Classifier.ETHER_TYPE_CL,
+                    IpProtoClassifierDefinition.ID, Classifier.IP_PROTO_CL,
+                    L4ClassifierDefinition.ID, Classifier.L4_CL);
 
     private static final List<ClassifierDefinition> classifierDefs =
             ImmutableList.copyOf(Collections2.transform(classifiers.values(),
                 new Function<Classifier, ClassifierDefinition>() {
                     @Override
                     public ClassifierDefinition apply(Classifier input) {
-                        return input.getClassDef();
+                        return input.getClassifierDefinition();
                     }
                 }
             ));
 
-    private static final Map<ActionDefinitionId, Action> actions =
-            ImmutableMap.<ActionDefinitionId, Action>
-                of(AllowActionDefinition.ID, new AllowAction(),
-                   ChainActionDefinition.ID, new ChainAction());
+    private static final Map<ActionDefinitionId, Action> actions = ImmutableMap.
+            of(AllowActionDefinition.ID, new AllowAction(), ChainActionDefinition.ID,
+                    new ChainAction());
 
     private static final List<ActionDefinition> actionDefs =
             ImmutableList.copyOf(Collections2.transform(actions.values(),
@@ -79,6 +78,11 @@ public class SubjectFeatures {
      */
     public static Classifier getClassifier(ClassifierDefinitionId id) {
         return classifiers.get(id);
+    }
+
+
+    public static Map<ClassifierDefinitionId, Classifier> getClassifiers() {
+        return classifiers;
     }
 
     public static Map<ActionDefinitionId, Action> getActions() {

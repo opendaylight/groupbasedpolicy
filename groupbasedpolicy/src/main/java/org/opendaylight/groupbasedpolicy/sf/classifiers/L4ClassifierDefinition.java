@@ -14,6 +14,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.SubjectFeatureDefinitions;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definition.Parameter.IsRequired;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definition.Parameter.Type;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definition.ParameterBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinition;
@@ -56,21 +57,26 @@ public class L4ClassifierDefinition {
                         new ParameterBuilder().setName(new ParameterName(SRC_PORT_PARAM))
                             .setDescription(new Description("The source port number to match against"))
                             .setType(Type.Int)
+                            .setIsRequired(IsRequired.Optional)
                             .build(),
                         new ParameterBuilder().setName(new ParameterName(SRC_PORT_RANGE_PARAM))
                             .setDescription(new Description("The source port range to match against"))
                             .setType(Type.Range)
+                            .setIsRequired(IsRequired.Optional)
                             .build(),
                         new ParameterBuilder().setName(new ParameterName(DST_PORT_PARAM))
                             .setDescription(new Description("The destination port number to match against"))
                             .setType(Type.Int)
-                            .build(), new ParameterBuilder().setName(new ParameterName(DST_PORT_RANGE_PARAM))
+                            .setIsRequired(IsRequired.Optional)
+                            .build(), 
+                        new ParameterBuilder().setName(new ParameterName(DST_PORT_RANGE_PARAM))
                             .setDescription(new Description("The destination port range to match against"))
                             .setType(Type.Range)
+                            .setIsRequired(IsRequired.Optional)
                             .build()))
         .build();
 
-    public static final InstanceIdentifier IID =
+    public static final InstanceIdentifier<ClassifierDefinition> IID =
             InstanceIdentifier.builder(SubjectFeatureDefinitions.class)
                     .child(ClassifierDefinition.class, DEFINITION.getKey())
                     .build();

@@ -11,13 +11,20 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.collect.ImmutableList;
 import org.opendaylight.groupbasedpolicy.sf.classifiers.IpProtoClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.sf.classifiers.EtherTypeClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.parameters.type.parameter.type.IntBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.capabilities.supported.classifier.definition.SupportedParameterValues;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.capabilities.supported.classifier.definition.SupportedParameterValuesBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.supported._int.value.fields.SupportedIntValue;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.supported._int.value.fields.SupportedIntValueBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.IpMatchBuilder;
 
 /**
@@ -35,8 +42,27 @@ public class IpProtoClassifier extends Classifier {
     }
 
     @Override
-    public ClassifierDefinition getClassDef() {
+    public ClassifierDefinition getClassifierDefinition() {
         return IpProtoClassifierDefinition.DEFINITION;
+    }
+
+    @Override
+    public List<SupportedParameterValues> getSupportedParameterValues() {
+
+        List<SupportedIntValue> values = ImmutableList.of(
+                new SupportedIntValueBuilder().setValue(IpProtoClassifierDefinition.ICMP_VALUE)
+                        .build(),
+                new SupportedIntValueBuilder().setValue(IpProtoClassifierDefinition.SCTP_VALUE)
+                        .build(),
+                new SupportedIntValueBuilder().setValue(IpProtoClassifierDefinition.TCP_VALUE)
+                        .build(),
+                new SupportedIntValueBuilder().setValue(IpProtoClassifierDefinition.UDP_VALUE)
+                        .build());
+        SupportedParameterValuesBuilder b = new SupportedParameterValuesBuilder();
+        b.setParameterName(new ParameterName(IpProtoClassifierDefinition.PROTO_PARAM));
+        b.setParameterType(new IntBuilder().setSupportedIntValue(values).build());
+
+        return ImmutableList.of(b.build());
     }
 
     @Override

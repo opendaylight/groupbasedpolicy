@@ -63,6 +63,13 @@ module gbp-common {
         description "A globally unique identifier";
     }
 
+    typedef unique-id-string {
+        type string {
+            length "1..256";
+        }
+        description "A globally unique identifier (based on String)";
+    }
+
     // *************
     // Relator names
     // *************
@@ -218,7 +225,7 @@ module gbp-common {
     // ****************
 
     typedef subject-feature-id {
-        type unique-id;
+        type unique-id-string;
         description "A unique ID for a parameterized object";
     }
 

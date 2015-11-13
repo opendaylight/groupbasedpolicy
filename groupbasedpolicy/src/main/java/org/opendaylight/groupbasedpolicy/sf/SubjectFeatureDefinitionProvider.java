@@ -17,15 +17,11 @@ import org.opendaylight.groupbasedpolicy.sf.actions.ChainActionDefinition;
 import org.opendaylight.groupbasedpolicy.sf.classifiers.EtherTypeClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.sf.classifiers.IpProtoClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.sf.classifiers.L4ClassifierDefinition;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
- * On creation, puts known Subject Feature Definitions to operational datastore; deletes them on #close()
+ * On creation, puts known Subject Feature Definitions to config datastore; deletes them on #close()
  */
 public class SubjectFeatureDefinitionProvider implements AutoCloseable {
-    private static final Logger LOG =
-            LoggerFactory.getLogger(SubjectFeatureDefinitionProvider.class);
 
     private final DataBroker dataProvider;
 
@@ -38,7 +34,6 @@ public class SubjectFeatureDefinitionProvider implements AutoCloseable {
     public SubjectFeatureDefinitionProvider(DataBroker dataProvider)
             throws TransactionCommitFailedException {
         this.dataProvider = dataProvider;
-
         putSubjectFeatureDefinitions();
     }
 
@@ -50,16 +45,16 @@ public class SubjectFeatureDefinitionProvider implements AutoCloseable {
     private void putSubjectFeatureDefinitions() throws TransactionCommitFailedException {
         WriteTransaction wt = this.dataProvider.newWriteOnlyTransaction();
 
-        wt.put(LogicalDatastoreType.OPERATIONAL, EtherTypeClassifierDefinition.IID,
+        wt.put(LogicalDatastoreType.CONFIGURATION, EtherTypeClassifierDefinition.IID,
                 EtherTypeClassifierDefinition.DEFINITION);
-        wt.put(LogicalDatastoreType.OPERATIONAL, IpProtoClassifierDefinition.IID,
+        wt.put(LogicalDatastoreType.CONFIGURATION, IpProtoClassifierDefinition.IID,
                 IpProtoClassifierDefinition.DEFINITION);
-        wt.put(LogicalDatastoreType.OPERATIONAL, L4ClassifierDefinition.IID,
+        wt.put(LogicalDatastoreType.CONFIGURATION, L4ClassifierDefinition.IID,
                 L4ClassifierDefinition.DEFINITION);
 
-        wt.put(LogicalDatastoreType.OPERATIONAL, AllowActionDefinition.IID,
+        wt.put(LogicalDatastoreType.CONFIGURATION, AllowActionDefinition.IID,
                 AllowActionDefinition.DEFINITION);
-        wt.put(LogicalDatastoreType.OPERATIONAL, ChainActionDefinition.IID,
+        wt.put(LogicalDatastoreType.CONFIGURATION, ChainActionDefinition.IID,
                 ChainActionDefinition.DEFINITION);
 
         wt.submit().checkedGet();
@@ -68,12 +63,12 @@ public class SubjectFeatureDefinitionProvider implements AutoCloseable {
     private void deleteSubjectFeatureDefinitions() throws TransactionCommitFailedException {
         WriteTransaction wt = this.dataProvider.newWriteOnlyTransaction();
 
-        wt.delete(LogicalDatastoreType.OPERATIONAL, EtherTypeClassifierDefinition.IID);
-        wt.delete(LogicalDatastoreType.OPERATIONAL, IpProtoClassifierDefinition.IID);
-        wt.delete(LogicalDatastoreType.OPERATIONAL, L4ClassifierDefinition.IID);
+        wt.delete(LogicalDatastoreType.CONFIGURATION, EtherTypeClassifierDefinition.IID);
+        wt.delete(LogicalDatastoreType.CONFIGURATION, IpProtoClassifierDefinition.IID);
+        wt.delete(LogicalDatastoreType.CONFIGURATION, L4ClassifierDefinition.IID);
 
-        wt.delete(LogicalDatastoreType.OPERATIONAL, AllowActionDefinition.IID);
-        wt.delete(LogicalDatastoreType.OPERATIONAL, ChainActionDefinition.IID);
+        wt.delete(LogicalDatastoreType.CONFIGURATION, AllowActionDefinition.IID);
+        wt.delete(LogicalDatastoreType.CONFIGURATION, ChainActionDefinition.IID);
 
         wt.submit().checkedGet();
     }

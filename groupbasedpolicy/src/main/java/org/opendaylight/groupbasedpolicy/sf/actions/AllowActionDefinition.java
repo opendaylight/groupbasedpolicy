@@ -30,7 +30,7 @@ public class AllowActionDefinition {
         .setDescription(new Description("Allow the specified traffic to pass"))
         .build();
 
-    public static final InstanceIdentifier IID =
+    public static final InstanceIdentifier<ActionDefinition> IID =
             InstanceIdentifier.builder(SubjectFeatureDefinitions.class)
                     .child(ActionDefinition.class, DEFINITION.getKey())
                     .build();

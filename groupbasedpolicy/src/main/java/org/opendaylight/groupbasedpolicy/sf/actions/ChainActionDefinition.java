@@ -46,7 +46,7 @@ public class ChainActionDefinition {
                     .build())))
         .build();
 
-    public static final InstanceIdentifier IID =
+    public static final InstanceIdentifier<ActionDefinition> IID =
             InstanceIdentifier.builder(SubjectFeatureDefinitions.class)
                     .child(ActionDefinition.class, DEFINITION.getKey())
                     .build();

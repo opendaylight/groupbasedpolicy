@@ -636,6 +636,37 @@ module policy {
     // Global Configuration
     // ********************
 
+    grouping classifier-definition-fields {
+        uses subject-feature-definition;
+
+        leaf id {
+            description "A unique ID for the classifier definition";
+            type gbp-common:classifier-definition-id;
+            mandatory true;
+        }
+
+        leaf name {
+            description
+                "A user-visible name for the classifier definition";
+            type gbp-common:classifier-name;
+        }
+    }
+
+    grouping action-definition-fields {
+        uses subject-feature-definition;
+
+        leaf id {
+            description "A unique ID for the action";
+            type gbp-common:action-definition-id;
+            mandatory true;
+        }
+
+        leaf name {
+            description "A user-visible name for the action";
+            type gbp-common:action-name;
+        }
+    }
+
     container subject-feature-definitions {
         description
             "Contains configuration for the set of actions and
@@ -667,19 +698,7 @@ module policy {
                  references it.";
 
             key "id";
-            uses subject-feature-definition;
-
-            leaf id {
-                description "A unique ID for the classifier definition";
-                type gbp-common:classifier-definition-id;
-                mandatory true;
-            }
-
-            leaf name {
-                description
-                    "A user-visible name for the classifier definition";
-                type gbp-common:classifier-name;
-            }
+            uses classifier-definition-fields;
         }
 
         list action-definition {
@@ -690,18 +709,7 @@ module policy {
                  references it.";
 
             key "id";
-            uses subject-feature-definition;
-
-            leaf id {
-                description "A unique ID for the action";
-                type gbp-common:action-definition-id;
-                mandatory true;
-            }
-
-            leaf name {
-                description "A user-visible name for the action";
-                type gbp-common:action-name;
-            }
+            uses action-definition-fields;
         }
     }
 

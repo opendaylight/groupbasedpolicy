@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
- * 
+ *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -12,12 +12,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.base.Strings;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
-
-import com.google.common.base.Strings;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.capabilities.supported.classifier.definition.SupportedParameterValues;
 
 /**
  * Represent a classifier definition, and provide tools for generating flow
@@ -47,7 +47,7 @@ public abstract class Classifier {
      *
      * @return the {@link ClassifierDefinition} for this classifier
      */
-    public abstract ClassifierDefinition getClassDef();
+    public abstract ClassifierDefinition getClassifierDefinition();
 
     /**
      * @return parent classifier, see {@link Classifier}
@@ -83,7 +83,7 @@ public abstract class Classifier {
                 } catch (IllegalArgumentException e) {
                     hasReqParams = false;
                 }
-                if (hasReqParams == true) {
+                if (hasReqParams) {
                     matchBuilders = parent.update(matchBuilders, params);
                     updatedClassifiers.add(parent);
                 }
@@ -101,6 +101,8 @@ public abstract class Classifier {
         }
         return new ClassificationResult(matchBuilders);
     }
+
+    public abstract List<SupportedParameterValues> getSupportedParameterValues();
 
     /**
      * Checks presence of required {@code params} in order to decide if classifier can update {@code matches} properly

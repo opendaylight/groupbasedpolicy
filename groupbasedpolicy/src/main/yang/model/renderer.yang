@@ -1,0 +1,197 @@
+/*
+ * Copyright (c) 2015 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
+module renderer {
+    yang-version 1;
+
+    namespace "urn:opendaylight:groupbasedpolicy:renderer";
+    prefix "gbp-renderer";
+
+    import gbp-common {
+        prefix gbp-common;
+        revision-date 2014-04-21;
+    }
+    import policy {
+        prefix policy;
+        revision-date 2014-04-21;
+    }
+    import ietf-inet-types {
+        prefix inet;
+        revision-date 2010-09-24;
+    }
+
+    description
+        "This module defines renderer capabilities.";
+
+    revision "2015-11-03" {
+        description
+            "Initial revision.";
+    }
+
+    typedef renderer-name {
+        type gbp-common:name;
+        description "A name for a renderer";
+    }
+
+    grouping supported-string-value-fields {
+        list supported-string-value {
+            description "String value has to be identical.";
+            key value;
+            leaf value {
+                type string;
+            }
+        }
+    }
+
+    grouping supported-int-value-fields {
+        list supported-int-value {
+            description "Int value has to be identical.";
+            key value;
+            leaf value {
+                type int64;
+            }
+        }
+        list supported-int-value-in-range {
+            description "Int value has to be inside the range include boundaries.";
+            key "min max";
+            leaf min {
+                type int64;
+            }
+            leaf max {
+                type int64;
+            }
+        }
+    }
+
+    grouping supported-range-value-fields {
+        list supported-range-value {
+            description "Min and max values have to be inside the range include boundaries.";
+            key "min max";
+            leaf min {
+                type int64;
+            }
+            leaf max {
+                type int64;
+            }
+        }
+    }
+
+    grouping has-parameters-type {
+        choice parameter-type {
+            case string {
+                uses supported-string-value-fields;
+            }
+            case int {
+                uses supported-int-value-fields;
+            }
+            case range {
+                uses supported-range-value-fields;
+            }
+        }
+    }
+
+    container renderers {
+        description
+            "Leaf containing all renderers' description.";
+
+        config false;
+
+        list renderer {
+            description
+                "A renderer provides a list of capabilities.";
+
+            key name;
+
+            leaf name {
+                description
+                    "A user-visible name for the renderer";
+                type renderer-name;
+            }
+
+            container capabilities {
+                description "Capabilities this renderer provides.";
+
+                list supported-classifier-definition {
+                    description
+                        "Classifier definitions this renderer can use.";
+
+                    key classifier-definition-id;
+
+                    leaf classifier-definition-id {
+                        description "Reference to a classifier definition in config datastore.";
+                        type leafref {
+                            path "/policy:subject-feature-definitions/policy:classifier-definition/policy:id";
+                        }
+                    }
+
+                    leaf parent-classifier-definition-id {
+                        description
+                            "Optional reference to a parent classifier definition,
+                            to provide a hierarchical structure.";
+                        type leafref {
+                            path "/policy:subject-feature-definitions/policy:classifier-definition/policy:id";
+                        }
+                    }
+
+                    list supported-parameter-values {
+                        description "Represents supported paramters and its values by renderer.
+                            If it contains only parameter-name without paramater-type, it means that any value is supported.";
+                        key parameter-name;
+
+                        leaf parameter-name {
+                            description "TODO";
+                            type leafref {
+                                path "/policy:subject-feature-definitions/policy:classifier-definition/policy:parameter/policy:name";
+                            }
+                        }
+
+                        uses has-parameters-type;
+                    }
+                }
+
+                list supported-action-definition {
+                    description
+                        "Action definitions this renderer can use.";
+
+                    key action-definition-id;
+
+                    leaf action-definition-id {
+                        description "Reference to an action definition in config datastore.";
+                        type leafref {
+                            path "/policy:subject-feature-definitions/policy:action-definition/policy:id";
+                        }
+                    }
+
+                    leaf parent-action-definition-id {
+                        description
+                            "Optional reference to a parent action definition,
+                            to provide a hierarchical structure.";
+                        type leafref {
+                            path "/policy:subject-feature-definitions/policy:action-definition/policy:id";
+                        }
+                    }
+
+                    list supported-parameter-values {
+                        description "Represents supported paramters and its values by renderer.
+                            If it contains only parameter-name without paramater-type, it means that any value is supported.";
+                        key parameter-name;
+
+                        leaf parameter-name {
+                            description "TODO";
+                            type leafref {
+                                path "/policy:subject-feature-definitions/policy:action-definition/policy:parameter/policy:name";
+                            }
+                        }
+
+                        uses has-parameters-type;
+                    }
+                }
+            }
+        }
+    }
+}

@@ -59,7 +59,7 @@ public class EtherTypeClassifierDefinition {
                     .build()))
         .build();
 
-    public static final InstanceIdentifier IID =
+    public static final InstanceIdentifier<ClassifierDefinition> IID =
             InstanceIdentifier.builder(SubjectFeatureDefinitions.class)
                     .child(ClassifierDefinition.class, DEFINITION.getKey())
                     .build();
