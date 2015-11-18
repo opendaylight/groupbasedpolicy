@@ -8,12 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.iovisor;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.NotificationService;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
+import org.opendaylight.groupbasedpolicy.renderer.iovisor.endpoint.EndpointManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,24 +20,18 @@ public class IovisorRenderer implements AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(IovisorRenderer.class);
 
-    private final DataBroker dataBroker;
-    private final ScheduledExecutorService executor;
+    private EndpointManager endPointManager;
 
-
-    public IovisorRenderer(final DataBroker dataProvider, RpcProviderRegistry rpcRegistry,
-            NotificationService notificationService) {
-        super();
-        this.dataBroker = dataProvider;
-
-        int numCPU = Runtime.getRuntime().availableProcessors();
-        executor = Executors.newScheduledThreadPool(numCPU * 2);
-
+    public IovisorRenderer(final DataBroker dataBroker) {
         LOG.info("IOVisor Renderer has Started");
+        this.endPointManager = new EndpointManager(dataBroker);
     }
 
     @Override
     public void close() throws Exception {
-        executor.shutdownNow();
+        if (endPointManager != null) {
+            endPointManager.close();
+        }
     }
 
 }

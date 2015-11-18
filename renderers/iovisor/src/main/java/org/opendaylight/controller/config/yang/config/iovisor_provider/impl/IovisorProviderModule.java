@@ -1,4 +1,7 @@
 package org.opendaylight.controller.config.yang.config.iovisor_provider.impl;
+
+import org.opendaylight.groupbasedpolicy.renderer.iovisor.IovisorRenderer;
+
 public class IovisorProviderModule extends org.opendaylight.controller.config.yang.config.iovisor_provider.impl.AbstractIovisorProviderModule {
     public IovisorProviderModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {
         super(identifier, dependencyResolver);
@@ -15,8 +18,6 @@ public class IovisorProviderModule extends org.opendaylight.controller.config.ya
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        // TODO:implement
-        throw new java.lang.UnsupportedOperationException();
+        return  new IovisorRenderer(getDataBrokerDependency());
     }
-
 }
