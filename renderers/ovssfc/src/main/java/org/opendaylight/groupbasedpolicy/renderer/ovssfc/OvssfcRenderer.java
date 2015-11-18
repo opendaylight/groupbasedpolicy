@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.renderer.iovisor;
+package org.opendaylight.groupbasedpolicy.renderer.ovssfc;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
