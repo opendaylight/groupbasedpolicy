@@ -12,6 +12,10 @@ module iovisor {
     namespace "urn:opendaylight:groupbasedpolicy:iovisor";
     prefix "iovisor";
 
+    import yang-ext {prefix ext; revision-date "2013-07-09";}
+    import ietf-inet-types { prefix inet; revision-date 2010-09-24; }
+    import endpoint { prefix endpoint; }
+
     description
         "This module defines the group-based policy iovisor renderer model.";
 
@@ -20,9 +24,16 @@ module iovisor {
                 "Initial revision.";
     }
 
-    container iovisor-renderer {
-        leaf iovisor-renderer-name {
-            type string;
+    grouping iovisor-module-location {
+        leaf iom-uri {
+            type inet:uri;
+            description "IOVisor module uniform resource identifier.";
         }
+    }
+    
+    augment "/endpoint:endpoints" {
+        description "Augmentation adding the IOVisor module location";
+        ext:augment-identifier "iovior-module-location";
+        uses iovisor-module-location;
     }
 }
