@@ -35,10 +35,10 @@ import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
-import org.opendaylight.groupbasedpolicy.resolver.ActionInstanceValidator;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyScope;
+import org.opendaylight.groupbasedpolicy.resolver.validator.Validator;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
@@ -121,8 +121,8 @@ public class PolicyManagerTest {
                 any(InstanceIdentifier.class), any(SubjectFeatureDefinitions.class));
         PolicyManager ctorPolicyManager = new PolicyManager(dataBroker, ctorPolicyResolver,
                 switchManager, endpointManager, rpcRegistry, executor, tableOffset);
-        verify(ctorPolicyResolver, atLeastOnce()).registerActionDefinitions(any(ActionDefinitionId.class),
-                any(ActionInstanceValidator.class));
+        verify(ctorPolicyResolver, atLeastOnce()).registerActionInstanceValidators(any(ActionDefinitionId.class),
+                any(Validator.class));
         verify(ctorWriteTransaction).put(any(LogicalDatastoreType.class),
                 any(InstanceIdentifier.class), any(SubjectFeatureDefinitions.class));
         verify(ctorWriteTransaction).submit();

@@ -24,15 +24,20 @@ import javax.annotation.concurrent.Immutable;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
-import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.resolver.validator.ValidationResult;
+import org.opendaylight.groupbasedpolicy.resolver.validator.Validator;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.SubjectFeatureInstances;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ClassifierInstance;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -41,14 +46,15 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.opendaylight.groupbasedpolicy.resolver.validator.PolicyValidator;
-import org.opendaylight.groupbasedpolicy.resolver.validator.ValidationResult;
 
 /**
  * The policy resolver is a utility for renderers to help in resolving
@@ -93,7 +99,8 @@ public class PolicyResolver implements AutoCloseable {
      * Store validators for ActionDefinitions from Renderers
      *
      */
-    protected ConcurrentMap<ActionDefinitionId, ActionInstanceValidator> registeredActions = new ConcurrentHashMap<>();
+    protected SetMultimap<ActionDefinitionId, Validator<ActionInstance>> actionInstanceValidatorsByDefinition = Multimaps.synchronizedSetMultimap(HashMultimap.<ActionDefinitionId, Validator<ActionInstance>>create());
+    protected SetMultimap<ClassifierDefinitionId, Validator<ClassifierInstance>> classifierInstanceValidatorsByDefinition = Multimaps.synchronizedSetMultimap(HashMultimap.<ClassifierDefinitionId, Validator<ClassifierInstance>>create());
 
     public PolicyResolver(DataBroker dataProvider,
             ScheduledExecutorService executor) {
@@ -144,8 +151,24 @@ public class PolicyResolver implements AutoCloseable {
         return tc.tenant.get();
     }
 
-    public void registerActionDefinitions(ActionDefinitionId actionDefinitionId, ActionInstanceValidator validator) {
-        registeredActions.putIfAbsent(actionDefinitionId, validator);
+    public void registerActionInstanceValidators(ActionDefinitionId actionDefinitionId,
+            Validator<ActionInstance> validator) {
+        actionInstanceValidatorsByDefinition.put(actionDefinitionId, validator);
+    }
+
+    public void unregisterActionInstanceValidators(ActionDefinitionId actionDefinitionId,
+            Validator<ActionInstance> validator) {
+        actionInstanceValidatorsByDefinition.remove(actionDefinitionId, validator);
+    }
+
+    public void registerClassifierInstanceValidators(ClassifierDefinitionId classifierDefinitionId,
+            Validator<ClassifierInstance> validator) {
+        classifierInstanceValidatorsByDefinition.put(classifierDefinitionId, validator);
+    }
+
+    public void unregisterClassifierInstanceValidators(ClassifierDefinitionId classifierDefinitionId,
+            Validator<ClassifierInstance> validator) {
+        classifierInstanceValidatorsByDefinition.remove(classifierDefinitionId, validator);
     }
 
     /**
@@ -306,17 +329,22 @@ public class PolicyResolver implements AutoCloseable {
                 }
 
                 Tenant t = InheritanceUtils.resolveTenant(result.get());
-                if (isValidTenant(t)) {
-                    IndexedTenant it = new IndexedTenant(t);
-                    if (!tenantRef.compareAndSet(ot, it)) {
-                        // concurrent update of tenant policy. Retry
-                        updateTenant(tenantId);
-                    } else {
-                        // Update the policy cache and notify listeners
-                        WriteTransaction wt = dataProvider.newWriteOnlyTransaction();
-                        wt.put(LogicalDatastoreType.OPERATIONAL, tiid, t, true);
-                        wt.submit();
-                        updatePolicy();
+                SubjectFeatureInstances subjectFeatureInstances = t.getSubjectFeatureInstances();
+                if (subjectFeatureInstances != null) {
+                    // TODO log and remove invalid action instances
+                    if (actionInstancesAreValid(subjectFeatureInstances.getActionInstance())
+                            && classifierInstancesAreValid(subjectFeatureInstances.getClassifierInstance())) {
+                        IndexedTenant it = new IndexedTenant(t);
+                        if (!tenantRef.compareAndSet(ot, it)) {
+                            // concurrent update of tenant policy. Retry
+                            updateTenant(tenantId);
+                        } else {
+                            // Update the policy cache and notify listeners
+                            WriteTransaction wt = dataProvider.newWriteOnlyTransaction();
+                            wt.put(LogicalDatastoreType.OPERATIONAL, tiid, t, true);
+                            wt.submit();
+                            updatePolicy();
+                        }
                     }
                 }
             }
@@ -377,6 +405,56 @@ public class PolicyResolver implements AutoCloseable {
         return result;
     }
 
+    /**
+     * Validation of action instances.
+     *
+     * @param actionInstances list of instances to validate
+     * @return true if instances are valid or if <code>actionInstances</code>
+     * is <code>null</code>, Otherwise returns false.
+     *
+     */
+    private boolean actionInstancesAreValid(List<ActionInstance> actionInstances) {
+        if (actionInstances == null) {
+            return true;
+        }
+        for (ActionInstance actionInstance : actionInstances) {
+            Set<Validator<ActionInstance>> actionInstanceValidators = actionInstanceValidatorsByDefinition.get(actionInstance.getActionDefinitionId());
+            for (Validator<ActionInstance> actionInstanceValidator : actionInstanceValidators) {
+                ValidationResult validationResult = actionInstanceValidator.validate(actionInstance);
+                if (!validationResult.isValid()) {
+                    LOG.error("ActionInstance {} is not valid!", actionInstance.getName());
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Validation of classifier instances.
+     *
+     * @param classifierInstances list of instances to validate
+     * @return true if instances are valid or if <code>classifierInstances</code>
+     * is <code>null</code>, Otherwise returns false.
+     *
+     */
+    private boolean classifierInstancesAreValid(List<ClassifierInstance> classifierInstances) {
+        if (classifierInstances == null) {
+            return true;
+        }
+        for (ClassifierInstance classifierInstance : classifierInstances) {
+            Set<Validator<ClassifierInstance>> classifierInstanceValidators = classifierInstanceValidatorsByDefinition.get(classifierInstance.getClassifierDefinitionId());
+            for (Validator<ClassifierInstance> classifierInstanceValidator : classifierInstanceValidators) {
+                ValidationResult validationResult = classifierInstanceValidator.validate(classifierInstance);
+                if (!validationResult.isValid()) {
+                    LOG.error("ClassifierInstance {} is not valid!", classifierInstance.getName());
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     protected static class TenantContext {
 
         ListenerRegistration<DataChangeListener> registration;
@@ -403,22 +481,6 @@ public class PolicyResolver implements AutoCloseable {
         public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> arg0) {
             updateTenant(tenantId);
         }
-
-    }
-
-    private boolean isValidTenant(Tenant t) {
-        ValidationResult validationResult = PolicyValidator.validate(t, this);
-        if (validationResult == null) {
-            return true;
-        }
-        return validationResult.getResult().getValue();
-    }
-
-    public ActionInstanceValidator getActionInstanceValidator(ActionDefinitionId actionDefinitionId) {
-        if (registeredActions == null) {
-            return null;
-        }
-        return registeredActions.get(actionDefinitionId);
 
     }
 

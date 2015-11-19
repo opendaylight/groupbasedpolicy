@@ -17,6 +17,8 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.NetworkElements;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.PolicyPair;
+import org.opendaylight.groupbasedpolicy.resolver.validator.ValidationResult;
+import org.opendaylight.groupbasedpolicy.resolver.validator.ValidationResultBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
@@ -76,8 +78,8 @@ public class AllowAction extends Action {
     }
 
     @Override
-    public boolean isValid(ActionInstance actionInstance) {
-        return true;
+    public ValidationResult validate(ActionInstance actionInstance) {
+        return new ValidationResultBuilder().success().build();
     }
 
 }

@@ -32,6 +32,8 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcIidFactory;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcNshHeader;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcNshHeader.SfcNshHeaderBuilder;
+import org.opendaylight.groupbasedpolicy.resolver.validator.ValidationResult;
+import org.opendaylight.groupbasedpolicy.resolver.validator.ValidationResultBuilder;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.sfc.provider.api.SfcProviderRenderedPathAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServiceChainAPI;
@@ -118,7 +120,6 @@ public class ChainAction extends Action {
         if (params != null) {
             LOG.debug("updateAction: Searching for named chain");
             for (String name : params.keySet()) {
-                if (name instanceof String) {
                     if (name.equals(SFC_CHAIN_NAME)) {
                         chainName = (String) params.get(name);
                         if (chainName == null) {
@@ -126,7 +127,6 @@ public class ChainAction extends Action {
                             return null;
                         }
                     }
-                }
             }
         } else {
             LOG.error("updateAction: Parameters null for chain action");
@@ -275,18 +275,24 @@ public class ChainAction extends Action {
     }
 
     @Override
-    public boolean isValid(ActionInstance actionInstance) {
+    public ValidationResult validate(ActionInstance actionInstance) {
         return isValidGbpChain(actionInstance.getParameterValue());
     }
 
-    private boolean isValidGbpChain(List<ParameterValue> paramValue) {
+    private ValidationResult isValidGbpChain(List<ParameterValue> paramValue) {
         ParameterValue pv = getChainNameParameter(paramValue);
         if (pv == null) {
-            return false;
+            return new ValidationResultBuilder().failed().setMessage(
+                    "Chain parameter {" + paramValue + "} not found!").build();
         }
         LOG.trace("isValidGbpChain: Invoking RPC for chain {}", pv.getStringValue());
         ServiceFunctionChain chain = SfcProviderServiceChainAPI.readServiceFunctionChain(pv.getStringValue());
-        return (chain != null);
+        if (chain != null){
+            return new ValidationResultBuilder().success().build();
+        } else {
+            return new ValidationResultBuilder().failed().setMessage(
+                    "Chain named {" + pv.getStringValue() + "} not found in config DS.").build();
+        }
     }
 
     public ServiceFunctionPath getSfcPath(String chainName) {

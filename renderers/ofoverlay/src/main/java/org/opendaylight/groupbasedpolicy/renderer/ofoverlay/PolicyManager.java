@@ -133,7 +133,7 @@ public class PolicyManager
         }
 
         for(Entry<ActionDefinitionId, Action> entry : SubjectFeatures.getActions().entrySet()) {
-            policyResolver.registerActionDefinitions(entry.getKey(), entry.getValue());
+            policyResolver.registerActionInstanceValidators(entry.getKey(), entry.getValue());
         }
 
         ofCtx = new OfContext(dataBroker, rpcRegistry,
