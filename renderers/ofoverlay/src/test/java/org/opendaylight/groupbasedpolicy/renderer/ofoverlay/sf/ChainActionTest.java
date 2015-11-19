@@ -181,7 +181,7 @@ public class ChainActionTest {
 
     @Test
     public void isValidTestParameterValueNull() {
-        ActionInstance actionInstance = mock(ActionInstance.class);
-        Assert.assertFalse(chainAction.isValid(actionInstance));
+         ActionInstance actionInstance = mock(ActionInstance.class);
+         Assert.assertFalse(chainAction.validate(actionInstance).isValid());
     }
 }

@@ -8,15 +8,10 @@
 
 package org.opendaylight.groupbasedpolicy.resolver.validator;
 
-/**
- * Interface for Validators used to validate Policy objects
- *
- * @param <T>
- */
 public interface Validator<T> {
 
     /**
-     * Validate given object and his children. The result of all validations is
+     * Validate given object. The result of all validations is
      * stored in {@link ValidationResult} object.
      *
      * @param objectToValidate Object that should be validated by
@@ -24,12 +19,4 @@ public interface Validator<T> {
      * @return Result of performed validation
      */
     ValidationResult validate(T objectToValidate);
-
-    /**
-     * Returns the Policy object type for which it is intended validator.
-     *
-     * @return Class of Policy object;
-     */
-    Class<T> getType();
-
 }
