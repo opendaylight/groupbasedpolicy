@@ -21,6 +21,10 @@
   </properties>
 
   <dependencies>
+    <dependency>
+      <groupId>org.opendaylight.mdsal.model</groupId>
+      <artifactId>yang-ext</artifactId>
+    </dependency>
     <!-- testing dependencies -->
     <dependency>
       <groupId>junit</groupId>
