@@ -8,7 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint;
 
-
+import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -20,9 +21,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterL3PrefixEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3PrefixBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayL3Context;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayL3ContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.node.NodeConnector;
@@ -49,29 +52,33 @@ public class OfOverlayAug implements EpRendererAugmentation, AutoCloseable {
     }
 
     @Override
-    public Augmentation<Endpoint> buildEndpointAugmentation(RegisterEndpointInput input) {
+    public Map.Entry<Class<? extends Augmentation<Endpoint>>, Augmentation<Endpoint>> buildEndpointAugmentation(
+            RegisterEndpointInput input) {
         // In order to support both the port-name and the data-path information, allow
         // an EP to register without the augmentations, and resolve later.
         OfOverlayContextBuilder ictx = checkAugmentation(input);
         if (ictx != null) {
-            return ictx.build();
+            return new SimpleImmutableEntry<Class<? extends Augmentation<Endpoint>>, Augmentation<Endpoint>>(
+                    OfOverlayContext.class, ictx.build());
         }
         return null;
     }
 
     @Override
-    public Augmentation<EndpointL3> buildEndpointL3Augmentation(RegisterEndpointInput input) {
+    public Map.Entry<Class<? extends Augmentation<EndpointL3>>, Augmentation<EndpointL3>> buildEndpointL3Augmentation(
+            RegisterEndpointInput input) {
         OfOverlayContextBuilder ictx = checkAugmentation(input);
         if (ictx != null) {
-            return new OfOverlayL3ContextBuilder(ictx.build()).build();
+            return new SimpleImmutableEntry<Class<? extends Augmentation<EndpointL3>>, Augmentation<EndpointL3>>(
+                    OfOverlayL3Context.class, new OfOverlayL3ContextBuilder(ictx.build()).build());
         }
         return null;
     }
 
     @Override
-    public void buildL3PrefixEndpointAugmentation(EndpointL3PrefixBuilder eb, RegisterL3PrefixEndpointInput input) {
-        // TODO Auto-generated method stub
-
+    public Map.Entry<Class<? extends Augmentation<EndpointL3Prefix>>, Augmentation<EndpointL3Prefix>> buildL3PrefixEndpointAugmentation(
+            RegisterL3PrefixEndpointInput input) {
+        return null;
     }
 
     private OfOverlayContextBuilder checkAugmentation(RegisterEndpointInput input) {
@@ -85,10 +92,10 @@ public class OfOverlayAug implements EpRendererAugmentation, AutoCloseable {
             return ictxBuilder;
         }
 
-            /*
-             * In the case where they've provided just the port name, go see if
-             * we can find the NodeId and NodeConnectorId from inventory.
-             */
+        /*
+         * In the case where they've provided just the port name, go see if
+         * we can find the NodeId and NodeConnectorId from inventory.
+         */
         if (ictx.getPortName() != null) {
             NodeInfo augmentation = fetchAugmentation(ictx.getPortName().getValue());
             if (augmentation != null) {
@@ -106,9 +113,7 @@ public class OfOverlayAug implements EpRendererAugmentation, AutoCloseable {
 
             Optional<Nodes> result;
             try {
-                result = dataProvider.newReadOnlyTransaction()
-                        .read(LogicalDatastoreType.OPERATIONAL, nodesIid)
-                        .get();
+                result = dataProvider.newReadOnlyTransaction().read(LogicalDatastoreType.OPERATIONAL, nodesIid).get();
                 if (result.isPresent()) {
                     Nodes nodes = result.get();
                     for (Node node : nodes.getNode()) {

@@ -8,6 +8,7 @@
 
 package org.opendaylight.groupbasedpolicy.endpoint;
 
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -101,28 +102,6 @@ public class EndpointRpcRegistry implements EndpointService, AutoCloseable {
         LOG.info("Unregistered {}", regImp.getClass().getName());
     }
 
-    public static Class<?> getAugmentationContextType(
-            final Augmentation<?> augmentation) {
-        if (augmentation == null) {
-            return null;
-        }
-        final Class<?>[] augmentationInterfaces = augmentation.getClass()
-                .getInterfaces();
-        if (augmentationInterfaces.length == 1) {
-            return augmentationInterfaces[0];
-        }
-        /*
-         * if here, then the way YANG tools generate augmentation code has
-         * changed, hence augmentation classes are not implemented by single
-         * interface anymore. This is very unlikely to happen, but if it did, we
-         * need to know about it in order to update this method.
-         */
-        LOG.error(
-                "YANG Generated Code has Changed -- augmentation object {} is NOT implemented by one interface anymore",
-                augmentation);
-        return null;
-    }
-
     /**
      * Constructor
      *
@@ -183,12 +162,10 @@ public class EndpointRpcRegistry implements EndpointService, AutoCloseable {
         for (Entry<String, EpRendererAugmentation> entry : registeredRenderers
                 .entrySet()) {
             try {
-                Augmentation<Endpoint> augmentation = entry.getValue()
-                        .buildEndpointAugmentation(input);
-                if (augmentation != null) {
-                    @SuppressWarnings("unchecked")
-                    Class<? extends Augmentation<Endpoint>> augmentationType = (Class<? extends Augmentation<Endpoint>>) getAugmentationContextType(augmentation);
-                    eb.addAugmentation(augmentationType, augmentation);
+                Map.Entry<Class<? extends Augmentation<Endpoint>>, Augmentation<Endpoint>> augmentationEntry =
+                        entry.getValue().buildEndpointAugmentation(input);
+                if (augmentationEntry != null) {
+                    eb.addAugmentation(augmentationEntry.getKey(), augmentationEntry.getValue());
                 }
             } catch (Exception e) {
                 LOG.warn("Endpoint Augmentation error while processing "
@@ -211,12 +188,10 @@ public class EndpointRpcRegistry implements EndpointService, AutoCloseable {
         for (Entry<String, EpRendererAugmentation> entry : registeredRenderers
                 .entrySet()) {
             try {
-                Augmentation<EndpointL3> augmentation = entry.getValue()
-                        .buildEndpointL3Augmentation(input);
-                if (augmentation != null) {
-                    @SuppressWarnings("unchecked")
-                    Class<? extends Augmentation<EndpointL3>> augmentationType = (Class<? extends Augmentation<EndpointL3>>) getAugmentationContextType(augmentation);
-                    eb.addAugmentation(augmentationType, augmentation);
+                Map.Entry<Class<? extends Augmentation<EndpointL3>>, Augmentation<EndpointL3>> augmentationEntry =
+                        entry.getValue().buildEndpointL3Augmentation(input);
+                if (augmentationEntry != null) {
+                    eb.addAugmentation(augmentationEntry.getKey(), augmentationEntry.getValue());
                 }
             } catch (Exception e) {
                 LOG.warn("L3 endpoint Augmentation error while processing "
@@ -239,7 +214,11 @@ public class EndpointRpcRegistry implements EndpointService, AutoCloseable {
         for (Entry<String, EpRendererAugmentation> entry : registeredRenderers
                 .entrySet()) {
             try {
-                entry.getValue().buildL3PrefixEndpointAugmentation(eb, input);
+                Map.Entry<Class<? extends Augmentation<EndpointL3Prefix>>, Augmentation<EndpointL3Prefix>> augmentationEntry =
+                        entry.getValue().buildL3PrefixEndpointAugmentation(input);
+                if (augmentationEntry != null) {
+                    eb.addAugmentation(augmentationEntry.getKey(), augmentationEntry.getValue());
+                }
             } catch (Exception e) {
                 LOG.warn("L3 endpoint Augmentation error while processing "
                         + entry.getKey() + ". Reason: ", e);
