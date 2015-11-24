@@ -91,8 +91,8 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
                                           rpcRegistry,
                                           executor,
                                           tableOffset);
-        ofOverlayAug = new OfOverlayAug(dataProvider, rpcRegistry);
-        ofOverlayL3NatAug = new OfOverlayL3NatAug(dataProvider, rpcRegistry);
+        ofOverlayAug = new OfOverlayAug(dataProvider);
+        ofOverlayL3NatAug = new OfOverlayL3NatAug();
             Optional<OfOverlayConfig> config = readConfig();
             OfOverlayConfigBuilder configBuilder = new OfOverlayConfigBuilder();
             if (config.isPresent()) {

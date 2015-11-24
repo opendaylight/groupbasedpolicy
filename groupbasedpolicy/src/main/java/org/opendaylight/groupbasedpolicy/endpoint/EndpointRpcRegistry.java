@@ -11,9 +11,7 @@ package org.opendaylight.groupbasedpolicy.endpoint;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
@@ -63,56 +61,30 @@ import com.google.common.util.concurrent.ListenableFuture;
  * Endpoint registry provides a scalable store for accessing and updating
  * information about endpoints.
  */
-public class EndpointRpcRegistry implements EndpointService {
+public class EndpointRpcRegistry implements EndpointService, AutoCloseable {
     private static final Logger LOG =
             LoggerFactory.getLogger(EndpointRpcRegistry.class);
 
     private final DataBroker dataProvider;
-    private final ScheduledExecutorService executor;
     private final RpcProviderRegistry rpcRegistry;
-    private static EndpointRpcRegistry endpointRpcRegistry;
 
-    final BindingAwareBroker.RpcRegistration<EndpointService> rpcRegistration;
+    private final BindingAwareBroker.RpcRegistration<EndpointService> rpcRegistration;
 
-    private final static ConcurrentMap<String, EpRendererAugmentation> registeredRenderers = new ConcurrentHashMap<String, EpRendererAugmentation>();
+    final static ConcurrentMap<String, EpRendererAugmentation> registeredRenderers = new ConcurrentHashMap<String, EpRendererAugmentation>();
 
     /**
      * This method registers a renderer for endpoint RPC API. This method
      * ensures single RPC registration for all renderers since a single RPC
      * registration is only allowed.
      *
-     * @param dataProvider
-     *            - the dataProvider
-     * @param rpcRegistry
-     *            - the rpcRegistry
      * @param epRendererAugmentation
      *            - specific implementation RPC augmentation, if any. Otherwise
      *            NULL
      */
-    public static void register(DataBroker dataProvider,
-            RpcProviderRegistry rpcRegistry,
-            EpRendererAugmentation epRendererAugmentation) {
-        if (dataProvider == null || rpcRegistry == null) {
-            if (epRendererAugmentation != null) {
-                LOG.warn("Couldn't register class {} for endpoint RPC because of missing required info", epRendererAugmentation);
-            }
-            return;
-        }
-        if (endpointRpcRegistry == null) {
-            synchronized (EndpointRpcRegistry.class) {
-                if (endpointRpcRegistry == null) {
-                    ScheduledExecutorService executor = Executors
-                            .newScheduledThreadPool(Math
-                                    .max(Runtime.getRuntime()
-                                            .availableProcessors() * 3, 10));
-                    endpointRpcRegistry = new EndpointRpcRegistry(dataProvider,
-                            rpcRegistry, executor);
-                }
-            }
-        }
+    public static void register(EpRendererAugmentation epRendererAugmentation) {
         if (epRendererAugmentation != null) {
-            registeredRenderers.putIfAbsent(epRendererAugmentation.getClass()
-                    .getName(), epRendererAugmentation);
+            registeredRenderers.putIfAbsent(epRendererAugmentation.getClass().getName(), epRendererAugmentation);
+            LOG.info("Registered {}", epRendererAugmentation.getClass().getName());
         }
     }
 
@@ -121,25 +93,12 @@ public class EndpointRpcRegistry implements EndpointService {
      * @param regImp the endpoint augmentation
      * @throws Exception
      */
-    public static void unregister(EpRendererAugmentation regImp)
-            throws Exception {
-        if (regImp == null
-                || !registeredRenderers
-                        .containsKey(regImp.getClass().getName())) {
+    public static void unregister(EpRendererAugmentation regImp) throws Exception {
+        if (regImp == null || !registeredRenderers.containsKey(regImp.getClass().getName())) {
             return;
         }
         registeredRenderers.remove(regImp.getClass().getName());
         LOG.info("Unregistered {}", regImp.getClass().getName());
-        if (registeredRenderers.isEmpty() && endpointRpcRegistry != null) {
-            synchronized (EndpointRpcRegistry.class) {
-                if (registeredRenderers.isEmpty() && endpointRpcRegistry != null
-                        && endpointRpcRegistry.rpcRegistration != null) {
-                    endpointRpcRegistry.rpcRegistration.close();
-                    endpointRpcRegistry.executor.shutdown();
-                    endpointRpcRegistry = null;
-                }
-            }
-        }
     }
 
     public static Class<?> getAugmentationContextType(
@@ -169,15 +128,10 @@ public class EndpointRpcRegistry implements EndpointService {
      *
      * @param dataProvider the {@link DataBroker}
      * @param rpcRegistry  the {@link RpcProviderRegistry}
-     * @param executor     the {@link ScheduledExecutorService}
      */
-    private EndpointRpcRegistry(DataBroker dataProvider,
-            RpcProviderRegistry rpcRegistry,
-            ScheduledExecutorService executor) {
+    public EndpointRpcRegistry(DataBroker dataProvider, RpcProviderRegistry rpcRegistry) {
         this.dataProvider = dataProvider;
-        this.executor = executor;
         this.rpcRegistry = rpcRegistry;
-
         if (this.rpcRegistry != null) {
             rpcRegistration =
                     this.rpcRegistry.addRpcImplementation(EndpointService.class, this);
@@ -207,6 +161,13 @@ public class EndpointRpcRegistry implements EndpointService {
 
         // TODO Be alagalah - age out endpoint data and remove
         // endpoint group/condition mappings with no conditions
+    }
+
+    @Override
+    public void close() throws Exception {
+        if (rpcRegistration != null) {
+            rpcRegistration.close();
+        }
     }
 
     /**
@@ -327,7 +288,7 @@ public class EndpointRpcRegistry implements EndpointService {
             }
         }
         ListenableFuture<Void> r = t.submit();
-        return Futures.transform(r, futureTrans, executor);
+        return Futures.transform(r, futureTrans);
     }
 
     @Override
@@ -364,7 +325,7 @@ public class EndpointRpcRegistry implements EndpointService {
         t.put(LogicalDatastoreType.OPERATIONAL, iid_l3prefix, epL3Prefix);
 
         ListenableFuture<Void> r = t.submit();
-        return Futures.transform(r, futureTrans, executor);
+        return Futures.transform(r, futureTrans);
     }
 
     @Override
@@ -397,7 +358,7 @@ public class EndpointRpcRegistry implements EndpointService {
         // TODO: Implement L3Prefix
 
         ListenableFuture<Void> r = t.submit();
-        return Futures.transform(r, futureTrans, executor);
+        return Futures.transform(r, futureTrans);
     }
 
     @Override
@@ -420,7 +381,7 @@ public class EndpointRpcRegistry implements EndpointService {
         }
 
         ListenableFuture<Void> r = t.submit();
-        return Futures.transform(r, futureTrans, executor);
+        return Futures.transform(r, futureTrans);
     }
 
     @Override
@@ -444,7 +405,7 @@ public class EndpointRpcRegistry implements EndpointService {
         }
 
         ListenableFuture<Void> r = t.submit();
-        return Futures.transform(r, futureTrans, executor);
+        return Futures.transform(r, futureTrans);
     }
 
     Function<Void, RpcResult<Void>> futureTrans =
@@ -454,5 +415,4 @@ public class EndpointRpcRegistry implements EndpointService {
                     return RpcResultBuilder.<Void> success().build();
                 }
             };
-
 }

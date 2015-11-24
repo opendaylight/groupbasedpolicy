@@ -1,6 +1,18 @@
 package org.opendaylight.groupbasedpolicy.endpoint;
 
-import com.google.common.util.concurrent.CheckedFuture;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -15,7 +27,15 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.*;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInputBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterL3PrefixEndpointInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterL3PrefixEndpointInputBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.SetEndpointGroupConditionsInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnregisterEndpointInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnsetEndpointGroupConditionsInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.has.endpoint.group.conditions.EndpointGroupCondition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L2;
@@ -24,13 +44,7 @@ import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.binding.RpcService;
 
-import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ScheduledExecutorService;
-
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.*;
+import com.google.common.util.concurrent.CheckedFuture;
 
 public class EndPointRpcRegistryTest {
 
@@ -56,41 +70,31 @@ public class EndPointRpcRegistryTest {
 
         rpcRegistration = mock(RpcRegistration.class);
         when(rpcRegistry.addRpcImplementation(any(Class.class), any(RpcService.class))).thenReturn(rpcRegistration);
+
+        endpointRpcRegistry = new EndpointRpcRegistry(dataProvider, rpcRegistry);
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void registerTest() throws Exception {
-        EndpointRpcRegistry.register(dataProvider, rpcRegistry, epRendererAugmentation);
         verify(rpcRegistry).addRpcImplementation(any(Class.class), any(RpcService.class));
         verify(t).put(any(LogicalDatastoreType.class), any(InstanceIdentifier.class), any(Endpoints.class));
+        EndpointRpcRegistry.register(epRendererAugmentation);
+        Assert.assertEquals(1, EndpointRpcRegistry.registeredRenderers.size());
 
         EndpointRpcRegistry.unregister(epRendererAugmentation);
-        verify(rpcRegistration).close();
+        Assert.assertEquals(0, EndpointRpcRegistry.registeredRenderers.size());
     }
 
     @Test
     public void registerTestSafelyFail() {
-        EndpointRpcRegistry.register(null, rpcRegistry, epRendererAugmentation);
-        EndpointRpcRegistry.register(dataProvider, null, epRendererAugmentation);
-        EndpointRpcRegistry.register(null, rpcRegistry, null);
-        EndpointRpcRegistry.register(dataProvider, null, null);
-        EndpointRpcRegistry.register(dataProvider, rpcRegistry, null);
-    }
-
-    @Test
-    public void unregisterTestFail() throws Exception {
-        EndpointRpcRegistry.unregister(null);
-        verify(rpcRegistration, never()).close();
-
-        EpRendererAugmentation epRendererAugmentation = mock(EpRendererAugmentation.class);
-        EndpointRpcRegistry.unregister(epRendererAugmentation);
-        verify(rpcRegistration, never()).close();
+        EndpointRpcRegistry.register(epRendererAugmentation);
+        EndpointRpcRegistry.register(null);
+        Assert.assertEquals(1, EndpointRpcRegistry.registeredRenderers.size());
     }
 
     @Test
     public void registerEndpointTest()throws Exception{
-        setPrivateInstanceByReflexion();
         endpointRpcRegistry.registerEndpoint(setRegisterEndpointVariablesForTest());
         verify(t, times(1)).put(eq(LogicalDatastoreType.OPERATIONAL), any(InstanceIdentifier.class), any(DataObject.class), eq(true));
 
@@ -116,16 +120,8 @@ public class EndPointRpcRegistryTest {
         return registerEndpointInputBuilder.build();
     }
 
-    private void setPrivateInstanceByReflexion() throws Exception{
-        ScheduledExecutorService scheduledExecutorServiceMock = mock(ScheduledExecutorService.class);
-        Constructor[] cons = EndpointRpcRegistry.class.getDeclaredConstructors();
-        cons[0].setAccessible(true);
-        endpointRpcRegistry = (EndpointRpcRegistry)cons[0].newInstance(dataProvider, rpcRegistry, scheduledExecutorServiceMock);
-    }
-
     @Test
     public void registerL3PrefixEndpointTest()throws Exception{
-        setPrivateInstanceByReflexion();
         endpointRpcRegistry.registerL3PrefixEndpoint(setL3PrefixTestVariables());
         verify(t, atLeast(1)).put(eq(LogicalDatastoreType.OPERATIONAL), any(InstanceIdentifier.class), any(DataObject.class));
     }
@@ -143,7 +139,6 @@ public class EndPointRpcRegistryTest {
 
     @Test
     public void unregisterEndpointTest() throws Exception{
-        setPrivateInstanceByReflexion();
         L2 l2Mock = mock(L2.class);
         List<L2> l2List = new ArrayList<>();
         l2List.add(l2Mock);
@@ -159,7 +154,6 @@ public class EndPointRpcRegistryTest {
 
     @Test
     public void setEndpointGroupConditionsTest()throws Exception{
-        setPrivateInstanceByReflexion();
         EndpointGroupId endpointGroupIdMock = mock(EndpointGroupId.class);
 
         EndpointGroupCondition endpointGroupConditionMock = mock(EndpointGroupCondition.class);
@@ -174,8 +168,6 @@ public class EndPointRpcRegistryTest {
 
     @Test
     public void unsetEndpointGroupConditionsTest()throws Exception{
-        setPrivateInstanceByReflexion();
-
         UnsetEndpointGroupConditionsInput unsetEndpointGroupConditionsInputMock = mock(UnsetEndpointGroupConditionsInput.class);
         EndpointGroupCondition endpointGroupConditionMock = mock(EndpointGroupCondition.class);
         List<EndpointGroupCondition> endpointGroupConditionList = new ArrayList();

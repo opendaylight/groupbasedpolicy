@@ -8,8 +8,6 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint;
 
-import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EpRendererAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
@@ -23,8 +21,8 @@ import org.opendaylight.yangtools.yang.binding.Augmentation;
 
 public class OfOverlayL3NatAug implements EpRendererAugmentation, AutoCloseable {
 
-    public OfOverlayL3NatAug(DataBroker dataProvider, RpcProviderRegistry rpcRegistry) {
-        EndpointRpcRegistry.register(dataProvider, rpcRegistry, this);
+    public OfOverlayL3NatAug() {
+        EndpointRpcRegistry.register(this);
     }
 
     @Override

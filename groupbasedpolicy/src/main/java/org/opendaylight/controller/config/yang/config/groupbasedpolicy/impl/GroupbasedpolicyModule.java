@@ -8,12 +8,17 @@
 
 package org.opendaylight.controller.config.yang.config.groupbasedpolicy.impl;
 
-import com.google.common.base.Preconditions;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
+import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
+import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
 import org.opendaylight.groupbasedpolicy.sf.SubjectFeatureDefinitionProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Preconditions;
+
+
 
 public class GroupbasedpolicyModule extends
         org.opendaylight.controller.config.yang.config.groupbasedpolicy.impl.AbstractGroupbasedpolicyModule {
@@ -46,12 +51,24 @@ public class GroupbasedpolicyModule extends
      */
     @Override
     public java.lang.AutoCloseable createInstance() {
-        DataBroker dataProvider = Preconditions.checkNotNull(getDataBrokerDependency());
+        final DataBroker dataProvider = Preconditions.checkNotNull(getDataBrokerDependency());
+        final RpcProviderRegistry rpcRegistry = Preconditions.checkNotNull(getRpcRegistryDependency());
 
         try {
-            return new SubjectFeatureDefinitionProvider(dataProvider);
+            return new AutoCloseable() {
+
+                SubjectFeatureDefinitionProvider sfdp = new SubjectFeatureDefinitionProvider(dataProvider);
+                EndpointRpcRegistry epRpcRegistry = new EndpointRpcRegistry(dataProvider, rpcRegistry);
+
+                @Override
+                public void close() throws Exception {
+                    sfdp.close();
+                    epRpcRegistry.close();
+                }
+            };
         } catch (TransactionCommitFailedException e) {
-            LOG.error("Error creating instance of SubjectFeatureDefinitionProvider; Subject Feature Definitions were not put to Datastore");
+            LOG.error(
+                    "Error creating instance of SubjectFeatureDefinitionProvider; Subject Feature Definitions were not put to Datastore");
             throw new RuntimeException(e);
         }
     }

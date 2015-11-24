@@ -22,6 +22,11 @@
                         <name>binding-data-broker</name>
                     </data-broker>
 
+                    <rpc-registry>
+                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-rpc-registry</type>
+                        <name>binding-rpc-broker</name>
+                    </rpc-registry>
+
                 </module>
             </modules>
         </data>

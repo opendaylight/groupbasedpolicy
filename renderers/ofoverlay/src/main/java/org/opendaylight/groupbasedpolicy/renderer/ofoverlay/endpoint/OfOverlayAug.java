@@ -13,7 +13,6 @@ import java.util.concurrent.ExecutionException;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EpRendererAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNodeConnector;
@@ -43,10 +42,10 @@ public class OfOverlayAug implements EpRendererAugmentation, AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(OfOverlayAug.class);
     private final DataBroker dataProvider;
 
-    public OfOverlayAug(DataBroker dataProvider, RpcProviderRegistry rpcRegistry) {
+    public OfOverlayAug(DataBroker dataProvider) {
         this.dataProvider = dataProvider;
 
-        EndpointRpcRegistry.register(this.dataProvider, rpcRegistry, this);
+        EndpointRpcRegistry.register(this);
     }
 
     @Override

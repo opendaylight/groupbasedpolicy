@@ -43,6 +43,15 @@ module groupbasedpolicy-impl {
                     }
                 }
             }
+            //RPC Registry
+            container rpc-registry {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity mdsal:binding-rpc-registry;
+                    }
+                }
+            }
         }
     }
 }
