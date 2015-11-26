@@ -30,6 +30,8 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointMan
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.OfOverlayAug;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.OfOverlayL3NatAug;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ActionDefinitionListener;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ClassifierDefinitionListener;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig;
@@ -52,12 +54,15 @@ import com.google.common.util.concurrent.ListenableFuture;
 public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     private static final Logger LOG =
             LoggerFactory.getLogger(OFOverlayRenderer.class);
+    public static final String RENDERER_NAME = "OFOverlay";
 
     private final DataBroker dataBroker;
     private final PolicyResolver policyResolver;
     private final SwitchManager switchManager;
     private final EndpointManager endpointManager;
     private final PolicyManager policyManager;
+    private final ClassifierDefinitionListener classifierDefinitionListener;
+    private ActionDefinitionListener actionDefinitionListener;
     private final OfOverlayAug ofOverlayAug;
     private final OfOverlayL3NatAug ofOverlayL3NatAug;
 
@@ -83,6 +88,9 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
         endpointManager = new EndpointManager(dataProvider, rpcRegistry, notificationService,
                                               executor, switchManager);
         policyResolver = new PolicyResolver(dataProvider, executor);
+
+        classifierDefinitionListener = new ClassifierDefinitionListener(dataBroker);
+        actionDefinitionListener = new ActionDefinitionListener(dataProvider);
 
         policyManager = new PolicyManager(dataProvider,
                                           policyResolver,
@@ -116,6 +124,8 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
         if (policyResolver != null) policyResolver.close();
         if (switchManager != null) switchManager.close();
         if (endpointManager != null) endpointManager.close();
+        if (classifierDefinitionListener != null) classifierDefinitionListener.close();
+        if (actionDefinitionListener != null) actionDefinitionListener.close();
         if (ofOverlayAug != null) ofOverlayAug.close();
         if (ofOverlayL3NatAug != null) ofOverlayL3NatAug.close();
     }

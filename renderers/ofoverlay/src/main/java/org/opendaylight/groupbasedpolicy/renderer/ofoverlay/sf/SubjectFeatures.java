@@ -80,11 +80,6 @@ public class SubjectFeatures {
         return classifiers.get(id);
     }
 
-
-    public static Map<ClassifierDefinitionId, Classifier> getClassifiers() {
-        return classifiers;
-    }
-
     public static Map<ActionDefinitionId, Action> getActions() {
         return actions;
     }

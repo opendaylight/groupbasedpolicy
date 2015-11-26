@@ -13,6 +13,8 @@ import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFaile
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
 import org.opendaylight.groupbasedpolicy.sf.SubjectFeatureDefinitionProvider;
+import org.opendaylight.groupbasedpolicy.sf.SupportedActionDefinitionListener;
+import org.opendaylight.groupbasedpolicy.sf.SupportedClassifierDefinitionListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,11 +61,17 @@ public class GroupbasedpolicyModule extends
 
                 SubjectFeatureDefinitionProvider sfdp = new SubjectFeatureDefinitionProvider(dataProvider);
                 EndpointRpcRegistry epRpcRegistry = new EndpointRpcRegistry(dataProvider, rpcRegistry);
+                SupportedClassifierDefinitionListener supportedClassifierDefinitionListener =
+                        new SupportedClassifierDefinitionListener(dataProvider);
+                SupportedActionDefinitionListener supportedActionDefinitionListener =
+                        new SupportedActionDefinitionListener(dataProvider);
 
                 @Override
                 public void close() throws Exception {
                     sfdp.close();
                     epRpcRegistry.close();
+                    supportedClassifierDefinitionListener.close();
+                    supportedActionDefinitionListener.close();
                 }
             };
         } catch (TransactionCommitFailedException e) {

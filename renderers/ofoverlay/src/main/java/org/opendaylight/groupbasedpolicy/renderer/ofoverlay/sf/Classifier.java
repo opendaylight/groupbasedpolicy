@@ -57,6 +57,13 @@ public abstract class Classifier {
     }
 
     /**
+     * The result represents supported parameters for the classifier by renderer
+     * 
+     * @return list of supported parameters by the classifier
+     */
+    public abstract List<SupportedParameterValues> getSupportedParameterValues();
+
+    /**
      * Template method for resolving {@code matches}.
      *
      * @param matches list of builders containing {@code matches} to update
@@ -101,8 +108,6 @@ public abstract class Classifier {
         }
         return new ClassificationResult(matchBuilders);
     }
-
-    public abstract List<SupportedParameterValues> getSupportedParameterValues();
 
     /**
      * Checks presence of required {@code params} in order to decide if classifier can update {@code matches} properly
