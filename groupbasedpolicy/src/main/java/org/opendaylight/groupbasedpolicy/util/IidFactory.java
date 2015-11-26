@@ -206,10 +206,17 @@ public class IidFactory {
             .build();
     }
 
+    /**
+     * Get the {@link Endpoint} {@link InstanceIdentifier} based on the {@link EndpointKey}
+     * @param endpointKey The {@link EndpointKey} of a particular {@link Endpoint}
+     * @return The {@link InstanceIdentifier} of the {@link Endpoint}
+     */
+    public static InstanceIdentifier<Endpoint> endpointIid(EndpointKey endpointKey) {
+        return InstanceIdentifier.builder(Endpoints.class).child(Endpoint.class, endpointKey).build();
+    }
+
     public static InstanceIdentifier<Endpoint> endpointIid(L2BridgeDomainId l2Context, MacAddress macAddress) {
-        return InstanceIdentifier.builder(Endpoints.class)
-            .child(Endpoint.class, new EndpointKey(l2Context, macAddress))
-            .build();
+        return IidFactory.endpointIid(new EndpointKey(l2Context, macAddress));
     }
 
     public static InstanceIdentifier<EndpointL3> l3EndpointIid(L3ContextId l3Context, IpAddress ipAddress) {
