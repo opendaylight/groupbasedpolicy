@@ -24,16 +24,36 @@ module iovisor {
                 "Initial revision.";
     }
 
-    grouping iovisor-module-location {
-        leaf iom-uri {
+    typedef iovisor-module-id {
+        description "Uniquely identifies the IOVisor module";
+        type string;
+    }
+
+    grouping iovisor-module {
+        leaf uri {
             type inet:uri;
             description "IOVisor module uniform resource identifier.";
         }
     }
-    
-    augment "/endpoint:endpoints" {
+
+    container iovisor-module-instances {
+        description "IOVisor module inventory.";
+        list iovisor-module-instance {
+            key "id";
+            config true;
+            description "This is a list of IOVisor modules.";
+
+            leaf id {
+                type iovisor-module-id;
+            }
+
+            uses iovisor-module;
+        }
+    }
+
+    augment "/endpoint:endpoints/endpoint:endpoint" {
         description "Augmentation adding the IOVisor module location";
-        ext:augment-identifier "iovior-module-location";
-        uses iovisor-module-location;
+        ext:augment-identifier "iovisor-module-augmentation";
+        uses iovisor-module;
     }
 }

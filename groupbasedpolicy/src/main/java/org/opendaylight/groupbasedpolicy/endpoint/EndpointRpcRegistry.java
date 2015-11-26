@@ -115,8 +115,9 @@ public class EndpointRpcRegistry implements EndpointService, AutoCloseable {
             rpcRegistration =
                     this.rpcRegistry.addRpcImplementation(EndpointService.class, this);
             LOG.debug("Added RPC Implementation Correctly");
-        } else
+        } else {
             rpcRegistration = null;
+        }
 
         if (dataProvider != null) {
             InstanceIdentifier<Endpoints> iid =
