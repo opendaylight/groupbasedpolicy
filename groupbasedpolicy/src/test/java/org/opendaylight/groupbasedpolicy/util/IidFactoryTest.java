@@ -35,21 +35,15 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.TenantKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ContractKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroupKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L2BridgeDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L2FloodDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L3Context;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Subnet;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.SubnetKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Clause;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Subject;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.SubjectKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.Rule;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.RuleKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ConsumerNamedSelector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderNamedSelector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstance;
@@ -83,14 +77,14 @@ public class IidFactoryTest {
     public void endpointGroupIidTest() {
         InstanceIdentifier<EndpointGroup> identifier = IidFactory.endpointGroupIid(tenantId, epgId);
         Assert.assertEquals(epgId, InstanceIdentifier.keyOf(identifier).getId());
-        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class, TenantKey.class).getId());
+        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class).getId());
     }
 
     @Test
     public void contractIidTest() {
         InstanceIdentifier<Contract> identifier = IidFactory.contractIid(tenantId, contractId);
         Assert.assertEquals(contractId, InstanceIdentifier.keyOf(identifier).getId());
-        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class, TenantKey.class).getId());
+        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class).getId());
     }
 
     @Test
@@ -98,8 +92,8 @@ public class IidFactoryTest {
         SubjectName subjectName = mock(SubjectName.class);
         InstanceIdentifier<Subject> identifier = IidFactory.subjectIid(tenantId, contractId, subjectName);
         Assert.assertEquals(subjectName, InstanceIdentifier.keyOf(identifier).getName());
-        Assert.assertEquals(contractId, identifier.firstKeyOf(Contract.class, ContractKey.class).getId());
-        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class, TenantKey.class).getId());
+        Assert.assertEquals(contractId, identifier.firstKeyOf(Contract.class).getId());
+        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class).getId());
     }
 
     @Test
@@ -108,8 +102,8 @@ public class IidFactoryTest {
         InstanceIdentifier<ProviderNamedSelector> identifier = IidFactory.providerNamedSelectorIid(tenantId, epgId,
                 providerSelectorName);
         Assert.assertEquals(providerSelectorName, InstanceIdentifier.keyOf(identifier).getName());
-        Assert.assertEquals(epgId, identifier.firstKeyOf(EndpointGroup.class, EndpointGroupKey.class).getId());
-        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class, TenantKey.class).getId());
+        Assert.assertEquals(epgId, identifier.firstKeyOf(EndpointGroup.class).getId());
+        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class).getId());
     }
 
     @Test
@@ -118,8 +112,8 @@ public class IidFactoryTest {
         InstanceIdentifier<ConsumerNamedSelector> identifier = IidFactory.consumerNamedSelectorIid(tenantId, epgId,
                 consumerSelectorName);
         Assert.assertEquals(consumerSelectorName, InstanceIdentifier.keyOf(identifier).getName());
-        Assert.assertEquals(epgId, identifier.firstKeyOf(EndpointGroup.class, EndpointGroupKey.class).getId());
-        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class, TenantKey.class).getId());
+        Assert.assertEquals(epgId, identifier.firstKeyOf(EndpointGroup.class).getId());
+        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class).getId());
     }
 
     @Test
@@ -127,17 +121,17 @@ public class IidFactoryTest {
         ClauseName clauseName = mock(ClauseName.class);
         InstanceIdentifier<Clause> identifier = IidFactory.clauseIid(tenantId, contractId, clauseName);
         Assert.assertEquals(clauseName, InstanceIdentifier.keyOf(identifier).getName());
-        Assert.assertEquals(contractId, identifier.firstKeyOf(Contract.class, ContractKey.class).getId());
-        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class, TenantKey.class).getId());
+        Assert.assertEquals(contractId, identifier.firstKeyOf(Contract.class).getId());
+        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class).getId());
     }
 
     @Test
     public void ruleIdTest() {
         InstanceIdentifier<Rule> identifier = IidFactory.ruleIid(tenantId, contractId, subjectName, ruleName);
         Assert.assertEquals(ruleName, InstanceIdentifier.keyOf(identifier).getName());
-        Assert.assertEquals(subjectName, identifier.firstKeyOf(Subject.class, SubjectKey.class).getName());
-        Assert.assertEquals(contractId, identifier.firstKeyOf(Contract.class, ContractKey.class).getId());
-        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class, TenantKey.class).getId());
+        Assert.assertEquals(subjectName, identifier.firstKeyOf(Subject.class).getName());
+        Assert.assertEquals(contractId, identifier.firstKeyOf(Contract.class).getId());
+        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class).getId());
     }
 
     @Test
@@ -145,7 +139,7 @@ public class IidFactoryTest {
         ActionName actionName = mock(ActionName.class);
         InstanceIdentifier<ActionInstance> identifier = IidFactory.actionInstanceIid(tenantId, actionName);
         Assert.assertEquals(actionName, InstanceIdentifier.keyOf(identifier).getName());
-        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class, TenantKey.class).getId());
+        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class).getId());
     }
 
     @Test
@@ -153,7 +147,7 @@ public class IidFactoryTest {
         ClassifierName classifierName = mock(ClassifierName.class);
         InstanceIdentifier<ClassifierInstance> identifier = IidFactory.classifierInstanceIid(tenantId, classifierName);
         Assert.assertEquals(classifierName, InstanceIdentifier.keyOf(identifier).getName());
-        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class, TenantKey.class).getId());
+        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class).getId());
     }
 
     @Test
@@ -162,10 +156,10 @@ public class IidFactoryTest {
         InstanceIdentifier<ClassifierRef> identifier = IidFactory.classifierRefIid(tenantId, contractId, subjectName,
                 ruleName, classifierRefName);
         Assert.assertEquals(classifierRefName, InstanceIdentifier.keyOf(identifier).getName());
-        Assert.assertEquals(ruleName, identifier.firstKeyOf(Rule.class, RuleKey.class).getName());
-        Assert.assertEquals(subjectName, identifier.firstKeyOf(Subject.class, SubjectKey.class).getName());
-        Assert.assertEquals(contractId, identifier.firstKeyOf(Contract.class, ContractKey.class).getId());
-        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class, TenantKey.class).getId());
+        Assert.assertEquals(ruleName, identifier.firstKeyOf(Rule.class).getName());
+        Assert.assertEquals(subjectName, identifier.firstKeyOf(Subject.class).getName());
+        Assert.assertEquals(contractId, identifier.firstKeyOf(Contract.class).getId());
+        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class).getId());
     }
 
     @Test
@@ -173,7 +167,7 @@ public class IidFactoryTest {
         L2FloodDomainId l2FloodDomainId = mock(L2FloodDomainId.class);
         InstanceIdentifier<L2FloodDomain> identifier = IidFactory.l2FloodDomainIid(tenantId, l2FloodDomainId);
         Assert.assertEquals(l2FloodDomainId, InstanceIdentifier.keyOf(identifier).getId());
-        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class, TenantKey.class).getId());
+        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class).getId());
     }
 
     @Test
@@ -181,7 +175,7 @@ public class IidFactoryTest {
         L2BridgeDomainId l2BridgeDomainId = mock(L2BridgeDomainId.class);
         InstanceIdentifier<L2BridgeDomain> identifier = IidFactory.l2BridgeDomainIid(tenantId, l2BridgeDomainId);
         Assert.assertEquals(l2BridgeDomainId, InstanceIdentifier.keyOf(identifier).getId());
-        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class, TenantKey.class).getId());
+        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class).getId());
     }
 
     @Test
@@ -189,7 +183,7 @@ public class IidFactoryTest {
         L3ContextId l3ContextId = mock(L3ContextId.class);
         InstanceIdentifier<L3Context> identifier = IidFactory.l3ContextIid(tenantId, l3ContextId);
         Assert.assertEquals(l3ContextId, InstanceIdentifier.keyOf(identifier).getId());
-        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class, TenantKey.class).getId());
+        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class).getId());
     }
 
     @Test
@@ -235,8 +229,8 @@ public class IidFactoryTest {
     public void subnetIidTest() {
         SubnetId subnetId = mock(SubnetId.class);
         InstanceIdentifier<Subnet> identifier = IidFactory.subnetIid(tenantId, subnetId);
-        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class, TenantKey.class).getId());
-        Assert.assertEquals(subnetId, identifier.firstKeyOf(Subnet.class, SubnetKey.class).getId());
+        Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class).getId());
+        Assert.assertEquals(subnetId, identifier.firstKeyOf(Subnet.class).getId());
     }
 
 }
