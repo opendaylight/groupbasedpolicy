@@ -59,7 +59,7 @@ module gbp-common {
     }
 
     typedef unique-id {
-        type uuid;
+        type unique-id-string;
         description "A globally unique identifier";
     }
 

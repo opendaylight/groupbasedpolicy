@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -13,14 +13,14 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.SubjectFeatureDefinitions;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definition.ParameterBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definition.Parameter.IsRequired;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definition.Parameter.Type;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definition.ParameterBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinitionBuilder;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.collect.ImmutableList;
-import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 /**
  * Match on the IP protocol of IP traffic
@@ -48,27 +48,21 @@ public class IpProtoClassifierDefinition {
      */
     public static final Long SCTP_VALUE = Long.valueOf(132);
 
-    public static final ClassifierDefinitionId ID =
-            new ClassifierDefinitionId("79c6fdb2-1e1a-4832-af57-c65baf5c2335");
+    public static final ClassifierDefinitionId ID = new ClassifierDefinitionId("Classifier-IP-Protocol");
     /**
      * Protocol classifier-definition
      */
-    public static final ClassifierDefinition DEFINITION =
-            new ClassifierDefinitionBuilder().setId(ID)
-                    .setName(new ClassifierName("ip_proto"))
-                    .setDescription(new Description("Match on the IP protocol of IP traffic"))
-                    .setParameter(ImmutableList.of(
-                                    new ParameterBuilder().setName(new ParameterName(PROTO_PARAM))
-                                            .setDescription(new Description(
-                                                    "The IP protocol to match against"))
-                                            .setIsRequired(IsRequired.Required)
-                                            .setType(Type.Int)
-                                            .build()))
-                    .build();
+    public static final ClassifierDefinition DEFINITION = new ClassifierDefinitionBuilder().setId(ID)
+        .setName(new ClassifierName("ip_proto"))
+        .setDescription(new Description("Match on the IP protocol of IP traffic"))
+        .setParameter(ImmutableList.of(new ParameterBuilder().setName(new ParameterName(PROTO_PARAM))
+            .setDescription(new Description("The IP protocol to match against"))
+            .setIsRequired(IsRequired.Required)
+            .setType(Type.Int)
+            .build()))
+        .build();
 
-    public static final InstanceIdentifier<ClassifierDefinition> IID =
-            InstanceIdentifier.builder(SubjectFeatureDefinitions.class)
-                    .child(ClassifierDefinition.class, DEFINITION.getKey())
-                    .build();
+    public static final InstanceIdentifier<ClassifierDefinition> IID = InstanceIdentifier
+        .builder(SubjectFeatureDefinitions.class).child(ClassifierDefinition.class, DEFINITION.getKey()).build();
 
 }

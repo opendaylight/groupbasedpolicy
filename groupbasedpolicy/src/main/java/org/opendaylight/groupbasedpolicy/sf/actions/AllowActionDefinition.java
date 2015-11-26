@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -21,7 +21,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
  */
 public class AllowActionDefinition {
 
-    public static final ActionDefinitionId ID = new ActionDefinitionId("f942e8fd-e957-42b7-bd18-f73d11266d17");
+    public static final ActionDefinitionId ID = new ActionDefinitionId("Action-Allow");
     /**
      * Access control - allow action-definition
      */
@@ -30,9 +30,7 @@ public class AllowActionDefinition {
         .setDescription(new Description("Allow the specified traffic to pass"))
         .build();
 
-    public static final InstanceIdentifier<ActionDefinition> IID =
-            InstanceIdentifier.builder(SubjectFeatureDefinitions.class)
-                    .child(ActionDefinition.class, DEFINITION.getKey())
-                    .build();
+    public static final InstanceIdentifier<ActionDefinition> IID = InstanceIdentifier
+        .builder(SubjectFeatureDefinitions.class).child(ActionDefinition.class, DEFINITION.getKey()).build();
 
 }

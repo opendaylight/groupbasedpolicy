@@ -42,7 +42,7 @@ import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.ovsdb.southbound.SouthboundConstants;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Uuid;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.UniqueId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey;
@@ -81,8 +81,8 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
             .child(Node.class)
             .child(TerminationPoint.class)
             .augmentation(OvsdbTerminationPointAugmentation.class);
-        registration = dataBroker.registerDataChangeListener(LogicalDatastoreType.OPERATIONAL, iid, this,
-                DataChangeScope.ONE);
+        registration =
+                dataBroker.registerDataChangeListener(LogicalDatastoreType.OPERATIONAL, iid, this, DataChangeScope.ONE);
         requiredTunnelTypes = createSupportedTunnelsList();
     }
 
@@ -102,7 +102,8 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
      * When vSwitch is deleted, we loose data in operational DS to determine Iid of
      * corresponding NodeId.
      */
-    private static final Map<InstanceIdentifier<OvsdbTerminationPointAugmentation>, NodeId> nodeIdByTerminPoint = new HashMap<>();
+    private static final Map<InstanceIdentifier<OvsdbTerminationPointAugmentation>, NodeId> nodeIdByTerminPoint =
+            new HashMap<>();
 
     @Override
     public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
@@ -115,7 +116,8 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
             if (entry.getValue() instanceof OvsdbTerminationPointAugmentation) {
                 OvsdbTerminationPointAugmentation ovsdbTp = (OvsdbTerminationPointAugmentation) entry.getValue();
                 @SuppressWarnings("unchecked")
-                InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid = (InstanceIdentifier<OvsdbTerminationPointAugmentation>) entry.getKey();
+                InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid =
+                        (InstanceIdentifier<OvsdbTerminationPointAugmentation>) entry.getKey();
                 OvsdbBridgeAugmentation ovsdbBridge = getOvsdbBridgeFromTerminationPoint(ovsdbTpIid, dataBroker);
                 nodeIdByTerminPoint.put(ovsdbTpIid,
                         new NodeId(getInventoryNodeIdString(ovsdbBridge, ovsdbTpIid, dataBroker)));
@@ -130,7 +132,8 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
             if (entry.getValue() instanceof OvsdbTerminationPointAugmentation) {
                 OvsdbTerminationPointAugmentation ovsdbTp = (OvsdbTerminationPointAugmentation) entry.getValue();
                 @SuppressWarnings("unchecked")
-                InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid = (InstanceIdentifier<OvsdbTerminationPointAugmentation>) entry.getKey();
+                InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid =
+                        (InstanceIdentifier<OvsdbTerminationPointAugmentation>) entry.getKey();
                 OvsdbBridgeAugmentation ovsdbBridge = getOvsdbBridgeFromTerminationPoint(ovsdbTpIid, dataBroker);
                 processOvsdbBridge(ovsdbBridge, ovsdbTp, ovsdbTpIid);
             }
@@ -144,8 +147,9 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
             if (old instanceof OvsdbTerminationPointAugmentation) {
                 OvsdbTerminationPointAugmentation ovsdbTp = (OvsdbTerminationPointAugmentation) old;
                 @SuppressWarnings("unchecked")
-                InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid = (InstanceIdentifier<OvsdbTerminationPointAugmentation>) iid;
-                processRemovedTp(nodeIdByTerminPoint.get(ovsdbTpIid) , ovsdbTp, ovsdbTpIid);
+                InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid =
+                        (InstanceIdentifier<OvsdbTerminationPointAugmentation>) iid;
+                processRemovedTp(nodeIdByTerminPoint.get(ovsdbTpIid), ovsdbTp, ovsdbTpIid);
             }
         }
     }
@@ -188,7 +192,7 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
          */
 
         if (externalId != null) {
-            EndpointKey epKey = getEpKeyFromNeutronMapper(new Uuid(externalId), dataBroker);
+            EndpointKey epKey = getEpKeyFromNeutronMapper(new UniqueId(externalId), dataBroker);
             if (epKey == null) {
                 LOG.debug("TerminationPoint {} with external ID {} is not in Neutron Map", ovsdbTp, externalId);
                 return;
@@ -278,7 +282,7 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
     private void deleteLocationForTp(OvsdbTerminationPointAugmentation ovsdbTp) {
         String externalId = getNeutronPortUuid(ovsdbTp);
         if (externalId != null) {
-            EndpointKey epKey = getEpKeyFromNeutronMapper(new Uuid(externalId), dataBroker);
+            EndpointKey epKey = getEpKeyFromNeutronMapper(new UniqueId(externalId), dataBroker);
             if (epKey == null) {
                 LOG.debug("TerminationPoint {} with external ID {} is not in Neutron Map.", ovsdbTp, externalId);
                 return;
@@ -327,7 +331,8 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
      *
      * @return true if it's a required tunnel port, false if it isn't
      */
-    private boolean isTunnelPort(OvsdbTerminationPointAugmentation ovsdbTp, List<AbstractTunnelType> requiredTunnelTypes) {
+    private boolean isTunnelPort(OvsdbTerminationPointAugmentation ovsdbTp,
+            List<AbstractTunnelType> requiredTunnelTypes) {
         if (ovsdbTp.getInterfaceType() != null) {
             for (AbstractTunnelType tunnelType : requiredTunnelTypes) {
                 if (tunnelType.isValidTunnelPort(ovsdbTp)) {

@@ -21,7 +21,7 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Uuid;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.UniqueId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.endpoints.by.ports.EndpointByPort;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
@@ -30,14 +30,14 @@ import com.google.common.util.concurrent.CheckedFuture;
 
 public class NeutronHelperTest {
 
-    private Uuid externalId;
+    private UniqueId externalId;
     private DataBroker dataBroker;
     private Optional<EndpointByPort> optionalEp;
 
     @SuppressWarnings("unchecked")
     @Before
     public void initialise() throws Exception {
-        externalId = mock(Uuid.class);
+        externalId = mock(UniqueId.class);
         dataBroker = mock(DataBroker.class);
 
         ReadWriteTransaction transaction = mock(ReadWriteTransaction.class);
