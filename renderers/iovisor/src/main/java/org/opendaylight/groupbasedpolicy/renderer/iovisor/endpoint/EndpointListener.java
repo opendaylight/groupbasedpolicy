@@ -16,15 +16,19 @@ import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.renderer.iovisor.utils.IovisorModuleUtils;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.IovisorModuleAugmentation;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Preconditions;
 
 public class EndpointListener implements DataChangeListener, AutoCloseable {
 
@@ -32,7 +36,10 @@ public class EndpointListener implements DataChangeListener, AutoCloseable {
 
     private final ListenerRegistration<DataChangeListener> registerListener;
 
+    private DataBroker dataBroker;
+
     public EndpointListener(DataBroker dataBroker) {
+        this.dataBroker = dataBroker;
         this.registerListener = dataBroker.registerDataChangeListener(
                                                 LogicalDatastoreType.OPERATIONAL,
                                                 IidFactory.endpointsIidWildcard().child(Endpoint.class),
@@ -56,8 +63,15 @@ public class EndpointListener implements DataChangeListener, AutoCloseable {
     private void created(Map<InstanceIdentifier<?>, DataObject> created) {
         for (Entry<InstanceIdentifier<?>, DataObject> newEndpoint : created.entrySet()) {
             Endpoint endpoint = fromMd(newEndpoint.getKey(), (Endpoint) newEndpoint.getValue());
-            LOG.info("Endpoint CREATED {}", endpoint);
-            // TODO process created event
+            LOG.debug("Endpoint CREATED {}", endpoint);
+
+            // Validate the IOVisorModuleInstance
+            IovisorModuleAugmentation iovisorModuleAugmentation = endpoint.getAugmentation(IovisorModuleAugmentation.class);
+            Preconditions.checkNotNull(iovisorModuleAugmentation.getUri(), "At this point, the Endpoint should be provided with a IovisorModuleInstance");
+            if (IovisorModuleUtils.validateIovisorModuleInstance(dataBroker, iovisorModuleAugmentation.getUri())) {
+                LOG.debug("This Endpoint {} provides a valid IovisorModuleInstance {}", endpoint, iovisorModuleAugmentation.getUri());
+                // TODO process validated endpoint
+            }
         }
     }
 
@@ -70,8 +84,9 @@ public class EndpointListener implements DataChangeListener, AutoCloseable {
     private void updated(Map<InstanceIdentifier<?>, DataObject> updated) {
         for (Entry<InstanceIdentifier<?>, DataObject> updatedEndpoint : updated.entrySet()) {
             Endpoint endpoint = fromMd(updatedEndpoint.getKey(), (Endpoint) updatedEndpoint.getValue());
-            LOG.info("Endpoint UPDATED {}", endpoint);
+            LOG.debug("Endpoint UPDATED {}", endpoint);
             //TODO process updated event
+
         }
     }
 
@@ -84,7 +99,7 @@ public class EndpointListener implements DataChangeListener, AutoCloseable {
     private void removed(AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> changes) {
         for (InstanceIdentifier<?> deletedEndpointPath : changes.getRemovedPaths()) {
             Endpoint endpoint = fromMd(deletedEndpointPath, (Endpoint) changes.getOriginalData().get(deletedEndpointPath));
-            LOG.info("Endpoint REMOVED {}", endpoint);
+            LOG.debug("Endpoint REMOVED {}", endpoint);
             // TODO process removed event
         }
     }
@@ -98,11 +113,10 @@ public class EndpointListener implements DataChangeListener, AutoCloseable {
      *            Endpoint from the related event
      * @return Endpoint constructed from the one gathered in the related event
      */
-    @SuppressWarnings("deprecation")
     private Endpoint fromMd(InstanceIdentifier<?> iid, Endpoint endpoint) {
         EndpointBuilder result = new EndpointBuilder();
 
-        final EndpointKey endpointKey = iid.firstKeyOf(Endpoint.class, EndpointKey.class);
+        final EndpointKey endpointKey = iid.firstKeyOf(Endpoint.class);
         if (endpointKey != null) {
             result.setKey(endpointKey);
         }
