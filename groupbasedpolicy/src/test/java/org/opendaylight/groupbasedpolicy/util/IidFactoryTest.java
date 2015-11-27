@@ -31,6 +31,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
@@ -199,6 +200,10 @@ public class IidFactoryTest {
         InstanceIdentifier<Endpoint> identifier = IidFactory.endpointIid(l2Context, macAddress);
         Assert.assertEquals(l2Context, InstanceIdentifier.keyOf(identifier).getL2Context());
         Assert.assertEquals(macAddress, InstanceIdentifier.keyOf(identifier).getMacAddress());
+
+        EndpointKey key = mock(EndpointKey.class);
+        identifier = IidFactory.endpointIid(key);
+        Assert.assertEquals(key, identifier.firstKeyOf(Endpoint.class));
     }
 
     @Test
