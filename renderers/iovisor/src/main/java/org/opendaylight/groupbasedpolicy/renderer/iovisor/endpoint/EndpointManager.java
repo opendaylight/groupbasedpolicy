@@ -33,7 +33,7 @@ public class EndpointManager implements EpRendererAugmentation, AutoCloseable {
     private EndpointListener endpointListener;
 
     public EndpointManager(DataBroker dataBroker, RpcProviderRegistry rpcProviderRegistry) {
-        LOG.debug("Initialized IOVisor EndpointManager");
+        LOG.info("Initialized IOVisor EndpointManager");
         Preconditions.checkNotNull(dataBroker, "DataBroker instance must not be null");
         Preconditions.checkNotNull(rpcProviderRegistry, "RpcProviderRegistry instance must not be null");
 
