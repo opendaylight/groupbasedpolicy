@@ -27,6 +27,8 @@
     <repository>mvn:org.opendaylight.netconf/features-restconf/{{VERSION}}/xml/features</repository>
     <!-- Repos needed by the UI -->
     <repository>mvn:org.opendaylight.dlux/features-dlux/{{VERSION}}/xml/features</repository>
+    <!-- Repos needed by IOvisor Renderer -->
+    <repository>mvn:org.opendaylight.aaa/features-aaa/${aaa.version}/xml/features</repository>
 
     <!-- The common GBP components -->
     <feature name='odl-groupbasedpolicy-base' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Base Copmonents'>
@@ -92,9 +94,15 @@
 
         This renderer maps GBP service model to agents of the IOVisor Linux Foundation project.
     -->
-    <feature name='odl-groupbasedpolicy-iovisor' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: IOVisor Renderer'>
+    <feature name='odl-groupbasedpolicy-iovisor' version='${project.version}'
+        description='OpenDaylight :: groupbasedpolicy :: IOVisor Renderer'>
+        <feature>war</feature>
+        <feature version='${aaa.version}'>odl-aaa-authn</feature>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/iovisor-renderer/{{VERSION}}</bundle>
+        <bundle>mvn:com.sun.jersey/jersey-core/${jersey.version}</bundle>
+        <bundle>mvn:com.sun.jersey/jersey-server/${jersey.version}</bundle>
+        <bundle>mvn:com.sun.jersey/jersey-servlet/${jersey.version}</bundle>
         <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-iovisor.xml">mvn:org.opendaylight.groupbasedpolicy/iovisor-renderer/{{VERSION}}/xml/config</configfile>
     </feature>
 
