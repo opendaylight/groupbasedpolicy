@@ -66,6 +66,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayL3Context;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayL3ContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayL3Nat;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.napt.translations.fields.NaptTranslations;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.napt.translations.fields.napt.translations.NaptTranslation;
@@ -356,7 +357,6 @@ public class EndpointManagerTest {
         Assert.assertTrue(result.isEmpty());
     }
 
-    @SuppressWarnings("unused")
     @Test
     public void getNaptAugL3EndpointTest() {
         EndpointL3 endpointL3 = mock(EndpointL3.class);
@@ -619,32 +619,31 @@ public class EndpointManagerTest {
 
     @Test
     public void getOfOverlayContextFromL3EndpointTest() throws Exception {
-        OfOverlayL3Context ofL3Ctx = mock(OfOverlayL3Context.class);
+        OfOverlayL3ContextBuilder ofL3CtxBuilder = new OfOverlayL3ContextBuilder();
         OfOverlayContext result;
         Method method = EndpointManager.class.getDeclaredMethod("getOfOverlayContextFromL3Endpoint",
                 OfOverlayL3Context.class);
         method.setAccessible(true);
 
-        result = (OfOverlayContext) method.invoke(manager, ofL3Ctx);
+        result = (OfOverlayContext) method.invoke(manager, ofL3CtxBuilder.build());
         Assert.assertEquals(null, result.getInterfaceId());
         Assert.assertEquals(null, result.getLocationType());
         Assert.assertEquals(null, result.getNodeConnectorId());
         Assert.assertEquals(null, result.getNodeId());
         Assert.assertEquals(null, result.getPortName());
 
-        UniqueId interfaceId = mock(UniqueId.class);
-        when(ofL3Ctx.getInterfaceId()).thenReturn(interfaceId);
+        UniqueId interfaceId = new UniqueId("iface");
+        ofL3CtxBuilder.setInterfaceId(interfaceId);
         LocationType locationType = LocationType.External;
-        when(ofL3Ctx.getLocationType()).thenReturn(locationType);
-        NodeConnectorId nodeConnectorId = mock(NodeConnectorId.class);
-        when(ofL3Ctx.getNodeConnectorId()).thenReturn(nodeConnectorId);
-        NodeId nodeId = mock(NodeId.class);
-        when(ofL3Ctx.getNodeId()).thenReturn(nodeId);
-        Name portName = mock(Name.class);
-        when(portName.getValue()).thenReturn("portName");
-        when(ofL3Ctx.getPortName()).thenReturn(portName);
+        ofL3CtxBuilder.setLocationType(locationType);
+        NodeConnectorId nodeConnectorId = new NodeConnectorId("nc");
+        ofL3CtxBuilder.setNodeConnectorId(nodeConnectorId);
+        NodeId nodeId = new NodeId("nId");
+        ofL3CtxBuilder.setNodeId(nodeId);
+        Name portName = new Name("pName");
+        ofL3CtxBuilder.setPortName(portName);
 
-        result = (OfOverlayContext) method.invoke(manager, ofL3Ctx);
+        result = (OfOverlayContext) method.invoke(manager, ofL3CtxBuilder.build());
         Assert.assertEquals(interfaceId, result.getInterfaceId());
         Assert.assertEquals(locationType, result.getLocationType());
         Assert.assertEquals(nodeConnectorId, result.getNodeConnectorId());

@@ -21,7 +21,10 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker.RpcRegistration;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
@@ -37,6 +40,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnregisterEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnsetEndpointGroupConditionsInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3AddressBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.has.endpoint.group.conditions.EndpointGroupCondition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L2;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L3;
@@ -104,18 +108,17 @@ public class EndPointRpcRegistryTest {
 
     private RegisterEndpointInput setRegisterEndpointVariablesForTest() throws Exception{
         RegisterEndpointInputBuilder registerEndpointInputBuilder = new RegisterEndpointInputBuilder();
-        L2BridgeDomainId l2BridgeDomainIdMock = mock(L2BridgeDomainId.class);
-        registerEndpointInputBuilder.setL2Context(l2BridgeDomainIdMock);
-        MacAddress macAddressMock = mock(MacAddress.class);
-        registerEndpointInputBuilder.setMacAddress(macAddressMock);
+        registerEndpointInputBuilder.setL2Context(new L2BridgeDomainId("l2bdId"));
+        registerEndpointInputBuilder.setMacAddress(new MacAddress("5E:83:39:98:4F:1B"));
         return registerEndpointInputBuilder.build();
     }
 
-    private RegisterEndpointInput setL3AddressVariableForTest(){
+    private RegisterEndpointInput setL3AddressVariableForTest() {
         RegisterEndpointInputBuilder registerEndpointInputBuilder = new RegisterEndpointInputBuilder();
-        L3Address l3AddressMock = mock(L3Address.class);
         List<L3Address> l3AddressList = new ArrayList<>();
-        l3AddressList.add(l3AddressMock);
+        l3AddressList.add(new L3AddressBuilder().setL3Context(new L3ContextId("l3c"))
+            .setIpAddress(new IpAddress(new Ipv4Address("1.1.1.1")))
+            .build());
         registerEndpointInputBuilder.setL3Address(l3AddressList);
         return registerEndpointInputBuilder.build();
     }
@@ -128,12 +131,9 @@ public class EndPointRpcRegistryTest {
 
     private RegisterL3PrefixEndpointInput setL3PrefixTestVariables(){
         RegisterL3PrefixEndpointInputBuilder registerL3PrefixEndpointInputBuilder = new RegisterL3PrefixEndpointInputBuilder();
-        L3ContextId l3ContextIdMock = mock(L3ContextId.class);
-        registerL3PrefixEndpointInputBuilder.setL3Context(l3ContextIdMock);
-        IpPrefix ipPrefixMock = mock(IpPrefix.class);
-        registerL3PrefixEndpointInputBuilder.setIpPrefix(ipPrefixMock);
-        TenantId tenantIdMock = mock(TenantId.class);
-        registerL3PrefixEndpointInputBuilder.setTenant(tenantIdMock);
+        registerL3PrefixEndpointInputBuilder.setL3Context(new L3ContextId("l3c"));
+        registerL3PrefixEndpointInputBuilder.setIpPrefix(new IpPrefix(new Ipv4Prefix("1.1.1.0/24")));
+        registerL3PrefixEndpointInputBuilder.setTenant(new TenantId("t1"));
         return registerL3PrefixEndpointInputBuilder.build();
     }
 
