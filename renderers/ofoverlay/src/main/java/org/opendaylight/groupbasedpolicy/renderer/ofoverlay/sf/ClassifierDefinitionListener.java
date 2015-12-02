@@ -22,7 +22,6 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OFOverlayRenderer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.SubjectFeatureDefinitions;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinition;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.Renderers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.RendererKey;
@@ -42,7 +41,7 @@ public class ClassifierDefinitionListener implements DataTreeChangeListener<Clas
 
     private static final Logger LOG = LoggerFactory.getLogger(ClassifierDefinitionListener.class);
     private static final InstanceIdentifier<Capabilities> CAPABILITIES_IID = InstanceIdentifier.builder(Renderers.class)
-        .child(Renderer.class, new RendererKey(new RendererName(OFOverlayRenderer.RENDERER_NAME)))
+        .child(Renderer.class, new RendererKey(OFOverlayRenderer.RENDERER_NAME))
         .child(Capabilities.class)
         .build();
     private static String PUT = "stored";
@@ -115,14 +114,14 @@ public class ClassifierDefinitionListener implements DataTreeChangeListener<Clas
 
             @Override
             public void onSuccess(Void result) {
-                LOG.debug("Capability of renerer {} was {}: {}", OFOverlayRenderer.RENDERER_NAME, putOrDeleted,
-                        supportedClassifierDefinitionKey);
+                LOG.debug("Capability of renerer {} was {}: {}", OFOverlayRenderer.RENDERER_NAME.getValue(),
+                        putOrDeleted, supportedClassifierDefinitionKey);
             }
 
             @Override
             public void onFailure(Throwable t) {
-                LOG.error("Capability of renderer {} was NOT {}: {}", OFOverlayRenderer.RENDERER_NAME, putOrDeleted,
-                        supportedClassifierDefinitionKey, t);
+                LOG.error("Capability of renderer {} was NOT {}: {}", OFOverlayRenderer.RENDERER_NAME.getValue(),
+                        putOrDeleted, supportedClassifierDefinitionKey, t);
             }
         };
     }

@@ -121,7 +121,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
         endpointManager.addEndpoint(ep1);
         Endpoint ep2 = localEP().setMacAddress(new MacAddress("00:00:00:00:00:02")).build();
         endpointManager.addEndpoint(ep2);
-        policyResolver.addTenant(baseTenant().setContract(ImmutableList.<Contract>of(baseContract(null).build()))
+        ctx.addTenant(baseTenant().setContract(ImmutableList.<Contract>of(baseContract(null).build()))
             .build());
 
         OfWriter fm = dosync(null);
@@ -196,7 +196,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
         endpointManager.addEndpoint(ep1);
         Endpoint ep2 = localEP().setMacAddress(new MacAddress("00:00:00:00:00:02")).setEndpointGroup(eg2).build();
         endpointManager.addEndpoint(ep2);
-        policyResolver.addTenant(baseTenant().setContract(ImmutableList.<Contract>of(baseContract(subjects).build()))
+        ctx.addTenant(baseTenant().setContract(ImmutableList.<Contract>of(baseContract(subjects).build()))
             .build());
 
         OfWriter fm = dosync(null);
@@ -282,9 +282,9 @@ public class PolicyEnforcerTest extends FlowTableTest {
                                                     .build())).build())
                                 .build()))
                     .build()));
-        policyResolver.addTenant(tb.build());
+        ctx.addTenant(tb.build());
 
-        PolicyInfo policy = policyResolver.getCurrentPolicy();
+        PolicyInfo policy = ctx.getCurrentPolicy();
         List<ConditionName> ep1c = endpointManager.getConditionsForEndpoint(ep1);
         ConditionGroup cg1 = policy.getEgCondGroup(new EgKey(tb.getId(), ep1.getEndpointGroup()), ep1c);
         List<ConditionName> ep2c = endpointManager.getConditionsForEndpoint(ep2);
@@ -300,11 +300,6 @@ public class PolicyEnforcerTest extends FlowTableTest {
         FlowUtils.addNxRegMatch(mb, RegMatch.of(NxmNxReg0.class, Long.valueOf(eg1Id)),
                 RegMatch.of(NxmNxReg1.class, Long.valueOf(cg1Id)), RegMatch.of(NxmNxReg2.class, Long.valueOf(eg2Id)),
                 RegMatch.of(NxmNxReg3.class, Long.valueOf(cg2Id)));
-        GeneralAugMatchNodesNodeTableFlow m1 = mb.getAugmentation(GeneralAugMatchNodesNodeTableFlow.class);
-        FlowUtils.addNxRegMatch(mb, RegMatch.of(NxmNxReg0.class, Long.valueOf(eg2Id)),
-                RegMatch.of(NxmNxReg1.class, Long.valueOf(cg2Id)), RegMatch.of(NxmNxReg2.class, Long.valueOf(eg1Id)),
-                RegMatch.of(NxmNxReg3.class, Long.valueOf(cg1Id)));
-        GeneralAugMatchNodesNodeTableFlow m2 = mb.getAugmentation(GeneralAugMatchNodesNodeTableFlow.class);
         int count = 0;
         OfWriter fm = dosync(null);
         assertEquals(7, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())

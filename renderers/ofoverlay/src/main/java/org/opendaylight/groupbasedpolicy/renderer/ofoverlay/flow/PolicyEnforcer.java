@@ -25,9 +25,8 @@ import java.util.Set;
 
 import javax.annotation.concurrent.Immutable;
 
-import org.opendaylight.groupbasedpolicy.sf.actions.AllowActionDefinition;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Action;
@@ -40,8 +39,8 @@ import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.resolver.EndpointConstraint;
 import org.opendaylight.groupbasedpolicy.resolver.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.resolver.Policy;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.groupbasedpolicy.resolver.RuleGroup;
+import org.opendaylight.groupbasedpolicy.sf.actions.AllowActionDefinition;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
@@ -109,7 +108,7 @@ public class PolicyEnforcer extends FlowTable {
     }
 
     @Override
-    public void sync(NodeId nodeId, PolicyInfo policyInfo, OfWriter ofWriter) throws Exception {
+    public void sync(NodeId nodeId, OfWriter ofWriter) throws Exception {
 
         ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
@@ -126,22 +125,20 @@ public class PolicyEnforcer extends FlowTable {
 
         for (Endpoint srcEp : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
             for (EgKey srcEpgKey : ctx.getEndpointManager().getEgKeysForEndpoint(srcEp)) {
-                Set<EgKey> peers = policyInfo.getPeers(srcEpgKey);
+                Set<EgKey> peers = ctx.getCurrentPolicy().getPeers(srcEpgKey);
                 for (EgKey dstEpgKey : peers) {
                     Set<Endpoint> dstEndpoints = new HashSet<>();
                     dstEndpoints.addAll(ctx.getEndpointManager().getEndpointsForGroup(dstEpgKey));
                     dstEndpoints.addAll(ctx.getEndpointManager().getExtEpsNoLocForGroup(dstEpgKey));
                     for (Endpoint dstEp : dstEndpoints) {
 
-                        EndpointFwdCtxOrdinals srcEpFwdCxtOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx,
-                                policyInfo, srcEp);
+                        EndpointFwdCtxOrdinals srcEpFwdCxtOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, srcEp);
                         if (srcEpFwdCxtOrds == null) {
                             LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", srcEp);
                             continue;
                         }
 
-                        EndpointFwdCtxOrdinals dstEpFwdCxtOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx,
-                                policyInfo, dstEp);
+                        EndpointFwdCtxOrdinals dstEpFwdCxtOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, dstEp);
                         if (dstEpFwdCxtOrds == null) {
                             LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", dstEp);
                             continue;
@@ -153,9 +150,9 @@ public class PolicyEnforcer extends FlowTable {
                         int sepgId = srcEpFwdCxtOrds.getEpgId();
 
                         fdIds.add(srcEpFwdCxtOrds.getFdId());
-                        NetworkElements netElements = new NetworkElements(srcEp, dstEp, nodeId, ctx, policyInfo);
+                        NetworkElements netElements = new NetworkElements(srcEp, dstEp, nodeId, ctx);
 
-                        Policy policy = policyInfo.getPolicy(dstEpgKey, srcEpgKey);
+                        Policy policy = ctx.getCurrentPolicy().getPolicy(dstEpgKey, srcEpgKey);
                         for (Cell<EndpointConstraint, EndpointConstraint, List<RuleGroup>> activeRulesByConstraints : getActiveRulesBetweenEps(
                                 policy, dstEp, srcEp)) {
                             Set<IpPrefix> sIpPrefixes = Policy.getIpPrefixesFrom(activeRulesByConstraints.getRowKey()
@@ -177,7 +174,7 @@ public class PolicyEnforcer extends FlowTable {
                         }
 
                         // Reverse
-                        policy = policyInfo.getPolicy(srcEpgKey, dstEpgKey);
+                        policy = ctx.getCurrentPolicy().getPolicy(srcEpgKey, dstEpgKey);
                         for (Cell<EndpointConstraint, EndpointConstraint, List<RuleGroup>> activeRulesByConstraints : getActiveRulesBetweenEps(
                                 policy, srcEp, dstEp)) {
                             Set<IpPrefix> sIpPrefixes = Policy.getIpPrefixesFrom(activeRulesByConstraints.getRowKey()
@@ -208,7 +205,7 @@ public class PolicyEnforcer extends FlowTable {
         for (Endpoint srcEp : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
             for (EgKey srcEpgKey : ctx.getEndpointManager().getEgKeysForEndpoint(srcEp)) {
 
-                IndexedTenant tenant = ctx.getPolicyResolver().getTenant(srcEpgKey.getTenantId());
+                IndexedTenant tenant = ctx.getTenant(srcEpgKey.getTenantId());
                 if (tenant != null) {
                     EndpointGroup group = tenant.getEndpointGroup(srcEpgKey.getEgId());
                     if (group == null) {
@@ -220,14 +217,14 @@ public class PolicyEnforcer extends FlowTable {
                     if (igp == null || igp.equals(IntraGroupPolicy.Allow)) {
                         for (Endpoint dstEp : ctx.getEndpointManager().getEndpointsForGroup(srcEpgKey)) {
                             EndpointFwdCtxOrdinals srcEpFwdCxtOrds =
-                                OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, srcEp);
+                                OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, srcEp);
                             if (srcEpFwdCxtOrds == null) {
                                 LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", srcEp);
                                 continue;
                             }
 
                             EndpointFwdCtxOrdinals dstEpFwdCxtOrds =
-                                OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, dstEp);
+                                OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, dstEp);
                             if (dstEpFwdCxtOrds == null) {
                                 LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", dstEp);
                                 continue;
@@ -301,7 +298,7 @@ public class PolicyEnforcer extends FlowTable {
         int priority = 65000;
         for (RuleGroup rg : rgs) {
             TenantId tenantId = rg.getContractTenant().getId();
-            IndexedTenant tenant = ctx.getPolicyResolver().getTenant(tenantId);
+            IndexedTenant tenant = ctx.getTenant(tenantId);
             for (Rule r : rg.getRules()) {
                 syncDirection(ofWriter, netElements, tenant, policyPair, r, Direction.In, priority);
                 syncDirection(ofWriter, netElements, tenant, policyPair, r, Direction.Out, priority);
@@ -701,7 +698,7 @@ public class PolicyEnforcer extends FlowTable {
         private EndpointFwdCtxOrdinals srcEpOrds;
         private EndpointFwdCtxOrdinals dstEpOrds;
 
-        public NetworkElements(Endpoint srcEp, Endpoint dstEp, NodeId nodeId, OfContext ctx, PolicyInfo policyInfo)
+        public NetworkElements(Endpoint srcEp, Endpoint dstEp, NodeId nodeId, OfContext ctx)
                 throws Exception {
             Preconditions.checkArgument(srcEp.getAugmentation(OfOverlayContext.class) != null);
             Preconditions.checkArgument(dstEp.getAugmentation(OfOverlayContext.class) != null);
@@ -709,12 +706,12 @@ public class PolicyEnforcer extends FlowTable {
             this.srcEp = srcEp;
             this.dstEp = dstEp;
             this.localNodeId = nodeId;
-            this.srcEpOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, srcEp);
+            this.srcEpOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, srcEp);
             if (this.srcEpOrds == null) {
                 LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", srcEp);
                 return;
             }
-            this.dstEpOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, dstEp);
+            this.dstEpOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, dstEp);
             if (this.dstEpOrds == null) {
                 LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", dstEp);
                 return;

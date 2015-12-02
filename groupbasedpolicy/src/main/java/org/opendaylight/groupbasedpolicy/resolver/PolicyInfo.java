@@ -38,6 +38,7 @@ public class PolicyInfo {
         this.policyMap = policyMap;
         this.egConditions = egConditions;
     }
+
     public Table<EgKey, EgKey, Policy> getPolicyMap() {
         return policyMap;
     }

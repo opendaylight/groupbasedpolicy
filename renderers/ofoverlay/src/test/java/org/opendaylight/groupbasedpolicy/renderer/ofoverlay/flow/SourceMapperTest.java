@@ -22,15 +22,14 @@ import java.util.Set;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.resolver.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
@@ -54,7 +53,6 @@ public class SourceMapperTest {
     private Endpoint endpoint;
     private EndpointManager endpointManager;
     private IndexedTenant tenant;
-    private PolicyResolver policyResolver;
     private TenantId tenantId;
     private PolicyManager policyManager;
     private OfOverlayContext ofOverlayContext;
@@ -69,7 +67,6 @@ public class SourceMapperTest {
         ctx = mock(OfContext.class);
         tableId = 5;
         nodeId = mock(NodeId.class);
-        policyInfo = mock(PolicyInfo.class);
         ofWriter = mock(OfWriter.class);
 
         mapper = new SourceMapper(ctx, tableId);
@@ -88,12 +85,12 @@ public class SourceMapperTest {
 
         tenantId = mock(TenantId.class);
         when(endpoint.getTenant()).thenReturn(tenantId);
-        policyResolver = mock(PolicyResolver.class);
-        when(ctx.getPolicyResolver()).thenReturn(policyResolver);
         tenant = mock(IndexedTenant.class);
-        when(policyResolver.getTenant(tenantId)).thenReturn(tenant);
+        when(ctx.getTenant(tenantId)).thenReturn(tenant);
         policyManager = mock(PolicyManager.class);
         when(ctx.getPolicyManager()).thenReturn(policyManager);
+        policyInfo = mock(PolicyInfo.class);
+        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
 
         endpointGroup = mock(EndpointGroup.class);
         when(tenant.getEndpointGroup(any(EndpointGroupId.class))).thenReturn(endpointGroup);
@@ -117,7 +114,7 @@ public class SourceMapperTest {
         when(endpoint.getEndpointGroup()).thenReturn(endpointGroupIdSingle);
         when(endpoint.getEndpointGroups()).thenReturn(null);
 
-        mapper.sync(nodeId, policyInfo, ofWriter);
+        mapper.sync(nodeId, ofWriter);
         verify(ofWriter, times(4)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
     }
 
@@ -127,7 +124,7 @@ public class SourceMapperTest {
         List<EndpointGroupId> endpointGroups = Arrays.asList(endpointGroupIdList);
         when(endpoint.getEndpointGroups()).thenReturn(endpointGroups);
 
-        mapper.sync(nodeId, policyInfo, ofWriter);
+        mapper.sync(nodeId, ofWriter);
         verify(ofWriter, times(4)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
     }
 
@@ -137,7 +134,7 @@ public class SourceMapperTest {
         when(endpoint.getEndpointGroup()).thenReturn(endpointGroupIdSingle);
         when(endpoint.getEndpointGroups()).thenReturn(null);
 
-        mapper.sync(nodeId, policyInfo, ofWriter);
+        mapper.sync(nodeId, ofWriter);
         verify(ofWriter, times(4)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
     }
 
@@ -148,15 +145,15 @@ public class SourceMapperTest {
         when(endpoint.getEndpointGroups()).thenReturn(null);
         when(switchManager.getTunnelPort(nodeId, TunnelTypeVxlan.class)).thenReturn(null);
 
-        mapper.sync(nodeId, policyInfo, ofWriter);
+        mapper.sync(nodeId, ofWriter);
         verify(ofWriter, times(2)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
     }
 
     @Test
     public void syncTestTenantNull() throws Exception {
-        when(policyResolver.getTenant(tenantId)).thenReturn(null);
+        when(ctx.getTenant(tenantId)).thenReturn(null);
 
-        mapper.sync(nodeId, policyInfo, ofWriter);
+        mapper.sync(nodeId, ofWriter);
         verify(ofWriter, times(1)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
     }
 }

@@ -19,7 +19,6 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.resolver.ConditionGroup;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.resolver.IndexedTenant;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
@@ -170,14 +169,14 @@ public class OrdinalFactory {
         return ord.intValue();
     }
 
-    public static final EndpointFwdCtxOrdinals getEndpointFwdCtxOrdinals(OfContext ctx, PolicyInfo policyInfo,
+    public static final EndpointFwdCtxOrdinals getEndpointFwdCtxOrdinals(OfContext ctx,
             Endpoint ep) throws Exception {
-        IndexedTenant tenant = ctx.getPolicyResolver().getTenant(ep.getTenant());
+        IndexedTenant tenant = ctx.getTenant(ep.getTenant());
         if (tenant == null) {
             LOG.debug("Tenant {} is null", ep.getTenant());
             return null;
         }
-        return new EndpointFwdCtxOrdinals(ep, policyInfo, ctx);
+        return new EndpointFwdCtxOrdinals(ep, ctx);
     }
 
     // TODO alagalah Li: Move to either OrdinalFactory or EndpointManager
@@ -187,10 +186,10 @@ public class OrdinalFactory {
         private EpKey ep;
         private int epgId = 0, bdId = 0, fdId = 0, l3Id = 0, cgId = 0, tunnelId = 0;
 
-        private EndpointFwdCtxOrdinals(Endpoint ep, PolicyInfo policyInfo, OfContext ctx) throws Exception {
+        private EndpointFwdCtxOrdinals(Endpoint ep, OfContext ctx) throws Exception {
             this.ep = new EpKey(ep.getL2Context(), ep.getMacAddress());
 
-            IndexedTenant tenant = ctx.getPolicyResolver().getTenant(ep.getTenant());
+            IndexedTenant tenant = ctx.getTenant(ep.getTenant());
 
             // Set network containment either from ep, or from primary EPG
             if (ep.getNetworkContainment() != null) {
@@ -210,7 +209,7 @@ public class OrdinalFactory {
             // conditions, but
             // out of scope until broader bugs with conditions are fixed.
             List<ConditionName> conds = ctx.getEndpointManager().getConditionsForEndpoint(ep);
-            ConditionGroup cg = policyInfo.getEgCondGroup(new EgKey(ep.getTenant(), ep.getEndpointGroup()), conds);
+            ConditionGroup cg = ctx.getCurrentPolicy().getEgCondGroup(new EgKey(ep.getTenant(), ep.getEndpointGroup()), conds);
             this.cgId = getCondGroupOrdinal(cg);
 
             // Based on network containment, determine components of

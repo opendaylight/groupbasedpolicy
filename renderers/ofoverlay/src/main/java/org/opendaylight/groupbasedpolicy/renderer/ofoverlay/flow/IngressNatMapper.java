@@ -32,10 +32,9 @@ import java.util.Collection;
 import java.util.List;
 
 import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Prefix;
@@ -84,7 +83,7 @@ public class IngressNatMapper extends FlowTable {
     }
 
     @Override
-    public void sync(NodeId nodeId, PolicyInfo policyInfo, OfWriter ofWriter) throws Exception {
+    public void sync(NodeId nodeId, OfWriter ofWriter) throws Exception {
 
         ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
@@ -96,13 +95,13 @@ public class IngressNatMapper extends FlowTable {
             if (l3Ep.getL2Context() != null && l3Ep.getMacAddress() !=null ) {
                 Endpoint ep = ctx.getEndpointManager().getEndpoint(new EpKey(l3Ep.getL2Context(), l3Ep.getMacAddress()));
                 if (endpointsForNode.contains(ep)) {
-                    createNatFlow(l3Ep, nodeId, ofWriter, policyInfo);
+                    createNatFlow(l3Ep, nodeId, ofWriter);
                 }
             }
         }
     }
 
-    private void createNatFlow(EndpointL3 l3Ep, NodeId nodeId, OfWriter ofWriter, PolicyInfo policyInfo) throws Exception {
+    private void createNatFlow(EndpointL3 l3Ep, NodeId nodeId, OfWriter ofWriter) throws Exception {
         List<NaptTranslation> naptAugL3Endpoint = ctx.getEndpointManager().getNaptAugL3Endpoint(l3Ep);
         // Match on L3 Nat Augmentation in Destination, set to IPAddress/Mac, send to SourceMapper
         if (naptAugL3Endpoint == null) {
@@ -111,7 +110,7 @@ public class IngressNatMapper extends FlowTable {
         Flow flow = null;
         for (NaptTranslation nat : naptAugL3Endpoint) {
             Endpoint ep = ctx.getEndpointManager().getEndpoint(new EpKey(l3Ep.getL2Context(), l3Ep.getMacAddress()));
-            EndpointFwdCtxOrdinals epFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, ep);
+            EndpointFwdCtxOrdinals epFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, ep);
             if (epFwdCtxOrds == null) {
                 LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", ep);
                 continue;

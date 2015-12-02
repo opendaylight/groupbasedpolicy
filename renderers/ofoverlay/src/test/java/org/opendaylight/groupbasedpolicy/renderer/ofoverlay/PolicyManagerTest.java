@@ -11,9 +11,6 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -36,17 +33,12 @@ import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyScope;
-import org.opendaylight.groupbasedpolicy.resolver.validator.Validator;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.SubjectFeatureDefinitions;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
@@ -68,7 +60,6 @@ public class PolicyManagerTest {
     private PolicyManager manager;
 
     private DataBroker dataBroker;
-    private PolicyResolver policyResolver;
     private SwitchManager switchManager;
     private EndpointManager endpointManager;
     private RpcProviderRegistry rpcRegistry;
@@ -82,20 +73,14 @@ public class PolicyManagerTest {
     private short tableId;
     private Flow flow;
 
-    private PolicyScope policyScope;
-
     @Before
     public void setUp() {
         dataBroker = mock(DataBroker.class);
-        policyResolver = mock(PolicyResolver.class);
         switchManager = mock(SwitchManager.class);
         endpointManager = mock(EndpointManager.class);
         rpcRegistry = mock(RpcProviderRegistry.class);
         executor = mock(ScheduledExecutorService.class);
         tableOffset = 5;
-
-        policyScope = mock(PolicyScope.class);
-        when(policyResolver.registerListener(any(PolicyManager.class))).thenReturn(policyScope);
 
         writeTransaction = mock(WriteTransaction.class);
         when(dataBroker.newWriteOnlyTransaction()).thenReturn(writeTransaction);
@@ -103,24 +88,12 @@ public class PolicyManagerTest {
         readWriteTransaction = mock(ReadWriteTransaction.class);
         when(dataBroker.newReadWriteTransaction()).thenReturn(readWriteTransaction);
 
-        manager = new PolicyManager(dataBroker, policyResolver, switchManager,
+        manager = new PolicyManager(dataBroker, switchManager,
                 endpointManager, rpcRegistry, executor, tableOffset);
 
         nodeId = mock(NodeId.class);
         tableId = 5;
         flow = mock(Flow.class);
-    }
-
-    @SuppressWarnings("unchecked")
-    @Test
-    public void constructorTest() {
-        WriteTransaction ctorWriteTransaction = mock(WriteTransaction.class);
-        when(dataBroker.newWriteOnlyTransaction()).thenReturn(ctorWriteTransaction);
-        PolicyResolver ctorPolicyResolver = mock(PolicyResolver.class);
-        PolicyManager ctorPolicyManager = new PolicyManager(dataBroker, ctorPolicyResolver,
-                switchManager, endpointManager, rpcRegistry, executor, tableOffset);
-        verify(ctorPolicyResolver, atLeastOnce()).registerActionInstanceValidators(any(ActionDefinitionId.class),
-                any(Validator.class));
     }
 
     @SuppressWarnings("unchecked")
@@ -165,9 +138,7 @@ public class PolicyManagerTest {
         EpKey epKey = new EpKey(
                 new L2ContextId("10fdfde9-c0f2-412d-822d-59d38711bde8"),
                 new MacAddress("24:77:03:D8:E9:B4"));
-        doNothing().when(policyScope).addToScope(eq(egKey.getTenantId()), eq(egKey.getEgId()));
-        manager.groupEndpointUpdated(egKey, epKey);
-        verify(policyScope).addToScope(eq(egKey.getTenantId()), eq(egKey.getEgId()));
+        // TODO finish this test
     }
 
     @Test

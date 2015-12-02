@@ -12,13 +12,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockOfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockPolicyManager;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.MockEndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.MockSwitchManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.AllowAction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Classifier;
-import org.opendaylight.groupbasedpolicy.resolver.MockPolicyResolver;
 import org.opendaylight.groupbasedpolicy.sf.classifiers.L4ClassifierDefinition;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
@@ -69,10 +68,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import com.google.common.collect.ImmutableList;
 
 public class OfTableTest {
-    OfContext ctx;
+    MockOfContext ctx;
 
     MockEndpointManager endpointManager;
-    MockPolicyResolver policyResolver;
     MockPolicyManager policyManager;
     MockSwitchManager switchManager;
     NodeId nodeId = new NodeId("openflow:1");
@@ -96,13 +94,10 @@ public class OfTableTest {
 
     protected void initCtx() {
         endpointManager = new MockEndpointManager();
-        policyResolver = new MockPolicyResolver();
-        policyManager = new MockPolicyManager(policyResolver, endpointManager);
+        policyManager = new MockPolicyManager(endpointManager);
         switchManager = new MockSwitchManager();
-        ctx = new OfContext(null,
-                             null,
+        ctx = new MockOfContext(null,
                              policyManager,
-                             policyResolver,
                              switchManager,
                              endpointManager,
                              null);

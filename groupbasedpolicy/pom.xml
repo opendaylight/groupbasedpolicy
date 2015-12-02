@@ -61,6 +61,7 @@
             <Export-Package>
               org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.*,
               org.opendaylight.controller.config.yang.config.endpoint_provider,
+              org.opendaylight.groupbasedpolicy.dto,
               org.opendaylight.groupbasedpolicy.endpoint,
               org.opendaylight.groupbasedpolicy.resolver.*,
               org.opendaylight.groupbasedpolicy.sf.actions.*,

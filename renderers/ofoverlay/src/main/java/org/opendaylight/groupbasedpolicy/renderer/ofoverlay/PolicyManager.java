@@ -8,10 +8,11 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
@@ -19,14 +20,12 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.base.Function;
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.AsyncFunction;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
+import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
@@ -43,22 +42,29 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PortSecurity;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.SourceMapper;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchListener;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Action;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyListener;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyScope;
+import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.groupbasedpolicy.util.SingletonTask;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig.LearningMode;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.interests.followed.tenants.followed.tenant.FollowedEndpointGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.interests.followed.tenants.followed.tenant.FollowedEndpointGroupBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.ResolvedPolicies;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.ResolvedPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.table.types.rev131026.TableId;
+import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Function;
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.AsyncFunction;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * Manage policies on switches by subscribing to updates from the
@@ -66,7 +72,7 @@ import org.slf4j.LoggerFactory;
  * registry
  */
 public class PolicyManager
-     implements SwitchListener, PolicyListener, EndpointListener {
+     implements SwitchListener, EndpointListener, DataTreeChangeListener<ResolvedPolicy>, Closeable {
     private static final Logger LOG =
             LoggerFactory.getLogger(PolicyManager.class);
 
@@ -80,18 +86,13 @@ public class PolicyManager
     private static final short TABLEID_EXTERNAL_MAPPER = 6;
 
     private final SwitchManager switchManager;
-    private final PolicyResolver policyResolver;
+    private final EndpointManager endpointManager;
 
-    private final PolicyScope policyScope;
+    private final ListenerRegistration<PolicyManager> registerDataTreeChangeListener;
 
     private final ScheduledExecutorService executor;
     private final SingletonTask flowUpdateTask;
     private final DataBroker dataBroker;
-    private final OfContext ofCtx;
-    /**
-     * The flow tables that make up the processing pipeline
-     */
-    private List<? extends OfTable> flowPipeline;
 
     /**
      * The delay before triggering the flow update task in response to an
@@ -100,7 +101,6 @@ public class PolicyManager
     private final static int FLOW_UPDATE_DELAY = 250;
 
     public PolicyManager(DataBroker dataBroker,
-                         PolicyResolver policyResolver,
                          SwitchManager switchManager,
                          EndpointManager endpointManager,
                          RpcProviderRegistry rpcRegistry,
@@ -109,7 +109,6 @@ public class PolicyManager
         super();
         this.switchManager = switchManager;
         this.executor = executor;
-        this.policyResolver = policyResolver;
         this.dataBroker = dataBroker;
         this.tableOffset = tableOffset;
         try {
@@ -120,19 +119,19 @@ public class PolicyManager
                     + "Max. table ID would be out of range. Check config-subsystem.\n{}", e);
         }
 
-        for(Entry<ActionDefinitionId, Action> entry : SubjectFeatures.getActions().entrySet()) {
-            policyResolver.registerActionInstanceValidators(entry.getKey(), entry.getValue());
+        if (dataBroker != null) {
+            registerDataTreeChangeListener = dataBroker.registerDataTreeChangeListener(
+                    new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
+                            InstanceIdentifier.builder(ResolvedPolicies.class).child(ResolvedPolicy.class).build()),
+                    this);
+        } else {
+            registerDataTreeChangeListener = null;
+            LOG.error("DataBroker is null. Listener for {} was not registered.",
+                    ResolvedPolicy.class.getCanonicalName());
         }
-
-        ofCtx = new OfContext(dataBroker, rpcRegistry,
-                                        this, policyResolver, switchManager,
-                                        endpointManager, executor);
-
-        flowPipeline = createFlowPipeline();
-
-        policyScope = policyResolver.registerListener(this);
         if (switchManager != null)
             switchManager.registerListener(this);
+        this.endpointManager = endpointManager;
         endpointManager.registerListener(this);
 
         flowUpdateTask = new SingletonTask(executor, new FlowUpdateTask());
@@ -141,7 +140,7 @@ public class PolicyManager
         LOG.debug("Initialized OFOverlay policy manager");
     }
 
-    private List<? extends OfTable> createFlowPipeline() {
+    private List<? extends OfTable> createFlowPipeline(OfContext ofCtx) {
         // TODO - PORTSECURITY is kept in table 0.
         // According to openflow spec,processing on vSwitch always starts from table 0.
         // Packets will be droped if table 0 is empty.
@@ -177,7 +176,6 @@ public class PolicyManager
 
             @Override
             public Void apply(Void tablesRemoved) {
-                flowPipeline = createFlowPipeline();
                 scheduleUpdate();
                 return null;
             }
@@ -306,16 +304,25 @@ public class PolicyManager
 
     @Override
     public void groupEndpointUpdated(EgKey egKey, EpKey epKey) {
-        policyScope.addToScope(egKey.getTenantId(), egKey.getEgId());
+        // TODO a renderer should remove followed-EPG and followed-tenant at some point
+        if (dataBroker == null) {
+            LOG.error("DataBroker is null. Cannot write followed-epg {}", epKey);
+            return;
+        }
+        WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
+        FollowedEndpointGroup followedEpg = new FollowedEndpointGroupBuilder().setId(egKey.getEgId()).build();
+        wTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.followedEndpointgroupIid(OFOverlayRenderer.RENDERER_NAME,
+                egKey.getTenantId(), egKey.getEgId()), followedEpg, true);
+        DataStoreHelper.submitToDs(wTx);
         scheduleUpdate();
     }
 
     // **************
-    // PolicyListener
+    // DataTreeChangeListener<ResolvedPolicy>
     // **************
 
     @Override
-    public void policyUpdated(Set<EgKey> updatedConsumers) {
+    public void onDataTreeChanged(Collection<DataTreeModification<ResolvedPolicy>> changes) {
         scheduleUpdate();
     }
 
@@ -346,22 +353,22 @@ public class PolicyManager
      * Update the flows on a particular switch
      */
     private class SwitchFlowUpdateTask implements Callable<Void> {
-        private OfWriter ofWriter;
+        private final OfWriter ofWriter;
 
         public SwitchFlowUpdateTask(OfWriter ofWriter) {
-            super();
             this.ofWriter = ofWriter;
         }
 
         @Override
         public Void call() throws Exception {
+            OfContext ofCtx = new OfContext(dataBroker, PolicyManager.this, switchManager, endpointManager, executor);
+            if (ofCtx.getCurrentPolicy() == null)
+                return null;
+            List<? extends OfTable> flowPipeline = createFlowPipeline(ofCtx);
             for (NodeId node : switchManager.getReadySwitches()) {
-                PolicyInfo info = policyResolver.getCurrentPolicy();
-                if (info == null)
-                    return null;
                 for (OfTable table : flowPipeline) {
                     try {
-                        table.update(node, info, ofWriter);
+                        table.sync(node, ofWriter);
                     } catch (Exception e) {
                         LOG.error("Failed to write Openflow table {}",
                                 table.getClass().getSimpleName(), e);
@@ -403,8 +410,11 @@ public class PolicyManager
         }
     }
 
-
-
-
+    @Override
+    public void close() throws IOException {
+        if (registerDataTreeChangeListener != null)
+            registerDataTreeChangeListener.close();
+        // TODO unregister classifier and action instance validators
+    }
 
 }

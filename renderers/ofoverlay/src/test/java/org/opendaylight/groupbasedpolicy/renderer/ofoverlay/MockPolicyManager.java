@@ -9,14 +9,12 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
 
 public class MockPolicyManager extends PolicyManager {
 
     private static short offSet = 0;
-    public MockPolicyManager(PolicyResolver policyResolver,
-                             EndpointManager endpointManager) {
-        super(null, policyResolver, null, endpointManager, null, null, offSet);
+    public MockPolicyManager(EndpointManager endpointManager) {
+        super(null, null, endpointManager, null, null, offSet);
     }
 
 }

@@ -10,6 +10,7 @@ package org.opendaylight.groupbasedpolicy.resolver;
 
 import javax.annotation.concurrent.Immutable;
 
+import org.opendaylight.groupbasedpolicy.dto.EpgKeyDto;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 
@@ -18,9 +19,11 @@ import com.google.common.collect.Ordering;
 
 /**
  * A tuple referencing an endpoint group and its enclosing tenant
+ * @deprecated use {@link EpgKeyDto}
  * @author readams
  */
 @Immutable
+@Deprecated 
 public class EgKey implements Comparable<EgKey> {
     private final TenantId tenantId;
     private final EndpointGroupId egId;

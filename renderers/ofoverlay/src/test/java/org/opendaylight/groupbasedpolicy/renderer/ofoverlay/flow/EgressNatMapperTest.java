@@ -24,8 +24,6 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Address;
@@ -42,7 +40,6 @@ public class EgressNatMapperTest {
     private EgressNatMapper mapper;
 
     private NodeId nodeId;
-    private PolicyInfo policyInfo;
     private OfWriter ofWriter;
 
     private IpAddress ipAddressNapt;
@@ -98,12 +95,7 @@ public class EgressNatMapperTest {
         when(ctx.getPolicyManager()).thenReturn(policyManager);
         when(policyManager.getTABLEID_DESTINATION_MAPPER()).thenReturn(TABLE_ID);
 
-        // EndpointFwdCtxOrdinals
-        PolicyResolver policyResolver = mock(PolicyResolver.class);
-        when(ctx.getPolicyResolver()).thenReturn(policyResolver);
-
         nodeId = mock(NodeId.class);
-        policyInfo = mock(PolicyInfo.class);
         ofWriter = mock(OfWriter.class);
 
         mapper = new EgressNatMapper(ctx, TABLE_ID);
@@ -116,14 +108,14 @@ public class EgressNatMapperTest {
 
     @Test
     public void syncTestIpv4() throws Exception {
-        mapper.sync(nodeId, policyInfo, ofWriter);
+        mapper.sync(nodeId, ofWriter);
         verify(ofWriter, times(2)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
     }
 
     @Test
     public void syncTestIpv6() throws Exception {
         when(ipAddressNapt.getIpv4Address()).thenReturn(null);
-        mapper.sync(nodeId, policyInfo, ofWriter);
+        mapper.sync(nodeId, ofWriter);
         verify(ofWriter, times(2)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
     }
 

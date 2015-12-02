@@ -42,7 +42,7 @@ public class PolicyResolverUtils {
      * (3) resolve the set of in-scope contracts into a list of subjects that apply for each pair of
      * endpoint groups and the conditions that can apply for for each endpoint in those groups.
      */
-    protected static Table<EgKey, EgKey, Policy> resolvePolicy(Set<IndexedTenant> tenants,
+    public static Table<EgKey, EgKey, Policy> resolvePolicy(Set<IndexedTenant> tenants,
             Map<EgKey, Set<ConditionSet>> egConditions) {
         Preconditions.checkNotNull(tenants);
         Preconditions.checkNotNull(egConditions);

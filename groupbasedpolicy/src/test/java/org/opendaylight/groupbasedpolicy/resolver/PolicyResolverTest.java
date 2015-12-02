@@ -14,16 +14,13 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ScheduledExecutorService;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -102,7 +99,6 @@ import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Table;
@@ -112,66 +108,20 @@ public class PolicyResolverTest {
 
     private PolicyResolver policyResolver;
     private DataBroker dataProvider;
-    private ScheduledExecutorService executor;
-    private PolicyListener policyListener;
     private ReadOnlyTransaction readTransaction;
     private CheckedFuture<Optional<Tenant>, ReadFailedException> unresolved;
-
-    private Table<EgKey, EgKey, Policy> policyMap;
-    private Map<EgKey, Set<ConditionSet>> egConditions;
-    private List<PolicyScope> policyListenerScopes;
 
     @SuppressWarnings("unchecked")
     @Before
     public void initialisePolicyResolver() {
         dataProvider = mock(DataBroker.class);
-        executor = mock(ScheduledExecutorService.class);
         readTransaction = mock(ReadOnlyTransaction.class);
         when(dataProvider.newReadOnlyTransaction()).thenReturn(readTransaction);
         unresolved = mock(CheckedFuture.class);
         when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
                 unresolved);
 
-        policyResolver = spy(new PolicyResolver(dataProvider, executor));
-
-        policyMap = HashBasedTable.create();
-        egConditions = new HashMap<EgKey, Set<ConditionSet>>();
-        policyListenerScopes = new ArrayList<PolicyScope>();
-        policyListener = mock(PolicyListener.class);
-        policyResolver.registerListener(policyListener);
-    }
-
-    @Test
-    public void updatePolicyTest() {
-        EgKey oldRowKey = mock(EgKey.class);
-        EgKey oldColumnKey = mock(EgKey.class);
-        Policy oldPolicy = mock(Policy.class);
-        policyMap.put(oldRowKey, oldColumnKey, oldPolicy);
-
-        Set<EgKey> notifySet;
-        notifySet = policyResolver.updatePolicy(policyMap, egConditions, policyListenerScopes);
-        Assert.assertTrue(notifySet.contains(oldRowKey));
-        Assert.assertTrue(notifySet.contains(oldColumnKey));
-
-        EgKey newRowKey = mock(EgKey.class);
-        EgKey newColumnKey = mock(EgKey.class);
-        Policy newPolicy = mock(Policy.class);
-
-        policyMap = HashBasedTable.create();
-        policyMap.put(newRowKey, newColumnKey, newPolicy);
-
-        notifySet = policyResolver.updatePolicy(policyMap, egConditions, policyListenerScopes);
-        Assert.assertTrue(notifySet.contains(oldRowKey));
-        Assert.assertTrue(notifySet.contains(oldColumnKey));
-        Assert.assertTrue(notifySet.contains(newRowKey));
-        Assert.assertTrue(notifySet.contains(newColumnKey));
-    }
-
-    @SuppressWarnings("unchecked")
-    @Test
-    public void updatePolicy2Test() {
-        policyResolver.updatePolicy();
-        verify(policyResolver).updatePolicy(any(Table.class), any(Map.class), any(List.class));
+        policyResolver = spy(new PolicyResolver(dataProvider));
 
     }
 
@@ -334,29 +284,14 @@ public class PolicyResolverTest {
 
     @Before
     public void setup() throws Exception {
-        resolver = new PolicyResolver(null, null);
-    }
-
-    @Test
-    public void listenerTest() {
-        PolicyScope policyScope;
-        PolicyListener policyListener = mock(PolicyListener.class);
-        Assert.assertTrue(resolver.policyListenerScopes.isEmpty());
-
-        policyScope = resolver.registerListener(policyListener);
-        Assert.assertNotNull(policyScope);
-        Assert.assertFalse(resolver.policyListenerScopes.isEmpty());
-
-        resolver.removeListener(policyScope);
-        Assert.assertTrue(resolver.policyListenerScopes.isEmpty());
+        resolver = new PolicyResolver(null);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Test
     public void tenantTest() {
         DataBroker dataProvider = mock(DataBroker.class);
-        ScheduledExecutorService executor = mock(ScheduledExecutorService.class);
-        resolver = new PolicyResolver(dataProvider, executor);
+        resolver = new PolicyResolver(dataProvider);
 
         TenantId tenantId = mock(TenantId.class);
         Assert.assertTrue(resolver.resolvedTenants.isEmpty());

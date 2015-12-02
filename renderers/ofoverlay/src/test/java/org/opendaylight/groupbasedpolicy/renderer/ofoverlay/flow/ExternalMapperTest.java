@@ -22,10 +22,9 @@ import java.util.Set;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
@@ -37,7 +36,6 @@ public class ExternalMapperTest {
     private OfContext ctx;
     private short tableId;
     private NodeId nodeId;
-    private PolicyInfo policyInfo;
     private OfWriter ofWriter;
     private SwitchManager switchManager;
 
@@ -46,7 +44,6 @@ public class ExternalMapperTest {
         ctx = mock(OfContext.class);
         tableId = 5;
         nodeId = mock(NodeId.class);
-        policyInfo = mock(PolicyInfo.class);
         ofWriter = mock(OfWriter.class);
         switchManager = mock(SwitchManager.class);
         when(ctx.getSwitchManager()).thenReturn(switchManager);
@@ -65,7 +62,7 @@ public class ExternalMapperTest {
         Set<NodeConnectorId> externalPorts = new HashSet<NodeConnectorId>(Arrays.asList(nodeConnectorId));
         when(switchManager.getExternalPorts(nodeId)).thenReturn(externalPorts);
 
-        mapper.sync(nodeId, policyInfo, ofWriter);
+        mapper.sync(nodeId, ofWriter);
         verify(ofWriter, times(2)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
     }
 
@@ -73,7 +70,7 @@ public class ExternalMapperTest {
     public void syncTestNoExternalPorts() throws Exception {
         when(switchManager.getExternalPorts(nodeId)).thenReturn(null);
 
-        mapper.sync(nodeId, policyInfo, ofWriter);
+        mapper.sync(nodeId, ofWriter);
         verify(ofWriter, never()).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
     }
 }

@@ -8,9 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,29 +21,22 @@ import org.slf4j.LoggerFactory;
  * @author readams
  */
 public abstract class OfTable {
-    protected static final Logger LOG =
-            LoggerFactory.getLogger(OfTable.class);
+
+    protected static final Logger LOG = LoggerFactory.getLogger(OfTable.class);
 
     protected final OfContext ctx;
 
     public OfTable(OfContext ctx) {
-        super();
         this.ctx = ctx;
     }
 
-
-    // *******
-    // OfTable
-    // *******
-
     /**
      * Update the relevant flow table for the node
+     * 
      * @param nodeId the node to update
-     * @param policyInfo the current policy snapshot
      * @param ofWriter the {@link OfWriter}
      * @throws Exception throws all exception
      */
-    public abstract void update(NodeId nodeId,
-                                PolicyInfo policyInfo,
-                                OfWriter ofWriter) throws Exception;
+    public abstract void sync(NodeId nodeId, OfWriter ofWriter)
+            throws Exception;
 }

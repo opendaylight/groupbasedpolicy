@@ -55,7 +55,6 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMa
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.resolver.IndexedTenant;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.groupbasedpolicy.resolver.TenantUtils;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
@@ -145,7 +144,7 @@ public class DestinationMapper extends FlowTable {
     }
 
     @Override
-    public void sync(NodeId nodeId, PolicyInfo policyInfo, OfWriter ofWriter) throws Exception {
+    public void sync(NodeId nodeId, OfWriter ofWriter) throws Exception {
 
         TenantId currentTenant = null;
 
@@ -163,7 +162,7 @@ public class DestinationMapper extends FlowTable {
 
             for (EndpointGroupId epgId : srcEpgIds) {
                 EgKey epg = new EgKey(srcEp.getTenant(), epgId);
-                Set<EgKey> peers = Sets.union(Collections.singleton(epg), policyInfo.getPeers(epg));
+                Set<EgKey> peers = Sets.union(Collections.singleton(epg), ctx.getCurrentPolicy().getPeers(epg));
                 for (EgKey peer : peers) {
                     for (Endpoint peerEp : ctx.getEndpointManager().getEndpointsForGroup(peer)) {
                         currentTenant = peerEp.getTenant();
@@ -174,11 +173,11 @@ public class DestinationMapper extends FlowTable {
                         if (visitedEps.get(srcEpKey) != null && visitedEps.get(srcEpKey).contains(peerEpKey)) {
                             continue;
                         }
-                        syncEP(ofWriter, nodeId, policyInfo, srcEp, peerEp);
+                        syncEP(ofWriter, nodeId, srcEp, peerEp);
                         visitedEps.put(srcEpKey, peerEpKey);
 
                         // Process subnets and flood-domains for epPeer
-                        EndpointFwdCtxOrdinals epOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo,
+                        EndpointFwdCtxOrdinals epOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx,
                                 peerEp);
                         if (epOrds == null) {
                             LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", peerEp);
@@ -228,7 +227,7 @@ public class DestinationMapper extends FlowTable {
                     continue;
                 }
                 for (Subnet localSubnet: localSubnets) {
-                    Flow prefixFlow = createL3PrefixFlow(prefixEp, policyInfo, nodeId, localSubnet);
+                    Flow prefixFlow = createL3PrefixFlow(prefixEp, nodeId, localSubnet);
                     if (prefixFlow != null) {
                         ofWriter.writeFlow(nodeId, TABLE_ID, prefixFlow);
                         LOG.trace("Wrote L3Prefix flow");
@@ -241,7 +240,7 @@ public class DestinationMapper extends FlowTable {
     // set up next-hop destinations for all the endpoints in the endpoint
     // group on the node
 
-    private Flow createL3PrefixFlow(EndpointL3Prefix prefixEp, PolicyInfo policyInfo, NodeId nodeId, Subnet subnet) throws Exception {
+    private Flow createL3PrefixFlow(EndpointL3Prefix prefixEp, NodeId nodeId, Subnet subnet) throws Exception {
         /*
          * Priority: 100+lengthprefix
          * Match: prefix, l3c, "mac address of router" ?
@@ -275,7 +274,7 @@ public class DestinationMapper extends FlowTable {
             return null;
         }
         Endpoint l2Ep = optL2Ep.get();
-        EndpointFwdCtxOrdinals epFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, l2Ep);
+        EndpointFwdCtxOrdinals epFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, l2Ep);
         if (epFwdCtxOrds == null) {
             LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", l2Ep);
             return null;
@@ -464,7 +463,7 @@ public class DestinationMapper extends FlowTable {
     }
 
     private L3Context getL3ContextForSubnet(TenantId tenantId, Subnet sn) {
-        IndexedTenant indexedTenant = ctx.getPolicyResolver().getTenant(tenantId);
+        IndexedTenant indexedTenant = ctx.getTenant(tenantId);
         if (indexedTenant == null) {
             LOG.debug("Tenant {} is null, cannot get L3 context", tenantId);
             return null;
@@ -577,23 +576,23 @@ public class DestinationMapper extends FlowTable {
         return flowb.build();
     }
 
-    private void syncEP(OfWriter ofWriter, NodeId nodeId, PolicyInfo policyInfo, Endpoint srcEp, Endpoint destEp)
+    private void syncEP(OfWriter ofWriter, NodeId nodeId, Endpoint srcEp, Endpoint destEp)
             throws Exception {
 
-        if (ctx.getPolicyResolver().getTenant(srcEp.getTenant()) == null
-                || ctx.getPolicyResolver().getTenant(destEp.getTenant()) == null) {
+        if (ctx.getTenant(srcEp.getTenant()) == null
+                || ctx.getTenant(destEp.getTenant()) == null) {
             LOG.debug("Source or destination EP references empty tenant srcEp:{} destEp:{}", srcEp, destEp);
             return;
         }
 
         // TODO: Conditions messed up, but for now, send policyInfo until this
         // is fixed.
-        EndpointFwdCtxOrdinals destEpFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, destEp);
+        EndpointFwdCtxOrdinals destEpFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, destEp);
         if (destEpFwdCtxOrds == null) {
             LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", destEp);
             return;
         }
-        EndpointFwdCtxOrdinals srcEpFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, srcEp);
+        EndpointFwdCtxOrdinals srcEpFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, srcEp);
         if (srcEpFwdCtxOrds == null) {
             LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", srcEp);
             return;
@@ -1109,8 +1108,7 @@ public class DestinationMapper extends FlowTable {
              * which we can't do because of the backwards way endpoints were
              * "architected".
              */
-            return ctx.getPolicyResolver()
-                .getTenant(endpoint.getTenant())
+            return ctx.getTenant(endpoint.getTenant())
                 .getEndpointGroup(endpoint.getEndpointGroup())
                 .getNetworkDomain();
         }

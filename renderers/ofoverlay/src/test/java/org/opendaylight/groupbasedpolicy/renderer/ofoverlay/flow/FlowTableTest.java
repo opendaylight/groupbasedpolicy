@@ -34,7 +34,7 @@ public class FlowTableTest extends OfTableTest {
                 }
             }
         }
-        table.sync(nodeId, policyResolver.getCurrentPolicy(), ofWriter);
+        table.sync(nodeId, ofWriter);
         return ofWriter;
     }
 }

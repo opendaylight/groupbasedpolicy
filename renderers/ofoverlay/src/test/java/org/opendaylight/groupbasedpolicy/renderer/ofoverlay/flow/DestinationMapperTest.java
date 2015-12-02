@@ -289,7 +289,7 @@ public class DestinationMapperTest extends FlowTableTest {
         endpointManager.addEndpoint(remoteEp);
 
 
-        policyResolver.addTenant(baseTenant().setContract(
+        ctx.addTenant(baseTenant().setContract(
                 ImmutableList.<Contract> of(baseContract(null).build())).build());
         verifyDMap(remoteEp, localEp);
     }
@@ -304,7 +304,7 @@ public class DestinationMapperTest extends FlowTableTest {
                 .build();
         endpointManager.addEndpoint(remoteEp);
 
-        policyResolver.addTenant(baseTenant().setContract(
+        ctx.addTenant(baseTenant().setContract(
                 ImmutableList.<Contract> of(baseContract(null).build())).build());
         verifyDMap(remoteEp, localEp);
     }

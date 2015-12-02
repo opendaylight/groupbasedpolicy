@@ -26,7 +26,6 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.resolver.IndexedTenant;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
@@ -72,7 +71,7 @@ public class SourceMapper extends FlowTable {
     }
 
     @Override
-    public void sync(NodeId nodeId, PolicyInfo policyInfo, OfWriter ofWriter) throws Exception {
+    public void sync(NodeId nodeId, OfWriter ofWriter) throws Exception {
 
         ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
@@ -80,17 +79,17 @@ public class SourceMapper extends FlowTable {
         for (Endpoint ep : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
             OfOverlayContext ofc = ep.getAugmentation(OfOverlayContext.class);
 
-            IndexedTenant tenant = ctx.getPolicyResolver().getTenant(ep.getTenant());
+            IndexedTenant tenant = ctx.getTenant(ep.getTenant());
             if (tenant == null)
                 continue;
 
-            EndpointFwdCtxOrdinals epFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, ep);
+            EndpointFwdCtxOrdinals epFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, ep);
             if (epFwdCtxOrds == null) {
                 LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", ep);
                 continue;
             }
 
-            createRemoteTunnels(ofWriter, nodeId, ep, policyInfo, epFwdCtxOrds);
+            createRemoteTunnels(ofWriter, nodeId, ep, epFwdCtxOrds);
 
             if (ep.getTenant() == null || (ep.getEndpointGroup() == null && ep.getEndpointGroups() == null)) {
                 continue;
@@ -106,8 +105,8 @@ public class SourceMapper extends FlowTable {
         }
     }
 
-    private void createRemoteTunnels(OfWriter ofWriter, NodeId nodeId, Endpoint ep, PolicyInfo policyInfo,
-            EndpointFwdCtxOrdinals epFwdCtxOrds) throws Exception {
+    private void createRemoteTunnels(OfWriter ofWriter, NodeId nodeId, Endpoint ep, EndpointFwdCtxOrdinals epFwdCtxOrds)
+            throws Exception {
         Set<EgKey> epgs = new HashSet<>();
 
         // Get EPGs and add to Set to remove duplicates
@@ -123,7 +122,7 @@ public class SourceMapper extends FlowTable {
 
         // Create tunnels on remote Nodes that may talk to us.
         for (EgKey epg : epgs) {
-            Set<EgKey> peers = Sets.union(Collections.singleton(epg), policyInfo.getPeers(epg));
+            Set<EgKey> peers = Sets.union(Collections.singleton(epg), ctx.getCurrentPolicy().getPeers(epg));
             for (EgKey peer : peers) {
                 for (NodeId remoteNodeId : ctx.getEndpointManager().getNodesForGroup(peer)) {
 

@@ -9,7 +9,6 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyListOf;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -22,8 +21,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.CheckedFuture;
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -33,16 +30,16 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.groupbasedpolicy.resolver.IndexedTenant;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNode;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.GroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.GroupTypes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.group.Buckets;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.group.buckets.Bucket;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.groups.Group;
@@ -53,8 +50,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.CheckedFuture;
 
 public class GroupTableTest {
 
@@ -69,19 +68,15 @@ public class GroupTableTest {
 
     private CheckedFuture<Optional<FlowCapableNode>, ReadFailedException> checkedFutureFCNRead;
     private CheckedFuture<Void, TransactionCommitFailedException> checkedFutureWrite;
-    private Optional<Node> optionalNode;
     private Optional<FlowCapableNode> optionalFlowCapableNode;
 
-    private Node node;
     private FlowCapableNode flowCapableNode;
     private Group group;
     private List<Group> groups;
     private Buckets buckets;
     private Bucket bucket;
     private NodeId nodeId;
-    private PolicyInfo policyInfo;
     private OfWriter ofWriter;
-    private GroupId groupId;
     private Bucket bucketOther;
     private EndpointManager endpointManager;
     private Endpoint localEp;
@@ -98,7 +93,6 @@ public class GroupTableTest {
         dataBroker = mock(DataBroker.class);
         when(ofContext.getDataBroker()).thenReturn(dataBroker);
 
-        node = mock(Node.class);
         checkedFutureFCNRead =  mock(CheckedFuture.class);
         optionalFlowCapableNode = mock(Optional.class);
         flowCapableNode = mock(FlowCapableNode.class);
@@ -136,10 +130,8 @@ public class GroupTableTest {
         bucketOther = mock(Bucket.class);
         when(bucketOther.getAction()).thenReturn(Collections.singletonList(mock(Action.class)));
 
-        groupId = mock(GroupId.class);
 
         nodeId = mock(NodeId.class);
-        policyInfo = mock(PolicyInfo.class);
         ofWriter = mock(OfWriter.class);
 
         endpointManager = mock(EndpointManager.class);
@@ -147,10 +139,8 @@ public class GroupTableTest {
         localEp = mock(Endpoint.class);
         when(endpointManager.getEndpointsForNode(nodeId)).thenReturn(Collections.singletonList(
                 localEp));
-        PolicyResolver policyResolver = mock(PolicyResolver.class);
-        when(ofContext.getPolicyResolver()).thenReturn(policyResolver);
         IndexedTenant indexedTenant = mock(IndexedTenant.class);
-        when(policyResolver.getTenant(any(TenantId.class))).thenReturn(indexedTenant);
+        when(ofContext.getTenant(any(TenantId.class))).thenReturn(indexedTenant);
         EndpointGroup epg = mock(EndpointGroup.class);
         when(indexedTenant.getEndpointGroup(any(EndpointGroupId.class))).thenReturn(epg);
         egKey = mock(EgKey.class);
@@ -164,18 +154,21 @@ public class GroupTableTest {
 
     @Test
     public void updateTest() throws Exception {
-        doNothing().when(groupTable).sync(nodeId, policyInfo, ofWriter);
+        doNothing().when(groupTable).sync(nodeId, ofWriter);
 
-        groupTable.update(nodeId, policyInfo, ofWriter);
-        verify(groupTable).sync(any(NodeId.class), any(PolicyInfo.class), any(OfWriter.class));
+        groupTable.sync(nodeId, ofWriter);
+        verify(groupTable).sync(any(NodeId.class), any(OfWriter.class));
     }
 
     @Test
     public void updateTestNoFCN() throws Exception {
         doReturn(null).when(groupTable).getFCNodeFromDatastore(any(NodeId.class));
 
-        groupTable.update(nodeId, policyInfo, ofWriter);
-        verify(groupTable, never()).sync(any(NodeId.class), any(PolicyInfo.class), any(OfWriter.class));
+        groupTable.sync(nodeId, ofWriter);
+        verify(ofWriter, never()).writeBucket(any(NodeId.class), any(GroupId.class), any(Bucket.class));;
+        verify(ofWriter, never()).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
+        verify(ofWriter, never()).writeGroup(any(NodeId.class), any(GroupId.class), any(GroupTypes.class),
+                any(String.class), any(String.class), any(Boolean.class));
     }
 
     @Test
@@ -184,7 +177,7 @@ public class GroupTableTest {
         when(endpointManager.getGroupsForNode(any(NodeId.class))).thenReturn(
                 Collections.<EgKey>emptySet());
 
-        groupTable.update(nodeId, policyInfo, ofWriter);
+        groupTable.sync(nodeId, ofWriter);
         verify(ofWriter).writeGroup(any(NodeId.class), any(GroupId.class));
     }
 
@@ -194,7 +187,7 @@ public class GroupTableTest {
         when(endpointManager.getGroupsForNode(any(NodeId.class))).thenReturn(
                 Collections.<EgKey>emptySet());
 
-        groupTable.update(nodeId, policyInfo, ofWriter);
+        groupTable.sync(nodeId, ofWriter);
         verify(ofWriter, never()).writeGroup(any(NodeId.class), any(GroupId.class));
     }
 }

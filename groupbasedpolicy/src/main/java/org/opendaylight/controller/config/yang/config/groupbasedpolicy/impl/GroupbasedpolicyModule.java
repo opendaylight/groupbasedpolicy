@@ -12,6 +12,8 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
+import org.opendaylight.groupbasedpolicy.resolver.FollowedTenantListener;
+import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
 import org.opendaylight.groupbasedpolicy.sf.SubjectFeatureDefinitionProvider;
 import org.opendaylight.groupbasedpolicy.sf.SupportedActionDefinitionListener;
 import org.opendaylight.groupbasedpolicy.sf.SupportedClassifierDefinitionListener;
@@ -65,6 +67,8 @@ public class GroupbasedpolicyModule extends
                         new SupportedClassifierDefinitionListener(dataProvider);
                 SupportedActionDefinitionListener supportedActionDefinitionListener =
                         new SupportedActionDefinitionListener(dataProvider);
+                PolicyResolver policyResolver = new PolicyResolver(dataProvider);
+                FollowedTenantListener followedTenantListener = new FollowedTenantListener(dataProvider, policyResolver);
 
                 @Override
                 public void close() throws Exception {
@@ -72,6 +76,8 @@ public class GroupbasedpolicyModule extends
                     epRpcRegistry.close();
                     supportedClassifierDefinitionListener.close();
                     supportedActionDefinitionListener.close();
+                    policyResolver.close();
+                    followedTenantListener.close();
                 }
             };
         } catch (TransactionCommitFailedException e) {

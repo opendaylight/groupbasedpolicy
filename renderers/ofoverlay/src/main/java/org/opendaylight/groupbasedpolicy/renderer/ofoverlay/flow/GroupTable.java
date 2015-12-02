@@ -18,15 +18,12 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
-import com.google.common.base.Optional;
-
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNode;
@@ -42,6 +39,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Optional;
 
 /**
  * Manage the group tables for handling broadcast/multicast
@@ -73,7 +72,7 @@ public class GroupTable extends OfTable {
     }
 
     @Override
-    public void update(NodeId nodeId, PolicyInfo policyInfo, OfWriter ofWriter) throws Exception {
+    public void sync(NodeId nodeId, OfWriter ofWriter) throws Exception {
         // there appears to be no way of getting only the existing group
         // tables unfortunately, so we have to get the whole goddamned node.
         // Since this is happening concurrently with other things that are
@@ -82,14 +81,9 @@ public class GroupTable extends OfTable {
         if (fcn == null)
             return;
 
-        sync(nodeId, policyInfo, ofWriter);
-    }
-
-    public void sync(NodeId nodeId, PolicyInfo policyInfo, OfWriter ofWriter) throws Exception {
-
         for (Endpoint localEp : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
             EndpointFwdCtxOrdinals localEpFwdCtxOrds =
-                    OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, localEp);
+                    OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, localEp);
             if (localEpFwdCtxOrds == null) {
                 LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", localEp);
                 continue;
@@ -105,11 +99,11 @@ public class GroupTable extends OfTable {
 
                 // we'll use the fdId with the high bit set for remote bucket
                 // and just the local port number for local bucket
-                for (NodeId destNode : findPeerNodesForGroup(policyInfo, epg)) {
+                for (NodeId destNode : findPeerNodesForGroup(epg)) {
                     if (nodeId.equals(destNode))
                         continue;
 
-                    if(isFloodDomainOnNode(localEpFwdCtxOrds.getFdId(), destNode, policyInfo)) {
+                    if(isFloodDomainOnNode(localEpFwdCtxOrds.getFdId(), destNode)) {
                         long bucketId = OrdinalFactory.getContextOrdinal(destNode);
                         bucketId |= 1L << 31;
 
@@ -153,23 +147,22 @@ public class GroupTable extends OfTable {
     }
 
     /**
-     * @param policyInfo to read peer groups for a group
      * @param sourceEpgKey a key of source group
      * @return all the nodes on which endpoints are either in groups that have policy with source
      *         group, or are in the source group
      */
-    private Set<NodeId> findPeerNodesForGroup(PolicyInfo policyInfo, EgKey sourceEpgKey) {
+    private Set<NodeId> findPeerNodesForGroup(EgKey sourceEpgKey) {
         Set<NodeId> nodes = new HashSet<NodeId>();
         nodes.addAll(ctx.getEndpointManager().getNodesForGroup(sourceEpgKey));
-        for (EgKey dstEpgs : policyInfo.getPeers(sourceEpgKey)) {
+        for (EgKey dstEpgs : ctx.getCurrentPolicy().getPeers(sourceEpgKey)) {
             nodes.addAll(ctx.getEndpointManager().getNodesForGroup(dstEpgs));
         }
         return nodes;
     }
 
-    private boolean isFloodDomainOnNode(int fdId, NodeId node, PolicyInfo policyInfo) throws Exception {
+    private boolean isFloodDomainOnNode(int fdId, NodeId node) throws Exception {
         for (Endpoint ep : ctx.getEndpointManager().getEndpointsForNode(node)) {
-            int epFdId = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, policyInfo, ep).getFdId();
+            int epFdId = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, ep).getFdId();
             if (fdId == epFdId) {
                 return true;
             }

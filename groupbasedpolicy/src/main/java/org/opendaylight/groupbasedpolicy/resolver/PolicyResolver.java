@@ -15,8 +15,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.concurrent.Immutable;
@@ -31,15 +29,16 @@ import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.resolver.validator.ValidationResult;
 import org.opendaylight.groupbasedpolicy.resolver.validator.Validator;
+import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.ResolvedPolicies;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.ResolvedPoliciesBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.SubjectFeatureInstances;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ClassifierInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.ResolvedPolicies;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.ResolvedPoliciesBuilder;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -47,18 +46,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
-import com.google.common.collect.Table.Cell;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-
-import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 
 /**
  * The policy resolver is a utility for renderers to help in resolving
@@ -83,21 +77,8 @@ public class PolicyResolver implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(PolicyResolver.class);
 
     private final DataBroker dataProvider;
-    private final ScheduledExecutorService executor;
-
-    /**
-     * Keep track of the current relevant policy scopes.
-     */
-    protected CopyOnWriteArrayList<PolicyScope> policyListenerScopes;
 
     protected ConcurrentMap<TenantId, TenantContext> resolvedTenants;
-
-    /**
-     * Store a policy object for each endpoint group pair. The table is stored
-     * with the key as (consumer, provider). Two endpoints could appear in both
-     * roles at the same time, in which case both policies would apply.
-     */
-    AtomicReference<PolicyInfo> policy = new AtomicReference<>();
 
     /*
      * Store validators for ActionDefinitions from Renderers
@@ -106,12 +87,8 @@ public class PolicyResolver implements AutoCloseable {
     protected SetMultimap<ActionDefinitionId, Validator<ActionInstance>> actionInstanceValidatorsByDefinition = Multimaps.synchronizedSetMultimap(HashMultimap.<ActionDefinitionId, Validator<ActionInstance>>create());
     protected SetMultimap<ClassifierDefinitionId, Validator<ClassifierInstance>> classifierInstanceValidatorsByDefinition = Multimaps.synchronizedSetMultimap(HashMultimap.<ClassifierDefinitionId, Validator<ClassifierInstance>>create());
 
-    public PolicyResolver(DataBroker dataProvider,
-            ScheduledExecutorService executor) {
-        super();
+    public PolicyResolver(DataBroker dataProvider) {
         this.dataProvider = dataProvider;
-        this.executor = executor;
-        policyListenerScopes = new CopyOnWriteArrayList<>();
         resolvedTenants = new ConcurrentHashMap<>();
         LOG.debug("Initialized renderer common policy resolver");
     }
@@ -131,29 +108,6 @@ public class PolicyResolver implements AutoCloseable {
     // *************************
     // PolicyResolver public API
     // *************************
-    /**
-     * Get a snapshot of the current policy
-     *
-     * @return the {@link PolicyInfo} object representing an immutable snapshot
-     * of the policy state
-     */
-    public PolicyInfo getCurrentPolicy() {
-        return policy.get();
-    }
-
-    /**
-     * Get the normalized tenant for the given ID
-     *
-     * @param tenant the tenant ID
-     * @return the {@link Tenant}
-     */
-    public IndexedTenant getTenant(TenantId tenant) {
-        TenantContext tc = resolvedTenants.get(tenant);
-        if (tc == null) {
-            return null;
-        }
-        return tc.tenant.get();
-    }
 
     public void registerActionInstanceValidators(ActionDefinitionId actionDefinitionId,
             Validator<ActionInstance> validator) {
@@ -173,91 +127,6 @@ public class PolicyResolver implements AutoCloseable {
     public void unregisterClassifierInstanceValidators(ClassifierDefinitionId classifierDefinitionId,
             Validator<ClassifierInstance> validator) {
         classifierInstanceValidatorsByDefinition.remove(classifierDefinitionId, validator);
-    }
-
-    /**
-     * Register a listener to receive update events.
-     *
-     * @param listener the {@link PolicyListener} object to receive the update
-     * events
-     */
-    public PolicyScope registerListener(PolicyListener listener) {
-        PolicyScope ps = new PolicyScope(this, listener);
-        policyListenerScopes.add(ps);
-
-        return ps;
-    }
-
-    /**
-     * Remove the listener registered for the given {@link PolicyScope}.
-     *
-     * @param scope the scope to remove
-     * @see PolicyResolver#registerListener(PolicyListener)
-     */
-    public void removeListener(PolicyScope scope) {
-        policyListenerScopes.remove(scope);
-    }
-
-    // **************
-    // Implementation
-    // **************
-    /**
-     * Atomically update the active policy and notify policy listeners of
-     * relevant changes
-     *
-     * @param policyMap the new policy to set
-     * @param egConditions the map of endpoint groups to relevant condition sets
-     * @return the set of groups with updated policy
-     */
-    protected Set<EgKey> updatePolicy(Table<EgKey, EgKey, Policy> policyMap,
-            Map<EgKey, Set<ConditionSet>> egConditions,
-            List<PolicyScope> policyListenerScopes) {
-        PolicyInfo newPolicy = new PolicyInfo(policyMap, egConditions);
-        PolicyInfo oldPolicy = policy.getAndSet(newPolicy);
-
-        HashSet<EgKey> notifySet = new HashSet<>();
-
-        for (Cell<EgKey, EgKey, Policy> cell : newPolicy.getPolicyMap().cellSet()) {
-            Policy newp = cell.getValue();
-            Policy oldp = null;
-            if (oldPolicy != null) {
-                oldp = oldPolicy.getPolicyMap().get(cell.getRowKey(),
-                        cell.getColumnKey());
-            }
-            if (oldp == null || !newp.equals(oldp)) {
-                notifySet.add(cell.getRowKey());
-                notifySet.add(cell.getColumnKey());
-            }
-        }
-        if (oldPolicy != null) {
-            for (Cell<EgKey, EgKey, Policy> cell : oldPolicy.getPolicyMap().cellSet()) {
-                if (!newPolicy.getPolicyMap().contains(cell.getRowKey(),
-                        cell.getColumnKey())) {
-                    notifySet.add(cell.getRowKey());
-                    notifySet.add(cell.getColumnKey());
-                }
-            }
-        }
-        return notifySet;
-    }
-
-    /**
-     * Notify the policy listeners about a set of updated groups
-     */
-    private void notifyListeners(Set<EgKey> updatedGroups) {
-        for (final PolicyScope scope : policyListenerScopes) {
-            Set<EgKey> filtered
-                    = Sets.filter(updatedGroups, new Predicate<EgKey>() {
-                        @Override
-                        public boolean apply(EgKey input) {
-                            return scope.contains(input.getTenantId(),
-                                    input.getEgId());
-                        }
-                    });
-            if (!filtered.isEmpty()) {
-                scope.getListener().policyUpdated(filtered);
-            }
-        }
     }
 
     /**
@@ -299,6 +168,7 @@ public class PolicyResolver implements AutoCloseable {
                             TenantUtils.tenantIid(tenantId),
                             new PolicyChangeListener(tenantId),
                             DataChangeScope.SUBTREE);
+            LOG.debug("Data change listener for tenant {} in CONF DS is registered.", tenantId.getValue());
 
             context = new TenantContext(registration);
             TenantContext oldContext
@@ -331,7 +201,7 @@ public class PolicyResolver implements AutoCloseable {
                     deleteOperTenantIfExists(tiid, tenantId);
                     return;
                 }
-
+                LOG.debug("Resolving of tenant inheritance and policy triggered by a change in tenant {}", tenantId);
                 Tenant t = InheritanceUtils.resolveTenant(result.get());
                 SubjectFeatureInstances subjectFeatureInstances = t.getSubjectFeatureInstances();
                 if (subjectFeatureInstances != null) {
@@ -357,7 +227,7 @@ public class PolicyResolver implements AutoCloseable {
             public void onFailure(Throwable t) {
                 LOG.error("Count not get tenant {}", tenantId, t);
             }
-        }, executor);
+        });
     }
 
     private void deleteOperTenantIfExists(final InstanceIdentifier<Tenant> tiid, final TenantId tenantId) {
@@ -381,8 +251,7 @@ public class PolicyResolver implements AutoCloseable {
                 LOG.error("Failed to read operational datastore: {}", t);
                 rwTx.cancel();
             }
-        }, executor);
-
+        });
     }
 
     protected void updatePolicy() {
@@ -390,10 +259,7 @@ public class PolicyResolver implements AutoCloseable {
             Map<EgKey, Set<ConditionSet>> egConditions = new HashMap<>();
             Set<IndexedTenant> indexedTenants = getIndexedTenants(resolvedTenants.values());
             Table<EgKey, EgKey, Policy> policyMap = PolicyResolverUtils.resolvePolicy(indexedTenants, egConditions);
-            Set<EgKey> updatedGroups = updatePolicy(policyMap, egConditions, policyListenerScopes);
             updatePolicyInDataStore(policyMap);
-            //TODO the following will be removed when the policyInfo datastore is completed
-            notifyListeners(updatedGroups);
         } catch (Exception e) {
             LOG.error("Failed to update policy", e);
         }
@@ -416,6 +282,7 @@ public class PolicyResolver implements AutoCloseable {
             LOG.error("Failed to write resolved policies to Datastore.");
         }
     }
+
     private Set<IndexedTenant> getIndexedTenants(Collection<TenantContext> tenantCtxs) {
         Set<IndexedTenant> result = new HashSet<>();
         for (TenantContext tenant : tenantCtxs) {
