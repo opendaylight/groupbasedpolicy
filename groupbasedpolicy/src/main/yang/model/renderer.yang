@@ -109,9 +109,38 @@ module renderer {
 
             leaf name {
                 description
-                    "A user-visible name for the renderer";
+                    "A user-visible name for the renderer.";
                 type renderer-name;
             }
+
+            container interests {
+                description "Represents interests of the renderer.";
+
+                container followed-tenants {
+                    description "Interesting tenants for the renderer.";
+
+                    list followed-tenant {
+                        description "Tenant which is followed by the renderer.";
+
+                        key id;
+
+                        leaf id {
+                            type gbp-common:tenant-id;
+                        }
+
+                        list followed-endpoint-group {
+                            description "Endpoint-group which is followed by the renderer.";
+
+                            key id;
+
+                            leaf id {
+                                type gbp-common:endpoint-group-id;
+                            }
+                        }
+                    }
+                }
+            }
+
 
             container capabilities {
                 description "Capabilities this renderer provides.";
