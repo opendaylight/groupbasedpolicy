@@ -17,6 +17,9 @@ import java.util.Map;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.api.ValidationResult;
+import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
+import org.opendaylight.groupbasedpolicy.dto.ValidationResultBuilder;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.NetworkElements;
@@ -24,14 +27,11 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcIidFactory;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcNshHeader;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcNshHeader.SfcNshHeaderBuilder;
-import org.opendaylight.groupbasedpolicy.sf.actions.ChainActionDefinition;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.PolicyPair;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcIidFactory;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcNshHeader;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcNshHeader.SfcNshHeaderBuilder;
-import org.opendaylight.groupbasedpolicy.resolver.validator.ValidationResult;
-import org.opendaylight.groupbasedpolicy.resolver.validator.ValidationResultBuilder;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.sfc.provider.api.SfcProviderRenderedPathAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServiceChainAPI;

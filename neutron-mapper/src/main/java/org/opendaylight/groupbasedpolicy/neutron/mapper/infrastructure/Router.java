@@ -17,9 +17,9 @@ import javax.annotation.Nullable;
 
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.api.sf.EtherTypeClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
-import org.opendaylight.groupbasedpolicy.sf.classifiers.EtherTypeClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;

@@ -20,10 +20,10 @@ import java.util.concurrent.ExecutionException;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.dto.EgKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
-import org.opendaylight.groupbasedpolicy.resolver.EgKey;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNode;

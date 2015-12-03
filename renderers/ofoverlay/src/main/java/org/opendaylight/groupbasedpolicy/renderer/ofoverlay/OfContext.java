@@ -18,16 +18,13 @@ import java.util.concurrent.ScheduledExecutorService;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
+import org.opendaylight.groupbasedpolicy.dto.PolicyInfo;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
-import org.opendaylight.groupbasedpolicy.resolver.ConditionSet;
-import org.opendaylight.groupbasedpolicy.resolver.EgKey;
-import org.opendaylight.groupbasedpolicy.resolver.IndexedTenant;
-import org.opendaylight.groupbasedpolicy.resolver.InheritanceUtils;
-import org.opendaylight.groupbasedpolicy.resolver.Policy;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyResolverUtils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.groupbasedpolicy.util.InheritanceUtils;
+import org.opendaylight.groupbasedpolicy.util.PolicyResolverUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.Tenants;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
@@ -37,7 +34,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
-import com.google.common.collect.Table;
 
 public class OfContext {
 
@@ -88,10 +84,7 @@ public class OfContext {
         if (resolvedTenants.isEmpty()) {
             return null;
         }
-        Map<EgKey, Set<ConditionSet>> egConditions = new HashMap<>();
-        Table<EgKey, EgKey, Policy> resolvePolicy =
-                PolicyResolverUtils.resolvePolicy(getIndexedTenants(resolvedTenants.values()), egConditions);
-        return new PolicyInfo(resolvePolicy, egConditions);
+        return PolicyResolverUtils.resolvePolicyInfo(getIndexedTenants(resolvedTenants.values()));
     }
 
     private static Set<IndexedTenant> getIndexedTenants(Collection<IndexedTenant> tenants) {

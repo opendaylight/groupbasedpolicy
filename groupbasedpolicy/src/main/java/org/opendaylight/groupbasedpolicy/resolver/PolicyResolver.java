@@ -8,10 +8,8 @@
 package org.opendaylight.groupbasedpolicy.resolver;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -27,9 +25,17 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.groupbasedpolicy.resolver.validator.ValidationResult;
-import org.opendaylight.groupbasedpolicy.resolver.validator.Validator;
+import org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistrar;
+import org.opendaylight.groupbasedpolicy.api.ValidationResult;
+import org.opendaylight.groupbasedpolicy.api.Validator;
+import org.opendaylight.groupbasedpolicy.dto.EgKey;
+import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
+import org.opendaylight.groupbasedpolicy.dto.Policy;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.groupbasedpolicy.util.InheritanceUtils;
+import org.opendaylight.groupbasedpolicy.util.PolicyInfoUtils;
+import org.opendaylight.groupbasedpolicy.util.PolicyResolverUtils;
+import org.opendaylight.groupbasedpolicy.util.TenantUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
@@ -72,7 +78,7 @@ import com.google.common.util.concurrent.ListenableFuture;
  * been registered.
  *
  */
-public class PolicyResolver implements AutoCloseable {
+public class PolicyResolver implements PolicyValidatorRegistrar, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(PolicyResolver.class);
 
@@ -106,25 +112,29 @@ public class PolicyResolver implements AutoCloseable {
     }
 
     // *************************
-    // PolicyResolver public API
+    // PolicyResolutionValidatorRegistrar
     // *************************
 
-    public void registerActionInstanceValidators(ActionDefinitionId actionDefinitionId,
+    @Override
+    public void register(ActionDefinitionId actionDefinitionId,
             Validator<ActionInstance> validator) {
         actionInstanceValidatorsByDefinition.put(actionDefinitionId, validator);
     }
 
-    public void unregisterActionInstanceValidators(ActionDefinitionId actionDefinitionId,
+    @Override
+    public void unregister(ActionDefinitionId actionDefinitionId,
             Validator<ActionInstance> validator) {
         actionInstanceValidatorsByDefinition.remove(actionDefinitionId, validator);
     }
 
-    public void registerClassifierInstanceValidators(ClassifierDefinitionId classifierDefinitionId,
+    @Override
+    public void register(ClassifierDefinitionId classifierDefinitionId,
             Validator<ClassifierInstance> validator) {
         classifierInstanceValidatorsByDefinition.put(classifierDefinitionId, validator);
     }
 
-    public void unregisterClassifierInstanceValidators(ClassifierDefinitionId classifierDefinitionId,
+    @Override
+    public void unregister(ClassifierDefinitionId classifierDefinitionId,
             Validator<ClassifierInstance> validator) {
         classifierInstanceValidatorsByDefinition.remove(classifierDefinitionId, validator);
     }
@@ -256,9 +266,8 @@ public class PolicyResolver implements AutoCloseable {
 
     protected void updatePolicy() {
         try {
-            Map<EgKey, Set<ConditionSet>> egConditions = new HashMap<>();
             Set<IndexedTenant> indexedTenants = getIndexedTenants(resolvedTenants.values());
-            Table<EgKey, EgKey, Policy> policyMap = PolicyResolverUtils.resolvePolicy(indexedTenants, egConditions);
+            Table<EgKey, EgKey, Policy> policyMap = PolicyResolverUtils.resolvePolicy(indexedTenants);
             updatePolicyInDataStore(policyMap);
         } catch (Exception e) {
             LOG.error("Failed to update policy", e);

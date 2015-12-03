@@ -12,13 +12,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.opendaylight.groupbasedpolicy.api.sf.L4ClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockOfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockPolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.MockEndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.MockSwitchManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.AllowAction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Classifier;
-import org.opendaylight.groupbasedpolicy.sf.classifiers.L4ClassifierDefinition;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;

@@ -12,11 +12,11 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
-import org.opendaylight.groupbasedpolicy.sf.actions.AllowActionDefinition;
-import org.opendaylight.groupbasedpolicy.sf.actions.ChainActionDefinition;
-import org.opendaylight.groupbasedpolicy.sf.classifiers.EtherTypeClassifierDefinition;
-import org.opendaylight.groupbasedpolicy.sf.classifiers.IpProtoClassifierDefinition;
-import org.opendaylight.groupbasedpolicy.sf.classifiers.L4ClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.api.sf.AllowActionDefinition;
+import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
+import org.opendaylight.groupbasedpolicy.api.sf.EtherTypeClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.api.sf.IpProtoClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.api.sf.L4ClassifierDefinition;
 
 /**
  * On creation, puts known Subject Feature Definitions to config datastore; deletes them on #close()

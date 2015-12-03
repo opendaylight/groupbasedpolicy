@@ -21,6 +21,7 @@ import java.util.List;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;

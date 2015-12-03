@@ -15,12 +15,12 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
+import org.opendaylight.groupbasedpolicy.api.sf.EtherTypeClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.api.sf.IpProtoClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.api.sf.L4ClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.EtherTypeClassifier;
-import org.opendaylight.groupbasedpolicy.sf.classifiers.EtherTypeClassifierDefinition;
-import org.opendaylight.groupbasedpolicy.sf.classifiers.IpProtoClassifierDefinition;
-import org.opendaylight.groupbasedpolicy.sf.classifiers.L4ClassifierDefinition;
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;

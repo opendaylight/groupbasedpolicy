@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.resolver;
+package org.opendaylight.groupbasedpolicy.util;
 
 import java.io.Serializable;
 import java.util.Comparator;
@@ -41,6 +41,11 @@ import com.google.common.collect.Ordering;
  * @author readams
  */
 public class TenantUtils {
+
+    private TenantUtils() {
+        throw new UnsupportedOperationException("Cannot create an instance");
+    }
+
     /**
      * A comparator that assigns the natural ordering for rules, null-aware
      * @author readams

@@ -12,8 +12,9 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
-import org.opendaylight.groupbasedpolicy.sf.classifiers.IpProtoClassifierDefinition;
-import org.opendaylight.groupbasedpolicy.sf.classifiers.EtherTypeClassifierDefinition;
+
+import org.opendaylight.groupbasedpolicy.api.sf.EtherTypeClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.api.sf.IpProtoClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;

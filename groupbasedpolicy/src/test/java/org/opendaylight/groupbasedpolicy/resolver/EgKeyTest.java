@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.opendaylight.groupbasedpolicy.dto.EgKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 

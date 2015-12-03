@@ -14,8 +14,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.opendaylight.groupbasedpolicy.api.sf.EtherTypeClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils;
-import org.opendaylight.groupbasedpolicy.sf.classifiers.EtherTypeClassifierDefinition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValueBuilder;
 

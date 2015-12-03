@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.resolver;
+package org.opendaylight.groupbasedpolicy.util;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -15,7 +15,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
-import org.opendaylight.groupbasedpolicy.resolver.MatcherUtils.GetLabelName;
+import org.opendaylight.groupbasedpolicy.util.MatcherUtils.GetLabelName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.CapabilityMatcherName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.CapabilityName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClauseName;
@@ -91,6 +91,11 @@ import com.google.common.collect.ImmutableList;
  *
  */
 public class InheritanceUtils {
+
+    private InheritanceUtils() {
+        throw new UnsupportedOperationException("Cannot create an instance");
+    }
+
     /**
      * Fully resolve the specified {@link Tenant}, returning a tenant with all
      * items fully normalized. This means that no items will have parent/child

@@ -27,7 +27,6 @@ import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataCh
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstance;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
@@ -38,7 +37,6 @@ public class SfcManagerTest {
     private SfcManager manager;
 
     private DataBroker dataBroker;
-    private PolicyResolver policyResolver;
     private RpcProviderRegistry rpcRegistry;
     private ExecutorService executor;
     private ListenerRegistration<DataChangeListener> actionListener;
@@ -53,7 +51,6 @@ public class SfcManagerTest {
     @Before
     public void initialise() {
         dataBroker = mock(DataBroker.class);
-        policyResolver = mock(PolicyResolver.class);
         rpcRegistry = mock(RpcProviderRegistry.class);
         executor = mock(ExecutorService.class);
         actionListener = mock(ListenerRegistration.class);
@@ -68,7 +65,7 @@ public class SfcManagerTest {
         dataMap.put(pathIdentifier, dataObject);
         dataSet = new HashSet<InstanceIdentifier<?>>(Arrays.asList(pathIdentifier));
 
-        manager = new SfcManager(dataBroker, policyResolver, rpcRegistry, executor);
+        manager = new SfcManager(dataBroker, rpcRegistry, executor);
     }
 
     @Test

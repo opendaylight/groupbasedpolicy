@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.resolver;
+package org.opendaylight.groupbasedpolicy.util;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,6 +45,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
  * Utilities related to matchers and labels
  */
 public class MatcherUtils {
+
+    private MatcherUtils() {
+        throw new UnsupportedOperationException("Cannot create an instance");
+    }
+
     /**
      * Apply a quality matcher to a normalized target
      *

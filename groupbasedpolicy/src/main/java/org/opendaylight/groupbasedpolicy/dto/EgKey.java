@@ -6,11 +6,10 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.resolver;
+package org.opendaylight.groupbasedpolicy.dto;
 
 import javax.annotation.concurrent.Immutable;
 
-import org.opendaylight.groupbasedpolicy.dto.EpgKeyDto;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 

@@ -21,7 +21,7 @@ import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
+import org.opendaylight.groupbasedpolicy.dto.EpKey;
 import org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.NeutronOvsdbIidFactory;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;

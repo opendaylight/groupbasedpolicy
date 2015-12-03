@@ -3,6 +3,7 @@ package org.opendaylight.groupbasedpolicy.resolver;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.opendaylight.groupbasedpolicy.dto.Policy;
 
 public class PolicyTest {
 

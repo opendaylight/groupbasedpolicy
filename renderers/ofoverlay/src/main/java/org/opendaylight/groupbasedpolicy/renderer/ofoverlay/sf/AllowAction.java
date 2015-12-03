@@ -14,13 +14,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.opendaylight.groupbasedpolicy.sf.actions.AllowActionDefinition;
+import org.opendaylight.groupbasedpolicy.api.ValidationResult;
+import org.opendaylight.groupbasedpolicy.api.sf.AllowActionDefinition;
+import org.opendaylight.groupbasedpolicy.dto.ValidationResultBuilder;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.NetworkElements;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.PolicyPair;
-import org.opendaylight.groupbasedpolicy.resolver.validator.ValidationResult;
-import org.opendaylight.groupbasedpolicy.resolver.validator.ValidationResultBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;

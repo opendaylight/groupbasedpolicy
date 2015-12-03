@@ -20,10 +20,10 @@ import java.util.Set;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.opendaylight.groupbasedpolicy.api.sf.EtherTypeClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.api.sf.IpProtoClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.api.sf.L4ClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils;
-import org.opendaylight.groupbasedpolicy.sf.classifiers.EtherTypeClassifierDefinition;
-import org.opendaylight.groupbasedpolicy.sf.classifiers.IpProtoClassifierDefinition;
-import org.opendaylight.groupbasedpolicy.sf.classifiers.L4ClassifierDefinition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._4.match.TcpMatch;

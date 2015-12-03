@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.sf.classifiers;
+package org.opendaylight.groupbasedpolicy.api.sf;
 
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
@@ -23,36 +23,40 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import com.google.common.collect.ImmutableList;
 
 /**
- * Match on the ether type of the traffic
+ * Match on the IP protocol of IP traffic
  */
-public class EtherTypeClassifierDefinition {
+public class IpProtoClassifierDefinition {
 
     /**
-     * Ethertype parameter name
+     * Protocol parameter name
      */
-    public static final String ETHERTYPE_PARAM = "ethertype";
+    public static final String PROTO_PARAM = "proto";
     /**
-     * ARP ethertype value
+     * TCP protocol value
      */
-    public static final Long ARP_VALUE = Long.valueOf(0x0806);
+    public static final Long TCP_VALUE = Long.valueOf(6);
     /**
-     * IPv4 ethertype value
+     * UDP protocol value
      */
-    public static final Long IPv4_VALUE = Long.valueOf(0x0800);
+    public static final Long UDP_VALUE = Long.valueOf(17);
     /**
-     * IPv6 ethertype value
+     * ICMP protocol value
      */
-    public static final Long IPv6_VALUE = Long.valueOf(0x86DD);
+    public static final Long ICMP_VALUE = Long.valueOf(1);
+    /**
+     * SCTP protocol value
+     */
+    public static final Long SCTP_VALUE = Long.valueOf(132);
 
-    public static final ClassifierDefinitionId ID = new ClassifierDefinitionId("Classifier-EtherType");
+    public static final ClassifierDefinitionId ID = new ClassifierDefinitionId("Classifier-IP-Protocol");
     /**
-     * Ethertype classifier-definition
+     * Protocol classifier-definition
      */
     public static final ClassifierDefinition DEFINITION = new ClassifierDefinitionBuilder().setId(ID)
-        .setName(new ClassifierName("ether_type"))
-        .setDescription(new Description("Match on the ether type of the traffic"))
-        .setParameter(ImmutableList.of(new ParameterBuilder().setName(new ParameterName(ETHERTYPE_PARAM))
-            .setDescription(new Description("The ethertype to match against"))
+        .setName(new ClassifierName("ip_proto"))
+        .setDescription(new Description("Match on the IP protocol of IP traffic"))
+        .setParameter(ImmutableList.of(new ParameterBuilder().setName(new ParameterName(PROTO_PARAM))
+            .setDescription(new Description("The IP protocol to match against"))
             .setIsRequired(IsRequired.Required)
             .setType(Type.Int)
             .build()))

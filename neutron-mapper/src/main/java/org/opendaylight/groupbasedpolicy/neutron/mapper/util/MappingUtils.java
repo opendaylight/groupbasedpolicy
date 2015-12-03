@@ -12,8 +12,8 @@ import java.util.List;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.api.sf.AllowActionDefinition;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronPortAware;
-import org.opendaylight.groupbasedpolicy.sf.actions.AllowActionDefinition;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.neutron.spi.Neutron_IPs;

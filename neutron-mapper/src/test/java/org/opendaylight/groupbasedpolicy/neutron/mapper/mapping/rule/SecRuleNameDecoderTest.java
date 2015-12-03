@@ -4,11 +4,11 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.opendaylight.groupbasedpolicy.api.sf.EtherTypeClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.api.sf.IpProtoClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.api.sf.L4ClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronUtils;
-import org.opendaylight.groupbasedpolicy.sf.classifiers.EtherTypeClassifierDefinition;
-import org.opendaylight.groupbasedpolicy.sf.classifiers.IpProtoClassifierDefinition;
-import org.opendaylight.groupbasedpolicy.sf.classifiers.L4ClassifierDefinition;
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClauseName;

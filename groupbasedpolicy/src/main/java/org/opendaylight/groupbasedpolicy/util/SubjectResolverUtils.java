@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.resolver;
+package org.opendaylight.groupbasedpolicy.util;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -16,7 +16,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.opendaylight.groupbasedpolicy.resolver.ContractResolverUtils.ContractMatch;
+import org.opendaylight.groupbasedpolicy.dto.ConditionSet;
+import org.opendaylight.groupbasedpolicy.dto.EgKey;
+import org.opendaylight.groupbasedpolicy.dto.EndpointConstraint;
+import org.opendaylight.groupbasedpolicy.dto.Policy;
+import org.opendaylight.groupbasedpolicy.dto.RuleGroup;
+import org.opendaylight.groupbasedpolicy.util.ContractResolverUtils.ContractMatch;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.Matcher.MatchType;
@@ -38,7 +43,7 @@ import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
 
 
-public class SubjectResolverUtils {
+class SubjectResolverUtils {
 
     private SubjectResolverUtils() {
         throw new UnsupportedOperationException("Cannot create an instance");
@@ -50,7 +55,7 @@ public class SubjectResolverUtils {
      */
     // TODO Li msunal do we really need contractMatches to be a type Table<EgKey, EgKey, List<ContractMatch>>
     // it should be sufficient to be just List<ContractMatch>
-    protected static Table<EgKey, EgKey, Policy> selectSubjects(
+    static Table<EgKey, EgKey, Policy> selectSubjects(
             Table<EgKey, EgKey, List<ContractMatch>> contractMatches, Map<EgKey, Set<ConditionSet>> egConditions) {
         // TODO: Note that it's possible to further simplify the resulting
         // policy

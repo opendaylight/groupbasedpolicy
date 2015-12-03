@@ -32,7 +32,6 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.OfOverlayL3
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ActionDefinitionListener;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ClassifierDefinitionListener;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfigBuilder;
@@ -58,7 +57,6 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     public static final RendererName RENDERER_NAME = new RendererName("OFOverlay");
 
     private final DataBroker dataBroker;
-    private final PolicyResolver policyResolver;
     private final SwitchManager switchManager;
     private final EndpointManager endpointManager;
     private final PolicyManager policyManager;
@@ -88,7 +86,6 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
         switchManager = new SwitchManager(dataProvider);
         endpointManager = new EndpointManager(dataProvider, rpcRegistry, notificationService,
                                               executor, switchManager);
-        policyResolver = new PolicyResolver(dataProvider);
 
         classifierDefinitionListener = new ClassifierDefinitionListener(dataBroker);
         actionDefinitionListener = new ActionDefinitionListener(dataProvider);
@@ -123,7 +120,6 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     public void close() throws Exception {
         executor.shutdownNow();
         if (configReg != null) configReg.close();
-        if (policyResolver != null) policyResolver.close();
         if (switchManager != null) switchManager.close();
         if (endpointManager != null) endpointManager.close();
         if (classifierDefinitionListener != null) classifierDefinitionListener.close();

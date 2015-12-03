@@ -19,6 +19,8 @@ import java.util.Set;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.opendaylight.groupbasedpolicy.dto.ConditionSet;
+import org.opendaylight.groupbasedpolicy.dto.EndpointConstraint;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.endpoint.identification.constraints.EndpointIdentificationConstraints;

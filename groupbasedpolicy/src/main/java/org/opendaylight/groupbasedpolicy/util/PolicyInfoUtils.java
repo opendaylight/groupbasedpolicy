@@ -5,7 +5,7 @@
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
-package org.opendaylight.groupbasedpolicy.resolver;
+package org.opendaylight.groupbasedpolicy.util;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -13,6 +13,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.opendaylight.groupbasedpolicy.dto.ConditionSet;
+import org.opendaylight.groupbasedpolicy.dto.EgKey;
+import org.opendaylight.groupbasedpolicy.dto.EndpointConstraint;
+import org.opendaylight.groupbasedpolicy.dto.Policy;
+import org.opendaylight.groupbasedpolicy.dto.RuleGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
@@ -52,15 +57,15 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.p
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.policy.rule.group.with.endpoint.constraints.PolicyRuleGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.policy.rule.group.with.endpoint.constraints.PolicyRuleGroupBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.policy.rule.group.with.endpoint.constraints.ProviderEndpointConstraintsBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
 
 public class PolicyInfoUtils {
 
-    private static final Logger LOG = LoggerFactory.getLogger(PolicyInfoUtils.class);
+    private PolicyInfoUtils() {
+        throw new UnsupportedOperationException("Cannot create an instance");
+    }
 
     public static List<ResolvedPolicy> buildResolvedPolicy(Table<EgKey, EgKey, Policy> policyMap) {
         List<ResolvedPolicy> resolvedPolicies = new ArrayList<>();
@@ -205,7 +210,6 @@ public class PolicyInfoUtils {
                 return instance;
             }
         }
-        LOG.warn("Couldn't find Classifier Instance {} in Tenant {}", instanceName, tenant.getId());
         return null;
     }
 
@@ -215,7 +219,6 @@ public class PolicyInfoUtils {
                 return instance;
             }
         }
-        LOG.warn("Couldn't find Action Instance {} in Tenant {}", instanceName, tenant.getId());
         return null;
     }
 

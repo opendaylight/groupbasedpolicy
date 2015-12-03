@@ -11,12 +11,11 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf;
 import java.util.List;
 import java.util.Map;
 
-import org.opendaylight.groupbasedpolicy.sf.classifiers.EtherTypeClassifierDefinition;
-import org.opendaylight.groupbasedpolicy.sf.classifiers.IpProtoClassifierDefinition;
-import org.opendaylight.groupbasedpolicy.sf.classifiers.L4ClassifierDefinition;
-import org.opendaylight.groupbasedpolicy.sf.actions.AllowActionDefinition;
-import org.opendaylight.groupbasedpolicy.sf.actions.ChainActionDefinition;
-
+import org.opendaylight.groupbasedpolicy.api.sf.AllowActionDefinition;
+import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
+import org.opendaylight.groupbasedpolicy.api.sf.EtherTypeClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.api.sf.IpProtoClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.api.sf.L4ClassifierDefinition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.SubjectFeatureDefinitions;

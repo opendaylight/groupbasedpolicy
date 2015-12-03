@@ -22,6 +22,11 @@ import java.util.Set;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.opendaylight.groupbasedpolicy.dto.ConditionGroup;
+import org.opendaylight.groupbasedpolicy.dto.ConditionSet;
+import org.opendaylight.groupbasedpolicy.dto.EgKey;
+import org.opendaylight.groupbasedpolicy.dto.Policy;
+import org.opendaylight.groupbasedpolicy.dto.PolicyInfo;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 
 import com.google.common.collect.HashBasedTable;

@@ -25,6 +25,12 @@ import java.util.Set;
 
 import javax.annotation.concurrent.Immutable;
 
+import org.opendaylight.groupbasedpolicy.api.sf.AllowActionDefinition;
+import org.opendaylight.groupbasedpolicy.dto.EgKey;
+import org.opendaylight.groupbasedpolicy.dto.EndpointConstraint;
+import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
+import org.opendaylight.groupbasedpolicy.dto.Policy;
+import org.opendaylight.groupbasedpolicy.dto.RuleGroup;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
@@ -35,12 +41,6 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ClassificationRes
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Classifier;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ParamDerivator;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
-import org.opendaylight.groupbasedpolicy.resolver.EgKey;
-import org.opendaylight.groupbasedpolicy.resolver.EndpointConstraint;
-import org.opendaylight.groupbasedpolicy.resolver.IndexedTenant;
-import org.opendaylight.groupbasedpolicy.resolver.Policy;
-import org.opendaylight.groupbasedpolicy.resolver.RuleGroup;
-import org.opendaylight.groupbasedpolicy.sf.actions.AllowActionDefinition;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;

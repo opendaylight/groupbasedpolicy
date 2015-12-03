@@ -21,11 +21,11 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.opendaylight.groupbasedpolicy.dto.EgKey;
+import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
-import org.opendaylight.groupbasedpolicy.resolver.EgKey;
-import org.opendaylight.groupbasedpolicy.resolver.IndexedTenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;

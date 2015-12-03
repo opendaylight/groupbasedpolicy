@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.resolver;
+package org.opendaylight.groupbasedpolicy.util;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +14,8 @@ import java.util.Set;
 
 import javax.annotation.concurrent.Immutable;
 
+import org.opendaylight.groupbasedpolicy.dto.EgKey;
+import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.ConsumerSelectionRelator;
@@ -32,7 +34,7 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 
 
-public class ContractResolverUtils {
+class ContractResolverUtils {
 
     private ContractResolverUtils() {
         throw new UnsupportedOperationException("Cannot create an instance");
@@ -42,7 +44,7 @@ public class ContractResolverUtils {
      * Choose the contracts that are in scope for each pair of endpoint groups,
      * then perform subject selection for the pair
      */
-    protected static Table<EgKey, EgKey, List<ContractMatch>> selectContracts(Set<IndexedTenant> tenants) {
+    static Table<EgKey, EgKey, List<ContractMatch>> selectContracts(Set<IndexedTenant> tenants) {
         Table<TenantId, ContractId, List<ConsumerContractMatch>> consumerMatches = HashBasedTable.create();
         Table<EgKey, EgKey, List<ContractMatch>> contractMatches = HashBasedTable.create();
 
@@ -52,7 +54,7 @@ public class ContractResolverUtils {
         return contractMatches;
     }
 
-    protected static void selectContracts(Table<TenantId, ContractId, List<ConsumerContractMatch>> consumerMatches,
+    static void selectContracts(Table<TenantId, ContractId, List<ConsumerContractMatch>> consumerMatches,
             Table<EgKey, EgKey, List<ContractMatch>> contractMatches, Tenant tenant) {
         // For each endpoint group, match consumer selectors
         // against contracts to get a set of matching consumer selectors
@@ -208,7 +210,7 @@ public class ContractResolverUtils {
      * @author readams
      */
     @Immutable
-    protected static class ContractMatch extends ConsumerContractMatch {
+    static class ContractMatch extends ConsumerContractMatch {
 
         /**
          * The tenant ID of the provider endpoint group
@@ -236,7 +238,7 @@ public class ContractResolverUtils {
     }
 
     @Immutable
-    protected static class ConsumerContractMatch {
+    static class ConsumerContractMatch {
 
         /**
          * The tenant of the matching contract

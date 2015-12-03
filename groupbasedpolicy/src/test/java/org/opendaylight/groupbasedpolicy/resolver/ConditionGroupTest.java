@@ -16,6 +16,8 @@ import java.util.Set;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.opendaylight.groupbasedpolicy.dto.ConditionGroup;
+import org.opendaylight.groupbasedpolicy.dto.ConditionSet;
 
 public class ConditionGroupTest {
 

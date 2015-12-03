@@ -19,7 +19,7 @@ import java.util.Arrays;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.opendaylight.groupbasedpolicy.endpoint.EpKey;
+import org.opendaylight.groupbasedpolicy.dto.EpKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager;

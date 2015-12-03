@@ -19,6 +19,8 @@ import java.util.HashSet;
 import java.util.List;
 
 import org.junit.Test;
+import org.opendaylight.groupbasedpolicy.util.InheritanceUtils;
+import org.opendaylight.groupbasedpolicy.util.TenantUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.CapabilityMatcherName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.CapabilityName;

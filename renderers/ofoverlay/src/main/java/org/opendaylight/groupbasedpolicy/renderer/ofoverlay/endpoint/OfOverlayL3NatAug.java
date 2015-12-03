@@ -11,8 +11,8 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Map;
 
+import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentation;
 import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
-import org.opendaylight.groupbasedpolicy.endpoint.EpRendererAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterL3PrefixEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;

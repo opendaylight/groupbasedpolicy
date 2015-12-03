@@ -16,6 +16,10 @@ import java.util.HashSet;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.opendaylight.groupbasedpolicy.dto.EgKey;
+import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
+import org.opendaylight.groupbasedpolicy.dto.Policy;
+import org.opendaylight.groupbasedpolicy.util.PolicyResolverUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;

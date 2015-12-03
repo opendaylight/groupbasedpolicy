@@ -12,8 +12,8 @@ import java.util.Map.Entry;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
+import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentation;
 import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
-import org.opendaylight.groupbasedpolicy.endpoint.EpRendererAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterL3PrefixEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;

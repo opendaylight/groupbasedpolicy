@@ -24,8 +24,7 @@ import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataCh
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
-import org.opendaylight.groupbasedpolicy.resolver.PolicyResolver;
-import org.opendaylight.groupbasedpolicy.sf.actions.ChainActionDefinition;
+import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
 import org.opendaylight.sfc.provider.SfcProviderRpc;
 import org.opendaylight.sfc.provider.api.SfcProviderServiceChainAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServicePathAPI;
@@ -109,7 +108,6 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
 
 
     public SfcManager(DataBroker dataBroker,
-                      PolicyResolver policyResolver,
                       RpcProviderRegistry rpcRegistry,
                       ExecutorService executor) {
         this.dataBroker = dataBroker;
