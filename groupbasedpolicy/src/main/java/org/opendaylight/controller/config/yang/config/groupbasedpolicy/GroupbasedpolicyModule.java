@@ -1,8 +1,8 @@
 package org.opendaylight.controller.config.yang.config.groupbasedpolicy;
 
-import com.google.common.base.Preconditions;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
+import org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistry;
 import org.opendaylight.groupbasedpolicy.sf.SubjectFeatureDefinitionProvider;
 import org.opendaylight.groupbasedpolicy.sf.SupportedActionDefinitionListener;
 import org.opendaylight.groupbasedpolicy.sf.SupportedClassifierDefinitionListener;
@@ -33,26 +33,37 @@ public class GroupbasedpolicyModule extends org.opendaylight.controller.config.y
      */
     @Override
     public java.lang.AutoCloseable createInstance() {
-        final DataBroker dataProvider = Preconditions.checkNotNull(getDataBrokerDependency());
-        try {
-            return new AutoCloseable() {
+        DataBroker dataProvider = getDataBrokerDependency();
+        PolicyValidatorRegistry validatorRegistry = getPolicyValidatorRegistryDependency();
 
-                SubjectFeatureDefinitionProvider sfdp = new SubjectFeatureDefinitionProvider(dataProvider);
-                SupportedClassifierDefinitionListener supportedClassifierDefinitionListener =
-                        new SupportedClassifierDefinitionListener(dataProvider);
-                SupportedActionDefinitionListener supportedActionDefinitionListener =
-                        new SupportedActionDefinitionListener(dataProvider);
-                @Override
-                public void close() throws Exception {
-                    sfdp.close();
-                    supportedClassifierDefinitionListener.close();
-                    supportedActionDefinitionListener.close();
-                }
-            };
+        try {
+            Instance instance = new Instance(dataProvider, validatorRegistry);
+            LOG.info("{} successfully started.", GroupbasedpolicyModule.class.getCanonicalName());
+            return instance;
         } catch (TransactionCommitFailedException e) {
             LOG.error(
                     "Error creating instance of SubjectFeatureDefinitionProvider; Subject Feature Definitions were not put to Datastore");
             throw new RuntimeException(e);
+        }
+    }
+
+    private static class Instance implements AutoCloseable {
+
+        private final SubjectFeatureDefinitionProvider sfdp;
+        private final SupportedClassifierDefinitionListener supportedClassifierDefinitionListener;
+        private final SupportedActionDefinitionListener supportedActionDefinitionListener;
+
+        Instance(DataBroker dataProvider, PolicyValidatorRegistry validatorRegistry) throws TransactionCommitFailedException {
+            sfdp = new SubjectFeatureDefinitionProvider(dataProvider);
+            supportedClassifierDefinitionListener = new SupportedClassifierDefinitionListener(dataProvider, validatorRegistry);
+            supportedActionDefinitionListener = new SupportedActionDefinitionListener(dataProvider);
+        }
+
+        @Override
+        public void close() throws Exception {
+            sfdp.close();
+            supportedClassifierDefinitionListener.close();
+            supportedActionDefinitionListener.close();
         }
     }
 

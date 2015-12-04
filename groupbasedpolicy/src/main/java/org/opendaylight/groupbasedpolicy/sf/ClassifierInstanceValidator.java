@@ -15,10 +15,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import org.opendaylight.groupbasedpolicy.api.ValidationResult;
+import org.opendaylight.groupbasedpolicy.api.Validator;
+import org.opendaylight.groupbasedpolicy.dto.ValidationResultBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.parameter.value.RangeValue;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.parameters.type.ParameterType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.parameters.type.parameter.type.Int;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.parameters.type.parameter.type.Range;
@@ -34,55 +43,72 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
 
-public class ClassifierInstanceValidator {
+public class ClassifierInstanceValidator implements Validator<ClassifierInstance> {
 
     private static final Logger LOG = LoggerFactory.getLogger(ClassifierInstanceValidator.class);
     private final Map<ParameterName, Optional<ParameterType>> parameterByName = new HashMap<>();
+    private final ClassifierDefinitionId classifierDefinitionId;
+    private final ClassifierDefinitionId parentClassifierDefinitionId;
+    private final RendererName rendererName;
+    private ClassifierInstanceValidator parentValidator;
 
-    public ClassifierInstanceValidator(SupportedClassifierDefinition constraint) {
-        for (SupportedParameterValues supportedParams : constraint.getSupportedParameterValues()) {
-            ParameterName parameterName = checkNotNull(supportedParams.getParameterName());
-            ParameterType parameterType = supportedParams.getParameterType();
-            parameterByName.put(parameterName, Optional.fromNullable(parameterType));
+    public ClassifierInstanceValidator(SupportedClassifierDefinition constraint, RendererName rendererName) {
+        this.rendererName = checkNotNull(rendererName);
+        classifierDefinitionId = checkNotNull(constraint.getClassifierDefinitionId());
+        parentClassifierDefinitionId = constraint.getParentClassifierDefinitionId();
+        if (constraint.getSupportedParameterValues() != null) {
+            for (SupportedParameterValues supportedParams : constraint.getSupportedParameterValues()) {
+                ParameterName parameterName = checkNotNull(supportedParams.getParameterName());
+                ParameterType parameterType = supportedParams.getParameterType();
+                parameterByName.put(parameterName, Optional.fromNullable(parameterType));
+            }
         }
     }
 
-    public boolean validate(ClassifierInstance ci) {
-        List<ParameterValue> params = ci.getParameterValue();
-        for (ParameterValue param : params) {
-            ParameterName paramName = param.getName();
-            Optional<ParameterType> potentialParamConstraint = parameterByName.get(paramName);
-            if (potentialParamConstraint == null) {
-                LOG.info("Parameter {} with value {} is not supported.", paramName, param);
-                return false;
-            }
-            if (!potentialParamConstraint.isPresent()) {
-                LOG.info("There is no constraint for parameter {}. \nTherefore the parameter is considered as valid.",
-                        param);
-                continue;
-            }
-            ParameterType paramConstraint = potentialParamConstraint.get();
-            if (paramConstraint instanceof Int) {
-                boolean paramValid = isParamValid(param, (Int) paramConstraint);
-                if (!paramValid) {
-                    LOG.info("Parameter {} with value {} is not valid.", paramName, param);
-                    return false;
-                }
-            } else if (paramConstraint instanceof Range) {
-                boolean paramValid = isParamValid(param, (Range) paramConstraint);
-                if (!paramValid) {
-                    LOG.info("Parameter {} with value {} is not valid.", paramName, param);
-                    return false;
-                }
-            } else if (paramConstraint instanceof String) {
-                boolean paramValid = isParamValid(param, (String) paramConstraint);
-                if (!paramValid) {
-                    LOG.info("Parameter {} with value {} is not valid.", paramName, param);
-                    return false;
-                }
+    @Override
+    public ValidationResult validate(ClassifierInstance ci) {
+        for (ParameterValue param : ci.getParameterValue()) {
+            ValidationResult validationResult = validate(param, ci.getName());
+            if (!validationResult.isValid()) {
+                return validationResult;
             }
         }
-        return true;
+        return new ValidationResultBuilder().success().build();
+    }
+
+    public ValidationResult validate(ParameterValue param, ClassifierName ciName) {
+        ParameterName paramName = param.getName();
+        Optional<ParameterType> potentialParamConstraint = parameterByName.get(paramName);
+        if (potentialParamConstraint == null) {
+            // unknown parameter for this validator - let's try validate in parent
+            if (parentValidator != null) {
+                return parentValidator.validate(param, ciName);
+            }
+            return createFailedResult(ciName, param, "is not supported");
+        }
+        if (!potentialParamConstraint.isPresent()) {
+            LOG.info("There is no constraint for parameter {}. \nTherefore the parameter is considered as valid.",
+                    param);
+            return new ValidationResultBuilder().success().build();
+        }
+        ParameterType paramConstraint = potentialParamConstraint.get();
+        if (paramConstraint instanceof Int) {
+            boolean paramValid = isParamValid(param, (Int) paramConstraint);
+            if (!paramValid) {
+                return createFailedResultForNotValidParam(ciName, param);
+            }
+        } else if (paramConstraint instanceof Range) {
+            boolean paramValid = isParamValid(param, (Range) paramConstraint);
+            if (!paramValid) {
+                return createFailedResultForNotValidParam(ciName, param);
+            }
+        } else if (paramConstraint instanceof String) {
+            boolean paramValid = isParamValid(param, (String) paramConstraint);
+            if (!paramValid) {
+                return createFailedResultForNotValidParam(ciName, param);
+            }
+        }
+        return new ValidationResultBuilder().success().build();
     }
 
     private boolean isParamValid(ParameterValue param, Int constraint) {
@@ -133,8 +159,58 @@ public class ClassifierInstanceValidator {
         return false;
     }
 
-    public Set<ParameterName> getSupportedParameters() {
+    private ValidationResult createFailedResultForNotValidParam(ClassifierName ciName, ParameterValue param) {
+        return createFailedResult(ciName, param, "is not valid");
+    }
+
+    private ValidationResult createFailedResult(ClassifierName ciName, ParameterValue param, java.lang.String cause) {
+        StringBuilder sb = new StringBuilder("Error in classifier-instance ").append(ciName.getValue())
+            .append(". Parameter ")
+            .append(param.getName().getValue())
+            .append(" with value ");
+        if (param.getIntValue() != null) {
+            sb.append(param.getIntValue());
+        } else if (param.getRangeValue() != null) {
+            RangeValue rangeValue = param.getRangeValue();
+            sb.append("min:").append(rangeValue.getMin()).append(" max:").append(rangeValue.getMax());
+        } else if (param.getStringValue() != null) {
+            sb.append(param.getStringValue());
+        }
+        sb.append(" ").append(cause).append(".").toString();
+        return new ValidationResultBuilder().failed().setMessage(sb.toString()).build();
+    }
+
+    public boolean containsParamsForValidation() {
+        for (Optional<ParameterType> paramValue : parameterByName.values()) {
+            if (paramValue.isPresent()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public @Nonnull RendererName getRendererName() {
+        return rendererName;
+    }
+
+    public @Nonnull Set<ParameterName> getSupportedParameters() {
         return parameterByName.keySet();
+    }
+
+    public @Nonnull ClassifierDefinitionId getClassifierDefinitionId() {
+        return classifierDefinitionId;
+    }
+
+    public @Nullable ClassifierDefinitionId getParentClassifierDefinitionId() {
+        return parentClassifierDefinitionId;
+    }
+
+    public @Nullable Validator<ClassifierInstance> getParentValidator() {
+        return parentValidator;
+    }
+
+    public void setParentValidator(@Nullable ClassifierInstanceValidator parentValidator) {
+        this.parentValidator = parentValidator;
     }
 
     @Override

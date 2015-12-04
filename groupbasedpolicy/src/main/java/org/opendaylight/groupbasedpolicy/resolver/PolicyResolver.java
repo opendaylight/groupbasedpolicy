@@ -327,7 +327,8 @@ public class PolicyResolver implements PolicyValidatorRegistry, AutoCloseable {
             for (Validator<ActionInstance> actionInstanceValidator : actionInstanceValidators) {
                 ValidationResult validationResult = actionInstanceValidator.validate(actionInstance);
                 if (!validationResult.isValid()) {
-                    LOG.error("ActionInstance {} is not valid!", actionInstance.getName());
+                    LOG.error("ActionInstance {} is not valid! {}", actionInstance.getName().getValue(),
+                            validationResult.getMessage());
                     return false;
                 }
             }
@@ -352,7 +353,8 @@ public class PolicyResolver implements PolicyValidatorRegistry, AutoCloseable {
             for (Validator<ClassifierInstance> classifierInstanceValidator : classifierInstanceValidators) {
                 ValidationResult validationResult = classifierInstanceValidator.validate(classifierInstance);
                 if (!validationResult.isValid()) {
-                    LOG.error("ClassifierInstance {} is not valid!", classifierInstance.getName());
+                    LOG.error("ClassifierInstance {} is not valid! {}", classifierInstance.getName().getValue(),
+                            validationResult.getMessage());
                     return false;
                 }
             }

@@ -8,23 +8,17 @@
 
 package org.opendaylight.groupbasedpolicy.sf;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
-import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
-import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
-import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistry;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
@@ -32,143 +26,195 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definition.Parameter;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinitionBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.Renderers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.Capabilities;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.capabilities.SupportedClassifierDefinition;
-import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.SetMultimap;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
 
-public class SupportedClassifierDefinitionListener
-        implements DataTreeChangeListener<SupportedClassifierDefinition>, AutoCloseable {
+public class SupportedClassifierDefinitionListener extends DataTreeChangeHandler<SupportedClassifierDefinition> {
 
     private static final Logger LOG = LoggerFactory.getLogger(SupportedClassifierDefinitionListener.class);
 
-    private final DataBroker dataProvider;
-    private final ListenerRegistration<SupportedClassifierDefinitionListener> registration;
     @VisibleForTesting
-    final SetMultimap<ClassifierDefinitionId, InstanceIdentifier<SupportedClassifierDefinition>> supportedCdIidByCdId =
-            HashMultimap.create();
-    @VisibleForTesting
-    final Map<InstanceIdentifier<SupportedClassifierDefinition>, ClassifierInstanceValidator> ciValidatorBySupportedCdIid =
-            new HashMap<>();
+    final Table<RendererName, ClassifierDefinitionId, ClassifierInstanceValidator> validatorByRendererAndCd =
+            HashBasedTable.create();
+    private final PolicyValidatorRegistry validatorRegistry;
 
-    public SupportedClassifierDefinitionListener(DataBroker dataProvider) {
-        this.dataProvider = checkNotNull(dataProvider);
-        registration =
-                dataProvider.registerDataTreeChangeListener(
-                        new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
-                                InstanceIdentifier.builder(Renderers.class)
-                                    .child(Renderer.class)
-                                    .child(Capabilities.class)
-                                    .child(SupportedClassifierDefinition.class)
-                                    .build()),
-                        this);
+    public SupportedClassifierDefinitionListener(DataBroker dataProvider, PolicyValidatorRegistry validatorRegistry) {
+        super(dataProvider,
+                new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
+                        InstanceIdentifier.builder(Renderers.class)
+                            .child(Renderer.class)
+                            .child(Capabilities.class)
+                            .child(SupportedClassifierDefinition.class)
+                            .build()));
+        this.validatorRegistry = validatorRegistry;
+        if (validatorRegistry == null) {
+            LOG.info(
+                    "{} service was NOT found. Automatic registration of simple classifier-instance validators is NOT available for renderers.",
+                    PolicyValidatorRegistry.class.getCanonicalName());
+        } else {
+            LOG.info(
+                    "{} service was found. Automatic registration of simple classifier-instance validators is available for renderers.",
+                    PolicyValidatorRegistry.class.getCanonicalName());
+        }
     }
 
     @Override
-    public void onDataTreeChanged(Collection<DataTreeModification<SupportedClassifierDefinition>> changes) {
-        for (DataTreeModification<SupportedClassifierDefinition> change : changes) {
-            DataObjectModification<SupportedClassifierDefinition> rootNode = change.getRootNode();
-            InstanceIdentifier<SupportedClassifierDefinition> rootIdentifier = change.getRootPath().getRootIdentifier();
-            switch (rootNode.getModificationType()) {
-                case WRITE:
-                    ClassifierDefinitionId classifierDefinitionId = rootNode.getDataAfter().getClassifierDefinitionId();
-                    if (containsParameters(rootNode.getDataAfter())) {
-                        ClassifierInstanceValidator ciValidator =
-                                new ClassifierInstanceValidator(rootNode.getDataAfter());
-                        ciValidatorBySupportedCdIid.put(rootIdentifier, ciValidator);
-                        // TODO register validator to Policy Resolver service
-                    }
-                    supportedCdIidByCdId.put(classifierDefinitionId, rootIdentifier);
-                    putOrRemoveClassifierDefinitionInOperDs(classifierDefinitionId);
-                    break;
-                case DELETE:
-                    classifierDefinitionId = rootNode.getDataBefore().getClassifierDefinitionId();
-                    // TODO unregister validator from Policy Resolver service
-                    supportedCdIidByCdId.remove(classifierDefinitionId, rootIdentifier);
-                    ciValidatorBySupportedCdIid.remove(rootIdentifier);
-                    putOrRemoveClassifierDefinitionInOperDs(classifierDefinitionId);
-                    break;
-                case SUBTREE_MODIFIED:
-                    classifierDefinitionId = rootNode.getDataAfter().getClassifierDefinitionId();
-                    if (containsParameters(rootNode.getDataAfter())) {
-                        ClassifierInstanceValidator ciValidator =
-                                new ClassifierInstanceValidator(rootNode.getDataAfter());
-                        ClassifierInstanceValidator oldCiValidator =
-                                ciValidatorBySupportedCdIid.put(rootIdentifier, ciValidator);
-                        // TODO unregister old validator from Policy Resolver service and register
-                        // new one
-                    }
-                    putOrRemoveClassifierDefinitionInOperDs(classifierDefinitionId);
-                    break;
+    protected void onWrite(DataObjectModification<SupportedClassifierDefinition> rootNode,
+            InstanceIdentifier<SupportedClassifierDefinition> createdSupportedCdIid) {
+        SupportedClassifierDefinition createdSupportedCd = rootNode.getDataAfter();
+        RendererName rendererName = createdSupportedCdIid.firstKeyOf(Renderer.class).getName();
+        ClassifierInstanceValidator ciValidator = new ClassifierInstanceValidator(createdSupportedCd, rendererName);
+        setParentValidators(ciValidator, false);
+        ClassifierDefinitionId cdId = createdSupportedCd.getClassifierDefinitionId();
+        validatorByRendererAndCd.put(rendererName, cdId, ciValidator);
+        if (validatorRegistry != null) {
+            validatorRegistry.register(cdId, ciValidator);
+        }
+        putOrRemoveClassifierDefinitionInOperDs(cdId, getAllSupportedParams(cdId));
+    }
+
+    @Override
+    protected void onDelete(DataObjectModification<SupportedClassifierDefinition> rootNode,
+            InstanceIdentifier<SupportedClassifierDefinition> removedSupportedCdIid) {
+        SupportedClassifierDefinition removedSupportedCd = rootNode.getDataBefore();
+        ClassifierDefinitionId cdId = removedSupportedCd.getClassifierDefinitionId();
+        RendererName rendererName = removedSupportedCdIid.firstKeyOf(Renderer.class).getName();
+        ClassifierInstanceValidator removedCiValidator = validatorByRendererAndCd.remove(rendererName, cdId);
+        if (validatorRegistry != null) {
+            validatorRegistry.unregister(cdId, removedCiValidator);
+        }
+        setParentValidators(removedCiValidator, true);
+        putOrRemoveClassifierDefinitionInOperDs(cdId, getAllSupportedParams(cdId));
+    }
+
+    @Override
+    protected void onSubreeModified(DataObjectModification<SupportedClassifierDefinition> rootNode,
+            InstanceIdentifier<SupportedClassifierDefinition> modifiedSupportedCdIid) {
+        SupportedClassifierDefinition beforeSupportedCd = rootNode.getDataBefore();
+        ClassifierDefinitionId cdId = beforeSupportedCd.getClassifierDefinitionId();
+        RendererName rendererName = modifiedSupportedCdIid.firstKeyOf(Renderer.class).getName();
+        ClassifierInstanceValidator oldCiValidator = validatorByRendererAndCd.remove(rendererName, cdId);
+        if (validatorRegistry != null) {
+            validatorRegistry.unregister(cdId, oldCiValidator);
+        }
+        SupportedClassifierDefinition afterSupportedCd = rootNode.getDataAfter();
+        ClassifierInstanceValidator newCiValidator = new ClassifierInstanceValidator(afterSupportedCd, rendererName);
+        setParentValidators(newCiValidator, false);
+        validatorByRendererAndCd.put(rendererName, cdId, newCiValidator);
+        if (validatorRegistry != null) {
+            validatorRegistry.register(cdId, newCiValidator);
+        }
+        putOrRemoveClassifierDefinitionInOperDs(cdId, getAllSupportedParams(cdId));
+    }
+
+    @VisibleForTesting
+    void setParentValidators(ClassifierInstanceValidator ciValidator, boolean setParentToNull) {
+        if (ciValidator.getParentClassifierDefinitionId() != null && !setParentToNull) {
+            ClassifierInstanceValidator parentCiValidator = validatorByRendererAndCd.get(ciValidator.getRendererName(),
+                    ciValidator.getParentClassifierDefinitionId());
+            if (parentCiValidator != null) {
+                ciValidator.setParentValidator(parentCiValidator);
+            }
+        }
+        for (ClassifierInstanceValidator existingCiValidator : getValidatorsWithParentCdForRenderer(
+                ciValidator.getClassifierDefinitionId(), ciValidator.getRendererName())) {
+            if (setParentToNull) {
+                existingCiValidator.setParentValidator(null);
+            } else {
+                existingCiValidator.setParentValidator(ciValidator);
             }
         }
     }
 
-    private boolean containsParameters(SupportedClassifierDefinition supportedClassifierDefinition) {
-        return supportedClassifierDefinition.getSupportedParameterValues() != null
-                && !supportedClassifierDefinition.getSupportedParameterValues().isEmpty();
+    @VisibleForTesting
+    Collection<ClassifierInstanceValidator> getValidatorsWithParentCdForRenderer(
+            final ClassifierDefinitionId parentCdId, RendererName renderer) {
+        return Collections2.filter(validatorByRendererAndCd.row(renderer).values(),
+                new Predicate<ClassifierInstanceValidator>() {
+
+                    @Override
+                    public boolean apply(ClassifierInstanceValidator ciValidator) {
+                        if (parentCdId.equals(ciValidator.getParentClassifierDefinitionId())) {
+                            return true;
+                        }
+                        return false;
+                    }
+                });
     }
 
-    private void putOrRemoveClassifierDefinitionInOperDs(ClassifierDefinitionId classifierDefinitionId) {
+    @VisibleForTesting
+    List<ParameterName> getAllSupportedParams(final ClassifierDefinitionId cdId) {
+        return FluentIterable.from(validatorByRendererAndCd.column(cdId).values())
+            .transformAndConcat(new Function<ClassifierInstanceValidator, Set<ParameterName>>() {
+
+                @Override
+                public Set<ParameterName> apply(ClassifierInstanceValidator input) {
+                    return input.getSupportedParameters();
+                }
+            })
+            .toList();
+    }
+
+    @VisibleForTesting
+    void putOrRemoveClassifierDefinitionInOperDs(ClassifierDefinitionId cdId, List<ParameterName> supportedParams) {
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
-        ClassifierDefinition cd = createClassifierDefinitionWithUnionOfParams(classifierDefinitionId, rwTx);
+        Optional<ClassifierDefinition> potentialCdFromConfDs = DataStoreHelper
+            .readFromDs(LogicalDatastoreType.CONFIGURATION, IidFactory.classifierDefinitionIid(cdId), rwTx);
+        if (!potentialCdFromConfDs.isPresent()) {
+            LOG.error("Classifier-definition with ID {} does not exist in CONF datastore.", cdId);
+            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL, IidFactory.classifierDefinitionIid(cdId),
+                    rwTx);
+            DataStoreHelper.submitToDs(rwTx);
+            return;
+        }
+        ClassifierDefinition cd =
+                createClassifierDefinitionWithUnionOfParams(potentialCdFromConfDs.get(), supportedParams);
         if (cd != null) {
-            rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.classifierDefinitionIid(classifierDefinitionId), cd);
+            rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.classifierDefinitionIid(cdId), cd);
         } else {
-            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
-                    IidFactory.classifierDefinitionIid(classifierDefinitionId), rwTx);
+            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL, IidFactory.classifierDefinitionIid(cdId),
+                    rwTx);
         }
         DataStoreHelper.submitToDs(rwTx);
     }
 
     @VisibleForTesting
-    ClassifierDefinition createClassifierDefinitionWithUnionOfParams(ClassifierDefinitionId classifierDefinitionId,
-            ReadTransaction rTx) {
-        Optional<ClassifierDefinition> potentialCdFromDs = DataStoreHelper.readFromDs(
-                LogicalDatastoreType.CONFIGURATION, IidFactory.classifierDefinitionIid(classifierDefinitionId), rTx);
-        if (!potentialCdFromDs.isPresent()) {
-            LOG.error("Classifier-definition with ID {} does not exist in CONF datastore.", classifierDefinitionId);
+    static ClassifierDefinition createClassifierDefinitionWithUnionOfParams(ClassifierDefinition cd,
+            List<ParameterName> supportedParams) {
+        if (supportedParams == null || supportedParams.isEmpty()) {
+            LOG.debug("Classifier-definition with ID {} is not supported by any renderer.", cd.getId().getValue());
             return null;
         }
-        ClassifierDefinition cdFromDs = potentialCdFromDs.get();
-        Set<InstanceIdentifier<SupportedClassifierDefinition>> supportedCdIids =
-                supportedCdIidByCdId.get(classifierDefinitionId);
-        if (supportedCdIids.isEmpty()) {
-            LOG.debug("Classifier-definition with ID {} is not supported by any renderer.", classifierDefinitionId);
-            return null;
-        }
-        if (cdFromDs.getParameter() == null || cdFromDs.getParameter().isEmpty()) {
-            LOG.debug("Classifier-definition with ID {} does not contain any parameter", classifierDefinitionId);
-            return cdFromDs;
+        if (cd.getParameter() == null || cd.getParameter().isEmpty()) {
+            LOG.trace("Classifier-definition with ID {} does not contain any parameter in CONF datastore.",
+                    cd.getId().getValue());
+            return cd;
         }
         List<Parameter> params = new ArrayList<>();
-        for (InstanceIdentifier<SupportedClassifierDefinition> supportedCdIid : supportedCdIids) {
-            ClassifierInstanceValidator ciValidator = ciValidatorBySupportedCdIid.get(supportedCdIid);
-            Set<ParameterName> supportedParams = ciValidator.getSupportedParameters();
-            for (ParameterName supportedParamName : supportedParams) {
-                for (Parameter param : cdFromDs.getParameter()) {
-                    if (param.getName().equals(supportedParamName)) {
-                        params.add(param);
-                    }
+        for (ParameterName supportedParam : supportedParams) {
+            for (Parameter param : cd.getParameter()) {
+                if (param.getName().equals(supportedParam)) {
+                    params.add(param);
                 }
             }
         }
-        ClassifierDefinitionBuilder cdBuilder = new ClassifierDefinitionBuilder(cdFromDs);
+        ClassifierDefinitionBuilder cdBuilder = new ClassifierDefinitionBuilder(cd);
         return cdBuilder.setParameter(params).build();
-    }
-
-    @Override
-    public void close() throws Exception {
-        registration.close();
     }
 
 }

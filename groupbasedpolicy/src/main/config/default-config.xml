@@ -27,6 +27,10 @@
                         <name>binding-rpc-broker</name>
                     </rpc-registry>
 
+                    <policy-validator-registry>
+                        <type xmlns:groupbasedpolicy="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">groupbasedpolicy:policy-validator-registry</type>
+                        <name>policy-validator-registry</name>
+                    </policy-validator-registry>
                 </module>
                 <module>
                     <type xmlns:groupbasedpolicy="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">
@@ -38,7 +42,6 @@
                         <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
                         <name>binding-data-broker</name>
                     </data-broker>
-
                 </module>
                 <module>
                     <type xmlns:groupbasedpolicy="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">
@@ -55,7 +58,6 @@
                         <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-rpc-registry</type>
                         <name>binding-rpc-broker</name>
                     </rpc-registry>
-
                 </module>
             </modules>
 
@@ -71,8 +73,8 @@
                     </instance>
                 </service>
                 <service>
-                    <type xmlns:epr="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">
-                        epr:ep-renderer-augmentation-registry
+                    <type xmlns:groupbasedpolicy="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">
+                        groupbasedpolicy:ep-renderer-augmentation-registry
                     </type>
 
                     <instance>

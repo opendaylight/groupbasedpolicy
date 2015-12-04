@@ -9,7 +9,7 @@
 module groupbasedpolicy-cfg {
     yang-version 1;
     namespace "urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy";
-    prefix "groupbasedpolicy-cfg";
+    prefix "gbpcfg";
 
     import config { prefix config; revision-date 2013-04-05; }
     import opendaylight-md-sal-binding { prefix mdsal; revision-date 2013-10-28; }
@@ -79,6 +79,14 @@ module groupbasedpolicy-cfg {
                     refine type {
                         mandatory true;
                         config:required-identity mdsal:binding-rpc-registry;
+                    }
+                }
+            }
+            // EpRendererAugmentationRegistry service
+            container policy-validator-registry {
+                uses config:service-ref {
+                    refine type {
+                        config:required-identity policy-validator-registry;
                     }
                 }
             }

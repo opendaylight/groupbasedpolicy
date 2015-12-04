@@ -1,11 +1,15 @@
 package org.opendaylight.controller.config.yang.config.groupbasedpolicy;
 
-import com.google.common.base.Preconditions;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class EpRendererAugmentationRegistryImplModule extends org.opendaylight.controller.config.yang.config.groupbasedpolicy.AbstractEpRendererAugmentationRegistryImplModule {
+
+    private static final Logger LOG = LoggerFactory.getLogger(EpRendererAugmentationRegistryImplModule.class);
+
     public EpRendererAugmentationRegistryImplModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {
         super(identifier, dependencyResolver);
     }
@@ -21,10 +25,12 @@ public class EpRendererAugmentationRegistryImplModule extends org.opendaylight.c
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        final DataBroker dataProvider = Preconditions.checkNotNull(getDataBrokerDependency());
-        final RpcProviderRegistry rpcRegistry = Preconditions.checkNotNull(getRpcRegistryDependency());
+        final DataBroker dataProvider = getDataBrokerDependency();
+        final RpcProviderRegistry rpcRegistry = getRpcRegistryDependency();
 
-        return new EndpointRpcRegistry(dataProvider, rpcRegistry);
+        EndpointRpcRegistry endpointRpcRegistry = new EndpointRpcRegistry(dataProvider, rpcRegistry);
+        LOG.info("{} successfully started.", EpRendererAugmentationRegistryImplModule.class.getCanonicalName());
+        return endpointRpcRegistry;
     }
 
 }
