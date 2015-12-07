@@ -16,17 +16,14 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf;
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.ChainActionFlows.createChainTunnelFlows;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxSetNsiAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxSetNspAction;
-
-import java.util.List;
-import java.util.Map;
-
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.NetworkElements;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.PolicyPair;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcIidFactory;
@@ -65,9 +62,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
+import java.util.List;
+import java.util.Map;
+
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.ChainActionFlows.createChainTunnelFlows;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxSetNsiAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxSetNspAction;
 
 /**
  * Chain action for the OpenFlow Overlay renderer
@@ -76,29 +76,22 @@ import com.google.common.collect.Iterables;
  */
 public class ChainAction extends Action {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ChainAction.class);
-
     public static final ActionDefinitionId ID = new ActionDefinitionId("3d886be7-059f-4c4f-bbef-0356bea40933");
-
-    public static final Integer CHAIN_CONDITION_GROUP = 0xfffffe;
-
-    protected static final String TYPE = "type";
-
     // the chain action
-    public static final String SFC_CHAIN_ACTION = "chain";
+    private static final String SFC_CHAIN_ACTION = "chain";
     // the parameter used for storing the chain name
     public static final String SFC_CHAIN_NAME = "sfc-chain-name";
-
-    protected static final ActionDefinition DEF = new ActionDefinitionBuilder().setId(ID)
-        .setName(new ActionName(SFC_CHAIN_ACTION))
-        .setDescription(new Description("Send the traffic through a Service Function Chain"))
-        .setParameter(
-                (ImmutableList.of(new ParameterBuilder().setName(new ParameterName(SFC_CHAIN_NAME))
-                    .setDescription(new Description("The named chain to match against"))
-                    .setIsRequired(IsRequired.Required)
-                    .setType(Type.String)
-                    .build())))
-        .build();
+    private static final ActionDefinition DEF = new ActionDefinitionBuilder().setId(ID)
+            .setName(new ActionName(SFC_CHAIN_ACTION))
+            .setDescription(new Description("Send the traffic through a Service Function Chain"))
+            .setParameter(
+                    (ImmutableList.of(new ParameterBuilder().setName(new ParameterName(SFC_CHAIN_NAME))
+                            .setDescription(new Description("The named chain to match against"))
+                            .setIsRequired(IsRequired.Required)
+                            .setType(Type.String)
+                            .build())))
+            .build();
+    private static final Logger LOG = LoggerFactory.getLogger(ChainAction.class);
 
     @Override
     public ActionDefinitionId getId() {
@@ -112,10 +105,9 @@ public class ChainAction extends Action {
 
     @Override
     public List<ActionBuilder> updateAction(List<ActionBuilder> actions, Map<String, Object> params, Integer order,
-            NetworkElements netElements, PolicyPair policyPair, OfWriter ofWriter, OfContext ctx, Direction direction) {
-        /*
-         * Get the named chain
-         */
+                                            NetworkElements netElements, PolicyPair policyPair, OfWriter ofWriter, OfContext ctx,
+                                            Direction trafficDirection) {
+        // Get the named chain
         String chainName = null;
         if (params != null) {
             LOG.debug("updateAction: Searching for named chain");
@@ -138,11 +130,11 @@ public class ChainAction extends Action {
             return null;
         }
 
-        /*
-         * If path is symmetrical then there are two RSPs.
-         * if srcEp is in consumer EPG use "rspName"
-         * else srcEp is in provider EPG, "rspName-Reverse".
-         */
+        Long returnVnId;
+
+        // If path is symmetrical then there are two RSPs.
+        // if srcEp is in consumer EPG use "rspName"
+        // else srcEp is in provider EPG, "rspName-Reverse".
         ServiceFunctionPath sfcPath = getSfcPath(chainName);
         if (sfcPath == null || sfcPath.getName() == null) {
             LOG.error("updateAction: SFC Path was invalid. Either null or name was null.", sfcPath);
@@ -153,6 +145,7 @@ public class ChainAction extends Action {
         ReadOnlyTransaction rTx = ctx.getDataBroker().newReadOnlyTransaction();
         RenderedServicePath renderedServicePath;
         RenderedServicePath rsp = getRspByName(rspName, rTx);
+        returnVnId = (long) resolveTunnelId(netElements, false);
         if (rsp == null) {
             renderedServicePath = createRsp(sfcPath, rspName);
             if (renderedServicePath != null) {
@@ -166,9 +159,11 @@ public class ChainAction extends Action {
         }
 
         try {
-            if (sfcPath.isSymmetric() && direction.equals(Direction.Out)){
+            // Direction here represents direction of traffic between EPGs
+            if (sfcPath.isSymmetric() && trafficDirection.equals(Direction.Out)) {
                 rspName = rspName + "-Reverse";
                 rsp = getRspByName(rspName, rTx);
+                returnVnId = (long) resolveTunnelId(netElements, true);
                 if (rsp == null) {
                     LOG.info("updateAction: Could not find Reverse RSP {} for Chain {}", rspName, chainName);
                     renderedServicePath = createSymmetricRsp(renderedServicePath);
@@ -181,7 +176,7 @@ public class ChainAction extends Action {
                 }
             }
         } catch (Exception e) {
-            LOG.error("updateAction: Attemping to determine if srcEp {} was consumer.", netElements.getSrcEp().getKey(), e);
+            LOG.error("updateAction: Attempting to determine if srcEp {} was consumer.", netElements.getSrcEp().getKey(), e);
             return null;
         }
 
@@ -191,9 +186,7 @@ public class ChainAction extends Action {
             return null;
         }
 
-        NodeId tunnelDestNodeId=netElements.getDstNodeId();
-
-        Long returnVnid = (long) netElements.getSrcEpOrds().getTunnelId();
+        NodeId tunnelDestNodeId = netElements.getDstNodeId();
 
         IpAddress tunnelDest = ctx.getSwitchManager().getTunnelIP(tunnelDestNodeId, TunnelTypeVxlanGpe.class);
         if (tunnelDest == null || tunnelDest.getIpv4Address() == null) {
@@ -204,14 +197,14 @@ public class ChainAction extends Action {
         RenderedServicePathHop firstRspHop = renderedServicePath.getRenderedServicePathHop().get(0);
         RenderedServicePathHop lastRspHop = Iterables.getLast(renderedServicePath.getRenderedServicePathHop());
         SfcNshHeader sfcNshHeader = new SfcNshHeaderBuilder().setNshTunIpDst(rspFirstHop.getIp().getIpv4Address())
-            .setNshTunUdpPort(rspFirstHop.getPort())
-            .setNshNsiToChain(firstRspHop.getServiceIndex())
-            .setNshNspToChain(renderedServicePath.getPathId())
-            .setNshNsiFromChain((short) (lastRspHop.getServiceIndex().intValue() - 1))
-            .setNshNspFromChain(renderedServicePath.getPathId())
-            .setNshMetaC1(SfcNshHeader.convertIpAddressToLong(tunnelDest.getIpv4Address()))
-            .setNshMetaC2(returnVnid)
-            .build();
+                .setNshTunUdpPort(rspFirstHop.getPort())
+                .setNshNsiToChain(firstRspHop.getServiceIndex())
+                .setNshNspToChain(renderedServicePath.getPathId())
+                .setNshNsiFromChain((short) (lastRspHop.getServiceIndex().intValue() - 1))
+                .setNshNspFromChain(renderedServicePath.getPathId())
+                .setNshMetaC1(SfcNshHeader.convertIpAddressToLong(tunnelDest.getIpv4Address()))
+                .setNshMetaC2(returnVnId)
+                .build();
 
         // Cannot set all actions here. Some actions are destination specific, and we don't know
         // a destination is to be
@@ -223,13 +216,23 @@ public class ChainAction extends Action {
         return actions;
     }
 
+    // Return tunnelId according to policy direction
+    private int resolveTunnelId(NetworkElements netElements, boolean isReversedPath) {
+        if ((isReversedPath && PolicyEnforcer.checkPolicyOrientation())
+                || (!isReversedPath && !PolicyEnforcer.checkPolicyOrientation())) {
+            return netElements.getDstEpOrdinals().getTunnelId();
+        } else {
+            return netElements.getSrcEpOrdinals().getTunnelId();
+        }
+    }
+
     private RenderedServicePath createRsp(ServiceFunctionPath sfcPath, String rspName) {
         CreateRenderedPathInput rspInput = new CreateRenderedPathInputBuilder().setParentServiceFunctionPath(
                 sfcPath.getName())
-            .setName(rspName)
-            .setSymmetric(sfcPath.isSymmetric())
-            .build();
-         return SfcProviderRenderedPathAPI.createRenderedServicePathAndState(sfcPath, rspInput);
+                .setName(rspName)
+                .setSymmetric(sfcPath.isSymmetric())
+                .build();
+        return SfcProviderRenderedPathAPI.createRenderedServicePathAndState(sfcPath, rspInput);
     }
 
     private RenderedServicePath createSymmetricRsp(RenderedServicePath rsp) {
@@ -317,7 +320,7 @@ public class ChainAction extends Action {
     }
 
     private List<ActionBuilder> addActionBuilder(List<ActionBuilder> actions,
-            org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action action, Integer order) {
+                                                 org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action action, Integer order) {
         ActionBuilder ab = new ActionBuilder();
         ab.setAction(action);
         ab.setOrder(order);

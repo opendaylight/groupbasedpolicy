@@ -92,7 +92,7 @@ public class ChainActionTest {
         nodeId = mock(NodeId.class);
         when(netElements.getDstNodeId()).thenReturn(nodeId);
         endpointFwdCtxOrdinals = mock(EndpointFwdCtxOrdinals.class);
-        when(netElements.getSrcEpOrds()).thenReturn(endpointFwdCtxOrdinals);
+       when(netElements.getDstEpOrdinals()).thenReturn(endpointFwdCtxOrdinals);
         endpoint = mock(Endpoint.class);
         when(netElements.getSrcEp()).thenReturn(endpoint);
         policyPair = mock(PolicyPair.class);

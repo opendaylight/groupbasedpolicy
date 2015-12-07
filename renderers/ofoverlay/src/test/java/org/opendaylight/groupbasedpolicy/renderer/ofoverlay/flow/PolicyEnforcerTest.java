@@ -8,30 +8,21 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.applyActionIns;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.instructions;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxOutputRegAction;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockPolicyManager;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.MockEndpointManager;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.*;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.PolicyPair;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.MockSwitchManager;
 import org.opendaylight.groupbasedpolicy.resolver.ConditionGroup;
 import org.opendaylight.groupbasedpolicy.resolver.EgKey;
+import org.opendaylight.groupbasedpolicy.resolver.MockPolicyResolver;
 import org.opendaylight.groupbasedpolicy.resolver.PolicyInfo;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
@@ -46,6 +37,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfigBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.TunnelBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
@@ -55,7 +47,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.conditions.Condition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.conditions.ConditionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.TenantBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ContractBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.ClauseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Subject;
@@ -79,22 +70,50 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.ni
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxmNxReg0Key;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.match.rev140714.NxmNxReg2Key;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
-public class PolicyEnforcerTest extends FlowTableTest {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.*;
 
-    protected static final Logger LOG = LoggerFactory.getLogger(PolicyEnforcerTest.class);
+public class PolicyEnforcerTest {
+    PolicyPair policyPair;
+    int consumerEpgId;
+    int providerEpgId;
+    int consumerCondGrpId;
+    int providerCondGrpId;
+    Set<IpPrefix> consumerEicIpPrefixes;
+    Set<IpPrefix> providerEicIpPrefixes;
+    IpPrefix consumerEicIp;
+    IpPrefix providerEicIp;
+    NodeId consumerEpNodeId;
+    NodeId providerEpNodeId;
+    private FlowTestUtils testUtils = new FlowTestUtils();
+    private OfContext ctx;
+    private PolicyEnforcer flowTable;
+    private NodeId nodeId;
+    private NodeConnectorId tunnelId;
+    private MockSwitchManager switchManager = new MockSwitchManager();
+    private MockEndpointManager endpointManager = new MockEndpointManager();
+    private MockPolicyResolver policyResolver = new MockPolicyResolver();
+    private MockPolicyManager policyManager = new MockPolicyManager(policyResolver, endpointManager);
 
-    @Override
     @Before
     public void setup() throws Exception {
-        initCtx();
-        table = new PolicyEnforcer(ctx, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER());
-        super.setup();
+        ctx = testUtils.initCtx(policyManager, policyResolver, switchManager, endpointManager);
+        flowTable = new PolicyEnforcer(ctx, PolicyEnforcer.TABLE_ID);
+        nodeId = FlowTestUtils.nodeId;
+        tunnelId = FlowTestUtils.tunnelId;
 
         switchManager.addSwitch(
                 nodeId,
@@ -102,32 +121,33 @@ public class PolicyEnforcerTest extends FlowTableTest {
                 Collections.<NodeConnectorId>emptySet(),
                 new OfOverlayNodeConfigBuilder().setTunnel(
                         ImmutableList.of(new TunnelBuilder().setIp(new IpAddress(new Ipv4Address("1.2.3.4")))
-                            .setTunnelType(TunnelTypeVxlan.class)
-                            .setNodeConnectorId(tunnelId)
-                            .build())).build());
+                                .setTunnelType(TunnelTypeVxlan.class)
+                                .setNodeConnectorId(tunnelId)
+                                .build())).build());
     }
 
     @Test
     public void testNoEps() throws Exception {
-        OfWriter fm = dosync(null);
+        OfWriter fm = doSync(null);
         assertEquals(2, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())
-            .getFlow()
-            .size());
+                .getFlow()
+                .size());
     }
 
     @Test
     public void testSameEg() throws Exception {
-        Endpoint ep1 = localEP().build();
-        endpointManager.addEndpoint(ep1);
-        Endpoint ep2 = localEP().setMacAddress(new MacAddress("00:00:00:00:00:02")).build();
-        endpointManager.addEndpoint(ep2);
-        policyResolver.addTenant(baseTenant().setContract(ImmutableList.<Contract>of(baseContract(null).build()))
-            .build());
+        Endpoint ep1 = testUtils.localEP().build();
+        Endpoint ep2 = testUtils.localEP().setMacAddress(new MacAddress("00:00:00:00:00:02")).build();
 
-        OfWriter fm = dosync(null);
-        assertNotEquals(0, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())
-            .getFlow()
-            .size());
+        endpointManager.addEndpoint(ep1);
+        endpointManager.addEndpoint(ep2);
+        policyResolver.addTenant(testUtils.baseTenant().setContract(ImmutableList.of(testUtils.baseContract(null).build()))
+                .build());
+
+        OfWriter fm = doSync(null);
+        assertEquals(3, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())
+                .getFlow()
+                .size());
         int count = 0;
         HashMap<String, Flow> flowMap = new HashMap<>();
         for (Flow f : fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow()) {
@@ -138,75 +158,73 @@ public class PolicyEnforcerTest extends FlowTableTest {
         }
         assertEquals(1, count);
         assertEquals(3, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())
-            .getFlow()
-            .size());
-        fm = dosync(flowMap);
+                .getFlow()
+                .size());
+        fm = doSync(flowMap);
         assertEquals(3, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())
-            .getFlow()
-            .size());
+                .getFlow()
+                .size());
     }
 
     @Test
     public void testDifferentEg() throws Exception {
-        assertEquals(7, doTestDifferentEg(ImmutableList.<Subject>of(baseSubject(null).build())));
-        assertEquals(7, doTestDifferentEg(ImmutableList.<Subject>of(baseSubject(Direction.Bidirectional).build())));
-        assertEquals(5, doTestDifferentEg(ImmutableList.<Subject>of(baseSubject(Direction.In).build())));
-        assertEquals(5, doTestDifferentEg(ImmutableList.<Subject>of(baseSubject(Direction.Out).build())));
+        assertEquals(3, doTestDifferentEg(ImmutableList.of(testUtils.baseSubject("s1", null, "allow").build())));
+        assertEquals(3, doTestDifferentEg(ImmutableList.of(testUtils.baseSubject("s1", Direction.Bidirectional, "allow").build())));
+        assertEquals(3, doTestDifferentEg(ImmutableList.of(testUtils.baseSubject("s1", Direction.In, "allow").build())));
+        assertEquals(3, doTestDifferentEg(ImmutableList.of(testUtils.baseSubject("s1", Direction.Out, "allow").build())));
     }
 
     @Test
     public void doTestRule() throws Exception {
         Rule rule1 = new RuleBuilder().setActionRef(
                 ImmutableList.of(new ActionRefBuilder().setName(new ActionName("allow")).build()))
-            .setClassifierRef(
-                    createClassifierRefs(ImmutableMap.<String, Direction>of("tcp_dst_80", Direction.In, "tcp_src_80",
-                            Direction.In)))
-            .build();
+                .setClassifierRef(
+                        testUtils.createClassifierRefs(ImmutableMap.of("tcp_dst_80", Direction.In, "tcp_src_80",
+                                Direction.In)))
+                .build();
         Rule rule2 = new RuleBuilder().setActionRef(
                 ImmutableList.of(new ActionRefBuilder().setName(new ActionName("allow")).build()))
-            .setClassifierRef(
-                    createClassifierRefs(ImmutableMap.<String, Direction>of("tcp_dst_80", Direction.In, "tcp_src_80",
-                            Direction.Out)))
-            .build();
+                .setClassifierRef(
+                        testUtils.createClassifierRefs(ImmutableMap.of("tcp_dst_80", Direction.In, "tcp_src_80",
+                                Direction.Out)))
+                .build();
         Rule rule3 = new RuleBuilder().setActionRef(
                 ImmutableList.of(new ActionRefBuilder().setName(new ActionName("allow")).build()))
-            .setClassifierRef(
-                    createClassifierRefs(ImmutableMap.<String, Direction>of("tcp_dst_80", Direction.In, "tcp_src_80",
-                            Direction.Out, "ether_type", Direction.In)))
-            .build();
+                .setClassifierRef(
+                        testUtils.createClassifierRefs(ImmutableMap.of("tcp_dst_80", Direction.In, "tcp_src_80",
+                                Direction.Out, "ether_type", Direction.In)))
+                .build();
         Rule rule4 = new RuleBuilder().setActionRef(
                 ImmutableList.of(new ActionRefBuilder().setName(new ActionName("allow")).build()))
-            .setClassifierRef(
-                    createClassifierRefs(ImmutableMap.<String, Direction>of("tcp_dst_80", Direction.In, "tcp_dst_90",
-                            Direction.In)))
-            .build();
+                .setClassifierRef(
+                        testUtils.createClassifierRefs(ImmutableMap.of("tcp_dst_80", Direction.In, "tcp_dst_90",
+                                Direction.In)))
+                .build();
 
-        assertEquals(5,
-                doTestDifferentEg(ImmutableList.<Subject>of(createSubject("s1", ImmutableList.<Rule>of(rule1)))));
-        assertEquals(7,
-                doTestDifferentEg(ImmutableList.<Subject>of(createSubject("s2", ImmutableList.<Rule>of(rule2)))));
-        assertEquals(6,
-                doTestDifferentEg(ImmutableList.<Subject>of(createSubject("s3", ImmutableList.<Rule>of(rule3)))));
         assertEquals(3,
-                doTestDifferentEg(ImmutableList.<Subject>of(createSubject("s4", ImmutableList.<Rule>of(rule4)))));
+                doTestDifferentEg(ImmutableList.of(testUtils.createSubject("s1", ImmutableList.of(rule1)))));
+        assertEquals(3,
+                doTestDifferentEg(ImmutableList.of(testUtils.createSubject("s2", ImmutableList.of(rule2)))));
+        assertEquals(3,
+                doTestDifferentEg(ImmutableList.of(testUtils.createSubject("s3", ImmutableList.of(rule3)))));
+        assertEquals(3,
+                doTestDifferentEg(ImmutableList.of(testUtils.createSubject("s4", ImmutableList.of(rule4)))));
     }
 
     private int doTestDifferentEg(List<Subject> subjects) throws Exception {
-        Endpoint ep1 = localEP().build();
+        Endpoint ep1 = testUtils.localEP().build();
         endpointManager.addEndpoint(ep1);
-        Endpoint ep2 = localEP().setMacAddress(new MacAddress("00:00:00:00:00:02")).setEndpointGroup(eg2).build();
+        Endpoint ep2 = testUtils.localEP().setMacAddress(new MacAddress("00:00:00:00:00:02")).setEndpointGroup(FlowTestUtils.eg2).build();
         endpointManager.addEndpoint(ep2);
-        policyResolver.addTenant(baseTenant().setContract(ImmutableList.<Contract>of(baseContract(subjects).build()))
-            .build());
+        policyResolver.addTenant(testUtils.baseTenant().setContract(ImmutableList.of(testUtils.baseContract(subjects).build()))
+                .build());
 
-        OfWriter fm = dosync(null);
+        OfWriter fm = doSync(null);
         assertNotEquals(0, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())
-            .getFlow()
-            .size());
+                .getFlow()
+                .size());
         int count = 0;
-        HashMap<String, Flow> flowMap = new HashMap<>();
         for (Flow f : fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow()) {
-            flowMap.put(f.getId().getValue(), f);
             if (isAllowSameEpg(f)) {
                 count += 1;
             } else if (f.getMatch() != null && Objects.equals(tunnelId, f.getMatch().getInPort())) {
@@ -215,32 +233,32 @@ public class PolicyEnforcerTest extends FlowTableTest {
             } else if (f.getMatch() != null
                     && f.getMatch().getEthernetMatch() != null
                     && Objects.equals(FlowUtils.IPv4, f.getMatch()
-                        .getEthernetMatch()
-                        .getEthernetType()
-                        .getType()
-                        .getValue())
+                    .getEthernetMatch()
+                    .getEthernetType()
+                    .getType()
+                    .getValue())
                     && f.getMatch().getIpMatch() != null
-                    && Objects.equals(Short.valueOf((short) 6), f.getMatch().getIpMatch().getIpProtocol())
+                    && Objects.equals((short) 6, f.getMatch().getIpMatch().getIpProtocol())
                     && f.getMatch().getLayer4Match() != null
-                    && (Objects.equals(new PortNumber(Integer.valueOf(80)),
-                            ((TcpMatch) f.getMatch().getLayer4Match()).getTcpSourcePort()) || Objects.equals(
-                            new PortNumber(Integer.valueOf(80)),
-                            ((TcpMatch) f.getMatch().getLayer4Match()).getTcpDestinationPort()))) {
+                    && (Objects.equals(new PortNumber(80),
+                    ((TcpMatch) f.getMatch().getLayer4Match()).getTcpSourcePort()) || Objects.equals(
+                    new PortNumber(80),
+                    ((TcpMatch) f.getMatch().getLayer4Match()).getTcpDestinationPort()))) {
                 count += 1;
             } else if (f.getMatch() != null
                     && f.getMatch().getEthernetMatch() != null
                     && Objects.equals(FlowUtils.IPv6, f.getMatch()
-                        .getEthernetMatch()
-                        .getEthernetType()
-                        .getType()
-                        .getValue())
+                    .getEthernetMatch()
+                    .getEthernetType()
+                    .getType()
+                    .getValue())
                     && f.getMatch().getIpMatch() != null
-                    && Objects.equals(Short.valueOf((short) 6), f.getMatch().getIpMatch().getIpProtocol())
+                    && Objects.equals((short) 6, f.getMatch().getIpMatch().getIpProtocol())
                     && f.getMatch().getLayer4Match() != null
-                    && (Objects.equals(new PortNumber(Integer.valueOf(80)),
-                            ((TcpMatch) f.getMatch().getLayer4Match()).getTcpSourcePort()) || Objects.equals(
-                            new PortNumber(Integer.valueOf(80)),
-                            ((TcpMatch) f.getMatch().getLayer4Match()).getTcpDestinationPort()))) {
+                    && (Objects.equals(new PortNumber(80),
+                    ((TcpMatch) f.getMatch().getLayer4Match()).getTcpSourcePort()) || Objects.equals(
+                    new PortNumber(80),
+                    ((TcpMatch) f.getMatch().getLayer4Match()).getTcpDestinationPort()))) {
                 count += 1;
             }
         }
@@ -252,36 +270,36 @@ public class PolicyEnforcerTest extends FlowTableTest {
         Condition cond1 = new ConditionBuilder().setName(new ConditionName("cond1")).build();
         Condition cond2 = new ConditionBuilder().setName(new ConditionName("cond2")).build();
 
-        Endpoint ep1 = localEP().setCondition(ImmutableList.of(cond1.getName())).build();
+        Endpoint ep1 = testUtils.localEP().setCondition(ImmutableList.of(cond1.getName())).build();
         endpointManager.addEndpoint(ep1);
-        Endpoint ep2 = localEP().setMacAddress(new MacAddress("00:00:00:00:00:02"))
-            .setCondition(ImmutableList.of(cond1.getName(), cond2.getName()))
-            .setEndpointGroup(eg2)
-            .build();
+        Endpoint ep2 = testUtils.localEP().setMacAddress(new MacAddress("00:00:00:00:00:02"))
+                .setCondition(ImmutableList.of(cond1.getName(), cond2.getName()))
+                .setEndpointGroup(FlowTestUtils.eg2)
+                .build();
         endpointManager.addEndpoint(ep2);
 
-        TenantBuilder tb = baseTenant().setContract(
-                ImmutableList.of(new ContractBuilder().setId(cid)
-                    .setSubject(ImmutableList.of(baseSubject(Direction.Out).build()))
-                    .setClause(
-                            ImmutableList.of(new ClauseBuilder().setName(new ClauseName("test"))
-                                .setSubjectRefs(ImmutableList.of(new SubjectName("s1")))
-                                .setConsumerMatchers(
-                                        new ConsumerMatchersBuilder().setConditionMatcher(
-                                                ImmutableList.of(new ConditionMatcherBuilder().setName(
-                                                        new ConditionMatcherName("m1"))
-                                                    .setCondition(ImmutableList.of(cond1, cond2))
-                                                    .setMatchType(MatchType.Any)
-                                                    .build())).build())
-                                .setProviderMatchers(
-                                        new ProviderMatchersBuilder().setConditionMatcher(
-                                                ImmutableList.of(new ConditionMatcherBuilder().setName(
-                                                        new ConditionMatcherName("m2"))
-                                                    .setCondition(ImmutableList.of(cond1, cond2))
-                                                    .setMatchType(MatchType.All)
-                                                    .build())).build())
-                                .build()))
-                    .build()));
+        TenantBuilder tb = testUtils.baseTenant().setContract(
+                ImmutableList.of(new ContractBuilder().setId(FlowTestUtils.cid1)
+                        .setSubject(ImmutableList.of(testUtils.baseSubject("s1", Direction.Out, "allow").build()))
+                        .setClause(
+                                ImmutableList.of(new ClauseBuilder().setName(new ClauseName("test"))
+                                        .setSubjectRefs(ImmutableList.of(new SubjectName("s1")))
+                                        .setConsumerMatchers(
+                                                new ConsumerMatchersBuilder().setConditionMatcher(
+                                                        ImmutableList.of(new ConditionMatcherBuilder().setName(
+                                                                new ConditionMatcherName("m1"))
+                                                                .setCondition(ImmutableList.of(cond1, cond2))
+                                                                .setMatchType(MatchType.Any)
+                                                                .build())).build())
+                                        .setProviderMatchers(
+                                                new ProviderMatchersBuilder().setConditionMatcher(
+                                                        ImmutableList.of(new ConditionMatcherBuilder().setName(
+                                                                new ConditionMatcherName("m2"))
+                                                                .setCondition(ImmutableList.of(cond1, cond2))
+                                                                .setMatchType(MatchType.All)
+                                                                .build())).build())
+                                        .build()))
+                        .build()));
         policyResolver.addTenant(tb.build());
 
         PolicyInfo policy = policyResolver.getCurrentPolicy();
@@ -297,19 +315,17 @@ public class PolicyEnforcerTest extends FlowTableTest {
         assertNotEquals(cg1Id, cg2Id);
 
         MatchBuilder mb = new MatchBuilder();
-        FlowUtils.addNxRegMatch(mb, RegMatch.of(NxmNxReg0.class, Long.valueOf(eg1Id)),
-                RegMatch.of(NxmNxReg1.class, Long.valueOf(cg1Id)), RegMatch.of(NxmNxReg2.class, Long.valueOf(eg2Id)),
-                RegMatch.of(NxmNxReg3.class, Long.valueOf(cg2Id)));
-        GeneralAugMatchNodesNodeTableFlow m1 = mb.getAugmentation(GeneralAugMatchNodesNodeTableFlow.class);
-        FlowUtils.addNxRegMatch(mb, RegMatch.of(NxmNxReg0.class, Long.valueOf(eg2Id)),
-                RegMatch.of(NxmNxReg1.class, Long.valueOf(cg2Id)), RegMatch.of(NxmNxReg2.class, Long.valueOf(eg1Id)),
-                RegMatch.of(NxmNxReg3.class, Long.valueOf(cg1Id)));
-        GeneralAugMatchNodesNodeTableFlow m2 = mb.getAugmentation(GeneralAugMatchNodesNodeTableFlow.class);
+        FlowUtils.addNxRegMatch(mb, RegMatch.of(NxmNxReg0.class, (long) eg1Id),
+                RegMatch.of(NxmNxReg1.class, (long) cg1Id), RegMatch.of(NxmNxReg2.class, (long) eg2Id),
+                RegMatch.of(NxmNxReg3.class, (long) cg2Id));
+        FlowUtils.addNxRegMatch(mb, RegMatch.of(NxmNxReg0.class, (long) eg2Id),
+                RegMatch.of(NxmNxReg1.class, (long) cg2Id), RegMatch.of(NxmNxReg2.class, (long) eg1Id),
+                RegMatch.of(NxmNxReg3.class, (long) cg1Id));
         int count = 0;
-        OfWriter fm = dosync(null);
-        assertEquals(7, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())
-            .getFlow()
-            .size());
+        OfWriter fm = doSync(null);
+        assertEquals(5, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())
+                .getFlow()
+                .size());
         HashMap<String, Flow> flowMap = new HashMap<>();
         for (Flow f : fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow()) {
             flowMap.put(f.getId().getValue(), f);
@@ -317,15 +333,15 @@ public class PolicyEnforcerTest extends FlowTableTest {
                 count++;
             }
         }
-        assertEquals(3, count);
-        fm = dosync(flowMap);
+        assertEquals(1, count);
+        fm = doSync(flowMap);
         int numberOfFlows = fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())
-            .getFlow()
-            .size();
-        fm = dosync(flowMap);
+                .getFlow()
+                .size();
+        fm = doSync(flowMap);
         assertEquals(numberOfFlows, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())
-            .getFlow()
-            .size());
+                .getFlow()
+                .size());
     }
 
     private boolean isAllowSameEpg(Flow flow) {
@@ -363,18 +379,6 @@ public class PolicyEnforcerTest extends FlowTableTest {
         return res;
     }
 
-    PolicyPair policyPair;
-    int consumerEpgId;
-    int providerEpgId;
-    int consumerCondGrpId;
-    int providerCondGrpId;
-    Set<IpPrefix> consumerEicIpPrefixes;
-    Set<IpPrefix> providerEicIpPrefixes;
-    IpPrefix consumerEicIp;
-    IpPrefix providerEicIp;
-    NodeId consumerEpNodeId;
-    NodeId providerEpNodeId;
-
     @Before
     public void PolicyPairInitialisation() {
         consumerEpgId = 5;
@@ -383,8 +387,8 @@ public class PolicyEnforcerTest extends FlowTableTest {
         providerCondGrpId = 8;
         consumerEicIp = mock(IpPrefix.class);
         providerEicIp = mock(IpPrefix.class);
-        consumerEicIpPrefixes = new HashSet<IpPrefix>(Arrays.asList(consumerEicIp));
-        providerEicIpPrefixes = new HashSet<IpPrefix>(Arrays.asList(providerEicIp));
+        consumerEicIpPrefixes = new HashSet<>(Collections.singletonList(consumerEicIp));
+        providerEicIpPrefixes = new HashSet<>(Collections.singletonList(providerEicIp));
         consumerEpNodeId = mock(NodeId.class);
         when(consumerEpNodeId.getValue()).thenReturn("consumerValue");
         providerEpNodeId = mock(NodeId.class);
@@ -411,8 +415,6 @@ public class PolicyEnforcerTest extends FlowTableTest {
 
         policyPair = new PolicyPair(consumerEpgId, providerEpgId, consumerCondGrpId, providerCondGrpId,
                 consumerEicIpPrefixes, providerEicIpPrefixes, consumerEpNodeId, providerEpNodeId);
-        Assert.assertTrue(policyPair.equals(policyPair));
-        Assert.assertFalse(policyPair.equals(null));
         Assert.assertFalse(policyPair.equals(new Object()));
 
         Assert.assertFalse(other.equals(policyPair));
@@ -458,5 +460,101 @@ public class PolicyEnforcerTest extends FlowTableTest {
         other = new PolicyPair(5, 8, 5, 8, consumerEicIpPrefixes, providerEicIpPrefixes, consumerEpNodeId,
                 providerEpNodeId);
         Assert.assertTrue(policyPair.equals(other));
+    }
+
+    @Test
+    public void testConflictResolution() throws Exception {
+        Condition cond1 = new ConditionBuilder().setName(new ConditionName("cond1")).build();
+        Condition cond2 = new ConditionBuilder().setName(new ConditionName("cond2")).build();
+
+        EndpointBuilder ep1 = testUtils.localEP()
+                .setL2Context(FlowTestUtils.bd)
+                .setTenant(FlowTestUtils.tid)
+                .setEndpointGroup(FlowTestUtils.eg)
+                .setCondition(ImmutableList.of(cond1.getName(), cond2.getName()))
+                .setMacAddress(new MacAddress("00:00:00:00:00:01"));
+
+        EndpointBuilder ep2 = testUtils.localEP()
+                .setL2Context(FlowTestUtils.bd)
+                .setTenant(FlowTestUtils.tid)
+                .setEndpointGroup(FlowTestUtils.eg2)
+                .setCondition(ImmutableList.of(cond1.getName(), cond2.getName()))
+                .setMacAddress(new MacAddress("00:00:00:00:00:02"));
+
+        endpointManager.addEndpoint(ep1.build());
+        endpointManager.addEndpoint(ep2.build());
+
+        Rule cIn = new RuleBuilder().setActionRef(
+                ImmutableList.of(new ActionRefBuilder().setName(new ActionName("Allow")).setOrder(0).build()))
+                .setClassifierRef(testUtils.createClassifierRefs(ImmutableMap.of("tcp_dst_80", Direction.In, "tcp_src_80",
+                        Direction.In)))
+                .build();
+        Rule cOut = new RuleBuilder().setActionRef(
+                ImmutableList.of(new ActionRefBuilder().setName(new ActionName("Allow")).setOrder(0).build()))
+                .setClassifierRef(testUtils.createClassifierRefs(ImmutableMap.of("tcp_dst_80", Direction.In, "tcp_src_80",
+                        Direction.In)))
+                .build();
+        Rule wIn = new RuleBuilder().setActionRef(
+                ImmutableList.of(new ActionRefBuilder().setName(new ActionName("Allow")).setOrder(0).build()))
+                .setClassifierRef(testUtils.createClassifierRefs(ImmutableMap.of("tcp_dst_80", Direction.In, "tcp_src_80",
+                        Direction.In)))
+                .build();
+        Rule wOut = new RuleBuilder().setActionRef(
+                ImmutableList.of(new ActionRefBuilder().setName(new ActionName("Allow")).setOrder(0).build()))
+                .setClassifierRef(testUtils.createClassifierRefs(ImmutableMap.of("tcp_dst_80", Direction.In, "tcp_src_80",
+                        Direction.In)))
+                .build();
+
+        List<Rule> cIns = new ArrayList<>();
+        cIns.add(cIn);
+        List<Rule> cOuts = new ArrayList<>();
+        cOuts.add(cOut);
+        List<Rule> wIns = new ArrayList<>();
+        wIns.add(wIn);
+        List<Rule> wOuts = new ArrayList<>();
+        wOuts.add(wOut);
+
+        TenantBuilder tenant = testUtils.baseTenant()
+                .setContract(ImmutableList.of(
+                        new ContractBuilder().setId(FlowTestUtils.cid1)
+                                .setSubject(ImmutableList.of(testUtils.createSubject("Client_In", cIns)))
+                                .setClause(ImmutableList.of(testUtils.baseClause("Client_In_Ipv4", "Client_In", cond1, cond2).build()))
+                                .build(),
+                        new ContractBuilder().setId(FlowTestUtils.cid2)
+                                .setSubject(ImmutableList.of(testUtils.createSubject("Client_Out", cOuts)))
+                                .setClause(ImmutableList.of(testUtils.baseClause("Client_Out_Ipv4", "Client_Out", cond1, cond2).build()))
+                                .build(),
+                        new ContractBuilder().setId(FlowTestUtils.cid3)
+                                .setSubject(ImmutableList.of(testUtils.createSubject("Web_In", wIns)))
+                                .setClause(ImmutableList.of(testUtils.baseClause("Web_In_Ipv4", "Web_In", cond1, cond2).build()))
+                                .build(),
+                        new ContractBuilder().setId(FlowTestUtils.cid4)
+                                .setSubject(ImmutableList.of(testUtils.createSubject("Web_Out", wOuts)))
+                                .setClause(ImmutableList.of(testUtils.baseClause("Web_Out_Ipv4", "Web_Out", cond1, cond2).build()))
+                                .build()));
+
+
+        policyResolver.addTenant(tenant.build());
+
+        flowTable.sync(nodeId, policyResolver.getCurrentPolicy(), doSync(null));
+
+        assertEquals(5, doTestDifferentEg(ImmutableList.of(testUtils.createSubject("Client_In", cIns))));
+        assertEquals(5, doTestDifferentEg(ImmutableList.of(testUtils.createSubject("Client_Out", cOuts))));
+        assertEquals(5, doTestDifferentEg(ImmutableList.of(testUtils.createSubject("Web_In", wIns))));
+        assertEquals(5, doTestDifferentEg(ImmutableList.of(testUtils.createSubject("Web_Out", wOuts))));
+    }
+
+    private OfWriter doSync(Map<String, Flow> flows) throws Exception {
+        OfWriter ofWriter = new OfWriter();
+        if (flows != null) {
+            for (String key : flows.keySet()) {
+                Flow flow = flows.get(key);
+                if (flow != null) {
+                    ofWriter.writeFlow(nodeId, flow.getTableId(), flow);
+                }
+            }
+        }
+        flowTable.sync(nodeId, policyResolver.getCurrentPolicy(), ofWriter);
+        return ofWriter;
     }
 }

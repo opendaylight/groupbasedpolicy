@@ -8,35 +8,15 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.ARP;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.decNwTtlAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.dropInstructions;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.ethernetMatch;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.getOfPortNum;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.gotoTableIns;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.groupAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadArpOpAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadArpShaAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadArpSpaAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadRegAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxMoveArpShaToArpThaAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxMoveArpSpaToArpTpaAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxMoveEthSrcToEthDstAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxMoveRegTunIdAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.setDlSrcAction;
-
-import java.math.BigInteger;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Objects;
-
+import com.google.common.collect.ImmutableList;
 import org.junit.Before;
 import org.junit.Test;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.MockPolicyManager;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.MockEndpointManager;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.MockSwitchManager;
+import org.opendaylight.groupbasedpolicy.resolver.MockPolicyResolver;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Address;
@@ -50,7 +30,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfigBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.TunnelBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv4Match;
@@ -58,36 +37,50 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg0;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
+import java.math.BigInteger;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
-public class DestinationMapperTest extends FlowTableTest {
-    protected static final Logger LOG =
-            LoggerFactory.getLogger(DestinationMapperTest.class);
+import static junit.framework.TestCase.assertEquals;
+import static junit.framework.TestCase.assertTrue;
+import static org.junit.Assert.assertNotEquals;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.*;
 
-    NodeConnectorId remoteTunnelId =
-            new NodeConnectorId(remoteNodeId.getValue() + ":101");
+public class DestinationMapperTest {
+    private FlowTestUtils testUtils = new FlowTestUtils();
+    private DestinationMapper flowTable;
+    private OfContext ctx;
+    private NodeId nodeId;
+    private NodeConnectorId nodeConnectorId, tunnelId;
+    private MockEndpointManager endpointManager = new MockEndpointManager();
+    private MockPolicyResolver policyResolver = new MockPolicyResolver();
+    private MockSwitchManager switchManager = new MockSwitchManager();
+    private MockPolicyManager policyManager = new MockPolicyManager(policyResolver, endpointManager);
 
-    @Override
     @Before
     public void setup() throws Exception {
-        initCtx();
-        table = new DestinationMapper(ctx,ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER());
-        super.setup();
+        ctx = testUtils.initCtx(policyManager, policyResolver, switchManager, endpointManager);
+        nodeId = FlowTestUtils.nodeId;
+        tunnelId = FlowTestUtils.tunnelId;
+        nodeConnectorId = FlowTestUtils.nodeConnectorId;
+
+        flowTable = new DestinationMapper(ctx, DestinationMapper.TABLE_ID);
     }
 
     @Test
     public void testNoEps() throws Exception {
-        OfWriter fm = dosync(null);
+        OfWriter fm = doSync(null);
         assertEquals(1, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER()).getFlow().size());
     }
 
     private void verifyDMap(Endpoint remoteEp,
-            Endpoint localEp) throws Exception {
+                            Endpoint localEp) throws Exception {
 
-        OfWriter fm = dosync(null);
+        OfWriter fm = doSync(null);
         assertNotEquals(0, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER()).getFlow().size());
 
         // presumably counts flows that have correct matches set up
@@ -103,7 +96,6 @@ public class DestinationMapperTest extends FlowTableTest {
                     f.getMatch().getEthernetMatch())) {
                 // router ARP reply
                 Instruction ins = f.getInstructions().getInstruction().get(0);
-                ins = f.getInstructions().getInstruction().get(0);
                 assertTrue(ins.getInstruction() instanceof ApplyActionsCase);
                 List<Action> actions = ((ApplyActionsCase) ins.getInstruction()).getApplyActions().getAction();
                 assertEquals(nxMoveEthSrcToEthDstAction(),
@@ -119,8 +111,8 @@ public class DestinationMapperTest extends FlowTableTest {
                         actions.get(3).getAction());
                 assertEquals(Integer.valueOf(3), actions.get(3).getOrder());
                 assertEquals(nxLoadArpShaAction(new BigInteger(1, DestinationMapper
-                        .bytesFromHexString(DestinationMapper.ROUTER_MAC
-                                .getValue()))),
+                                .bytesFromHexString(DestinationMapper.ROUTER_MAC
+                                        .getValue()))),
                         actions.get(4).getAction());
                 assertEquals(Integer.valueOf(4), actions.get(4).getOrder());
                 assertEquals(nxMoveArpSpaToArpTpaAction(),
@@ -150,7 +142,6 @@ public class DestinationMapperTest extends FlowTableTest {
                     }
                 }
                 assertEquals(2, icount);
-                LOG.info("{}", f);
                 count += 1;
             } else if (Objects.equals(remoteEp.getMacAddress(),
                     f.getMatch().getEthernetMatch()
@@ -164,13 +155,12 @@ public class DestinationMapperTest extends FlowTableTest {
                                 actions.get(actions.size() - 1).getAction());
                         icount += 1;
                     } else if (ins.getInstruction() instanceof GoToTableCase) {
-                        assertEquals(gotoTableIns((short) (table.getTableId() + 1)),
+                        assertEquals(gotoTableIns((short) (flowTable.getTableId() + 1)),
                                 ins.getInstruction());
                         icount += 1;
                     }
                 }
                 assertEquals(2, icount);
-                LOG.info("{}", f);
                 count += 1;
             } else if (Objects.equals(DestinationMapper.ROUTER_MAC,
                     f.getMatch().getEthernetMatch()
@@ -218,14 +208,13 @@ public class DestinationMapperTest extends FlowTableTest {
                             .getAddress())) {
                 // broadcast/multicast flow should output to group table
                 Instruction ins = f.getInstructions().getInstruction().get(0);
-                ins = f.getInstructions().getInstruction().get(0);
                 assertTrue(ins.getInstruction() instanceof ApplyActionsCase);
                 List<Action> actions = ((ApplyActionsCase) ins.getInstruction()).getApplyActions().getAction();
                 assertEquals(nxMoveRegTunIdAction(NxmNxReg0.class, false),
                         actions.get(0).getAction());
                 assertEquals(Integer.valueOf(0), actions.get(0).getOrder());
 
-                Long v = Long.valueOf(OrdinalFactory.getContextOrdinal(tid, fd));
+                Long v = (long) OrdinalFactory.getContextOrdinal(FlowTestUtils.tid, FlowTestUtils.fd);
                 assertEquals(groupAction(v), actions.get(1).getAction());
                 assertEquals(Integer.valueOf(1), actions.get(1).getOrder());
                 count += 1;
@@ -237,24 +226,22 @@ public class DestinationMapperTest extends FlowTableTest {
         // assertEquals(8, count);
         assertEquals(fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER()).getFlow().size(), count);
         int numberOfFlows = fm.getTableForNode(nodeId, (short) 2).getFlow().size();
-        fm = dosync(flowMap);
+        fm = doSync(flowMap);
         assertEquals(numberOfFlows, fm.getTableForNode(nodeId, (short) 2).getFlow().size());
     }
 
-    @Override
     protected EndpointBuilder localEP() {
-        return super.localEP()
+        return testUtils.localEP()
                 .setL3Address(ImmutableList.of(new L3AddressBuilder()
-                        .setL3Context(l3c)
+                        .setL3Context(FlowTestUtils.l3c)
                         .setIpAddress(new IpAddress(new Ipv4Address("10.0.0.1")))
                         .build()));
     }
 
-    @Override
     protected EndpointBuilder remoteEP(NodeId remoteNodeId) {
-        return super.remoteEP(remoteNodeId)
+        return testUtils.remoteEP(remoteNodeId)
                 .setL3Address(ImmutableList.of(new L3AddressBuilder()
-                        .setL3Context(l3c)
+                        .setL3Context(FlowTestUtils.l3c)
                         .setIpAddress(new IpAddress(new Ipv6Address("::ffff:0:0:0:10.0.0.2")))
                         .build()));
     }
@@ -266,18 +253,18 @@ public class DestinationMapperTest extends FlowTableTest {
                 Collections.<NodeConnectorId>emptySet(),
                 new OfOverlayNodeConfigBuilder().setTunnel(
                         ImmutableList.of(new TunnelBuilder().setIp(new IpAddress(new Ipv4Address("1.2.3.4")))
-                            .setTunnelType(TunnelTypeVxlan.class)
-                            .setNodeConnectorId(tunnelId)
-                            .build())).build());
+                                .setTunnelType(TunnelTypeVxlan.class)
+                                .setNodeConnectorId(tunnelId)
+                                .build())).build());
         switchManager.addSwitch(
-                remoteNodeId,
-                remoteTunnelId,
+                FlowTestUtils.remoteNodeId,
+                FlowTestUtils.remoteTunnelId,
                 Collections.<NodeConnectorId>emptySet(),
                 new OfOverlayNodeConfigBuilder().setTunnel(
                         ImmutableList.of(new TunnelBuilder().setIp(new IpAddress(new Ipv4Address("1.2.3.5")))
-                            .setTunnelType(TunnelTypeVxlan.class)
-                            .setNodeConnectorId(tunnelId)
-                            .build())).build());
+                                .setTunnelType(TunnelTypeVxlan.class)
+                                .setNodeConnectorId(tunnelId)
+                                .build())).build());
     }
 
     @Test
@@ -285,12 +272,12 @@ public class DestinationMapperTest extends FlowTableTest {
         addSwitches();
         Endpoint localEp = localEP().build();
         endpointManager.addEndpoint(localEp);
-        Endpoint remoteEp = remoteEP(remoteNodeId).build();
+        Endpoint remoteEp = remoteEP(FlowTestUtils.remoteNodeId).build();
         endpointManager.addEndpoint(remoteEp);
 
 
-        policyResolver.addTenant(baseTenant().setContract(
-                ImmutableList.<Contract> of(baseContract(null).build())).build());
+        policyResolver.addTenant(testUtils.baseTenant().setContract(
+                ImmutableList.of(testUtils.baseContract(null).build())).build());
         verifyDMap(remoteEp, localEp);
     }
 
@@ -299,14 +286,28 @@ public class DestinationMapperTest extends FlowTableTest {
         addSwitches();
         Endpoint localEp = localEP().build();
         endpointManager.addEndpoint(localEp);
-        Endpoint remoteEp = remoteEP(remoteNodeId)
-                .setEndpointGroup(eg2)
+        Endpoint remoteEp = remoteEP(FlowTestUtils.remoteNodeId)
+                .setEndpointGroup(FlowTestUtils.eg2)
                 .build();
         endpointManager.addEndpoint(remoteEp);
 
-        policyResolver.addTenant(baseTenant().setContract(
-                ImmutableList.<Contract> of(baseContract(null).build())).build());
+        policyResolver.addTenant(testUtils.baseTenant().setContract(
+                ImmutableList.of(testUtils.baseContract(null).build())).build());
         verifyDMap(remoteEp, localEp);
+    }
+
+    private OfWriter doSync(Map<String, Flow> flows) throws Exception {
+        OfWriter ofWriter = new OfWriter();
+        if (flows != null) {
+            for (String key : flows.keySet()) {
+                Flow flow = flows.get(key);
+                if (flow != null) {
+                    ofWriter.writeFlow(nodeId, flow.getTableId(), flow);
+                }
+            }
+        }
+        flowTable.sync(nodeId, policyResolver.getCurrentPolicy(), ofWriter);
+        return ofWriter;
     }
 
 }
