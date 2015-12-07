@@ -241,7 +241,7 @@ def get_tenant_data():
     return {
         "tenant": [
           {
-            "id": "tenant-dobre",
+            "id": "tenant-red",
             "name": "DockerTenant",
             "forwarding-context": {
               "l2-flood-domain": [
@@ -459,7 +459,7 @@ def get_tenant_data():
 # Main Program
 
 def get_tenant_uri():
-    return "/restconf/config/policy:tenants/policy:tenant/tenant-dobre"
+    return "/restconf/config/policy:tenants/policy:tenant/tenant-red"
 
 def get_tunnel_data_1():
     return {
@@ -532,7 +532,7 @@ def get_endpoint_data():
         }
     ],
     "port-name": "vethl-h36_2",
-    "tenant": "tenant-dobre"
+    "tenant": "tenant-red"
 }
 },
 {
@@ -548,7 +548,7 @@ def get_endpoint_data():
     }
 ],
 "port-name": "vethl-h35_2",
-"tenant": "tenant-dobre"
+"tenant": "tenant-red"
 }
 },
 {
@@ -568,7 +568,7 @@ def get_endpoint_data():
         }
     ],
     "port-name": "vethl-h35_3",
-    "tenant": "tenant-dobre"
+    "tenant": "tenant-red"
 }
 },
 {
@@ -588,7 +588,7 @@ def get_endpoint_data():
         }
     ],
     "port-name": "vethl-h36_3",
-    "tenant": "tenant-dobre"
+    "tenant": "tenant-red"
 }
 },
 {
@@ -608,7 +608,7 @@ def get_endpoint_data():
         }
     ],
     "port-name": "vethl-h36_4",
-    "tenant": "tenant-dobre"
+    "tenant": "tenant-red"
 }
 },
 {
@@ -628,7 +628,7 @@ def get_endpoint_data():
         }
     ],
     "port-name": "vethl-h35_4",
-    "tenant": "tenant-dobre"
+    "tenant": "tenant-red"
 }
 },
 {
@@ -648,7 +648,7 @@ def get_endpoint_data():
         }
     ],
     "port-name": "vethl-h35_5",
-    "tenant": "tenant-dobre"
+    "tenant": "tenant-red"
 }
 },
 {
@@ -668,7 +668,7 @@ def get_endpoint_data():
         }
     ],
     "port-name": "vethl-h36_5",
-    "tenant": "tenant-dobre"
+    "tenant": "tenant-red"
 }
 }]
 
