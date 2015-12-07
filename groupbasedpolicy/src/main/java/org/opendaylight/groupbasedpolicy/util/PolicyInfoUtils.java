@@ -29,9 +29,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.endpoint.identification.constraints.endpoint.identification.constraints.L3EndpointIdentificationConstraintsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.endpoint.identification.constraints.endpoint.identification.constraints.l3.endpoint.identification.constraints.PrefixConstraint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.Rule;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstance;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ClassifierInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.Rule;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.actions.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.actions.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.actions.ActionKey;
@@ -205,7 +205,11 @@ public class PolicyInfoUtils {
     }
 
     private static ClassifierInstance readClassifierInstance(Tenant tenant, ClassifierName instanceName) {
-        for (ClassifierInstance instance : tenant.getSubjectFeatureInstances().getClassifierInstance()) {
+        if (tenant.getPolicy() == null || tenant.getPolicy().getSubjectFeatureInstances() == null
+                || tenant.getPolicy().getSubjectFeatureInstances().getClassifierInstance() == null) {
+            return null;
+        }
+        for (ClassifierInstance instance : tenant.getPolicy().getSubjectFeatureInstances().getClassifierInstance()) {
             if (instance.getName().equals(instanceName)) {
                 return instance;
             }
@@ -214,7 +218,11 @@ public class PolicyInfoUtils {
     }
 
     private static ActionInstance readActionInstance(Tenant tenant, ActionName instanceName) {
-        for (ActionInstance instance : tenant.getSubjectFeatureInstances().getActionInstance()) {
+        if (tenant.getPolicy() == null || tenant.getPolicy().getSubjectFeatureInstances() == null
+                || tenant.getPolicy().getSubjectFeatureInstances().getActionInstance() == null) {
+            return null;
+        }
+        for (ActionInstance instance : tenant.getPolicy().getSubjectFeatureInstances().getActionInstance()) {
             if (instance.getName().equals(instanceName)) {
                 return instance;
             }

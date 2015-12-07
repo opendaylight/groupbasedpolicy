@@ -187,11 +187,19 @@ module resolved-policy {
     container resolved-policies {
         config false;
         list resolved-policy {
-           description "Policies between consumer endpoint groups and provider
-                        endpoint groups";
-           key "consumer-tenant-id consumer-epg-id provider-tenant-id provider-epg-id";
-           uses has-consumer-epg-key;
-           uses has-provider-epg-key;
+            description "Policies between consumer endpoint groups and provider
+                         endpoint groups";
+            key "consumer-tenant-id consumer-epg-id provider-tenant-id provider-epg-id";
+            uses has-consumer-epg-key;
+            uses has-provider-epg-key;
+
+            leaf external-implicit-group {
+                description "If present, denotes which EPG in key is an external implicit group.";
+                type enumeration {
+                    enum consumer-epg;
+                    enum provider-epg;
+                }
+            }
 
             list policy-rule-group-with-endpoint-constraints {
                description "The policy rule groups that apply to a single pair of endpoint

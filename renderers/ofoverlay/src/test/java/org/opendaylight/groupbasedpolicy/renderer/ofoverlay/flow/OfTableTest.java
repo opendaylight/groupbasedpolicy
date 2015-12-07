@@ -46,22 +46,24 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRefBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValueBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.TenantBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ContractBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroupBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L2BridgeDomainBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L2FloodDomainBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L3ContextBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.SubjectFeatureInstancesBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.SubnetBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.ClauseBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Subject;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.SubjectBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.Rule;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.RuleBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ConsumerNamedSelectorBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderNamedSelectorBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstanceBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ClassifierInstanceBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ForwardingContextBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.PolicyBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomainBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomainBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3ContextBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.SubnetBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ContractBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroupBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.SubjectFeatureInstancesBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.ClauseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.Subject;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.SubjectBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.Rule;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.RuleBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ConsumerNamedSelectorBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ProviderNamedSelectorBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstanceBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstanceBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 
@@ -104,91 +106,81 @@ public class OfTableTest {
     }
 
     protected TenantBuilder baseTenant() {
-        return new TenantBuilder()
-            .setId(tid)
-            .setEndpointGroup(ImmutableList.of(new EndpointGroupBuilder()
-                    .setId(eg)
-                    .setNetworkDomain(sub)
-                    .setConsumerNamedSelector(ImmutableList.of(new ConsumerNamedSelectorBuilder()
-                        .setName(new SelectorName("cns1"))
-                        .setContract(ImmutableList.of(cid))
-                        .build()))
-                    .build(),
-                new EndpointGroupBuilder()
-                    .setId(eg2)
-                    .setNetworkDomain(sub2)
-                    .setProviderNamedSelector(ImmutableList.of(new ProviderNamedSelectorBuilder()
-                        .setName(new SelectorName("pns1"))
-                        .setContract(ImmutableList.of(cid))
-                        .build()))
-                    .build()))
-            .setL3Context(ImmutableList.of(new L3ContextBuilder()
-                .setId(l3c)
-                .build()))
-            .setL2BridgeDomain(ImmutableList.of(new L2BridgeDomainBuilder()
-                .setId(bd)
-                .setParent(l3c)
-                .build()))
-            .setL2FloodDomain(ImmutableList.of(new L2FloodDomainBuilder()
-                .setId(fd)
-                .setParent(bd)
-                .build()))
-            .setSubnet(ImmutableList.of(new SubnetBuilder()
-                    .setId(sub2)
-                    .setParent(fd)
-                    .setIpPrefix(new IpPrefix(new Ipv4Prefix("10.0.1.0/24")))
-                    .setVirtualRouterIp(new IpAddress(new Ipv4Address("10.0.1.1")))
-                    .build(),
-                new SubnetBuilder()
-                    .setId(sub)
-                    .setParent(fd)
-                    .setIpPrefix(new IpPrefix(new Ipv4Prefix("10.0.0.0/24")))
-                    .setVirtualRouterIp(new IpAddress(new Ipv4Address("10.0.0.1")))
-                    .build(),
-                new SubnetBuilder()
-                    .setId(sub3)
-                    .setParent(bd)
-                    .setIpPrefix(new IpPrefix(new Ipv4Prefix("10.0.2.0/24")))
-                    .setVirtualRouterIp(new IpAddress(new Ipv4Address("10.0.2.1")))
-                    .build()))
-            .setSubjectFeatureInstances(new SubjectFeatureInstancesBuilder()
-                .setClassifierInstance(ImmutableList.of(new ClassifierInstanceBuilder()
-                     .setName(new ClassifierName("tcp_dst_80"))
-                     .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
-                     .setParameterValue(ImmutableList.of(new ParameterValueBuilder()
-                              .setName(new ParameterName("destport"))
-                              .setIntValue(Long.valueOf(80))
-                              .build(),
-                          new ParameterValueBuilder()
-                             .setName(new ParameterName("proto"))
-                             .setIntValue(Long.valueOf(6))
-                             .build()))
-                     .build(),
-                     new ClassifierInstanceBuilder()
-                     .setName(new ClassifierName("tcp_src_80"))
-                     .setClassifierDefinitionId(Classifier.L4_CL.getId())
-                     .setParameterValue(ImmutableList.of(new ParameterValueBuilder()
-                              .setName(new ParameterName("sourceport"))
-                              .setIntValue(Long.valueOf(80))
-                              .build(),
-                          new ParameterValueBuilder()
-                             .setName(new ParameterName("proto"))
-                             .setIntValue(Long.valueOf(6))
-                             .build()))
-                     .build(),
-                     new ClassifierInstanceBuilder()
-                     .setName(new ClassifierName("ether_type"))
-                     .setClassifierDefinitionId(Classifier.ETHER_TYPE_CL.getId())
-                     .setParameterValue(ImmutableList.of(new ParameterValueBuilder()
-                              .setName(new ParameterName("ethertype"))
-                              .setIntValue(Long.valueOf(FlowUtils.IPv4))
-                              .build()))
-                     .build()))
-                .setActionInstance(ImmutableList.of(new ActionInstanceBuilder()
-                    .setName(new ActionName("allow"))
-                    .setActionDefinitionId(new AllowAction().getId())
-                    .build()))
-                .build());
+        return new TenantBuilder().setId(tid)
+            .setPolicy(new PolicyBuilder()
+                .setEndpointGroup(ImmutableList.of(
+                        new EndpointGroupBuilder().setId(eg)
+                            .setNetworkDomain(sub)
+                            .setConsumerNamedSelector(ImmutableList.of(new ConsumerNamedSelectorBuilder()
+                                .setName(new SelectorName("cns1")).setContract(ImmutableList.of(cid)).build()))
+                            .build(),
+                        new EndpointGroupBuilder().setId(eg2)
+                            .setNetworkDomain(sub2)
+                            .setProviderNamedSelector(ImmutableList.of(new ProviderNamedSelectorBuilder()
+                                .setName(new SelectorName("pns1")).setContract(ImmutableList.of(cid)).build()))
+                            .build()))
+                .setSubjectFeatureInstances(
+                        new SubjectFeatureInstancesBuilder()
+                            .setClassifierInstance(
+                                    ImmutableList
+                                        .of(new ClassifierInstanceBuilder().setName(new ClassifierName("tcp_dst_80"))
+                                            .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
+                                            .setParameterValue(ImmutableList.of(
+                                                    new ParameterValueBuilder().setName(new ParameterName("destport"))
+                                                        .setIntValue(Long.valueOf(80))
+                                                        .build(),
+                                                    new ParameterValueBuilder().setName(new ParameterName("proto"))
+                                                        .setIntValue(Long.valueOf(6))
+                                                        .build()))
+                                            .build(), new ClassifierInstanceBuilder()
+                                                .setName(new ClassifierName("tcp_src_80"))
+                                                .setClassifierDefinitionId(Classifier.L4_CL.getId())
+                                                .setParameterValue(ImmutableList.of(
+                                                        new ParameterValueBuilder()
+                                                            .setName(new ParameterName("sourceport"))
+                                                            .setIntValue(Long.valueOf(80))
+                                                            .build(),
+                                                        new ParameterValueBuilder().setName(new ParameterName("proto"))
+                                                            .setIntValue(Long.valueOf(6))
+                                                            .build()))
+                                                .build(),
+                                                new ClassifierInstanceBuilder()
+                                                    .setName(new ClassifierName("ether_type"))
+                                                    .setClassifierDefinitionId(Classifier.ETHER_TYPE_CL.getId())
+                                                    .setParameterValue(ImmutableList.of(new ParameterValueBuilder()
+                                                        .setName(new ParameterName("ethertype"))
+                                                        .setIntValue(Long.valueOf(FlowUtils.IPv4))
+                                                        .build()))
+                                                    .build()))
+                            .setActionInstance(
+                                    ImmutableList.of(new ActionInstanceBuilder().setName(new ActionName("allow"))
+                                        .setActionDefinitionId(new AllowAction().getId())
+                                        .build()))
+                            .build())
+                .build())
+            .setForwardingContext(
+                    new ForwardingContextBuilder()
+                        .setL3Context(ImmutableList.of(new L3ContextBuilder().setId(l3c).build()))
+                        .setL2BridgeDomain(
+                                ImmutableList.of(new L2BridgeDomainBuilder().setId(bd).setParent(l3c).build()))
+                        .setL2FloodDomain(ImmutableList.of(new L2FloodDomainBuilder().setId(fd).setParent(bd).build()))
+                        .setSubnet(ImmutableList.of(
+                                new SubnetBuilder().setId(sub2)
+                                    .setParent(fd)
+                                    .setIpPrefix(new IpPrefix(new Ipv4Prefix("10.0.1.0/24")))
+                                    .setVirtualRouterIp(new IpAddress(new Ipv4Address("10.0.1.1")))
+                                    .build(),
+                                new SubnetBuilder().setId(sub)
+                                    .setParent(fd)
+                                    .setIpPrefix(new IpPrefix(new Ipv4Prefix("10.0.0.0/24")))
+                                    .setVirtualRouterIp(new IpAddress(new Ipv4Address("10.0.0.1")))
+                                    .build(),
+                                new SubnetBuilder().setId(sub3)
+                                    .setParent(bd)
+                                    .setIpPrefix(new IpPrefix(new Ipv4Prefix("10.0.2.0/24")))
+                                    .setVirtualRouterIp(new IpAddress(new Ipv4Address("10.0.2.1")))
+                                    .build()))
+                        .build());
     }
 
     protected ContractBuilder baseContract(List<Subject> subjects) {

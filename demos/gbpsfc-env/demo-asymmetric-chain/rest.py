@@ -237,206 +237,210 @@ def get_service_function_paths_data():
 
 def get_tenant_data():
     return {
-    "tenant": [
-      {
-        "id": "tenant-dobre",
-        "l2-flood-domain": [
+        "tenant": [
           {
-            "id": "flood-domain-1",
-            "parent": "bridge-domain1"
-          },
-          {
-            "id": "flood-domain-2",
-            "parent": "bridge-domain1"
-          }
-        ],
-        "name": "DockerTenant",
-        "l3-context": [
-          {
-            "id": "l3-context-vrf-red"
-          }
-        ],
-        "l2-bridge-domain": [
-          {
-            "id": "bridge-domain1",
-            "parent": "l3-context-vrf-red"
-          }
-        ],
-        "subnet": [
-          {
-            "id": "subnet-10.0.36.0/24",
-            "virtual-router-ip": "10.0.36.1",
-            "parent": "flood-domain-2",
-            "ip-prefix": "10.0.36.1/24"
-          },
-          {
-            "id": "subnet-10.0.35.0/24",
-            "virtual-router-ip": "10.0.35.1",
-            "parent": "flood-domain-1",
-            "ip-prefix": "10.0.35.1/24"
-          }
-        ],
-        "endpoint-group": [
-          {
-            "id": "webservers",
-            "name" : "webservers",
-            "provider-named-selector": [
-              {
-                "name": "webservers-clients-icmp-http-contract",
-                "contract": [
-                  "icmp-http-contract"
-                ]
-              }
-            ]
-          },
-          {
-            "id": "clients",
-            "name" : "clients",
-            "consumer-named-selector": [
-              {
-                "name": "webservers-clients-icmp-http-contract",
-                "contract": [
-                  "icmp-http-contract"
-                ]
-              }
-            ]
-          }
-        ],
-        "subject-feature-instances": {
-          "classifier-instance": [
-            {
-              "name": "icmp",
-              "classifier-definition-id": "Classifier-IP-Protocol",
-              "parameter-value": [
+            "id": "tenant-dobre",
+            "name": "DockerTenant",
+            "forwarding-context": {
+              "l2-flood-domain": [
                 {
-                  "name": "proto",
-                  "int-value": 1
-                }
-              ]
-            },
-            {
-              "name": "http-dest",
-              "classifier-definition-id": "Classifier-L4",
-              "parameter-value": [
-                {
-                  "int-value": "6",
-                  "name": "proto"
+                  "id": "flood-domain-1",
+                  "parent": "bridge-domain1"
                 },
                 {
-                  "int-value": "80",
-                  "name": "destport"
+                  "id": "flood-domain-2",
+                  "parent": "bridge-domain1"
                 }
-              ]
-            },
-            {
-              "name": "http-src",
-              "classifier-definition-id": "Classifier-L4",
-              "parameter-value": [
+              ],
+              "l3-context": [
                 {
-                  "int-value": "6",
-                  "name": "proto"
+                  "id": "l3-context-vrf-red"
+                }
+              ],
+              "l2-bridge-domain": [
+                {
+                  "id": "bridge-domain1",
+                  "parent": "l3-context-vrf-red"
+                }
+              ],
+              "subnet": [
+                {
+                  "id": "subnet-10.0.36.0/24",
+                  "virtual-router-ip": "10.0.36.1",
+                  "parent": "flood-domain-2",
+                  "ip-prefix": "10.0.36.1/24"
                 },
                 {
-                  "int-value": "80",
-                  "name": "sourceport"
-                }
-              ]
-            }
-          ],
-          "action-instance": [
-            {
-              "name": "chain1",
-              "action-definition-id": "Action-Chain",
-              "parameter-value": [
-                {
-                  "name": "sfc-chain-name",
-                  "string-value": "SFCGBP"
+                  "id": "subnet-10.0.35.0/24",
+                  "virtual-router-ip": "10.0.35.1",
+                  "parent": "flood-domain-1",
+                  "ip-prefix": "10.0.35.1/24"
                 }
               ]
             },
-            {
-              "name": "allow1",
-              "action-definition-id": "Action-Allow"
-            }
-          ]
-        },
-        "contract": [
-          {
-            "id": "icmp-http-contract",
-            "subject": [
-              {
-                "name": "icmp-subject",
-                "rule": [
+            "policy": {
+              "endpoint-group": [
+                {
+                  "id": "webservers",
+                  "name": "webservers",
+                  "provider-named-selector": [
+                    {
+                      "name": "webservers-clients-icmp-http-contract",
+                      "contract": [
+                        "icmp-http-contract"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "clients",
+                  "name": "clients",
+                  "consumer-named-selector": [
+                    {
+                      "name": "webservers-clients-icmp-http-contract",
+                      "contract": [
+                        "icmp-http-contract"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "subject-feature-instances": {
+                "classifier-instance": [
                   {
-                    "name": "allow-icmp-rule",
-                    "order" : 0,
-                    "classifier-ref": [
+                    "name": "icmp",
+                    "classifier-definition-id": "Classifier-IP-Protocol",
+                    "parameter-value": [
                       {
-                        "name": "icmp",
-			"instance-name" : "icmp"
-                      }
-                    ],
-                    "action-ref": [
-                      {
-                        "name": "allow1",
-                        "order": 0
-                      }
-                    ]
-                  }
-                ]
-              },
-              {
-                "name": "http-subject",
-                "rule": [
-                  {
-                    "name": "http-chain-rule",
-                    "classifier-ref": [
-                      {
-                        "name": "http-dest",
-                        "instance-name" : "http-dest",
-                        "direction": "in"
-                      }
-                    ],
-                    "action-ref": [
-                      {
-                        "name": "chain1",
-                        "order": 0
+                        "name": "proto",
+                        "int-value": 1
                       }
                     ]
                   },
                   {
-                    "name": "http-out-rule",
-                    "classifier-ref": [
+                    "name": "http-dest",
+                    "classifier-definition-id": "Classifier-L4",
+                    "parameter-value": [
                       {
-                        "name": "http-src",
-                        "instance-name" : "http-src",
-			"direction": "out"
+                        "int-value": "6",
+                        "name": "proto"
+                      },
+                      {
+                        "int-value": "80",
+                        "name": "destport"
                       }
-                    ],
-                    "action-ref": [
+                    ]
+                  },
+                  {
+                    "name": "http-src",
+                    "classifier-definition-id": "Classifier-L4",
+                    "parameter-value": [
                       {
-                        "name": "allow1",
-                        "order": 0
+                        "int-value": "6",
+                        "name": "proto"
+                      },
+                      {
+                        "int-value": "80",
+                        "name": "sourceport"
                       }
                     ]
                   }
+                ],
+                "action-instance": [
+                  {
+                    "name": "chain1",
+                    "action-definition-id": "Action-Chain",
+                    "parameter-value": [
+                      {
+                        "name": "sfc-chain-name",
+                        "string-value": "SFCGBP"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "allow1",
+                    "action-definition-id": "Action-Allow"
+                  }
                 ]
-              }
-            ],
-            "clause": [
-              {
-                "name": "icmp-http-clause",
-                "subject-refs": [
-                  "icmp-subject",
-                  "http-subject"
-                ]
-              }
-            ]
+              },
+              "contract": [
+                {
+                  "id": "icmp-http-contract",
+                  "subject": [
+                    {
+                      "name": "icmp-subject",
+                      "rule": [
+                        {
+                          "name": "allow-icmp-rule",
+                          "order": 0,
+                          "classifier-ref": [
+                            {
+                              "name": "icmp",
+                              "instance-name": "icmp"
+                            }
+                          ],
+                          "action-ref": [
+                            {
+                              "name": "allow1",
+                              "order": 0
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "http-subject",
+                      "rule": [
+                        {
+                          "name": "http-chain-rule",
+                          "classifier-ref": [
+                            {
+                              "name": "http-dest",
+                              "instance-name": "http-dest",
+                              "direction": "in"
+                            }
+                          ],
+                          "action-ref": [
+                            {
+                              "name": "chain1",
+                              "order": 0
+                            }
+                          ]
+                        },
+                        {
+                          "name": "http-out-rule",
+                          "classifier-ref": [
+                            {
+                              "name": "http-src",
+                              "instance-name": "http-src",
+                              "direction": "out"
+                            }
+                          ],
+                          "action-ref": [
+                            {
+                              "name": "allow1",
+                              "order": 0
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ],
+                  "clause": [
+                    {
+                      "name": "icmp-http-clause",
+                      "subject-refs": [
+                        "icmp-subject",
+                        "http-subject"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
           }
         ]
-      }
-    ]
-}
+    }
 
 # Main definition - constants
 

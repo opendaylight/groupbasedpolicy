@@ -25,16 +25,17 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup.IntraGroupPolicy;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Clause;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Subject;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.Rule;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ConsumerNamedSelector;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderNamedSelector;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstance;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ClassifierInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Policy;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.Contract;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup.IntraGroupPolicy;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.Clause;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.Subject;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.Rule;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ConsumerNamedSelector;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ProviderNamedSelector;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -74,11 +75,16 @@ public final class PolicyAssert {
     public static void assertContractCount(DataBroker dataBroker, String tenantId, int expectedCount) throws Exception {
         Optional<Tenant> tenant = ConfigDataStoreReader.readTenant(dataBroker, tenantId);
         assertTrue(tenant.isPresent());
-        List<Contract> contracts = tenant.get().getContract();
-        if (contracts != null) {
-            assertEquals(expectedCount, tenant.get().getContract().size());
-        } else {
+        Policy policy = tenant.get().getPolicy();
+        if (policy == null) {
             assertEquals(expectedCount, 0);
+        } else {
+            List<Contract> contracts = policy.getContract();
+            if (contracts != null) {
+                assertEquals(expectedCount, policy.getContract().size());
+            } else {
+                assertEquals(expectedCount, 0);
+            }
         }
     }
 
@@ -148,11 +154,16 @@ public final class PolicyAssert {
             throws Exception {
         Optional<Tenant> tenant = ConfigDataStoreReader.readTenant(dataBroker, tenantId);
         assertTrue(tenant.isPresent());
-        List<EndpointGroup> endpointGroups = tenant.get().getEndpointGroup();
-        if (endpointGroups != null) {
-            assertEquals(expectedCount, endpointGroups.size());
-        } else {
+        Policy policy = tenant.get().getPolicy();
+        if (policy == null) {
             assertEquals(expectedCount, 0);
+        } else {
+            List<EndpointGroup> endpointGroups = policy.getEndpointGroup();
+            if (endpointGroups != null) {
+                assertEquals(expectedCount, endpointGroups.size());
+            } else {
+                assertEquals(expectedCount, 0);
+            }
         }
     }
 

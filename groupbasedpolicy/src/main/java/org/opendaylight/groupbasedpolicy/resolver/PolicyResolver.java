@@ -40,9 +40,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.SubjectFeatureInstances;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstance;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ClassifierInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.SubjectFeatureInstances;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.ResolvedPolicies;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.ResolvedPoliciesBuilder;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
@@ -213,8 +213,8 @@ public class PolicyResolver implements PolicyValidatorRegistrar, AutoCloseable {
                 }
                 LOG.debug("Resolving of tenant inheritance and policy triggered by a change in tenant {}", tenantId);
                 Tenant t = InheritanceUtils.resolveTenant(result.get());
-                SubjectFeatureInstances subjectFeatureInstances = t.getSubjectFeatureInstances();
-                if (subjectFeatureInstances != null) {
+                if (t.getPolicy() != null && t.getPolicy().getSubjectFeatureInstances() != null) {
+                    SubjectFeatureInstances subjectFeatureInstances = t.getPolicy().getSubjectFeatureInstances();
                     // TODO log and remove invalid action instances
                     if (actionInstancesAreValid(subjectFeatureInstances.getActionInstance())
                             && classifierInstancesAreValid(subjectFeatureInstances.getClassifierInstance())) {

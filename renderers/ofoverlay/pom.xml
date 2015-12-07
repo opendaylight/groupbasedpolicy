@@ -66,7 +66,6 @@
     <dependency>
       <groupId>org.opendaylight.controller</groupId>
       <artifactId>sal-binding-broker-impl</artifactId>
-      <version>${mdsal.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
@@ -81,35 +80,12 @@
       separate copies, we just copy the file(s) needed in order to run the test). -->
     <plugins>
       <plugin>
-        <artifactId>maven-resources-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>copy-resources</id>
-            <!-- here the phase you need -->
-            <phase>validate</phase>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>src/test/java/org/opendaylight/groupbasedpolicy/resolver</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>../../groupbasedpolicy/src/test/java/org/opendaylight/groupbasedpolicy/resolver</directory>
-                  <filtering>true</filtering>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
         <extensions>true</extensions>
         <configuration>
           <instructions>
             <Export-Package>
-              org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf,
               org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.*
             </Export-Package>
           </instructions>

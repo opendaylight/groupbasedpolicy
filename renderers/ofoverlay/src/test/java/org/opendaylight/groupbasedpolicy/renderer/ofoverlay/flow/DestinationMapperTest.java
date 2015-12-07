@@ -50,7 +50,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfigBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.TunnelBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.PolicyBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.Contract;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv4Match;
@@ -289,8 +290,8 @@ public class DestinationMapperTest extends FlowTableTest {
         endpointManager.addEndpoint(remoteEp);
 
 
-        ctx.addTenant(baseTenant().setContract(
-                ImmutableList.<Contract> of(baseContract(null).build())).build());
+        ctx.addTenant(baseTenant().setPolicy(new PolicyBuilder(baseTenant().getPolicy()).setContract(
+                ImmutableList.<Contract> of(baseContract(null).build())).build()).build());
         verifyDMap(remoteEp, localEp);
     }
 
@@ -304,8 +305,8 @@ public class DestinationMapperTest extends FlowTableTest {
                 .build();
         endpointManager.addEndpoint(remoteEp);
 
-        ctx.addTenant(baseTenant().setContract(
-                ImmutableList.<Contract> of(baseContract(null).build())).build());
+        ctx.addTenant(baseTenant().setPolicy(new PolicyBuilder(baseTenant().getPolicy()).setContract(
+                ImmutableList.<Contract> of(baseContract(null).build())).build()).build());
         verifyDMap(remoteEp, localEp);
     }
 

@@ -24,15 +24,17 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubnetId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.NetworkDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L2BridgeDomain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L2FloodDomain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L3Context;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.SubjectFeatureInstances;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Subnet;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstance;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ClassifierInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ForwardingContext;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Policy;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3Context;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.Contract;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.SubjectFeatureInstances;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
@@ -57,50 +59,31 @@ public class IndexedTenant {
     private final Map<ActionName, ActionInstance> actions =
             new HashMap<>();
     private final Map<String, Set<SubnetId>> subnetMap = new HashMap<>();
-    
+
     public IndexedTenant(Tenant tenant) {
-        super();
         this.tenant = tenant;
         this.hashCode = tenant.hashCode();
-        
-        if (tenant.getEndpointGroup() != null) {
-            for (EndpointGroup eg : tenant.getEndpointGroup()) {
+        if (tenant.getPolicy() != null) {
+            processPolicy(tenant.getPolicy());
+        }
+        if (tenant.getForwardingContext() != null) {
+            processForwardingContext(tenant.getForwardingContext());
+        }
+    }
+
+    private void processPolicy(Policy policy) {
+        if (policy.getEndpointGroup() != null) {
+            for (EndpointGroup eg : policy.getEndpointGroup()) {
                 endpointGroups.put(eg.getId(), eg);
             }
         }
-        if (tenant.getContract() != null) {
-            for (Contract c : tenant.getContract()) {
+        if (policy.getContract() != null) {
+            for (Contract c : policy.getContract()) {
                 contracts.put(c.getId(), c);
             }
         }
-        if (tenant.getL3Context() != null) {
-            for (L3Context c : tenant.getL3Context()) {
-                networkDomains.put(c.getId().getValue(), c);
-            }
-        }
-        if (tenant.getL2BridgeDomain() != null) {
-            for (L2BridgeDomain c : tenant.getL2BridgeDomain()) {
-                networkDomains.put(c.getId().getValue(), c);
-            }
-        }
-        if (tenant.getL2FloodDomain() != null) {
-            for (L2FloodDomain c : tenant.getL2FloodDomain()) {
-                networkDomains.put(c.getId().getValue(), c);
-            }
-        }
-        if (tenant.getSubnet() != null) {
-            for (Subnet s : tenant.getSubnet()) {
-                networkDomains.put(s.getId().getValue(), s);
-                Set<SubnetId> sset = subnetMap.get(s.getParent().getValue());
-                if (sset == null) {
-                    subnetMap.put(s.getParent().getValue(), 
-                                  sset = new HashSet<SubnetId>());
-                }
-                sset.add(s.getId());
-            }
-        }
-        if (tenant.getSubjectFeatureInstances() != null) {
-            SubjectFeatureInstances sfi = tenant.getSubjectFeatureInstances();
+        if (policy.getSubjectFeatureInstances() != null) {
+            SubjectFeatureInstances sfi = policy.getSubjectFeatureInstances();
             if (sfi.getClassifierInstance() != null) {
                 for (ClassifierInstance ci : sfi.getClassifierInstance()) {
                     classifiers.put(ci.getName(), ci);
@@ -110,6 +93,34 @@ public class IndexedTenant {
                 for (ActionInstance action : sfi.getActionInstance()) {
                     actions.put(action.getName(), action);
                 }
+            }
+        }
+    }
+
+    private void processForwardingContext(ForwardingContext fwCtx) {
+        if (fwCtx.getL3Context() != null) {
+            for (L3Context c : fwCtx.getL3Context()) {
+                networkDomains.put(c.getId().getValue(), c);
+            }
+        }
+        if (fwCtx.getL2BridgeDomain() != null) {
+            for (L2BridgeDomain c : fwCtx.getL2BridgeDomain()) {
+                networkDomains.put(c.getId().getValue(), c);
+            }
+        }
+        if (fwCtx.getL2FloodDomain() != null) {
+            for (L2FloodDomain c : fwCtx.getL2FloodDomain()) {
+                networkDomains.put(c.getId().getValue(), c);
+            }
+        }
+        if (fwCtx.getSubnet() != null) {
+            for (Subnet s : fwCtx.getSubnet()) {
+                networkDomains.put(s.getId().getValue(), s);
+                Set<SubnetId> sset = subnetMap.get(s.getParent().getValue());
+                if (sset == null) {
+                    subnetMap.put(s.getParent().getValue(), sset = new HashSet<SubnetId>());
+                }
+                sset.add(s.getId());
             }
         }
     }

@@ -30,7 +30,7 @@ module ui-backend {
         }
         leaf consumer-endpoint-group-id {
             type leafref {
-                path "/gbp-policy:tenants/gbp-policy:tenant/gbp-policy:endpoint-group/gbp-policy:id";
+                path "/gbp-policy:tenants/gbp-policy:tenant/gbp-policy:policy/gbp-policy:endpoint-group/gbp-policy:id";
             }
         }
     }
@@ -43,7 +43,7 @@ module ui-backend {
         }
         leaf provider-endpoint-group-id {
             type leafref {
-                path "/gbp-policy:tenants/gbp-policy:tenant/gbp-policy:endpoint-group/gbp-policy:id";
+                path "/gbp-policy:tenants/gbp-policy:tenant/gbp-policy:policy/gbp-policy:endpoint-group/gbp-policy:id";
             }
         }
     }

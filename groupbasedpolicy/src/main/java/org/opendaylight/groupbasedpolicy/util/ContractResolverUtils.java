@@ -22,13 +22,14 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.ProviderSelectionRelator;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.target.selector.QualityMatcher;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Target;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ConsumerNamedSelector;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ConsumerTargetSelector;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderNamedSelector;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderTargetSelector;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Policy;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.Contract;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.Target;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ConsumerNamedSelector;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ConsumerTargetSelector;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ProviderNamedSelector;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ProviderTargetSelector;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
@@ -58,9 +59,11 @@ class ContractResolverUtils {
             Table<EgKey, EgKey, List<ContractMatch>> contractMatches, Tenant tenant) {
         // For each endpoint group, match consumer selectors
         // against contracts to get a set of matching consumer selectors
-        if (tenant.getEndpointGroup() == null)
+        Policy policy = tenant.getPolicy();
+        if (policy == null || policy.getEndpointGroup() == null) {
             return;
-        for (EndpointGroup group : tenant.getEndpointGroup()) {
+        }
+        for (EndpointGroup group : policy.getEndpointGroup()) {
             List<ConsumerContractMatch> r = matchConsumerContracts(tenant, group);
             for (ConsumerContractMatch ccm : r) {
                 List<ConsumerContractMatch> cms = consumerMatches.get(tenant.getId(), ccm.contract.getId());
@@ -74,7 +77,7 @@ class ContractResolverUtils {
 
         // Match provider selectors, and check each match for a corresponding
         // consumer selector match.
-        for (EndpointGroup group : tenant.getEndpointGroup()) {
+        for (EndpointGroup group : policy.getEndpointGroup()) {
             List<ContractMatch> matches = matchProviderContracts(tenant, group, consumerMatches);
             for (ContractMatch cm : matches) {
                 EgKey consumerKey = new EgKey(cm.consumerTenant.getId(), cm.consumer.getId());
@@ -93,15 +96,21 @@ class ContractResolverUtils {
     private static List<ConsumerContractMatch> matchConsumerContracts(Tenant tenant,
             EndpointGroup consumer) {
         List<ConsumerContractMatch> matches = new ArrayList<>();
+        Policy policy = tenant.getPolicy();
+        if (policy == null || policy.getContract() == null) {
+            return matches;
+        }
         if (consumer.getConsumerNamedSelector() != null) {
             for (ConsumerNamedSelector cns : consumer.getConsumerNamedSelector()) {
-                if (cns.getContract() == null)
+                if (cns.getContract() == null) {
                     continue;
+                }
                 for (ContractId contractId : cns.getContract()) {
                     Contract contract =
                             TenantUtils.findContract(tenant, contractId);
-                    if (contract == null)
+                    if (contract == null) {
                         continue;
+                    }
                     matches.add(new ConsumerContractMatch(tenant, contract,
                             tenant, consumer,
                             cns));
@@ -110,11 +119,10 @@ class ContractResolverUtils {
         }
         if (consumer.getConsumerTargetSelector() != null) {
             for (ConsumerTargetSelector cts : consumer.getConsumerTargetSelector()) {
-                if (tenant.getContract() == null)
-                    continue;
-                for (Contract contract : tenant.getContract()) {
-                    if (contract.getTarget() == null)
+                for (Contract contract : policy.getContract()) {
+                    if (contract.getTarget() == null) {
                         continue;
+                    }
                     for (Target t : contract.getTarget()) {
                         boolean match = true;
                         if (cts.getQualityMatcher() != null) {
@@ -150,10 +158,15 @@ class ContractResolverUtils {
     private static List<ContractMatch> matchProviderContracts(Tenant tenant, EndpointGroup provider,
             Table<TenantId, ContractId, List<ConsumerContractMatch>> consumerMatches) {
         List<ContractMatch> matches = new ArrayList<>();
+        Policy policy = tenant.getPolicy();
+        if (policy == null || policy.getContract() == null) {
+            return matches;
+        }
         if (provider.getProviderNamedSelector() != null) {
             for (ProviderNamedSelector pns : provider.getProviderNamedSelector()) {
-                if (pns.getContract() == null)
+                if (pns.getContract() == null) {
                     continue;
+                }
                 for (ContractId contractId : pns.getContract()) {
                     Contract c = TenantUtils.findContract(tenant, contractId);
                     if (c == null)
@@ -165,9 +178,7 @@ class ContractResolverUtils {
         }
         if (provider.getProviderTargetSelector() != null) {
             for (ProviderTargetSelector pts : provider.getProviderTargetSelector()) {
-                if (tenant.getContract() == null)
-                    continue;
-                for (Contract c : tenant.getContract()) {
+                for (Contract c : policy.getContract()) {
                     if (c.getTarget() == null)
                         continue;
                     for (Target t : c.getTarget()) {
@@ -196,8 +207,9 @@ class ContractResolverUtils {
             List<ConsumerContractMatch> cMatches,
             Tenant tenant, EndpointGroup provider,
             ProviderSelectionRelator relator) {
-        if (cMatches == null)
+        if (cMatches == null) {
             return;
+        }
         for (ConsumerContractMatch cMatch : cMatches) {
             matches.add(new ContractMatch(cMatch, tenant, provider, relator));
         }

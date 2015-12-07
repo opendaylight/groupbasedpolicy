@@ -23,13 +23,13 @@ import org.opendaylight.groupbasedpolicy.util.PolicyResolverUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Target;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ConsumerNamedSelector;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ConsumerTargetSelector;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderNamedSelector;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderTargetSelector;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.Contract;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.Target;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ConsumerNamedSelector;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ConsumerTargetSelector;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ProviderNamedSelector;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ProviderTargetSelector;
 
 import com.google.common.collect.Table;
 
@@ -41,16 +41,19 @@ public class PolicyResolverUtilsTest {
         HashSet<IndexedTenant> tenants = new HashSet<IndexedTenant>();
         tenants.add(indexedTenant);
         Tenant tenant = mock(Tenant.class);
+        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Policy policy =
+                mock(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Policy.class);
+        when(tenant.getPolicy()).thenReturn(policy);
         when(indexedTenant.getTenant()).thenReturn(tenant);
 
         EndpointGroup endpointGroup = mock(EndpointGroup.class);
-        when(tenant.getEndpointGroup()).thenReturn(Arrays.asList(endpointGroup));
+        when(policy.getEndpointGroup()).thenReturn(Arrays.asList(endpointGroup));
         ConsumerNamedSelector cns = mock(ConsumerNamedSelector.class);
         when(endpointGroup.getConsumerNamedSelector()).thenReturn(Arrays.asList(cns));
         ContractId contractId = mock(ContractId.class);
         when(cns.getContract()).thenReturn(Arrays.asList(contractId));
         Contract contract = mock(Contract.class);
-        when(tenant.getContract()).thenReturn(Arrays.asList(contract));
+        when(policy.getContract()).thenReturn(Arrays.asList(contract));
         when(contract.getId()).thenReturn(contractId);
         TenantId tenantId = mock(TenantId.class);
         when(tenant.getId()).thenReturn(tenantId);

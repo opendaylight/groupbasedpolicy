@@ -71,7 +71,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.napt.translations.fields.NaptTranslations;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.napt.translations.fields.napt.translations.NaptTranslation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L2BridgeDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ForwardingContext;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
@@ -571,11 +572,13 @@ public class EndpointManagerTest {
         Optional<Tenant> optional = mock(Optional.class);
         when(checkedFuture.checkedGet()).thenReturn(optional);
         Tenant tenant = mock(Tenant.class);
+        ForwardingContext fwCtx = mock(ForwardingContext.class);
+        when(tenant.getForwardingContext()).thenReturn(fwCtx);
         when(optional.isPresent()).thenReturn(true);
         when(optional.get()).thenReturn(tenant);
 
         L2BridgeDomain l2BridgeDomain = mock(L2BridgeDomain.class);
-        when(tenant.getL2BridgeDomain()).thenReturn(Collections.singletonList(l2BridgeDomain));
+        when(fwCtx.getL2BridgeDomain()).thenReturn(Collections.singletonList(l2BridgeDomain));
         L2BridgeDomainId l2BridgeDomainId = mock(L2BridgeDomainId.class);
         when(l2BridgeDomain.getId()).thenReturn(l2BridgeDomainId);
         String l2bdValue = UUID.randomUUID().toString();

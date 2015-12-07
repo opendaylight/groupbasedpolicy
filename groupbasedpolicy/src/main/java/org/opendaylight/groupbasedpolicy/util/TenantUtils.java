@@ -21,16 +21,16 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.Tenants;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.TenantKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Clause;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Subject;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Target;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.Rule;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ConsumerNamedSelector;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ConsumerTargetSelector;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderNamedSelector;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderTargetSelector;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.Contract;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.Clause;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.Subject;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.Target;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.Rule;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ConsumerNamedSelector;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ConsumerTargetSelector;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ProviderNamedSelector;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ProviderTargetSelector;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.collect.ComparisonChain;
@@ -88,7 +88,7 @@ public class TenantUtils {
     public static InstanceIdentifier<Tenant> tenantIid(TenantId tenantId) {
         return tenantIid(new TenantKey(tenantId));
     }
-    
+
     /**
      * Find a contract with a specified ID within a tenant
      * @param tenant the {@link Tenant} to search
@@ -97,8 +97,8 @@ public class TenantUtils {
      */
     public static Contract findContract(Tenant tenant, 
                                         ContractId contractId) {
-        if (tenant.getContract() != null) {
-            for (Contract c : tenant.getContract()) {
+        if (tenant.getPolicy() != null && tenant.getPolicy().getContract() != null) {
+            for (Contract c : tenant.getPolicy().getContract()) {
                 if (contractId.equals(c.getId())) {
                     return c;
                 }
@@ -160,7 +160,7 @@ public class TenantUtils {
         }
         return null;
     }
-    
+
     /**
      * Find an endpoint group with a specified ID within a tenant
      * @param tenant the {@link Tenant} to search
@@ -169,8 +169,8 @@ public class TenantUtils {
      */
     public static EndpointGroup findEndpointGroup(Tenant tenant, 
                                                   EndpointGroupId egId) {
-        if (tenant.getEndpointGroup() != null) {
-            for (EndpointGroup eg : tenant.getEndpointGroup()) {
+        if (tenant.getPolicy() != null && tenant.getPolicy().getEndpointGroup() != null) {
+            for (EndpointGroup eg : tenant.getPolicy().getEndpointGroup()) {
                 if (egId.equals(eg.getId())) {
                     return eg;
                 }
@@ -195,7 +195,7 @@ public class TenantUtils {
         }
         return null;
     }
-    
+
     /**
      * Find a consumer target selector in an endpoint group
      * @param eg the {@link EndpointGroup} to search
@@ -229,7 +229,7 @@ public class TenantUtils {
         }
         return null;
     }
-    
+
     /**
      * Find a provider target selector in an endpoint group
      * @param eg the {@link EndpointGroup} to search
@@ -245,5 +245,5 @@ public class TenantUtils {
             }
         }
         return null;
-    }    
+    }
 }

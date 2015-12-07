@@ -55,14 +55,15 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.conditions.Condition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.conditions.ConditionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.TenantBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ContractBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.ClauseBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Subject;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.ConsumerMatchersBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.clause.ProviderMatchersBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.Rule;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.RuleBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.PolicyBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.Contract;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ContractBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.ClauseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.Subject;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.clause.ConsumerMatchersBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.clause.ProviderMatchersBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.Rule;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.RuleBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._4.match.TcpMatch;
@@ -121,8 +122,8 @@ public class PolicyEnforcerTest extends FlowTableTest {
         endpointManager.addEndpoint(ep1);
         Endpoint ep2 = localEP().setMacAddress(new MacAddress("00:00:00:00:00:02")).build();
         endpointManager.addEndpoint(ep2);
-        ctx.addTenant(baseTenant().setContract(ImmutableList.<Contract>of(baseContract(null).build()))
-            .build());
+        ctx.addTenant(baseTenant().setPolicy(new PolicyBuilder(baseTenant().getPolicy())
+            .setContract(ImmutableList.<Contract>of(baseContract(null).build())).build()).build());
 
         OfWriter fm = dosync(null);
         assertNotEquals(0, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())
@@ -196,8 +197,8 @@ public class PolicyEnforcerTest extends FlowTableTest {
         endpointManager.addEndpoint(ep1);
         Endpoint ep2 = localEP().setMacAddress(new MacAddress("00:00:00:00:00:02")).setEndpointGroup(eg2).build();
         endpointManager.addEndpoint(ep2);
-        ctx.addTenant(baseTenant().setContract(ImmutableList.<Contract>of(baseContract(subjects).build()))
-            .build());
+        ctx.addTenant(baseTenant().setPolicy(new PolicyBuilder(baseTenant().getPolicy())
+            .setContract(ImmutableList.<Contract>of(baseContract(subjects).build())).build()).build());
 
         OfWriter fm = dosync(null);
         assertNotEquals(0, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())
@@ -260,7 +261,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
             .build();
         endpointManager.addEndpoint(ep2);
 
-        TenantBuilder tb = baseTenant().setContract(
+        TenantBuilder tb = baseTenant().setPolicy(new PolicyBuilder(baseTenant().getPolicy()).setContract(
                 ImmutableList.of(new ContractBuilder().setId(cid)
                     .setSubject(ImmutableList.of(baseSubject(Direction.Out).build()))
                     .setClause(
@@ -281,7 +282,7 @@ public class PolicyEnforcerTest extends FlowTableTest {
                                                     .setMatchType(MatchType.All)
                                                     .build())).build())
                                 .build()))
-                    .build()));
+                    .build())).build());
         ctx.addTenant(tb.build());
 
         PolicyInfo policy = ctx.getCurrentPolicy();

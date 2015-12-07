@@ -43,33 +43,35 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinitionKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.TenantKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Contract;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ContractKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroup;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.EndpointGroupKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L2BridgeDomain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L2BridgeDomainKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L2FloodDomain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L2FloodDomainKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L3Context;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.L3ContextKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.SubjectFeatureInstances;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Subnet;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.SubnetKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Clause;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.ClauseKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.Subject;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.SubjectKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.Rule;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.contract.subject.RuleKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ConsumerNamedSelector;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ConsumerNamedSelectorKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderNamedSelector;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.endpoint.group.ProviderNamedSelectorKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstance;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ActionInstanceKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ClassifierInstance;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.subject.feature.instances.ClassifierInstanceKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ForwardingContext;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Policy;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomainKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomainKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3Context;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3ContextKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.SubnetKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.Contract;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ContractKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroupKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.SubjectFeatureInstances;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.Clause;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.ClauseKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.Subject;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.SubjectKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.Rule;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.RuleKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ConsumerNamedSelector;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ConsumerNamedSelectorKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ProviderNamedSelector;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ProviderNamedSelectorKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstanceKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstanceKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.Renderers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
@@ -97,6 +99,7 @@ public class IidFactory {
     public static InstanceIdentifier<EndpointGroup> endpointGroupIid(TenantId tenantId, EndpointGroupId epgId) {
         return InstanceIdentifier.builder(Tenants.class)
             .child(Tenant.class, new TenantKey(tenantId))
+            .child(Policy.class)
             .child(EndpointGroup.class, new EndpointGroupKey(epgId))
             .build();
     }
@@ -104,6 +107,7 @@ public class IidFactory {
     public static InstanceIdentifier<Contract> contractIid(TenantId tenantId, ContractId contractId) {
         return InstanceIdentifier.builder(Tenants.class)
             .child(Tenant.class, new TenantKey(tenantId))
+            .child(Policy.class)
             .child(Contract.class, new ContractKey(contractId))
             .build();
     }
@@ -112,6 +116,7 @@ public class IidFactory {
             SubjectName subjectName) {
         return InstanceIdentifier.builder(Tenants.class)
             .child(Tenant.class, new TenantKey(tenantId))
+            .child(Policy.class)
             .child(Contract.class, new ContractKey(contractId))
             .child(Subject.class, new SubjectKey(subjectName))
             .build();
@@ -121,6 +126,7 @@ public class IidFactory {
             EndpointGroupId epgId, SelectorName providerSelectorName) {
         return InstanceIdentifier.builder(Tenants.class)
             .child(Tenant.class, new TenantKey(tenantId))
+            .child(Policy.class)
             .child(EndpointGroup.class, new EndpointGroupKey(epgId))
             .child(ProviderNamedSelector.class, new ProviderNamedSelectorKey(providerSelectorName))
             .build();
@@ -130,6 +136,7 @@ public class IidFactory {
             EndpointGroupId epgId, SelectorName consumerSelectorName) {
         return InstanceIdentifier.builder(Tenants.class)
             .child(Tenant.class, new TenantKey(tenantId))
+            .child(Policy.class)
             .child(EndpointGroup.class, new EndpointGroupKey(epgId))
             .child(ConsumerNamedSelector.class, new ConsumerNamedSelectorKey(consumerSelectorName))
             .build();
@@ -138,6 +145,7 @@ public class IidFactory {
     public static InstanceIdentifier<Clause> clauseIid(TenantId tenantId, ContractId contractId, ClauseName clauseName) {
         return InstanceIdentifier.builder(Tenants.class)
             .child(Tenant.class, new TenantKey(tenantId))
+            .child(Policy.class)
             .child(Contract.class, new ContractKey(contractId))
             .child(Clause.class, new ClauseKey(clauseName))
             .build();
@@ -147,6 +155,7 @@ public class IidFactory {
             RuleName ruleName) {
         return InstanceIdentifier.builder(Tenants.class)
             .child(Tenant.class, new TenantKey(tenantId))
+            .child(Policy.class)
             .child(Contract.class, new ContractKey(contractId))
             .child(Subject.class, new SubjectKey(subjectName))
             .child(Rule.class, new RuleKey(ruleName))
@@ -156,6 +165,7 @@ public class IidFactory {
     public static InstanceIdentifier<ActionInstance> actionInstanceIid(TenantId tenantId, ActionName actionName) {
         return InstanceIdentifier.builder(Tenants.class)
             .child(Tenant.class, new TenantKey(tenantId))
+            .child(Policy.class)
             .child(SubjectFeatureInstances.class)
             .child(ActionInstance.class, new ActionInstanceKey(actionName))
             .build();
@@ -165,6 +175,7 @@ public class IidFactory {
             ClassifierName classifierName) {
         return InstanceIdentifier.builder(Tenants.class)
             .child(Tenant.class, new TenantKey(tenantId))
+            .child(Policy.class)
             .child(SubjectFeatureInstances.class)
             .child(ClassifierInstance.class, new ClassifierInstanceKey(classifierName))
             .build();
@@ -187,6 +198,7 @@ public class IidFactory {
             SubjectName subjectName, RuleName ruleName, ClassifierName classifierRefName) {
         return InstanceIdentifier.builder(Tenants.class)
             .child(Tenant.class, new TenantKey(tenantId))
+            .child(Policy.class)
             .child(Contract.class, new ContractKey(contractId))
             .child(Subject.class, new SubjectKey(subjectName))
             .child(Rule.class, new RuleKey(ruleName))
@@ -197,6 +209,7 @@ public class IidFactory {
     public static InstanceIdentifier<L2FloodDomain> l2FloodDomainIid(TenantId tenantId, L2FloodDomainId l2FloodDomainId) {
         return InstanceIdentifier.builder(Tenants.class)
             .child(Tenant.class, new TenantKey(tenantId))
+            .child(ForwardingContext.class)
             .child(L2FloodDomain.class, new L2FloodDomainKey(l2FloodDomainId))
             .build();
     }
@@ -205,6 +218,7 @@ public class IidFactory {
             L2BridgeDomainId l2BridgeDomainId) {
         return InstanceIdentifier.builder(Tenants.class)
             .child(Tenant.class, new TenantKey(tenantId))
+            .child(ForwardingContext.class)
             .child(L2BridgeDomain.class, new L2BridgeDomainKey(l2BridgeDomainId))
             .build();
     }
@@ -212,6 +226,7 @@ public class IidFactory {
     public static InstanceIdentifier<L3Context> l3ContextIid(TenantId tenantId, L3ContextId l3ContextId) {
         return InstanceIdentifier.builder(Tenants.class)
             .child(Tenant.class, new TenantKey(tenantId))
+            .child(ForwardingContext.class)
             .child(L3Context.class, new L3ContextKey(l3ContextId))
             .build();
     }
@@ -254,6 +269,7 @@ public class IidFactory {
     public static InstanceIdentifier<Subnet> subnetIid(TenantId tenantId, SubnetId subnetId) {
         return InstanceIdentifier.builder(Tenants.class)
             .child(Tenant.class, new TenantKey(tenantId))
+            .child(ForwardingContext.class)
             .child(Subnet.class, new SubnetKey(subnetId))
             .build();
     }
