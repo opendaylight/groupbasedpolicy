@@ -84,17 +84,17 @@ public class EndPointRpcRegistryTest {
     public void registerTest() throws Exception {
         verify(rpcRegistry).addRpcImplementation(any(Class.class), any(RpcService.class));
         verify(t).put(any(LogicalDatastoreType.class), any(InstanceIdentifier.class), any(Endpoints.class));
-        EndpointRpcRegistry.register(epRendererAugmentation);
+        endpointRpcRegistry.register(epRendererAugmentation);
         Assert.assertEquals(1, EndpointRpcRegistry.registeredRenderers.size());
 
-        EndpointRpcRegistry.unregister(epRendererAugmentation);
+        endpointRpcRegistry.unregister(epRendererAugmentation);
         Assert.assertEquals(0, EndpointRpcRegistry.registeredRenderers.size());
     }
 
     @Test
     public void registerTestSafelyFail() {
-        EndpointRpcRegistry.register(epRendererAugmentation);
-        EndpointRpcRegistry.register(null);
+        endpointRpcRegistry.register(epRendererAugmentation);
+        endpointRpcRegistry.register(null);
         Assert.assertEquals(1, EndpointRpcRegistry.registeredRenderers.size());
     }
 

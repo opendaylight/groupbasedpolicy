@@ -8,14 +8,12 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint;
 
-import java.util.AbstractMap.SimpleImmutableEntry;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
-
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentation;
-import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
+import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNodeConnector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterL3PrefixEndpointInput;
@@ -35,8 +33,9 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
+import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 public class OfOverlayAug implements EpRendererAugmentation, AutoCloseable {
 
@@ -44,11 +43,14 @@ public class OfOverlayAug implements EpRendererAugmentation, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(OfOverlayAug.class);
     private final DataBroker dataProvider;
+    private EpRendererAugmentationRegistry epRendererAugmentationRegistry;
 
-    public OfOverlayAug(DataBroker dataProvider) {
+
+    public OfOverlayAug(DataBroker dataProvider, EpRendererAugmentationRegistry epRendererAugmentationRegistry) {
         this.dataProvider = dataProvider;
 
-        EndpointRpcRegistry.register(this);
+        this.epRendererAugmentationRegistry = epRendererAugmentationRegistry;
+        epRendererAugmentationRegistry.register(this);
     }
 
     @Override
@@ -142,7 +144,7 @@ public class OfOverlayAug implements EpRendererAugmentation, AutoCloseable {
 
     @Override
     public void close() throws Exception {
-        EndpointRpcRegistry.unregister(this);
+        epRendererAugmentationRegistry.unregister(this);
     }
 
     /**

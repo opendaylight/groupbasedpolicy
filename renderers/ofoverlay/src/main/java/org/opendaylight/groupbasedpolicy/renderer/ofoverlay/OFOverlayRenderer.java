@@ -26,6 +26,7 @@ import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataCh
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
+import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.OfOverlayAug;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.OfOverlayL3NatAug;
@@ -49,7 +50,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 /**
  * Renderer that uses OpenFlow and OVSDB to implement an overlay network
  * using Open vSwitch.
-
  */
 public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     private static final Logger LOG =
@@ -75,17 +75,17 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     public OFOverlayRenderer(final DataBroker dataProvider,
                              RpcProviderRegistry rpcRegistry,
                              NotificationService notificationService,
+                             EpRendererAugmentationRegistry epRendererAugmentationRegistry,
                              final short tableOffset) {
         super();
         this.dataBroker = dataProvider;
-
         int numCPU = Runtime.getRuntime().availableProcessors();
         //TODO: Consider moving to groupbasedpolicy-ofoverlay-config so as to be user configurable in distribution.
         executor = Executors.newScheduledThreadPool(numCPU * 2);
 
         switchManager = new SwitchManager(dataProvider);
         endpointManager = new EndpointManager(dataProvider, rpcRegistry, notificationService,
-                                              executor, switchManager);
+                executor, switchManager);
 
         classifierDefinitionListener = new ClassifierDefinitionListener(dataBroker);
         actionDefinitionListener = new ActionDefinitionListener(dataProvider);
@@ -93,23 +93,23 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
         // TODO we need register action/classifier validators to gpb-base
 
         policyManager = new PolicyManager(dataProvider,
-                                          switchManager,
-                                          endpointManager,
-                                          rpcRegistry,
-                                          executor,
-                                          tableOffset);
-        ofOverlayAug = new OfOverlayAug(dataProvider);
-        ofOverlayL3NatAug = new OfOverlayL3NatAug();
-            Optional<OfOverlayConfig> config = readConfig();
-            OfOverlayConfigBuilder configBuilder = new OfOverlayConfigBuilder();
-            if (config.isPresent()) {
-                configBuilder = new OfOverlayConfigBuilder(config.get());
-            }
-            registerConfigListener(dataProvider);
-            if (configBuilder.getGbpOfoverlayTableOffset() == null) {
-                configBuilder.setGbpOfoverlayTableOffset(tableOffset).build();
-                writeTableOffset(configBuilder.build());
-            }
+                switchManager,
+                endpointManager,
+                rpcRegistry,
+                executor,
+                tableOffset);
+        ofOverlayAug = new OfOverlayAug(dataProvider, epRendererAugmentationRegistry);
+        ofOverlayL3NatAug = new OfOverlayL3NatAug(epRendererAugmentationRegistry);
+        Optional<OfOverlayConfig> config = readConfig();
+        OfOverlayConfigBuilder configBuilder = new OfOverlayConfigBuilder();
+        if (config.isPresent()) {
+            configBuilder = new OfOverlayConfigBuilder(config.get());
+        }
+        registerConfigListener(dataProvider);
+        if (configBuilder.getGbpOfoverlayTableOffset() == null) {
+            configBuilder.setGbpOfoverlayTableOffset(tableOffset).build();
+            writeTableOffset(configBuilder.build());
+        }
     }
 
     // *************
@@ -163,17 +163,17 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     private void registerConfigListener(DataBroker dataProvider) {
         configReg =
                 dataProvider.registerDataChangeListener(LogicalDatastoreType.CONFIGURATION,
-                                                        configIid,
-                                                        this,
-                                                        DataChangeScope.SUBTREE);
+                        configIid,
+                        this,
+                        DataChangeScope.SUBTREE);
     }
 
     private Optional<OfOverlayConfig> readConfig() {
         final ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
         Optional<OfOverlayConfig> config =
                 DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
-                                           configIid,
-                                           rTx);
+                        configIid,
+                        rTx);
         rTx.close();
         return config;
     }

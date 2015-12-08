@@ -12,7 +12,7 @@
         <data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
             <modules xmlns="urn:opendaylight:params:xml:ns:yang:controller:config">
                 <module>
-                    <type xmlns:groupbasedpolicy="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy:impl">
+                    <type xmlns:groupbasedpolicy="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">
                         groupbasedpolicy:groupbasedpolicy-impl
                     </type>
                     <name>groupbasedpolicy-impl</name>
@@ -28,13 +28,65 @@
                     </rpc-registry>
 
                 </module>
+                <module>
+                    <type xmlns:groupbasedpolicy="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">
+                        groupbasedpolicy:policy-validator-registry-impl
+                    </type>
+                    <name>policy-validator-registry</name>
+
+                    <data-broker>
+                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
+                        <name>binding-data-broker</name>
+                    </data-broker>
+
+                </module>
+                <module>
+                    <type xmlns:groupbasedpolicy="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">
+                        groupbasedpolicy:ep-renderer-augmentation-registry-impl
+                    </type>
+                    <name>ep-renderer-augmentation-registry</name>
+
+                    <data-broker>
+                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
+                        <name>binding-data-broker</name>
+                    </data-broker>
+
+                    <rpc-registry>
+                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-rpc-registry</type>
+                        <name>binding-rpc-broker</name>
+                    </rpc-registry>
+
+                </module>
             </modules>
+
+            <services xmlns="urn:opendaylight:params:xml:ns:yang:controller:config">
+                <service>
+                    <type xmlns:groupbasedpolicy="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">
+                        groupbasedpolicy:policy-validator-registry
+                    </type>
+
+                    <instance>
+                        <name>policy-validator-registry</name>
+                        <provider>/modules/module[type='policy-validator-registry-impl'][name='policy-validator-registry']</provider>
+                    </instance>
+                </service>
+                <service>
+                    <type xmlns:epr="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">
+                        epr:ep-renderer-augmentation-registry
+                    </type>
+
+                    <instance>
+                        <name>ep-renderer-augmentation-registry</name>
+                        <provider>/modules/module[type='ep-renderer-augmentation-registry-impl'][name='ep-renderer-augmentation-registry']</provider>
+                    </instance>
+                </service>
+            </services>
         </data>
 
     </configuration>
 
     <required-capabilities>
-        <capability>urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy:impl?module=groupbasedpolicy-impl&amp;revision=2015-11-06</capability>
+        <capability>urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy?module=groupbasedpolicy-cfg&amp;revision=2015-11-06</capability>
     </required-capabilities>
 
 </snapshot>

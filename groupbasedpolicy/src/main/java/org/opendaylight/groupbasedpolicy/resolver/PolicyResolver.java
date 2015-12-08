@@ -25,7 +25,7 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistrar;
+import org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistry;
 import org.opendaylight.groupbasedpolicy.api.ValidationResult;
 import org.opendaylight.groupbasedpolicy.api.Validator;
 import org.opendaylight.groupbasedpolicy.dto.EgKey;
@@ -78,23 +78,27 @@ import com.google.common.util.concurrent.ListenableFuture;
  * been registered.
  *
  */
-public class PolicyResolver implements PolicyValidatorRegistrar, AutoCloseable {
+public class PolicyResolver implements PolicyValidatorRegistry, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(PolicyResolver.class);
 
     private final DataBroker dataProvider;
 
-    protected ConcurrentMap<TenantId, TenantContext> resolvedTenants;
+    private final FollowedTenantListener followedTenantListener;
+
+
+    protected final ConcurrentMap<TenantId, TenantContext> resolvedTenants;
 
     /*
      * Store validators for ActionDefinitions from Renderers
      *
      */
-    protected SetMultimap<ActionDefinitionId, Validator<ActionInstance>> actionInstanceValidatorsByDefinition = Multimaps.synchronizedSetMultimap(HashMultimap.<ActionDefinitionId, Validator<ActionInstance>>create());
-    protected SetMultimap<ClassifierDefinitionId, Validator<ClassifierInstance>> classifierInstanceValidatorsByDefinition = Multimaps.synchronizedSetMultimap(HashMultimap.<ClassifierDefinitionId, Validator<ClassifierInstance>>create());
+    private SetMultimap<ActionDefinitionId, Validator<ActionInstance>> actionInstanceValidatorsByDefinition = Multimaps.synchronizedSetMultimap(HashMultimap.<ActionDefinitionId, Validator<ActionInstance>>create());
+    private SetMultimap<ClassifierDefinitionId, Validator<ClassifierInstance>> classifierInstanceValidatorsByDefinition = Multimaps.synchronizedSetMultimap(HashMultimap.<ClassifierDefinitionId, Validator<ClassifierInstance>>create());
 
     public PolicyResolver(DataBroker dataProvider) {
         this.dataProvider = dataProvider;
+        followedTenantListener = new FollowedTenantListener(dataProvider, this);
         resolvedTenants = new ConcurrentHashMap<>();
         LOG.debug("Initialized renderer common policy resolver");
     }
@@ -108,6 +112,9 @@ public class PolicyResolver implements PolicyValidatorRegistrar, AutoCloseable {
             if (ctx.registration != null) {
                 ctx.registration.close();
             }
+        }
+        if (followedTenantListener != null) {
+            followedTenantListener.close();
         }
     }
 
@@ -264,7 +271,7 @@ public class PolicyResolver implements PolicyValidatorRegistrar, AutoCloseable {
         });
     }
 
-    protected void updatePolicy() {
+    private void updatePolicy() {
         try {
             Set<IndexedTenant> indexedTenants = getIndexedTenants(resolvedTenants.values());
             Table<EgKey, EgKey, Policy> policyMap = PolicyResolverUtils.resolvePolicy(indexedTenants);
@@ -353,9 +360,9 @@ public class PolicyResolver implements PolicyValidatorRegistrar, AutoCloseable {
         return true;
     }
 
-    protected static class TenantContext {
+    static class TenantContext {
 
-        ListenerRegistration<DataChangeListener> registration;
+        final ListenerRegistration<DataChangeListener> registration;
 
         AtomicReference<IndexedTenant> tenant = new AtomicReference<>();
 

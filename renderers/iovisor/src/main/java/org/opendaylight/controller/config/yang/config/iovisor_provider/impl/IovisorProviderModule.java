@@ -18,6 +18,7 @@ public class IovisorProviderModule extends org.opendaylight.controller.config.ya
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        return  new IovisorRenderer(getDataBrokerDependency(), getRpcRegistryDependency());
+        return  new IovisorRenderer(getDataBrokerDependency(),
+                                    getEpRendererAugmentationRegistryDependency());
     }
 }

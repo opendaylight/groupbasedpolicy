@@ -60,10 +60,10 @@
           <instructions>
             <Export-Package>
               org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.*,
-              org.opendaylight.controller.config.yang.config.endpoint_provider,
+              org.opendaylight.controller.config.yang.config.groupbasedpolicy.*,
+              org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.*,
               org.opendaylight.groupbasedpolicy.api.*,
               org.opendaylight.groupbasedpolicy.dto,
-              org.opendaylight.groupbasedpolicy.endpoint,
               org.opendaylight.groupbasedpolicy.util,
             </Export-Package>
           </instructions>

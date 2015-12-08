@@ -1,0 +1,122 @@
+/*
+ * Copyright (c) 2015 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
+module groupbasedpolicy-cfg {
+    yang-version 1;
+    namespace "urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy";
+    prefix "groupbasedpolicy-cfg";
+
+    import config { prefix config; revision-date 2013-04-05; }
+    import opendaylight-md-sal-binding { prefix mdsal; revision-date 2013-10-28; }
+
+    description
+        "This module contains the base YANG definitions for
+          groupbasedpolicy impl implementation.";
+
+    revision "2015-11-06" {
+        description
+            "Initial revision.";
+    }
+
+    identity ep-renderer-augmentation-registry {
+        description
+            "ep-renderer-augmentation-registry service definition";
+
+        base "config:service-type";
+        config:java-class "org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry";
+    }
+
+    identity policy-validator-registry {
+        description
+            "policy-validator-registry service definition";
+
+        base "config:service-type";
+        config:java-class "org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistry";
+    }
+
+    identity policy-validator-registry-impl {
+        base "config:module-type";
+
+        config:provided-service policy-validator-registry;
+        config:java-name-prefix PolicyValidatorRegistry;
+    }
+
+    identity ep-renderer-augmentation-registry-impl {
+        base "config:module-type";
+
+        config:provided-service ep-renderer-augmentation-registry;
+        config:java-name-prefix EpRendererAugmentationRegistryImpl;
+    }
+
+    identity groupbasedpolicy-impl {
+        base "config:module-type";
+
+        config:java-name-prefix Groupbasedpolicy;
+    }
+
+    // Augments the 'configuration' choice node under modules/module.
+    augment "/config:modules/config:module/config:configuration" {
+        case groupbasedpolicy-impl {
+            when "/config:modules/config:module/config:type = 'groupbasedpolicy-impl'";
+
+            //wires in the data-broker service
+            container data-broker {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity mdsal:binding-async-data-broker;
+                    }
+                }
+            }
+            //RPC Registry
+            container rpc-registry {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity mdsal:binding-rpc-registry;
+                    }
+                }
+            }
+        }
+        case policy-validator-registry-impl {
+            when "/config:modules/config:module/config:type = 'policy-validator-registry-impl'";
+
+            //wires in the data-broker service
+            container data-broker {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity mdsal:binding-async-data-broker;
+                    }
+                }
+            }
+        }
+        case ep-renderer-augmentation-registry-impl {
+            when "/config:modules/config:module/config:type = 'ep-renderer-augmentation-registry-impl'";
+
+            //wires in the data-broker service
+            container data-broker {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity mdsal:binding-async-data-broker;
+                    }
+                }
+            }
+            //RPC Registry
+            container rpc-registry {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity mdsal:binding-rpc-registry;
+                    }
+                }
+            }
+        }
+    }
+}

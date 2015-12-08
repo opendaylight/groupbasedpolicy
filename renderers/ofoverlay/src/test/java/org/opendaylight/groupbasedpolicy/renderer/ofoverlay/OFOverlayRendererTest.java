@@ -28,6 +28,7 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
+import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -42,6 +43,7 @@ public class OFOverlayRendererTest {
 
     private DataBroker dataProvider;
     private RpcProviderRegistry rpcRegistry;
+    private EndpointRpcRegistry endpointRpcRegistry;
     private NotificationService notificationService;
     private short tableOffset;
     private CheckedFuture<Optional<OfOverlayConfig>, ReadFailedException> future;
@@ -54,6 +56,7 @@ public class OFOverlayRendererTest {
         dataProvider = mock(DataBroker.class);
         rpcRegistry = mock(RpcProviderRegistry.class);
         notificationService = mock(NotificationService.class);
+        endpointRpcRegistry = mock(EndpointRpcRegistry.class);
         tableOffset = 5;
         configReg = mock(ListenerRegistration.class);
         when(
@@ -69,7 +72,7 @@ public class OFOverlayRendererTest {
         when(dataProvider.newReadOnlyTransaction()).thenReturn(readTransaction);
         future = Futures.immediateCheckedFuture(Optional.<OfOverlayConfig> absent());
         when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(future);
-        renderer = new OFOverlayRenderer(dataProvider, rpcRegistry, notificationService, tableOffset);
+        renderer = new OFOverlayRenderer(dataProvider, rpcRegistry, notificationService, endpointRpcRegistry, tableOffset);
     }
 
     @Test

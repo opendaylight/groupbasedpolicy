@@ -14,6 +14,7 @@ module iovisor-provider-impl {
     import config { prefix config; revision-date 2013-04-05; }
     import opendaylight-md-sal-binding { prefix mdsal; revision-date 2013-10-28; }
     import opendaylight-sal-binding-broker-impl { prefix sal-broker; revision-date 2013-10-28; }
+    import groupbasedpolicy-cfg { prefix gbpcfg; revision-date 2015-11-06; }
 
     description
         "This module contains the base YANG definitions for iovisor-provider
@@ -35,7 +36,7 @@ module iovisor-provider-impl {
         case iovisor-provider-impl {
             when "/config:modules/config:module/config:type = 'iovisor-provider-impl'";
 
-            //wires in the data-broker service 
+            // Wires in the data-broker service
             container data-broker {
                 uses config:service-ref {
                     refine type {
@@ -44,12 +45,12 @@ module iovisor-provider-impl {
                     }
                 }
             }
-            // RPC Registry
-            container rpc-registry {
+            // EpRendererAugmentationRegistrar service
+            container ep-renderer-augmentation-registry {
                 uses config:service-ref {
                     refine type {
                         mandatory true;
-                        config:required-identity mdsal:binding-rpc-registry;
+                        config:required-identity gbpcfg:ep-renderer-augmentation-registry;
                     }
                 }
             }

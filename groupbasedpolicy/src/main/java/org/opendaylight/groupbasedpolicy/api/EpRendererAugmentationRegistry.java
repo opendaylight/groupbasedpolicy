@@ -8,7 +8,7 @@
 
 package org.opendaylight.groupbasedpolicy.api;
 
-public interface EpRendererAugmentationRegistrar {
+public interface EpRendererAugmentationRegistry {
 
     /**
      * Registers renderer's endpoint augmentation.

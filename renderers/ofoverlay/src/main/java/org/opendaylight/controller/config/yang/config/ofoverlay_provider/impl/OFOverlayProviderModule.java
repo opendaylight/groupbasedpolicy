@@ -28,6 +28,7 @@ public class OFOverlayProviderModule extends org.opendaylight.controller.config.
         return new OFOverlayRenderer(getDataBrokerDependency(),
                                      getRpcRegistryDependency(),
                                      getNotificationAdapterDependency(),
+                                     getEpRendererAugmentationRegistryDependency(),
                                      getGbpOfoverlayTableOffset().shortValue());
     }
 

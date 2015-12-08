@@ -21,6 +21,7 @@ import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFaile
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentation;
+import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointsBuilder;
@@ -63,7 +64,7 @@ import com.google.common.util.concurrent.ListenableFuture;
  * Endpoint registry provides a scalable store for accessing and updating
  * information about endpoints.
  */
-public class EndpointRpcRegistry implements EndpointService, AutoCloseable {
+public class EndpointRpcRegistry implements EndpointService, EpRendererAugmentationRegistry, AutoCloseable {
     private static final Logger LOG =
             LoggerFactory.getLogger(EndpointRpcRegistry.class);
 
@@ -83,7 +84,8 @@ public class EndpointRpcRegistry implements EndpointService, AutoCloseable {
      *            - specific implementation RPC augmentation, if any. Otherwise
      *            NULL
      */
-    public static void register(EpRendererAugmentation epRendererAugmentation) {
+    @Override
+    public void register(EpRendererAugmentation epRendererAugmentation) {
         if (epRendererAugmentation != null) {
             registeredRenderers.putIfAbsent(epRendererAugmentation.getClass().getName(), epRendererAugmentation);
             LOG.info("Registered {}", epRendererAugmentation.getClass().getName());
@@ -93,9 +95,9 @@ public class EndpointRpcRegistry implements EndpointService, AutoCloseable {
     /**
      *
      * @param regImp the endpoint augmentation
-     * @throws Exception
      */
-    public static void unregister(EpRendererAugmentation regImp) throws Exception {
+    @Override
+    public void unregister(EpRendererAugmentation regImp) {
         if (regImp == null || !registeredRenderers.containsKey(regImp.getClass().getName())) {
             return;
         }

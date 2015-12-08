@@ -31,6 +31,12 @@
                         <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding:impl">binding:binding-new-notification-service</type>
                         <name>binding-notification-adapter</name>
                     </notification-adapter>
+
+                    <ep-renderer-augmentation-registry>
+                        <type xmlns:epr="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">epr:ep-renderer-augmentation-registry</type>
+                        <name>ep-renderer-augmentation-registry</name>
+                    </ep-renderer-augmentation-registry>
+
                     <gbp-ofoverlay-table-offset>0</gbp-ofoverlay-table-offset>
                 </module>
             </modules>

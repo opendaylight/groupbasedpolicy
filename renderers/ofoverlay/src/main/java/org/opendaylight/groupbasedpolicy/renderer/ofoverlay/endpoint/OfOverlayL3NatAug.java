@@ -12,7 +12,7 @@ import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Map;
 
 import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentation;
-import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
+import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterL3PrefixEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
@@ -25,8 +25,11 @@ import org.opendaylight.yangtools.yang.binding.Augmentation;
 
 public class OfOverlayL3NatAug implements EpRendererAugmentation, AutoCloseable {
 
-    public OfOverlayL3NatAug() {
-        EndpointRpcRegistry.register(this);
+    private EpRendererAugmentationRegistry epRendererAugmentationRegistry;
+
+    public OfOverlayL3NatAug(EpRendererAugmentationRegistry epRendererAugmentationRegistry) {
+        this.epRendererAugmentationRegistry = epRendererAugmentationRegistry;
+        this.epRendererAugmentationRegistry.register(this);
     }
 
     @Override
@@ -55,6 +58,6 @@ public class OfOverlayL3NatAug implements EpRendererAugmentation, AutoCloseable 
 
     @Override
     public void close() throws Exception {
-        EndpointRpcRegistry.unregister(this);
+        this.epRendererAugmentationRegistry.unregister(this);
     }
 }

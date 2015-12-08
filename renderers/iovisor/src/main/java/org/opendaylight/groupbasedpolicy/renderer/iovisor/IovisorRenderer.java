@@ -9,7 +9,7 @@
 package org.opendaylight.groupbasedpolicy.renderer.iovisor;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
+import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry;
 import org.opendaylight.groupbasedpolicy.renderer.iovisor.endpoint.EndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.iovisor.module.IovisorModuleManager;
 import org.slf4j.Logger;
@@ -25,9 +25,10 @@ public class IovisorRenderer implements AutoCloseable {
     private EndpointManager endPointManager;
     private IovisorModuleManager iovisorModuleManager;
 
-    public IovisorRenderer(DataBroker dataBroker, RpcProviderRegistry rpcProviderRegistry) {
+    public IovisorRenderer(DataBroker dataBroker,
+                           EpRendererAugmentationRegistry epRendererAugmentationRegistry) {
         LOG.info("IOVisor Renderer has Started");
-        this.endPointManager = new EndpointManager(dataBroker, rpcProviderRegistry);
+        this.endPointManager = new EndpointManager(dataBroker, epRendererAugmentationRegistry);
         this.iovisorModuleManager = new IovisorModuleManager(dataBroker);
     }
 

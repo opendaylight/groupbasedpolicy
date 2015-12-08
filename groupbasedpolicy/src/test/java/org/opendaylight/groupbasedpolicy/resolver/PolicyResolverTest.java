@@ -49,8 +49,6 @@ public class PolicyResolverTest {
                 unresolved);
 
         policyResolver = spy(new PolicyResolver(dataProvider));
-        resolver = new PolicyResolver(null);
-
     }
 
     @Test

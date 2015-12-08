@@ -11,9 +11,8 @@ package org.opendaylight.groupbasedpolicy.renderer.iovisor.endpoint;
 import java.util.Map.Entry;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentation;
-import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
+import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterL3PrefixEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
@@ -29,18 +28,18 @@ public class EndpointManager implements EpRendererAugmentation, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(EndpointManager.class);
 
-    private EndpointRpcRegistry endpointRpcRegistry;
     private EndpointListener endpointListener;
+    private EpRendererAugmentationRegistry epRendererAugmentationRegistry;
 
-    public EndpointManager(DataBroker dataBroker, RpcProviderRegistry rpcProviderRegistry) {
+    public EndpointManager(DataBroker dataBroker,
+                           EpRendererAugmentationRegistry epRendererAugmentationRegistry) {
         LOG.info("Initialized IOVisor EndpointManager");
         Preconditions.checkNotNull(dataBroker, "DataBroker instance must not be null");
-        Preconditions.checkNotNull(rpcProviderRegistry, "RpcProviderRegistry instance must not be null");
 
-        this.endpointRpcRegistry = new EndpointRpcRegistry(dataBroker, rpcProviderRegistry);
+        this.epRendererAugmentationRegistry = epRendererAugmentationRegistry;
         this.endpointListener = new EndpointListener(dataBroker);
 
-        EndpointRpcRegistry.register(this);
+        epRendererAugmentationRegistry.register(this);
     }
 
     @Override
@@ -48,10 +47,7 @@ public class EndpointManager implements EpRendererAugmentation, AutoCloseable {
         if (endpointListener != null) {
             endpointListener.close();
         }
-        if (endpointRpcRegistry != null) {
-            endpointRpcRegistry.close();
-        }
-        EndpointRpcRegistry.unregister(this);
+        epRendererAugmentationRegistry.unregister(this);
     }
 
     @Override

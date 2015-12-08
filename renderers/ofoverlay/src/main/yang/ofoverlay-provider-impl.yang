@@ -16,6 +16,7 @@ module ofoverlay-provider-impl {
     import ietf-yang-types { prefix "yang"; revision-date 2010-09-24; }
     import opendaylight-sal-binding-broker-impl { prefix sal-broker; revision-date 2013-10-28;}
     import ofoverlay { prefix ofoverlay; revision-date 2014-05-28; }
+    import groupbasedpolicy-cfg { prefix gbpcfg; revision-date 2015-11-06; }
 
     description
         "This module contains the base YANG definitions for
@@ -37,7 +38,7 @@ module ofoverlay-provider-impl {
         case ofoverlay-provider-impl {
             when "/config:modules/config:module/config:type = 'ofoverlay-provider-impl'";
 
-            //wires in the data-broker service 
+            // Wires in the data-broker service
             container data-broker {
                 uses config:service-ref {
                     refine type {
@@ -61,6 +62,15 @@ module ofoverlay-provider-impl {
                     refine type {
                         mandatory true;
                         config:required-identity sal-broker:binding-new-notification-service;
+                    }
+                }
+            }
+            // EpRendererAugmentationRegistry service
+            container ep-renderer-augmentation-registry {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity gbpcfg:ep-renderer-augmentation-registry;
                     }
                 }
             }

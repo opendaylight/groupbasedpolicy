@@ -13,7 +13,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
 
-public interface PolicyValidatorRegistrar {
+public interface PolicyValidatorRegistry {
 
     /**
      * Registers validator of {@link ActionInstance} for {@link ActionDefinitionId}.
