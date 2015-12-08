@@ -64,7 +64,7 @@ public class ChainActionFlows {
 
         NodeId localNodeId = netElements.getLocalNodeId();
         NodeId destNodeId = netElements.getDstEp().getAugmentation(OfOverlayContext.class).getNodeId();
-        EndpointFwdCtxOrdinals epOrds = netElements.getSrcEpOrds();
+        EndpointFwdCtxOrdinals epOrdinals = netElements.getSrcEpOrdinals();
 
         NodeConnectorId localNodeTunPort = ctx.getSwitchManager().getTunnelPort(localNodeId, TunnelTypeVxlanGpe.class);
         NodeConnectorId destNodeTunPort = ctx.getSwitchManager().getTunnelPort(destNodeId, TunnelTypeVxlanGpe.class);
@@ -88,13 +88,13 @@ public class ChainActionFlows {
         ofWriter.writeFlow(
                 destNodeId,
                 ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER(),
-                createChainTunnelFlow(sfcNshHeader, destNodeTunPort, epOrds, ctx.getPolicyManager()
+                createChainTunnelFlow(sfcNshHeader, destNodeTunPort, epOrdinals, ctx.getPolicyManager()
                     .getTABLEID_SOURCE_MAPPER(), ctx));
 
         ofWriter.writeFlow(
                 destNodeId,
                 ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER(),
-                createChainBroadcastFlow(sfcNshHeader, destNodeTunPort, epOrds, ctx.getPolicyManager()
+                createChainBroadcastFlow(sfcNshHeader, destNodeTunPort, epOrdinals, ctx.getPolicyManager()
                     .getTABLEID_SOURCE_MAPPER(), ctx));
     }
 
@@ -129,7 +129,7 @@ public class ChainActionFlows {
 
         Integer priority = 1000;
         int matchTunnelId=sfcNshHeader.getNshMetaC2().intValue();
-        Long l3c=Long.valueOf(netElements.getSrcEpOrds().getL3Id());
+        Long l3c=Long.valueOf(netElements.getSrcEpOrdinals().getL3Id());
 
         org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action loadC1 = nxLoadNshc1RegAction(sfcNshHeader.getNshMetaC1());
         org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action loadC2 = nxLoadNshc2RegAction(sfcNshHeader.getNshMetaC2());
