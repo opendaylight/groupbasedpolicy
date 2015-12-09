@@ -2,7 +2,11 @@
 
 This is a demonstration/development environment for show-casing OpenDaylight GroupBasedPolicy (GBP) with ServiceFunctionChaining (SFC)
 
-The initial instalation may take some time, with vagrant and docker image downloads. 
+This version is using a vagrant box: alagalah/gbpsfc-trusty64 v1.0.1
+
+It is important to ./cleandemo.sh before using. A demo.lock file will be added to repo so that first run will fail unless you ./cleandemo.sh
+
+This is to ensure that each OVS gets a unique UUID as the Box file will re-use the same UUID for each OVS.
 
 After the first time it is very quick.
 
@@ -17,14 +21,13 @@ After the first time it is very quick.
 source ./env.sh
 vagrant up
 ```
-  * This takes quite some time initially.
   * If the starting process fail with '/sbin/mount.vboxsf: mounting failed with the error: No such device' line
     (usually occur after first halt) run 'vagrant plugin install vagrant-vbguest' command on host. It should solve the problem.
 
 3. Start controller.
   * Currently it is expected that that controller runs on the host hosting the VMs.
-  * Tested using groupbasedpolicy stable/lithium.
-		If you are building stable/lithium and you get 'illegal unicode escape' error, 
+  * Tested using groupbasedpolicy beryllium
+		If you are building and get 'illegal unicode escape' error, 
 		you have to rename two yang files in 'groupbasedpolicy\ui-backend\src\main\yang'. 
 		These files have to start with a character other than 'u'. 
 		E.g. rename 'ui-backend.yang' to 'aui-backend.yang' and 'ui-backend-impl.yang' to 'aui-backend-impl.yang'.

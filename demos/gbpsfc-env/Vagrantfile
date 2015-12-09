@@ -8,8 +8,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     vb.memory = "512"
   end
   # run our bootstrapping for the system
-  config.vm.provision 'shell', path: 'bootstrap.sh', :args => odl
-
   num_nodes = (ENV['NUM_NODES'] || 1).to_i
 
   # ip configuration
@@ -20,8 +18,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     config.vm.define "gbpsfc#{n+1}", autostart: true do |compute|
       vm_ip = ips[n]
       vm_index = n+1
-      compute.vm.box = "ubuntu/trusty64"
-      compute.vm.box_version = "20151130.0.0"
+      compute.vm.box = "alagalah/gbpsfc-trusty64"
+      compute.vm.box_version = "1.0.1"
       compute.vm.hostname = "gbpsfc#{vm_index}"
       compute.vm.network "private_network", ip: "#{vm_ip}"
       compute.vm.provider :virtualbox do |vb|
