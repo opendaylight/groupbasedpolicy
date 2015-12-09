@@ -7,9 +7,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.provider "virtualbox" do |vb|
     vb.memory = "512"
   end
-  if Vagrant.has_plugin?("vagrant-cachier")
-    config.cache.scope = :box
-  end
   # run our bootstrapping for the system
   config.vm.provision 'shell', path: 'bootstrap.sh', :args => odl
 
@@ -24,6 +21,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       vm_ip = ips[n]
       vm_index = n+1
       compute.vm.box = "ubuntu/trusty64"
+      compute.vm.box_version = "20151130.0.0"
       compute.vm.hostname = "gbpsfc#{vm_index}"
       compute.vm.network "private_network", ip: "#{vm_ip}"
       compute.vm.provider :virtualbox do |vb|
