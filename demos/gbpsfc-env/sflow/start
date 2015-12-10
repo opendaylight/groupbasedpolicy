@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+if [ $1 ]; then
+  vagrant ssh $1 -c "bash -E /vagrant/sflow/internal_start"
+else
+  . sflow/settings
+  for i in $SFLOW_LIST
+  do
+    echo; echo "gbpsfc$i"
+    vagrant ssh gbpsfc$i -c "bash -E /vagrant/sflow/internal_start"
+  done
+fi
+
