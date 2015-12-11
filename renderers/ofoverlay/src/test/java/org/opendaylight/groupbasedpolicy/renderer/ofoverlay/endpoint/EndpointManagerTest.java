@@ -541,16 +541,95 @@ public class EndpointManagerTest {
     public void updateEndpointTestNewLocNullOldLocNullExternalRemove() {
         when(context1.getNodeId()).thenReturn(null);
         when(context1.getLocationType()).thenReturn(LocationType.External);
+        manager.processEndpoint(null, endpoint1);
 
         manager.processEndpoint(endpoint1, null);
         verify(endpointListener, never()).endpointUpdated(any(EpKey.class));
         verify(endpointListener, never()).nodeEndpointUpdated(any(NodeId.class), any(EpKey.class));
     }
 
+    /**
+     * Endpoint changes it's location
+     */
     @Test
-    public void updateEndpointTestUpdate() {
+    public void updateEndpointLocationTestUpdate() {
         Collection<Endpoint> collection;
-        when(nodeId2.getValue()).thenReturn("nodeValue1");
+        manager.processEndpoint(null, endpoint1);
+
+        manager.processEndpoint(endpoint1, endpoint2);
+        verify(endpointListener, times(2)).endpointUpdated(any(EpKey.class));
+        // create: node1, update: node1 -> node2
+        verify(endpointListener, times(3)).nodeEndpointUpdated(any(NodeId.class), any(EpKey.class));
+        collection = manager.getEndpointsForGroup(new EgKey(tenantId, endpointGroupId));
+        Assert.assertFalse(collection.isEmpty());
+    }
+
+    /**
+     * Endpoint changes it's EPG
+     */
+    @Test
+    public void updateEndpointGroupTestUpdate() {
+        Collection<Endpoint> collection;
+        EndpointGroupId otherEndpointGroupId = mock(EndpointGroupId.class);
+        when(endpoint2.getEndpointGroup()).thenReturn(otherEndpointGroupId);
+        when(endpoint2.getAugmentation(OfOverlayContext.class)).thenReturn(context1);
+        manager.processEndpoint(null, endpoint1);
+
+        manager.processEndpoint(endpoint1, endpoint2);
+        verify(endpointListener, times(2)).endpointUpdated(any(EpKey.class));
+        verify(endpointListener, times(1)).nodeEndpointUpdated(any(NodeId.class), any(EpKey.class));
+        collection = manager.getEndpointsForGroup(new EgKey(tenantId, endpointGroupId));
+        Assert.assertTrue(collection.isEmpty());
+        collection = manager.getEndpointsForGroup(new EgKey(tenantId, otherEndpointGroupId));
+        Assert.assertFalse(collection.isEmpty());
+    }
+
+    /**
+     * Endpoint changes it's location and EPGs
+     */
+    @Test
+    public void updateEndpointLocationAndGroupTestUpdate() {
+        Collection<Endpoint> collection;
+        EndpointGroupId otherEndpointGroupId = mock(EndpointGroupId.class);
+        when(endpoint2.getEndpointGroup()).thenReturn(otherEndpointGroupId);
+        manager.processEndpoint(null, endpoint1);
+
+        manager.processEndpoint(endpoint1, endpoint2);
+        verify(endpointListener, times(2)).endpointUpdated(any(EpKey.class));
+        // create: node1, update: node1 -> node2
+        verify(endpointListener, times(3)).nodeEndpointUpdated(any(NodeId.class), any(EpKey.class));
+        collection = manager.getEndpointsForGroup(new EgKey(tenantId, endpointGroupId));
+        Assert.assertTrue(collection.isEmpty());
+        collection = manager.getEndpointsForGroup(new EgKey(tenantId, otherEndpointGroupId));
+        Assert.assertFalse(collection.isEmpty());
+    }
+
+    /**
+     * Endpoint becomes external when removing it's location augmentation.
+     * This might happen when an endpoint is removed from a device.
+     */
+    @Test
+    public void updateEndpointLocationRemovedTestUpdate() {
+        Collection<Endpoint> collection;
+        when(endpoint2.getAugmentation(OfOverlayContext.class)).thenReturn(null);
+        manager.processEndpoint(null, endpoint1);
+
+        manager.processEndpoint(endpoint1, endpoint2);
+        verify(endpointListener, times(2)).endpointUpdated(any(EpKey.class));
+        verify(endpointListener, times(2)).nodeEndpointUpdated(any(NodeId.class), any(EpKey.class));
+        collection = manager.getEndpointsForGroup(new EgKey(tenantId, endpointGroupId));
+        Assert.assertTrue(collection.isEmpty());
+    }
+
+    /**
+     * Endpoint is created when adding location augmentation.
+     * Endpoint is not external anymore.
+     */
+    @Test
+    public void updateEndpointLocationAddedTestUpdate() {
+        Collection<Endpoint> collection;
+        when(endpoint1.getAugmentation(OfOverlayContext.class)).thenReturn(null);
+        manager.processEndpoint(null, endpoint1);
 
         manager.processEndpoint(endpoint1, endpoint2);
         verify(endpointListener).endpointUpdated(any(EpKey.class));

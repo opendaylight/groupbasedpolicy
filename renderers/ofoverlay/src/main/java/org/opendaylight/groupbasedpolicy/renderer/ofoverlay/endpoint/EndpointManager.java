@@ -307,62 +307,67 @@ public class EndpointManager implements AutoCloseable {
         boolean notifyOldEg = false;
         boolean notifyNewEg = false;
 
-        // maintain external endpoints map
-        if (newLoc == null && oldLoc == null) {
-            if (newEp != null && newEpKey != null) {
+        // create endpoint
+        if (oldEp == null && newEp != null) {
+            if (newLoc != null) {
+                createEndpoint(newLoc, newEpKey, newEpgIds, tenantId);
+                endpoints.put(newEpKey, newEp);
+                notifyEndpointUpdated(newEpKey);
+                notifyNewLoc = true;
+                notifyNewEg = true;
+            } else {
                 externalEndpointsWithoutLocation.put(newEpKey, newEp);
             }
-            if (oldEp != null && oldEpKey != null) {
-                externalEndpointsWithoutLocation.remove(oldEpKey);
-            }
-            return;
-        }
-
-        // maintain endpoint maps
-        // new endpoint
-        if (newEp != null && newEpKey != null) {
-            endpoints.put(newEpKey, newEp);
-            // TODO This and the create endpoint / update endpoint section will cause switchUpdate
-            // to be called twice. Consider removing
-            notifyEndpointUpdated(newEpKey);
-        }
-        // odl endpoint
-        else if (oldEpKey != null) {
-            endpoints.remove(oldEpKey);
-            // TODO This and the create endpoint / update endpoint section will cause switchUpdate
-            // to be called twice. Consider removing
-            notifyEndpointUpdated(oldEpKey);
-        }
-
-        // create endpoint
-        if (oldEp == null && newEp != null && newLoc != null) {
-            createEndpoint(newLoc, newEpKey, newEpgIds, tenantId);
-            notifyNewLoc = true;
-            notifyNewEg = true;
         }
 
         // update endpoint
-        if (oldEp != null && newEp != null && oldEpKey != null && newEpKey != null && newLoc != null
-                && (oldEpKey.toString().equals(newEpKey.toString()))) {
-
-            // endpoint was moved, new location exists but is different from old one
-            if (oldLoc != null && !(oldLoc.getValue().equals(newLoc.getValue()))) {
-                // remove old endpoint
+        else if (oldEp != null && newEp != null && oldEpKey != null && newEpKey != null) {
+            // endpoint is not external anymore
+            if (newLoc != null && oldLoc == null) {
+                createEndpoint(newLoc, newEpKey, newEpgIds, tenantId);
+                externalEndpointsWithoutLocation.remove(oldEpKey);
+                endpoints.put(newEpKey, newEp);
+                notifyEndpointUpdated(newEpKey);
+                notifyNewLoc = true;
+                notifyNewEg = true;
+            }
+            // endpoint changed to external
+            else if (newLoc == null && oldLoc != null) {
                 removeEndpoint(oldEp, oldLoc, oldEpKey, oldEpgIds);
+                externalEndpointsWithoutLocation.put(newEpKey, newEp);
+                endpoints.remove(oldEpKey);
+                notifyEndpointUpdated(oldEpKey);
                 notifyOldLoc = true;
                 notifyOldEg = true;
+            // endpoint might have changed location, EPGs or it's properties
+            } else if (newLoc != null && oldLoc != null) {
+                    // endpoit changed location
+                    if (!(oldLoc.getValue().equals(newLoc.getValue()))) {
+                        notifyOldLoc = true;
+                        notifyNewLoc = true;
+                    }
+                    // endpoint changed EPGs
+                    if (!oldEpgIds.equals(newEpgIds)) {
+                        notifyOldEg = true;
+                        notifyNewEg = true;
+                    }
+                    removeEndpoint(oldEp, oldLoc, oldEpKey, oldEpgIds);
+                    createEndpoint(newLoc, newEpKey, newEpgIds, tenantId);
+                    notifyEndpointUpdated(newEpKey);
             }
-            // add moved endpoint
-            createEndpoint(newLoc, newEpKey, newEpgIds, tenantId);
-            notifyNewLoc = true;
-            notifyNewEg = true;
         }
 
         // remove endpoint
-        if (oldEp != null && newEp == null) {
-            removeEndpoint(oldEp, oldLoc, oldEpKey, oldEpgIds);
-            notifyOldLoc = true;
-            notifyOldEg = true;
+        else if (oldEp != null && newEp == null) {
+            if (oldLoc != null) {
+                removeEndpoint(oldEp, oldLoc, oldEpKey, oldEpgIds);
+                endpoints.remove(oldEpKey);
+                notifyEndpointUpdated(oldEpKey);
+                notifyOldLoc = true;
+                notifyOldEg = true;
+            } else {
+                externalEndpointsWithoutLocation.remove(oldEpKey);
+            }
         }
 
         // notifications
