@@ -27,13 +27,17 @@ import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry;
+import org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistry;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.OfOverlayAug;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.OfOverlayL3NatAug;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Action;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ActionDefinitionListener;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ClassifierDefinitionListener;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfigBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
@@ -76,6 +80,7 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
                              RpcProviderRegistry rpcRegistry,
                              NotificationService notificationService,
                              EpRendererAugmentationRegistry epRendererAugmentationRegistry,
+                             PolicyValidatorRegistry policyValidatorRegistry,
                              final short tableOffset) {
         super();
         this.dataBroker = dataProvider;
@@ -90,7 +95,9 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
         classifierDefinitionListener = new ClassifierDefinitionListener(dataBroker);
         actionDefinitionListener = new ActionDefinitionListener(dataProvider);
 
-        // TODO we need register action/classifier validators to gpb-base
+        for (Entry<ActionDefinitionId, Action> entry : SubjectFeatures.getActions().entrySet()) {
+            policyValidatorRegistry.register(entry.getKey(), entry.getValue());
+        }
 
         policyManager = new PolicyManager(dataProvider,
                 switchManager,
