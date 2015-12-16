@@ -20,7 +20,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.acti
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.OutputPortValues;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.EtherType;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.arp.match.fields.ArpTargetHardwareAddressBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.ethernet.match.fields.EthernetDestinationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.ethernet.match.fields.EthernetTypeBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.EthernetMatch;
@@ -49,6 +48,15 @@ public class ArpFlowFactory {
     }
 
     /**
+     * Creates {@link EthernetMatch} containing ARP ether-type
+     */
+    public static EthernetMatch createEthernetMatch() {
+        return new EthernetMatchBuilder().setEthernetType(
+                new EthernetTypeBuilder().setType(new EtherType(Long.valueOf(EtherTypes.ARP.intValue()))).build())
+            .build();
+    }
+
+    /**
      * Creates {@link ArpMatch} containing Reply ARP operation, THA and TPA for the given target
      * address and SPA for the given sender protocol address
      *
@@ -58,8 +66,6 @@ public class ArpFlowFactory {
      */
     public static ArpMatch createArpMatch(ArpMessageAddress targetAddress, Ipv4Address senderProtocolAddress) {
         return new ArpMatchBuilder().setArpOp(ArpOperation.REPLY.intValue())
-            .setArpTargetHardwareAddress(
-                    new ArpTargetHardwareAddressBuilder().setAddress(targetAddress.getHardwareAddress()).build())
             .setArpTargetTransportAddress(new Ipv4Prefix(targetAddress.getProtocolAddress().getValue() + HOST_MASK))
             .setArpSourceTransportAddress(new Ipv4Prefix(senderProtocolAddress.getValue() + HOST_MASK))
             .build();
