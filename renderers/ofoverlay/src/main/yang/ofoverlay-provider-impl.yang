@@ -74,6 +74,15 @@ module ofoverlay-provider-impl {
                     }
                 }
             }
+            // PolicyProviderRegistry service
+            container policy-validator-registry {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity gbpcfg:policy-validator-registry;
+                    }
+                }
+            }
 
             uses ofoverlay:initial-values;
         }
