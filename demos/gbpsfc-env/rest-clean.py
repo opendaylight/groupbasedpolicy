@@ -61,7 +61,7 @@ def get_service_function_paths_uri():
     return "/restconf/config/service-function-path:service-function-paths/"
 
 def get_tenant_uri():
-    return "/restconf/config/policy:tenants/policy:tenant/f5c7d344-d1c7-4208-8531-2c2693657e12"
+    return "/restconf/config/policy:tenants/policy:tenant/tenant-red"
 
 def get_tunnel_uri():
     return "/restconf/config/opendaylight-inventory:nodes"
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     if controller == None:
         sys.exit("No controller set.")
     else:
-	print "Contacting controller at %s" % controller
+        print "Contacting controller at %s" % controller
 
     resp=get(controller,DEFAULT_PORT,'/restconf/operational/endpoint:endpoints')
     resp_json=json.loads(resp.text)
@@ -108,12 +108,12 @@ if __name__ == "__main__":
 
     print "unregistering L2 endpoints"
     for endpoint in l2_eps:
-	data={ "input": { "l2": [ { "l2-context": endpoint['l2-context'] ,"mac-address": endpoint['mac-address'] } ] } }
+        data={ "input": { "l2": [ { "l2-context": endpoint['l2-context'] ,"mac-address": endpoint['mac-address'] } ] } }
         post(controller, DEFAULT_PORT, get_endpoint_uri(),data,True)
 
     print "unregistering L3 endpoints"
     for endpoint in l3_eps:
-	data={ "input": { "l3": [ { "l3-context": endpoint['l3-context'] ,"ip-address": endpoint['ip-address'] } ] } }
+        data={ "input": { "l3": [ { "l3-context": endpoint['l3-context'] ,"ip-address": endpoint['ip-address'] } ] } }
         post(controller, DEFAULT_PORT, get_endpoint_uri(),data,True)
 
     print "topology removed check"
