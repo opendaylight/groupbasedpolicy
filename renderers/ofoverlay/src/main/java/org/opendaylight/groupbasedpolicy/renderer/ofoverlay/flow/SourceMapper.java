@@ -25,6 +25,7 @@ import org.opendaylight.groupbasedpolicy.dto.EgKey;
 import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
@@ -34,7 +35,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.M
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
@@ -77,8 +77,6 @@ public class SourceMapper extends FlowTable {
 
         // Handle case where packets from from External
         for (Endpoint ep : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
-            OfOverlayContext ofc = ep.getAugmentation(OfOverlayContext.class);
-
             IndexedTenant tenant = ctx.getTenant(ep.getTenant());
             if (tenant == null)
                 continue;
@@ -95,8 +93,9 @@ public class SourceMapper extends FlowTable {
                 continue;
             }
 
+            OfOverlayContext ofc = ep.getAugmentation(OfOverlayContext.class);
             if (ofc != null && ofc.getNodeConnectorId() != null
-                    && (ofc.getLocationType() == null || LocationType.Internal.equals(ofc.getLocationType()))) {
+                    && (EndpointManager.isInternal(ep, ctx.getTenant(ep.getTenant()).getExternalImplicitGroups()))) {
                 /**
                  * Sync the local EP information.
                  */

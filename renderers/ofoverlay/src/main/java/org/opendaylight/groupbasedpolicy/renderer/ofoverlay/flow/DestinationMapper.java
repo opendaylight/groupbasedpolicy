@@ -53,6 +53,7 @@ import org.opendaylight.groupbasedpolicy.dto.EpKey;
 import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
@@ -80,7 +81,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ForwardingContext;
@@ -305,21 +305,9 @@ public class DestinationMapper extends FlowTable {
         String nextHop=null;
 
         OfOverlayContext ofc = l2Ep.getAugmentation(OfOverlayContext.class);
-        LocationType location;
-
-        if (ofc != null && ofc.getLocationType() != null) {
-            location = ofc.getLocationType();
-        } else if (ofc != null) {
-            // Augmentation, but using default location
-            location = LocationType.Internal;
-        } else {
-            LOG.info("createL3PrefixFlow - Endpoint {} had no augmentation.", l2Ep);
-            return null;
-        }
 
         long portNum = -1;
-
-        if (location.equals(LocationType.Internal)) {
+        if (EndpointManager.isInternal(l2Ep, ctx.getTenant(l2Ep.getTenant()).getExternalImplicitGroups())) {
             checkNotNull(ofc.getNodeConnectorId());
             nextHop = ofc.getNodeConnectorId().getValue();
             try {
@@ -608,9 +596,8 @@ public class DestinationMapper extends FlowTable {
             }
             return;
         }
-        OfOverlayContext ofc = destEp.getAugmentation(OfOverlayContext.class);
 
-        if (LocationType.External.equals(ofc.getLocationType())) {
+        if (EndpointManager.isExternal(destEp, ctx.getTenant(destEp.getTenant()).getExternalImplicitGroups())) {
             LOG.error("syncEp(): External endpoints should not be seen here.");
             return;
         }
@@ -627,6 +614,7 @@ public class DestinationMapper extends FlowTable {
             return;
         }
 
+        OfOverlayContext ofc = destEp.getAugmentation(OfOverlayContext.class);
         if (Objects.equals(ofc.getNodeId(), nodeId)) {
             // this is a local endpoint; send to the approppriate local
             // port

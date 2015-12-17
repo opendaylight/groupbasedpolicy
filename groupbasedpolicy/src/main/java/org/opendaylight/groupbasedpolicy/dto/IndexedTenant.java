@@ -9,6 +9,7 @@
 package org.opendaylight.groupbasedpolicy.dto;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -32,12 +33,14 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.Contract;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ExternalImplicitGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.SubjectFeatureInstances;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * Wrap some convenient indexes around a {@link Tenant} object
@@ -59,6 +62,7 @@ public class IndexedTenant {
     private final Map<ActionName, ActionInstance> actions =
             new HashMap<>();
     private final Map<String, Set<SubnetId>> subnetMap = new HashMap<>();
+    private Set<ExternalImplicitGroup> externalImplicitGroups = Collections.emptySet();
 
     public IndexedTenant(Tenant tenant) {
         this.tenant = tenant;
@@ -76,6 +80,9 @@ public class IndexedTenant {
             for (EndpointGroup eg : policy.getEndpointGroup()) {
                 endpointGroups.put(eg.getId(), eg);
             }
+        }
+        if (policy.getExternalImplicitGroup() != null) {
+            externalImplicitGroups = ImmutableSet.copyOf(policy.getExternalImplicitGroup());
         }
         if (policy.getContract() != null) {
             for (Contract c : policy.getContract()) {
@@ -131,6 +138,14 @@ public class IndexedTenant {
      */
     public Tenant getTenant() {
         return tenant;
+    }
+
+    /**
+     * Gets all external implicit groups in the tenant
+     * @return immutable set of EIGs
+     */
+    public Set<ExternalImplicitGroup> getExternalImplicitGroups() {
+        return externalImplicitGroups;
     }
     
     /**

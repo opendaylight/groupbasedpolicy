@@ -79,10 +79,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gb
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.ports.by.endpoints.PortByEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.router._interface.ports.by.endpoints.RouterInterfacePortByEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.router.gateway.ports.by.endpoints.RouterGatewayPortByEndpoint;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextInputBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
@@ -594,10 +593,6 @@ public class NeutronPortAware implements INeutronPortAware {
             }
             epgIds.add(NetworkClient.EPG_ID);
         }
-        LocationType locationType = LocationType.Internal;
-        if(isRouterGatewayPort(port)) {
-            locationType = LocationType.External;
-        }
         RegisterEndpointInputBuilder inputBuilder = new RegisterEndpointInputBuilder().setL2Context(
                 fwCtx.getL2BridgeDomain().getId())
             .setMacAddress(new MacAddress(port.getMacAddress()))
@@ -606,7 +601,6 @@ public class NeutronPortAware implements INeutronPortAware {
             .addAugmentation(OfOverlayContextInput.class,
                     new OfOverlayContextInputBuilder()
                         .setPortName(createTapPortName(port))
-                        .setLocationType(locationType)
                     .build())
             .setTimestamp(System.currentTimeMillis());
         List<Neutron_IPs> fixedIPs = port.getFixedIPs();

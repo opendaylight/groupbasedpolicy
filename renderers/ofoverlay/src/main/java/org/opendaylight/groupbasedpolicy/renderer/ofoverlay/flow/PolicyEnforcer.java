@@ -8,12 +8,23 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ComparisonChain;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Ordering;
-import com.google.common.collect.Table.Cell;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.addNxRegMatch;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.applyActionIns;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.gotoTableIns;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.instructions;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxOutputRegAction;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.annotation.concurrent.Immutable;
+
 import org.opendaylight.groupbasedpolicy.api.sf.AllowActionDefinition;
 import org.opendaylight.groupbasedpolicy.api.sf.EtherTypeClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.api.sf.IpProtoClassifierDefinition;
@@ -25,7 +36,8 @@ import org.opendaylight.groupbasedpolicy.dto.Policy;
 import org.opendaylight.groupbasedpolicy.dto.RuleGroup;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.*;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Action;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.AllowAction;
@@ -53,6 +65,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup.IntraGroupPolicy;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ExternalImplicitGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.Rule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
@@ -71,17 +84,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.concurrent.Immutable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.*;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ComparisonChain;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Ordering;
+import com.google.common.collect.Table.Cell;
 
 /**
  * Manage the table that enforces policy on the traffic. Traffic is denied
@@ -829,16 +836,20 @@ public class PolicyEnforcer extends FlowTable {
             // If actionBuilderList is empty (we removed the last Allow) then go straight to
             // ExternalMapper table.
 
-            if (ctx.getEndpointManager().isExternal(netElements.getDstEp())) {
-                flow.setInstructions(instructions(getGotoEgressNatInstruction()));
+            List<ExternalImplicitGroup> eigs = ctx.getTenant(netElements.getDstEp().getTenant())
+                .getTenant()
+                .getPolicy()
+                .getExternalImplicitGroup();
+            if (EndpointManager.isExternal(netElements.getDstEp(), eigs)) {
+                flow.setInstructions(instructions(gotoEgressNatInstruction));
             } else if (actionBuilderList == null) {
                 //TODO - analyse, what happen for unknown action, SFC, etc.
                 LOG.warn("Action builder list not found, partially flow which is not created: {}", flow.build());
                 continue;
             } else if (actionBuilderList.isEmpty()) {
-                flow.setInstructions(instructions(getGotoExternalInstruction()));
+                flow.setInstructions(instructions(gotoExternalInstruction));
             } else {
-                flow.setInstructions(instructions(applyActionIns(actionBuilderList), getGotoExternalInstruction()));
+                flow.setInstructions(instructions(applyActionIns(actionBuilderList), gotoExternalInstruction));
             }
             ofWriter.writeFlow(netElements.getLocalNodeId(), TABLE_ID, flow.build());
         }
@@ -1064,9 +1075,6 @@ public class PolicyEnforcer extends FlowTable {
         private EndpointFwdCtxOrdinals dstEpOrdinals;
 
         public NetworkElements(Endpoint srcEp, Endpoint dstEp, EgKey srcEpg, EgKey dstEpg, NodeId nodeId, OfContext ctx) throws Exception {
-            Preconditions.checkArgument(srcEp.getAugmentation(OfOverlayContext.class) != null);
-            Preconditions.checkArgument(dstEp.getAugmentation(OfOverlayContext.class) != null);
-
             this.srcEp = srcEp;
             this.dstEp = dstEp;
             this.srcEpg = srcEpg;
@@ -1082,8 +1090,12 @@ public class PolicyEnforcer extends FlowTable {
                 LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", dstEp);
                 return;
             }
-            this.dstNodeId = dstEp.getAugmentation(OfOverlayContext.class).getNodeId();
-            this.srcNodeId = srcEp.getAugmentation(OfOverlayContext.class).getNodeId();
+            if (dstEp.getAugmentation(OfOverlayContext.class) != null) {
+                this.dstNodeId = dstEp.getAugmentation(OfOverlayContext.class).getNodeId();
+            }
+            if (srcEp.getAugmentation(OfOverlayContext.class) != null) {
+                this.srcNodeId = srcEp.getAugmentation(OfOverlayContext.class).getNodeId();
+            }
         }
 
 

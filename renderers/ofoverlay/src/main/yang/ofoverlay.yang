@@ -77,20 +77,6 @@ module ofoverlay {
     grouping endpoint-location {
         description
             "The location for this endpoint in the overlay network";
-        leaf location-type {
-            default internal;
-            type enumeration {
-                enum internal {
-                    description
-                    "The endpoint is located on a port that is part of
-                     the overlay network.  You must include the node
-                     ID and port number for this endpoint.";
-                }
-                enum external {
-                    description "This endpoint is not inside the overlay.";
-                }
-            }
-        }
         leaf node-id {
             description
                 "The OpenFlow switch for the endpoint. Must be included

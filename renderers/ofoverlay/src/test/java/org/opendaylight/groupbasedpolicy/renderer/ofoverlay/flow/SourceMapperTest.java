@@ -34,7 +34,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.ta
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
@@ -81,7 +80,6 @@ public class SourceMapperTest {
         when(endpoint.getAugmentation(OfOverlayContext.class)).thenReturn(ofOverlayContext);
         nodeConnectorId = mock(NodeConnectorId.class);
         when(ofOverlayContext.getNodeConnectorId()).thenReturn(nodeConnectorId);
-        when(ofOverlayContext.getLocationType()).thenReturn(LocationType.Internal);
 
         tenantId = mock(TenantId.class);
         when(endpoint.getTenant()).thenReturn(tenantId);

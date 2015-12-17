@@ -23,6 +23,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledExecutorService;
 
+import javax.annotation.Nullable;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.NotificationService;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
@@ -41,6 +43,7 @@ import org.opendaylight.groupbasedpolicy.util.SetUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointFields;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3AddressBuilder;
@@ -51,8 +54,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddress;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextBuilder;
@@ -60,6 +61,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3Context;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ExternalImplicitGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.slf4j.Logger;
@@ -457,8 +459,7 @@ public class EndpointManager implements AutoCloseable {
     private void createL3Endpoint(EndpointL3 newL3Ep) {
         LOG.trace("Processing L3Endpoint {}", newL3Ep.getKey());
         if (isValidL3Ep(newL3Ep)) {
-            if (newL3Ep.getMacAddress() == null && getLocationType(newL3Ep) != null
-                    && getLocationType(newL3Ep).equals(LocationType.External)) {
+            if (newL3Ep.getMacAddress() == null) {
                 if (newL3Ep.getNetworkContainment() != null) {
                     arpTasker.addMacForL3EpAndCreateEp(newL3Ep);
                 } else {
@@ -514,15 +515,59 @@ public class EndpointManager implements AutoCloseable {
         return SetUtils.getNestedSet(eg, map);
     }
 
-    protected boolean isInternal(Endpoint ep) {
-        Preconditions.checkNotNull(ep);
-        OfOverlayContext ofc = ep.getAugmentation(OfOverlayContext.class);
-        return ofc == null || ofc.getLocationType() == null
-                || ofc.getLocationType().equals(EndpointLocation.LocationType.Internal);
+    /**
+     * An endpoint is external if its endpoint-group is external implicit group.
+     * 
+     * @param ep an endpoint
+     * @param eigs external implicit groups
+     * @return {@code true} if the given endpoint has EPG representing external implicit group;
+     *         {@code false} otherwise
+     * @throws NullPointerException if the given endpoint is {@code null}
+     * @throws IllegalArgumentException if the given endpoint does not contain any endpoint-group
+     */
+    public static boolean isExternal(Endpoint ep, @Nullable Collection<ExternalImplicitGroup> eigs) {
+        return !isInternal(ep, eigs);
     }
 
-    public boolean isExternal(Endpoint ep) {
-        return !isInternal(ep);
+    /**
+     * An endpoint is internal if none of its endpoint-groups is external implicit group.
+     * 
+     * @param ep an endpoint
+     * @param eigs external implicit groups
+     * @return {@code true} if the given endpoint does not have EPG representing external implicit
+     *         group;
+     *         {@code false} otherwise
+     * @throws NullPointerException if the given endpoint is {@code null}
+     * @throws IllegalArgumentException if the given endpoint does not contain any endpoint-group
+     */
+    public static boolean isInternal(Endpoint ep, @Nullable Collection<ExternalImplicitGroup> eigs) {
+        Preconditions.checkNotNull(ep);
+        if (eigs == null || eigs.isEmpty()) {
+            return true;
+        }
+        Set<EndpointGroupId> epgs = getEpgs(ep);
+        Preconditions.checkArgument(!epgs.isEmpty());
+        for (EndpointGroupId epg : epgs) {
+            for (ExternalImplicitGroup eig : eigs) {
+                if (epg.equals(eig.getId())) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static Set<EndpointGroupId> getEpgs(EndpointFields ep) {
+        EndpointGroupId epgId = ep.getEndpointGroup();
+        List<EndpointGroupId> epgsId = ep.getEndpointGroups();
+        Set<EndpointGroupId> result = new HashSet<>();
+        if (epgId != null) {
+            result.add(epgId);
+        }
+        if (epgsId != null) {
+            result.addAll(epgsId);
+        }
+        return result;
     }
 
     /**
@@ -726,20 +771,12 @@ public class EndpointManager implements AutoCloseable {
         return egKeys;
     }
 
-    private EndpointLocation.LocationType getLocationType(EndpointL3 epL3) {
-        if (epL3 == null || epL3.getAugmentation(OfOverlayL3Context.class) == null
-                || epL3.getAugmentation(OfOverlayL3Context.class).getLocationType() == null) {
-            return null;
-        }
-        return epL3.getAugmentation(OfOverlayL3Context.class).getLocationType();
-    }
-
     @SuppressWarnings("unused")
     private Endpoint addEndpointFromL3Endpoint(EndpointL3 l3Ep, ReadWriteTransaction rwTx) {
         // Make an indexed tenant and resolveL2BridgeDomain from L3EP containment if not L3
         // (instanceof)
         OfOverlayL3Context ofL3Ctx = l3Ep.getAugmentation(OfOverlayL3Context.class);
-        OfOverlayContext ofCtx = getOfOverlayContextFromL3Endpoint(ofL3Ctx);
+        OfOverlayContext ofCtx = new OfOverlayContextBuilder(ofL3Ctx).build();
         if (l3Ep.getNetworkContainment() instanceof L3Context) {
             LOG.error("Cannot generate Endpoint from EndpointL3, network containment is L3Context.");
             rwTx.cancel();
@@ -774,27 +811,6 @@ public class EndpointManager implements AutoCloseable {
             .build();
         rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointIid(ep.getL2Context(), ep.getMacAddress()), ep);
         return ep;
-    }
-
-    private OfOverlayContext getOfOverlayContextFromL3Endpoint(OfOverlayL3Context ofL3Ctx) {
-        OfOverlayContextBuilder ofBuilder = new OfOverlayContextBuilder();
-        if (ofL3Ctx.getInterfaceId() != null) {
-            ofBuilder.setInterfaceId(ofL3Ctx.getInterfaceId());
-        }
-        if (ofL3Ctx.getLocationType() != null) {
-            ofBuilder.setLocationType(ofL3Ctx.getLocationType());
-        }
-        if (ofL3Ctx.getNodeConnectorId() != null) {
-            ofBuilder.setNodeConnectorId(ofL3Ctx.getNodeConnectorId());
-        }
-        if (ofL3Ctx.getNodeId() != null) {
-            ofBuilder.setNodeId(ofL3Ctx.getNodeId());
-        }
-        if (ofL3Ctx.getPortName() != null) {
-            ofBuilder.setPortName(ofL3Ctx.getPortName());
-        }
-
-        return ofBuilder.build();
     }
 
     private Set<EndpointGroupId> getEndpointGroupsFromEndpoint(Endpoint ep) {

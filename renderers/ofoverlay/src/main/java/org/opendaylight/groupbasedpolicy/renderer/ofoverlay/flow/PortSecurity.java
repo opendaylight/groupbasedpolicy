@@ -8,10 +8,14 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
+import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Prefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
@@ -19,10 +23,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.ta
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ExternalImplicitGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer3Match;
@@ -80,9 +85,14 @@ public class PortSecurity extends FlowTable {
 
         for (Endpoint ep : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
             OfOverlayContext ofc = ep.getAugmentation(OfOverlayContext.class);
+            if (ofc == null || ofc.getNodeConnectorId() == null) {
+                LOG.info("Endpoint {} does not contain node-connector-id. OFOverlay ignores the endpoint.",
+                        ep.getKey());
+                continue;
+            }
 
-            if (ofc != null && ofc.getNodeConnectorId() != null
-                    && (ofc.getLocationType() == null || LocationType.Internal.equals(ofc.getLocationType()))) {
+            Set<ExternalImplicitGroup> eigs = getExternalImplicitGroupsForTenant(ep.getTenant());
+            if (EndpointManager.isInternal(ep, eigs)) {
                 // Allow layer 3 traffic (ARP and IP) with the correct
                 // source IP, MAC, and source port
                 l3flow(ofWriter, nodeId, ep, ofc, 120, false);
@@ -92,8 +102,20 @@ public class PortSecurity extends FlowTable {
                 // Allow layer 2 traffic with the correct source MAC and
                 // source port (note lower priority than drop IP rules)
                 ofWriter.writeFlow(nodeId, TABLE_ID, l2flow(ep, ofc, 100));
+            } else { // EP is external
+                if (LOG.isTraceEnabled()) {
+                    LOG.trace("External Endpoint is ignored in PortSecurity: {}", ep);
+                }
             }
         }
+    }
+
+    private Set<ExternalImplicitGroup> getExternalImplicitGroupsForTenant(TenantId tenantId) {
+        IndexedTenant tenant = ctx.getTenant(tenantId);
+        if (tenant == null) {
+            return Collections.emptySet();
+        }
+        return tenant.getExternalImplicitGroups();
     }
 
     private Flow allowFromPort(NodeConnectorId port) {

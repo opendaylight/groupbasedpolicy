@@ -66,7 +66,13 @@ public class EndpointHelper {
         NodeConnectorId ncId = new NodeConnectorId(nodeConnectorIdString);
 
         OfOverlayContext ofc = endpoint.getAugmentation(OfOverlayContext.class);
-        OfOverlayContextBuilder ofcBuilder = new OfOverlayContextBuilder(ofc).setNodeConnectorId(ncId).setNodeId(invNodeId);
+        OfOverlayContextBuilder ofcBuilder;
+        if (ofc == null) {
+            ofcBuilder = new OfOverlayContextBuilder();
+        } else {
+            ofcBuilder = new OfOverlayContextBuilder(ofc);
+        }
+        ofcBuilder.setNodeConnectorId(ncId).setNodeId(invNodeId);
         EndpointBuilder epBuilder = new EndpointBuilder(endpoint);
         epBuilder.addAugmentation(OfOverlayContext.class, ofcBuilder.build());
         Endpoint newEp = epBuilder.build();
