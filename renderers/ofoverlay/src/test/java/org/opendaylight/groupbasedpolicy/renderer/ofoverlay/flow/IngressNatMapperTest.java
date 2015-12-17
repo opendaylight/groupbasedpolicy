@@ -31,7 +31,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.ta
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.napt.translations.fields.napt.translations.NaptTranslation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 
 public class IngressNatMapperTest {
@@ -78,10 +78,9 @@ public class IngressNatMapperTest {
         when(endpointManager.getEndpointsForNode(any(NodeId.class))).thenReturn(Arrays.asList(endpoint));
 
         // createNatFlow
-        NaptTranslation nat = mock(NaptTranslation.class);
-        when(endpointManager.getNaptAugL3Endpoint(any(EndpointL3.class))).thenReturn(Arrays.asList(nat));
         ipAddressNapt = mock(IpAddress.class);
-        when(nat.getIpAddress()).thenReturn(ipAddressNapt);
+        NatAddress nat = mock(NatAddress.class);
+        when(nat.getNatAddress()).thenReturn(ipAddressNapt);
         Ipv4Address ipv4AddressNapt = mock(Ipv4Address.class);
         when(ipAddressNapt.getIpv4Address()).thenReturn(ipv4AddressNapt);
         when(ipv4AddressNapt.getValue()).thenReturn(IPV4_ADDRESS);

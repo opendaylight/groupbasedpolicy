@@ -63,13 +63,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayL3Context;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayL3ContextBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayL3Nat;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.napt.translations.fields.NaptTranslations;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.napt.translations.fields.napt.translations.NaptTranslation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ForwardingContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomain;
@@ -295,11 +293,9 @@ public class EndpointManagerTest {
         List<EndpointL3> endpointL3List = Collections.singletonList(endpointL3);
         when(endpoints.getEndpointL3()).thenReturn(endpointL3List);
 
-        OfOverlayL3Nat overlayL3Nat = mock(OfOverlayL3Nat.class);
-        when(endpointL3.getAugmentation(OfOverlayL3Nat.class)).thenReturn(overlayL3Nat);
-        NaptTranslations naptTranslations = mock(NaptTranslations.class);
-        when(overlayL3Nat.getNaptTranslations()).thenReturn(mock(NaptTranslations.class));
-        when(naptTranslations.getNaptTranslation()).thenReturn(Collections.singletonList(mock(NaptTranslation.class)));
+        NatAddress overlayL3Nat = mock(NatAddress.class);
+        when(endpointL3.getAugmentation(NatAddress.class)).thenReturn(overlayL3Nat);
+        when(overlayL3Nat.getNatAddress()).thenReturn(mock(IpAddress.class));
 
         when(endpointL3.getL2Context()).thenReturn(mock(L2BridgeDomainId.class));
         when(endpointL3.getMacAddress()).thenReturn(mock(MacAddress.class));
@@ -323,11 +319,8 @@ public class EndpointManagerTest {
         List<EndpointL3> endpointL3List = Collections.singletonList(endpointL3);
         when(endpoints.getEndpointL3()).thenReturn(endpointL3List);
 
-        OfOverlayL3Nat overlayL3Nat = mock(OfOverlayL3Nat.class);
-        when(endpointL3.getAugmentation(OfOverlayL3Nat.class)).thenReturn(overlayL3Nat);
-        NaptTranslations naptTranslations = mock(NaptTranslations.class);
-        when(overlayL3Nat.getNaptTranslations()).thenReturn(mock(NaptTranslations.class));
-        when(naptTranslations.getNaptTranslation()).thenReturn(Collections.singletonList(mock(NaptTranslation.class)));
+        NatAddress overlayL3Nat = mock(NatAddress.class);
+        when(endpointL3.getAugmentation(NatAddress.class)).thenReturn(overlayL3Nat);
 
         when(endpointL3.getL2Context()).thenReturn(mock(L2BridgeDomainId.class));
         when(endpointL3.getMacAddress()).thenReturn(null);
@@ -345,47 +338,14 @@ public class EndpointManagerTest {
         List<EndpointL3> endpointL3List = Collections.singletonList(endpointL3);
         when(endpoints.getEndpointL3()).thenReturn(endpointL3List);
 
-        OfOverlayL3Nat overlayL3Nat = mock(OfOverlayL3Nat.class);
-        when(endpointL3.getAugmentation(OfOverlayL3Nat.class)).thenReturn(overlayL3Nat);
-        NaptTranslations naptTranslations = mock(NaptTranslations.class);
-        when(overlayL3Nat.getNaptTranslations()).thenReturn(mock(NaptTranslations.class));
-        when(naptTranslations.getNaptTranslation()).thenReturn(Collections.singletonList(mock(NaptTranslation.class)));
+        NatAddress overlayL3Nat = mock(NatAddress.class);
+        when(endpointL3.getAugmentation(NatAddress.class)).thenReturn(overlayL3Nat);
 
         when(endpointL3.getL2Context()).thenReturn(null);
         when(endpointL3.getMacAddress()).thenReturn(mock(MacAddress.class));
 
         Map<EndpointKey, EndpointL3> result = manager.getL3EpWithNatByL2Key();
         Assert.assertTrue(result.isEmpty());
-    }
-
-    @Test
-    public void getNaptAugL3EndpointTest() {
-        EndpointL3 endpointL3 = mock(EndpointL3.class);
-        OfOverlayL3Nat ofOverlayL3Nat = mock(OfOverlayL3Nat.class);
-        when(endpointL3.getAugmentation(OfOverlayL3Nat.class)).thenReturn(ofOverlayL3Nat);
-        NaptTranslations naptTranslations = mock(NaptTranslations.class);
-        when(ofOverlayL3Nat.getNaptTranslations()).thenReturn(naptTranslations);
-        when(naptTranslations.getNaptTranslation()).thenReturn(null);
-        when(naptTranslations.getNaptTranslation()).thenReturn(Collections.singletonList(mock(NaptTranslation.class)));
-
-        Assert.assertNotNull(manager.getNaptAugL3Endpoint(endpointL3));
-    }
-
-    @Test
-    public void getNaptAugL3EndpointTestNull() {
-        EndpointL3 endpointL3 = mock(EndpointL3.class);
-        when(endpointL3.getAugmentation(OfOverlayL3Nat.class)).thenReturn(null);
-        Assert.assertNull(manager.getNaptAugL3Endpoint(endpointL3));
-
-        OfOverlayL3Nat ofOverlayL3Nat = mock(OfOverlayL3Nat.class);
-        when(endpointL3.getAugmentation(OfOverlayL3Nat.class)).thenReturn(ofOverlayL3Nat);
-        when(ofOverlayL3Nat.getNaptTranslations()).thenReturn(null);
-        Assert.assertNull(manager.getNaptAugL3Endpoint(endpointL3));
-
-        NaptTranslations naptTranslations = mock(NaptTranslations.class);
-        when(ofOverlayL3Nat.getNaptTranslations()).thenReturn(naptTranslations);
-        when(naptTranslations.getNaptTranslation()).thenReturn(null);
-        Assert.assertNull(manager.getNaptAugL3Endpoint(endpointL3));
     }
 
     @Test

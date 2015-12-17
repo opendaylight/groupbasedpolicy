@@ -29,7 +29,6 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 
 import java.math.BigInteger;
 import java.util.Collection;
-import java.util.List;
 
 import org.opendaylight.groupbasedpolicy.dto.EpKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
@@ -46,7 +45,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.ta
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.napt.translations.fields.napt.translations.NaptTranslation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer3Match;
@@ -102,32 +101,25 @@ public class IngressNatMapper extends FlowTable {
     }
 
     private void createNatFlow(EndpointL3 l3Ep, NodeId nodeId, OfWriter ofWriter) throws Exception {
-        List<NaptTranslation> naptAugL3Endpoint = ctx.getEndpointManager().getNaptAugL3Endpoint(l3Ep);
+        NatAddress natAugL3Endpoint = l3Ep.getAugmentation(NatAddress.class);
         // Match on L3 Nat Augmentation in Destination, set to IPAddress/Mac, send to SourceMapper
-        if (naptAugL3Endpoint == null) {
+        if (natAugL3Endpoint == null) {
             return;
         }
-        Flow flow = null;
-        for (NaptTranslation nat : naptAugL3Endpoint) {
-            Endpoint ep = ctx.getEndpointManager().getEndpoint(new EpKey(l3Ep.getL2Context(), l3Ep.getMacAddress()));
-            EndpointFwdCtxOrdinals epFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, ep);
-            if (epFwdCtxOrds == null) {
-                LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", ep);
-                continue;
-            }
-
-
-            flow = buildNatFlow(nat.getIpAddress(), l3Ep.getIpAddress(), l3Ep.getMacAddress(), epFwdCtxOrds);
-            if (flow != null) {
-                ofWriter.writeFlow(nodeId, TABLE_ID, flow);
-            }
-            flow = createOutsideArpFlow(nat.getIpAddress(), l3Ep.getMacAddress(), nodeId);
-            if (flow != null) {
-                ofWriter.writeFlow(nodeId, TABLE_ID, flow);
-            }
-            break;
+        Endpoint ep = ctx.getEndpointManager().getEndpoint(new EpKey(l3Ep.getL2Context(), l3Ep.getMacAddress()));
+        EndpointFwdCtxOrdinals epFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, ep);
+        if (epFwdCtxOrds == null) {
+            LOG.info("getEndpointFwdCtxOrdinals is null for EP {}", ep);
+            return;
         }
-
+        Flow flow = buildNatFlow(natAugL3Endpoint.getNatAddress(), l3Ep.getIpAddress(), l3Ep.getMacAddress(), epFwdCtxOrds);
+        if (flow != null) {
+            ofWriter.writeFlow(nodeId, TABLE_ID, flow);
+        }
+        flow = createOutsideArpFlow(natAugL3Endpoint.getNatAddress(), l3Ep.getMacAddress(), nodeId);
+        if (flow != null) {
+            ofWriter.writeFlow(nodeId, TABLE_ID, flow);
+        }
     }
 
     private Flow buildNatFlow(IpAddress outsideDestAddress, IpAddress insideDestAddress, MacAddress toMac,

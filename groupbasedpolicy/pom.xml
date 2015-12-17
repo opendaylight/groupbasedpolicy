@@ -28,7 +28,7 @@
     </dependency>
     <dependency>
       <groupId>org.opendaylight.mdsal.model</groupId>
-      <artifactId>ietf-yang-types</artifactId>
+      <artifactId>yang-ext</artifactId>
     </dependency>
     <!-- testing dependencies -->
     <dependency>

@@ -120,28 +120,6 @@ module ofoverlay {
         }
     }
 
-    grouping napt-translations-fields {
-        container napt-translations {
-            description "List of NAPT translations";
-            list napt-translation {
-                key "ip-address";
-                uses napt-fields;
-            }
-        }
-    }
-
-    grouping napt-fields {
-        description "Support for IP NAPT";
-        leaf ip-address {
-            description "Ip address the L3Endpoint translates to.";
-            type inet:ip-address;
-        }
-        leaf port {
-            description "Port that L3Endpoint translates to.";
-            type inet:port-number;
-        }
-    }
-
     augment "/endpoint:endpoints/endpoint:endpoint" {
         ext:augment-identifier "of-overlay-context";
         uses endpoint-location;
@@ -155,16 +133,6 @@ module ofoverlay {
     augment "/endpoint:register-endpoint/endpoint:input" {
         ext:augment-identifier "of-overlay-context-input";
         uses endpoint-location;
-    }
-
-    augment "/endpoint:endpoints/endpoint:endpoint-l3" {
-        ext:augment-identifier "of-overlay-l3-nat";
-        uses napt-translations-fields;
-    }
-
-    augment "/endpoint:register-endpoint/endpoint:input" {
-        ext:augment-identifier "of-overlay-l3-nat-input";
-        uses napt-translations-fields;
     }
 
     augment "/inv:nodes/inv:node" {

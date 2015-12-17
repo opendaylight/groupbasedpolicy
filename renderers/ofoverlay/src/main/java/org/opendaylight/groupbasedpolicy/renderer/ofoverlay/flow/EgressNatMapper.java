@@ -17,7 +17,6 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.setIpv6SrcAction;
 
 import java.util.Collection;
-import java.util.List;
 
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
@@ -33,7 +32,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.M
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.napt.translations.fields.napt.translations.NaptTranslation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer3Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv4MatchBuilder;
@@ -78,15 +77,13 @@ public class EgressNatMapper extends FlowTable {
     }
 
     private Flow addNatFlow(EndpointL3 l3Ep) throws Exception {
-        List<NaptTranslation> naptAugL3Endpoint = ctx.getEndpointManager().getNaptAugL3Endpoint(l3Ep);
-        //Match on L3 Nat Augmentation in Destination, set to IPAddress/Mac, send to SourceMapper
-        Flow flow = null;
-        for (NaptTranslation nat:naptAugL3Endpoint) {
-            flow = buildNatFlow(l3Ep.getIpAddress(),nat.getIpAddress(),l3Ep.getTenant(), l3Ep.getL3Context());
-            break;
+        NatAddress natAugL3Endpoint = l3Ep.getAugmentation(NatAddress.class);
+        // Match on L3 Nat Augmentation in Destination, set to IPAddress/Mac, send to SourceMapper
+        if (natAugL3Endpoint != null) {
+            return buildNatFlow(l3Ep.getIpAddress(), natAugL3Endpoint.getNatAddress(), l3Ep.getTenant(),
+                    l3Ep.getL3Context());
         }
-
-        return flow;
+        return null;
     }
 
     private Flow buildNatFlow(IpAddress insideAddress, IpAddress outsideAddress, TenantId tenantId, L3ContextId l3Ctx) throws Exception {

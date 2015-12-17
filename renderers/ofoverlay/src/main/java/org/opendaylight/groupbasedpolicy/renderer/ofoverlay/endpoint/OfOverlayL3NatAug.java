@@ -18,9 +18,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayL3Nat;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayL3NatBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayL3NatInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddressBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddressInput;
 import org.opendaylight.yangtools.yang.binding.Augmentation;
 
 public class OfOverlayL3NatAug implements EpRendererAugmentation, AutoCloseable {
@@ -42,10 +42,10 @@ public class OfOverlayL3NatAug implements EpRendererAugmentation, AutoCloseable 
     @Override
     public Map.Entry<Class<? extends Augmentation<EndpointL3>>, Augmentation<EndpointL3>> buildEndpointL3Augmentation(
             RegisterEndpointInput input) {
-        if (input.getAugmentation(OfOverlayL3NatInput.class) != null) {
+        if (input.getAugmentation(NatAddressInput.class) != null) {
             return new SimpleImmutableEntry<Class<? extends Augmentation<EndpointL3>>, Augmentation<EndpointL3>>(
-                    OfOverlayL3Nat.class,
-                    new OfOverlayL3NatBuilder(input.getAugmentation(OfOverlayL3NatInput.class)).build());
+                    NatAddress.class,
+                    new NatAddressBuilder(input.getAugmentation(NatAddressInput.class)).build());
         }
         return null;
     }

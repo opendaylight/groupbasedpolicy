@@ -10,8 +10,6 @@ package org.opendaylight.groupbasedpolicy.neutron.ovsdb;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map.Entry;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -32,15 +30,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddressBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.floating.ip.association.mappings.internal.ports.by.floating.ip.ports.InternalPortByFloatingIpPort;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.endpoints.by.ports.EndpointByPort;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayL3Nat;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayL3NatBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.napt.translations.fields.NaptTranslations;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.napt.translations.fields.NaptTranslationsBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.napt.translations.fields.napt.translations.NaptTranslation;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.napt.translations.fields.napt.translations.NaptTranslationBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.napt.translations.fields.napt.translations.NaptTranslationKey;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -114,7 +107,6 @@ public class NeutronGbpFloatingIpListener implements DataChangeListener, AutoClo
         Endpoint l2Ep;
         EndpointL3 l3Ep;
         EndpointL3Key l3EpKey = null;
-        OfOverlayL3NatBuilder l3EpAug = null;
 
         ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
 
@@ -145,21 +137,9 @@ public class NeutronGbpFloatingIpListener implements DataChangeListener, AutoClo
                 IidFactory.l3EndpointIid(l3EpKey.getL3Context(), l3EpKey.getIpAddress()), rwTx);
         if (optL3Ep.isPresent()) {
             l3Ep = optL3Ep.get();
-            OfOverlayL3Nat ofL3NatAug = l3Ep.getAugmentation(OfOverlayL3Nat.class);
-            if (ofL3NatAug != null) {
-                l3EpAug = new OfOverlayL3NatBuilder(ofL3NatAug);
-            } else {
-                l3EpAug = new OfOverlayL3NatBuilder();
-            }
-            NaptTranslation nat = new NaptTranslationBuilder().setIpAddress(ipAddress)
-                .setKey(new NaptTranslationKey(natAddress))
-                .build();
-            List<NaptTranslation> natList = new ArrayList<>();
-            natList.add(nat);
-            NaptTranslations nats = new NaptTranslationsBuilder().setNaptTranslation(natList).build();
+            NatAddress nat = new NatAddressBuilder().setNatAddress(natAddress).build();
 
-            EndpointL3 updatedEpL3 = new EndpointL3Builder(l3Ep).addAugmentation(OfOverlayL3Nat.class,
-                    l3EpAug.setNaptTranslations(nats).build()).build();
+            EndpointL3 updatedEpL3 = new EndpointL3Builder(l3Ep).addAugmentation(NatAddress.class, nat).build();
 
             rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.l3EndpointIid(l3EpKey.getL3Context(), l3EpKey.getIpAddress()), updatedEpL3,true);
             boolean writeResult = DataStoreHelper.submitToDs(rwTx);

@@ -50,14 +50,13 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.EndpointLocation.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayL3Context;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayL3Nat;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.napt.translations.fields.napt.translations.NaptTranslation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3Context;
@@ -626,33 +625,14 @@ public class EndpointManager implements AutoCloseable {
 
             @Override
             public boolean apply(EndpointL3 input) {
-                return !((input.getAugmentation(OfOverlayL3Nat.class) == null)
-                        || (input.getAugmentation(OfOverlayL3Nat.class).getNaptTranslations() == null) || (input
-                            .getAugmentation(OfOverlayL3Nat.class).getNaptTranslations().getNaptTranslation() == null));
+                return !((input.getAugmentation(NatAddress.class) == null)
+                        || (input.getAugmentation(NatAddress.class).getNatAddress() == null));
             }
         });
         if (l3Endpoints == null) {
             return Collections.emptySet();
         }
         return ImmutableSet.copyOf(l3Endpoints);
-    }
-
-    /**
-     * Return NAPT of concrete endpoint
-     *
-     * @param endpointL3 - the
-     *        {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3}
-     *        to resolve
-     * @return the
-     *         {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint}
-     */
-    public List<NaptTranslation> getNaptAugL3Endpoint(EndpointL3 endpointL3) {
-        if ((endpointL3.getAugmentation(OfOverlayL3Nat.class) == null)
-                || (endpointL3.getAugmentation(OfOverlayL3Nat.class).getNaptTranslations() == null) || (endpointL3
-                    .getAugmentation(OfOverlayL3Nat.class).getNaptTranslations().getNaptTranslation() == null)) {
-            return null;
-        }
-        return endpointL3.getAugmentation(OfOverlayL3Nat.class).getNaptTranslations().getNaptTranslation();
     }
 
     /**
