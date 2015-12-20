@@ -19,6 +19,7 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.api.StatisticsManager;
+import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
@@ -72,15 +73,16 @@ public class StatisticsManagerImpl implements StatisticsManager, AutoCloseable {
 
     @Override
     public boolean writeStat(StatRecords record) {
+        WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
         for (EpToEpStatistic epStats : record.getEpToEpStatistic()) {
             SrcEndpointBuilder srcBuilder = new SrcEndpointBuilder();
             DstEndpointBuilder dstBuilder = new DstEndpointBuilder();
             srcBuilder.setMacAddress(epStats.getSrcMacAddress())
-                .setL2Context(epStats.getSrcL2c())
-                .setTenant(epStats.getSrcTenant());
+                    .setL2Context(epStats.getSrcL2c())
+                    .setTenant(epStats.getSrcTenant());
             dstBuilder.setMacAddress(epStats.getDstMacAddress())
-                .setL2Context(epStats.getDstL2c())
-                .setTenant(epStats.getDstTenant());
+                    .setL2Context(epStats.getDstL2c())
+                    .setTenant(epStats.getDstTenant());
             for (EpEpgToEpEpgStatistic epgStats : epStats.getEpEpgToEpEpgStatistic()) {
                 StatisticRecordKey key = new StatisticRecordKey(new RecordId(recordKey++));
                 StatisticRecord statRecord;
@@ -89,35 +91,33 @@ public class StatisticsManagerImpl implements StatisticsManager, AutoCloseable {
                 List<Statistic> statisticList = new ArrayList<>();
                 for (MatchedRuleStatistic ruleStats : epgStats.getMatchedRuleStatistic()) {
                     Statistic statistic = new StatisticBuilder()
-                        .setKey(new StatisticKey(ruleStats.getContract(), ruleStats.getMatchedRule(),
-                                ruleStats.getSubject()))
-                        .setContract(ruleStats.getContract())
-                        .setSubject(ruleStats.getSubject())
-                        .setRule(ruleStats.getMatchedRule())
-                        .setAction(ruleStats.getAction())
-                        .setClassifier(ruleStats.getClassifier())
-                        .setByteCount(ruleStats.getByteCount())
-                        .setPacketCount(ruleStats.getPacketCount())
-                        .build();
+                            .setKey(new StatisticKey(ruleStats.getContract(),
+                                    ruleStats.getMatchedRule(), ruleStats.getSubject()))
+                            .setContract(ruleStats.getContract())
+                            .setSubject(ruleStats.getSubject())
+                            .setRule(ruleStats.getMatchedRule())
+                            .setAction(ruleStats.getAction())
+                            .setClassifier(ruleStats.getClassifier())
+                            .setByteCount(ruleStats.getByteCount())
+                            .setPacketCount(ruleStats.getPacketCount())
+                            .build();
                     statisticList.add(statistic);
 
                 }
                 statRecord = new StatisticRecordBuilder().setKey(key)
-                    .setRecordId(new RecordId(recordKey))
-                    .setTimestamp(epStats.getTimestamp())
-                    .setSrcEndpoint(srcBuilder.build())
-                    .setDstEndpoint(dstBuilder.build())
-                    .setStatistic(statisticList)
-                    .build();
+                        .setRecordId(new RecordId(recordKey))
+                        .setTimestamp(epStats.getTimestamp())
+                        .setSrcEndpoint(srcBuilder.build())
+                        .setDstEndpoint(dstBuilder.build())
+                        .setStatistic(statisticList)
+                        .build();
 
                 InstanceIdentifier<StatisticRecord> statIID = IidFactory.statisticRecordIid(key);
-                WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
-                LOG.debug("Writing statistics to datastore");
-                wtx.put(LogicalDatastoreType.OPERATIONAL, statIID, statRecord);
-                wtx.submit();
+                LOG.debug("Writing statistics to datastore: {}", statRecord);
+                wtx.put(LogicalDatastoreType.OPERATIONAL, statIID, statRecord, true);
             }
         }
-        return true;
+        return DataStoreHelper.submitToDs(wtx);
     }
 
     @Override

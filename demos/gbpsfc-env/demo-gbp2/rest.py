@@ -181,7 +181,19 @@ def get_tenant_data():
               },
               {
                 "consumer-named-selector": [],
-                "id": "webservers",
+                "id": "webservers1",
+                "provider-named-selector": [
+                  {
+                    "contract": [
+                      "icmp-http-contract"
+                    ],
+                    "name": "webservers-clients-icmp-http-contract"
+                  }
+                ]
+              },
+              {
+                "consumer-named-selector": [],
+                "id": "webservers2",
                 "provider-named-selector": [
                   {
                     "contract": [
@@ -409,7 +421,7 @@ def get_endpoint_data():
             {
     "input": {
 
-        "endpoint-group": "webservers",
+        "endpoint-group": "webservers1",
 
         "network-containment" : "subnet-10.0.36.0/24",
 
@@ -429,7 +441,7 @@ def get_endpoint_data():
             {
     "input": {
 
-        "endpoint-group": "webservers",
+        "endpoint-group": "webservers2",
 
         "network-containment" : "subnet-10.0.36.0/24",
 
@@ -449,7 +461,7 @@ def get_endpoint_data():
             {
     "input": {
 
-        "endpoint-group": "webservers",
+        "endpoint-group": "webservers1",
 
         "network-containment" : "subnet-10.0.36.0/24",
 
@@ -468,7 +480,7 @@ def get_endpoint_data():
 },{
     "input": {
 
-        "endpoint-group": "webservers",
+        "endpoint-group": "webservers2",
 
         "network-containment" : "subnet-10.0.36.0/24",
 

@@ -20,6 +20,7 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
+import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
@@ -132,10 +133,18 @@ public class StatisticManagerImplTest {
             .setSrcEndpoint(srcBuilder.build())
             .setDstEndpoint(dstBuilder.build());
 
+//        manager.writeStat(recordsBuilder.build());
+//        Mockito.verify(wtx).put(LogicalDatastoreType.OPERATIONAL,
+//                IidFactory.statisticRecordIid(key),
+//                statRecord.build());
+        CheckedFuture<Void,TransactionCommitFailedException> future = Mockito.mock(CheckedFuture.class);
+        Mockito.when(wtx.submit()).thenReturn(future);
+        Mockito.when(dataBroker.newWriteOnlyTransaction()).thenReturn(wtx);
+
         manager.writeStat(recordsBuilder.build());
         Mockito.verify(wtx).put(LogicalDatastoreType.OPERATIONAL,
                 IidFactory.statisticRecordIid(key),
-                statRecord.build());
+                statRecord.build(), true);
     }
 
     @Test

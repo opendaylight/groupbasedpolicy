@@ -31,6 +31,7 @@ import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistry;
+import org.opendaylight.groupbasedpolicy.api.StatisticsManager;
 import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
@@ -49,6 +50,7 @@ public class OFOverlayRendererTest {
     private EndpointRpcRegistry endpointRpcRegistry;
     private NotificationService notificationService;
     private PolicyValidatorRegistry policyValidatorRegistry;
+    private StatisticsManager statisticsManager;
     private short tableOffset;
     private CheckedFuture<Optional<OfOverlayConfig>, ReadFailedException> future;
     private ListenerRegistration<DataChangeListener> configReg;
@@ -62,6 +64,7 @@ public class OFOverlayRendererTest {
         endpointRpcRegistry = mock(EndpointRpcRegistry.class);
         notificationService = mock(NotificationService.class);
         policyValidatorRegistry = mock(PolicyValidatorRegistry.class);
+        statisticsManager = mock(StatisticsManager.class);
         tableOffset = 5;
         configReg = mock(ListenerRegistration.class);
         when(dataProvider.registerDataChangeListener(any(LogicalDatastoreType.class), any(InstanceIdentifier.class),
@@ -79,13 +82,13 @@ public class OFOverlayRendererTest {
         future = Futures.immediateCheckedFuture(Optional.<OfOverlayConfig> absent());
         when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(future);
         renderer = new OFOverlayRenderer(dataProvider, rpcRegistry, notificationService, endpointRpcRegistry,
-                policyValidatorRegistry, tableOffset);
+                policyValidatorRegistry, statisticsManager, tableOffset);
     }
 
     @Test
     public void constructorTest() throws Exception {
         renderer.close();
-        verify(configReg, times(10)).close();
+        verify(configReg, times(11)).close();
     }
 
     @Test

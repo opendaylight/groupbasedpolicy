@@ -375,8 +375,14 @@ def get_tenant_data():
                           "order": 0,
                           "classifier-ref": [
                             {
-                              "name": "icmp",
-                              "instance-name": "icmp"
+                              "name": "icmp-in",
+                              "instance-name": "icmp",
+                              "direction": "in"
+                            },
+                            {
+                              "name": "icmp-out",
+                              "instance-name": "icmp",
+                              "direction": "out"
                             }
                           ],
                           "action-ref": [

@@ -49,6 +49,7 @@ import org.opendaylight.groupbasedpolicy.dto.EpKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.EndpointListener;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
@@ -131,7 +132,7 @@ public class EndpointManagerTest {
         tenantId = mock(TenantId.class);
         endpointGroupId = mock(EndpointGroupId.class);
         l2BridgeDomainId = mock(L2BridgeDomainId.class);
-        MacAddress macAddress = mock(MacAddress.class);
+        MacAddress macAddress = new MacAddress("12:34:56:78:9a:bc");
         when(endpoint1.getTenant()).thenReturn(tenantId);
         when(endpoint1.getEndpointGroup()).thenReturn(endpointGroupId);
         when(endpoint1.getL2Context()).thenReturn(l2BridgeDomainId);
@@ -383,7 +384,7 @@ public class EndpointManagerTest {
         when(newL3Ep.getKey()).thenReturn(endpointL3Key);
         IpAddress ipAddress = mock(IpAddress.class);
         when(endpointL3Key.getIpAddress()).thenReturn(ipAddress);
-
+        when(newL3Ep.getIpAddress()).thenReturn(new IpAddress(new Ipv4Address("1.1.1.1")));
         manager.processL3Endpoint(null, newL3Ep);
         verify(endpointListener,never()).endpointUpdated(any(EpKey.class));
     }
@@ -404,7 +405,7 @@ public class EndpointManagerTest {
         when(newL3Ep.getKey()).thenReturn(endpointL3Key);
         IpAddress ipAddress = mock(IpAddress.class);
         when(endpointL3Key.getIpAddress()).thenReturn(ipAddress);
-
+        when(newL3Ep.getIpAddress()).thenReturn(new IpAddress(new Ipv4Address("1.1.1.1")));
         manager.processL3Endpoint(null, newL3Ep);
         verify(endpointListener,never()).endpointUpdated(any(EpKey.class));
     }
@@ -423,7 +424,7 @@ public class EndpointManagerTest {
 
         when(newL3Ep.getL2Context()).thenReturn(mock(L2BridgeDomainId.class));
         when(newL3Ep.getMacAddress()).thenReturn(mock(MacAddress.class));
-
+        when(newL3Ep.getIpAddress()).thenReturn(new IpAddress(new Ipv4Address("1.1.1.1")));
         manager.processL3Endpoint(null, newL3Ep);
         verify(endpointListener).endpointUpdated(any(EpKey.class));
     }
@@ -434,13 +435,14 @@ public class EndpointManagerTest {
         when(newL3Ep.getEndpointGroup()).thenReturn(mock(EndpointGroupId.class));
         when(newL3Ep.getL3Context()).thenReturn(mock(L3ContextId.class));
         when(newL3Ep.getIpAddress()).thenReturn(null);
-
+        when(newL3Ep.getIpAddress()).thenReturn(new IpAddress(new Ipv4Address("1.1.1.1")));
         manager.processL3Endpoint(null, newL3Ep);
         verify(endpointListener,never()).endpointUpdated(any(EpKey.class));
     }
 
     @Test
     public void updateEndpointL3TestDelete() throws Exception {
+        when(oldL3Ep.getIpAddress()).thenReturn(new IpAddress(new Ipv4Address("1.1.1.1")));
         manager.processL3Endpoint(oldL3Ep, null);
         verify(endpointListener).endpointUpdated(any(EpKey.class));
     }
