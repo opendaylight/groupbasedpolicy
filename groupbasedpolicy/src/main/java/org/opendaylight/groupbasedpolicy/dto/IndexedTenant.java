@@ -237,7 +237,7 @@ public class IndexedTenant {
      */
     public Collection<Subnet> resolveSubnets(NetworkDomainId id) {
         Set<SubnetId> sset = new HashSet<>();
-        HashSet<NetworkDomainId> visited = new HashSet<>();        
+        HashSet<NetworkDomainId> visited = new HashSet<>();
         while (id != null) {
             if (visited.contains(id)) break;
             visited.add(id);

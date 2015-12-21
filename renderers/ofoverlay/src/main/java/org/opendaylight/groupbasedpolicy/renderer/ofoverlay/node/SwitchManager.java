@@ -9,6 +9,7 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.getOfPortNum;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -22,6 +23,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.annotation.Nullable;
 
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
@@ -140,6 +142,21 @@ public class SwitchManager implements AutoCloseable {
             return Collections.emptySet();
         }
         return ImmutableSet.copyOf(state.externalPorts);
+    }
+
+    public Set<Long> getExternalPortNumbers(NodeId nodeId) {
+        Set<Long> extPortNumbers = new HashSet<>();
+        for(NodeConnectorId nc : getExternalPorts(nodeId)) {
+            long portNum;
+            try {
+                portNum = getOfPortNum(nc);
+            } catch (NumberFormatException ex) {
+                LOG.warn("Could not parse port number {}", nc, ex);
+                return null;
+            }
+            extPortNumbers.add(portNum);
+        }
+        return extPortNumbers;
     }
 
     public synchronized Collection<NodeConnectorId> getTunnelPorts(NodeId nodeId) {

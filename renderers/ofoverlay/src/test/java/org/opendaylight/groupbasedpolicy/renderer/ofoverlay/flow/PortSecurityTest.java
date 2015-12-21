@@ -46,6 +46,14 @@ public class PortSecurityTest extends FlowTableTest {
     protected static final Logger LOG =
             LoggerFactory.getLogger(PortSecurityTest.class);
 
+    private Endpoint ep = localEP()
+            .setL3Address(ImmutableList.of(new L3AddressBuilder()
+            .setIpAddress(new IpAddress(new Ipv4Address("10.10.10.10")))
+            .build(),
+            new L3AddressBuilder()
+            .setIpAddress(new IpAddress(new Ipv6Address("2001:db8:85a3::8a2e:370:7334")))
+            .build()))
+        .build();
     @Override
     @Before
     public void setup() throws Exception {
@@ -97,7 +105,7 @@ public class PortSecurityTest extends FlowTableTest {
         for (Flow f : fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow()) {
             flowMap.put(f.getId().getValue(), f);
             if (f.getMatch() != null && f.getMatch().getInPort() != null &&
-                ncs.contains(f.getMatch().getInPort().getValue())) {
+                (ncs.contains(f.getMatch().getInPort().getValue()))) {
                 assertTrue(f.getInstructions().equals(
                              FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_INGRESS_NAT()))
                              || f.getInstructions().equals(
@@ -105,7 +113,7 @@ public class PortSecurityTest extends FlowTableTest {
                 count += 1;
             }
         }
-        assertEquals(2, count);
+        assertEquals(1, count);
         int numberOfFlows = fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow().size();
         fm = dosync(flowMap);
         assertEquals(numberOfFlows, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow().size());
@@ -148,15 +156,6 @@ public class PortSecurityTest extends FlowTableTest {
 
     @Test
     public void testL3() throws Exception {
-        Endpoint ep = localEP()
-            .setL3Address(ImmutableList.of(new L3AddressBuilder()
-                .setIpAddress(new IpAddress(new Ipv4Address("10.10.10.10")))
-                .build(),
-                new L3AddressBuilder()
-                .setIpAddress(new IpAddress(new Ipv6Address("2001:db8:85a3::8a2e:370:7334")))
-                .build()))
-            .build();
-
         endpointManager.addEndpoint(ep);
 
         OfWriter fm = dosync(null);
@@ -196,5 +195,20 @@ public class PortSecurityTest extends FlowTableTest {
         int numberOfFlows = fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow().size();
         fm = dosync(flowMap);
         assertEquals(numberOfFlows, fm.getTableForNode(nodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY()).getFlow().size());
+    }
+
+    @Test
+    public void testExternal() throws Exception {
+        endpointManager.addEndpoint(ep);
+        switchManager.addSwitch(
+                new NodeId("openflow:12"),
+                new NodeConnectorId("openflow:12:1"),
+                ImmutableSet.of(new NodeConnectorId("openflow:12:2")),
+                new OfOverlayNodeConfigBuilder().setTunnel(
+                        ImmutableList.of(new TunnelBuilder().setTunnelType(TunnelTypeVxlan.class)
+                            .setNodeConnectorId(new NodeConnectorId("openflow:12:1"))
+                            .build())).build());
+        ctx.addTenant(baseTenant().build());
+        OfWriter fm = dosync(null);
     }
 }

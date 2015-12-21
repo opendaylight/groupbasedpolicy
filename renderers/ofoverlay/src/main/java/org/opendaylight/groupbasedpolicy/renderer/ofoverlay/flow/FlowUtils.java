@@ -23,18 +23,24 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.acti
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.DropActionCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.GroupActionCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.OutputActionCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.PopVlanActionCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.PushVlanActionCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.SetDlDstActionCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.SetDlSrcActionCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.SetNwDstActionCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.SetNwSrcActionCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.SetVlanIdActionCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.dec.nw.ttl._case.DecNwTtlBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.drop.action._case.DropActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.group.action._case.GroupActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.output.action._case.OutputActionBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.pop.vlan.action._case.PopVlanActionBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.push.vlan.action._case.PushVlanActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.set.dl.dst.action._case.SetDlDstActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.set.dl.src.action._case.SetDlSrcActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.set.nw.dst.action._case.SetNwDstActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.set.nw.src.action._case.SetNwSrcActionBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.set.vlan.id.action._case.SetVlanIdActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.address.address.Ipv4Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.address.address.Ipv6Builder;
@@ -68,11 +74,15 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.NodeKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.EtherType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.VlanId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.ethernet.match.fields.EthernetDestinationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.ethernet.match.fields.EthernetSourceBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.ethernet.match.fields.EthernetTypeBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.EthernetMatch;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.EthernetMatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.VlanMatch;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.VlanMatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.vlan.match.fields.VlanIdBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg0;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg1;
@@ -186,6 +196,10 @@ public final class FlowUtils {
      * IPv6 ethertype
      */
     public static final Long IPv6 = Long.valueOf(0x86DD);
+    /**
+     * VLAN ethertype
+     */
+    public static final Integer VLAN = Integer.valueOf(0x8100);
 
     /**
      * Creates an Instance Identifier (path) for node with specified id
@@ -355,6 +369,29 @@ public final class FlowUtils {
 
     public static Action setDlDstAction(MacAddress mac) {
         return new SetDlDstActionCaseBuilder().setSetDlDstAction(new SetDlDstActionBuilder().setAddress(mac).build())
+            .build();
+    }
+
+    public static VlanMatch vlanMatch(int vlanId, boolean vlanIdPresent) {
+    return new VlanMatchBuilder().setVlanId(
+            new VlanIdBuilder().setVlanId(new VlanId(vlanId)).setVlanIdPresent(vlanIdPresent).build()).build();
+    }
+
+    public static List<org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder> pushVlanActions(int vlanId) {
+        List<org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder> actions = new ArrayList<>();
+        actions.add(new ActionBuilder().setAction(pushVlanAction()).setOrder(0));
+        actions.add(new ActionBuilder().setAction(setVlanId(vlanId)).setOrder(1));
+        return actions;
+    }
+
+    public static org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.Instruction popVlanInstruction(
+            int order) {
+        List<ActionBuilder> actionBuilders = new ArrayList<>();
+        actionBuilders.add(new ActionBuilder().setAction(popVlanAction()).setOrder(0));
+        return new InstructionBuilder().setInstruction(
+                new ApplyActionsCaseBuilder().setApplyActions(
+                        new ApplyActionsBuilder().setAction(actionList(actionBuilders)).build()).build())
+            .setOrder(order)
             .build();
     }
 
@@ -661,6 +698,20 @@ public final class FlowUtils {
         if (etherType != null)
             emb.setEthernetType(new EthernetTypeBuilder().setType(new EtherType(etherType)).build());
         return emb.build();
+    }
+
+    private static Action pushVlanAction() {
+        return new PushVlanActionCaseBuilder().setPushVlanAction(
+                new PushVlanActionBuilder().setEthernetType(VLAN).build()).build();
+    }
+
+    private static Action popVlanAction() {
+        return new PopVlanActionCaseBuilder().setPopVlanAction(new PopVlanActionBuilder().build()).build();
+    }
+
+    private static Action setVlanId(int vlanId) {
+        return new SetVlanIdActionCaseBuilder().setSetVlanIdAction(
+                new SetVlanIdActionBuilder().setVlanId(new VlanId(vlanId)).build()).build();
     }
 
     private static List<ExtensionList> getExistingGeneralAugMatchNodesNodeTableFlow(MatchBuilder match) {

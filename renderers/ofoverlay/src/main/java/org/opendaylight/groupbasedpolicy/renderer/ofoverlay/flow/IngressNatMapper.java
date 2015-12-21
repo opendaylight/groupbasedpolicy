@@ -42,6 +42,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.acti
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
@@ -84,7 +85,20 @@ public class IngressNatMapper extends FlowTable {
     @Override
     public void sync(NodeId nodeId, OfWriter ofWriter) throws Exception {
 
-        ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
+        // TODO for consideration: default instruction is goto next table because when matching against eth type 0x8100
+        // in PortSecurity, it's not possible to match against IPv4 addresses (only inf eth type would be 0x800)
+        // We can't determine just from L2 layer if traffic should be passed from PortSecurity here to IngressNat or to
+        // SourceMapper. Various 802.1q encapsulated IPs can pass through external ports - NATed or not NATed, remote
+        // or directly connected.
+        // All external ingress traffic is currently passed here and if no match is foud - no NAT is performed
+        // and processing continues in SourceMapper.
+        Flow flow = base()
+                .setTableId(TABLE_ID)
+                .setPriority(1)
+                .setInstructions(FlowUtils.instructions(FlowUtils.gotoTableIns(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER())))
+                .setId(FlowIdUtils.newFlowId("gotoSourceMapper"))
+                .build();
+        ofWriter.writeFlow(nodeId, TABLE_ID, flow);
 
         // TODO Bug 3546 - Difficult: External port is unrelated to Tenant, L3C, L2BD..
 
