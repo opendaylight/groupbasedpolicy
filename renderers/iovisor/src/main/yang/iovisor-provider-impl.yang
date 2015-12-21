@@ -45,12 +45,21 @@ module iovisor-provider-impl {
                     }
                 }
             }
-            // EpRendererAugmentationRegistrar service
+            // EpRendererAugmentationRegistry service
             container ep-renderer-augmentation-registry {
                 uses config:service-ref {
                     refine type {
                         mandatory true;
                         config:required-identity gbpcfg:ep-renderer-augmentation-registry;
+                    }
+                }
+            }
+            // PolicyProviderRegistry service
+            container policy-validator-registry {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity gbpcfg:policy-validator-registry;
                     }
                 }
             }

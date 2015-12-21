@@ -76,7 +76,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.Renderers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.RendererKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.Capabilities;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.Interests;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.capabilities.SupportedActionDefinition;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.capabilities.SupportedClassifierDefinition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.interests.FollowedTenants;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.interests.followed.tenants.FollowedTenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.interests.followed.tenants.FollowedTenantKey;
@@ -90,7 +93,8 @@ public class IidFactory {
         throw new UnsupportedOperationException();
     }
 
-    private static final InstanceIdentifier<Endpoints> ENDPOINTS_IID = InstanceIdentifier.builder(Endpoints.class).build();
+    private static final InstanceIdentifier<Endpoints> ENDPOINTS_IID =
+            InstanceIdentifier.builder(Endpoints.class).build();
 
     public static InstanceIdentifier<Tenant> tenantIid(TenantId id) {
         return InstanceIdentifier.builder(Tenants.class).child(Tenant.class, new TenantKey(id)).build();
@@ -142,7 +146,8 @@ public class IidFactory {
             .build();
     }
 
-    public static InstanceIdentifier<Clause> clauseIid(TenantId tenantId, ContractId contractId, ClauseName clauseName) {
+    public static InstanceIdentifier<Clause> clauseIid(TenantId tenantId, ContractId contractId,
+            ClauseName clauseName) {
         return InstanceIdentifier.builder(Tenants.class)
             .child(Tenant.class, new TenantKey(tenantId))
             .child(Policy.class)
@@ -206,7 +211,8 @@ public class IidFactory {
             .build();
     }
 
-    public static InstanceIdentifier<L2FloodDomain> l2FloodDomainIid(TenantId tenantId, L2FloodDomainId l2FloodDomainId) {
+    public static InstanceIdentifier<L2FloodDomain> l2FloodDomainIid(TenantId tenantId,
+            L2FloodDomainId l2FloodDomainId) {
         return InstanceIdentifier.builder(Tenants.class)
             .child(Tenant.class, new TenantKey(tenantId))
             .child(ForwardingContext.class)
@@ -233,6 +239,7 @@ public class IidFactory {
 
     /**
      * Get the {@link Endpoint} {@link InstanceIdentifier} based on the {@link EndpointKey}
+     *
      * @param endpointKey The {@link EndpointKey} of a particular {@link Endpoint}
      * @return The {@link InstanceIdentifier} of the {@link Endpoint}
      */
@@ -244,16 +251,16 @@ public class IidFactory {
         return IidFactory.endpointIid(new EndpointKey(l2Context, macAddress));
     }
 
+    public static InstanceIdentifier<EndpointL3> l3EndpointIid(EndpointL3Key endpointL3Key) {
+        return InstanceIdentifier.builder(Endpoints.class).child(EndpointL3.class, endpointL3Key).build();
+    }
+
     public static InstanceIdentifier<EndpointL3> l3EndpointIid(L3ContextId l3Context, IpAddress ipAddress) {
-        return InstanceIdentifier.builder(Endpoints.class)
-            .child(EndpointL3.class, new EndpointL3Key(ipAddress, l3Context))
-            .build();
+        return IidFactory.l3EndpointIid(new EndpointL3Key(ipAddress, l3Context));
     }
 
     public static InstanceIdentifier<EndpointL3> l3EndpointsIidWildcard() {
-        return InstanceIdentifier.builder(Endpoints.class)
-            .child(EndpointL3.class)
-            .build();
+        return InstanceIdentifier.builder(Endpoints.class).child(EndpointL3.class).build();
     }
 
     public static InstanceIdentifier<EndpointL3Prefix> endpointL3PrefixIid(L3ContextId l3Context, IpPrefix ipPrefix) {
@@ -285,4 +292,19 @@ public class IidFactory {
             .build();
     }
 
+    public static InstanceIdentifier<SupportedActionDefinition> supportedActionDefinitionIidWildcard() {
+        return InstanceIdentifier.builder(Renderers.class)
+            .child(Renderer.class)
+            .child(Capabilities.class)
+            .child(SupportedActionDefinition.class)
+            .build();
+    }
+
+    public static InstanceIdentifier<SupportedClassifierDefinition> supportedClassifierDefinitionIidWildcard() {
+        return InstanceIdentifier.builder(Renderers.class)
+            .child(Renderer.class)
+            .child(Capabilities.class)
+            .child(SupportedClassifierDefinition.class)
+            .build();
+    }
 }

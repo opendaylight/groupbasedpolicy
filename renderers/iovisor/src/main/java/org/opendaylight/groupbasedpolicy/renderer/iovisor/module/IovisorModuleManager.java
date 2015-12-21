@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Inocybe Technologies and others.  All rights reserved.
+ * Copyright (c) 2015 Inocybe Technologies and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -21,10 +21,10 @@ public class IovisorModuleManager implements AutoCloseable {
     private IovisorModuleListener iovisorModuleListener;
 
     public IovisorModuleManager(DataBroker dataBroker) {
-        LOG.info("Initialized IOVisor IovisorModuleManager");
         Preconditions.checkNotNull(dataBroker, "DataBroker instance must not be null");
 
         this.iovisorModuleListener = new IovisorModuleListener(dataBroker);
+        LOG.info("Initialized IOVisor IovisorModuleManager");
     }
 
     @Override

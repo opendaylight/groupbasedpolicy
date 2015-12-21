@@ -40,7 +40,7 @@ import com.google.common.util.concurrent.Futures;
 public class ClassifierDefinitionListener implements DataTreeChangeListener<ClassifierDefinition>, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(ClassifierDefinitionListener.class);
-    private static final InstanceIdentifier<Capabilities> CAPABILITIES_IID = InstanceIdentifier.builder(Renderers.class)
+    private static final InstanceIdentifier<Capabilities> RENDERER_CAPABILITIES_IID = InstanceIdentifier.builder(Renderers.class)
         .child(Renderer.class, new RendererKey(OFOverlayRenderer.RENDERER_NAME))
         .child(Capabilities.class)
         .build();
@@ -74,7 +74,7 @@ public class ClassifierDefinitionListener implements DataTreeChangeListener<Clas
                         SupportedClassifierDefinition supportedClassifierDefinition =
                                 createSupportedClassifierDefinition(ourClassifier);
                         WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
-                        wTx.put(LogicalDatastoreType.OPERATIONAL, CAPABILITIES_IID
+                        wTx.put(LogicalDatastoreType.OPERATIONAL, RENDERER_CAPABILITIES_IID
                             .child(SupportedClassifierDefinition.class, supportedClassifierDefinition.getKey()),
                                 supportedClassifierDefinition, true);
                         Futures.addCallback(wTx.submit(), logDebugResult(supportedClassifierDefinition.getKey(), PUT));
@@ -88,7 +88,7 @@ public class ClassifierDefinitionListener implements DataTreeChangeListener<Clas
                         SupportedClassifierDefinitionKey supportedClassifierDefinitionKey =
                                 new SupportedClassifierDefinitionKey(ourClassifier.getId());
                         WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
-                        wTx.delete(LogicalDatastoreType.OPERATIONAL, CAPABILITIES_IID
+                        wTx.delete(LogicalDatastoreType.OPERATIONAL, RENDERER_CAPABILITIES_IID
                             .child(SupportedClassifierDefinition.class, supportedClassifierDefinitionKey));
                         Futures.addCallback(wTx.submit(), logDebugResult(supportedClassifierDefinitionKey, DELETED));
                     }

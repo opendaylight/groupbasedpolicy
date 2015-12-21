@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.sf;
+package org.opendaylight.groupbasedpolicy.util;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 

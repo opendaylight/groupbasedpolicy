@@ -8,66 +8,60 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.iovisor.endpoint;
 
-import java.util.Map.Entry;
-
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentation;
 import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterL3PrefixEndpointInput;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix;
-import org.opendaylight.yangtools.yang.binding.Augmentation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 
-public class EndpointManager implements EpRendererAugmentation, AutoCloseable {
+public class EndpointManager implements AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(EndpointManager.class);
 
     private EndpointListener endpointListener;
-    private EpRendererAugmentationRegistry epRendererAugmentationRegistry;
+    private final IovisorEndpointAug iovisorEndpointAug;
 
-    public EndpointManager(DataBroker dataBroker,
-                           EpRendererAugmentationRegistry epRendererAugmentationRegistry) {
-        LOG.info("Initialized IOVisor EndpointManager");
+    public EndpointManager(DataBroker dataBroker, EpRendererAugmentationRegistry epRendererAugmentationRegistry) {
         Preconditions.checkNotNull(dataBroker, "DataBroker instance must not be null");
+        iovisorEndpointAug = new IovisorEndpointAug(epRendererAugmentationRegistry);
+        endpointListener = new EndpointListener(dataBroker, this);
+        LOG.info("Initialized IOVisor EndpointManager");
+    }
 
-        this.epRendererAugmentationRegistry = epRendererAugmentationRegistry;
-        this.endpointListener = new EndpointListener(dataBroker);
+    public void processEndpoint(EndpointL3 endpoint) {
+        /*
+         * Is Augmentation valid?
+         * - IPAddress or a name that can be resolved to an IPAddress
+         */
 
-        epRendererAugmentationRegistry.register(this);
+        /*
+         * IOVisorModule registered?
+         * - In this rev, we will register the IOVisorModule (agent)
+         */
+
+        /*
+         * Validate there is a resolved policy for tenant/EPGs.
+         * - If so, add to resolved policy endpoint map thing
+         * - If not, wait until there is (listener)
+         * .... not real sure on this one... chicken and egg.
+         */
+
+        /*
+         * Validate there is a valid forwarding model
+         *
+         */
+
+        LOG.info("Processed Endpoint {}", endpoint);
     }
 
     @Override
     public void close() throws Exception {
-        if (endpointListener != null) {
+        if (iovisorEndpointAug != null)
+            iovisorEndpointAug.close();
+        if (endpointListener != null)
             endpointListener.close();
-        }
-        epRendererAugmentationRegistry.unregister(this);
-    }
 
-    @Override
-    public Entry<Class<? extends Augmentation<Endpoint>>, Augmentation<Endpoint>> buildEndpointAugmentation(
-            RegisterEndpointInput input) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public Entry<Class<? extends Augmentation<EndpointL3>>, Augmentation<EndpointL3>> buildEndpointL3Augmentation(
-            RegisterEndpointInput input) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public Entry<Class<? extends Augmentation<EndpointL3Prefix>>, Augmentation<EndpointL3Prefix>> buildL3PrefixEndpointAugmentation(
-            RegisterL3PrefixEndpointInput input) {
-        // TODO Auto-generated method stub
-        return null;
     }
 }

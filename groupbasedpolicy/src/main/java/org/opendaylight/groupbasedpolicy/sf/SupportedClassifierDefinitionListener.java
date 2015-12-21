@@ -20,6 +20,7 @@ import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistry;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.groupbasedpolicy.util.DataTreeChangeHandler;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
@@ -27,9 +28,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinitionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.Renderers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.Capabilities;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.capabilities.SupportedClassifierDefinition;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
@@ -54,13 +53,8 @@ public class SupportedClassifierDefinitionListener extends DataTreeChangeHandler
     private final PolicyValidatorRegistry validatorRegistry;
 
     public SupportedClassifierDefinitionListener(DataBroker dataProvider, PolicyValidatorRegistry validatorRegistry) {
-        super(dataProvider,
-                new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
-                        InstanceIdentifier.builder(Renderers.class)
-                            .child(Renderer.class)
-                            .child(Capabilities.class)
-                            .child(SupportedClassifierDefinition.class)
-                            .build()));
+        super(dataProvider, new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
+                IidFactory.supportedClassifierDefinitionIidWildcard()));
         this.validatorRegistry = validatorRegistry;
         if (validatorRegistry == null) {
             LOG.info(

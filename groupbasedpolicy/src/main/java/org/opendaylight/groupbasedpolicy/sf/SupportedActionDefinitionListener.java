@@ -26,9 +26,6 @@ import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ActionDefinition;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.Renderers;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.Capabilities;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.capabilities.SupportedActionDefinition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.capabilities.SupportedClassifierDefinition;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
@@ -58,14 +55,8 @@ public class SupportedActionDefinitionListener
     public SupportedActionDefinitionListener(DataBroker dataProvider) {
         this.dataProvider = checkNotNull(dataProvider);
         registration =
-                dataProvider.registerDataTreeChangeListener(
-                        new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
-                                InstanceIdentifier.builder(Renderers.class)
-                                    .child(Renderer.class)
-                                    .child(Capabilities.class)
-                                    .child(SupportedActionDefinition.class)
-                                    .build()),
-                        this);
+                dataProvider.registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
+                        IidFactory.supportedActionDefinitionIidWildcard()), this);
     }
 
     @Override
@@ -77,13 +68,14 @@ public class SupportedActionDefinitionListener
                 case SUBTREE_MODIFIED:
                     ActionDefinitionId actionDefinitionId = rootNode.getDataAfter().getActionDefinitionId();
                     ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
-                    Optional<ActionDefinition> potentialAdFromConfDs = DataStoreHelper.readFromDs(
-                            LogicalDatastoreType.CONFIGURATION, IidFactory.actionDefinitionIid(actionDefinitionId), rwTx);
+                    Optional<ActionDefinition> potentialAdFromConfDs =
+                            DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
+                                    IidFactory.actionDefinitionIid(actionDefinitionId), rwTx);
                     if (!potentialAdFromConfDs.isPresent()) {
                         LOG.error("Action-definition with ID {} does not exist in CONF datastore.", actionDefinitionId);
                         return;
                     }
-                    // TODO union and validation need to be finished
+                    // TODO validation needs to be finished - this is effectively a union.
                     ActionDefinition ad = potentialAdFromConfDs.get();
                     rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.actionDefinitionIid(actionDefinitionId), ad);
                     DataStoreHelper.submitToDs(rwTx);

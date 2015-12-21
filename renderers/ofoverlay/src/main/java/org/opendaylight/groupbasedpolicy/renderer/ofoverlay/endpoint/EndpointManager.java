@@ -90,7 +90,8 @@ public class EndpointManager implements AutoCloseable {
     private final EndpointManagerListener endpointListener;
     private final ConcurrentHashMap<EpKey, Endpoint> endpoints = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<EpKey, Endpoint> externalEndpointsWithoutLocation = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<NodeId, ConcurrentMap<EgKey, Set<EpKey>>> endpointsByGroupByNode = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<NodeId, ConcurrentMap<EgKey, Set<EpKey>>> endpointsByGroupByNode =
+            new ConcurrentHashMap<>();
     private final ConcurrentHashMap<NodeId, Set<EpKey>> endpointsByNode = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<EgKey, Set<EpKey>> endpointsByGroup = new ConcurrentHashMap<>();
     private final ScheduledExecutorService executor;
@@ -106,8 +107,8 @@ public class EndpointManager implements AutoCloseable {
         }
     };
 
-    public EndpointManager(DataBroker dataProvider, RpcProviderRegistry rpcRegistry, NotificationService notificationService, ScheduledExecutorService executor,
-                           SwitchManager switchManager) {
+    public EndpointManager(DataBroker dataProvider, RpcProviderRegistry rpcRegistry,
+            NotificationService notificationService, ScheduledExecutorService executor, SwitchManager switchManager) {
         this.executor = executor;
         this.dataProvider = dataProvider;
         if (rpcRegistry != null) {
@@ -176,7 +177,7 @@ public class EndpointManager implements AutoCloseable {
      * Get the endpoints in a particular group on a particular node
      *
      * @param nodeId - the node ID to look up
-     * @param eg     - the group to look up
+     * @param eg - the group to look up
      * @return the endpoints
      */
     public synchronized Collection<Endpoint> getEndpointsForNode(NodeId nodeId, EgKey eg) {
@@ -239,26 +240,26 @@ public class EndpointManager implements AutoCloseable {
      */
     public synchronized Collection<Endpoint> getExtEpsNoLocForGroup(final EgKey eg) {
 
-        return ImmutableSet.copyOf(Collections2.filter(externalEndpointsWithoutLocation.values(),
-                new Predicate<Endpoint>() {
+        return ImmutableSet
+            .copyOf(Collections2.filter(externalEndpointsWithoutLocation.values(), new Predicate<Endpoint>() {
 
-                    @Override
-                    public boolean apply(Endpoint input) {
-                        Set<EndpointGroupId> epgIds = new HashSet<>();
-                        if (input.getEndpointGroup() != null) {
-                            epgIds.add(input.getEndpointGroup());
-                        }
-                        if (input.getEndpointGroups() != null) {
-                            epgIds.addAll(input.getEndpointGroups());
-                        }
-                        if (epgIds.isEmpty()) {
-                            LOG.error("No EPGs for {}. This is not a valid Endpoint.", input.getKey());
-                            return false;
-                        }
-                        return (epgIds.contains(eg.getEgId()));
+                @Override
+                public boolean apply(Endpoint input) {
+                    Set<EndpointGroupId> epgIds = new HashSet<>();
+                    if (input.getEndpointGroup() != null) {
+                        epgIds.add(input.getEndpointGroup());
                     }
+                    if (input.getEndpointGroups() != null) {
+                        epgIds.addAll(input.getEndpointGroups());
+                    }
+                    if (epgIds.isEmpty()) {
+                        LOG.error("No EPGs for {}. This is not a valid Endpoint.", input.getKey());
+                        return false;
+                    }
+                    return (epgIds.contains(eg.getEgId()));
+                }
 
-                }));
+            }));
     }
 
     /**
@@ -269,17 +270,17 @@ public class EndpointManager implements AutoCloseable {
      */
     protected synchronized void processL3Endpoint(EndpointL3 oldL3Ep, EndpointL3 newL3Ep) {
         // TODO Bug 3543
-        //create L3 endpoint
+        // create L3 endpoint
         if (oldL3Ep == null && newL3Ep != null) {
             createL3Endpoint(newL3Ep);
         }
 
-        //update L3 endpoint
+        // update L3 endpoint
         if (oldL3Ep != null && newL3Ep != null) {
             updateL3Endpoint(newL3Ep);
         }
 
-        //remove L3 endpoint
+        // remove L3 endpoint
         if (oldL3Ep != null && newL3Ep == null) {
             removeL3Endpoint(oldL3Ep);
         }
@@ -306,7 +307,7 @@ public class EndpointManager implements AutoCloseable {
         boolean notifyOldEg = false;
         boolean notifyNewEg = false;
 
-        //maintain external endpoints map
+        // maintain external endpoints map
         if (newLoc == null && oldLoc == null) {
             if (newEp != null && newEpKey != null) {
                 externalEndpointsWithoutLocation.put(newEpKey, newEp);
@@ -317,50 +318,54 @@ public class EndpointManager implements AutoCloseable {
             return;
         }
 
-        //maintain endpoint maps
-        //new endpoint
+        // maintain endpoint maps
+        // new endpoint
         if (newEp != null && newEpKey != null) {
             endpoints.put(newEpKey, newEp);
+            // TODO This and the create endpoint / update endpoint section will cause switchUpdate
+            // to be called twice. Consider removing
             notifyEndpointUpdated(newEpKey);
         }
-        //odl endpoint
+        // odl endpoint
         else if (oldEpKey != null) {
             endpoints.remove(oldEpKey);
+            // TODO This and the create endpoint / update endpoint section will cause switchUpdate
+            // to be called twice. Consider removing
             notifyEndpointUpdated(oldEpKey);
         }
 
-        //create endpoint
+        // create endpoint
         if (oldEp == null && newEp != null && newLoc != null) {
             createEndpoint(newLoc, newEpKey, newEpgIds, tenantId);
             notifyNewLoc = true;
             notifyNewEg = true;
         }
 
-        //update endpoint
-        if (oldEp != null && newEp != null && oldEpKey != null && newEpKey != null &&
-                newLoc != null && (oldEpKey.toString().equals(newEpKey.toString()))) {
+        // update endpoint
+        if (oldEp != null && newEp != null && oldEpKey != null && newEpKey != null && newLoc != null
+                && (oldEpKey.toString().equals(newEpKey.toString()))) {
 
-            //endpoint was moved, new location exists but is different from old one
+            // endpoint was moved, new location exists but is different from old one
             if (oldLoc != null && !(oldLoc.getValue().equals(newLoc.getValue()))) {
-                //remove old endpoint
+                // remove old endpoint
                 removeEndpoint(oldEp, oldLoc, oldEpKey, oldEpgIds);
                 notifyOldLoc = true;
                 notifyOldEg = true;
             }
-            //add moved endpoint
+            // add moved endpoint
             createEndpoint(newLoc, newEpKey, newEpgIds, tenantId);
             notifyNewLoc = true;
             notifyNewEg = true;
         }
 
-        //remove endpoint
+        // remove endpoint
         if (oldEp != null && newEp == null) {
             removeEndpoint(oldEp, oldLoc, oldEpKey, oldEpgIds);
             notifyOldLoc = true;
             notifyOldEg = true;
         }
 
-        //notifications
+        // notifications
         if (notifyOldLoc)
             notifyNodeEndpointUpdated(oldLoc, oldEpKey);
         if (notifyNewLoc)
@@ -418,7 +423,8 @@ public class EndpointManager implements AutoCloseable {
             }
         }
 
-        // Update endpointsByGroupByNode and endpointsByGroup, get map of EPGs and their Endpoints for Node
+        // Update endpointsByGroupByNode and endpointsByGroup, get map of EPGs and their Endpoints
+        // for Node
         ConcurrentMap<EgKey, Set<EpKey>> map = endpointsByGroupByNode.get(oldLoc);
         for (EndpointGroupId oldEpgId : oldEpgIds) {
             // endpointsByGroupByNode
@@ -483,7 +489,7 @@ public class EndpointManager implements AutoCloseable {
 
     }
 
-    //auto closeable
+    // auto closeable
     @Override
     public void close() throws Exception {
         if (endpointListener != null)
@@ -507,7 +513,8 @@ public class EndpointManager implements AutoCloseable {
     protected boolean isInternal(Endpoint ep) {
         Preconditions.checkNotNull(ep);
         OfOverlayContext ofc = ep.getAugmentation(OfOverlayContext.class);
-        return ofc == null || ofc.getLocationType() == null || ofc.getLocationType().equals(EndpointLocation.LocationType.Internal);
+        return ofc == null || ofc.getLocationType() == null
+                || ofc.getLocationType().equals(EndpointLocation.LocationType.Internal);
     }
 
     public boolean isExternal(Endpoint ep) {
@@ -518,7 +525,8 @@ public class EndpointManager implements AutoCloseable {
      * Get the endpoints container from data store.
      * Note: There are maps maintained by listener when higher performance is required.
      *
-     * @return the {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints}
+     * @return the
+     *         {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints}
      */
     protected Endpoints getEndpointsFromDataStore() {
         /*
@@ -534,8 +542,8 @@ public class EndpointManager implements AutoCloseable {
             return null;
         }
         ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
-        Optional<Endpoints> endpoints = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
-                IidFactory.endpointsIidWildcard(), rTx);
+        Optional<Endpoints> endpoints =
+                DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointsIidWildcard(), rTx);
         if (!endpoints.isPresent()) {
             LOG.warn("No Endpoints present in data store.");
             return null;
@@ -546,7 +554,8 @@ public class EndpointManager implements AutoCloseable {
     /**
      * Return all L3Endpoints from data store.
      *
-     * @return the {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3}
+     * @return the
+     *         {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3}
      */
     protected Collection<EndpointL3> getL3Endpoints() {
         Endpoints endpoints = getEndpointsFromDataStore();
@@ -560,7 +569,8 @@ public class EndpointManager implements AutoCloseable {
     /**
      * Return all L3Prefix Endpoints from data store.
      *
-     * @return the {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix}
+     * @return the
+     *         {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix}
      */
     private Collection<EndpointL3Prefix> getEndpointsL3Prefix() {
         Endpoints endpoints = getEndpointsFromDataStore();
@@ -574,8 +584,11 @@ public class EndpointManager implements AutoCloseable {
     /**
      * Return all L3Prefix Endpoints which come under particular tenant
      *
-     * @param tenantId - the {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId} to resolve
-     * @return the {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix}
+     * @param tenantId - the
+     *        {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId}
+     *        to resolve
+     * @return the
+     *         {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix}
      */
     public Collection<EndpointL3Prefix> getEndpointsL3PrefixForTenant(final TenantId tenantId) {
         Collection<EndpointL3Prefix> l3PrefixEndpoints = getEndpointsL3Prefix();
@@ -596,7 +609,8 @@ public class EndpointManager implements AutoCloseable {
     /**
      * Return all L3Endpoints containing network and port address translation in augmentation
      *
-     * @return the {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3}
+     * @return the
+     *         {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3}
      */
     public Collection<EndpointL3> getL3EndpointsWithNat() {
         Collection<EndpointL3> l3Endpoints = getL3Endpoints();
@@ -608,8 +622,8 @@ public class EndpointManager implements AutoCloseable {
             @Override
             public boolean apply(EndpointL3 input) {
                 return !((input.getAugmentation(OfOverlayL3Nat.class) == null)
-                        || (input.getAugmentation(OfOverlayL3Nat.class).getNaptTranslations() == null)
-                        || (input.getAugmentation(OfOverlayL3Nat.class).getNaptTranslations().getNaptTranslation() == null));
+                        || (input.getAugmentation(OfOverlayL3Nat.class).getNaptTranslations() == null) || (input
+                            .getAugmentation(OfOverlayL3Nat.class).getNaptTranslations().getNaptTranslation() == null));
             }
         });
         if (l3Endpoints == null) {
@@ -621,13 +635,16 @@ public class EndpointManager implements AutoCloseable {
     /**
      * Return NAPT of concrete endpoint
      *
-     * @param endpointL3 - the {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3} to resolve
-     * @return the {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint}
+     * @param endpointL3 - the
+     *        {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3}
+     *        to resolve
+     * @return the
+     *         {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint}
      */
     public List<NaptTranslation> getNaptAugL3Endpoint(EndpointL3 endpointL3) {
         if ((endpointL3.getAugmentation(OfOverlayL3Nat.class) == null)
-                || (endpointL3.getAugmentation(OfOverlayL3Nat.class).getNaptTranslations() == null)
-                || (endpointL3.getAugmentation(OfOverlayL3Nat.class).getNaptTranslations().getNaptTranslation() == null)) {
+                || (endpointL3.getAugmentation(OfOverlayL3Nat.class).getNaptTranslations() == null) || (endpointL3
+                    .getAugmentation(OfOverlayL3Nat.class).getNaptTranslations().getNaptTranslation() == null)) {
             return null;
         }
         return endpointL3.getAugmentation(OfOverlayL3Nat.class).getNaptTranslations().getNaptTranslation();
@@ -649,8 +666,11 @@ public class EndpointManager implements AutoCloseable {
      * directly represented in the endpoint object
      * set
      *
-     * @param endpoint - the {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint} to resolve
-     * @return the list of {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName}
+     * @param endpoint - the
+     *        {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint}
+     *        to resolve
+     * @return the list of
+     *         {@link org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName}
      */
     public List<ConditionName> getConditionsForEndpoint(Endpoint endpoint) {
         // TODO Be alagalah From Helium: consider group conditions as well. Also
@@ -742,8 +762,8 @@ public class EndpointManager implements AutoCloseable {
         }
 
         IndexedTenant indexedTenant;
-        Optional<Tenant> tenant = readFromDs(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.tenantIid(l3Ep.getTenant()), rwTx);
+        Optional<Tenant> tenant =
+                readFromDs(LogicalDatastoreType.CONFIGURATION, IidFactory.tenantIid(l3Ep.getTenant()), rwTx);
         if (tenant.isPresent()) {
             indexedTenant = new IndexedTenant(tenant.get());
         } else {
@@ -753,20 +773,20 @@ public class EndpointManager implements AutoCloseable {
         }
         List<L3Address> l3Address = new ArrayList<>();
         l3Address.add(new L3AddressBuilder().setIpAddress(l3Ep.getIpAddress())
-                .setL3Context(l3Ep.getL3Context())
-                .setKey(new L3AddressKey(l3Ep.getIpAddress(), l3Ep.getL3Context()))
-                .build());
+            .setL3Context(l3Ep.getL3Context())
+            .setKey(new L3AddressKey(l3Ep.getIpAddress(), l3Ep.getL3Context()))
+            .build());
         L2BridgeDomain l2Bd = indexedTenant.resolveL2BridgeDomain(l3Ep.getNetworkContainment());
         Endpoint ep = new EndpointBuilder().setKey(new EndpointKey(l2Bd.getId(), l3Ep.getMacAddress()))
-                .setMacAddress(l3Ep.getMacAddress())
-                .setL2Context(l2Bd.getId())
-                .setEndpointGroups(l3Ep.getEndpointGroups())
-                .setTenant(l3Ep.getTenant())
-                .setL3Address(l3Address)
-                .setCondition(l3Ep.getCondition())
-                .setNetworkContainment(l3Ep.getNetworkContainment())
-                .addAugmentation(OfOverlayContext.class, ofCtx)
-                .build();
+            .setMacAddress(l3Ep.getMacAddress())
+            .setL2Context(l2Bd.getId())
+            .setEndpointGroups(l3Ep.getEndpointGroups())
+            .setTenant(l3Ep.getTenant())
+            .setL3Address(l3Address)
+            .setCondition(l3Ep.getCondition())
+            .setNetworkContainment(l3Ep.getNetworkContainment())
+            .addAugmentation(OfOverlayContext.class, ofCtx)
+            .build();
         rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointIid(ep.getL2Context(), ep.getMacAddress()), ep);
         return ep;
     }

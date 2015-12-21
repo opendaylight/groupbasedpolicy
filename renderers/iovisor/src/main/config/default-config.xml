@@ -23,9 +23,14 @@
                     </data-broker>
 
                     <ep-renderer-augmentation-registry>
-                        <type xmlns:epr="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">epr:ep-renderer-augmentation-registry</type>
+                        <type xmlns:gbp="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">gbp:ep-renderer-augmentation-registry</type>
                         <name>ep-renderer-augmentation-registry</name>
                     </ep-renderer-augmentation-registry>
+
+                    <policy-validator-registry>
+                        <type xmlns:gbp="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">gbp:policy-validator-registry</type>
+                        <name>policy-validator-registry</name>
+                    </policy-validator-registry>
 
                 </module>
             </modules>
