@@ -13,6 +13,7 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -182,7 +183,18 @@ public class OfWriter {
         }
     }
 
-    public void commitToDataStore(DataBroker dataBroker) {
+    /**
+     * Update groups and flows on every node
+     * Only flows created by gbp - which are present in actualFlowMap - can be removed. It ensures no other flows
+     * are deleted
+     * Newly created flows are returned and will be used as actual in next update
+     *
+     * @param actualFlowMap map of flows which are currently present on all nodes
+     * @return map of newly created flows. These flows will be "actual" in next update
+     */
+    public Map<InstanceIdentifier<Table>, TableBuilder> commitToDataStore(DataBroker dataBroker,
+                                                                          Map<InstanceIdentifier<Table>, TableBuilder> actualFlowMap) {
+        Map<InstanceIdentifier<Table>, TableBuilder> actualFlows = new HashMap<>();
         if (dataBroker != null) {
 
             for (NodeId nodeId : groupIdsByNode.keySet()) {
@@ -193,47 +205,51 @@ public class OfWriter {
                 }
             }
 
-            for (Map.Entry<InstanceIdentifier<Table>, TableBuilder> entry : flowMap.entrySet()) {
+            for (Map.Entry<InstanceIdentifier<Table>, TableBuilder> newEntry : flowMap.entrySet()) {
                 try {
-                    /*
-                     * Get the currently configured flows for
-                     * this table.
-                     */
-                    updateFlowTable(dataBroker, entry);
+                    // Get actual flows on the same node/table
+                    Map.Entry<InstanceIdentifier<Table>, TableBuilder> actualEntry = null;
+                    for (Map.Entry<InstanceIdentifier<Table>, TableBuilder> a : actualFlowMap.entrySet()) {
+                        if (a.getKey().equals(newEntry.getKey())) {
+                            actualEntry = a;
+                        }
+                    }
+                    // Get the currently configured flows for this table
+                    updateFlowTable(dataBroker, newEntry, actualEntry);
+                    actualFlows.put(newEntry.getKey(), newEntry.getValue());
                 } catch (Exception e) {
-                    LOG.warn("Couldn't read flow table {}", entry.getKey());
+                    LOG.warn("Couldn't read flow table {}", newEntry.getKey());
                 }
             }
         }
+        return actualFlows;
     }
 
-    private void updateFlowTable(DataBroker dataBroker,
-            Map.Entry<InstanceIdentifier<Table>, TableBuilder> entry)
+    private void updateFlowTable(DataBroker dataBroker, Map.Entry<InstanceIdentifier<Table>, TableBuilder> desiredFlowMap,
+                                 Map.Entry<InstanceIdentifier<Table>, TableBuilder> actualFlowMap)
             throws ExecutionException, InterruptedException {
-        // flows to update
-        Set<Flow> update = new HashSet<>(entry.getValue().getFlow());
-        // flows currently in the table
-        Set<Flow> curr = new HashSet<>();
 
-        final InstanceIdentifier<Table> tableIid = entry.getKey();
-        ReadWriteTransaction t = dataBroker.newReadWriteTransaction();
-        Optional<Table> r = t.read(LogicalDatastoreType.CONFIGURATION, tableIid).get();
-
-        if (r.isPresent()) {
-            Table currentTable = r.get();
-            curr = new HashSet<>(currentTable.getFlow());
+        // Actual state
+        List<Flow> actualFlows = new ArrayList<>();
+        if (actualFlowMap != null && actualFlowMap.getValue() != null) {
+            actualFlows = actualFlowMap.getValue().getFlow();
         }
+        // New state
+        List<Flow> desiredFlows = new ArrayList<>(desiredFlowMap.getValue().getFlow());
 
         // Sets with custom equivalence rules
-        Set<Equivalence.Wrapper<Flow>> oldFlows = new HashSet<>(
-                Collections2.transform(curr, EquivalenceFabric.FLOW_WRAPPER_FUNCTION));
-        Set<Equivalence.Wrapper<Flow>> updatedFlows = new HashSet<>(
-                Collections2.transform(update, EquivalenceFabric.FLOW_WRAPPER_FUNCTION));
+        Set<Equivalence.Wrapper<Flow>> wrappedActualFlows = new HashSet<>(
+                Collections2.transform(actualFlows, EquivalenceFabric.FLOW_WRAPPER_FUNCTION));
+        Set<Equivalence.Wrapper<Flow>> wrappedDesiredFlows = new HashSet<>(
+                Collections2.transform(desiredFlows, EquivalenceFabric.FLOW_WRAPPER_FUNCTION));
 
-        // what is still there but was not updated, needs to be deleted
-        Sets.SetView<Equivalence.Wrapper<Flow>> deletions = Sets.difference(oldFlows, updatedFlows);
-        // new flows (they were not there before)
-        Sets.SetView<Equivalence.Wrapper<Flow>> additions = Sets.difference(updatedFlows, oldFlows);
+        // All gbp flows which are not updated will be removed
+        Sets.SetView<Equivalence.Wrapper<Flow>> deletions = Sets.difference(wrappedActualFlows, wrappedDesiredFlows);
+        // New flows (they were not there before)
+        Sets.SetView<Equivalence.Wrapper<Flow>> additions = Sets.difference(wrappedDesiredFlows, wrappedActualFlows);
+
+        final InstanceIdentifier<Table> tableIid = desiredFlowMap.getKey();
+        ReadWriteTransaction t = dataBroker.newReadWriteTransaction();
 
         if (!deletions.isEmpty()) {
             for (Equivalence.Wrapper<Flow> wf : deletions) {

@@ -102,7 +102,6 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
         policyManager = new PolicyManager(dataProvider,
                 switchManager,
                 endpointManager,
-                rpcRegistry,
                 executor,
                 tableOffset);
         ofOverlayAug = new OfOverlayAug(dataProvider, epRendererAugmentationRegistry);

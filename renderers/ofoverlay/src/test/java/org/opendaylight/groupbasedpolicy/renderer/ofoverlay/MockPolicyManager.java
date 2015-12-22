@@ -14,7 +14,7 @@ public class MockPolicyManager extends PolicyManager {
 
     private static short offSet = 0;
     public MockPolicyManager(EndpointManager endpointManager) {
-        super(null, null, endpointManager, null, null, offSet);
+        super(null, null, endpointManager, null, offSet);
     }
 
 }

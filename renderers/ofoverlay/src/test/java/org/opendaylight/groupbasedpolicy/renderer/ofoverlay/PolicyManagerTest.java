@@ -17,6 +17,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.HashMap;
 import java.util.concurrent.ScheduledExecutorService;
 
 import org.junit.Before;
@@ -28,13 +29,13 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.dto.EgKey;
 import org.opendaylight.groupbasedpolicy.dto.EpKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.TableBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2ContextId;
@@ -44,13 +45,12 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
-import com.google.common.util.concurrent.ListenableFuture;
 
 public class PolicyManagerTest {
 
     // constant values used by the tested class implementation
     private static final short TABLEID_PORTSECURITY = 0;
-    private static final short TABLEID_INGRESS_NAT =  1;
+    private static final short TABLEID_INGRESS_NAT = 1;
     private static final short TABLEID_SOURCE_MAPPER = 2;
     private static final short TABLEID_DESTINATION_MAPPER = 3;
     private static final short TABLEID_POLICY_ENFORCER = 4;
@@ -61,12 +61,8 @@ public class PolicyManagerTest {
 
     private DataBroker dataBroker;
     private SwitchManager switchManager;
-    private EndpointManager endpointManager;
-    private RpcProviderRegistry rpcRegistry;
-    private ScheduledExecutorService executor;
     private short tableOffset;
 
-    private WriteTransaction writeTransaction;
     private ReadWriteTransaction readWriteTransaction;
 
     private NodeId nodeId;
@@ -75,21 +71,20 @@ public class PolicyManagerTest {
 
     @Before
     public void setUp() {
+        EndpointManager endpointManager = mock(EndpointManager.class);
+        ScheduledExecutorService executor = mock(ScheduledExecutorService.class);
         dataBroker = mock(DataBroker.class);
         switchManager = mock(SwitchManager.class);
-        endpointManager = mock(EndpointManager.class);
-        rpcRegistry = mock(RpcProviderRegistry.class);
-        executor = mock(ScheduledExecutorService.class);
         tableOffset = 5;
 
-        writeTransaction = mock(WriteTransaction.class);
+        WriteTransaction writeTransaction = mock(WriteTransaction.class);
         when(dataBroker.newWriteOnlyTransaction()).thenReturn(writeTransaction);
 
         readWriteTransaction = mock(ReadWriteTransaction.class);
         when(dataBroker.newReadWriteTransaction()).thenReturn(readWriteTransaction);
 
         manager = new PolicyManager(dataBroker, switchManager,
-                endpointManager, rpcRegistry, executor, tableOffset);
+                endpointManager, executor, tableOffset);
 
         nodeId = mock(NodeId.class);
         tableId = 5;
@@ -114,10 +109,9 @@ public class PolicyManagerTest {
         CheckedFuture<Void, TransactionCommitFailedException> submitFuture = mock(CheckedFuture.class);
         when(readWriteTransaction.submit()).thenReturn(submitFuture);
 
-        flowMap.commitToDataStore(dataBroker);
+        flowMap.commitToDataStore(dataBroker, new HashMap<InstanceIdentifier<Table>, TableBuilder>());
 
         InOrder orderCheck = inOrder(readWriteTransaction);
-        orderCheck.verify(readWriteTransaction).read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class));
         orderCheck.verify(readWriteTransaction).put(any(LogicalDatastoreType.class), any(InstanceIdentifier.class),
                 any(Flow.class), any(Boolean.class));
         orderCheck.verify(readWriteTransaction).submit();
@@ -126,7 +120,7 @@ public class PolicyManagerTest {
     @Test
     public void changeOpenFlowTableOffsetTest() throws Exception {
         short tableOffset = 3;
-        assertTrue(manager.changeOpenFlowTableOffset(tableOffset) instanceof ListenableFuture<?>);
+        assertTrue(manager.changeOpenFlowTableOffset(tableOffset) != null);
         verify(switchManager, times(7)).getReadySwitches();
     }
 
