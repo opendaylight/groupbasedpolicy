@@ -90,7 +90,7 @@ public class SecRuleEntityDecoderTest {
     @Test
     public final void testGetTenantId_emptyUuidTenantID() {
         secRule.setSecurityRuleTenantID("");
-        thrown.expect(IllegalArgumentException.class);
+        thrown.expect(NullPointerException.class);
         SecRuleEntityDecoder.getTenantId(secRule);
     }
 
