@@ -22,6 +22,7 @@ import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
 import org.opendaylight.groupbasedpolicy.dto.ValidationResultBuilder;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.NetworkElements;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer.PolicyPair;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcIidFactory;
@@ -81,7 +82,8 @@ public class ChainAction extends Action {
 
     @Override
     public List<ActionBuilder> updateAction(List<ActionBuilder> actions, Map<String, Object> params, Integer order,
-            NetworkElements netElements, PolicyPair policyPair, OfWriter ofWriter, OfContext ctx, Direction direction) {
+                                            NetworkElements netElements, PolicyPair policyPair, OfWriter ofWriter,
+                                            OfContext ctx, Direction direction) {
         /*
          * Get the named chain
          */
@@ -107,6 +109,8 @@ public class ChainAction extends Action {
             return null;
         }
 
+        Long returnVnId;
+
         /*
          * If path is symmetrical then there are two RSPs.
          * if srcEp is in consumer EPG use "rspName"
@@ -126,6 +130,7 @@ public class ChainAction extends Action {
         ReadOnlyTransaction rTx = ctx.getDataBroker().newReadOnlyTransaction();
         RenderedServicePath renderedServicePath;
         RenderedServicePath rsp = getRspByName(rspName, rTx);
+        returnVnId = (long) resolveTunnelId(netElements, false);
         if (rsp == null) {
             renderedServicePath = createRsp(sfcPath, rspName);
             if (renderedServicePath != null) {
@@ -142,6 +147,7 @@ public class ChainAction extends Action {
             if (sfcPath.isSymmetric() && direction.equals(Direction.Out)) {
                 rspName = new RspName(rspName.getValue() + "-Reverse");
                 rsp = getRspByName(rspName, rTx);
+                returnVnId = (long) resolveTunnelId(netElements, true);
                 if (rsp == null) {
                     LOG.info("updateAction: Could not find Reverse RSP {} for Chain {}", rspName, chainName);
                     renderedServicePath = createSymmetricRsp(renderedServicePath);
@@ -154,7 +160,7 @@ public class ChainAction extends Action {
                 }
             }
         } catch (Exception e) {
-            LOG.error("updateAction: Attemping to determine if srcEp {} was consumer.", netElements.getSrcEp().getKey(),
+            LOG.error("updateAction: Attempting to determine if srcEp {} was consumer.", netElements.getSrcEp().getKey(),
                     e);
             return null;
         }
@@ -166,8 +172,6 @@ public class ChainAction extends Action {
         }
 
         NodeId tunnelDestNodeId = netElements.getDstNodeId();
-
-        Long returnVnid = (long) netElements.getSrcEpOrds().getTunnelId();
 
         IpAddress tunnelDest = ctx.getSwitchManager().getTunnelIP(tunnelDestNodeId, TunnelTypeVxlanGpe.class);
         if (tunnelDest == null || tunnelDest.getIpv4Address() == null) {
@@ -184,7 +188,7 @@ public class ChainAction extends Action {
             .setNshNsiFromChain((short) (lastRspHop.getServiceIndex().intValue() - 1))
             .setNshNspFromChain(renderedServicePath.getPathId())
             .setNshMetaC1(SfcNshHeader.convertIpAddressToLong(tunnelDest.getIpv4Address()))
-            .setNshMetaC2(returnVnid)
+            .setNshMetaC2(returnVnId)
             .build();
 
         // Cannot set all actions here. Some actions are destination specific, and we don't know
@@ -195,6 +199,16 @@ public class ChainAction extends Action {
         actions = addActionBuilder(actions, nxSetNspAction(sfcNshHeader.getNshNspToChain()), order);
         createChainTunnelFlows(sfcNshHeader, netElements, ofWriter, ctx);
         return actions;
+    }
+
+    // Return tunnelId according to policy direction
+    private int resolveTunnelId(NetworkElements netElements, boolean isReversedPath) {
+        if ((isReversedPath && PolicyEnforcer.checkPolicyOrientation())
+                || (!isReversedPath && !PolicyEnforcer.checkPolicyOrientation())) {
+            return netElements.getDstEpOrdinals().getTunnelId();
+        } else {
+            return netElements.getSrcEpOrdinals().getTunnelId();
+        }
     }
 
     private RenderedServicePath createRsp(ServiceFunctionPath sfcPath, RspName rspName) {

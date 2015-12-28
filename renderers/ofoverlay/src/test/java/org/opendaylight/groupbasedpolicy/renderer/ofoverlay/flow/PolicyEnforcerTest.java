@@ -184,9 +184,9 @@ public class PolicyEnforcerTest extends FlowTableTest {
 
         assertEquals(5,
                 doTestDifferentEg(ImmutableList.<Subject>of(createSubject("s1", ImmutableList.<Rule>of(rule1)))));
-        assertEquals(7,
+        assertEquals(11,
                 doTestDifferentEg(ImmutableList.<Subject>of(createSubject("s2", ImmutableList.<Rule>of(rule2)))));
-        assertEquals(6,
+        assertEquals(9,
                 doTestDifferentEg(ImmutableList.<Subject>of(createSubject("s3", ImmutableList.<Rule>of(rule3)))));
         assertEquals(3,
                 doTestDifferentEg(ImmutableList.<Subject>of(createSubject("s4", ImmutableList.<Rule>of(rule4)))));
