@@ -8,17 +8,27 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.iovisor;
 
-import org.junit.Test;
+import static org.mockito.Mockito.mock;
 
-public class IovisorRendererTest {
+import org.junit.Before;
+import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry;
+import org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistry;
+import org.opendaylight.groupbasedpolicy.renderer.iovisor.test.GbpIovisorDataBrokerTest;
 
-    @Test
-    public void IovisorRendererClassTest() {
-        // TODO Implement me
-    }
+public class IovisorRendererTest extends GbpIovisorDataBrokerTest {
 
-    @Test
-    public void endpointPolicyUpdatedTest() {
-        // TODO implement me
+    private DataBroker dataBroker;
+    private EpRendererAugmentationRegistry epRendererAugReg;
+    private IovisorRenderer iovisorRenderer;
+    private PolicyValidatorRegistry policyValidatorRegistry;
+
+    @Before
+    public void iovisorInit() {
+        dataBroker = getDataBroker();
+        epRendererAugReg = mock(EpRendererAugmentationRegistry.class);
+        policyValidatorRegistry = mock(PolicyValidatorRegistry.class);
+        iovisorRenderer = new IovisorRenderer(dataBroker, epRendererAugReg, policyValidatorRegistry);
+
     }
 }

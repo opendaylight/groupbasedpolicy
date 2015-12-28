@@ -31,7 +31,7 @@ public class IovisorModuleUtils {
      */
     public static boolean validateIovisorModuleInstance(DataBroker dataBroker, Uri iovisorModuleUri) {
         Optional<IovisorModuleInstances> res = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
-                                                                         IovisorIidFactory.iovisorModuleInstancesIid(),
+                                                                         IovisorIidFactory.iovisorModuleInstanceWildCardIid(),
                                                                          dataBroker.newReadOnlyTransaction());
         if (res.isPresent()) {
             for (IovisorModuleInstance instance : res.get().getIovisorModuleInstance()) {

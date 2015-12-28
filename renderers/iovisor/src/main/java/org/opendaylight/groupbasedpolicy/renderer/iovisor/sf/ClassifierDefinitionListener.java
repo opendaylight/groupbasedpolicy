@@ -17,6 +17,7 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.iovisor.IovisorRenderer;
 import org.opendaylight.groupbasedpolicy.util.DataTreeChangeHandler;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.SubjectFeatureDefinitions;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.Renderers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
@@ -38,14 +39,15 @@ public class ClassifierDefinitionListener extends DataTreeChangeHandler<Classifi
 
     private static final String PUT = "stored";
     private static final String DELETED = "removed";
+
     private static final InstanceIdentifier<Capabilities> CAPABILITIES_IID = InstanceIdentifier.builder(Renderers.class)
         .child(Renderer.class, new RendererKey(IovisorRenderer.RENDERER_NAME))
         .child(Capabilities.class)
         .build();
 
-    public ClassifierDefinitionListener(DataBroker dataBroker,
-            DataTreeIdentifier<ClassifierDefinition> pointOfInterest) {
-        super(dataBroker, pointOfInterest);
+    public ClassifierDefinitionListener(DataBroker dataBroker) {
+        super(dataBroker, new DataTreeIdentifier<>(LogicalDatastoreType.CONFIGURATION,
+                InstanceIdentifier.builder(SubjectFeatureDefinitions.class).child(ClassifierDefinition.class).build()));
     }
 
     private SupportedClassifierDefinition createSupportedClassifierDefinition(Classifier classifier) {
@@ -65,13 +67,13 @@ public class ClassifierDefinitionListener extends DataTreeChangeHandler<Classifi
             @Override
             public void onSuccess(Void result) {
                 LOG.debug("Capability of renerer {} was {}: {}", IovisorRenderer.RENDERER_NAME.getValue(), putOrDeleted,
-                        supportedClassifierDefinitionKey);
+                        supportedClassifierDefinitionKey.getClassifierDefinitionId().getValue());
             }
 
             @Override
             public void onFailure(Throwable t) {
                 LOG.error("Capability of renderer {} was NOT {}: {}", IovisorRenderer.RENDERER_NAME.getValue(),
-                        putOrDeleted, supportedClassifierDefinitionKey, t);
+                        putOrDeleted, supportedClassifierDefinitionKey.getClassifierDefinitionId().getValue(), t);
             }
         };
     }
@@ -91,6 +93,7 @@ public class ClassifierDefinitionListener extends DataTreeChangeHandler<Classifi
             SupportedClassifierDefinitionKey supportedClassifierDefinitionKey =
                     new SupportedClassifierDefinitionKey(ourClassifier.getId());
             WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
+
             wTx.delete(LogicalDatastoreType.OPERATIONAL,
                     CAPABILITIES_IID.child(SupportedClassifierDefinition.class, supportedClassifierDefinitionKey));
             Futures.addCallback(wTx.submit(), logDebugResult(supportedClassifierDefinitionKey, DELETED));

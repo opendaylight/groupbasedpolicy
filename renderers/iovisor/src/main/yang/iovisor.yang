@@ -15,6 +15,7 @@ module iovisor {
     import yang-ext {prefix ext; revision-date "2013-07-09";}
     import ietf-inet-types { prefix inet; revision-date 2010-09-24; }
     import endpoint { prefix endpoint; }
+    import gbp-common { prefix gbp-common; }
 
     description
         "This module defines the group-based policy iovisor renderer model.";
@@ -25,11 +26,19 @@ module iovisor {
     }
 
     typedef iovisor-module-id {
+        /*
+        * TODO Either convert this to URI or allow String but expect name:port where name will
+        * resolved into ip:port (see iovisor-module grouping)
+        */
         description "Uniquely identifies the IOVisor module";
         type string;
     }
 
     grouping iovisor-module {
+        /*
+        * TODO Convert this to leafs of IP(v4|v6) and port - easier to validate
+        * For now assuming format "ip:port"
+        */
         leaf uri {
             type inet:uri;
             description "IOVisor module uniform resource identifier.";
@@ -48,6 +57,32 @@ module iovisor {
             }
 
             uses iovisor-module;
+        }
+    }
+
+    container iovisor-resolved-endpoints {
+        description "IOvisor validated Endpoints";
+        config false;
+        list iovisor-resolved-endpoint {
+            key "l3-context ip-address";
+            uses endpoint:l3-key;
+        }
+    }
+
+    container iovisor-resolved-endpoints-by-tenant-by-endpointgroup-id {
+        config false;
+        list iovisor-resolved-endpoint-by-tenant-by-endpointgroup-id {
+            key "tenant-id endpointgroup-id";
+            leaf tenant-id {
+                type gbp-common:tenant-id;
+            }
+            leaf endpointgroup-id {
+                type gbp-common:endpoint-group-id;
+            }
+            list iovisor-endpoint {
+                key "l3-context ip-address";
+                uses endpoint:l3-key;
+            }
         }
     }
 

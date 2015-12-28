@@ -17,6 +17,7 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.iovisor.IovisorRenderer;
 import org.opendaylight.groupbasedpolicy.util.DataTreeChangeHandler;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.SubjectFeatureDefinitions;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ActionDefinition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.Renderers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
@@ -42,8 +43,9 @@ public class ActionDefinitionListener extends DataTreeChangeHandler<ActionDefini
     private static String PUT = "stored";
     private static String DELETED = "removed";
 
-    public ActionDefinitionListener(DataBroker dataProvider, DataTreeIdentifier<ActionDefinition> pointOfInterest) {
-        super(dataProvider, pointOfInterest);
+    public ActionDefinitionListener(DataBroker dataBroker) {
+        super(dataBroker, new DataTreeIdentifier<>(LogicalDatastoreType.CONFIGURATION,
+                InstanceIdentifier.builder(SubjectFeatureDefinitions.class).child(ActionDefinition.class).build()));
     }
 
     private SupportedActionDefinition createSupportedActionDefinition(Action action) {
@@ -59,13 +61,13 @@ public class ActionDefinitionListener extends DataTreeChangeHandler<ActionDefini
             @Override
             public void onSuccess(Void result) {
                 LOG.debug("Capability of renerer {} was {}: {}", IovisorRenderer.RENDERER_NAME.getValue(), putOrDeleted,
-                        supportedActionDefinitionKey);
+                        supportedActionDefinitionKey.getActionDefinitionId().getValue());
             }
 
             @Override
             public void onFailure(Throwable t) {
                 LOG.error("Capability of renderer {} was NOT {}: {}", IovisorRenderer.RENDERER_NAME.getValue(),
-                        putOrDeleted, supportedActionDefinitionKey, t);
+                        putOrDeleted, supportedActionDefinitionKey.getActionDefinitionId().getValue(), t);
             }
         };
     }
