@@ -331,7 +331,7 @@ public class PolicyResolver implements PolicyValidatorRegistry, AutoCloseable {
         }
 
         @Override
-        protected void onSubreeModified(DataObjectModification<Tenant> rootNode,
+        protected void onSubtreeModified(DataObjectModification<Tenant> rootNode,
                 InstanceIdentifier<Tenant> rootIdentifier) {
             Tenant tenantAfter = rootNode.getDataAfter();
             synchronized (subscribersPerTenant) {

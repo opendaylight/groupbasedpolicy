@@ -41,7 +41,7 @@ public class ResolvedPolicyListener extends DataTreeChangeHandler<ResolvedPolicy
     }
 
     @Override
-    protected void onSubreeModified(DataObjectModification<ResolvedPolicy> rootNode,
+    protected void onSubtreeModified(DataObjectModification<ResolvedPolicy> rootNode,
             InstanceIdentifier<ResolvedPolicy> rootIdentifier) {
         LOG.info("Not implemented yet");
 

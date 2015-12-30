@@ -73,7 +73,7 @@ public class ActionDefinitionListener extends DataTreeChangeHandler<ActionDefini
     @Override
     protected void onWrite(DataObjectModification<ActionDefinition> rootNode,
             InstanceIdentifier<ActionDefinition> rootIdentifier) {
-        onSubreeModified(rootNode, rootIdentifier);
+        onSubtreeModified(rootNode, rootIdentifier);
     }
 
     @Override
@@ -92,7 +92,7 @@ public class ActionDefinitionListener extends DataTreeChangeHandler<ActionDefini
     }
 
     @Override
-    protected void onSubreeModified(DataObjectModification<ActionDefinition> rootNode,
+    protected void onSubtreeModified(DataObjectModification<ActionDefinition> rootNode,
             InstanceIdentifier<ActionDefinition> rootIdentifier) {
         ActionDefinition actionDefinitionAfter = checkNotNull(rootNode.getDataAfter());
         Action ourAction = SubjectFeatures.getAction(actionDefinitionAfter.getId());

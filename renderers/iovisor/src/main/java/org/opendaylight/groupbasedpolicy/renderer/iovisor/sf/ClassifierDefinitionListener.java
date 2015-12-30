@@ -79,7 +79,7 @@ public class ClassifierDefinitionListener extends DataTreeChangeHandler<Classifi
     @Override
     protected void onWrite(DataObjectModification<ClassifierDefinition> rootNode,
             InstanceIdentifier<ClassifierDefinition> rootIdentifier) {
-        onSubreeModified(rootNode, rootIdentifier);
+        onSubtreeModified(rootNode, rootIdentifier);
     }
 
     @Override
@@ -98,7 +98,7 @@ public class ClassifierDefinitionListener extends DataTreeChangeHandler<Classifi
     }
 
     @Override
-    protected void onSubreeModified(DataObjectModification<ClassifierDefinition> rootNode,
+    protected void onSubtreeModified(DataObjectModification<ClassifierDefinition> rootNode,
             InstanceIdentifier<ClassifierDefinition> rootIdentifier) {
         ClassifierDefinition classifierDefinitionAfter = checkNotNull(rootNode.getDataAfter());
         Classifier ourClassifier = SubjectFeatures.getClassifier(classifierDefinitionAfter.getId());

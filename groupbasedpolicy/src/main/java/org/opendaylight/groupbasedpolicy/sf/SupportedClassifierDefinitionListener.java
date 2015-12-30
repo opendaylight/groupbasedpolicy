@@ -97,7 +97,7 @@ public class SupportedClassifierDefinitionListener extends DataTreeChangeHandler
     }
 
     @Override
-    protected void onSubreeModified(DataObjectModification<SupportedClassifierDefinition> rootNode,
+    protected void onSubtreeModified(DataObjectModification<SupportedClassifierDefinition> rootNode,
             InstanceIdentifier<SupportedClassifierDefinition> modifiedSupportedCdIid) {
         SupportedClassifierDefinition beforeSupportedCd = rootNode.getDataBefore();
         ClassifierDefinitionId cdId = beforeSupportedCd.getClassifierDefinitionId();

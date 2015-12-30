@@ -25,7 +25,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 /**
  * The purpose of this class is to eliminate boilerplate code used in most of
  * {@link DataTreeChangeListener} implementations.
- * 
+ *
  * @param <T>
  */
 public abstract class DataTreeChangeHandler<T extends DataObject> implements DataTreeChangeListener<T>, AutoCloseable {
@@ -36,7 +36,7 @@ public abstract class DataTreeChangeHandler<T extends DataObject> implements Dat
     /**
      * Registers {@link DataTreeChangeListener} for {@code pointOfInterest} by using
      * {@code dataProvider}
-     * 
+     *
      * @param dataProvider cannot be {@code null}
      * @param pointOfInterest cannot be {@code null}
      * @throws NullPointerException if at least one paramter is {@code null}
@@ -59,7 +59,7 @@ public abstract class DataTreeChangeHandler<T extends DataObject> implements Dat
                     onDelete(rootNode, rootIdentifier);
                     break;
                 case SUBTREE_MODIFIED:
-                    onSubreeModified(rootNode, rootIdentifier);
+                    onSubtreeModified(rootNode, rootIdentifier);
                     break;
             }
         }
@@ -69,7 +69,7 @@ public abstract class DataTreeChangeHandler<T extends DataObject> implements Dat
      * Handles case where {@link DataObjectModification#getModificationType()} is
      * {@link ModificationType#WRITE}. <br>
      * <b>Parameters of this method are never {@code null}.</b>
-     * 
+     *
      * @param rootNode represents {@link DataObjectModification} as result of
      *        {@link DataTreeModification#getRootNode()}
      * @param rootIdentifier represents {@link InstanceIdentifier} obtained from result of
@@ -81,7 +81,7 @@ public abstract class DataTreeChangeHandler<T extends DataObject> implements Dat
      * Handles case where {@link DataObjectModification#getModificationType()} is
      * {@link ModificationType#DELETE}. <br>
      * <b>Parameters of this method are never {@code null}.</b>
-     * 
+     *
      * @param rootNode represents {@link DataObjectModification} as result of
      *        {@link DataTreeModification#getRootNode()}
      * @param rootIdentifier represents {@link InstanceIdentifier} obtained from result of
@@ -93,13 +93,13 @@ public abstract class DataTreeChangeHandler<T extends DataObject> implements Dat
      * Handles case where {@link DataObjectModification#getModificationType()} is
      * {@link ModificationType#SUBTREE_MODIFIED}. <br>
      * <b>Parameters of this method are never {@code null}.</b>
-     * 
+     *
      * @param rootNode represents {@link DataObjectModification} as result of
      *        {@link DataTreeModification#getRootNode()}
      * @param rootIdentifier represents {@link InstanceIdentifier} obtained from result of
      *        {@link DataTreeModification#getRootPath()}
      */
-    protected abstract void onSubreeModified(DataObjectModification<T> rootNode, InstanceIdentifier<T> rootIdentifier);
+    protected abstract void onSubtreeModified(DataObjectModification<T> rootNode, InstanceIdentifier<T> rootIdentifier);
 
     @Override
     public void close() throws Exception {
