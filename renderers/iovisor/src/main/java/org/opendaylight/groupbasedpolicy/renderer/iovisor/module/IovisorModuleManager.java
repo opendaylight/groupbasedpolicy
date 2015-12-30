@@ -8,6 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.iovisor.module;
 
+import java.util.List;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
@@ -15,10 +17,14 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.iovisor.utils.IovisorIidFactory;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Uri;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.IovisorModuleId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.IovisorModuleInstances;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.module.instances.IovisorModuleInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.module.instances.IovisorModuleInstanceKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.modules.by.tenant.by.endpointgroup.id.IovisorModuleByTenantByEndpointgroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.modules.by.tenant.by.endpointgroup.id.iovisor.module.by.tenant.by.endpointgroup.id.IovisorModuleInstanceId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -137,6 +143,16 @@ public class IovisorModuleManager implements AutoCloseable {
             return false;
         }
         return true;
+    }
+
+    public List<IovisorModuleInstanceId> getIovisorModulesByTenantByEpg(TenantId tenantId, EndpointGroupId epgId) {
+        Optional<IovisorModuleByTenantByEndpointgroupId> returnFromDs =
+                DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
+                        IovisorIidFactory.iovisorModuleByTenantIdByEndpointGroupIdIid(tenantId, epgId),
+                        dataBroker.newReadOnlyTransaction());
+        if (returnFromDs.isPresent())
+            return returnFromDs.get().getIovisorModuleInstanceId();
+        return null;
     }
 
     @Override

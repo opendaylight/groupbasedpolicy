@@ -103,9 +103,9 @@
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <feature version="${restconf.version}">odl-restconf</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/iovisor-renderer/{{VERSION}}</bundle>
-        <bundle>mvn:com.sun.jersey/jersey-core/${jersey.version}</bundle>
-        <bundle>mvn:com.sun.jersey/jersey-server/${jersey.version}</bundle>
-        <bundle>mvn:com.sun.jersey/jersey-servlet/${jersey.version}</bundle>
+        <bundle>mvn:com.sun.jersey/jersey-core/{{VERSION}}</bundle>
+        <bundle>mvn:com.sun.jersey/jersey-client/{{VERSION}}</bundle>
+        <bundle>mvn:com.google.code.gson/gson/{{VERSION}}</bundle>
         <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-iovisor.xml">mvn:org.opendaylight.groupbasedpolicy/iovisor-renderer/{{VERSION}}/xml/config</configfile>
     </feature>
 

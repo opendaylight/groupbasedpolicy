@@ -8,8 +8,10 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.iovisor.endpoint;
 
-import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
@@ -19,12 +21,20 @@ import org.opendaylight.groupbasedpolicy.renderer.iovisor.module.IovisorModuleLi
 import org.opendaylight.groupbasedpolicy.renderer.iovisor.module.IovisorModuleManager;
 import org.opendaylight.groupbasedpolicy.renderer.iovisor.utils.IovisorIidFactory;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.IovisorModuleAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.IovisorModuleId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.IovisorResolvedEndpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.module.instances.IovisorModuleInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.module.instances.IovisorModuleInstanceBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.modules.by.tenant.by.endpointgroup.id.IovisorModuleByTenantByEndpointgroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.modules.by.tenant.by.endpointgroup.id.IovisorModuleByTenantByEndpointgroupIdBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.modules.by.tenant.by.endpointgroup.id.iovisor.module.by.tenant.by.endpointgroup.id.IovisorModuleInstanceId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.modules.by.tenant.by.endpointgroup.id.iovisor.module.by.tenant.by.endpointgroup.id.IovisorModuleInstanceIdBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.resolved.endpoints.IovisorResolvedEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.resolved.endpoints.IovisorResolvedEndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.resolved.endpoints.by.tenant.by.endpointgroup.id.IovisorResolvedEndpointByTenantByEndpointgroupId;
@@ -35,7 +45,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableList;
 
 public class EndpointManager implements AutoCloseable {
 
@@ -55,8 +69,7 @@ public class EndpointManager implements AutoCloseable {
         LOG.info("Initialized IOVisor EndpointManager");
     }
 
-    @VisibleForTesting
-    IovisorModuleManager getIovisorModuleManager() {
+    public IovisorModuleManager getIovisorModuleManager() {
         return iovisorModuleManager;
     }
 
@@ -114,49 +127,128 @@ public class EndpointManager implements AutoCloseable {
     @VisibleForTesting
     boolean addIovisorResolvedEndpoint(EndpointL3 endpoint) {
         WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
+        wTx = addToIovisorResolvedEndpointDatastore(endpoint, wTx);
+        wTx = addToIovisorResolvedEndpointByTenantByEndpointgroupId(endpoint, wTx);
+        wTx = addToIovisorModulesByTenantByEndpointgroupId(endpoint, wTx);
+        return DataStoreHelper.submitToDs(wTx);
+    }
+
+    @VisibleForTesting
+    WriteTransaction addToIovisorModulesByTenantByEndpointgroupId(EndpointL3 endpoint, WriteTransaction wTx) {
+        Set<EndpointGroupId> epgIds = new HashSet<>();
+        if (endpoint.getEndpointGroup() != null)
+            epgIds.add(endpoint.getEndpointGroup());
+        if (endpoint.getEndpointGroups() != null)
+            epgIds.addAll(endpoint.getEndpointGroups());
+
+        IovisorModuleInstanceId iomId = new IovisorModuleInstanceIdBuilder()
+            .setId(new IovisorModuleId(endpoint.getAugmentation(IovisorModuleAugmentation.class).getUri().getValue()))
+            .build();
+
+        List<IovisorModuleInstanceId> iomIds = ImmutableList.of(iomId);
+
+        for (EndpointGroupId epg : epgIds) {
+            IovisorModuleByTenantByEndpointgroupId data = new IovisorModuleByTenantByEndpointgroupIdBuilder()
+                .setTenantId(endpoint.getTenant()).setEndpointgroupId(epg).setIovisorModuleInstanceId(iomIds).build();
+            wTx.merge(LogicalDatastoreType.OPERATIONAL,
+                    IovisorIidFactory.iovisorModuleByTenantIdByEndpointGroupIdIid(endpoint.getTenant(), epg), data,
+                    true);
+        }
+        return wTx;
+    }
+
+    @VisibleForTesting
+    WriteTransaction addToIovisorResolvedEndpointByTenantByEndpointgroupId(EndpointL3 endpoint, WriteTransaction wTx) {
+        Set<EndpointGroupId> epgIds = new HashSet<>();
+        if (endpoint.getEndpointGroup() != null)
+            epgIds.add(endpoint.getEndpointGroup());
+        if (endpoint.getEndpointGroups() != null)
+            epgIds.addAll(endpoint.getEndpointGroups());
+
+        IovisorEndpoint iovisorEndpoint = new IovisorEndpointBuilder().setIpAddress(endpoint.getIpAddress())
+            .setL3Context(endpoint.getL3Context())
+            .build();
+        List<IovisorEndpoint> iovisorEndpoints = ImmutableList.of(iovisorEndpoint);
+
+        for (EndpointGroupId epg : epgIds) {
+            IovisorResolvedEndpointByTenantByEndpointgroupId iovisorResolvedEndpointbyTenantByEndpointgroupId =
+                    new IovisorResolvedEndpointByTenantByEndpointgroupIdBuilder().setTenantId(endpoint.getTenant())
+                        .setEndpointgroupId(epg)
+                        .setIovisorEndpoint(iovisorEndpoints)
+                        .build();
+            wTx.merge(LogicalDatastoreType.OPERATIONAL,
+                    IovisorIidFactory.iovisorResolvedEndpointByTenantIdByEndpointGroupIdIid(endpoint.getTenant(), epg),
+                    iovisorResolvedEndpointbyTenantByEndpointgroupId, true);
+            LOG.trace("Added endpoint via endpoingGroups() to ResolvedEndpoints for {} {}",
+                    endpoint.getTenant().getValue(), epg.getValue());
+        }
+
+        return wTx;
+    }
+
+    @VisibleForTesting
+    WriteTransaction addToIovisorResolvedEndpointDatastore(EndpointL3 endpoint, WriteTransaction wTx) {
         IovisorResolvedEndpoint iovisorResolvedEndpoint = new IovisorResolvedEndpointBuilder()
             .setIpAddress(endpoint.getIpAddress()).setL3Context(endpoint.getL3Context()).build();
         wTx.put(LogicalDatastoreType.OPERATIONAL,
                 IovisorIidFactory.iovisorResolvedEndpointIid(endpoint.getL3Context(), endpoint.getIpAddress()),
                 iovisorResolvedEndpoint, true);
+        LOG.trace("Added endpoint  to ResolvedEndpoints for {} {}", endpoint.getL3Context().getValue(),
+                endpoint.getIpAddress().getValue());
+        return wTx;
+    }
 
-        IovisorEndpoint iovisorEndpoint = new IovisorEndpointBuilder().setIpAddress(endpoint.getIpAddress())
-            .setL3Context(endpoint.getL3Context())
-            .build();
-        List<IovisorEndpoint> iovisorEndpoints = new ArrayList<>();
-        iovisorEndpoints.add(iovisorEndpoint);
+    @VisibleForTesting
+    boolean isResolvedEndpointByTenantByEpg(final L3ContextId l3ContextId, final IpAddress ipAddr, TenantId tenantId,
+            EndpointGroupId epgId) {
 
-        IovisorResolvedEndpointByTenantByEndpointgroupId iovisorResolvedEndpointbyTenantByEndpointgroupId;
-        if (endpoint.getEndpointGroup() != null) {
-            iovisorResolvedEndpointbyTenantByEndpointgroupId =
-                    new IovisorResolvedEndpointByTenantByEndpointgroupIdBuilder().setTenantId(endpoint.getTenant())
-                        .setEndpointgroupId(endpoint.getEndpointGroup())
-                        .setIovisorEndpoint(iovisorEndpoints)
-                        .build();
-            wTx.merge(LogicalDatastoreType.OPERATIONAL,
-                    IovisorIidFactory.iovisorResolvedEndpointByTenantIdByEndpointGroupIdIid(endpoint.getTenant(),
-                            endpoint.getEndpointGroup()),
-                    iovisorResolvedEndpointbyTenantByEndpointgroupId, true);
-            LOG.trace("Added endpoint via endpointGroup to ResolvedEndpoints for {} {}",
-                    endpoint.getTenant().getValue(), endpoint.getEndpointGroup().getValue());
-        }
-        if (endpoint.getEndpointGroups() != null) {
-            for (EndpointGroupId epg : endpoint.getEndpointGroups()) {
-                iovisorResolvedEndpointbyTenantByEndpointgroupId =
-                        new IovisorResolvedEndpointByTenantByEndpointgroupIdBuilder().setTenantId(endpoint.getTenant())
-                            .setEndpointgroupId(epg)
-                            .setIovisorEndpoint(iovisorEndpoints)
-                            .build();
-                wTx.merge(
-                        LogicalDatastoreType.OPERATIONAL, IovisorIidFactory
-                            .iovisorResolvedEndpointByTenantIdByEndpointGroupIdIid(endpoint.getTenant(), epg),
-                        iovisorResolvedEndpointbyTenantByEndpointgroupId, true);
-                LOG.trace("Added endpoint via endpoingGroups() to ResolvedEndpoints for {} {}",
-                        endpoint.getTenant().getValue(), epg.getValue());
-            }
-        }
-        return DataStoreHelper.submitToDs(wTx);
+        Collection<IovisorEndpoint> filter = Collections2.filter(getResolvedEndpointsByTenantByEpg(tenantId, epgId),
+                new Predicate<IovisorEndpoint>() {
 
+                    @Override
+                    public boolean apply(IovisorEndpoint input) {
+                        return (input.getL3Context().equals(l3ContextId) && input.getIpAddress().equals(ipAddr));
+                    }
+                });
+        if (filter.isEmpty())
+            return false;
+        return true;
+    }
+
+    @VisibleForTesting
+    Collection<IovisorEndpoint> getResolvedEndpointsByTenantByEpg(TenantId tenantId, EndpointGroupId epgId) {
+        Optional<IovisorResolvedEndpointByTenantByEndpointgroupId> returnFromDs =
+                DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
+                        IovisorIidFactory.iovisorResolvedEndpointByTenantIdByEndpointGroupIdIid(tenantId, epgId),
+                        dataBroker.newReadOnlyTransaction());
+        if (returnFromDs.isPresent())
+            return returnFromDs.get().getIovisorEndpoint();
+        return null;
+    }
+
+    @VisibleForTesting
+    boolean isResolvedEndpoint(final L3ContextId l3ContextId, final IpAddress ipAddr) {
+
+        Collection<IovisorResolvedEndpoint> filter =
+                Collections2.filter(getResolvedEndpoints(), new Predicate<IovisorResolvedEndpoint>() {
+
+                    @Override
+                    public boolean apply(IovisorResolvedEndpoint input) {
+                        return (input.getL3Context().equals(l3ContextId) && input.getIpAddress().equals(ipAddr));
+                    }
+                });
+        if (filter.isEmpty())
+            return false;
+        return true;
+    }
+
+    @VisibleForTesting
+    Collection<IovisorResolvedEndpoint> getResolvedEndpoints() {
+        Optional<IovisorResolvedEndpoints> returnFromDs = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
+                IovisorIidFactory.iovisorResolvedEndpointWildcardIid(), dataBroker.newReadOnlyTransaction());
+        if (returnFromDs.isPresent())
+            return returnFromDs.get().getIovisorResolvedEndpoint();
+        return null;
     }
 
     @Override
