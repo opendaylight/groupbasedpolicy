@@ -1,0 +1,100 @@
+/*
+ * Copyright (c) 2015 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
+module statistics-store {
+    yang-version 1;
+
+    namespace "urn:opendaylight:groupbasedpolicy:statistics:store";
+    prefix "gbp-statistics-store";
+
+    import endpoint {
+        prefix endpoint;
+        revision-date 2014-04-21;
+    }
+    import gbp-common {
+        prefix gbp-common;
+        revision-date 2014-04-21;
+        }
+    import ietf-inet-types {
+        prefix inet;
+        revision-date 2010-09-24;
+    }
+    description
+        "This module defines gbp statistics store.";
+
+    revision "2015-12-15" {
+        description
+            "Initial revision.";
+    }
+
+    typedef record-id {
+        type int64;
+    }
+    grouping source-ep-fields {
+        container src-endpoint {
+            uses endpoint:l2-key;
+            leaf endpoint-group {
+                type gbp-common:endpoint-group-id;
+            }
+            leaf tenant {
+                type gbp-common:tenant-id;
+            }
+        }
+    }
+
+    grouping dst-ep-fields {
+        container dst-endpoint {
+            uses endpoint:l2-key;
+            leaf endpoint-group {
+                type gbp-common:endpoint-group-id;
+            }
+            leaf tenant {
+                type gbp-common:tenant-id;
+            }
+        }
+    }
+
+    grouping statisitc-fields {
+        leaf contract {
+            type gbp-common:contract-id;
+        }
+        leaf rule {
+            type gbp-common:rule-name;
+        }
+        leaf subject {
+            type gbp-common:subject-name;
+        }
+        leaf-list classifier {
+            type gbp-common:classifier-name;
+        }
+        leaf-list action {
+            type gbp-common:action-name;
+        }
+        leaf byte-count {
+            type int64;
+        }
+        leaf packet-count {
+            type int64;
+        }
+    }
+
+    container statistics-store {
+        list statistic-record {
+            key "record-id";
+            leaf record-id {
+                type record-id;
+            }
+            uses source-ep-fields;
+            uses dst-ep-fields;
+            list statistic {
+                key "contract subject rule";
+                uses statisitc-fields;
+            }
+        }
+    }
+}

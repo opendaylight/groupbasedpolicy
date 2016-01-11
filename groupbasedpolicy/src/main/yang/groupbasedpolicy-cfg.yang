@@ -39,6 +39,14 @@ module groupbasedpolicy-cfg {
         config:java-class "org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistry";
     }
 
+    identity statistics-manager {
+        description
+            "statistics-manager service definition";
+
+        base "config:service-type";
+        config:java-class "org.opendaylight.groupbasedpolicy.api.StatisticsManager";
+    }
+
     identity policy-validator-registry-impl {
         base "config:module-type";
 
@@ -51,6 +59,13 @@ module groupbasedpolicy-cfg {
 
         config:provided-service ep-renderer-augmentation-registry;
         config:java-name-prefix EpRendererAugmentationRegistryImpl;
+    }
+
+    identity statistics-manager-impl {
+        base "config:module-type";
+
+        config:provided-service statistics-manager;
+        config:java-name-prefix StatisticsManagerImpl;
     }
 
     identity groupbasedpolicy-impl {
@@ -122,6 +137,19 @@ module groupbasedpolicy-cfg {
                     refine type {
                         mandatory true;
                         config:required-identity mdsal:binding-rpc-registry;
+                    }
+                }
+            }
+        }
+        case statistics-manager-impl {
+            when "/config:modules/config:module/config:type = 'statistics-manager-impl'";
+
+          //wires in the data-broker service
+            container data-broker {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity mdsal:binding-async-data-broker;
                     }
                 }
             }

@@ -85,6 +85,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.interests.followed.tenants.FollowedTenantKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.interests.followed.tenants.followed.tenant.FollowedEndpointGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.interests.followed.tenants.followed.tenant.FollowedEndpointGroupKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.statistics.store.rev151215.StatisticsStore;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.statistics.store.rev151215.statistics.store.StatisticRecord;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.statistics.store.rev151215.statistics.store.StatisticRecordKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 public class IidFactory {
@@ -322,6 +325,10 @@ public class IidFactory {
             .child(Capabilities.class)
             .child(SupportedClassifierDefinition.class)
             .build();
+    }
+
+    public static InstanceIdentifier<StatisticRecord> statisticRecordIid(StatisticRecordKey key) {
+        return InstanceIdentifier.builder(StatisticsStore.class).child(StatisticRecord.class, key).build();
     }
 
     public static InstanceIdentifier<FollowedTenant> followedTenantIid(RendererName rendererName, TenantId tenantId) {

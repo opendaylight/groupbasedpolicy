@@ -59,6 +59,17 @@
                         <name>binding-rpc-broker</name>
                     </rpc-registry>
                 </module>
+                <module>
+                    <type xmlns:groupbasedpolicy="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">
+                        groupbasedpolicy:statistics-manager-impl
+                    </type>
+                    <name>statistics-manager-impl</name>
+
+                    <data-broker>
+                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
+                        <name>binding-data-broker</name>
+                    </data-broker>
+                </module>
             </modules>
 
             <services xmlns="urn:opendaylight:params:xml:ns:yang:controller:config">
@@ -80,6 +91,16 @@
                     <instance>
                         <name>ep-renderer-augmentation-registry</name>
                         <provider>/modules/module[type='ep-renderer-augmentation-registry-impl'][name='ep-renderer-augmentation-registry']</provider>
+                    </instance>
+                </service>
+                <service>
+                    <type xmlns:groupbasedpolicy="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">
+                        groupbasedpolicy:statistics-manager
+                    </type>
+
+                    <instance>
+                        <name>statistics-manager</name>
+                        <provider>/modules/module[type='statistics-manager-impl'][name='statistics-manager-impl']</provider>
                     </instance>
                 </service>
             </services>
