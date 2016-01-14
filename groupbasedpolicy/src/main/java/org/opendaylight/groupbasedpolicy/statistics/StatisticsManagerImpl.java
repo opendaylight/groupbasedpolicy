@@ -103,6 +103,7 @@ public class StatisticsManagerImpl implements StatisticsManager, AutoCloseable {
                 }
                 statRecord = new StatisticRecordBuilder().setKey(key)
                     .setRecordId(new RecordId(recordKey))
+                    .setTimestamp(epStats.getTimestamp())
                     .setSrcEndpoint(srcBuilder.build())
                     .setDstEndpoint(dstBuilder.build())
                     .setStatistic(statisticList)
