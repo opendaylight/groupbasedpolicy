@@ -17,8 +17,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.capabilities.supported.classifier.definition.SupportedParameterValues;
 
 /**
- * Represent a classifier definition, and provide tools for generating flow
- * rules based on the classifier
+ * Represent a classifier definition
  */
 public abstract class Classifier {
 

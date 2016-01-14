@@ -47,6 +47,11 @@ module iovisor {
 
     container iovisor-module-instances {
         description "IOVisor module inventory.";
+        leaf base-url {
+            type string;
+            default "/policies";
+        }
+
         list iovisor-module-instance {
             key "id";
             config true;
@@ -66,6 +71,25 @@ module iovisor {
         list iovisor-resolved-endpoint {
             key "l3-context ip-address";
             uses endpoint:l3-key;
+        }
+    }
+
+    container iovisor-modules-by-tenant-by-endpointgroup-id {
+        config false;
+        list iovisor-module-by-tenant-by-endpointgroup-id {
+            key "tenant-id endpointgroup-id";
+            leaf tenant-id {
+                type gbp-common:tenant-id;
+            }
+            leaf endpointgroup-id {
+                type gbp-common:endpoint-group-id;
+            }
+            list iovisor-module-instance-id {
+                key "id";
+                leaf id {
+                    type iovisor-module-id;
+                }
+            }
         }
     }
 

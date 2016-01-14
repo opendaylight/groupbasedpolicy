@@ -29,7 +29,7 @@ import com.google.common.collect.ImmutableList;
  */
 public class EtherTypeClassifier extends Classifier {
 
-    protected EtherTypeClassifier(Classifier parent) {
+    public EtherTypeClassifier(Classifier parent) {
         super(parent);
     }
 

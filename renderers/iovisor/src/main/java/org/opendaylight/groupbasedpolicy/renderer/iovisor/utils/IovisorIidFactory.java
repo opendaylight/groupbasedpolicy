@@ -13,10 +13,13 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.IovisorModuleInstances;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.IovisorModulesByTenantByEndpointgroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.IovisorResolvedEndpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.IovisorResolvedEndpointsByTenantByEndpointgroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.module.instances.IovisorModuleInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.module.instances.IovisorModuleInstanceKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.modules.by.tenant.by.endpointgroup.id.IovisorModuleByTenantByEndpointgroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.modules.by.tenant.by.endpointgroup.id.IovisorModuleByTenantByEndpointgroupIdKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.resolved.endpoints.IovisorResolvedEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.resolved.endpoints.IovisorResolvedEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.resolved.endpoints.by.tenant.by.endpointgroup.id.IovisorResolvedEndpointByTenantByEndpointgroupId;
@@ -81,4 +84,22 @@ public class IovisorIidFactory {
             .child(IovisorResolvedEndpointByTenantByEndpointgroupId.class, key)
             .build();
     }
+
+    public static InstanceIdentifier<IovisorModulesByTenantByEndpointgroupId> iovisorModulesByTenantIdByEndpointGroupIdWildCardIid() {
+        return InstanceIdentifier.builder(IovisorModulesByTenantByEndpointgroupId.class).build();
+    }
+
+    public static InstanceIdentifier<IovisorModuleByTenantByEndpointgroupId> iovisorModuleByTenantIdByEndpointGroupIdIid(
+            TenantId tenantId, EndpointGroupId epgId) {
+        return iovisorModuleByTenantIdByEndpointGroupIdIid(
+                new IovisorModuleByTenantByEndpointgroupIdKey(epgId, tenantId));
+    }
+
+    public static InstanceIdentifier<IovisorModuleByTenantByEndpointgroupId> iovisorModuleByTenantIdByEndpointGroupIdIid(
+            IovisorModuleByTenantByEndpointgroupIdKey key) {
+        return InstanceIdentifier.builder(IovisorModulesByTenantByEndpointgroupId.class)
+            .child(IovisorModuleByTenantByEndpointgroupId.class, key)
+            .build();
+    }
+
 }
