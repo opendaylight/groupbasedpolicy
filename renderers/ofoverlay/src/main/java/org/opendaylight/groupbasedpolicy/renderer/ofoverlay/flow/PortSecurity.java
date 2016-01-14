@@ -10,6 +10,8 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
@@ -21,13 +23,21 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.InstructionsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.go.to.table._case.GoToTable;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.Instruction;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.InstructionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
+
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ExternalImplicitGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.Segmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer3Match;
@@ -66,15 +76,6 @@ public class PortSecurity extends FlowTable {
         if (tunnelIf != null)
             ofWriter.writeFlow(nodeId, TABLE_ID, allowFromPort(tunnelIf));
 
-        // Allow traffic from tunnel ports
-        //TODO Bug 3546 - Difficult: External port is unrelated to Tenant, L3C, L2BD..
-
-        Set<NodeConnectorId> external =
-                ctx.getSwitchManager().getExternalPorts(nodeId);
-        for (NodeConnectorId extIf : external) {
-            ofWriter.writeFlow(nodeId, TABLE_ID, allowFromExternalPort(extIf));
-        }
-
         // Default drop all
         ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
@@ -83,6 +84,7 @@ public class PortSecurity extends FlowTable {
         ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(111), FlowUtils.IPv4, TABLE_ID));
         ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(112), FlowUtils.IPv6, TABLE_ID));
 
+        Set<TenantId> tenantIds = new HashSet<>();
         for (Endpoint ep : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
             OfOverlayContext ofc = ep.getAugmentation(OfOverlayContext.class);
             if (ofc == null || ofc.getNodeConnectorId() == null) {
@@ -91,6 +93,7 @@ public class PortSecurity extends FlowTable {
                 continue;
             }
 
+            tenantIds.add(ep.getTenant());
             Set<ExternalImplicitGroup> eigs = getExternalImplicitGroupsForTenant(ep.getTenant());
             if (EndpointManager.isInternal(ep, eigs)) {
                 // Allow layer 3 traffic (ARP and IP) with the correct
@@ -106,6 +109,18 @@ public class PortSecurity extends FlowTable {
                 if (LOG.isTraceEnabled()) {
                     LOG.trace("External Endpoint is ignored in PortSecurity: {}", ep);
                 }
+            }
+        }
+
+        for (TenantId tenantId : tenantIds) {
+            for (NodeConnectorId nc : ctx.getSwitchManager().getExternalPorts(nodeId)) {
+                // TODO Bug 3546 - Difficult: External port is unrelated to Tenant, L3C, L2BD..
+                for (Flow flow : popVlanTagsOnExternalPort(nc, tenantId, 210)) {
+                    // tagged frames have to be untagged when entering policy domain
+                    ofWriter.writeFlow(nodeId, TABLE_ID, flow);
+                }
+                // allowing untagged frames entering policy domain
+                ofWriter.writeFlow(nodeId, TABLE_ID, allowFromExternalPort(nc, 200));
             }
         }
     }
@@ -125,22 +140,9 @@ public class PortSecurity extends FlowTable {
         FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "allow", match);
         FlowBuilder flowb = base()
                 .setId(flowid)
-                .setPriority(Integer.valueOf(200))
+                .setPriority(Integer.valueOf(300))
                 .setMatch(match)
                 .setInstructions(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()));
-        return flowb.build();
-    }
-
-    private Flow allowFromExternalPort(NodeConnectorId port) {
-        Match match = new MatchBuilder()
-                .setInPort(port)
-                .build();
-        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "allowExternal", match);
-        FlowBuilder flowb = base()
-                .setId(flowid)
-                .setPriority(Integer.valueOf(200))
-                .setMatch(match)
-                .setInstructions(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_INGRESS_NAT()));
         return flowb.build();
     }
 
@@ -183,7 +185,6 @@ public class PortSecurity extends FlowTable {
                 .setMatch(match)
                 .setInstructions(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()))
                 .build();
-
         return flow;
     }
 
@@ -240,5 +241,55 @@ public class PortSecurity extends FlowTable {
 
             ofWriter.writeFlow(nodeId, TABLE_ID,flow);
         }
+    }
+
+    private Flow allowFromExternalPort(NodeConnectorId nc, Integer priority) {
+        Match match = new MatchBuilder().setInPort(nc).build();
+        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "allowExternal", match);
+        FlowBuilder flowb = base().setId(flowid)
+            .setPriority(Integer.valueOf(priority))
+            .setMatch(match)
+            .setInstructions(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_INGRESS_NAT()));
+        return flowb.build();
+    }
+
+    /**
+     * Pops VLAN tag for inbound traffic.
+     *
+     * @param nc should be external for now
+     * @param tenantId of {@link Tenant} from which {@link L2FloodDomain}s are read from which VLAN IDs are resolved.
+     * @param priority of flows in the table
+     * @return {@link Flow}s which match on ingress port, and VLAN ID to pop.
+     *         {@link GoToTable} Instructions are set to INGRESS NAT table.
+     */
+    private List<Flow> popVlanTagsOnExternalPort(NodeConnectorId nc, TenantId tenantId, Integer priority) {
+        List<Flow> flows = new ArrayList<>();
+        for(L2FloodDomain l2Fd : ctx.getTenant(tenantId).getTenant().getForwardingContext().getL2FloodDomain()) {
+        Segmentation segmentation = l2Fd.getAugmentation(Segmentation.class);
+            if (segmentation != null) {
+                Integer vlanId = segmentation.getSegmentationId();
+                flows.add(buildPopVlanFlow(nc, vlanId, priority));
+            }
+        }
+        return flows;
+    }
+
+    private Flow buildPopVlanFlow(NodeConnectorId nc, Integer vlanId, int priority) {
+        Match match = new MatchBuilder()
+            .setVlanMatch(FlowUtils.vlanMatch(vlanId, true))
+            .setInPort(nc)
+            .build();
+        List<Instruction> instructions = new ArrayList<>();
+        instructions.add(FlowUtils.popVlanInstruction(0));
+        instructions.add(new InstructionBuilder().setOrder(1)
+             // TODO for now matches on external flows are passed to ingress nat table
+            .setInstruction(FlowUtils.gotoTableIns(ctx.getPolicyManager().getTABLEID_INGRESS_NAT()))
+            .build());
+        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "allowExternalPopVlan", match);
+        return base().setPriority(priority)
+            .setId(flowid)
+            .setMatch(match)
+            .setInstructions(new InstructionsBuilder().setInstruction(instructions).build())
+            .build();
     }
 }

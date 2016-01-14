@@ -8,7 +8,13 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key;
 
 /**
  * Class for mocking up endpoints for unit tests
@@ -16,11 +22,22 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
  */
 public class MockEndpointManager extends EndpointManager {
 
+    private Map<EndpointL3Key, EndpointL3> endpointsL3 = new HashMap<>();
+
     public MockEndpointManager() {
         super(null, null, null, null, null);
     }
 
     public void addEndpoint(Endpoint ep) {
         processEndpoint(null, ep);
+    }
+
+    public void addL3Endpoint(EndpointL3 l3Ep) {
+        endpointsL3.put(l3Ep.getKey(), l3Ep);
+    }
+
+    @Override
+    protected Collection<EndpointL3> getL3Endpoints() {
+        return endpointsL3.values();
     }
 }

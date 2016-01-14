@@ -27,6 +27,7 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClauseName;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
@@ -40,6 +41,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.Segmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.SegmentationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRefBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
@@ -49,8 +52,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ForwardingContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.PolicyBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomainBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3ContextBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.SubnetBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ContractBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroupBuilder;
@@ -86,9 +91,11 @@ public class OfTableTest {
     L3ContextId l3c = new L3ContextId("2cf51ee4-e996-467e-a277-2d380334a91d");
     L2BridgeDomainId bd = new L2BridgeDomainId("c95182ba-7807-43f8-98f7-6c7c720b7639");
     L2FloodDomainId fd = new L2FloodDomainId("98e1439e-52d2-46f8-bd69-5136e6088771");
+    L2FloodDomainId ext_fd = new L2FloodDomainId("d8024f7a-b83e-11e5-9912-ba0be0483c18");
     SubnetId sub = new SubnetId("4fcf8dfc-53b5-4aef-84d3-6b5586992fcb");
     SubnetId sub2 = new SubnetId("c285a59f-fcb8-42e6-bf29-87ea522fd626");
     SubnetId sub3 = new SubnetId("a0380d52-2a25-48ef-882c-a4d4cd9e00ec");
+    SubnetId ext_sub = new SubnetId("8da17ad9-3261-4dc9-bcff-928a2f73cce7");
     TenantId tid = new TenantId("1118c691-8520-47ad-80b8-4cf5e3fe3302");
     EndpointGroupId eg = new EndpointGroupId("36dec84a-08c7-497b-80b6-a0035af72a12");
     EndpointGroupId eg2 = new EndpointGroupId("632e5e11-7988-4eb5-8fe6-6c182d890276");
@@ -163,7 +170,22 @@ public class OfTableTest {
                         .setL3Context(ImmutableList.of(new L3ContextBuilder().setId(l3c).build()))
                         .setL2BridgeDomain(
                                 ImmutableList.of(new L2BridgeDomainBuilder().setId(bd).setParent(l3c).build()))
-                        .setL2FloodDomain(ImmutableList.of(new L2FloodDomainBuilder().setId(fd).setParent(bd).build()))
+                        .setL2FloodDomain(ImmutableList.of(
+                                new L2FloodDomainBuilder()
+                                    .setId(fd)
+                                    .setParent(bd)
+                                    .addAugmentation(Segmentation.class,
+                                        new SegmentationBuilder()
+                                        .setSegmentationId(Integer.valueOf(216))
+                                        .build())
+                                    .build(),
+                                new L2FloodDomainBuilder()
+                                    .setId(ext_fd)
+                                    .addAugmentation(Segmentation.class,
+                                        new SegmentationBuilder()
+                                        .setSegmentationId(Integer.valueOf(2016))
+                                        .build())
+                                    .build()))
                         .setSubnet(ImmutableList.of(
                                 new SubnetBuilder().setId(sub2)
                                     .setParent(fd)
@@ -179,8 +201,13 @@ public class OfTableTest {
                                     .setParent(bd)
                                     .setIpPrefix(new IpPrefix(new Ipv4Prefix("10.0.2.0/24")))
                                     .setVirtualRouterIp(new IpAddress(new Ipv4Address("10.0.2.1")))
+                                    .build(),
+                                new SubnetBuilder()
+                                    .setId(ext_sub)
+                                    .setIpPrefix(new IpPrefix(new Ipv4Prefix("192.168.111.0/24")))
+                                    .setParent(ext_fd)
                                     .build()))
-                        .build());
+                       .build());
     }
 
     protected ContractBuilder baseContract(List<Subject> subjects) {

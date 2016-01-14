@@ -14,10 +14,13 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadTunIPv4Action;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.outputAction;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
+import org.antlr.v4.runtime.misc.Array2DHashSet;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.dto.EgKey;
@@ -27,12 +30,15 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointMan
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.BucketId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.GroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.group.buckets.BucketBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.Segmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
@@ -85,7 +91,7 @@ public class GroupTable extends OfTable {
             EndpointFwdCtxOrdinals localEpFwdCtxOrds =
                     OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, localEp);
             if (localEpFwdCtxOrds == null) {
-                LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", localEp);
+                LOG.info("getEndpointFwdCtxOrdinals is null for EP {}", localEp);
                 continue;
             }
 
@@ -125,6 +131,7 @@ public class GroupTable extends OfTable {
                         ofWriter.writeBucket(nodeId, gid, bb.build());
                     }
                 }
+                // TODO broadcasts are not separated by EPG between endpoints on the same node
                 OfOverlayContext ofc = localEp.getAugmentation(OfOverlayContext.class);
                 if (EndpointManager.isExternal(localEp, ctx.getTenant(localEp.getTenant()).getExternalImplicitGroups()))
                     continue;
@@ -136,11 +143,44 @@ public class GroupTable extends OfTable {
                     LOG.warn("Could not parse port number {}", ofc.getNodeConnectorId(), e);
                     continue;
                 }
-
                 Action output = outputAction(ofc.getNodeConnectorId());
-                BucketBuilder bb = new BucketBuilder().setBucketId(new BucketId(Long.valueOf(bucketId)))
-                        .setAction(actionList(output));
+                BucketBuilder bb = new BucketBuilder().setBucketId(new BucketId(Long.valueOf(bucketId))).setAction(
+                        FlowUtils.actionList(output));
                 ofWriter.writeBucket(nodeId, gid, bb.build());
+
+                // if boradcast exceeds internal domain
+                for (Endpoint extEp : ctx.getEndpointManager().getExtEpsNoLocForGroup(epg)) {
+                    if (extEp.getNetworkContainment() != null
+                            && extEp.getNetworkContainment().equals(localEp.getNetworkContainment())) {
+                        L2FloodDomain l2Fd = ctx.getTenant(extEp.getTenant()).resolveL2FloodDomain(
+                                extEp.getNetworkContainment());
+                        if (l2Fd != null) {
+                            Segmentation segmentation = l2Fd.getAugmentation(Segmentation.class);
+                            // external endpoints do not have location augmentation
+                            // however they are beyond external ports
+                            for (NodeConnectorId extNcId : ctx.getSwitchManager().getExternalPorts(nodeId)) {
+                                try {
+                                    bucketId = getOfPortNum(extNcId);
+                                } catch (NumberFormatException e) {
+                                    LOG.warn("Could not parse external port number {}", extNcId, e);
+                                    continue;
+                                }
+                                ArrayList<org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder>
+                                    actionList = new ArrayList<>();
+                                if (segmentation != null) {
+                                    Integer vlanId = segmentation.getSegmentationId();
+                                    actionList.addAll(FlowUtils.pushVlanActions(vlanId));
+                                    actionList.add(new ActionBuilder().setOrder(2).setAction(outputAction(extNcId)));
+                                } else {
+                                    actionList.add(new ActionBuilder().setOrder(0).setAction(outputAction(extNcId)));
+                                }
+                                bb.setBucketId(new BucketId(Long.valueOf(bucketId))).setAction(
+                                        FlowUtils.actionList(actionList));
+                                ofWriter.writeBucket(nodeId, gid, bb.build());
+                            }
+                        }
+                    }
+                }
             }
         }
     }
