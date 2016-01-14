@@ -1,0 +1,27 @@
+settings
+contains a list of numbers to append to "gbpsfc" to get the VMs' names
+
+start [<name>]
+stop [<name>]
+list [<name>]
+No parameters: machines' names are generated from settings file.
+One parameter: operation will take place on than machine only
+
+start
+Start sending sFlow data from OVS (all parameters are set in internal_settings)
+
+stop
+Stop sending sFlow data
+
+list
+Show actual state of sFlow, or will not show anything if sFlow is stopped.
+
+internal_settings
+Settings used to start sFlow sending on a machine
+
+internal_start, internal_stop
+Not to be run manually. Starting/stopping sFlow sending on individual machine
+
+
+
+This has a lot of potential improvement...
