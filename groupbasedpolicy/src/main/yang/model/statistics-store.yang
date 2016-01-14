@@ -89,6 +89,12 @@ module statistics-store {
             leaf record-id {
                 type record-id;
             }
+            leaf timestamp {
+                type int64;
+                description
+                    "Date and time of record creation in milliseconds
+                        counting from 1.1.1970 00:00:00 UTC (= 0)";
+            }
             uses source-ep-fields;
             uses dst-ep-fields;
             list statistic {
