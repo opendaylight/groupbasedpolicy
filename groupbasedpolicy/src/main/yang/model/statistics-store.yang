@@ -90,7 +90,7 @@ module statistics-store {
                 type record-id;
             }
             leaf timestamp {
-                type int64;
+                type uint64;
                 description
                     "Date and time of record creation in milliseconds
                         counting from 1.1.1970 00:00:00 UTC (= 0)";
