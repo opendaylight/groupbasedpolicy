@@ -93,7 +93,8 @@ public class ExternalMapperTest extends FlowTableTest {
 
     @Test
     public void syncTestNoExternalPorts() throws Exception {
+        // we still need ExternalMapper flows (default output and default drop) to be generated
         mapper.sync(nodeId, ofWriter);
-        verify(ofWriter, never()).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
+        verify(ofWriter, times(2)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
     }
 }
