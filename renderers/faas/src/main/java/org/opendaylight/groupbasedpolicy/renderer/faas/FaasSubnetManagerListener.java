@@ -123,7 +123,7 @@ public class FaasSubnetManagerListener implements DataChangeListener {
         }
     }
 
-    private SubnetBuilder initSubnetBuilder(Subnet gbpSubnet) {
+    protected SubnetBuilder initSubnetBuilder(Subnet gbpSubnet) {
         SubnetBuilder builder = new SubnetBuilder();
         if (gbpSubnet.getGateways() != null) {
             List<ExternalGateways> gateways = new ArrayList<>();
