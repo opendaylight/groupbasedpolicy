@@ -70,10 +70,6 @@ public class ExternalMapper extends FlowTable {
     @Override
     public void sync(NodeId nodeId, OfWriter ofWriter) throws Exception {
 
-        if (ctx.getSwitchManager().getExternalPorts(nodeId).isEmpty()) {
-            LOG.trace("No external ports found for node: {}", nodeId);
-            return;
-        }
         // Default drop all
         ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
