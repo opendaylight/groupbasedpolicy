@@ -151,7 +151,7 @@ public class FaasContractManagerListener implements DataChangeListener {
         }
     }
 
-    private SecurityRuleGroupsBuilder initSecurityGroupBuilder(Contract contract) {
+    protected SecurityRuleGroupsBuilder initSecurityGroupBuilder(Contract contract) {
         LOG.trace("Start initSecurityGroupBuilder");
         SecurityRuleGroupsBuilder builder = new SecurityRuleGroupsBuilder();
         builder.setUuid(getFaasSecurityRulesId(contract.getId()));

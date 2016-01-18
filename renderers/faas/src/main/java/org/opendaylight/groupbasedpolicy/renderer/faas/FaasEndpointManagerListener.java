@@ -140,7 +140,7 @@ public class FaasEndpointManagerListener implements DataChangeListener, AutoClos
         }
     }
 
-    private void processEndpoint(Endpoint endpoint) {
+    protected void processEndpoint(Endpoint endpoint) {
         Uuid tenantId = policyManager.getFaasTenantId(endpoint.getTenant());
         if (tenantId == null) {
             LOG.error("Failed Endpoint Registration. Couldn't find faas tenant Id. Endpoint {}", endpoint);
