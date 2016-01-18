@@ -322,7 +322,7 @@ public class ArpTasker implements PacketProcessingListener {
             ReadTransaction rTx) {
         Optional<Nodes> potentialNodes = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
                 InstanceIdentifier.builder(Nodes.class).build(), rTx);
-        if (!potentialNodes.isPresent() && potentialNodes.get().getNode() != null) {
+        if (!potentialNodes.isPresent() || potentialNodes.get().getNode() == null) {
             return ImmutableSetMultimap.of();
         }
         List<Node> nodes = potentialNodes.get().getNode();
