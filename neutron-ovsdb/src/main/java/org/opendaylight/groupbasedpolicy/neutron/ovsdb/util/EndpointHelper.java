@@ -10,7 +10,6 @@ package org.opendaylight.groupbasedpolicy.neutron.ovsdb.util;
 import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.readFromDs;
 import static org.opendaylight.groupbasedpolicy.util.IidFactory.endpointIid;
 
-import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -23,14 +22,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
 
 
 public class EndpointHelper {
-    private static final Logger LOG = LoggerFactory.getLogger(EndpointHelper.class);
 
     /**
      * Look up the {@link Endpoint} from the Endpoint Registry.
@@ -59,24 +55,14 @@ public class EndpointHelper {
      * @param nodeConnectorIdString  the string representation of the inventory NodeConnectorId
      * @param rwTx                   a reference to ReadWriteTransaction object
      */
-    public static void updateEndpointWithLocation(Endpoint endpoint, String nodeIdString,
-        String nodeConnectorIdString, ReadWriteTransaction rwTx) {
-
+    public static void updateEndpointWithLocation(Endpoint endpoint, String nodeIdString, String nodeConnectorIdString,
+            ReadWriteTransaction rwTx) {
         NodeId invNodeId = new NodeId(nodeIdString);
         NodeConnectorId ncId = new NodeConnectorId(nodeConnectorIdString);
-
-        OfOverlayContext ofc = endpoint.getAugmentation(OfOverlayContext.class);
-        OfOverlayContextBuilder ofcBuilder;
-        if (ofc == null) {
-            ofcBuilder = new OfOverlayContextBuilder();
-        } else {
-            ofcBuilder = new OfOverlayContextBuilder(ofc);
-        }
-        ofcBuilder.setNodeConnectorId(ncId).setNodeId(invNodeId);
-        EndpointBuilder epBuilder = new EndpointBuilder(endpoint);
-        epBuilder.addAugmentation(OfOverlayContext.class, ofcBuilder.build());
-        Endpoint newEp = epBuilder.build();
-        rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointIid(newEp.getL2Context(), newEp.getMacAddress()), newEp);
+        OfOverlayContext newOfOverlayCtx =
+                new OfOverlayContextBuilder().setNodeId(invNodeId).setNodeConnectorId(ncId).build();
+        rwTx.merge(LogicalDatastoreType.OPERATIONAL,
+                IidFactory.endpointIid(endpoint.getKey()).augmentation(OfOverlayContext.class), newOfOverlayCtx);
         DataStoreHelper.submitToDs(rwTx);
     }
 

@@ -21,8 +21,6 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.Router;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.NeutronSecurityRuleAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils.ForwardingCtx;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronMapperIidFactory;
@@ -59,7 +57,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3ContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.SubnetBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,12 +71,10 @@ public class NeutronRouterAware implements INeutronRouterAware {
     private static final String DEFAULT_ROUTE = "0.0.0.0/0";
     private final DataBroker dataProvider;
     private final  EndpointService epService;
-    private final NeutronSecurityRuleAware secRuleAware;
 
-    public NeutronRouterAware(DataBroker dataProvider, EndpointService epService, NeutronSecurityRuleAware secRuleAware) {
+    public NeutronRouterAware(DataBroker dataProvider, EndpointService epService) {
         this.dataProvider = checkNotNull(dataProvider);
         this.epService = checkNotNull(epService);
-        this.secRuleAware = checkNotNull(secRuleAware);
     }
 
     @Override
@@ -207,16 +202,6 @@ public class NeutronRouterAware implements INeutronRouterAware {
     @Override
     public void neutronRouterDeleted(NeutronRouter router) {
         LOG.trace("neutronRouterDeleted - {}", router);
-        ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
-        TenantId tenantId = new TenantId(Utils.normalizeUuid(router.getTenantID()));
-        Optional<EndpointGroup> potentialEpg = DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.endpointGroupIid(tenantId, Router.EPG_ID), rwTx);
-        if (!potentialEpg.isPresent()) {
-            LOG.warn("Illegal state - Endpoint group {} does not exist.", Router.EPG_ID.getValue());
-            rwTx.cancel();
-            return;
-        }
-        DataStoreHelper.submitToDs(rwTx);
     }
 
     @Override
@@ -349,6 +334,9 @@ public class NeutronRouterAware implements INeutronRouterAware {
         NeutronSubnet neutronSubnet = subnetInterface.getSubnet(subnet.getId().getValue());
         List<NeutronPort> portsInNeutronSubnet = neutronSubnet.getPortsInSubnet();
         for (NeutronPort port : portsInNeutronSubnet) {
+            if (NeutronPortAware.isRouterGatewayPort(port) || NeutronPortAware.isRouterInterfacePort(port)) {
+                continue;
+            }
             boolean isPortAdded = NeutronPortAware.addNeutronPort(port, rwTx, epService);
             if (!isPortAdded) {
                 return false;
@@ -434,6 +422,9 @@ public class NeutronRouterAware implements INeutronRouterAware {
         NeutronSubnet neutronSubnet = subnetInterface.getSubnet(subnetId.getValue());
         List<NeutronPort> portsInNeutronSubnet = neutronSubnet.getPortsInSubnet();
         for (NeutronPort port : portsInNeutronSubnet) {
+            if (NeutronPortAware.isRouterGatewayPort(port) || NeutronPortAware.isRouterInterfacePort(port)) {
+                continue;
+            }
             boolean isPortAdded = NeutronPortAware.addNeutronPort(port, rwTx, epService);
             if (!isPortAdded) {
                 rwTx.cancel();

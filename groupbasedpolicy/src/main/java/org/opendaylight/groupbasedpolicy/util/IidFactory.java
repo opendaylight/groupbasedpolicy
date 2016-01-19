@@ -57,6 +57,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ContractKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroupKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ExternalImplicitGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ExternalImplicitGroupKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.SubjectFeatureInstances;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.Clause;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.ClauseKey;
@@ -347,4 +349,14 @@ public class IidFactory {
     public static InstanceIdentifier<Renderers> renderersIid() {
         return InstanceIdentifier.builder(Renderers.class).build();
     }
+
+    public static InstanceIdentifier<ExternalImplicitGroup> externalImplicitGroupIid(TenantId tenantId,
+            EndpointGroupId epgId) {
+        return InstanceIdentifier.builder(Tenants.class)
+            .child(Tenant.class, new TenantKey(tenantId))
+            .child(Policy.class)
+            .child(ExternalImplicitGroup.class, new ExternalImplicitGroupKey(epgId))
+            .build();
+    }
+
 }

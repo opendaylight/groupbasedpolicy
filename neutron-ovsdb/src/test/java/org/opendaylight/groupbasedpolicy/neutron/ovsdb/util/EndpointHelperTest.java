@@ -21,7 +21,11 @@ import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -42,7 +46,12 @@ public class EndpointHelperTest {
     @Before
     public void initialise() throws Exception {
         epKey = mock(EndpointKey.class);
-        endpoint = mock(Endpoint.class);
+        OfOverlayContext ofc = mock(OfOverlayContext.class);
+        endpoint = new EndpointBuilder().setL2Context(new L2BridgeDomainId("foo"))
+                .setMacAddress(new MacAddress("01:23:45:67:89:AB"))
+                .setTenant(new TenantId("fooTenant"))
+                .addAugmentation(OfOverlayContext.class, ofc)
+                .build();
         readTransaction = mock(ReadOnlyTransaction.class);
         writeTransaction = mock(ReadWriteTransaction.class);
 
@@ -51,9 +60,6 @@ public class EndpointHelperTest {
                 readFuture);
         readOptional = mock(Optional.class);
         when(readFuture.checkedGet()).thenReturn(readOptional);
-
-        OfOverlayContext ofc = mock(OfOverlayContext.class);
-        when(endpoint.getAugmentation(OfOverlayContext.class)).thenReturn(ofc);
 
         submitFuture = mock(CheckedFuture.class);
         when(writeTransaction.submit()).thenReturn(submitFuture);

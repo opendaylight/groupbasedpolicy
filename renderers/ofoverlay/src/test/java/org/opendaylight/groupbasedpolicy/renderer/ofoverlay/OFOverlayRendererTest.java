@@ -20,6 +20,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.NotificationService;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
@@ -62,9 +64,10 @@ public class OFOverlayRendererTest {
         policyValidatorRegistry = mock(PolicyValidatorRegistry.class);
         tableOffset = 5;
         configReg = mock(ListenerRegistration.class);
-        when(
-                dataProvider.registerDataChangeListener(any(LogicalDatastoreType.class), any(InstanceIdentifier.class),
-                        any(DataChangeListener.class), any(DataChangeScope.class))).thenReturn(configReg);
+        when(dataProvider.registerDataChangeListener(any(LogicalDatastoreType.class), any(InstanceIdentifier.class),
+                any(DataChangeListener.class), any(DataChangeScope.class))).thenReturn(configReg);
+        when(dataProvider.registerDataTreeChangeListener(any(DataTreeIdentifier.class),
+                any(DataTreeChangeListener.class))).thenReturn(configReg);
 
         WriteTransaction writeTransaction = mock(WriteTransaction.class);
         when(dataProvider.newWriteOnlyTransaction()).thenReturn(writeTransaction);
@@ -82,7 +85,7 @@ public class OFOverlayRendererTest {
     @Test
     public void constructorTest() throws Exception {
         renderer.close();
-        verify(configReg, times(5)).close();
+        verify(configReg, times(10)).close();
     }
 
     @Test

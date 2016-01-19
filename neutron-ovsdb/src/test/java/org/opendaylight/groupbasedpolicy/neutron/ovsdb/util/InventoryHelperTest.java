@@ -300,7 +300,7 @@ public class InventoryHelperTest {
         NodeId nodeId = mock(NodeId.class);
         NodeConnectorId ncId = mock(NodeConnectorId.class);
         ReadWriteTransaction transaction = mock(ReadWriteTransaction.class);
-        when(dataBroker.newReadWriteTransaction()).thenReturn(transaction);
+        when(dataBroker.newWriteOnlyTransaction()).thenReturn(transaction);
         CheckedFuture<Void, TransactionCommitFailedException> submitFuture = mock(CheckedFuture.class);
         when(transaction.submit()).thenReturn(submitFuture);
 

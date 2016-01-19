@@ -29,6 +29,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNodeConnector;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Name;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig.EncapsulationFormat;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfig;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.ExternalInterfaces;
@@ -107,6 +108,22 @@ public class SwitchManager implements AutoCloseable {
         }
         state.setHasEndpoints(false);
         state.updateStatus();
+    }
+
+    public synchronized InstanceIdentifier<NodeConnector> getNodeConnectorIidForPortName(Name portName) {
+        for (SwitchState sw : switches.values()) {
+            if (sw.fcncByNcIid == null) {
+                continue;
+            }
+            for (Entry<InstanceIdentifier<NodeConnector>, FlowCapableNodeConnector> fcncByNcIidEntry : sw.fcncByNcIid
+                .entrySet()) {
+                FlowCapableNodeConnector fcnc = fcncByNcIidEntry.getValue();
+                if (portName.getValue().equals(fcnc.getName())) {
+                    return fcncByNcIidEntry.getKey();
+                }
+            }
+        }
+        return null;
     }
 
     /**

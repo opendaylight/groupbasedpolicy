@@ -10,31 +10,26 @@ package org.opendaylight.groupbasedpolicy.neutron.ovsdb;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceRegistration;
 
 public class NeutronOvsdb implements AutoCloseable {
 
-    private final List<ServiceRegistration<?>> registrations = new ArrayList<ServiceRegistration<?>>();
     private final TerminationPointDataChangeListener tpListener;
-    private final NodeDataChangeListener nodeListener;
-    private final NeutronGbpFloatingIpListener neutronGbpFloatingIpListener;
+//    private final NodeDataChangeListener nodeListener;
+    private final PortByEndpointListener portByEndpointListener;
+    private final OvsdbNodeListener ovsdbNodeListener;
 
-    public NeutronOvsdb(DataBroker dataProvider, RpcProviderRegistry rpcProvider, BundleContext context) {
+    public NeutronOvsdb(DataBroker dataProvider, RpcProviderRegistry rpcProvider) {
         checkNotNull(dataProvider);
         checkNotNull(rpcProvider);
-        checkNotNull(context);
 
         EndpointService epService = rpcProvider.getRpcService(EndpointService.class);
         tpListener = new TerminationPointDataChangeListener(dataProvider, epService);
-        nodeListener = new NodeDataChangeListener(dataProvider);
-        neutronGbpFloatingIpListener = new NeutronGbpFloatingIpListener(dataProvider);
+//        nodeListener = new NodeDataChangeListener(dataProvider);
+        ovsdbNodeListener = new OvsdbNodeListener(dataProvider);
+        portByEndpointListener = new PortByEndpointListener(dataProvider);
     }
 
     /**
@@ -42,9 +37,10 @@ public class NeutronOvsdb implements AutoCloseable {
      */
     @Override
     public void close() throws Exception {
-        for (ServiceRegistration<?> registration : registrations) {
-            registration.unregister();
-        }
+        tpListener.close();
+//        nodeListener.close();
+        ovsdbNodeListener.close();
+        portByEndpointListener.close();
     }
 
 }

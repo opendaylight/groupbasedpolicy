@@ -31,6 +31,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.NotificationService;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
@@ -113,9 +115,11 @@ public class EndpointManagerTest {
         when(writeTransaction.submit()).thenReturn(checkedFutureWrite);
         BindingAwareBroker.RpcRegistration<EndpointService> rpcRegistration = mock(BindingAwareBroker.RpcRegistration.class);
         listenerReg = mock(ListenerRegistration.class);
-        when(
-                dataProvider.registerDataChangeListener(any(LogicalDatastoreType.class), any(InstanceIdentifier.class),
-                        any(DataChangeListener.class), any(DataChangeScope.class))).thenReturn(listenerReg);
+        when(dataProvider.registerDataChangeListener(any(LogicalDatastoreType.class), any(InstanceIdentifier.class),
+                any(DataChangeListener.class), any(DataChangeScope.class))).thenReturn(listenerReg);
+        when(dataProvider.registerDataTreeChangeListener(any(DataTreeIdentifier.class),
+                any(DataTreeChangeListener.class))).thenReturn(listenerReg);
+
         when(rpcRegistry.addRpcImplementation(any(Class.class), any(RpcService.class))).thenReturn(rpcRegistration);
 
         manager = spy(new EndpointManager(dataProvider, rpcRegistry, notificationService, executor, switchManager));
@@ -587,70 +591,10 @@ public class EndpointManagerTest {
         Assert.assertFalse(collection.isEmpty());
     }
 
-    @SuppressWarnings({"unchecked"})
-    @Test
-    public void addEndpointFromL3EndpointTest() throws Exception {
-        EndpointL3 l3Ep = mock(EndpointL3.class);
-        ReadWriteTransaction rwTx = mock(ReadWriteTransaction.class);
-        OfOverlayL3Context ofL3Ctx = mock(OfOverlayL3Context.class);
-        when(l3Ep.getAugmentation(OfOverlayL3Context.class)).thenReturn(ofL3Ctx);
-
-        CheckedFuture<Optional<Tenant>, ReadFailedException> checkedFuture = mock(CheckedFuture.class);
-        when(rwTx.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(checkedFuture);
-        Optional<Tenant> optional = mock(Optional.class);
-        when(checkedFuture.checkedGet()).thenReturn(optional);
-        Tenant tenant = mock(Tenant.class);
-        ForwardingContext fwCtx = mock(ForwardingContext.class);
-        when(tenant.getForwardingContext()).thenReturn(fwCtx);
-        when(optional.isPresent()).thenReturn(true);
-        when(optional.get()).thenReturn(tenant);
-
-        L2BridgeDomain l2BridgeDomain = mock(L2BridgeDomain.class);
-        when(fwCtx.getL2BridgeDomain()).thenReturn(Collections.singletonList(l2BridgeDomain));
-        L2BridgeDomainId l2BridgeDomainId = mock(L2BridgeDomainId.class);
-        when(l2BridgeDomain.getId()).thenReturn(l2BridgeDomainId);
-        String l2bdValue = UUID.randomUUID().toString();
-        when(l2BridgeDomainId.getValue()).thenReturn(l2bdValue);
-
-        NetworkDomainId networkDomainId = mock(NetworkDomainId.class);
-        when(l3Ep.getNetworkContainment()).thenReturn(networkDomainId);
-        when(networkDomainId.getValue()).thenReturn(l2bdValue);
-
-        Method method = EndpointManager.class.getDeclaredMethod("addEndpointFromL3Endpoint", EndpointL3.class,
-                ReadWriteTransaction.class);
-        method.setAccessible(true);
-        method.invoke(manager, l3Ep, rwTx);
-        verify(rwTx).put(any(LogicalDatastoreType.class), any(InstanceIdentifier.class), any(Endpoint.class));
-    }
-
-    @SuppressWarnings({"unchecked"})
-    @Test
-    public void addEndpointFromL3EndpointTestTenantPresentFalse() throws Exception {
-        EndpointL3 l3Ep = mock(EndpointL3.class);
-        ReadWriteTransaction rwTx = mock(ReadWriteTransaction.class);
-        OfOverlayL3Context ofL3Ctx = mock(OfOverlayL3Context.class);
-        when(l3Ep.getAugmentation(OfOverlayL3Context.class)).thenReturn(ofL3Ctx);
-
-        CheckedFuture<Optional<Tenant>, ReadFailedException> checkedFuture = mock(CheckedFuture.class);
-        when(rwTx.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(checkedFuture);
-        Optional<Tenant> optional = mock(Optional.class);
-        when(checkedFuture.checkedGet()).thenReturn(optional);
-        when(optional.isPresent()).thenReturn(false);
-
-        Method method = EndpointManager.class.getDeclaredMethod("addEndpointFromL3Endpoint", EndpointL3.class,
-                ReadWriteTransaction.class);
-        method.setAccessible(true);
-        method.invoke(manager, l3Ep, rwTx);
-        verify(rwTx).cancel();
-    }
-
     @Test
     public void closeTest() throws Exception {
         manager.close();
-        verify(listenerReg).close();
-        manager = new EndpointManager(null, rpcRegistry, notificationService, executor, switchManager);
-        manager.close();
-        verify(listenerReg, times(1)).close();
+        verify(listenerReg, times(3)).close();
     }
 
      //**************
