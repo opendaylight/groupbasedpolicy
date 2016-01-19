@@ -17,6 +17,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronFloatingIpAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronNetworkAware;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronNetworkDao;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronPortAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronRouterAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronSubnetAware;
@@ -48,16 +49,14 @@ public class NeutronMapper implements AutoCloseable {
     }
 
     private void registerAwareProviders(DataBroker dataProvider, EndpointService epService, BundleContext context) {
-        ServiceRegistration<INeutronNetworkAware> neutronNetworkAwareRegistration =
-                context.registerService(INeutronNetworkAware.class, new NeutronNetworkAware(dataProvider), null);
-        registrations.add(neutronNetworkAwareRegistration);
-
-        ServiceRegistration<INeutronSubnetAware> neutronSubnetAwareRegistration =
-                context.registerService(INeutronSubnetAware.class, new NeutronSubnetAware(dataProvider), null);
-        registrations.add(neutronSubnetAwareRegistration);
-
         SecGroupDao secGroupDao = new SecGroupDao();
         SecRuleDao secRuleDao = new SecRuleDao();
+        NeutronNetworkDao networkDao = new NeutronNetworkDao();
+
+        ServiceRegistration<INeutronSubnetAware> neutronSubnetAwareRegistration =
+                context.registerService(INeutronSubnetAware.class, new NeutronSubnetAware(dataProvider, networkDao), null);
+        registrations.add(neutronSubnetAwareRegistration);
+
         NeutronSecurityRuleAware securityRuleAware = new NeutronSecurityRuleAware(dataProvider, secRuleDao, secGroupDao);
         ServiceRegistration<INeutronSecurityRuleAware> neutronSecurityRuleAwareRegistration =
                 context.registerService(INeutronSecurityRuleAware.class, securityRuleAware, null);
@@ -68,19 +67,23 @@ public class NeutronMapper implements AutoCloseable {
                 context.registerService(INeutronSecurityGroupAware.class, securityGroupAware, null);
         registrations.add(neutronSecurityGroupAwareRegistration);
 
+        ServiceRegistration<INeutronNetworkAware> neutronNetworkAwareRegistration = context.registerService(
+                INeutronNetworkAware.class, new NeutronNetworkAware(dataProvider, securityGroupAware, networkDao), null);
+        registrations.add(neutronNetworkAwareRegistration);
+
         NeutronPortAware portAware =
                 new NeutronPortAware(dataProvider, epService, securityRuleAware, securityGroupAware);
         ServiceRegistration<INeutronPortAware> neutronPortAwareRegistration =
                 context.registerService(INeutronPortAware.class, portAware, null);
         registrations.add(neutronPortAwareRegistration);
 
-        NeutronRouterAware routerAware = new NeutronRouterAware(dataProvider, epService, securityRuleAware);
+        NeutronRouterAware routerAware = new NeutronRouterAware(dataProvider, epService);
         ServiceRegistration<INeutronRouterAware> neutronRouterAwareRegistration =
                 context.registerService(INeutronRouterAware.class, routerAware, null);
         registrations.add(neutronRouterAwareRegistration);
 
         ServiceRegistration<INeutronFloatingIPAware> neutronFloatingIpAwareRegistration = context
-            .registerService(INeutronFloatingIPAware.class, new NeutronFloatingIpAware(dataProvider, epService), null);
+            .registerService(INeutronFloatingIPAware.class, new NeutronFloatingIpAware(dataProvider), null);
         registrations.add(neutronFloatingIpAwareRegistration);
     }
 

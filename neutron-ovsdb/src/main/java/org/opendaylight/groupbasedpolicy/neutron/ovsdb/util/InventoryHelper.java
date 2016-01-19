@@ -7,15 +7,23 @@
  */
 package org.opendaylight.groupbasedpolicy.neutron.ovsdb.util;
 
-import com.google.common.base.Optional;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getOvsdbBridgeFromTerminationPoint;
+import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getOvsdbTerminationPoint;
+import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.readFromDs;
+import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.submitToDs;
+
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+
 import org.apache.commons.lang3.StringUtils;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.neutron.ovsdb.AbstractTunnelType;
+import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfig;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfigBuilder;
@@ -36,13 +44,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getOvsdbBridgeFromTerminationPoint;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getOvsdbTerminationPoint;
-import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.readFromDs;
-import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.submitToDs;
+import com.google.common.base.Optional;
 
 public class InventoryHelper {
 
@@ -182,9 +184,9 @@ public class InventoryHelper {
         ExternalInterfaces externalInterfaces = new ExternalInterfacesBuilder().setKey(new ExternalInterfacesKey(ncId))
             .setNodeConnectorId(ncId)
             .build();
-        WriteTransaction transaction = dataBroker.newReadWriteTransaction();
+        WriteTransaction transaction = dataBroker.newWriteOnlyTransaction();
         transaction.put(LogicalDatastoreType.CONFIGURATION, nodeExternalInterfacesIid, externalInterfaces, true);
-        submitToDs(transaction);
+        DataStoreHelper.submitToDs(transaction);
         LOG.trace("Added external interface node connector {} to node {}", ncId.getValue(), nodeId.getValue());
         return nodeExternalInterfacesIid;
     }

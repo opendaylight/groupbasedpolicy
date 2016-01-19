@@ -35,8 +35,10 @@ import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFaile
 import org.opendaylight.ovsdb.southbound.SouthboundConstants;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.endpoints.by.ports.EndpointByPort;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfig;
@@ -159,10 +161,13 @@ public class TerminationPointDataChangeListenerTest {
         Optional<Endpoint> endpointOptional = mock(Optional.class);
         when(endpointFuture.checkedGet()).thenReturn(endpointOptional);
         when(endpointOptional.isPresent()).thenReturn(true);
-        Endpoint endpoint = mock(Endpoint.class);
-        when(endpointOptional.get()).thenReturn(endpoint);
         OfOverlayContext ofc = mock(OfOverlayContext.class);
-        when(endpoint.getAugmentation(OfOverlayContext.class)).thenReturn(ofc);
+        Endpoint endpoint = new EndpointBuilder().setL2Context(new L2BridgeDomainId("foo"))
+            .setMacAddress(new MacAddress("01:23:45:67:89:AB"))
+            .setTenant(new TenantId("fooTenant"))
+            .addAugmentation(OfOverlayContext.class, ofc)
+            .build();
+        when(endpointOptional.get()).thenReturn(endpoint);
 
         // OfOverlayNodeConfig
         ofOverlayNodeConfigFuture = mock(CheckedFuture.class);

@@ -9,8 +9,6 @@
 package org.opendaylight.groupbasedpolicy.neutron.ovsdb;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.NodeDataChangeListener.getProviderMapping;
-import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.NodeDataChangeListener.processNodeNotification;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.EndpointHelper.lookupEndpoint;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.EndpointHelper.updateEndpointRemoveLocation;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.EndpointHelper.updateEndpointWithLocation;
@@ -225,22 +223,6 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
 
         }
 
-        /*
-         * Check if Neutron External port was announed in Node before TerminationPoint it refers to
-         * was actually instantiated. This may or may not have external information in the future,
-         * hence
-         * not process as IF/ELSE externalID.
-         */
-        ReadOnlyTransaction transaction = dataBroker.newReadOnlyTransaction();
-        Optional<Node> node = readFromDs(LogicalDatastoreType.OPERATIONAL, nodeIid, transaction);
-        if (node.isPresent() && node.get().getAugmentation(OvsdbNodeAugmentation.class) != null) {
-            OvsdbNodeAugmentation ovsdbNodeAug = node.get().getAugmentation(OvsdbNodeAugmentation.class);
-            if (getProviderMapping(ovsdbNodeAug) != null) {
-                processNodeNotification(ovsdbNodeAug);
-
-            }
-        } else {
-        }
         /*
          * This may be a notification for a tunnel we just created.
          * In that case, we need to update the Inventory Node's OfOverlay

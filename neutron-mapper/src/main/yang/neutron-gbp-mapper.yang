@@ -25,27 +25,6 @@ module neutron-gbp-mapper {
             type gbp-common:unique-id;
         }
     }
-    
-    grouping internal-port-floating-ip-port-association-fields {
-        leaf floating-ip-port-id {
-            description "A unique ID for the neutron port";
-            type gbp-common:unique-id;
-            mandatory true;
-        }
-        leaf floating-ip-port-ip-address {
-            type inet:ip-address;
-            mandatory true;
-        }
-        leaf internal-port-id {
-            description "A unique ID for the neutron port";
-            type gbp-common:unique-id;
-            mandatory true;
-        }
-        leaf internal-port-ip-address {
-            type inet:ip-address;
-            mandatory true;
-        }
-    }
 
     container mappings {
         description "Mapping of neutron entities by groupbasedpolicy entities and vice versa.";
@@ -56,33 +35,6 @@ module neutron-gbp-mapper {
                 description "Neutron ports by groupbasedpolicy endpoint";
                 list port-by-endpoint {
                     description "Neutron port key by groupbasedpolicy endpoint key";
-                    key "l2-context mac-address";
-                    uses gbp-endpoint:l2-key;
-                    uses neutron-port-key;
-                }
-            }
-            container router-gateway-ports-by-endpoints {
-                description "Neutron router gateway ports by groupbasedpolicy endpoint";
-                list router-gateway-port-by-endpoint {
-                    description "Neutron router gateway port key by groupbasedpolicy endpoint key";
-                    key "l2-context mac-address";
-                    uses gbp-endpoint:l2-key;
-                    uses neutron-port-key;
-                }
-            }
-            container router-interface-ports-by-endpoints {
-                description "Neutron router interface ports by groupbasedpolicy endpoint";
-                list router-interface-port-by-endpoint {
-                    description "Neutron router interface port key by groupbasedpolicy endpoint key";
-                    key "l2-context mac-address";
-                    uses gbp-endpoint:l2-key;
-                    uses neutron-port-key;
-                }
-            }
-            container floating-ip-ports-by-endpoints {
-                description "Neutron floating IP ports by groupbasedpolicy endpoint";
-                list floating-ip-port-by-endpoint {
-                    description "Neutron floating ip port key by groupbasedpolicy endpoint key";
                     key "l2-context mac-address";
                     uses gbp-endpoint:l2-key;
                     uses neutron-port-key;
@@ -99,16 +51,6 @@ module neutron-gbp-mapper {
                     uses gbp-endpoint:l3-key;
                 }
             }
-
-            container external-networks-by-l2-flood-domains {
-                list external-network-by-l2-flood-domain {
-                    key l2-flood-domain-id;
-                    leaf l2-flood-domain-id {
-                        description "The L2 Flood Domain ID";
-                        type gbp-common:l2-flood-domain-id;
-                    }
-                }
-            }
         }
 
         container gbp-by-neutron-mappings {
@@ -122,50 +64,8 @@ module neutron-gbp-mapper {
                     uses gbp-endpoint:l2-key;
                 }
             }
-            container endpoints-by-router-gateway-ports {
-                description "Groupbasedpolicy endpoints by neutron router gateway ports";
-                list endpoint-by-router-gateway-port {
-                    description "Groupbasedpolicy endpoint key by neutron router gateway port key";
-                    key port-id;
-                    uses neutron-port-key;
-                    uses gbp-endpoint:l2-key;
-                }
-            }
-            container endpoints-by-router-interface-ports {
-                description "Groupbasedpolicy endpoints by neutron router interface ports";
-                list endpoint-by-router-interface-port {
-                    description "Groupbasedpolicy endpoint key by neutron router interface port key";
-                    key port-id;
-                    uses neutron-port-key;
-                    uses gbp-endpoint:l2-key;
-                }
-            }
-            container endpoints-by-floating-ip-ports {
-                description "Groupbasedpolicy endpoints by neutron floating IP ports";
-                list endpoint-by-floating-ip-port {
-                    description "Groupbasedpolicy endpoint key by neutron floating IP port key";
-                    key port-id;
-                    uses neutron-port-key;
-                    uses gbp-endpoint:l2-key;
-                }
-            }
         }
 
-        container floating-ip-association-mappings {
-            description "Mapping of association between neutron port representing floating IP and internal neutron port";
-            container internal-ports-by-floating-ip-ports {
-                list internal-port-by-floating-ip-port {
-                    key floating-ip-port-id;
-                    uses internal-port-floating-ip-port-association-fields;
-                }
-            }
-            container floating-ip-ports-by-internal-ports {
-                list floating-ip-port-by-internal-port {
-                    key internal-port-id;
-                    uses internal-port-floating-ip-port-association-fields;
-                }
-            }
-        }
     }
 
 }

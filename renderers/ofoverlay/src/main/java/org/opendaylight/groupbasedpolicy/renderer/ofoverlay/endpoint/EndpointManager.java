@@ -90,6 +90,8 @@ public class EndpointManager implements AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(EndpointManager.class);
     private final EndpointManagerListener endpointListener;
+    private final OfOverlayContextListener ofOverlayContextListener;
+    private final OfOverlayL3ContextListener ofOverlayL3ContextListener;
     private final ConcurrentMap<EpKey, Endpoint> endpoints = new ConcurrentHashMap<>();
     private final ConcurrentMap<EpKey, Endpoint> externalEndpointsWithoutLocation = new ConcurrentHashMap<>();
     private final ConcurrentMap<NodeId, ConcurrentMap<EgKey, Set<EpKey>>> endpointsByGroupByNode =
@@ -129,8 +131,12 @@ public class EndpointManager implements AutoCloseable {
         }
         if (dataProvider != null) {
             endpointListener = new EndpointManagerListener(this.dataProvider, this);
+            ofOverlayContextListener = new OfOverlayContextListener(dataProvider, switchManager);
+            ofOverlayL3ContextListener = new OfOverlayL3ContextListener(dataProvider, switchManager);
         } else {
             endpointListener = null;
+            ofOverlayContextListener = null;
+            ofOverlayL3ContextListener = null;
         }
         LOG.debug("Initialized OFOverlay endpoint manager");
     }
@@ -498,10 +504,17 @@ public class EndpointManager implements AutoCloseable {
     // auto closeable
     @Override
     public void close() throws Exception {
-        if (endpointListener != null)
+        if (endpointListener != null) {
             endpointListener.close();
+        }
         if (notificationListenerRegistration != null) {
             notificationListenerRegistration.close();
+        }
+        if (ofOverlayContextListener != null) {
+            ofOverlayContextListener.close();
+        }
+        if (ofOverlayL3ContextListener != null) {
+            ofOverlayL3ContextListener.close();
         }
     }
 
@@ -772,48 +785,6 @@ public class EndpointManager implements AutoCloseable {
             }
         }
         return egKeys;
-    }
-
-    @SuppressWarnings("unused")
-    private Endpoint addEndpointFromL3Endpoint(EndpointL3 l3Ep, ReadWriteTransaction rwTx) {
-        // Make an indexed tenant and resolveL2BridgeDomain from L3EP containment if not L3
-        // (instanceof)
-        OfOverlayL3Context ofL3Ctx = l3Ep.getAugmentation(OfOverlayL3Context.class);
-        OfOverlayContext ofCtx = new OfOverlayContextBuilder(ofL3Ctx).build();
-        if (l3Ep.getNetworkContainment() instanceof L3Context) {
-            LOG.error("Cannot generate Endpoint from EndpointL3, network containment is L3Context.");
-            rwTx.cancel();
-            return null;
-        }
-
-        IndexedTenant indexedTenant;
-        Optional<Tenant> tenant =
-                readFromDs(LogicalDatastoreType.CONFIGURATION, IidFactory.tenantIid(l3Ep.getTenant()), rwTx);
-        if (tenant.isPresent()) {
-            indexedTenant = new IndexedTenant(tenant.get());
-        } else {
-            LOG.error("Could not find tenant {} for EndpointL3 {}", l3Ep.getTenant(), l3Ep);
-            rwTx.cancel();
-            return null;
-        }
-        List<L3Address> l3Address = new ArrayList<>();
-        l3Address.add(new L3AddressBuilder().setIpAddress(l3Ep.getIpAddress())
-            .setL3Context(l3Ep.getL3Context())
-            .setKey(new L3AddressKey(l3Ep.getIpAddress(), l3Ep.getL3Context()))
-            .build());
-        L2BridgeDomain l2Bd = indexedTenant.resolveL2BridgeDomain(l3Ep.getNetworkContainment());
-        Endpoint ep = new EndpointBuilder().setKey(new EndpointKey(l2Bd.getId(), l3Ep.getMacAddress()))
-            .setMacAddress(l3Ep.getMacAddress())
-            .setL2Context(l2Bd.getId())
-            .setEndpointGroups(l3Ep.getEndpointGroups())
-            .setTenant(l3Ep.getTenant())
-            .setL3Address(l3Address)
-            .setCondition(l3Ep.getCondition())
-            .setNetworkContainment(l3Ep.getNetworkContainment())
-            .addAugmentation(OfOverlayContext.class, ofCtx)
-            .build();
-        rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointIid(ep.getL2Context(), ep.getMacAddress()), ep);
-        return ep;
     }
 
     private Set<EndpointGroupId> getEndpointGroupsFromEndpoint(Endpoint ep) {

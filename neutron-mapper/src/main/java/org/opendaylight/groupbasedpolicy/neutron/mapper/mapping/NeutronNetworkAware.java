@@ -16,25 +16,25 @@ import java.util.UUID;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.groupbasedpolicy.neutron.gbp.util.NeutronGbpIidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.NetworkClient;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.NetworkService;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.Router;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.group.NeutronSecurityGroupAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronMapperIidFactory;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.neutron.spi.INeutronNetworkAware;
 import org.opendaylight.neutron.spi.NeutronNetwork;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
+import org.opendaylight.neutron.spi.NeutronSecurityGroup;
+import org.opendaylight.neutron.spi.NeutronSecurityRule;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2FloodDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Name;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.external.networks.by.l2.flood.domains.ExternalNetworkByL2FloodDomain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.external.networks.by.l2.flood.domains.ExternalNetworkByL2FloodDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.mapper.rev150223.mappings.network.mappings.NetworkMapping;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.mapper.rev150223.mappings.network.mappings.NetworkMappingBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomain;
@@ -43,22 +43,27 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3Context;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3ContextBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroupBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ExternalImplicitGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ExternalImplicitGroupBuilder;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 
 public class NeutronNetworkAware implements INeutronNetworkAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(NeutronNetworkAware.class);
     private final DataBroker dataProvider;
     private final Set<TenantId> tenantsWithRouterAndNetworkSeviceEntities = new HashSet<>();
+    private final NeutronSecurityGroupAware secGrpAware;
+    private final NeutronNetworkDao networkDao;
 
-    public NeutronNetworkAware(DataBroker dataProvider) {
+    public NeutronNetworkAware(DataBroker dataProvider, NeutronSecurityGroupAware secGrpAware, NeutronNetworkDao networkDao) {
         this.dataProvider = checkNotNull(dataProvider);
+        this.secGrpAware = checkNotNull(secGrpAware);
+        this.networkDao = checkNotNull(networkDao);
     }
 
     /**
@@ -111,49 +116,61 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
 
         if (!tenantsWithRouterAndNetworkSeviceEntities.contains(tenantId)) {
             tenantsWithRouterAndNetworkSeviceEntities.add(tenantId);
-            Router.writeRouterEntitiesToTenant(tenantId, rwTx);
-            Router.writeRouterClauseWithConsProvEic(tenantId, null, rwTx);
             NetworkService.writeNetworkServiceEntitiesToTenant(tenantId, rwTx);
             NetworkService.writeDhcpClauseWithConsProvEic(tenantId, null, rwTx);
             NetworkService.writeDnsClauseWithConsProvEic(tenantId, null, rwTx);
             NetworkService.writeMgmtClauseWithConsProvEic(tenantId, null, rwTx);
             NetworkClient.writeNetworkClientEntitiesToTenant(tenantId, rwTx);
-            NetworkClient.writeConsumerNamedSelector(tenantId, Router.CONTRACT_CONSUMER_SELECTOR, rwTx);
             NetworkClient.writeConsumerNamedSelector(tenantId, NetworkService.DHCP_CONTRACT_CONSUMER_SELECTOR, rwTx);
             NetworkClient.writeConsumerNamedSelector(tenantId, NetworkService.DNS_CONTRACT_CONSUMER_SELECTOR, rwTx);
             NetworkClient.writeConsumerNamedSelector(tenantId, NetworkService.MGMT_CONTRACT_CONSUMER_SELECTOR, rwTx);
         }
+        networkDao.addNetwork(network);
         if (network.getRouterExternal() != null && network.getRouterExternal() == true) {
-            addEpgExternalIfMissing(tenantId, rwTx);
-            addExternalNetworkIfMissing(l2Fd.getId(), rwTx);
+            addEigEpgExternalWithContracts(tenantId, rwTx);
         }
         DataStoreHelper.submitToDs(rwTx);
     }
 
-    private void addExternalNetworkIfMissing(L2FloodDomainId l2FdId, ReadWriteTransaction rwTx) {
-        InstanceIdentifier<ExternalNetworkByL2FloodDomain> iid =
-                NeutronGbpIidFactory.externalNetworkByL2FloodDomain(l2FdId);
-        Optional<ExternalNetworkByL2FloodDomain> externalPresent =
-                DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, iid, rwTx);
-        if (!externalPresent.isPresent()) {
-            ExternalNetworkByL2FloodDomainBuilder builder =
-                    new ExternalNetworkByL2FloodDomainBuilder().setL2FloodDomainId(l2FdId);
-            rwTx.put(LogicalDatastoreType.OPERATIONAL, NeutronGbpIidFactory.externalNetworkByL2FloodDomain(l2FdId),
-                    builder.build(), true);
+    private void addEigEpgExternalWithContracts(TenantId tenantId, ReadWriteTransaction rwTx) {
+        Uuid tenantUuid = new Uuid(tenantId.getValue());
+        NeutronSecurityRule inIpv4 = new NeutronSecurityRule();
+        inIpv4.setID("19b85ad2-bdfc-11e5-9912-ba0be0483c18");
+        inIpv4.setSecurityRuleDirection(NeutronUtils.INGRESS);
+        inIpv4.setSecurityRuleEthertype(NeutronUtils.IPv4);
+        inIpv4.setSecurityRuleGroupID(MappingUtils.EPG_EXTERNAL_ID.getValue());
+        inIpv4.setTenantID(tenantUuid);
+        NeutronSecurityRule outIpv4 = new NeutronSecurityRule();
+        outIpv4.setID("19b85eba-bdfc-11e5-9912-ba0be0483c18");
+        outIpv4.setSecurityRuleDirection(NeutronUtils.EGRESS);
+        outIpv4.setSecurityRuleEthertype(NeutronUtils.IPv4);
+        outIpv4.setSecurityRuleGroupID(MappingUtils.EPG_EXTERNAL_ID.getValue());
+        outIpv4.setTenantID(tenantUuid);
+        NeutronSecurityRule inIpv6 = new NeutronSecurityRule();
+        inIpv6.setID("19b86180-bdfc-11e5-9912-ba0be0483c18");
+        inIpv6.setSecurityRuleDirection(NeutronUtils.INGRESS);
+        inIpv6.setSecurityRuleEthertype(NeutronUtils.IPv6);
+        inIpv6.setSecurityRuleGroupID(MappingUtils.EPG_EXTERNAL_ID.getValue());
+        inIpv6.setTenantID(tenantUuid);
+        NeutronSecurityRule outIpv6 = new NeutronSecurityRule();
+        outIpv6.setID("19b86270-bdfc-11e5-9912-ba0be0483c18");
+        outIpv6.setSecurityRuleDirection(NeutronUtils.EGRESS);
+        outIpv6.setSecurityRuleEthertype(NeutronUtils.IPv6);
+        outIpv6.setSecurityRuleGroupID(MappingUtils.EPG_EXTERNAL_ID.getValue());
+        outIpv6.setTenantID(tenantUuid);
+        NeutronSecurityGroup externalSecGrp = new NeutronSecurityGroup();
+        externalSecGrp.setID(MappingUtils.EPG_EXTERNAL_ID.getValue());
+        externalSecGrp.setSecurityGroupName("EXTERNAL_group");
+        externalSecGrp.setTenantID(tenantUuid);
+        externalSecGrp.setSecurityRules(ImmutableList.of(inIpv4, outIpv4, inIpv6, outIpv6));
+        boolean isAddedNeutronSecurityGroup = secGrpAware.addNeutronSecurityGroup(externalSecGrp, rwTx);
+        if (!isAddedNeutronSecurityGroup) {
+            LOG.error("Problem with adding External Neutron Security Group representing External Implicit Group. {}", externalSecGrp);
+            return;
         }
-    }
-
-    private void addEpgExternalIfMissing(TenantId tenantId, ReadWriteTransaction rwTx) {
-        Optional<EndpointGroup> potentialEpgExternal = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.endpointGroupIid(tenantId, MappingUtils.EPG_EXTERNAL_ID), rwTx);
-        if (!potentialEpgExternal.isPresent()) {
-            EndpointGroup epgExternal = new EndpointGroupBuilder().setId(MappingUtils.EPG_EXTERNAL_ID)
-                .setName(new Name("EXTERNAL_group"))
-                .setDescription(new Description(MappingUtils.NEUTRON_EXTERNAL + "epg_external_networks"))
-                .build();
-            rwTx.put(LogicalDatastoreType.CONFIGURATION,
-                    IidFactory.endpointGroupIid(tenantId, MappingUtils.EPG_EXTERNAL_ID), epgExternal, true);
-        }
+        ExternalImplicitGroup eig = new ExternalImplicitGroupBuilder().setId(MappingUtils.EPG_EXTERNAL_ID).build();
+        rwTx.put(LogicalDatastoreType.CONFIGURATION,
+                IidFactory.externalImplicitGroupIid(tenantId, eig.getId()), eig, true);
     }
 
     /**
