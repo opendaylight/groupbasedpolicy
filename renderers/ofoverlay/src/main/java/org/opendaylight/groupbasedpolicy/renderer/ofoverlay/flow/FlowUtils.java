@@ -413,6 +413,16 @@ public final class FlowUtils {
         return actions;
     }
 
+    public static Action pushVlanAction() {
+        return new PushVlanActionCaseBuilder().setPushVlanAction(
+                new PushVlanActionBuilder().setEthernetType(VLAN).build()).build();
+    }
+
+    public static Action setVlanId(int vlanId) {
+        return new SetVlanIdActionCaseBuilder().setSetVlanIdAction(
+                new SetVlanIdActionBuilder().setVlanId(new VlanId(vlanId)).build()).build();
+    }
+
     public static org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.Instruction popVlanInstruction(
             int order) {
         List<ActionBuilder> actionBuilders = new ArrayList<>();
@@ -422,6 +432,10 @@ public final class FlowUtils {
                 .setApplyActions(new ApplyActionsBuilder().setAction(actionList(actionBuilders)).build()).build())
             .setOrder(order)
             .build();
+    }
+
+    public static Action popVlanAction() {
+        return new PopVlanActionCaseBuilder().setPopVlanAction(new PopVlanActionBuilder().build()).build();
     }
 
     public static Action setIpv4DstAction(Ipv4Address ipAddress) {
@@ -729,20 +743,6 @@ public final class FlowUtils {
         if (etherType != null)
             emb.setEthernetType(new EthernetTypeBuilder().setType(new EtherType(etherType)).build());
         return emb.build();
-    }
-
-    private static Action pushVlanAction() {
-        return new PushVlanActionCaseBuilder()
-            .setPushVlanAction(new PushVlanActionBuilder().setEthernetType(VLAN).build()).build();
-    }
-
-    private static Action popVlanAction() {
-        return new PopVlanActionCaseBuilder().setPopVlanAction(new PopVlanActionBuilder().build()).build();
-    }
-
-    private static Action setVlanId(int vlanId) {
-        return new SetVlanIdActionCaseBuilder()
-            .setSetVlanIdAction(new SetVlanIdActionBuilder().setVlanId(new VlanId(vlanId)).build()).build();
     }
 
     private static List<ExtensionList> getExistingGeneralAugMatchNodesNodeTableFlow(MatchBuilder match) {
