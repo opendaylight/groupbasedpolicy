@@ -56,5 +56,5 @@ if __name__ == "__main__":
                   print "******************************"
                   print "Adding flows for %s as an SF." % sw_name
                   print "******************************"
-                  doCmd('sudo /vagrant/utils/sf-flows.sh %s' % min(nsps))
+                  doCmd('sudo /vagrant/demo-symmetric-chain/sf-flows.sh %s' % min(nsps))
 
