@@ -21,3 +21,4 @@ MANIFEST.MF
 yang-gen-config/
 yang-gen-sal/
 maven-metadata-local.xml
+.DS_Store
