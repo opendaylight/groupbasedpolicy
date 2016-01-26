@@ -17,9 +17,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 public class NeutronOvsdb implements AutoCloseable {
 
     private final TerminationPointDataChangeListener tpListener;
-//    private final NodeDataChangeListener nodeListener;
     private final PortByEndpointListener portByEndpointListener;
     private final OvsdbNodeListener ovsdbNodeListener;
+    private final ProviderPhysicalNetworkListener provPhysNetListener;
 
     public NeutronOvsdb(DataBroker dataProvider, RpcProviderRegistry rpcProvider) {
         checkNotNull(dataProvider);
@@ -27,9 +27,9 @@ public class NeutronOvsdb implements AutoCloseable {
 
         EndpointService epService = rpcProvider.getRpcService(EndpointService.class);
         tpListener = new TerminationPointDataChangeListener(dataProvider, epService);
-//        nodeListener = new NodeDataChangeListener(dataProvider);
         ovsdbNodeListener = new OvsdbNodeListener(dataProvider);
         portByEndpointListener = new PortByEndpointListener(dataProvider);
+        provPhysNetListener = new ProviderPhysicalNetworkListener(dataProvider);
     }
 
     /**
@@ -38,9 +38,9 @@ public class NeutronOvsdb implements AutoCloseable {
     @Override
     public void close() throws Exception {
         tpListener.close();
-//        nodeListener.close();
         ovsdbNodeListener.close();
         portByEndpointListener.close();
+        provPhysNetListener.close();
     }
 
 }
