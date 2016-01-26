@@ -51,6 +51,27 @@ module neutron-gbp-mapper {
                     uses gbp-endpoint:l3-key;
                 }
             }
+
+            container provider-physical-networks-as-l2-flood-domains {
+                list provider-physical-network-as-l2-flood-domain {
+                    key "tenant-id l2-flood-domain-id";
+                    leaf tenant-id {
+                        description "Tenant of L2 Flood Domain";
+                        type gbp-common:tenant-id;
+                    }
+                    leaf l2-flood-domain-id {
+                        description "The L2 Flood Domain ID";
+                        type gbp-common:l2-flood-domain-id;
+                    }
+                    leaf segmentation-id {
+                        mandatory true;
+                        description "An isolated segment on the physical network. The network-type
+                            attribute defines the segmentation model. For example, if network-type
+                            is vlan, this ID is a vlan identifier.";
+                        type string;
+                    }
+                }
+            }
         }
 
         container gbp-by-neutron-mappings {

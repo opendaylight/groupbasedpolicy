@@ -15,7 +15,9 @@ import java.util.UUID;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
+import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.neutron.gbp.util.NeutronGbpIidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.NetworkClient;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.NetworkService;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.group.NeutronSecurityGroupAware;
@@ -35,6 +37,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Name;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.provider.physical.networks.as.l2.flood.domains.ProviderPhysicalNetworkAsL2FloodDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.provider.physical.networks.as.l2.flood.domains.ProviderPhysicalNetworkAsL2FloodDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.mapper.rev150223.mappings.network.mappings.NetworkMapping;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.mapper.rev150223.mappings.network.mappings.NetworkMappingBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomain;
@@ -50,6 +54,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
 public class NeutronNetworkAware implements INeutronNetworkAware {
@@ -129,6 +134,10 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
         if (network.getRouterExternal() != null && network.getRouterExternal() == true) {
             addEigEpgExternalWithContracts(tenantId, rwTx);
         }
+        if (!Strings.isNullOrEmpty(network.getProviderPhysicalNetwork())) {
+            String segmentationId = network.getProviderSegmentationID();
+            addProviderPhysicalNetworkMapping(tenantId, l2FdId, segmentationId, rwTx);
+        }
         DataStoreHelper.submitToDs(rwTx);
     }
 
@@ -171,6 +180,14 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
         ExternalImplicitGroup eig = new ExternalImplicitGroupBuilder().setId(MappingUtils.EPG_EXTERNAL_ID).build();
         rwTx.put(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.externalImplicitGroupIid(tenantId, eig.getId()), eig, true);
+    }
+
+    private void addProviderPhysicalNetworkMapping(TenantId tenantId, L2FloodDomainId l2FdId, String segmentationId,
+            WriteTransaction wTx) {
+        ProviderPhysicalNetworkAsL2FloodDomain provNetAsL2Fd = new ProviderPhysicalNetworkAsL2FloodDomainBuilder()
+            .setTenantId(tenantId).setL2FloodDomainId(l2FdId).setSegmentationId(segmentationId).build();
+        wTx.put(LogicalDatastoreType.OPERATIONAL,
+                NeutronGbpIidFactory.providerPhysicalNetworkAsL2FloodDomainIid(tenantId, l2FdId), provNetAsL2Fd);
     }
 
     /**
