@@ -90,12 +90,12 @@ public class EndpointManager implements AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(EndpointManager.class);
     private final EndpointManagerListener endpointListener;
-    private final ConcurrentHashMap<EpKey, Endpoint> endpoints = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<EpKey, Endpoint> externalEndpointsWithoutLocation = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<NodeId, ConcurrentMap<EgKey, Set<EpKey>>> endpointsByGroupByNode =
+    private final ConcurrentMap<EpKey, Endpoint> endpoints = new ConcurrentHashMap<>();
+    private final ConcurrentMap<EpKey, Endpoint> externalEndpointsWithoutLocation = new ConcurrentHashMap<>();
+    private final ConcurrentMap<NodeId, ConcurrentMap<EgKey, Set<EpKey>>> endpointsByGroupByNode =
             new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<NodeId, Set<EpKey>> endpointsByNode = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<EgKey, Set<EpKey>> endpointsByGroup = new ConcurrentHashMap<>();
+    private final ConcurrentMap<NodeId, Set<EpKey>> endpointsByNode = new ConcurrentHashMap<>();
+    private final ConcurrentMap<EgKey, Set<EpKey>> endpointsByGroup = new ConcurrentHashMap<>();
     private final ScheduledExecutorService executor;
     private final DataBroker dataProvider;
     private final ArpTasker arpTasker;
