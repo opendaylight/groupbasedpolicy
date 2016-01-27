@@ -22,6 +22,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.InOrder;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
@@ -33,6 +34,7 @@ import org.opendaylight.groupbasedpolicy.dto.EgKey;
 import org.opendaylight.groupbasedpolicy.dto.EpKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
+import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.TableBuilder;
@@ -45,7 +47,12 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({DataStoreHelper.class})
 public class PolicyManagerTest {
 
     // constant values used by the tested class implementation
@@ -70,7 +77,7 @@ public class PolicyManagerTest {
     private Flow flow;
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
         EndpointManager endpointManager = mock(EndpointManager.class);
         ScheduledExecutorService executor = mock(ScheduledExecutorService.class);
         dataBroker = mock(DataBroker.class);
@@ -83,8 +90,11 @@ public class PolicyManagerTest {
         readWriteTransaction = mock(ReadWriteTransaction.class);
         when(dataBroker.newReadWriteTransaction()).thenReturn(readWriteTransaction);
 
+        PowerMockito.stub(PowerMockito.method(DataStoreHelper.class, "submitToDs")).toReturn(true);
         manager = new PolicyManager(dataBroker, switchManager,
                 endpointManager, executor, tableOffset);
+
+        ///manager = mock(PolicyManager.class);
 
         nodeId = mock(NodeId.class);
         tableId = 5;

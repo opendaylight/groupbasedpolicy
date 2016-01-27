@@ -10,7 +10,7 @@ clear
 ovs-ofctl dump-groups $sw -OOpenFlow13
 if [ "$TABLE" ]
 then
-        ovs-ofctl dump-flows $sw -OOpenFlow13 table=$TABLE
+        ovs-ofctl dump-flows $sw -OOpenFlow13 table=$TABLE --rsort=priority
 else
         ovs-ofctl dump-flows $sw -OOpenFlow13
 fi

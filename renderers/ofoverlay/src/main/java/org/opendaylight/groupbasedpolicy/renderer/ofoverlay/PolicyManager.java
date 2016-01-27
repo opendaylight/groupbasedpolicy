@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -44,9 +44,12 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PortSecurity;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.SourceMapper;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchListener;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcIidFactory;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.groupbasedpolicy.util.SingletonTask;
+import org.opendaylight.yang.gen.v1.urn.ericsson.params.xml.ns.yang.sfc.of.renderer.rev151123.SfcOfRendererConfig;
+import org.opendaylight.yang.gen.v1.urn.ericsson.params.xml.ns.yang.sfc.of.renderer.rev151123.SfcOfRendererConfigBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.TableBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig.LearningMode;
@@ -74,20 +77,22 @@ import com.google.common.util.concurrent.ListenableFuture;
  * registry
  */
 public class PolicyManager
-     implements SwitchListener, EndpointListener, DataTreeChangeListener<ResolvedPolicy>, Closeable {
-    private static final Logger LOG =
-            LoggerFactory.getLogger(PolicyManager.class);
+        implements SwitchListener, EndpointListener, DataTreeChangeListener<ResolvedPolicy>, Closeable {
+
+    private static final Logger LOG = LoggerFactory.getLogger(PolicyManager.class);
 
     private Map<InstanceIdentifier<Table>, TableBuilder> previousGbpFlows  = new HashMap<>();
 
     private short tableOffset;
     private static final short TABLEID_PORTSECURITY = 0;
-    private static final short TABLEID_INGRESS_NAT =  1;
+    private static final short TABLEID_INGRESS_NAT = 1;
     private static final short TABLEID_SOURCE_MAPPER = 2;
     private static final short TABLEID_DESTINATION_MAPPER = 3;
     private static final short TABLEID_POLICY_ENFORCER = 4;
     private static final short TABLEID_EGRESS_NAT = 5;
     private static final short TABLEID_EXTERNAL_MAPPER = 6;
+    private static final short TABLEID_SFC_INGRESS = 7;
+    private static final short TABLEID_SFC_EGRESS = 0;
 
     private final SwitchManager switchManager;
     private final EndpointManager endpointManager;
@@ -104,11 +109,8 @@ public class PolicyManager
      */
     private final static int FLOW_UPDATE_DELAY = 250;
 
-    public PolicyManager(DataBroker dataBroker,
-                         SwitchManager switchManager,
-                         EndpointManager endpointManager,
-                         ScheduledExecutorService executor,
-                         short tableOffset) {
+    public PolicyManager(DataBroker dataBroker, SwitchManager switchManager, EndpointManager endpointManager,
+            ScheduledExecutorService executor, short tableOffset) {
         super();
         this.switchManager = switchManager;
         this.executor = executor;
@@ -137,10 +139,21 @@ public class PolicyManager
         this.endpointManager = endpointManager;
         endpointManager.registerListener(this);
 
+        if (!setSfcTableOffset(TABLEID_SFC_INGRESS, TABLEID_SFC_EGRESS)) {
+            LOG.error("Could not set SFC Ingress Table offset.");
+        }
         flowUpdateTask = new SingletonTask(executor, new FlowUpdateTask());
         scheduleUpdate();
 
         LOG.debug("Initialized OFOverlay policy manager");
+    }
+
+    private boolean setSfcTableOffset(short tableidSfcIngress, short tableidSfcEgress) {
+        SfcOfRendererConfig sfcOfRendererConfig = new SfcOfRendererConfigBuilder()
+            .setSfcOfTableOffset(tableidSfcIngress).setSfcOfAppEgressTableOffset(tableidSfcEgress).build();
+        WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
+        wTx.put(LogicalDatastoreType.CONFIGURATION, SfcIidFactory.sfcOfRendererConfigIid(), sfcOfRendererConfig);
+        return DataStoreHelper.submitToDs(wTx);
     }
 
     private List<? extends OfTable> createFlowPipeline(OfContext ofCtx) {
@@ -148,15 +161,13 @@ public class PolicyManager
         // According to openflow spec,processing on vSwitch always starts from table 0.
         // Packets will be droped if table 0 is empty.
         // Alternative workaround - table-miss flow entries in table 0.
-        return ImmutableList.of(new PortSecurity(ofCtx, (short) 0),
-                                        new GroupTable(ofCtx),
-                                        new IngressNatMapper(ofCtx, getTABLEID_INGRESS_NAT()),
-                                        new SourceMapper(ofCtx, getTABLEID_SOURCE_MAPPER()),
-                                        new DestinationMapper(ofCtx, getTABLEID_DESTINATION_MAPPER()),
-                                        new PolicyEnforcer(ofCtx, getTABLEID_POLICY_ENFORCER()),
-                                        new EgressNatMapper(ofCtx, getTABLEID_EGRESS_NAT()),
-                                        new ExternalMapper(ofCtx, getTABLEID_EXTERNAL_MAPPER())
-                                        );
+        return ImmutableList.of(new PortSecurity(ofCtx, (short) 0), new GroupTable(ofCtx),
+                new IngressNatMapper(ofCtx, getTABLEID_INGRESS_NAT()),
+                new SourceMapper(ofCtx, getTABLEID_SOURCE_MAPPER()),
+                new DestinationMapper(ofCtx, getTABLEID_DESTINATION_MAPPER()),
+                new PolicyEnforcer(ofCtx, getTABLEID_POLICY_ENFORCER()),
+                new EgressNatMapper(ofCtx, getTABLEID_EGRESS_NAT()),
+                new ExternalMapper(ofCtx, getTABLEID_EXTERNAL_MAPPER()));
     }
 
     /**
@@ -186,7 +197,7 @@ public class PolicyManager
     }
 
     /**
-     * @param  tableIDs - IDs of tables to delete
+     * @param tableIDs - IDs of tables to delete
      * @return ListenableFuture<Void> - which will be filled when clearing is done
      */
     private ListenableFuture<Void> removeUnusedTables(final List<Short> tableIDs) {
@@ -220,16 +231,19 @@ public class PolicyManager
         return tableIds;
     }
 
-    private ListenableFuture<Void> deleteTableIfExists(final ReadWriteTransaction rwTx, final InstanceIdentifier<Table> tablePath){
-    return Futures.transform(rwTx.read(LogicalDatastoreType.CONFIGURATION, tablePath), new Function<Optional<Table>, Void>() {
+    private ListenableFuture<Void> deleteTableIfExists(final ReadWriteTransaction rwTx,
+            final InstanceIdentifier<Table> tablePath) {
+        return Futures.transform(rwTx.read(LogicalDatastoreType.CONFIGURATION, tablePath),
+                new Function<Optional<Table>, Void>() {
 
-        @Override
-        public Void apply(Optional<Table> optTable) {
-            if(optTable.isPresent()){
-                rwTx.delete(LogicalDatastoreType.CONFIGURATION, tablePath);
-            }
-            return null;
-        }});
+                    @Override
+                    public Void apply(Optional<Table> optTable) {
+                        if (optTable.isPresent()) {
+                            rwTx.delete(LogicalDatastoreType.CONFIGURATION, tablePath);
+                        }
+                        return null;
+                    }
+                });
     }
 
     // **************
@@ -237,42 +251,43 @@ public class PolicyManager
     // **************
 
     public short getTABLEID_PORTSECURITY() {
-        return (short)(tableOffset+TABLEID_PORTSECURITY);
+        return (short) (tableOffset + TABLEID_PORTSECURITY);
     }
-
 
     public short getTABLEID_INGRESS_NAT() {
-        return (short)(tableOffset+TABLEID_INGRESS_NAT);
+        return (short) (tableOffset + TABLEID_INGRESS_NAT);
     }
-
 
     public short getTABLEID_SOURCE_MAPPER() {
-        return (short)(tableOffset+TABLEID_SOURCE_MAPPER);
+        return (short) (tableOffset + TABLEID_SOURCE_MAPPER);
     }
-
 
     public short getTABLEID_DESTINATION_MAPPER() {
-        return (short)(tableOffset+TABLEID_DESTINATION_MAPPER);
+        return (short) (tableOffset + TABLEID_DESTINATION_MAPPER);
     }
-
 
     public short getTABLEID_POLICY_ENFORCER() {
-        return (short)(tableOffset+TABLEID_POLICY_ENFORCER);
+        return (short) (tableOffset + TABLEID_POLICY_ENFORCER);
     }
-
 
     public short getTABLEID_EGRESS_NAT() {
-        return (short)(tableOffset+TABLEID_EGRESS_NAT);
+        return (short) (tableOffset + TABLEID_EGRESS_NAT);
     }
-
 
     public short getTABLEID_EXTERNAL_MAPPER() {
-        return (short)(tableOffset+TABLEID_EXTERNAL_MAPPER);
+        return (short) (tableOffset + TABLEID_EXTERNAL_MAPPER);
     }
 
+    public short getTABLEID_SFC_EGRESS() {
+        return TABLEID_SFC_EGRESS;
+    }
+
+    public short getTABLEID_SFC_INGRESS() {
+        return TABLEID_SFC_INGRESS;
+    }
 
     public TableId verifyMaxTableId(short tableOffset) {
-        return new TableId((short)(tableOffset+TABLEID_EXTERNAL_MAPPER));
+        return new TableId((short) (tableOffset + TABLEID_EXTERNAL_MAPPER));
     }
 
     @Override
@@ -301,7 +316,7 @@ public class PolicyManager
     }
 
     @Override
-    public void nodeEndpointUpdated(NodeId nodeId, EpKey epKey){
+    public void nodeEndpointUpdated(NodeId nodeId, EpKey epKey) {
         scheduleUpdate();
     }
 
@@ -335,6 +350,7 @@ public class PolicyManager
 
     /**
      * Set the learning mode to the specified value
+     *
      * @param learningMode the learning mode to set
      */
     public void setLearningMode(LearningMode learningMode) {
@@ -356,6 +372,7 @@ public class PolicyManager
      * Update the flows on a particular switch
      */
     private class SwitchFlowUpdateTask implements Callable<Void> {
+
         private final OfWriter ofWriter;
 
         public SwitchFlowUpdateTask(OfWriter ofWriter) {
@@ -373,8 +390,7 @@ public class PolicyManager
                     try {
                         table.sync(node, ofWriter);
                     } catch (Exception e) {
-                        LOG.error("Failed to write Openflow table {}",
-                                table.getClass().getSimpleName(), e);
+                        LOG.error("Failed to write Openflow table {}", table.getClass().getSimpleName(), e);
                     }
                 }
             }
@@ -383,16 +399,16 @@ public class PolicyManager
     }
 
     /**
-     * Update all flows on all switches as needed.  Note that this will block
+     * Update all flows on all switches as needed. Note that this will block
      * one of the threads on the executor.
      */
     private class FlowUpdateTask implements Runnable {
+
         @Override
         public void run() {
             LOG.debug("Beginning flow update task");
 
-            CompletionService<Void> ecs
-                = new ExecutorCompletionService<>(executor);
+            CompletionService<Void> ecs = new ExecutorCompletionService<>(executor);
 
             OfWriter ofWriter = new OfWriter();
 

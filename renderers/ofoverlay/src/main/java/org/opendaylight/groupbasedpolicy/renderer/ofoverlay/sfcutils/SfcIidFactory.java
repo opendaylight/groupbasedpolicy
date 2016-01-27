@@ -20,6 +20,7 @@ import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfc.rev1407
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.ServiceFunctionPaths;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.service.function.paths.ServiceFunctionPath;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.service.function.paths.ServiceFunctionPathKey;
+import org.opendaylight.yang.gen.v1.urn.ericsson.params.xml.ns.yang.sfc.of.renderer.rev151123.SfcOfRendererConfig;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 public class SfcIidFactory {
@@ -30,23 +31,28 @@ public class SfcIidFactory {
 
     public static InstanceIdentifier<ServiceFunctionChain> sfcIid(SfcName sfcName) {
 
-        ServiceFunctionChainKey serviceFunctionChainKey =
-                new ServiceFunctionChainKey(sfcName);
+        ServiceFunctionChainKey serviceFunctionChainKey = new ServiceFunctionChainKey(sfcName);
         return InstanceIdentifier.builder(ServiceFunctionChains.class)
-                .child(ServiceFunctionChain.class, serviceFunctionChainKey).build();
+            .child(ServiceFunctionChain.class, serviceFunctionChainKey)
+            .build();
     }
 
     public static InstanceIdentifier<ServiceFunctionPath> sfpIid(SfpName sfpName) {
 
         ServiceFunctionPathKey serviceFunctionPathKey = new ServiceFunctionPathKey(sfpName);
         return InstanceIdentifier.builder(ServiceFunctionPaths.class)
-                .child(ServiceFunctionPath.class, serviceFunctionPathKey).build();
+            .child(ServiceFunctionPath.class, serviceFunctionPathKey)
+            .build();
     }
 
     public static InstanceIdentifier<RenderedServicePath> rspIid(RspName rspName) {
 
         RenderedServicePathKey rspKey = new RenderedServicePathKey(rspName);
-        return InstanceIdentifier.builder(RenderedServicePaths.class)
-                .child(RenderedServicePath.class, rspKey).build();
+        return InstanceIdentifier.builder(RenderedServicePaths.class).child(RenderedServicePath.class, rspKey).build();
+    }
+
+    public static InstanceIdentifier<SfcOfRendererConfig> sfcOfRendererConfigIid() {
+        return InstanceIdentifier.builder(SfcOfRendererConfig.class).build();
+
     }
 }

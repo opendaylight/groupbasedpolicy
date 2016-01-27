@@ -45,6 +45,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv4MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv6MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlanGpe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,7 +61,7 @@ public class PortSecurity extends FlowTable {
 
     public PortSecurity(OfContext ctx, short tableId) {
         super(ctx);
-        this.TABLE_ID=tableId;
+        TABLE_ID=tableId;
     }
 
     @Override
@@ -72,17 +73,20 @@ public class PortSecurity extends FlowTable {
     public void sync(NodeId nodeId, OfWriter ofWriter) {
 
         // Allow traffic from tunnel ports
-        NodeConnectorId tunnelIf = ctx.getSwitchManager().getTunnelPort(nodeId, TunnelTypeVxlan.class);
-        if (tunnelIf != null)
-            ofWriter.writeFlow(nodeId, TABLE_ID, allowFromPort(tunnelIf));
+        NodeConnectorId vxLanTunnel = ctx.getSwitchManager().getTunnelPort(nodeId, TunnelTypeVxlan.class);
+        NodeConnectorId vxLanGpeTunnel = ctx.getSwitchManager().getTunnelPort(nodeId, TunnelTypeVxlanGpe.class);
+        if (vxLanTunnel != null)
+            ofWriter.writeFlow(nodeId, TABLE_ID, allowFromPort(vxLanTunnel));
+        if (vxLanGpeTunnel != null)
+            ofWriter.writeFlow(nodeId, TABLE_ID, allowFromPort(vxLanGpeTunnel));
 
         // Default drop all
-        ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
+        ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(1, null, TABLE_ID));
 
         // Drop IP traffic that doesn't match a source IP rule
-        ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(110), FlowUtils.ARP, TABLE_ID));
-        ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(111), FlowUtils.IPv4, TABLE_ID));
-        ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(112), FlowUtils.IPv6, TABLE_ID));
+        ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(110, FlowUtils.ARP, TABLE_ID));
+        ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(111, FlowUtils.IPv4, TABLE_ID));
+        ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(112, FlowUtils.IPv6, TABLE_ID));
 
         Set<TenantId> tenantIds = new HashSet<>();
         for (Endpoint ep : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
@@ -140,7 +144,7 @@ public class PortSecurity extends FlowTable {
         FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "allow", match);
         FlowBuilder flowb = base()
                 .setId(flowid)
-                .setPriority(Integer.valueOf(300))
+                .setPriority(300)
                 .setMatch(match)
                 .setInstructions(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()));
         return flowb.build();
@@ -179,13 +183,12 @@ public class PortSecurity extends FlowTable {
                 .setInPort(ofc.getNodeConnectorId())
                 .build();
         FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "dhcp", match);
-        Flow flow = base()
+        return base()
                 .setPriority(priority)
                 .setId(flowid)
                 .setMatch(match)
                 .setInstructions(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER()))
                 .build();
-        return flow;
     }
 
     private void l3flow(OfWriter ofWriter, NodeId nodeId,
@@ -196,9 +199,9 @@ public class PortSecurity extends FlowTable {
         for (L3Address l3 : ep.getL3Address()) {
             if (l3.getIpAddress() == null)
                 continue;
-            Layer3Match m = null;
-            Long etherType = null;
-            String ikey = null;
+            Layer3Match m;
+            Long etherType;
+            String ikey;
             if (l3.getIpAddress().getIpv4Address() != null) {
                 ikey = l3.getIpAddress().getIpv4Address().getValue() + "/32";
                 if (arp) {
@@ -247,7 +250,7 @@ public class PortSecurity extends FlowTable {
         Match match = new MatchBuilder().setInPort(nc).build();
         FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "allowExternal", match);
         FlowBuilder flowb = base().setId(flowid)
-            .setPriority(Integer.valueOf(priority))
+            .setPriority(priority)
             .setMatch(match)
             .setInstructions(FlowUtils.gotoTableInstructions(ctx.getPolicyManager().getTABLEID_INGRESS_NAT()));
         return flowb.build();
@@ -264,11 +267,13 @@ public class PortSecurity extends FlowTable {
      */
     private List<Flow> popVlanTagsOnExternalPort(NodeConnectorId nc, TenantId tenantId, Integer priority) {
         List<Flow> flows = new ArrayList<>();
-        for(L2FloodDomain l2Fd : ctx.getTenant(tenantId).getTenant().getForwardingContext().getL2FloodDomain()) {
-        Segmentation segmentation = l2Fd.getAugmentation(Segmentation.class);
-            if (segmentation != null) {
-                Integer vlanId = segmentation.getSegmentationId();
-                flows.add(buildPopVlanFlow(nc, vlanId, priority));
+        if(ctx.getTenant(tenantId) != null) {
+            for (L2FloodDomain l2Fd : ctx.getTenant(tenantId).getTenant().getForwardingContext().getL2FloodDomain()) {
+                Segmentation segmentation = l2Fd.getAugmentation(Segmentation.class);
+                if (segmentation != null) {
+                    Integer vlanId = segmentation.getSegmentationId();
+                    flows.add(buildPopVlanFlow(nc, vlanId, priority));
+                }
             }
         }
         return flows;

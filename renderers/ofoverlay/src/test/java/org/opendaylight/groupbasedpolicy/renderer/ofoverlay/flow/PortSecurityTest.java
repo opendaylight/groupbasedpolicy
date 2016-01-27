@@ -17,7 +17,9 @@ import java.util.Set;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Address;
@@ -34,17 +36,18 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv4Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv6Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import static org.junit.Assert.*;
 
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({PolicyManager.class})
 public class PortSecurityTest extends FlowTableTest {
-    protected static final Logger LOG =
-            LoggerFactory.getLogger(PortSecurityTest.class);
 
     private Endpoint ep = localEP()
             .setL3Address(ImmutableList.of(new L3AddressBuilder()
@@ -57,6 +60,8 @@ public class PortSecurityTest extends FlowTableTest {
     @Override
     @Before
     public void setup() throws Exception {
+        PowerMockito.stub(PowerMockito.method(PolicyManager.class, "setSfcTableOffset")).toReturn(true);
+
         initCtx();
         table = new PortSecurity(ctx,ctx.getPolicyManager().getTABLEID_PORTSECURITY());
         super.setup();
@@ -209,6 +214,5 @@ public class PortSecurityTest extends FlowTableTest {
                             .setNodeConnectorId(new NodeConnectorId("openflow:12:1"))
                             .build())).build());
         ctx.addTenant(baseTenant().build());
-        OfWriter fm = dosync(null);
     }
 }

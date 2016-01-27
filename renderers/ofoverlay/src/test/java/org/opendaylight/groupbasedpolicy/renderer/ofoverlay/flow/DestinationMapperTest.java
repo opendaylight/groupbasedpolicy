@@ -36,7 +36,9 @@ import java.util.Objects;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Address;
@@ -51,7 +53,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfigBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.TunnelBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.PolicyBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.Contract;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv4Match;
@@ -59,11 +60,16 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg0;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({PolicyManager.class})
 public class DestinationMapperTest extends FlowTableTest {
     protected static final Logger LOG =
             LoggerFactory.getLogger(DestinationMapperTest.class);
@@ -74,6 +80,8 @@ public class DestinationMapperTest extends FlowTableTest {
     @Override
     @Before
     public void setup() throws Exception {
+        PowerMockito.stub(PowerMockito.method(PolicyManager.class, "setSfcTableOffset")).toReturn(true);
+
         initCtx();
         table = new DestinationMapper(ctx,ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER());
         super.setup();
@@ -104,7 +112,6 @@ public class DestinationMapperTest extends FlowTableTest {
                     f.getMatch().getEthernetMatch())) {
                 // router ARP reply
                 Instruction ins = f.getInstructions().getInstruction().get(0);
-                ins = f.getInstructions().getInstruction().get(0);
                 assertTrue(ins.getInstruction() instanceof ApplyActionsCase);
                 List<Action> actions = ((ApplyActionsCase) ins.getInstruction()).getApplyActions().getAction();
                 assertEquals(nxMoveEthSrcToEthDstAction(),
@@ -219,14 +226,13 @@ public class DestinationMapperTest extends FlowTableTest {
                             .getAddress())) {
                 // broadcast/multicast flow should output to group table
                 Instruction ins = f.getInstructions().getInstruction().get(0);
-                ins = f.getInstructions().getInstruction().get(0);
                 assertTrue(ins.getInstruction() instanceof ApplyActionsCase);
                 List<Action> actions = ((ApplyActionsCase) ins.getInstruction()).getApplyActions().getAction();
                 assertEquals(nxMoveRegTunIdAction(NxmNxReg0.class, false),
                         actions.get(0).getAction());
                 assertEquals(Integer.valueOf(0), actions.get(0).getOrder());
 
-                Long v = Long.valueOf(OrdinalFactory.getContextOrdinal(tid, fd));
+                Long v = (long) OrdinalFactory.getContextOrdinal(tid, fd);
                 assertEquals(groupAction(v), actions.get(1).getAction());
                 assertEquals(Integer.valueOf(1), actions.get(1).getOrder());
                 count += 1;
@@ -291,7 +297,7 @@ public class DestinationMapperTest extends FlowTableTest {
 
 
         ctx.addTenant(baseTenant().setPolicy(new PolicyBuilder(baseTenant().getPolicy()).setContract(
-                ImmutableList.<Contract> of(baseContract(null).build())).build()).build());
+                ImmutableList.of(baseContract(null).build())).build()).build());
         verifyDMap(remoteEp, localEp);
     }
 
@@ -306,7 +312,7 @@ public class DestinationMapperTest extends FlowTableTest {
         endpointManager.addEndpoint(remoteEp);
 
         ctx.addTenant(baseTenant().setPolicy(new PolicyBuilder(baseTenant().getPolicy()).setContract(
-                ImmutableList.<Contract> of(baseContract(null).build())).build()).build());
+                ImmutableList.of(baseContract(null).build())).build()).build());
         verifyDMap(remoteEp, localEp);
     }
 

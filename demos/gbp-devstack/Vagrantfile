@@ -28,8 +28,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     control.vm.network "private_network", ip: "#{control_ip}"
     control.vm.network "private_network", ip: "#{neutron_ex_ip}", virtualbox__intnet: "mylocalnet" 
     control.vm.provider :virtualbox do |vb|
-      vb.memory = 4096
-      vb.cpus = 2
+      vb.memory = 6192
+      vb.cpus = 4 
     end
     control.vm.provider "vmware_fusion" do |vf|
       vf.vmx["memsize"] = "4096"
