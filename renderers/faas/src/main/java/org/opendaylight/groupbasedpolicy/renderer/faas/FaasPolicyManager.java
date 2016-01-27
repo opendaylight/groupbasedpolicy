@@ -91,9 +91,9 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
     private final ListenerRegistration<DataChangeListener> registerListener;
     private final ScheduledExecutorService executor;
     private final DataBroker dataProvider;
-    private final Map<Pair<EndpointGroupId, TenantId>, List<SubnetId>> epgSubnetsMap = new HashMap<>();
+    protected final Map<Pair<EndpointGroupId, TenantId>, List<SubnetId>> epgSubnetsMap = new HashMap<>();
     private final ConcurrentHashMap<TenantId, Uuid> mappedTenants = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<TenantId, ArrayList<ListenerRegistration<DataChangeListener>>> registeredTenants = new ConcurrentHashMap<TenantId, ArrayList<ListenerRegistration<DataChangeListener>>>();
+    protected final ConcurrentHashMap<TenantId, ArrayList<ListenerRegistration<DataChangeListener>>> registeredTenants = new ConcurrentHashMap<TenantId, ArrayList<ListenerRegistration<DataChangeListener>>>();
 
     public FaasPolicyManager(DataBroker dataBroker, ScheduledExecutorService executor) {
         this.dataProvider = dataBroker;
@@ -541,7 +541,7 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
         }
     }
 
-    private void createLayer3LogicalNetwork(EndpointGroup consEpg, ContractId contractId, EndpointGroup provEpg,
+    protected void createLayer3LogicalNetwork(EndpointGroup consEpg, ContractId contractId, EndpointGroup provEpg,
             TenantId gbpTenantId, ServiceCommunicationLayer comLayer, ExternalImplicitGroup externalImplicitGroup) {
         LOG.trace("Start createLayer3LogicalNetwork: Consumer EPG {}   Provider Epg {}   Contract {}", consEpg.getId()
             .getValue(), provEpg.getId().getValue(), contractId);
@@ -606,7 +606,7 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
                 contractId.getValue(), provEpg.getId().getValue());
     }
 
-    private void createLayer2LogicalNetwork(EndpointGroup consEpg, ContractId contractId, EndpointGroup provEpg,
+    protected void createLayer2LogicalNetwork(EndpointGroup consEpg, ContractId contractId, EndpointGroup provEpg,
             TenantId gbpTenantId, ServiceCommunicationLayer comLayer, ExternalImplicitGroup externalImplicitGroup) {
         LOG.trace("Start createLayer2LogicalNetwork: Consumer EPG {}   Provider Epg {}   Contract {}", consEpg.getId()
             .getValue(), provEpg.getId().getValue(), contractId);
@@ -773,7 +773,7 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
         return null;
     }
 
-    private Uuid getFaasSecRulesId(ContractId contractId, TenantId gbpTenantId) {
+    protected Uuid getFaasSecRulesId(ContractId contractId, TenantId gbpTenantId) {
         if (contractId != null) {
             Optional<MappedContract> mContractOp = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
                     FaasIidFactory.mappedContractIid(gbpTenantId, contractId),
@@ -812,7 +812,7 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
         return builder;
     }
 
-    private boolean needToCreateLogicalNetwork(ServiceCommunicationLayer comLayer, List<SubnetId> consSubnetIds,
+    protected boolean needToCreateLogicalNetwork(ServiceCommunicationLayer comLayer, List<SubnetId> consSubnetIds,
             List<SubnetId> provSubnetIds, TenantId tenantId, ContractId contractId, EndpointGroup providerEpg,
             EndpointGroup consumerEpg, ExternalImplicitGroup externalImplicitGroup) {
         Optional<LogicalNetwork> lnOp = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
@@ -950,7 +950,7 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
         return null;
     }
 
-    private L3Context readL3ContextInstance(TenantId tenantId, L3ContextId l3cId) {
+    protected L3Context readL3ContextInstance(TenantId tenantId, L3ContextId l3cId) {
         ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
         InstanceIdentifier<L3Context> iid = IidFactory.l3ContextIid(tenantId, l3cId);
         Optional<L3Context> l2Op = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, iid, rTx);
@@ -962,7 +962,7 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
         return l2Op.get();
     }
 
-    private L2BridgeDomain readL2BridgeDomainInstance(TenantId tenantId, L2BridgeDomainId l2bId) {
+    protected L2BridgeDomain readL2BridgeDomainInstance(TenantId tenantId, L2BridgeDomainId l2bId) {
         ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
         InstanceIdentifier<L2BridgeDomain> iid = IidFactory.l2BridgeDomainIid(tenantId, l2bId);
         Optional<L2BridgeDomain> l2Op = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, iid, rTx);
@@ -974,7 +974,7 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
         return l2Op.get();
     }
 
-    private L2FloodDomain readL2FloodDomain(L2FloodDomainId l2fId, TenantId tenantId) {
+    protected L2FloodDomain readL2FloodDomain(L2FloodDomainId l2fId, TenantId tenantId) {
         ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
         InstanceIdentifier<L2FloodDomain> iid = IidFactory.l2FloodDomainIid(tenantId, l2fId);
         Optional<L2FloodDomain> l2Op = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, iid, rTx);
