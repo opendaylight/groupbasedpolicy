@@ -34,6 +34,7 @@ import org.opendaylight.neutron.spi.INeutronRouterAware;
 import org.opendaylight.neutron.spi.INeutronSubnetCRUD;
 import org.opendaylight.neutron.spi.NeutronCRUDInterfaces;
 import org.opendaylight.neutron.spi.NeutronPort;
+import org.opendaylight.neutron.spi.NeutronRoute;
 import org.opendaylight.neutron.spi.NeutronRouter;
 import org.opendaylight.neutron.spi.NeutronRouter_Interface;
 import org.opendaylight.neutron.spi.NeutronSubnet;
@@ -70,6 +71,7 @@ import com.google.common.collect.ImmutableList;
 public class NeutronRouterAware implements INeutronRouterAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(NeutronRouterAware.class);
+    private static final String DEFAULT_ROUTE = "0.0.0.0/0";
     private final DataBroker dataProvider;
     private final  EndpointService epService;
     private final NeutronSecurityRuleAware secRuleAware;
@@ -149,13 +151,15 @@ public class NeutronRouterAware implements INeutronRouterAware {
         }
         // Create L3Prefix Endpoints for all routes
         if (router.getRoutes().isEmpty()) {
-            List<String> defaultRoute = ImmutableList.of("0.0.0.0/0");
-            router.setRoutes(defaultRoute);
+            NeutronRoute defaultRoute = new NeutronRoute();
+            defaultRoute.setDestination(DEFAULT_ROUTE);
+            defaultRoute.setNextHop(Utils.getStringIpAddress(defaultGateway));
+            router.setRoutes(ImmutableList.of(defaultRoute));
 
         }
-        if (l3ContextIdFromRouterId != null) {
-            for (String route : router.getRoutes()) {
-                IpPrefix ipPrefix = Utils.createIpPrefix(route);
+        if (defaultGateway != null) {
+            for (NeutronRoute route : router.getRoutes()) {
+                IpPrefix ipPrefix = Utils.createIpPrefix(route.getDestination());
                 boolean addedL3Prefix = NeutronPortAware.addL3PrefixEndpoint(l3ContextIdFromRouterId, ipPrefix,
                         defaultGateway, tenantId, epService);
                 if (!addedL3Prefix) {
