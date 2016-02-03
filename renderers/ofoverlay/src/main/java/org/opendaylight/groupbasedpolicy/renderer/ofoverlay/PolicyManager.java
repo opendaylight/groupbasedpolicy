@@ -78,7 +78,6 @@ public class PolicyManager
     private static final Logger LOG =
             LoggerFactory.getLogger(PolicyManager.class);
 
-    private Map<InstanceIdentifier<Table>, TableBuilder> actualGbpFlows = new HashMap<>();
     private Map<InstanceIdentifier<Table>, TableBuilder> previousGbpFlows  = new HashMap<>();
 
     private short tableOffset;
@@ -349,11 +348,6 @@ public class PolicyManager
     private void scheduleUpdate() {
         if (switchManager != null) {
             LOG.trace("Scheduling flow update task");
-
-            // Mark all existing flows as previous - will be compared with new ones
-            previousGbpFlows = actualGbpFlows;
-            actualGbpFlows = new HashMap<>();
-
             flowUpdateTask.reschedule(FLOW_UPDATE_DELAY, TimeUnit.MILLISECONDS);
         }
     }
@@ -409,7 +403,9 @@ public class PolicyManager
                 ecs.take().get();
                 // Current gbp flow must be independent, find out where this run() ends,
                 // set flows to one field and reset another
+                Map<InstanceIdentifier<Table>, TableBuilder> actualGbpFlows = new HashMap<>();
                 actualGbpFlows.putAll(ofWriter.commitToDataStore(dataBroker, previousGbpFlows));
+                previousGbpFlows = actualGbpFlows;
             } catch (InterruptedException | ExecutionException e) {
                 LOG.error("Failed to update flow tables", e);
             }
