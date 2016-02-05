@@ -1,0 +1,35 @@
+udo ovs-vsctl del-port vxlangpe-br-int
+  398  sudo ovs-vsctl del-port vxlan-br-int
+  399  sudo ovs-vsctl show
+  400  sudo ovs-dpctl dump-flows
+  401  dumpflows.sh | grep nsp
+  402  sudo ovs-dpctl dump-flows
+  403  ip a
+  404  sudo ip route add 11.0.0.3/32 dev tap20536c64-c7
+  405  sudo arp -i tap20536c64-c7 -s 11.0.0.3 fa:16:3e:64:0d:e6
+  406  sudo ovs-dpctl dump-flows
+  407  clear
+  408  sudo ovs-dpctl dump-flows
+  409  clear;sudo ovs-dpctl dump-flows
+  410  ip -o a
+  411  ip a
+  412  history
+  413  clear;sudo ovs-dpctl dump-flows
+  414  resetcontroller.sh 
+  415  history | grep route
+  416  sudo ip route add 11.0.0.3/32 dev tap20536c64-c7
+  417  sudo ip route del 11.0.0.3/32 dev tap20536c64-c7
+  418  sudo ovs-dpctl dump-flows
+  419  sudo ifdown eth1
+  420  sudo ifdown tap20536c64-c7
+  421  ip -o a
+  422  sudo ovs-dpctl dump-flows
+  423  clear
+  424  sudo ovs-dpctl dump-flows
+  425  clear
+  426  sudo ovs-dpctl dump-flows
+  427  clear
+  428  sudo ovs-dpctl dump-flows
+  429  route -n
+  430  history
+
