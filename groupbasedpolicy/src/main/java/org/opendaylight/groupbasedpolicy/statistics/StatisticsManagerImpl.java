@@ -86,7 +86,7 @@ public class StatisticsManagerImpl implements StatisticsManager, AutoCloseable {
                 StatisticRecord statRecord;
                 srcBuilder.setEndpointGroup(epgStats.getSrcEpg());
                 dstBuilder.setEndpointGroup(epgStats.getDstEpg());
-                ArrayList<Statistic> statisticList = new ArrayList<>();
+                List<Statistic> statisticList = new ArrayList<>();
                 for (MatchedRuleStatistic ruleStats : epgStats.getMatchedRuleStatistic()) {
                     Statistic statistic = new StatisticBuilder()
                         .setKey(new StatisticKey(ruleStats.getContract(), ruleStats.getMatchedRule(),
@@ -100,6 +100,7 @@ public class StatisticsManagerImpl implements StatisticsManager, AutoCloseable {
                         .setPacketCount(ruleStats.getPacketCount())
                         .build();
                     statisticList.add(statistic);
+
                 }
                 statRecord = new StatisticRecordBuilder().setKey(key)
                     .setRecordId(new RecordId(recordKey))
@@ -194,34 +195,54 @@ public class StatisticsManagerImpl implements StatisticsManager, AutoCloseable {
 
     private List<EpEpgToEpEpgStatistic> addIfNotExists(EpEpgToEpEpgStatisticBuilder stat,
             List<EpEpgToEpEpgStatistic> list) {
-        Iterator<EpEpgToEpEpgStatistic> iterator = list.iterator();
-        while (iterator.hasNext()) {
-            EpEpgToEpEpgStatistic epgStat = iterator.next();
-            if (stat.getKey().equals(epgStat.getKey())) {
-                Iterator<MatchedRuleStatistic> iteratorNew = stat.getMatchedRuleStatistic().iterator();
-                while(iteratorNew.hasNext()) {
-                    MatchedRuleStatistic newStat = iteratorNew.next();
-                    Iterator<MatchedRuleStatistic> iteratorOld = epgStat.getMatchedRuleStatistic().iterator();
-                    while(iteratorOld.hasNext()) {
-                        MatchedRuleStatistic oldStat = iteratorOld.next();
-                        if(oldStat.getKey().equals(newStat.getKey())) {
-                            newStat = new MatchedRuleStatisticBuilder(oldStat)
-                                    .setByteCount(oldStat.getByteCount()+newStat.getByteCount())
-                                    .setPacketCount(oldStat.getPacketCount()+newStat.getPacketCount())
-                                    .build();
-                            iteratorNew.remove();
-                            iteratorOld.remove();
-                            break;
+        if ( list == null ) {
+            list = new ArrayList<>();
+        } else {
+            Iterator<EpEpgToEpEpgStatistic> iterator = list.iterator();
+            while (iterator.hasNext()) {
+                EpEpgToEpEpgStatistic epgStat = iterator.next();
+                if (stat.getKey().equals(epgStat.getKey())) {
+                    List<MatchedRuleStatistic> newMatches = new ArrayList<>();
+                    Iterator<MatchedRuleStatistic> iteratorNew = stat.getMatchedRuleStatistic().iterator();
+                    while(iteratorNew.hasNext()) {
+                        MatchedRuleStatistic newStat = iteratorNew.next();
+                        Iterator<MatchedRuleStatistic> iteratorOld = epgStat.getMatchedRuleStatistic().iterator();
+                        boolean matched = false;
+                        while(iteratorOld.hasNext()) {
+                            MatchedRuleStatistic oldStat = iteratorOld.next();
+                            if(oldStat.getKey().equals(newStat.getKey())) {
+                                MatchedRuleStatistic newRuleStat = new MatchedRuleStatisticBuilder(oldStat)
+                                        .setByteCount(sumNullableValues(oldStat.getByteCount(), newStat.getByteCount()))
+                                        .setPacketCount(sumNullableValues(oldStat.getPacketCount(), newStat.getPacketCount()))
+                                        .build();
+                                newMatches.add(newRuleStat);
+                                matched = true;
+                            } else {
+                                newMatches.add(oldStat);
+                            }
+                        }
+                        if (!matched) {
+                            newMatches.add(newStat);
                         }
                     }
-                    epgStat.getMatchedRuleStatistic().add(newStat);
+                    stat.setMatchedRuleStatistic(newMatches);
+                    iterator.remove();
+                    break;
                 }
-                iterator.remove();
-                break;
             }
         }
         list.add(stat.build());
         return list;
+    }
+
+    public Long sumNullableValues (Long... x ) {
+        long result = 0;
+        for (Long num : x) {
+            if (num != null) {
+                result += num;
+            }
+        }
+        return result;
     }
 
     @Override
