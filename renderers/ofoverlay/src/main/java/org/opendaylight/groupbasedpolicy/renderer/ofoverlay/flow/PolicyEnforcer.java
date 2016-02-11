@@ -15,6 +15,7 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxOutputRegAction;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -31,6 +32,7 @@ import org.opendaylight.groupbasedpolicy.api.sf.IpProtoClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.api.sf.L4ClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.dto.EgKey;
 import org.opendaylight.groupbasedpolicy.dto.EndpointConstraint;
+import org.opendaylight.groupbasedpolicy.dto.EpKey;
 import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.dto.Policy;
 import org.opendaylight.groupbasedpolicy.dto.RuleGroup;
@@ -52,12 +54,17 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.acti
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Instructions;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRef;
@@ -840,16 +847,27 @@ public class PolicyEnforcer extends FlowTable {
                 .getTenant()
                 .getPolicy()
                 .getExternalImplicitGroup();
-            if (EndpointManager.isExternal(netElements.getDstEp(), eigs)) {
-                flow.setInstructions(instructions(gotoEgressNatInstruction));
-            } else if (actionBuilderList == null) {
+            boolean performNat = false;
+            for (EndpointL3 natEp : ctx.getEndpointManager().getL3EndpointsWithNat()) {
+                if (natEp.getMacAddress() != null &&
+                    natEp.getL2Context() != null &&
+                    netElements.getSrcEp().getKey().equals(new EndpointKey(natEp.getL2Context(),
+                        natEp.getMacAddress())) &&
+                    EndpointManager.isExternal(netElements.getDstEp(), eigs)) {
+                    performNat = true;
+                    break;
+                }
+            }
+            if (actionBuilderList == null) {
                 //TODO - analyse, what happen for unknown action, SFC, etc.
                 LOG.warn("Action builder list not found, partially flow which is not created: {}", flow.build());
                 continue;
-            } else if (actionBuilderList.isEmpty()) {
-                flow.setInstructions(instructions(gotoExternalInstruction));
+            }
+            if (actionBuilderList.isEmpty()) {
+                flow.setInstructions((performNat == true) ? instructions(gotoEgressNatInstruction) : instructions(gotoExternalInstruction));
             } else {
-                flow.setInstructions(instructions(applyActionIns(actionBuilderList), gotoExternalInstruction));
+                flow.setInstructions(instructions(applyActionIns(actionBuilderList),
+                        (performNat == true) ? gotoEgressNatInstruction : gotoExternalInstruction));
             }
             ofWriter.writeFlow(netElements.getLocalNodeId(), TABLE_ID, flow.build());
         }
