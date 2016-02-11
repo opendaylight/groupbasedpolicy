@@ -32,10 +32,13 @@ tacker vnf-create --name testVNF1 --vnfd-name test-vnfd
 
 echo "Wait a few minutes and then check VNF status is ACTIVE (tacker vnf-list) then execute the following commands on devstack-compute-1 BEFORE running sfc03.sh:
 
+on devstack-control:
+tacker vnf-list
+
+on devstack-compute-1:
 sudo ovs-vsctl show
 sudo ovs-vsctl del-port vxlangpe-br-int
 sudo ovs-vsctl del-port vxlan-br-int
 sudo ovs-vsctl show
-
-- remove VNF tenant from DataStore, it borks PolEnf"
+"
 

@@ -14,4 +14,10 @@ tacker sfc-create --name mychain --chain testVNF1 --symmetrical True
 tacker sfc-show mychain
 
 
-echo "Can verify flows by 'dumpflows.sh | grep nsp' on devstack-compute-1 and lack of them on devstack-control. Then run sfc04 to add chain to policy."
+echo "Can verify flows on devstack-compute-1:
+
+dumpflows.sh | grep nsp 
+
+then on devstack-control:
+
+sfc04.sh"
