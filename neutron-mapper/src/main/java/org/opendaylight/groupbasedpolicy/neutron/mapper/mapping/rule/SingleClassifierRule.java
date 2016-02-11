@@ -8,10 +8,13 @@
 
 package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule;
 
+
+import java.util.List;
+
 import javax.annotation.concurrent.Immutable;
 
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.Rule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.RuleBuilder;
@@ -26,16 +29,16 @@ public class SingleClassifierRule {
     private final ClassifierRef classifierRef;
     private final Rule rule;
 
-    public SingleClassifierRule(NeutronSecurityRule secRule, int ruleOrder) {
+    public SingleClassifierRule(NeutronSecurityRule secRule, int ruleOrder, List<ActionRef> actions) {
         classifierInstance = SecRuleEntityDecoder.getClassifierInstance(secRule);
         classifierRef = SecRuleEntityDecoder.getClassifierRef(secRule);
-        rule = createRule(ruleOrder, secRule);
+        rule = createRule(ruleOrder, secRule, actions);
     }
 
-    private Rule createRule(int order, NeutronSecurityRule secRule) {
+    private Rule createRule(int order, NeutronSecurityRule secRule, List<ActionRef> actions) {
         return new RuleBuilder().setName(SecRuleNameDecoder.getRuleName(secRule))
             .setOrder(order)
-            .setActionRef(MappingUtils.ACTION_REF_ALLOW)
+            .setActionRef(actions)
             .setClassifierRef(ImmutableList.of(classifierRef))
             .build();
     }

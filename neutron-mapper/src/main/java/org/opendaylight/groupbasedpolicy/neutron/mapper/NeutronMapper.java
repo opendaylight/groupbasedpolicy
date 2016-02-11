@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.sal.binding.api.BindingAwareBroker.RpcRegistration;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronFloatingIpAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronNetworkAware;
@@ -23,6 +24,7 @@ import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronRouterAwa
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronSubnetAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.group.NeutronSecurityGroupAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.group.SecGroupDao;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.NeutronGbpMapperServiceImpl;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.NeutronSecurityRuleAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.SecRuleDao;
 import org.opendaylight.neutron.spi.INeutronFloatingIPAware;
@@ -33,22 +35,28 @@ import org.opendaylight.neutron.spi.INeutronSecurityGroupAware;
 import org.opendaylight.neutron.spi.INeutronSecurityRuleAware;
 import org.opendaylight.neutron.spi.INeutronSubnetAware;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.NeutronGbpMapperService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
 
 public class NeutronMapper implements AutoCloseable {
 
     private final List<ServiceRegistration<?>> registrations = new ArrayList<ServiceRegistration<?>>();
+    private final DataBroker dataProvider;
+    private final RpcProviderRegistry providerRegistry;
+    private final BundleContext context;
+    private final EndpointService epService;
+    private RpcRegistration<NeutronGbpMapperService> rpcRegistration;
 
     public NeutronMapper(DataBroker dataProvider, RpcProviderRegistry rpcProvider, BundleContext context) {
-        checkNotNull(dataProvider);
-        checkNotNull(rpcProvider);
-        checkNotNull(context);
-        EndpointService epService = rpcProvider.getRpcService(EndpointService.class);
-        registerAwareProviders(dataProvider, epService, context);
+        this.dataProvider = checkNotNull(dataProvider);
+        this.providerRegistry = checkNotNull(rpcProvider);
+        this.context = checkNotNull(context);
+        this.epService = rpcProvider.getRpcService(EndpointService.class);
+        registerAwareProviders();
     }
 
-    private void registerAwareProviders(DataBroker dataProvider, EndpointService epService, BundleContext context) {
+    private void registerAwareProviders() {
         SecGroupDao secGroupDao = new SecGroupDao();
         SecRuleDao secRuleDao = new SecRuleDao();
         NeutronNetworkDao networkDao = new NeutronNetworkDao();
@@ -85,6 +93,9 @@ public class NeutronMapper implements AutoCloseable {
         ServiceRegistration<INeutronFloatingIPAware> neutronFloatingIpAwareRegistration = context
             .registerService(INeutronFloatingIPAware.class, new NeutronFloatingIpAware(dataProvider), null);
         registrations.add(neutronFloatingIpAwareRegistration);
+
+        NeutronGbpMapperService neutronGbpMapperService = new NeutronGbpMapperServiceImpl(dataProvider, securityRuleAware);
+        rpcRegistration = providerRegistry.addRpcImplementation(NeutronGbpMapperService.class, neutronGbpMapperService);
     }
 
     /**
@@ -95,6 +106,7 @@ public class NeutronMapper implements AutoCloseable {
         for (ServiceRegistration<?> registration : registrations) {
             registration.unregister();
         }
+        rpcRegistration.close();
     }
 
 }

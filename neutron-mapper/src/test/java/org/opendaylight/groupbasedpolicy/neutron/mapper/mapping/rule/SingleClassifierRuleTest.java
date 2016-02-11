@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNotNull;
 import org.junit.Test;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronEntityFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.PolicyAssert;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronUtils;
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
@@ -20,7 +21,7 @@ public class SingleClassifierRuleTest {
                 "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", NeutronUtils.IPv4,
                 NeutronUtils.INGRESS, NeutronUtils.TCP, 8010, 8020);
         final int ruleOrder = 1;
-        SingleClassifierRule singleClsfRule = new SingleClassifierRule(secRule, ruleOrder);
+        SingleClassifierRule singleClsfRule = new SingleClassifierRule(secRule, ruleOrder, MappingUtils.ACTION_REF_ALLOW);
 
         ClassifierInstance clsfInstance = singleClsfRule.getClassifierInstance();
         assertNotNull(clsfInstance);

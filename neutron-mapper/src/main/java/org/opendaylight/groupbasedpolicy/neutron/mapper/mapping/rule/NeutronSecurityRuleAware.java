@@ -10,12 +10,14 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.List;
 import java.util.Set;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
 import org.opendaylight.groupbasedpolicy.dto.EgKey;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.StatusCode;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.group.SecGroupDao;
@@ -24,19 +26,28 @@ import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.neutron.spi.INeutronSecurityRuleAware;
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClauseName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SelectorName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.change.action.of.security.group.rules.input.action.ActionChoice;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.change.action.of.security.group.rules.input.action.action.choice.SfcActionCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRef;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRefBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValueBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.Contract;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ConsumerNamedSelector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ConsumerNamedSelectorBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ProviderNamedSelector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ProviderNamedSelectorBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstanceBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
@@ -96,22 +107,47 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
         }
     }
 
-    /**
-     * @param secRule this security group rule will be translate to single rule inside single
-     *        subject inside a contract
-     * @param rwTx GBP entities are stored to this transaction. This method NEVER submits or cancel
-     *        the transaction.
-     * @return {@code true} if operation was successful; {@code false} if an illegal state occurs -
-     *         the transaction may contain just partial result
-     */
+    public boolean changeActionOfNeutronSecurityRule(Uuid secRuleId, ActionChoice action, ReadWriteTransaction rwTx) {
+        NeutronSecurityRule secRule = secRuleDao.getSecRuleByUuid(secRuleId);
+        List<ActionRef> actions = createActions(action, SecRuleEntityDecoder.getTenantId(secRule), rwTx);
+        LOG.trace("Changing to action {} for secuirity group rule {}", action, secRule);
+        return addNeutronSecurityRuleWithAction(secRule, actions, rwTx);
+    }
+
+    private List<ActionRef> createActions(ActionChoice action, TenantId tenantId, ReadWriteTransaction rwTx) {
+        if (action instanceof SfcActionCase) {
+            String sfcChainName = ((SfcActionCase) action).getSfcChainName();
+            ActionName actionName = addSfcChainActionInstance(sfcChainName, tenantId, rwTx);
+            return ImmutableList.of(new ActionRefBuilder().setName(actionName).setOrder(0).build());
+        }
+        return MappingUtils.ACTION_REF_ALLOW;
+    }
+
+    private ActionName addSfcChainActionInstance(String sfcChainName, TenantId tenantId, ReadWriteTransaction rwTx) {
+        ActionName actionName = new ActionName(sfcChainName);
+        ActionInstance sfcActionInstance = new ActionInstanceBuilder().setName(actionName)
+            .setActionDefinitionId(ChainActionDefinition.ID)
+            .setParameterValue(ImmutableList.of(new ParameterValueBuilder()
+                .setName(new ParameterName(ChainActionDefinition.SFC_CHAIN_NAME)).setStringValue(sfcChainName).build()))
+            .build();
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.actionInstanceIid(tenantId, actionName),
+                sfcActionInstance, true);
+        return actionName;
+    }
+
     public boolean addNeutronSecurityRule(NeutronSecurityRule secRule, ReadWriteTransaction rwTx) {
+        return addNeutronSecurityRuleWithAction(secRule, MappingUtils.ACTION_REF_ALLOW, rwTx);
+    }
+
+    public boolean addNeutronSecurityRuleWithAction(NeutronSecurityRule secRule, List<ActionRef> actions,
+            ReadWriteTransaction rwTx) {
         TenantId tenantId = SecRuleEntityDecoder.getTenantId(secRule);
         EndpointGroupId providerEpgId = SecRuleEntityDecoder.getProviderEpgId(secRule);
         secRuleDao.addSecRule(secRule);
 
         Description contractDescription = new Description(CONTRACT_PROVIDER
                 + secGroupDao.getNameOrIdOfSecGroup(providerEpgId));
-        SingleRuleContract singleRuleContract = createSingleRuleContract(secRule, contractDescription);
+        SingleRuleContract singleRuleContract = createSingleRuleContract(secRule, contractDescription, actions);
         Contract contract = singleRuleContract.getContract();
         rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.contractIid(tenantId, contract.getId()), contract, true);
         SelectorName providerSelector = getSelectorNameWithConsumer(secRule);
@@ -135,11 +171,12 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
     }
 
     @VisibleForTesting
-    static SingleRuleContract createSingleRuleContract(NeutronSecurityRule secRule, Description contractDescription) {
+    static SingleRuleContract createSingleRuleContract(NeutronSecurityRule secRule, Description contractDescription,
+            List<ActionRef> actions) {
         if (Strings.isNullOrEmpty(secRule.getSecurityRuleRemoteIpPrefix())) {
-            return new SingleRuleContract(secRule, 0, contractDescription);
+            return new SingleRuleContract(secRule, 0, contractDescription, actions);
         }
-        return new SingleRuleContract(secRule, 1, contractDescription);
+        return new SingleRuleContract(secRule, 1, contractDescription, actions);
     }
 
     @VisibleForTesting

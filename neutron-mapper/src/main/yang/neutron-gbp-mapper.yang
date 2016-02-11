@@ -4,12 +4,11 @@ module neutron-gbp-mapper {
     namespace "urn:opendaylight:groupbasedpolicy:neutron-gbp-mapper";
     prefix "neutron-gbp-mapper";
 
-    import gbp-common {prefix gbp-common;}
-    import endpoint {prefix gbp-endpoint;}
-    import ietf-inet-types {
-        prefix inet;
-        revision-date 2010-09-24;
-    }
+     import gbp-common { prefix gbp-common; }
+    import endpoint { prefix gbp-endpoint; }
+    import ietf-yang-types { prefix yang; revision-date 2013-07-15; }
+    import ietf-inet-types { prefix inet; revision-date 2010-09-24; }
+
 
     description 
         "This module defines the mapping model between Neutron entities and GBP entities.";
@@ -86,7 +85,32 @@ module neutron-gbp-mapper {
                 }
             }
         }
+    }
 
+    rpc change-action-of-security-group-rules {
+        input {
+            list security-group-rule {
+                key uuid;
+                leaf uuid {
+                    type yang:uuid;
+                    description "UUID to index this neutron security group rule.";
+                }
+            }
+            container action {
+                choice action-choice {
+                    case sfc-action-case {
+                        leaf sfc-chain-name {
+                            type string;
+                        }
+                    }
+                    case allow-action-case {
+                        container allow {
+                            presence true;
+                        }
+                    }
+                }
+            }
+        }
     }
 
 }

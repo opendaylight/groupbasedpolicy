@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNotNull;
 import org.junit.Test;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronEntityFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.PolicyAssert;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronUtils;
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
@@ -25,7 +26,7 @@ public class SingleRuleContractTest {
                 NeutronUtils.INGRESS, NeutronUtils.TCP, 8010, 8020);
         int subjectAndRuleOrder = 1;
         SingleRuleContract singleRuleContract = new SingleRuleContract(secRule, subjectAndRuleOrder, new Description(
-                "contractDescription"));
+                "contractDescription"), MappingUtils.ACTION_REF_ALLOW);
 
         SingleClassifierRule singleClsfRule = singleRuleContract.getSingleClassifierRule();
         assertNotNull(singleClsfRule);
