@@ -312,6 +312,11 @@ public class EndpointManager implements AutoCloseable {
         EpKey newEpKey = getEpKey(newEp);
         TenantId tenantId = (newEp == null) ? null : newEp.getTenant();
 
+        if (newEp != null && !isValidEp(newEp)) {
+            LOG.info("Endpoint is not valid: {}", newEp);
+            return;
+        }
+
         Set<EndpointGroupId> oldEpgIds = getEndpointGroupsFromEndpoint(oldEp);
         Set<EndpointGroupId> newEpgIds = getEndpointGroupsFromEndpoint(newEp);
 
@@ -782,7 +787,7 @@ public class EndpointManager implements AutoCloseable {
 
     private boolean isValidEp(Endpoint endpoint) {
         return (endpoint != null && endpoint.getTenant() != null
-                && (endpoint.getEndpointGroup() != null || endpoint.getEndpointGroups() != null)
+                && (endpoint.getEndpointGroup() != null || (endpoint.getEndpointGroups() != null && !endpoint.getEndpointGroups().isEmpty()))
                 && endpoint.getL2Context() != null && endpoint.getMacAddress() != null);
     }
 
