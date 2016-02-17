@@ -1,1 +1,5 @@
-ovs-appctl ofproto/trace $1
+STR=$1
+
+TRACE=${STR%", packets"*}
+
+ovs-appctl ofproto/trace $TRACE

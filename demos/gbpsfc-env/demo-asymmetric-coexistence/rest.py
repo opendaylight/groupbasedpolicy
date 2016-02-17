@@ -125,13 +125,13 @@ def get_service_function_forwarders_data():
                         "name": "firewall-72",
                         "sff-sf-data-plane-locator": {
                             "sf-dpl-name": "2",
-                            "sff-dpl-name": "sfc-tun2"
+                            "sff-dpl-name": "sw1-vxlangpe-0"
                         }
                     }
                 ],
                 "sff-data-plane-locator": [
                     {
-                        "name": "sfc-tun2",
+                        "name": "sw1-vxlangpe-0",
                         "data-plane-locator": {
                             "transport": "service-locator:vxlan-gpe",
                             "port": 6633,
@@ -162,13 +162,13 @@ def get_service_function_forwarders_data():
                         "name": "dpi-74",
                         "sff-sf-data-plane-locator": {
                             "sf-dpl-name": "3",
-                            "sff-dpl-name": "sfc-tun4"
+                            "sff-dpl-name": "sw2-vxlangpe-0"
                         }
                     }
                 ],
                 "sff-data-plane-locator": [
                     {
-                        "name": "sfc-tun4",
+                        "name": "sw2-vxlangpe-0",
                         "data-plane-locator": {
                             "transport": "service-locator:vxlan-gpe",
                             "port": 6633,

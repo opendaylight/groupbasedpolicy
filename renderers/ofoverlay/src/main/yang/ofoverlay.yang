@@ -132,6 +132,12 @@ module ofoverlay {
         }
     }
 
+    /* 
+    * TODO: should add "portname" to this instead of using heuristic name.
+    * Then SwitchManager could pull from here potentially. The only things that should
+    * populate this are REST or OVSDB-Neutron ... but now we could listen on OVSDB for when
+    * an SFF creates this for us and use the same tunnel... 
+    */
     augment "/inv:nodes/inv:node" {
         ext:augment-identifier "of-overlay-node-config";
         list tunnel {

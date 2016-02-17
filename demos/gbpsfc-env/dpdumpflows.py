@@ -10,8 +10,11 @@ def call_dpctl():
 
 if __name__ == "__main__" :
 	flows=call_dpctl().split("recirc_id")
+	print
+	print "Flows from dpctl:"
+	print 
 	for flow in flows:
-		print flow
+		if flow != "": print "recirc_id"+flow
 
 
 

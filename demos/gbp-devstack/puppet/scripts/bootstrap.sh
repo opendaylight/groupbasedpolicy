@@ -30,6 +30,15 @@ apt-get update >/dev/null
 echo "Installing wget..."
 apt-get install -y wget >/dev/null
 
+# Install vim
+echo "Installing vim..."
+apt-get install -y vim >/dev/null
+
+# Setup paths
+echo "Copying paths and ODL environment variable from .../devstack-scripts/environment to /etc/environment"
+cp /vagrant/devstack-scripts/environment /etc/environment
+source /etc/environment
+
 # Install the PuppetLabs repo
 echo "Configuring PuppetLabs repo..."
 repo_deb_path=$(mktemp)

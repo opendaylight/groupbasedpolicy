@@ -10,14 +10,15 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
@@ -34,7 +35,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeCon
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 
 import com.google.common.collect.ImmutableSet;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({PolicyManager.class})
 public class ExternalMapperTest extends FlowTableTest {
 
     private ExternalMapper mapper;
@@ -64,6 +70,8 @@ public class ExternalMapperTest extends FlowTableTest {
 
     @Before
     public void initialisation() {
+        PowerMockito.stub(PowerMockito.method(PolicyManager.class, "setSfcTableOffset")).toReturn(true);
+
         initCtx();
         tableId = 6;
         nodeId = mock(NodeId.class);
@@ -86,7 +94,7 @@ public class ExternalMapperTest extends FlowTableTest {
                 .build())
             .build();
         endpointManager.addEndpoint(l2Ep);
-        switchManager.addSwitch(nodeId,null,ImmutableSet.<NodeConnectorId>of(new NodeConnectorId("openflow:1:1")), null);
+        switchManager.addSwitch(nodeId,null,ImmutableSet.of(new NodeConnectorId("openflow:1:1")), null);
         mapper.sync(nodeId, ofWriter);
         verify(ofWriter, times(4)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
     }
