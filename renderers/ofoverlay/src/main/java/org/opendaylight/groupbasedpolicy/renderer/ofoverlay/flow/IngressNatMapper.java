@@ -30,6 +30,7 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import java.math.BigInteger;
 import java.util.Collection;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.opendaylight.groupbasedpolicy.dto.EpKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
@@ -42,11 +43,15 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.acti
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.Instruction;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.Segmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer3Match;
@@ -130,7 +135,7 @@ public class IngressNatMapper extends FlowTable {
         if (flow != null) {
             ofWriter.writeFlow(nodeId, TABLE_ID, flow);
         }
-        flow = createOutsideArpFlow(natAugL3Endpoint.getNatAddress(), l3Ep.getMacAddress(), nodeId);
+        flow = createOutsideArpFlow(l3Ep.getTenant(), natAugL3Endpoint.getNatAddress(), l3Ep.getMacAddress(), nodeId);
         if (flow != null) {
             ofWriter.writeFlow(nodeId, TABLE_ID, flow);
         }
@@ -191,25 +196,42 @@ public class IngressNatMapper extends FlowTable {
         return flowb.build();
     }
 
-    private Flow createOutsideArpFlow(IpAddress outsideDestAddress, MacAddress toMac, NodeId nodeId) {
-
+    private Flow createOutsideArpFlow(TenantId tenantId, IpAddress outsideDestAddress, MacAddress toMac, NodeId nodeId) {
         String ikey = outsideDestAddress.getIpv4Address().getValue();
         BigInteger intMac = new BigInteger(1, bytesFromHexString(toMac.getValue()));
-
-        FlowId flowId = new FlowId(new StringBuffer().append("outside-ip-arp|").append(ikey).toString());
         MatchBuilder mb = new MatchBuilder().setEthernetMatch(ethernetMatch(null, null, ARP)).setLayer3Match(
                 new ArpMatchBuilder().setArpOp(Integer.valueOf(1))
                     .setArpTargetTransportAddress(new Ipv4Prefix(ikey + "/32"))
                     .build());
-
-        FlowBuilder flowb = base().setPriority(150)
-            .setId(flowId)
-            .setMatch(mb.build())
-            .setInstructions(
-                    instructions(applyActionIns(nxMoveEthSrcToEthDstAction(), setDlSrcAction(toMac),
-                            nxLoadArpOpAction(BigInteger.valueOf(2L)), nxMoveArpShaToArpThaAction(),
-                            nxLoadArpShaAction(intMac), nxMoveArpSpaToArpTpaAction(), nxLoadArpSpaAction(ikey),
-                            outputAction(new NodeConnectorId(nodeId.getValue() + ":INPORT")))));
+        Action[] outsideArpActions = {
+                nxMoveEthSrcToEthDstAction(),
+                setDlSrcAction(toMac),
+                nxLoadArpOpAction(BigInteger.valueOf(2L)),
+                nxMoveArpShaToArpThaAction(),
+                nxLoadArpShaAction(intMac),
+                nxMoveArpSpaToArpTpaAction(),
+                nxLoadArpSpaAction(ikey),
+                outputAction(new NodeConnectorId(nodeId.getValue() + ":INPORT"))
+        };
+        Subnet extSubnet = ExternalMapper.resolveSubnetForIpv4Address(ctx.getTenant(tenantId),
+                outsideDestAddress.getIpv4Address());
+        L2FloodDomain l2Fd = null;
+        if (extSubnet != null && extSubnet.getParent() != null) {
+            l2Fd = ctx.getTenant(tenantId).resolveL2FloodDomain(extSubnet.getParent());
+        }
+        FlowBuilder flowb = base().setPriority(150);
+        if (l2Fd != null && l2Fd.getAugmentation(Segmentation.class) != null) {
+            Integer vlanId = l2Fd.getAugmentation(Segmentation.class).getSegmentationId();
+            mb.setVlanMatch(FlowUtils.vlanMatch(0, false));
+            Action[] pushVlanpActions = {FlowUtils.pushVlanAction(), FlowUtils.setVlanId(vlanId)};
+            flowb.setInstructions(instructions(FlowUtils.applyActionIns(ArrayUtils.addAll(
+                    pushVlanpActions,
+                    outsideArpActions))));
+        } else {
+            flowb.setInstructions(instructions(FlowUtils.applyActionIns(outsideArpActions)));
+        }
+        flowb.setId(FlowIdUtils.newFlowId(TABLE_ID, "outside-ip-arp", mb.build()));
+        flowb.setMatch(mb.build());
         return flowb.build();
     }
 
