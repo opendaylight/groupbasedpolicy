@@ -33,6 +33,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.ta
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.go.to.table._case.GoToTable;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
@@ -50,8 +51,43 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.Sets;
 
 /**
- * Manage the table that assigns source endpoint group, bridge domain, and
- * router domain to registers to be used by other tables.
+ * <h1>Manage the table that assigns source endpoint group, bridge domain, and
+ * router domain to registers to be used by other tables</h1>
+ *
+ * <i>Remote tunnel flow:</i><br>
+ * Priority = 150<br>
+ * Matches:<br>
+ *      - in_port (should be tunnel port), {@link NodeConnectorId}
+ *      - tunnel ID match {@link org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxTunId}<br>
+ * Actions:<br>
+ *      - loadReg1 fixed value 0xffffff {@link NxmNxReg1}<br>
+ *      - loadReg4 {@link NxmNxReg4}<br>
+ *      - loadReg5 {@link NxmNxReg5}<br>
+ *      - loadReg6 {@link NxmNxReg6}<br>
+ *      - {@link GoToTable} DESTINATION MAPPER table
+ * <p>
+ * <i>Remote broadcast flow:</i><br>
+ * Priority = 150<br>
+ * Matches:<br>
+ *      - in_port (should be tunnel port), {@link NodeConnectorId}
+ *      - tunnel ID match {@link org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxTunId}<br>
+ * Actions:<br>
+ *      - loadReg5 {@link NxmNxReg5}<br>
+ *      - {@link GoToTable} DESTINATION MAPPER table
+ * <p>
+ * <i>Local EP flow:</i><br>
+ * Priority = 100<br>
+ * Matches:<br>
+ *      - dl_src (source mac address) {@link org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress}<br>
+ *      - in_port (node connector ID) {@link NodeConnectorId}<br>
+ * Actions:<br>
+ *      - loadReg0 {@link NxmNxReg0}<br>
+ *      - loadReg1 {@link NxmNxReg1}<br>
+ *      - loadReg4 {@link NxmNxReg4}<br>
+ *      - loadReg5 {@link NxmNxReg5}<br>
+ *      - loadReg6 {@link NxmNxReg6}<br>
+ *      - loadTunnelId<br>
+ *      - {@link GoToTable} DESTINATION MAPPER table
  */
 public class SourceMapper extends FlowTable {
 
@@ -96,9 +132,8 @@ public class SourceMapper extends FlowTable {
             OfOverlayContext ofc = ep.getAugmentation(OfOverlayContext.class);
             if (ofc != null && ofc.getNodeConnectorId() != null
                     && (EndpointManager.isInternal(ep, ctx.getTenant(ep.getTenant()).getExternalImplicitGroups()))) {
-                /**
-                 * Sync the local EP information.
-                 */
+
+                // Sync the local EP information
                 syncEP(ofWriter, nodeId, ep, ofc.getNodeConnectorId(), epFwdCtxOrds);
             }
         }

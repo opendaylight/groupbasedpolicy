@@ -69,6 +69,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.ta
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.InstructionsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.go.to.table._case.GoToTable;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.Instruction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.InstructionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
@@ -85,7 +86,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ForwardingContext;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3Context;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
@@ -96,6 +96,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.ArpMatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv4MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv6MatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.dec.nw.ttl._case.DecNwTtl;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg2;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg4;
@@ -114,8 +115,87 @@ import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 
 /**
- * Manage the table that maps the destination address to the next hop for the
- * path as well as applies any relevant routing transformations.
+ * <h1>Manage the table that maps the destination address to the next hop for the
+ * path as well as applies any relevant routing transformations (table=3)</h1>
+ *
+ * Sync Ep flows, every endpoint pair creates L2 and L3 flow<br>
+ * <ul><li>Flow is external, when any {@link Endpoint} is external</li>
+ * <li>Flow is local, when src and dst endpoint {@link EndpointFwdCtxOrdinals} are the same</li>
+ * <li>Flow is local, when src and dst endpoint ordinals are not the same and {@link OfOverlayContext} is missing</li></ul>
+ * Also applies to L3
+ * <p>
+ * L2 Flows:
+ * <p>
+ * <i>External, local and remote L2 flows</i><br>
+ * Priority = 50<br>
+ * Matches:<br>
+ *      - dl_dst mac address {@link MacAddress}<br>
+ *      - loadReg4 {@link NxmNxReg4}<br>
+ * Actions:<br>
+ *      - load tunnel Ipv4 (local and remote only)<br>
+ *      - loadReg2 {@link NxmNxReg2}<br>
+ *      - loadReg3 {@link NxmNxReg3}<br>
+ *      - loadReg7 (next hop) {@link NxmNxReg7}<br>
+ *      - {@link GoToTable} POLICY ENFORCER table<br>
+ * <p>
+ * L3 flows:
+ * <p>
+ * <i>External, local and remote L3 routed flows:</i><br>
+ * Priority = 50<br>
+ * Matches:<br>
+ *      - ip (ethertype)
+ *      - dl_dst mac address {@link MacAddress}<br>
+ *      - setReg6 {@link NxmNxReg6}<br>
+ * Actions:<br>
+ *      - loadReg2 {@link NxmNxReg2}<br>
+ *      - loadReg3 {@link NxmNxReg3}<br>
+ *      - loadReg4 (tunnel destination) {@link NxmNxReg4} (remote only)<br>
+ *      - loadReg7 (next hop) {@link NxmNxReg7}<br>
+ *      - set dst mac to eth_dst {@link MacAddress}<br>
+ *      - dec_ttl {@link DecNwTtl} (local only)<br>
+ *      - {@link GoToTable} POLICY ENFORCER table
+ * <p>
+ * If virtual router ip is present in subnet, and subnet contains L3 context, arp flow is created<br>
+ * <p>
+ * <i>Router Arp flow</i><br>
+ * Priority = 150<br>
+ * Matches:<br>
+ *      - arp (ethertype)<br>
+ *      - arp target transport address<br>
+ *      - setReg6 {@link NxmNxReg6}<br>
+ * Actions:<br>
+ *      - move eth_src = eth_dst<br>
+ *      - set dl_src {@link MacAddress}<br>
+ *      - load arp_op<br>
+ *      - move arp_sha = arp_tha<br>
+ *      - load arp_sha<br>
+ *      - move arp_spa = arp_tpa<br>
+ *      - load arp_spa<br>
+ *      - output:port {@link NodeConnectorId}<br>
+ * <p>
+ * <i>Broadcast flow (per flood domain)</i>
+ * Priority = 140<br>
+ * Matches:<br>
+ *      - ethernet destination {@link MacAddress}
+ *      - setReg5 {@link NxmNxReg5}<br>
+ * Actions:<br>
+ *      - load tunnel ID<br>
+ *      - group action<br>
+ * <p>
+ * <i>L3 Prefix flow</i><br>
+ * Priority = 140<br>
+ * Matches:<br>
+ *      - ethernet destination {@link MacAddress}
+ *      - setReg5 {@link NxmNxReg5}<br>
+ * Actions:<br>
+ *      - dl_dst {@link MacAddress}<br>
+ *      - dec_ttl<br>
+ *      - loadReg2 {@link NxmNxReg2}<br>
+ *      - loadReg3 {@link NxmNxReg3}<br>
+ *      - loadReg4 (next hop) {@link NxmNxReg4}<br>
+ *      - loadReg7 (if internal, port_num == {@link NodeConnectorId of L2 EP} ) {@link NxmNxReg7}<br>
+ *      - loadReg7 (if external, port_num = external port) {@link NxmNxReg7}<br>
+ *      - {@link GoToTable} POLICY ENFORCER table
  */
 public class DestinationMapper extends FlowTable {
 

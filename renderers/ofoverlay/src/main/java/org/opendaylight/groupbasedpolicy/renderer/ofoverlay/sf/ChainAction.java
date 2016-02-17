@@ -62,9 +62,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
 /**
- * Chain action for the OpenFlow Overlay renderer
- * TODO: separate the generic definition from the concrete
+ * <h1>Chain action for the OpenFlow Overlay renderer</h1>
+ * TODO: separate the generic definition from the concrete<br>
  * implementation for the OpenFlow Overlay renderer
+ * <p>
+ *
+ * see {@link org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.ChainActionFlows}
+ *
  */
 public class ChainAction extends Action {
 
