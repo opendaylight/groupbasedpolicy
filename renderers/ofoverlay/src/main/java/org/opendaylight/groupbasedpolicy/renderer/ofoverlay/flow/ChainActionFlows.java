@@ -43,6 +43,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.ta
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.go.to.table._case.GoToTable;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
@@ -58,6 +59,80 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
+/**
+ * <h1>Creation of flows related to service chain</h1>
+ *
+ * These flows are built across most of gbp of tables and have higher priority than basic flows. It ensures, that
+ * packet redirected to chain will be sent to tunnel output
+ * <p>
+ *
+ * Flow that allows ALL traffic incoming from chain last hop
+ * <p>
+ * <i>Allow from chain flow</i><br>
+ * Table = 0<br>
+ * Priority = 1200<br>
+ * Matches:<br>
+ *      - Nshc1<br>
+ *      - Nsp<br>
+ *      - Nsi<br>
+ *      - in_port (tunnel port) {@link NodeConnectorId}<br>
+ * Actions:<br>
+ *      - {@link GoToTable} SOURCE MAPPER table
+ * <p>
+ * TODO: looks like duplicity, the same flow is created in policy enforcer
+ * <i>Allow from chain tunnel</i>
+ * Table = 4<br>
+ * Priority = 65000<br>
+ * Matches:<br>
+ *      - in_port (tunnel port) {@link NodeConnectorId}<br>
+ *      - Reg7 (fixed value 0xffffff) {@link NxmNxReg7}
+ * Actions:<br>
+ *      - {@link GoToTable} SOURCE MAPPER table
+ * <p>
+ * <i>Create external flow</i>
+ * Table = 6<br>
+ * Priority = 1000 (if dst node == src node, priority = 1500)<br>
+ * Matches:<br>
+ *      - Reg6 {@link NxmNxReg6}<br>
+ *      - tunnel ID<br>
+ *      - nsp<br>
+ *      - nsi<br>
+ *      - tun_dst (only if dst node == src node)<br>
+ * Actions:<br>
+ *      - set nshc1<br>
+ *      - set nshc2<br>
+ *      - load tunnel ID<br>
+ *      - load tunnel ipv4<br>
+ *      - output:(tunnel port)<br>
+ * <p>
+ * <i>Chain tunnel flow</i><br>
+ * Table = 2<br>
+ * Priority = 150<br>
+ * Matches:<br>
+ *      - in_port (tunnel port) {@link NodeConnectorId}<br>
+ *      - tunnel ID<br>
+ *      - nsp<br>
+ *      - nsi<br>
+ * Actions:<br>
+ *      - Reg0 {@link NxmNxReg0}<br>
+ *      - Reg1 {@link NxmNxReg1}<br>
+ *      - Reg4 {@link NxmNxReg4}<br>
+ *      - Reg5 {@link NxmNxReg5}<br>
+ *      - Reg6 {@link NxmNxReg6}<br>
+ *      - {@link GoToTable} DESTINATION MAPPER table<br>
+ * <p>
+ * <i>Chain broadcast flow</i><br>
+ * Table = 2<br>
+ * Priority = 150<br>
+ * Matches:<br>
+ *      - in_port (tunnel port) {@link NodeConnectorId}<br>
+ *      - tunnel ID<br>
+ *      - nsp<br>
+ *      - nsi<br>
+ * Actions:<br>
+ *      - load Reg5 {@link NxmNxReg5}<br>
+ *      - {@link GoToTable} DESTINATION MAPPER table<br>
+ */
 public class ChainActionFlows {
 
     private static final Logger LOG = LoggerFactory.getLogger(ChainAction.class);

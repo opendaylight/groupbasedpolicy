@@ -47,7 +47,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.Fl
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.Instruction;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.go.to.table._case.GoToTable;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
@@ -58,9 +58,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.EtherType;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.ethernet.match.fields.EthernetTypeBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.EthernetMatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer3Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.ArpMatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv4MatchBuilder;
@@ -70,15 +67,74 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev14
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg4;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg5;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg6;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.reg.load.grouping.NxRegLoad;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.nicira.action.rev140714.nx.action.reg.move.grouping.NxRegMove;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 
 /**
- * Manage the table that assigns source endpoint group, bridge domain, and
- * router domain to registers to be used by other tables.
+ * <h1>Manage the table processing NAT translation (table=1)</h1>
+ *
+ * Ingress NAT translation flows, created for every L3 endpoints with NAT which also contain L2 context
+ * <p>
+ * <i>Nat flow:</i><br>
+ * Priority = 100<br>
+ * Matches:<br>
+ *      - nw_dst (destination ip address)<br>
+ * Actions:<br>
+ *      - loadReg0 {@link NxmNxReg0}<br>
+ *      - loadReg1 {@link NxmNxReg1}<br>
+ *      - loadReg4 {@link NxmNxReg4}<br>
+ *      - loadReg5 {@link NxmNxReg5}<br>
+ *      - loadReg6 {@link NxmNxReg6}<br>
+ *      - loadTunnelId<br>
+ *      - {@link GoToTable} DESTINATION MAPPER table
+ * <p>
+ * <i>Outside Arp flow:</i><br>
+ * Priority = 150<br>
+ * Matches:<br>
+ *      - arp, (ethertype)<br>
+ *      - set arp target transport address<br>
+ * Actions:<br>
+ *      - move eth_src = eth_dst {@link NxRegMove}<br>
+ *      - set dl src_mac {@link MacAddress}<br>
+ *      - load arp_op {@link NxRegLoad}<br>
+ *      - move arp_sha = arp_tha {@link NxRegMove}<br>
+ *      - load arp_sha {@link NxRegLoad}<br>
+ *      - move arp_spa = arp_tpa {@link NxRegMove}<br>
+ *      - load arp_spa {@link NxRegLoad}<br>
+ *      - output:port {@link NodeConnectorId}
+ * <p>
+ * Flows for ingress traffic. Created for every external endpoint without location<br>
+ * <p>
+ * <i>Ingress external IP flow</i><br>
+ * Priority = 90<br>
+ * Matches:<br>
+ *      - nw_src (source ip address)<br>
+ * Actions:<br>
+ *      - loadReg0 {@link NxmNxReg0}<br>
+ *      - loadReg1 {@link NxmNxReg1}<br>
+ *      - loadReg4 {@link NxmNxReg4}<br>
+ *      - loadReg5 {@link NxmNxReg5}<br>
+ *      - loadReg6 {@link NxmNxReg6}<br>
+ *      - loadTunnelId<br>
+ *      - {@link GoToTable} DESTINATION MAPPER table
+ * <p>
+ * <i>Ingress external Arp flow</i><br>
+ * Priority = 80<br>
+ * Matches:<br>
+ *      - arp_spa (source arp address)<br>
+ * Actions:<br>
+ *      - loadReg0 {@link NxmNxReg0}<br>
+ *      - loadReg1 {@link NxmNxReg1}<br>
+ *      - loadReg4 {@link NxmNxReg4}<br>
+ *      - loadReg5 {@link NxmNxReg5}<br>
+ *      - loadReg6 {@link NxmNxReg6}<br>
+ *      - loadTunnelId<br>
+ *      - {@link GoToTable} DESTINATION MAPPER table
+ *
  */
 public class IngressNatMapper extends FlowTable {
 
@@ -100,7 +156,7 @@ public class IngressNatMapper extends FlowTable {
     @Override
     public void sync(NodeId nodeId, OfWriter ofWriter) throws Exception {
 
-        /**
+        /*
          * To support provider networks, all external ingress traffic is currently passed here and
          * if no match is foud - no NAT is performed and processing continues in DestinationMapper.
          */
@@ -204,7 +260,7 @@ public class IngressNatMapper extends FlowTable {
         }
         MatchBuilder mb = createMatchOnDstIpAddress(outsideDestAddress);
         Action[] dstIpMacAction = {setDestIp, setDestMac};
-        FlowBuilder flowb = base().setPriority(Integer.valueOf(100))
+        FlowBuilder flowb = base().setPriority(100)
             .setId(flowid)
             .setMatch(mb.build())
             .setInstructions(
@@ -218,7 +274,7 @@ public class IngressNatMapper extends FlowTable {
         String ikey = outsideDestAddress.getIpv4Address().getValue();
         BigInteger intMac = new BigInteger(1, bytesFromHexString(toMac.getValue()));
         MatchBuilder mb = new MatchBuilder().setEthernetMatch(ethernetMatch(null, null, ARP)).setLayer3Match(
-                new ArpMatchBuilder().setArpOp(Integer.valueOf(1))
+                new ArpMatchBuilder().setArpOp(1)
                     .setArpTargetTransportAddress(new Ipv4Prefix(ikey + "/32"))
                     .build());
         Action[] outsideArpActions = {
@@ -262,7 +318,7 @@ public class IngressNatMapper extends FlowTable {
         if (mb == null) {
             return null;
         }
-        FlowBuilder flowb = base().setPriority(Integer.valueOf(90))
+        FlowBuilder flowb = base().setPriority(90)
             .setId(FlowIdUtils.newFlowId(TABLE_ID, "inbound-external-ip", mb.build()))
             .setMatch(mb.build())
             .setInstructions(
@@ -343,8 +399,7 @@ public class IngressNatMapper extends FlowTable {
         Action fdReg = nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(fdId));
         Action vrfReg = nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(l3Id));
         Action tunIdAction = nxLoadTunIdAction(BigInteger.valueOf(tunnelId), false);
-        Action[] outsideArpActions = {segReg, scgReg, bdReg, fdReg, vrfReg, tunIdAction};
-        return outsideArpActions;
+        return new Action[]{segReg, scgReg, bdReg, fdReg, vrfReg, tunIdAction};
     }
 
     static byte[] bytesFromHexString(String values) {

@@ -50,7 +50,71 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Manage the table that enforces port security
+ * <h1>Manage the table that enforces port security. Initial flows in group-based policy pipeline (table=0)</h1>
+ *
+ * Lower-priority flows are leading flows for all traffic incoming from endpoints associated to gbp classifier.<br>
+ * Created when an {@link Endpoint} is internal and contains {@link OfOverlayContext} augmentation. Several flows of
+ * this kind are produced.
+ *<p>
+ * <i>L2 flow:</i><br>
+ * Priority = 100<br>
+ * Matches:<br>
+ *      - in_port, {@link NodeConnectorId}
+ *      - dl_src {@link org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress}<br>
+ * Actions:<br>
+ *      - {@link GoToTable} SOURCE MAPPER table
+ *<p>
+ * <i>L3 flow:</i><br>
+ * Priority = 120<br>
+ * Matches:<br>
+ *      - ip, (ethertype)<br>
+ *      - in_port, {@link NodeConnectorId}<br>
+ *      - dl_src {@link org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress}<br>
+ *      - nw_src (source ip address)<br>
+ * Actions:<br>
+ *      - {@link GoToTable} SOURCE MAPPER table
+ *<p>
+ * <i>L3 Arp flow:</i><br>
+ * Priority = 121<br>
+ * Matches:<br>
+ *      - arp, (ethertype)<br>
+ *      - in_port, {@link NodeConnectorId}<br>
+ *      - dl_src {@link org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress}<br>
+ *      - arp_spa (arp source transport address)<br>
+ * Actions:<br>
+ *      - {@link GoToTable} SOURCE MAPPER table
+ *<p>
+ * <i>L3 Dhcp dora flow:</i><br>
+ * Priority = 115<br>
+ * Matches:<br>
+ *      - ip, (ethertype)<br>
+ *      - in_port, {@link NodeConnectorId}<br>
+ *      - dl_src {@link org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress}<br>
+ *      - nw_dst (destination ip address)<br>
+ * Actions:<br>
+ *      - {@link GoToTable} SOURCE MAPPER table
+ *<p>
+ * Higher-priority flows providing VLAN support for external networks. Created when node contains external ports
+ *<p>
+ * <i>Allow from external:</i><br>
+ * Priority = 200<br>
+ * Matches:<br>
+ *      - in_port, {@link NodeConnectorId}<br>
+ * Actions:<br>
+ *      - {@link GoToTable} INGRESS NAT table
+ *<p>
+ * <i>Flow that pops VLAN tag for inbound traffic:</i><br>
+ * Priority = 210<br>
+ * See {@link #popVlanTagsOnExternalPort}
+ *<p>
+ * Highest priority flows used to direct traffic coming from tunnel (SFC). These flows are created always
+ *<p>
+ * <i>Allow from tunnel:</i><br>
+ * Priority = 300<br>
+ * Matches:<br>
+ *      - in_port (has to be tunnel port), {@link NodeConnectorId}<br>
+ * Actions:<br>
+ *      - {@link GoToTable} SOURCE MAPPER table
  *
  */
 public class PortSecurity extends FlowTable {
@@ -61,7 +125,7 @@ public class PortSecurity extends FlowTable {
 
     public PortSecurity(OfContext ctx, short tableId) {
         super(ctx);
-        TABLE_ID=tableId;
+        TABLE_ID = tableId;
     }
 
     @Override
@@ -120,10 +184,10 @@ public class PortSecurity extends FlowTable {
             for (NodeConnectorId nc : ctx.getSwitchManager().getExternalPorts(nodeId)) {
                 // TODO Bug 3546 - Difficult: External port is unrelated to Tenant, L3C, L2BD..
                 for (Flow flow : popVlanTagsOnExternalPort(nc, tenantId, 210)) {
-                    // tagged frames have to be untagged when entering policy domain
+                    // Tagged frames have to be untagged when entering policy domain
                     ofWriter.writeFlow(nodeId, TABLE_ID, flow);
                 }
-                // allowing untagged frames entering policy domain
+                // Allowing untagged frames entering policy domain
                 ofWriter.writeFlow(nodeId, TABLE_ID, allowFromExternalPort(nc, 200));
             }
         }

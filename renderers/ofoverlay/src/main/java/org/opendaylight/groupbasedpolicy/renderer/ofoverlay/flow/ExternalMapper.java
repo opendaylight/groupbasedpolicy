@@ -48,8 +48,38 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Preconditions;
 
 /**
- * Manage the table that assigns source endpoint group, bridge domain, and
- * router domain to registers to be used by other tables.
+ * <h1>Manage the table that assigns source endpoint group, bridge domain, and
+ * router domain to registers to be used by other tables</h1>
+ *
+ * <i>Push VLAN flow</i><br>
+ * Priority = 222<br>
+ * see {@link #buildPushVlanFlow(Ipv4Address, Integer, int)}<br>
+ * Matches:<br>
+ *      - ethernet type<br>
+ *      - L3 match<br>
+ *      - VLAN match<br>
+ * Actions:<br>
+ *      - set_ethertype (VLAN)<br>
+ *      - output:port (Reg7) {@link NxmNxReg7}<br>
+ * <p>
+ * <i>Push VLAN flow - external domain</i><br>
+ * Priority = 220<br>
+ * see {@link #buildPushVlanFlow(NodeId, int, Integer, int)}<br>
+ * Matches:<br>
+ *      - ethernet type<br>
+ *      - Reg7 {@link NxmNxReg7}<br>
+ *      - Reg5 {@link NxmNxReg5}<br>
+ *      - VLAN match<br>
+ * Actions:<br>
+ *      - set_ethertype (VLAN)<br>
+ *      - output:port (Reg7) {@link NxmNxReg7}<br>
+ * <p>
+ * <i>Default flow</i><br>
+ * Priority = 100<br>
+ * Matches:<br>
+ *      - none<br>
+ * Actions:<br>
+ *      - output:port (Reg7) {@link NxmNxReg7}<br>
  */
 public class ExternalMapper extends FlowTable {
 

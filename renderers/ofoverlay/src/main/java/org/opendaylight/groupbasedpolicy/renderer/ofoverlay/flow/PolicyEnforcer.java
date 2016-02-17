@@ -57,6 +57,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.ta
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Instructions;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.go.to.table._case.GoToTable;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
@@ -98,8 +99,53 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Table.Cell;
 
 /**
- * Manage the table that enforces policy on the traffic. Traffic is denied
- * unless specifically allowed by policy
+ * <h1>Manage the table that enforces policy on the traffic. Traffic is denied
+ * unless specifically allowed by policy (table=4)</h1>
+ *
+ * In policy enforcer, according to current {@link Policy} specific traffic is sent to SFC (nsp and nsi is set), or from SFC
+ * to some {@link Endpoint} or to another classifier.
+ * <p>
+ * <i>Tunnel/overlay flows</i><br>
+ * Priority = 65000 (if more flows, decrements)<br>
+ * Matches:<br>
+ *      - ethertype (tcp, tcp6, ipv6, icmp or missing)<br>
+ *      - Reg0 {@link NxmNxReg0}<br>
+ *      - Reg1 {@link NxmNxReg1}<br>
+ *      - Reg2 {@link NxmNxReg2}<br>
+ *      - Reg3 {@link NxmNxReg3}<br>
+ *      - L3 for src_ip_prefix (if exists)<br>
+ *      - L3 for dst_ip_prefix (if exists)<br>
+ * Actions:<br>
+ *      - set nsi (only chain action)<br>
+ *      - set nsp (only chain action)<br>
+ *      - {@link GoToTable} EXTERNAL MAPPER table<br>
+ *<p>
+ * <i>Allow from tunnel flow</i><br>
+ * Priority = 65000<br>
+ * Matches:<br>
+ *      - Reg1 (set to 0xffffff) {@link NxmNxReg1}<br>
+ *      - in_port (should be tunnel port) {@link NodeConnectorId}<br>
+ * Actions:<br>
+ *      - output:port (Reg7) {@link NxmNxReg7}<br>
+ * <p>
+ * Traffic is sent from one {@link EndpointGroup} to the same EPG
+ * <p>
+ * <i>Allow from same EPG flow</i><br>
+ * Priority = 65000<br>
+ * Matches:<br>
+ *      - Reg0 {@link NxmNxReg0}<br>
+ *      - Reg2 {@link NxmNxReg2}<br>
+ * Actions:<br>
+ *      - output:port (Reg7) {@link NxmNxReg7}
+ * <p>
+ * <i>Arp flow</i><br>
+ * Priority = 20000<br>
+ * Matches:<br>
+ *      - ethernet match (arp)<br>
+ *      - Reg5 {@link NxmNxReg5}<br>
+ * Actions:<br>
+ *      - output:port (Reg7) {@link NxmNxReg7}
+ *
  */
 public class PolicyEnforcer extends FlowTable {
 

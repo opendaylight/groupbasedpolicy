@@ -29,6 +29,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.Fl
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.go.to.table._case.GoToTable;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
@@ -42,8 +43,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Manage the table that assigns source endpoint group, bridge domain, and
- * router domain to registers to be used by other tables.
+ * <h1>Manage the table that assigns source endpoint group, bridge domain, and
+ * router domain to registers to be used by other tables</h1>
+ *
+ * <i>NAT flow</i><br>
+ * Priority = 100<br>
+ * Matches:<br>
+ *      - ipv4/ipv6 inside address<br>
+ *      - ethernet type<br>
+ *      - Reg6 {@link NxmNxReg6}<br>
+ * Actions:<br>
+ *      - set_src ip address<br>
+ *      - {@link GoToTable} EXTERNAL MAPPER table<br>
  */
 public class EgressNatMapper extends FlowTable {
 
