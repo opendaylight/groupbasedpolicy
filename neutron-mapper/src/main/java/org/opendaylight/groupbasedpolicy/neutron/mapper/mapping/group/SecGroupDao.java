@@ -33,7 +33,7 @@ public class SecGroupDao {
     }
 
     /**
-     * @param id
+     * @param id {@link EndpointGroupId} EndpointGroupId
      * @return {@code empty string} if security group with given ID does not exist; returns
      *         {@code name of security group} if has some; otherwise security group id
      */

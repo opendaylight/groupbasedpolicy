@@ -64,9 +64,6 @@ public class SecRuleEntityDecoder {
         return new EndpointGroupId(Utils.normalizeUuid(secRule.getSecurityRuleGroupID()));
     }
 
-    /**
-     * @return {@code null} if {@link NeutronSecurityRule#getSecurityRemoteGroupID()} is null
-     */
     public static @Nullable EndpointGroupId getConsumerEpgId(NeutronSecurityRule secRule) {
         if (Strings.isNullOrEmpty(secRule.getSecurityRemoteGroupID())) {
             return null;

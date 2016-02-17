@@ -8,11 +8,14 @@
 
 package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.Nullable;
 
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 
 import com.google.common.base.Preconditions;
@@ -24,6 +27,7 @@ public class SecRuleDao {
     private final SetMultimap<EndpointGroupId, NeutronSecurityRule> secRulesByOwnerSecGrpId = HashMultimap.create();
     private final SetMultimap<OwnerAndRemoteOfSecRule, NeutronSecurityRule> secRulesByRemoteSecGrpId =
             HashMultimap.create();
+    private final Map<Uuid, NeutronSecurityRule> secRuleByUuid = new HashMap<>();
 
     public void addSecRule(NeutronSecurityRule secRule) {
         Preconditions.checkNotNull(secRule);
@@ -31,6 +35,7 @@ public class SecRuleDao {
         EndpointGroupId remoteSecGrp = SecRuleEntityDecoder.getConsumerEpgId(secRule);
         secRulesByOwnerSecGrpId.put(ownerSecGrp, secRule);
         secRulesByRemoteSecGrpId.put(new OwnerAndRemoteOfSecRule(ownerSecGrp, remoteSecGrp), secRule);
+        secRuleByUuid.put(new Uuid(secRule.getID()), secRule);
     }
 
     public Set<NeutronSecurityRule> getSecRulesByOwnerSecGrpId(EndpointGroupId secGrpId) {
@@ -46,6 +51,10 @@ public class SecRuleDao {
         return secRulesByRemoteSecGrpId.get(new OwnerAndRemoteOfSecRule(ownerSecGrpId, null));
     }
 
+    public NeutronSecurityRule getSecRuleByUuid(Uuid secRule) {
+        return secRuleByUuid.get(secRule);
+    }
+
     public Set<EndpointGroupId> getAllOwnerSecGrps() {
         return secRulesByOwnerSecGrpId.keySet();
     }
@@ -56,6 +65,7 @@ public class SecRuleDao {
         EndpointGroupId remoteSecGrp = SecRuleEntityDecoder.getConsumerEpgId(secRule);
         secRulesByOwnerSecGrpId.remove(ownerSecGrp, secRule);
         secRulesByRemoteSecGrpId.remove(new OwnerAndRemoteOfSecRule(ownerSecGrp, remoteSecGrp), secRule);
+        secRuleByUuid.remove(new Uuid(secRule.getID()));
     }
 
     static class OwnerAndRemoteOfSecRule {

@@ -300,9 +300,6 @@ public class NeutronRouterAware implements INeutronRouterAware {
         return new SubnetBuilder(potentialSubnet.get()).setVirtualRouterIp(ipAddress).build();
     }
 
-    /**
-     * @return {@code false} if illegal state occurred; {@code true} otherwise
-     */
     public boolean setNewL3ContextToEpsFromSubnet(TenantId tenantId, L3Context l3Context, Subnet subnet,
             ReadWriteTransaction rwTx) {
         if (subnet.getParent() == null) {
