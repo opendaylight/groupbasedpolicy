@@ -263,7 +263,8 @@ public class OfTableTest {
             .setL2Context(bd)
             .setTenant(tid)
             .setEndpointGroup(eg)
-            .setMacAddress(new MacAddress("00:00:00:00:00:01"));
+            .setMacAddress(new MacAddress("00:00:00:00:00:01"))
+            .setNetworkContainment(sub2);
     }
 
     protected EndpointBuilder localEP() {

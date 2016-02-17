@@ -41,8 +41,10 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.statistics.OFStatist
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.groupbasedpolicy.util.SetUtils;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointFields;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
@@ -633,6 +635,34 @@ public class EndpointManager implements AutoCloseable {
             return null;
         }
         return endpoints.getEndpointL3();
+    }
+
+    /**
+     * Reads endpointL3 from data store
+     * @param l3c id of {@link L3Context}
+     * @param ipAddress IP address of the endpoint
+     * @param tenantId ID of {@link Tenant} can be optionally specified
+     * @return {@link EndpointL3} if exists, otherwise null.
+     */
+    public EndpointL3 getL3Endpoint(L3ContextId l3c, IpAddress ipAddress, @Nullable TenantId tenantId) {
+        if (l3c == null || ipAddress == null) {
+            LOG.warn("[ContextId: {}, IpAddress: {}] Cannot read endpoint from DS unless both keys are specified!",
+                    l3c, ipAddress);
+            return null;
+        }
+        ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
+        Optional<EndpointL3> endpointL3 = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
+                IidFactory.l3EndpointIid(l3c, ipAddress), rTx);
+        rTx.close();
+        if (!endpointL3.isPresent()) {
+            LOG.warn("EndpointL3 [{},{}] not found in data store.", l3c, ipAddress);
+            return null;
+        }
+        if(tenantId != null && !endpointL3.get().getTenant().equals(tenantId)) {
+            LOG.warn("EndpointL3 [{},{}] not found in data store for tenant: {}", l3c, ipAddress, tenantId);
+            return null;
+        }
+        return endpointL3.get();
     }
 
     /**

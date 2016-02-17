@@ -231,6 +231,21 @@ public class IndexedTenant {
     }
 
     /**
+     * Get the subnet based on it's ID. Since subnet is on the bottom
+     * of the forwarding hierarchy, there is no other underlying domain
+     * from which {@link Subnet} could be resolved. That is why the
+     * argument refers directly to {@link SubnetId} and not
+     * {@link NetworkDomainId}
+     *
+     * @param id of the {@link Subnet}
+     * @return the {@link Subnet} or <code>null</code> if it does
+     * not exist
+     */
+    public Subnet resolveSubnet(SubnetId id) {
+        return resolveDomain(Subnet.class, id);
+    }
+
+    /**
      * Resolve all subnets applicable to the given network domain ID
      * @param id the {@link NetworkDomainId}
      * @return the set of subnets.  Cannot be null, but could be empty.
