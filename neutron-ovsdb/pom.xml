@@ -11,17 +11,17 @@
   <parent>
     <groupId>org.opendaylight.controller</groupId>
     <artifactId>config-parent</artifactId>
-    <version>0.4.0-SNAPSHOT</version>
+    <version>0.4.0-Beryllium</version>
     <relativePath/>
   </parent>
 
   <groupId>org.opendaylight.groupbasedpolicy</groupId>
   <artifactId>neutron-ovsdb</artifactId>
-  <version>0.3.0-SNAPSHOT</version>
+  <version>0.3.0-Beryllium</version>
   <packaging>bundle</packaging>
   
   <properties>
-    <ovsdb.version>1.2.1-SNAPSHOT</ovsdb.version>
+    <ovsdb.version>1.2.1-Beryllium</ovsdb.version>
   </properties>
 
   <dependencies>
