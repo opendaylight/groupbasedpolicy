@@ -26,7 +26,7 @@ public class SingleRuleContractTest {
                 NeutronUtils.INGRESS, NeutronUtils.TCP, 8010, 8020);
         int subjectAndRuleOrder = 1;
         SingleRuleContract singleRuleContract = new SingleRuleContract(secRule, subjectAndRuleOrder, new Description(
-                "contractDescription"), MappingUtils.ACTION_REF_ALLOW);
+                "contractDescription"), MappingUtils.ALLOW_ACTION_CHOICE);
 
         SingleClassifierRule singleClsfRule = singleRuleContract.getSingleClassifierRule();
         assertNotNull(singleClsfRule);
@@ -41,7 +41,7 @@ public class SingleRuleContractTest {
 
         Rule rule = singleClsfRule.getRule();
         assertNotNull(rule);
-        PolicyAssert.assertRule(rule, secRule, subjectAndRuleOrder);
+        PolicyAssert.assertRule(rule, secRule, subjectAndRuleOrder + 180);
 
         assertEquals(rule, singleRuleContract.getRule());
 

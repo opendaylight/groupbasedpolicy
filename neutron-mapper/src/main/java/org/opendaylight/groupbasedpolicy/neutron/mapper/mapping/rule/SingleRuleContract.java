@@ -10,15 +10,12 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.List;
-
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.change.action.of.security.group.rules.input.action.ActionChoice;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.Contract;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ContractBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.Clause;
@@ -37,17 +34,17 @@ public class SingleRuleContract {
     private final Clause clause;
     private final Contract contract;
 
-    public SingleRuleContract(NeutronSecurityRule secRule, int subjectAndRuleOrder, @Nullable Description contractDescription, List<ActionRef> actions) {
-        this(secRule, new SingleClassifierRule(secRule, subjectAndRuleOrder, actions), subjectAndRuleOrder, contractDescription);
+    public SingleRuleContract(NeutronSecurityRule secRule, int subjectAndRuleOrder, @Nullable Description contractDescription, ActionChoice action) {
+        this(secRule, new SingleClassifierRule(secRule, subjectAndRuleOrder, action), contractDescription);
     }
 
     public SingleRuleContract(NeutronSecurityRule secRule, SingleClassifierRule singleClassifierRule,
-            int subjectOrder, @Nullable Description contractDescription) {
+            @Nullable Description contractDescription) {
         checkNotNull(secRule);
         this.singleClassifierRule = checkNotNull(singleClassifierRule);
         this.rule = singleClassifierRule.getRule();
         this.subject = new SubjectBuilder().setName(SecRuleNameDecoder.getSubjectName(secRule))
-            .setOrder(subjectOrder)
+            .setOrder(singleClassifierRule.getRule().getOrder())
             .setRule(ImmutableList.of(rule))
             .build();
         this.clause = SecRuleEntityDecoder.getClause(secRule);

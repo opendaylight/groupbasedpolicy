@@ -23,6 +23,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2FloodDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.change.action.of.security.group.rules.input.action.ActionChoice;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.change.action.of.security.group.rules.input.action.action.choice.AllowActionCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.change.action.of.security.group.rules.input.action.action.choice.SfcActionCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.change.action.of.security.group.rules.input.action.action.choice.allow.action._case.AllowBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRefBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomain;
@@ -32,7 +36,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstanceBuilder;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 
 public final class MappingUtils {
 
@@ -43,8 +46,10 @@ public final class MappingUtils {
             new ActionName("Allow"))
         .setActionDefinitionId(AllowActionDefinition.DEFINITION.getId())
         .build();
-    public static final List<ActionRef> ACTION_REF_ALLOW =
-            ImmutableList.of(new ActionRefBuilder().setName(ACTION_ALLOW.getName()).setOrder(0).build());
+    public static final ActionChoice ALLOW_ACTION_CHOICE = new AllowActionCaseBuilder().setAllow(
+            new AllowBuilder().build()).build();
+    public static final ActionRef ACTION_REF_ALLOW =
+            new ActionRefBuilder().setName(ACTION_ALLOW.getName()).setOrder(0).build();
     public static final EndpointGroupId EPG_EXTERNAL_ID = new EndpointGroupId("eeeaa3a2-e9ba-44e0-a462-bea923d30e38");
 
     public static final String NAME_VALUE_DELIMETER = "-";
@@ -53,6 +58,14 @@ public final class MappingUtils {
 
     private MappingUtils() {
         throw new UnsupportedOperationException("Cannot create an instance.");
+    }
+
+    public static ActionRef createSfcActionRef(String sfcChainName) {
+        return new ActionRefBuilder().setName(new ActionName(sfcChainName)).setOrder(0).build();
+    }
+
+    public static ActionChoice createSfcActionChoice(String chainName) {
+        return new SfcActionCaseBuilder().setSfcChainName(chainName).build();
     }
 
     public static ForwardingCtx createForwardingContext(TenantId tenantId, L2FloodDomainId l2FdId, ReadTransaction rTx) {
