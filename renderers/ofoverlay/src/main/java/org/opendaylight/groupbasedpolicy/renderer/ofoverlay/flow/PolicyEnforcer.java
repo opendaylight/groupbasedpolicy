@@ -15,7 +15,6 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxOutputRegAction;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -32,7 +31,6 @@ import org.opendaylight.groupbasedpolicy.api.sf.IpProtoClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.api.sf.L4ClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.dto.EgKey;
 import org.opendaylight.groupbasedpolicy.dto.EndpointConstraint;
-import org.opendaylight.groupbasedpolicy.dto.EpKey;
 import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.dto.Policy;
 import org.opendaylight.groupbasedpolicy.dto.RuleGroup;
@@ -54,7 +52,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.acti
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Instructions;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.go.to.table._case.GoToTable;
@@ -64,8 +61,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRef;
@@ -269,18 +264,6 @@ public class PolicyEnforcer extends FlowTable {
                     .getL3EpPrefixes());
             Set<IpPrefix> dIpPrefixes = Policy.getIpPrefixesFrom(activeRulesByConstraints.getColumnKey()
                     .getL3EpPrefixes());
-            PolicyPair policyPair = new PolicyPair(netElements.getDstEpOrdinals().getEpgId(), netElements.getSrcEpOrdinals().getEpgId(),
-                    netElements.getDstEpOrdinals().getCgId(), netElements.getSrcEpOrdinals().getCgId(), dIpPrefixes, sIpPrefixes,
-                    netElements.getDstNodeId(), netElements.getSrcNodeId());
-            if (visitedPairs.contains(policyPair)) {
-                LOG.trace("PolicyEnforcer: Already visited PolicyPair {}, endpoints {} {} skipped",
-                        policyPair, netElements.getSrcEp().getKey(), netElements.getDstEp().getKey());
-                continue;
-            } else {
-                LOG.trace("PolicyEnforcer: Visiting PolicyPair {} endpoints {} {}", policyPair,
-                        netElements.getSrcEp().getKey(), netElements.getDstEp().getKey());
-                visitedPairs.add(policyPair);
-            }
 
             int priority = 65000;
             for (RuleGroup rg : activeRulesByConstraints.getValue()) {
@@ -310,6 +293,20 @@ public class PolicyEnforcer extends FlowTable {
                             LOG.trace("No actions found for pair of rules {}, {}", rule, oppositeRule);
                             continue;
                         }
+                        PolicyPair policyPair = null;
+                        if (rule.equals(ruleWithMatches)) {
+                            policyPair = new PolicyPair(netElements.getDstEpOrdinals().getEpgId(),
+                                    netElements.getSrcEpOrdinals().getEpgId(), netElements.getDstEpOrdinals().getCgId(),
+                                    netElements.getSrcEpOrdinals().getCgId(), dIpPrefixes, sIpPrefixes,
+                                    netElements.getDstNodeId(), netElements.getSrcNodeId());
+                        } else {
+                            policyPair = new PolicyPair(netElements.getSrcEpOrdinals().getEpgId(),
+                                    netElements.getDstEpOrdinals().getEpgId(), netElements.getSrcEpOrdinals().getCgId(),
+                                    netElements.getDstEpOrdinals().getCgId(), sIpPrefixes, dIpPrefixes,
+                                    netElements.getSrcNodeId(), netElements.getDstNodeId());
+                        }
+                        LOG.trace("PolicyEnforcer: Visiting PolicyPair {} endpoints {} {}", policyPair,
+                                netElements.getSrcEp().getKey(), netElements.getDstEp().getKey());
 
                         // Preserve original rule direction
                         Set<Direction> directions = getRuleDirections(rule);
