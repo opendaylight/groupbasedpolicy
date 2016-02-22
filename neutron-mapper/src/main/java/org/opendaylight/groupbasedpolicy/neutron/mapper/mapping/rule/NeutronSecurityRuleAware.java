@@ -10,7 +10,6 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.List;
 import java.util.Set;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -38,8 +37,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.change.action.of.security.group.rules.input.action.ActionChoice;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.change.action.of.security.group.rules.input.action.action.choice.SfcActionCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRef;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRefBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValueBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.Contract;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ConsumerNamedSelector;
@@ -109,37 +106,33 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
 
     public boolean changeActionOfNeutronSecurityRule(Uuid secRuleId, ActionChoice action, ReadWriteTransaction rwTx) {
         NeutronSecurityRule secRule = secRuleDao.getSecRuleByUuid(secRuleId);
-        List<ActionRef> actions = createActions(action, SecRuleEntityDecoder.getTenantId(secRule), rwTx);
+        addSfcChainActionInstance(action, SecRuleEntityDecoder.getTenantId(secRule), rwTx);
         LOG.trace("Changing to action {} for secuirity group rule {}", action, secRule);
-        return addNeutronSecurityRuleWithAction(secRule, actions, rwTx);
+        return addNeutronSecurityRuleWithAction(secRule, action, rwTx);
     }
 
-    private List<ActionRef> createActions(ActionChoice action, TenantId tenantId, ReadWriteTransaction rwTx) {
+    private void addSfcChainActionInstance(ActionChoice action, TenantId tenantId, ReadWriteTransaction rwTx) {
         if (action instanceof SfcActionCase) {
             String sfcChainName = ((SfcActionCase) action).getSfcChainName();
-            ActionName actionName = addSfcChainActionInstance(sfcChainName, tenantId, rwTx);
-            return ImmutableList.of(new ActionRefBuilder().setName(actionName).setOrder(0).build());
+            ActionName actionName = new ActionName(sfcChainName);
+            ActionInstance sfcActionInstance = new ActionInstanceBuilder().setName(actionName)
+                .setActionDefinitionId(ChainActionDefinition.ID)
+                .setParameterValue(
+                        ImmutableList.of(new ParameterValueBuilder().setName(
+                                new ParameterName(ChainActionDefinition.SFC_CHAIN_NAME))
+                            .setStringValue(sfcChainName)
+                            .build()))
+                .build();
+            rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.actionInstanceIid(tenantId, actionName),
+                    sfcActionInstance, true);
         }
-        return MappingUtils.ACTION_REF_ALLOW;
-    }
-
-    private ActionName addSfcChainActionInstance(String sfcChainName, TenantId tenantId, ReadWriteTransaction rwTx) {
-        ActionName actionName = new ActionName(sfcChainName);
-        ActionInstance sfcActionInstance = new ActionInstanceBuilder().setName(actionName)
-            .setActionDefinitionId(ChainActionDefinition.ID)
-            .setParameterValue(ImmutableList.of(new ParameterValueBuilder()
-                .setName(new ParameterName(ChainActionDefinition.SFC_CHAIN_NAME)).setStringValue(sfcChainName).build()))
-            .build();
-        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.actionInstanceIid(tenantId, actionName),
-                sfcActionInstance, true);
-        return actionName;
     }
 
     public boolean addNeutronSecurityRule(NeutronSecurityRule secRule, ReadWriteTransaction rwTx) {
-        return addNeutronSecurityRuleWithAction(secRule, MappingUtils.ACTION_REF_ALLOW, rwTx);
+        return addNeutronSecurityRuleWithAction(secRule, MappingUtils.ALLOW_ACTION_CHOICE, rwTx);
     }
 
-    public boolean addNeutronSecurityRuleWithAction(NeutronSecurityRule secRule, List<ActionRef> actions,
+    public boolean addNeutronSecurityRuleWithAction(NeutronSecurityRule secRule, ActionChoice action,
             ReadWriteTransaction rwTx) {
         TenantId tenantId = SecRuleEntityDecoder.getTenantId(secRule);
         EndpointGroupId providerEpgId = SecRuleEntityDecoder.getProviderEpgId(secRule);
@@ -147,7 +140,7 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
 
         Description contractDescription = new Description(CONTRACT_PROVIDER
                 + secGroupDao.getNameOrIdOfSecGroup(providerEpgId));
-        SingleRuleContract singleRuleContract = createSingleRuleContract(secRule, contractDescription, actions);
+        SingleRuleContract singleRuleContract = createSingleRuleContract(secRule, contractDescription, action);
         Contract contract = singleRuleContract.getContract();
         rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.contractIid(tenantId, contract.getId()), contract, true);
         SelectorName providerSelector = getSelectorNameWithConsumer(secRule);
@@ -172,11 +165,11 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
 
     @VisibleForTesting
     static SingleRuleContract createSingleRuleContract(NeutronSecurityRule secRule, Description contractDescription,
-            List<ActionRef> actions) {
-        if (Strings.isNullOrEmpty(secRule.getSecurityRuleRemoteIpPrefix())) {
-            return new SingleRuleContract(secRule, 0, contractDescription, actions);
+            ActionChoice action) {
+        if (!Strings.isNullOrEmpty(secRule.getSecurityRuleRemoteIpPrefix())) {
+            return new SingleRuleContract(secRule, 0, contractDescription, action);
         }
-        return new SingleRuleContract(secRule, 1, contractDescription, actions);
+        return new SingleRuleContract(secRule, 400, contractDescription, action);
     }
 
     @VisibleForTesting
