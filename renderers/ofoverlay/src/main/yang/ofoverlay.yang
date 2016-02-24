@@ -62,6 +62,7 @@ module ofoverlay {
         }
 
         uses initial-values;
+        uses sflow-values;
     }
 
     grouping initial-values {
@@ -72,6 +73,25 @@ module ofoverlay {
                 "Used to offset pipeline to start at offset+1. Table0 is required.
                 This is to allow the enduser to configure where the GBP pipeline starts.";
             type uint8;
+        }
+    }
+
+    grouping sflow-values {
+        description
+            "Values for sFlow-RT collector setup";
+        container sflow-client-settings {
+            leaf gbp-ofoverlay-sflow-retrieve-interval {
+                description
+                    "Interval (seconds) for periodical flowcache data retrieve.";
+                type uint32;
+                default 20;
+            }
+            leaf gbp-ofoverlay-sflow-collector-uri {
+                description
+                    "URI of sFlow-RT collector, including schema, IP/domain, port. No trailing slash.";
+                mandatory true;
+                type string;
+            }
         }
     }
 

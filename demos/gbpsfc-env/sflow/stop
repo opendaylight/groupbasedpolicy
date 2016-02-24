@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 
 if [ $1 ]; then
-  vagrant ssh $1 -c "bash -E /vagrant/sflow/internal_stop"
+  vagrant ssh $1 -c "bash -E /vagrant/sflow/internal_stop.sh"
 else
-  . sflow/settings
+  . sflow/settings.sh
   for i in $SFLOW_LIST
   do
     echo; echo "gbpsfc$i"
-    vagrant ssh gbpsfc$i -c "bash -E /vagrant/sflow/internal_stop"
+    vagrant ssh gbpsfc$i -c "bash -E /vagrant/sflow/internal_stop.sh"
   done
 fi

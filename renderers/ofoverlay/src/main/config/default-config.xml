@@ -42,7 +42,15 @@
                         <name>policy-validator-registry</name>
                     </policy-validator-registry>
 
+                    <statistics-manager>
+                        <type xmlns:gbp="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">gbp:statistics-manager</type>
+                        <name>statistics-manager</name>
+                    </statistics-manager>
+
                     <gbp-ofoverlay-table-offset>0</gbp-ofoverlay-table-offset>
+
+                    <!--<gbp-ofoverlay-sflow-start>false</gbp-ofoverlay-sflow-start>-->
+                    <!--<gbp-ofoverlay-sflow-collector-uri>http://192.168.53.2:8008</gbp-ofoverlay-sflow-collector-uri>-->
                 </module>
             </modules>
         </data>

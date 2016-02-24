@@ -28,6 +28,7 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry;
 import org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistry;
+import org.opendaylight.groupbasedpolicy.api.StatisticsManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.OfOverlayAug;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.OfOverlayL3NatAug;
@@ -36,6 +37,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.Action;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ActionDefinitionListener;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ClassifierDefinitionListener;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.statistics.SflowClientSettingsListener;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig;
@@ -56,6 +58,7 @@ import com.google.common.util.concurrent.ListenableFuture;
  * using Open vSwitch.
  */
 public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
+
     private static final Logger LOG =
             LoggerFactory.getLogger(OFOverlayRenderer.class);
     public static final RendererName RENDERER_NAME = new RendererName("OFOverlay");
@@ -65,6 +68,7 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     private final EndpointManager endpointManager;
     private final PolicyManager policyManager;
     private final ClassifierDefinitionListener classifierDefinitionListener;
+    private final SflowClientSettingsListener sflowClientSettingsListener;
     private ActionDefinitionListener actionDefinitionListener;
     private final OfOverlayAug ofOverlayAug;
     private final OfOverlayL3NatAug ofOverlayL3NatAug;
@@ -77,11 +81,12 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     ListenerRegistration<DataChangeListener> configReg;
 
     public OFOverlayRenderer(final DataBroker dataProvider,
-                             RpcProviderRegistry rpcRegistry,
-                             NotificationService notificationService,
-                             EpRendererAugmentationRegistry epRendererAugmentationRegistry,
-                             PolicyValidatorRegistry policyValidatorRegistry,
-                             final short tableOffset) {
+            RpcProviderRegistry rpcRegistry,
+            NotificationService notificationService,
+            EpRendererAugmentationRegistry epRendererAugmentationRegistry,
+            PolicyValidatorRegistry policyValidatorRegistry,
+            StatisticsManager statisticsManager,
+            final short tableOffset) {
         super();
         this.dataBroker = dataProvider;
         int numCPU = Runtime.getRuntime().availableProcessors();
@@ -98,6 +103,8 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
         for (Entry<ActionDefinitionId, Action> entry : SubjectFeatures.getActions().entrySet()) {
             policyValidatorRegistry.register(entry.getKey(), entry.getValue());
         }
+
+        sflowClientSettingsListener = new SflowClientSettingsListener(dataProvider, executor, statisticsManager);
 
         policyManager = new PolicyManager(dataProvider,
                 switchManager,
@@ -116,6 +123,11 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
             configBuilder.setGbpOfoverlayTableOffset(tableOffset).build();
             writeTableOffset(configBuilder.build());
         }
+
+    }
+
+    public ScheduledExecutorService getExecutor() {
+        return executor;
     }
 
     // *************
@@ -133,6 +145,7 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
         if (ofOverlayAug != null) ofOverlayAug.close();
         if (ofOverlayL3NatAug != null) ofOverlayL3NatAug.close();
         if (policyManager != null) policyManager.close();
+        if (sflowClientSettingsListener != null) sflowClientSettingsListener.close();
     }
 
     // ******************

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export COLLECTOR_IP=192.168.53.2
+export COLLECTOR_IP=192.168.53.73
 export COLLECTOR_PORT=6343
 export AGENT_IP=eth2
 export HEADER_BYTES=128
