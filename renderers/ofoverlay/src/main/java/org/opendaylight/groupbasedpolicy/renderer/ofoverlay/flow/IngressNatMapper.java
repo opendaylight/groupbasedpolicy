@@ -29,8 +29,11 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 
 import java.math.BigInteger;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Set;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.opendaylight.groupbasedpolicy.dto.EgKey;
 import org.opendaylight.groupbasedpolicy.dto.EpKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
@@ -46,6 +49,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.ta
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.Instruction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddress;
@@ -54,6 +58,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.EtherType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.ethernet.match.fields.EthernetTypeBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.EthernetMatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer3Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.ArpMatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv4MatchBuilder;
@@ -65,6 +72,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev14
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg6;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Sets;
 
 /**
  * Manage the table that assigns source endpoint group, bridge domain, and
@@ -90,23 +100,23 @@ public class IngressNatMapper extends FlowTable {
     @Override
     public void sync(NodeId nodeId, OfWriter ofWriter) throws Exception {
 
-        // TODO for consideration: default instruction is goto next table because when matching against eth type 0x8100
-        // in PortSecurity, it's not possible to match against IPv4 addresses (only inf eth type would be 0x800)
-        // We can't determine just from L2 layer if traffic should be passed from PortSecurity here to IngressNat or to
-        // SourceMapper. Various 802.1q encapsulated IPs can pass through external ports - NATed or not NATed, remote
-        // or directly connected.
-        // All external ingress traffic is currently passed here and if no match is foud - no NAT is performed
-        // and processing continues in SourceMapper.
+        /**
+         * To support provider networks, all external ingress traffic is currently passed here and
+         * if no match is foud - no NAT is performed and processing continues in DestinationMapper.
+         */
         Flow flow = base()
                 .setTableId(TABLE_ID)
                 .setPriority(1)
-                .setInstructions(FlowUtils.instructions(FlowUtils.gotoTableIns(ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER())))
-                .setId(FlowIdUtils.newFlowId("gotoSourceMapper"))
+            .setInstructions(
+                    FlowUtils.instructions(FlowUtils.gotoTableIns(
+                        ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER())))
+                .setId(FlowIdUtils.newFlowId("gotoDestinationMapper"))
                 .build();
         ofWriter.writeFlow(nodeId, TABLE_ID, flow);
 
         // TODO Bug 3546 - Difficult: External port is unrelated to Tenant, L3C, L2BD..
 
+        // Flows for ingress NAT translation
         Collection<Endpoint> endpointsForNode = ctx.getEndpointManager().getEndpointsForNode(nodeId);
         Collection<EndpointL3> l3Endpoints = ctx.getEndpointManager().getL3EndpointsWithNat();
         for (EndpointL3 l3Ep : l3Endpoints) {
@@ -114,6 +124,18 @@ public class IngressNatMapper extends FlowTable {
                 Endpoint ep = ctx.getEndpointManager().getEndpoint(new EpKey(l3Ep.getL2Context(), l3Ep.getMacAddress()));
                 if (endpointsForNode.contains(ep)) {
                     createNatFlow(l3Ep, nodeId, ofWriter);
+                }
+            }
+        }
+        //Flows for ingress traffic that does not have to be translated.
+        // TODO similar loop in DestinationMapper
+        for (Endpoint ep : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
+            for (EgKey egKey : ctx.getEndpointManager().getEgKeysForEndpoint(ep)) {
+                Set<EgKey> groups = ctx.getCurrentPolicy().getPeers(egKey);
+                for (EgKey peer : Sets.union(Collections.singleton(egKey), ctx.getCurrentPolicy().getPeers(egKey))) {
+                    for (Endpoint extEp : ctx.getEndpointManager().getExtEpsNoLocForGroup(peer)) {
+                        createIngressExternalFlows(extEp, nodeId, ofWriter);
+                    }
                 }
             }
         }
@@ -141,14 +163,29 @@ public class IngressNatMapper extends FlowTable {
         }
     }
 
+    private void createIngressExternalFlows(Endpoint ep, NodeId nodeId, OfWriter ofWriter) throws Exception {
+        EndpointFwdCtxOrdinals epFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, ep);
+        if (epFwdCtxOrds == null) {
+            LOG.info("getEndpointFwdCtxOrdinals is null for EP {}", ep);
+            return;
+        }
+        if (ep.getL3Address() != null) {
+            for (L3Address l3Addr : ep.getL3Address()) {
+                Flow ipFlow = buildIngressExternalIpFlow(l3Addr.getIpAddress(), epFwdCtxOrds);
+                if (ipFlow != null) {
+                    ofWriter.writeFlow(nodeId, TABLE_ID, ipFlow);
+                }
+            }
+        }
+        Flow arpFlow = buildIngressExternalArpFlow(ep.getMacAddress(), epFwdCtxOrds);
+        if (arpFlow != null) {
+            ofWriter.writeFlow(nodeId, TABLE_ID, arpFlow);
+        }
+    }
+
     private Flow buildNatFlow(IpAddress outsideDestAddress, IpAddress insideDestAddress, MacAddress toMac,
             EndpointFwdCtxOrdinals epFwdCtxOrds) {
-        // TODO Auto-generated method stub
-        MatchBuilder mb = new MatchBuilder();
         Action setDestIp;
-        String outsideIpMatch;
-        Layer3Match m;
-
         Action setDestMac = setDlDstAction(toMac);
         FlowId flowid = new FlowId(new StringBuilder().append("IngressNat")
             .append("|")
@@ -160,38 +197,19 @@ public class IngressNatMapper extends FlowTable {
             .toString());
         if (insideDestAddress.getIpv4Address() != null) {
             setDestIp = setIpv4DstAction(insideDestAddress.getIpv4Address());
-
-            outsideIpMatch = outsideDestAddress.getIpv4Address().getValue() + "/32";
-            m = new Ipv4MatchBuilder().setIpv4Destination(new Ipv4Prefix(outsideIpMatch)).build();
-            mb.setEthernetMatch(ethernetMatch(null, null, FlowUtils.IPv4)).setLayer3Match(m);
         } else if (insideDestAddress.getIpv6Address() != null) {
             setDestIp = setIpv6DstAction(insideDestAddress.getIpv6Address());
-            outsideIpMatch = outsideDestAddress.getIpv6Address().getValue() + "/128";
-            m = new Ipv6MatchBuilder().setIpv6Destination(new Ipv6Prefix(outsideIpMatch)).build();
-            mb.setEthernetMatch(ethernetMatch(null, null, FlowUtils.IPv6)).setLayer3Match(m);
         } else {
             return null;
         }
-
-        int egId = epFwdCtxOrds.getEpgId();
-        int bdId = epFwdCtxOrds.getBdId();
-        int fdId = epFwdCtxOrds.getFdId();
-        int l3Id = epFwdCtxOrds.getL3Id();
-        int cgId = epFwdCtxOrds.getCgId();
-        int tunnelId = epFwdCtxOrds.getTunnelId();
-        Action segReg = nxLoadRegAction(NxmNxReg0.class, BigInteger.valueOf(egId));
-        Action scgReg = nxLoadRegAction(NxmNxReg1.class, BigInteger.valueOf(cgId));
-        Action bdReg = nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(bdId));
-        Action fdReg = nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(fdId));
-        Action vrfReg = nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(l3Id));
-        Action tunIdAction = nxLoadTunIdAction(BigInteger.valueOf(tunnelId), false);
-
+        MatchBuilder mb = createMatchOnDstIpAddress(outsideDestAddress);
+        Action[] dstIpMacAction = {setDestIp, setDestMac};
         FlowBuilder flowb = base().setPriority(Integer.valueOf(100))
             .setId(flowid)
             .setMatch(mb.build())
             .setInstructions(
                     instructions(
-                            applyActionIns(setDestIp, setDestMac, segReg, scgReg, bdReg, fdReg, vrfReg, tunIdAction),
+                            applyActionIns(ArrayUtils.addAll(dstIpMacAction, createEpFwdCtxActions(epFwdCtxOrds))),
                             gotoTableIns(ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER())));
         return flowb.build();
     }
@@ -233,6 +251,100 @@ public class IngressNatMapper extends FlowTable {
         flowb.setId(FlowIdUtils.newFlowId(TABLE_ID, "outside-ip-arp", mb.build()));
         flowb.setMatch(mb.build());
         return flowb.build();
+    }
+
+    /**
+     * Builds flow for inbound IP traffic of registered external endpoint.
+     * Priority should be lower than in NAT flow.
+     */
+    private Flow buildIngressExternalIpFlow(IpAddress srcIpAddress, EndpointFwdCtxOrdinals epFwdCtxOrds) {
+        MatchBuilder mb = createMatchOnSrcIpAddress(srcIpAddress);
+        if (mb == null) {
+            return null;
+        }
+        FlowBuilder flowb = base().setPriority(Integer.valueOf(90))
+            .setId(FlowIdUtils.newFlowId(TABLE_ID, "inbound-external-ip", mb.build()))
+            .setMatch(mb.build())
+            .setInstructions(
+                    instructions(applyActionIns(createEpFwdCtxActions(epFwdCtxOrds)),
+                            gotoTableIns(ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER())));
+        return flowb.build();
+    }
+
+    /**
+     * @param srcIpAddress can be IPv4 or IPv6
+     * @return {@link MatchBuilder} with specified L2 ethertype and L3 source address.
+     *  Returns null if srcIpAddress is null.
+     */
+    private MatchBuilder createMatchOnSrcIpAddress(IpAddress srcIpAddress) {
+        return createMatchOnIpAddress(srcIpAddress, true);
+    }
+
+    private MatchBuilder createMatchOnDstIpAddress(IpAddress srcIpAddress) {
+        return createMatchOnIpAddress(srcIpAddress, false);
+    }
+
+    // use createMatchOnSrcIpAddress or createMatchOnDstIpAddress
+    private MatchBuilder createMatchOnIpAddress(IpAddress srcIpAddress, boolean isSourceAddress) {
+        MatchBuilder mb = new MatchBuilder();
+        String ipPrefix;
+        Layer3Match m;
+        if (srcIpAddress.getIpv4Address() != null) {
+            ipPrefix = srcIpAddress.getIpv4Address().getValue() + "/32";
+            m = (isSourceAddress) ? new Ipv4MatchBuilder().setIpv4Source(new Ipv4Prefix(ipPrefix)).build() :
+                new Ipv4MatchBuilder().setIpv4Destination(new Ipv4Prefix(ipPrefix)).build();
+            mb.setEthernetMatch(ethernetMatch(null, null, FlowUtils.IPv4))
+              .setLayer3Match(m);
+            return mb;
+        } else if (srcIpAddress.getIpv6Address() != null) {
+            ipPrefix = srcIpAddress.getIpv6Address().getValue() + "/128";
+            m = (isSourceAddress) ? new Ipv6MatchBuilder().setIpv6Source(new Ipv6Prefix(ipPrefix)).build() :
+                new Ipv6MatchBuilder().setIpv6Destination(new Ipv6Prefix(ipPrefix)).build();
+            mb.setEthernetMatch(ethernetMatch(null, null, FlowUtils.IPv6))
+              .setLayer3Match(m);
+            return mb;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Builds flow for inbound ARP traffic of registered external endpoint.
+     * Priority should be lower than in ARP flow for NAT address.
+     */
+    private Flow buildIngressExternalArpFlow(MacAddress srcMac, EndpointFwdCtxOrdinals epFwdCtxOrds) {
+        if (srcMac == null) {
+            return null;
+        }
+        MatchBuilder mb = new MatchBuilder()
+            .setEthernetMatch(ethernetMatch(srcMac, null, ARP));
+            //.setLayer3Match(
+            //        new ArpMatchBuilder()
+           //             .setArpOp(Integer.valueOf(2))
+           //             .build());
+        FlowBuilder flowb = base().setPriority(80);
+        flowb.setInstructions(instructions(applyActionIns(createEpFwdCtxActions(epFwdCtxOrds)),
+                gotoTableIns(ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER())));
+        flowb.setId(FlowIdUtils.newFlowId(TABLE_ID, "inbound-external-arp", mb.build()));
+        flowb.setMatch(mb.build());
+        return flowb.build();
+    }
+
+    private Action[] createEpFwdCtxActions(EndpointFwdCtxOrdinals epFwdCtxOrds) {
+        int egId = epFwdCtxOrds.getEpgId();
+        int bdId = epFwdCtxOrds.getBdId();
+        int fdId = epFwdCtxOrds.getFdId();
+        int l3Id = epFwdCtxOrds.getL3Id();
+        int cgId = epFwdCtxOrds.getCgId();
+        int tunnelId = epFwdCtxOrds.getTunnelId();
+        Action segReg = nxLoadRegAction(NxmNxReg0.class, BigInteger.valueOf(egId));
+        Action scgReg = nxLoadRegAction(NxmNxReg1.class, BigInteger.valueOf(cgId));
+        Action bdReg = nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(bdId));
+        Action fdReg = nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(fdId));
+        Action vrfReg = nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(l3Id));
+        Action tunIdAction = nxLoadTunIdAction(BigInteger.valueOf(tunnelId), false);
+        Action[] outsideArpActions = {segReg, scgReg, bdReg, fdReg, vrfReg, tunIdAction};
+        return outsideArpActions;
     }
 
     static byte[] bytesFromHexString(String values) {
