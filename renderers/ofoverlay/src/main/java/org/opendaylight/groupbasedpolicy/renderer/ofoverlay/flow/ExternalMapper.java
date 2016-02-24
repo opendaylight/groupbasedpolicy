@@ -93,12 +93,17 @@ public class ExternalMapper extends FlowTable {
                 IpAddress natIpAddress = Preconditions.checkNotNull(natL3Ep.getAugmentation(NatAddress.class),
                         "NAT address augmentation is missing for NAT endpoint: [{}].", natL3Ep.getKey())
                     .getNatAddress();
-                L2FloodDomain natEpl2Fd = resolveL2FloodDomainForIpv4Address(ctx.getTenant(natL3Ep.getTenant()),
+                Subnet natIpSubnet = resolveSubnetForIpv4Address(ctx.getTenant(natL3Ep.getTenant()),
                         Preconditions.checkNotNull(natIpAddress.getIpv4Address(),
                                 "Endpoint {} does not have IPv4 address in NatAddress augmentation.", natL3Ep.getKey()));
-                if (natEpl2Fd != null && natEpl2Fd.getAugmentation(Segmentation.class) != null) {
-                    Integer vlanId = natEpl2Fd.getAugmentation(Segmentation.class).getSegmentationId();
-                    ofWriter.writeFlow(nodeId, TABLE_ID, buildPushVlanFlow(natIpAddress.getIpv4Address(), vlanId, 222));
+                if (natIpSubnet != null && natIpSubnet.getParent() != null) {
+                    L2FloodDomain natEpl2Fd = ctx.getTenant(natL3Ep.getTenant()).resolveL2FloodDomain(
+                            natIpSubnet.getParent());
+                    if (natEpl2Fd.getAugmentation(Segmentation.class) != null) {
+                        Integer vlanId = natEpl2Fd.getAugmentation(Segmentation.class).getSegmentationId();
+                        ofWriter.writeFlow(nodeId, TABLE_ID,
+                                buildPushVlanFlow(natIpAddress.getIpv4Address(), vlanId, 222));
+                    }
                 }
             }
         }
@@ -130,31 +135,6 @@ public class ExternalMapper extends FlowTable {
         ofWriter.writeFlow(nodeId, TABLE_ID, defaultFlow());
     }
 
-    static L2FloodDomain resolveL2FloodDomainForIpv4Address(IndexedTenant t, Ipv4Address ipv4Addr) {
-        Preconditions.checkNotNull(ipv4Addr);
-        if (t == null || t.getTenant() == null || t.getTenant().getForwardingContext() == null) {
-            return null;
-        }
-        List<Subnet> subnets = t.getTenant().getForwardingContext().getSubnet();
-        if (subnets != null) {
-            for (Subnet subnet : subnets) {
-                if (belongsToSubnet(ipv4Addr, subnet.getIpPrefix().getIpv4Prefix())) {
-                    return t.resolveL2FloodDomain(subnet.getParent());
-                }
-            }
-        }
-        LOG.warn(
-                "No subnet for IPv4 address {} found in tenant {}!",
-                ipv4Addr.getValue(), t.getTenant().getId());
-        return null;
-    }
-
-    static boolean belongsToSubnet(Ipv4Address ipv4Address, Ipv4Prefix subnetPrefix) {
-        SubnetUtils su = new SubnetUtils(subnetPrefix.getValue());
-        SubnetInfo si = su.getInfo();
-        return si.isInRange(ipv4Address.getValue());
-    }
-
     /**
      * Generates a {@link Flow} for tagging VLAN traffic based on given arguments.
      *
@@ -181,6 +161,28 @@ public class ExternalMapper extends FlowTable {
             .setMatch(match)
             .setInstructions(FlowUtils.instructions(applyActionIns(pushVlanActions)))
             .build();
+    }
+
+    public static Subnet resolveSubnetForIpv4Address(IndexedTenant t, Ipv4Address ipv4Addr) {
+        Preconditions.checkNotNull(ipv4Addr);
+        if (t == null || t.getTenant() == null || t.getTenant().getForwardingContext() == null) {
+            return null;
+        }
+        List<Subnet> subnets = t.getTenant().getForwardingContext().getSubnet();
+        if (subnets != null) {
+            for (Subnet subnet : subnets) {
+                if (belongsToSubnet(ipv4Addr, subnet.getIpPrefix().getIpv4Prefix())) {
+                    return subnet;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static boolean belongsToSubnet(Ipv4Address ipv4Address, Ipv4Prefix subnetPrefix) {
+        SubnetUtils su = new SubnetUtils(subnetPrefix.getValue());
+        SubnetInfo si = su.getInfo();
+        return si.isInRange(ipv4Address.getValue());
     }
 
     /**
