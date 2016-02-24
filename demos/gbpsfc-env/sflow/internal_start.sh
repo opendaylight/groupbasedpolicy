@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 
-. /vagrant/sflow/internal_settings
+. /vagrant/sflow/internal_settings.sh
 hostnum=${HOSTNAME#"gbpsfc"}
 sw="sw$hostnum"
 
 if [ -f ~/sflow_uuid ]; then
   echo "sflow_uuid already present; cleaning..."
-  sudo ovs-vsctl remove bridge $sw sflow `cat ~/sflow_uuid` 
+  sudo ovs-vsctl remove bridge $sw sflow `cat ~/sflow_uuid`
   rm ~/sflow_uuid
 fi
 

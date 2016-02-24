@@ -33,7 +33,7 @@ module ofoverlay-provider-impl {
         config:java-name-prefix OFOverlayProvider;
     }
 
-    // Augments the 'configuration' choice node under modules/module.  
+    // Augments the 'configuration' choice node under modules/module.
     augment "/config:modules/config:module/config:configuration" {
         case ofoverlay-provider-impl {
             when "/config:modules/config:module/config:type = 'ofoverlay-provider-impl'";
@@ -83,8 +83,18 @@ module ofoverlay-provider-impl {
                     }
                 }
             }
+            // StatisticsManager service
+            container statistics-manager {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity gbpcfg:statistics-manager;
+                    }
+                }
+            }
 
             uses ofoverlay:initial-values;
+            //uses ofoverlay:sflow-values;
         }
     }
 }

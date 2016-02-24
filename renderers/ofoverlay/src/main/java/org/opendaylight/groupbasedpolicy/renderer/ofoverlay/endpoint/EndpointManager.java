@@ -37,6 +37,7 @@ import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.EndpointListener;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.arp.ArpTasker;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.statistics.OFStatisticsManager;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.groupbasedpolicy.util.SetUtils;
@@ -281,6 +282,7 @@ public class EndpointManager implements AutoCloseable {
         // create L3 endpoint
         if (oldL3Ep == null && newL3Ep != null) {
             createL3Endpoint(newL3Ep);
+            OFStatisticsManager.addL3Endpoint(newL3Ep);
         }
 
         // update L3 endpoint
@@ -290,6 +292,7 @@ public class EndpointManager implements AutoCloseable {
 
         // remove L3 endpoint
         if (oldL3Ep != null && newL3Ep == null) {
+            OFStatisticsManager.removeL3Endpoint(oldL3Ep);
             removeL3Endpoint(oldL3Ep);
         }
     }
@@ -531,7 +534,7 @@ public class EndpointManager implements AutoCloseable {
 
     /**
      * An endpoint is external if its endpoint-group is external implicit group.
-     * 
+     *
      * @param ep an endpoint
      * @param eigs external implicit groups
      * @return {@code true} if the given endpoint has EPG representing external implicit group;
@@ -545,7 +548,7 @@ public class EndpointManager implements AutoCloseable {
 
     /**
      * An endpoint is internal if none of its endpoint-groups is external implicit group.
-     * 
+     *
      * @param ep an endpoint
      * @param eigs external implicit groups
      * @return {@code true} if the given endpoint does not have EPG representing external implicit
@@ -606,7 +609,8 @@ public class EndpointManager implements AutoCloseable {
         }
         ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
         Optional<Endpoints> endpoints =
-                DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL, IidFactory.endpointsIidWildcard(), rTx);
+                DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
+                        IidFactory.endpointsIidWildcard(), rTx);
         if (!endpoints.isPresent()) {
             LOG.warn("No Endpoints present in data store.");
             return null;

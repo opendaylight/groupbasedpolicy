@@ -38,11 +38,13 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.Tenants;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Policy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.SubjectFeatureInstances;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstanceBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.ResolvedPolicies;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.ResolvedPoliciesBuilder;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -316,6 +318,21 @@ public class PolicyResolver implements PolicyValidatorRegistry, AutoCloseable {
             synchronized (subscribersPerTenant) {
                 if (subscribersPerTenant.contains(tenantAfter.getId())) {
                     updateTenant(tenantAfter.getId(), tenantAfter);
+                    tenantAfter.getPolicy().getContract().get(0).getId();
+                    tenantAfter.getPolicy().getContract().get(0).getSubject().get(0).getName();
+                    tenantAfter.getPolicy().getContract().get(0).getSubject().get(0).getRule().get(0).getName();
+                    List<ClassifierRef> cref = tenantAfter.getPolicy()
+                            .getContract()
+                            .get(0)
+                            .getSubject()
+                            .get(0)
+                            .getRule()
+                            .get(0)
+                            .getClassifierRef();
+                    cref.get(0).getInstanceName();
+                    tenantAfter.getPolicy().getSubjectFeatureInstances().getClassifierInstance().get(0).getName();
+                    tenantAfter.getPolicy().getSubjectFeatureInstances().getClassifierInstance().get(0).getParameterValue()
+                            .get(0);
                 }
             }
         }

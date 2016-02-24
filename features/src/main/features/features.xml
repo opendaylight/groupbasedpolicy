@@ -56,6 +56,9 @@
         <feature version='${sfc.version}'>odl-sfc-ui</feature>
         <bundle>mvn:commons-net/commons-net/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/ofoverlay-renderer/{{VERSION}}</bundle>
+        <bundle>mvn:com.sun.jersey/jersey-core/{{VERSION}}</bundle>
+        <bundle>mvn:com.sun.jersey/jersey-client/{{VERSION}}</bundle>
+        <bundle>mvn:com.google.code.gson/gson/{{VERSION}}</bundle>
         <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-ofoverlay.xml">mvn:org.opendaylight.groupbasedpolicy/ofoverlay-renderer/{{VERSION}}/xml/config</configfile>
     </feature>
 

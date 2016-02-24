@@ -147,4 +147,15 @@ if __name__ == "__main__" :
            print "*****************************"
            doCmd('sudo /vagrant/sf-config.sh')
            #addGpeTunnel(switches[sw_index]['name'])
+       elif sw_type == 'sflow':
+           print "*****************************"
+           print "Configuring %s as an sFlow-RT collector." % sw_name
+           print "*****************************"
+           doCmd('sudo /vagrant/install_java.sh')
+           doCmd('sudo /vagrant/sflow/install_sflow-rt.sh')
+           call('sudo /home/vagrant/sflow-rt/gbp_start.sh &'.split())
+           doCmd('sudo /vagrant/sflow/set_collector_ip.sh')
+           doCmd('sudo /vagrant/sflow/curl_put_collector.sh')
+           print "Configuring finished."
+
 
