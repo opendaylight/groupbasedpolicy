@@ -613,7 +613,7 @@ public class EndpointManagerTest {
 
         when(endpoint1.getTenant()).thenReturn(tenantId);
         when(endpoint1.getEndpointGroup()).thenReturn(null);
-        Assert.assertNotNull(manager.getEgKey(endpoint1));
+        Assert.assertNull(manager.getEgKey(endpoint1));
 
         when(endpoint1.getEndpointGroup()).thenReturn(endpointGroupId);
         when(endpoint1.getEndpointGroups()).thenReturn(null);
