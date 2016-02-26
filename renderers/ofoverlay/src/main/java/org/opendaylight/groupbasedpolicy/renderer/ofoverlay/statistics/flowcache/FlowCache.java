@@ -8,6 +8,7 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.statistics.flowcache;
 
 import java.util.Arrays;
+import java.util.regex.Pattern;
 
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 
@@ -15,7 +16,7 @@ import com.google.common.base.Preconditions;
 import com.google.gson.Gson;
 
 public class FlowCache {
-
+    private static final Pattern REPLACE_PATTERN = Pattern.compile("^\\w+:(\\w+):.*");
     static final String API_FLOW = "/flow/";
     static final String SUFFIX_JSON = "/json";
 
@@ -76,8 +77,8 @@ public class FlowCache {
     }
 
     private String parseNullableKeyName(String nullableKeyName) {
-        String res = nullableKeyName.replaceAll("^\\w+:(\\w+):.*", "$1");
-        return "".equals(res) ? nullableKeyName : res;
+        String res = REPLACE_PATTERN.matcher(nullableKeyName).replaceAll("$1");
+        return res.isEmpty() ? nullableKeyName : res;
     }
 
     @Override
