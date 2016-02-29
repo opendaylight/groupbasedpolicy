@@ -143,6 +143,12 @@ public class OvsdbNodeListener extends DataTreeChangeHandler<Node> {
             }
             for (DataObjectModification<OvsdbTerminationPointAugmentation> ovsdbTpModification : ovsdbTpModifications) {
                 OvsdbTerminationPointAugmentation newOvsdbTp = ovsdbTpModification.getDataAfter();
+
+                if (newOvsdbTp == null) {
+                    LOG.trace("Termination Point is null. Not processing");
+                    continue;
+                }
+
                 if (ovsdbBridge.getBridgeName().getValue().equals(newOvsdbTp.getName())) {
                     LOG.trace("Termination Point {} same as Bridge {}. Not processing", newOvsdbTp.getName(),
                             ovsdbBridge.getBridgeName().getValue());
