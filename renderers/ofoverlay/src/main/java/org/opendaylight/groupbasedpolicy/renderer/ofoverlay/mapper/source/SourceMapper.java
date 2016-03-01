@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
+package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.source;
 
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.addNxTunIdMatch;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.applyActionIns;
@@ -26,6 +26,9 @@ import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowIdUtils;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
@@ -107,7 +110,10 @@ public class SourceMapper extends FlowTable {
     }
 
     @Override
-    public void sync(NodeId nodeId, OfWriter ofWriter) throws Exception {
+    public void sync(Endpoint endpoint, OfWriter ofWriter) throws Exception {
+
+        // TODO: only temporary workaround, use src & dst endpoint in implementation
+        NodeId nodeId = ctx.getEndpointManager().getEndpointNodeId(endpoint);
 
         ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
 
