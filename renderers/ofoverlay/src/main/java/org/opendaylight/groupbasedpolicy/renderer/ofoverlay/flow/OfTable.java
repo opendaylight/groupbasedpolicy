@@ -10,6 +10,7 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,11 +33,11 @@ public abstract class OfTable {
 
     /**
      * Update the relevant flow table for the node
-     * 
-     * @param nodeId the node to update
+     *
+     * @param endpoint flows will be created for
      * @param ofWriter the {@link OfWriter}
      * @throws Exception throws all exception
      */
-    public abstract void sync(NodeId nodeId, OfWriter ofWriter)
+    public abstract void sync(Endpoint endpoint, OfWriter ofWriter)
             throws Exception;
 }

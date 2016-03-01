@@ -8,24 +8,13 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletionService;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
+import com.google.common.base.Function;
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.AsyncFunction;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
@@ -35,20 +24,19 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.dto.EgKey;
 import org.opendaylight.groupbasedpolicy.dto.EpKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.DestinationMapper;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.EgressNatMapper;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.ExternalMapper;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.GroupTable;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.IngressNatMapper;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OfTable;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PolicyEnforcer;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.PortSecurity;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.SourceMapper;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.destination.DestinationMapper;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.egressnat.EgressNatMapper;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.external.ExternalMapper;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.ingressnat.IngressNatMapper;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.policyenforcer.PolicyEnforcer;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.portsecurity.PortSecurity;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.source.SourceMapper;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchListener;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcIidFactory;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.statistics.OFStatisticsManager;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.groupbasedpolicy.util.SingletonTask;
@@ -56,30 +44,34 @@ import org.opendaylight.yang.gen.v1.urn.ericsson.params.xml.ns.yang.sfc.of.rende
 import org.opendaylight.yang.gen.v1.urn.ericsson.params.xml.ns.yang.sfc.of.renderer.rev151123.SfcOfRendererConfigBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.TableBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig.LearningMode;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.interests.followed.tenants.followed.tenant.FollowedEndpointGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.interests.followed.tenants.followed.tenant.FollowedEndpointGroupBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.ResolvedPolicies;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.classifiers.Classifier;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.resolved.rules.ResolvedRule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.ResolvedPolicy;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.PolicyRuleGroupWithEndpointConstraints;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.policy.rule.group.with.endpoint.constraints.PolicyRuleGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.table.types.rev131026.TableId;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
-import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-import org.opendaylight.yangtools.yang.binding.InstanceIdentifier.Item;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Function;
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.AsyncFunction;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Manage policies on switches by subscribing to updates from the
@@ -395,15 +387,18 @@ public class PolicyManager
             if (ofCtx.getCurrentPolicy() == null)
                 return null;
             List<? extends OfTable> flowPipeline = createFlowPipeline(ofCtx);
-            for (NodeId node : switchManager.getReadySwitches()) {
-                for (OfTable table : flowPipeline) {
-                    try {
-                        table.sync(node, ofWriter);
-                    } catch (Exception e) {
-                        LOG.error("Failed to write Openflow table {}", table.getClass().getSimpleName(), e);
+            for (OfTable table : flowPipeline) {
+                try {
+                    for (Endpoint endpoint : endpointManager.getEndpoints()) {
+                        if (switchManager.getReadySwitches().contains(endpointManager.getEndpointNodeId(endpoint))) {
+                            table.sync(endpoint, ofWriter);
+                        }
                     }
+                } catch (Exception e) {
+                    LOG.error("Failed to write Openflow table {}", table.getClass().getSimpleName(), e);
                 }
             }
+
             return null;
         }
     }
