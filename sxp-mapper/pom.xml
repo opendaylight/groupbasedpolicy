@@ -26,6 +26,13 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>org.opendaylight.groupbasedpolicy</groupId>
+                <artifactId>groupbasedpolicy-artifacts</artifactId>
+                <version>${project.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+            <dependency>
                 <groupId>org.opendaylight.sxp</groupId>
                 <artifactId>sxp-api</artifactId>
                 <version>${sxp.version}</version>
@@ -42,6 +49,10 @@
         <dependency>
             <groupId>org.opendaylight.mdsal.model</groupId>
             <artifactId>yang-ext</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.opendaylight.groupbasedpolicy</groupId>
+            <artifactId>groupbasedpolicy</artifactId>
         </dependency>
 
         <!-- sxp deps -->

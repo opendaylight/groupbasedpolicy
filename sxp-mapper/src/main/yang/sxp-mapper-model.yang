@@ -12,6 +12,8 @@ module sxp-mapper-model {
     prefix "sxpm-model";
 
     import sxp-database { prefix sxp-database; revision-date 2014-10-02; }
+    import gbp-common { prefix gbp-common; revision-date 2014-04-21; }
+    import ietf-inet-types { prefix inet; revision-date 2010-09-24; }
 
     description
         "This module contains the YANG definitions for
