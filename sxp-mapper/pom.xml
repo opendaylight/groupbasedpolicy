@@ -9,18 +9,18 @@
     <parent>
         <groupId>org.opendaylight.controller</groupId>
         <artifactId>config-parent</artifactId>
-        <version>0.4.2-SNAPSHOT</version>
+        <version>0.5.0-SNAPSHOT</version>
         <relativePath/>
     </parent>
 
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>sxp-mapper</artifactId>
-    <version>0.3.2-SNAPSHOT</version>
+    <version>0.4.0-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>groupbasedpolicy-sxp-mapper</name>
 
     <properties>
-        <sxp.version>1.2.2-SNAPSHOT</sxp.version>
+        <sxp.version>1.3.0-SNAPSHOT</sxp.version>
     </properties>
 
     <dependencyManagement>
