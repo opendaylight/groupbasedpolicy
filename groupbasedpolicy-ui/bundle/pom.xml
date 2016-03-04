@@ -4,7 +4,7 @@
  <parent>
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>commons.groupbasedpolicy</artifactId>
-    <version>0.2.4-SNAPSHOT</version>
+    <version>0.2.4-Lithium-SR4</version>
     <relativePath>../../commons/parent</relativePath>
   </parent>
   <groupId>org.opendaylight.groupbasedpolicy</groupId>
