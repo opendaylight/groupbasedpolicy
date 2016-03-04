@@ -10,13 +10,13 @@
   <parent>
     <groupId>org.opendaylight.controller</groupId>
     <artifactId>karaf-parent</artifactId>
-    <version>1.5.4-Lithium-SR4</version>
+    <version>1.5.5-SNAPSHOT</version>
     <relativePath />
   </parent>
 
   <artifactId>distribution-karaf</artifactId>
   <groupId>org.opendaylight.groupbasedpolicy</groupId>
-  <version>0.2.4-Lithium-SR4</version>
+  <version>0.2.5-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <prerequisites>
@@ -24,8 +24,8 @@
   </prerequisites>
 
   <properties>
-    <groupbasedpolicy.project.version>0.2.4-Lithium-SR4</groupbasedpolicy.project.version>
-    <sfc.version>0.1.4-Lithium-SR4</sfc.version>
+    <groupbasedpolicy.project.version>0.2.5-SNAPSHOT</groupbasedpolicy.project.version>
+    <sfc.version>0.1.5-SNAPSHOT</sfc.version>
   </properties>
 
   <dependencies>

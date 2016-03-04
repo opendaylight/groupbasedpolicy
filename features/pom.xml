@@ -10,7 +10,7 @@
   <parent>
     <artifactId>commons.groupbasedpolicy</artifactId>
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
-    <version>0.2.4-Lithium-SR4</version>
+    <version>0.2.5-SNAPSHOT</version>
     <relativePath>../commons/parent</relativePath>
   </parent>
 
@@ -18,7 +18,7 @@
   <packaging>jar</packaging>
 
   <properties>
-    <karaf.empty.version>1.5.4-Lithium-SR4</karaf.empty.version>
+    <karaf.empty.version>1.5.5-SNAPSHOT</karaf.empty.version>
     <features.file>features.xml</features.file>
     <config.configfile.directory>etc/opendaylight/karaf</config.configfile.directory>
     <config.groupbasedpolicy.ofoverlayconfigfile>15-groupbasedpolicy-ofoverlay.xml</config.groupbasedpolicy.ofoverlayconfigfile>
@@ -38,7 +38,7 @@
     <dependency>
       <groupId>org.opendaylight.controller</groupId>
       <artifactId>features-nsf</artifactId>
-      <version>0.5.4-Lithium-SR4</version>
+      <version>0.5.5-SNAPSHOT</version>
       <classifier>features</classifier>
       <type>xml</type>
     </dependency>
@@ -51,7 +51,7 @@
     <dependency>
       <groupId>org.opendaylight.controller</groupId>
       <artifactId>features-base</artifactId>
-      <version>1.5.4-Lithium-SR4</version>
+      <version>1.5.5-SNAPSHOT</version>
       <classifier>features</classifier>
       <type>xml</type>
     </dependency>
@@ -200,7 +200,7 @@
     <dependency>
       <groupId>org.opendaylight.odlparent</groupId>
       <artifactId>features-test</artifactId>
-      <version>1.5.4-Lithium-SR4</version>
+      <version>1.5.5-SNAPSHOT</version>
       <scope>test</scope>
     </dependency>
 
