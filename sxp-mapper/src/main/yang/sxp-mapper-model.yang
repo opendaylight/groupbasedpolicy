@@ -68,6 +68,12 @@ module sxp-mapper-model {
                description
                     "The context for the endpoint's layer 3 address";
             }
+            leaf network-containment {
+                description
+                    "The network domain associated with this endpoint's fowarding
+                    context.";
+                type gbp-common:network-domain-id;
+            }
         }
     }
 }

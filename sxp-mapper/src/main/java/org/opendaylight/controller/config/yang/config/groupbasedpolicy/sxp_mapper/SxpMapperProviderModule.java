@@ -7,6 +7,10 @@
  */
 
 package org.opendaylight.controller.config.yang.config.groupbasedpolicy.sxp_mapper;
+
+
+import org.opendaylight.groupbasedpolicy.sxp.mapper.SxpMapperProviderImpl;
+
 /**
 * sxp-mapper impl module
 */
@@ -26,8 +30,6 @@ public class SxpMapperProviderModule extends org.opendaylight.controller.config.
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        // TODO:implement
-        throw new java.lang.UnsupportedOperationException();
+        return new SxpMapperProviderImpl(getDataBrokerDependency(), getRpcRegistryDependency());
     }
-
 }
