@@ -18,6 +18,7 @@ public final class NeutronUtils {
     public static final String UDP = "udp";
     public static final String TCP = "tcp";
     public static final String ICMP = "icmp";
+    public static final String ICMPv6 = "icmpv6";
 
     private NeutronUtils() {
         throw new UnsupportedOperationException("Cannot create an instance.");

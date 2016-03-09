@@ -44,6 +44,10 @@ public class IpProtoClassifierDefinition {
      */
     public static final Long ICMP_VALUE = Long.valueOf(1);
     /**
+     * ICMPv6 protocol value
+     */
+    public static final Long ICMPv6_VALUE = Long.valueOf(58);
+    /**
      * SCTP protocol value
      */
     public static final Long SCTP_VALUE = Long.valueOf(132);

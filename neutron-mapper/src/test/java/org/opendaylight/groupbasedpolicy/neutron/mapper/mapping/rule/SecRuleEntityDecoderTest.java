@@ -657,6 +657,12 @@ public class SecRuleEntityDecoderTest {
     }
 
     @Test
+    public final void testGetProtocol_numValue() {
+        secRule.setSecurityRuleProtocol("199");
+        Assert.assertEquals(Long.valueOf(199) , SecRuleEntityDecoder.getProtocol(secRule));
+    }
+
+    @Test
     public final void testGetProtocol_protoNull() {
         secRule.setSecurityRuleProtocol(null);
         Assert.assertNull(SecRuleEntityDecoder.getProtocol(secRule));

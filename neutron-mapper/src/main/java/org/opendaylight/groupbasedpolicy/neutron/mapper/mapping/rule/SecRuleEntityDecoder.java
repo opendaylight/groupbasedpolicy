@@ -237,7 +237,7 @@ public class SecRuleEntityDecoder {
      *         empty; Otherwise protocol number
      * @throws IllegalArgumentException if return value of
      *         {@link NeutronSecurityRule#getSecurityRuleProtocol()} is not empty/null and is other
-     *         than "tcp", "udp", "icmp"
+     *         than "tcp", "udp", "icmp", "icmpv6" or string values that can be decoded to {@link Short}.
      */
     public static Long getProtocol(NeutronSecurityRule secRule) {
         String protocol = secRule.getSecurityRuleProtocol();
@@ -253,6 +253,16 @@ public class SecRuleEntityDecoder {
         if (NeutronUtils.ICMP.equals(protocol)) {
             return IpProtoClassifierDefinition.ICMP_VALUE;
         }
-        throw new IllegalArgumentException("Protocol " + protocol + " is not supported.");
+        if (NeutronUtils.ICMPv6.equals(protocol)) {
+            return IpProtoClassifierDefinition.ICMPv6_VALUE;
+        }
+        Long protocolNum;
+        try {
+            protocolNum = Long.valueOf(protocol);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Neutron Security Rule Protocol value " + protocol
+                    + " is not supported.");
+        }
+        return protocolNum;
     }
 }
