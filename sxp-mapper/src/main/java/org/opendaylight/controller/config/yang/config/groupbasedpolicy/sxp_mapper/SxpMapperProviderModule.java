@@ -9,7 +9,7 @@
 package org.opendaylight.controller.config.yang.config.groupbasedpolicy.sxp_mapper;
 
 
-import org.opendaylight.groupbasedpolicy.sxp.mapper.SxpMapperProviderImpl;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.SxpMapperProviderImpl;
 
 /**
 * sxp-mapper impl module
