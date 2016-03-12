@@ -33,7 +33,8 @@ public class NeutronOvsdbModule extends org.opendaylight.controller.config.yang.
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        final NeutronOvsdb neutronOvsdb = new NeutronOvsdb(getDataBrokerDependency(), getRpcRegistryDependency());
+        final NeutronOvsdb neutronOvsdb = new NeutronOvsdb(getDataBrokerDependency(), getRpcRegistryDependency(),
+                getIntegrationBridgeSetting());
         LOG.info("Neutron ovsdb started.");
         return neutronOvsdb;
     }
