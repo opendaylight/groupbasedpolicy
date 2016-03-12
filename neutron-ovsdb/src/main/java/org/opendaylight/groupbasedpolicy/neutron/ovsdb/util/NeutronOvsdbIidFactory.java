@@ -16,22 +16,26 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gb
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.endpoints.by.ports.EndpointByPortKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.ExternalGatewaysAsL3Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.external.gateways.as.l3.endpoints.ExternalGatewayAsL3Endpoint;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.NodeKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbNodeAugmentation;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 public class NeutronOvsdbIidFactory {
 
-    public static InstanceIdentifier<OvsdbNodeAugmentation> ovsdbNodeAugmentationIid(TopologyId ovsdbTopologyId) {
+    public static InstanceIdentifier<Topology> topologyIid(TopologyId ovsdbTopologyId) {
         return InstanceIdentifier.create(NetworkTopology.class)
-            .child(Topology.class, new TopologyKey(ovsdbTopologyId))
+            .child(Topology.class, new TopologyKey(ovsdbTopologyId));
+    }
+
+    public static InstanceIdentifier<OvsdbNodeAugmentation> ovsdbNodeAugmentationIid(TopologyId ovsdbTopologyId) {
+        return topologyIid(ovsdbTopologyId)
             .child(Node.class)
             .augmentation(OvsdbNodeAugmentation.class);
     }
@@ -56,11 +60,15 @@ public class NeutronOvsdbIidFactory {
         return InstanceIdentifier.builder(Mappings.class).child(NeutronByGbpMappings.class).build();
     }
 
+    public static InstanceIdentifier<Node> nodeIid(TopologyId ovsdbTopologyId, NodeId nodeId) {
+        return topologyIid(ovsdbTopologyId).child(Node.class, new NodeKey(nodeId));
+    }
+
     public static InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node> nodeIid(
-            NodeId nodeId) {
+            org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId nodeId) {
         return InstanceIdentifier.builder(Nodes.class)
             .child(org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node.class,
-                    new NodeKey(nodeId))
+                    new org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.NodeKey(nodeId))
             .build();
     }
 }
