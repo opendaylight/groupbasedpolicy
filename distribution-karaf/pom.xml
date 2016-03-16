@@ -57,6 +57,20 @@
       <scope>runtime</scope>
     </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <!-- DO NOT deploy the karaf artifact -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
   <scm>
     <connection>scm:git:ssh://git.opendaylight.org:29418/groupbasedpolicy.git</connection>
     <developerConnection>scm:git:ssh://git.opendaylight.org:29418/groupbasedpolicy.git</developerConnection>
