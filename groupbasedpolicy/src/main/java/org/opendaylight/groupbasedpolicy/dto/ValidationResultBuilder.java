@@ -34,6 +34,27 @@ public final class ValidationResultBuilder implements Builder<ValidationResult> 
         public String getMessage() {
             return message;
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o)
+                return true;
+            if (o == null || getClass() != o.getClass())
+                return false;
+
+            ValidationResultImpl that = (ValidationResultImpl) o;
+
+            if (success != that.success)
+                return false;
+            return message.equals(that.message);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = (success ? 1 : 0);
+            result = 31 * result + message.hashCode();
+            return result;
+        }
     }
 
     private boolean success;

@@ -21,12 +21,12 @@ import org.junit.Test;
 
 public class SingletonTaskTest {
 
-    public int ran = 0;
-    public int finished = 0;
-    public long time = 0;
+    private int ran;
+    private int finished;
+    private long time;
 
     @Before
-    public void setUp() throws Exception {
+    public void init() {
         ran = 0;
         finished = 0;
         time = 0;
@@ -54,73 +54,66 @@ public class SingletonTaskTest {
     public void testDelay() throws InterruptedException {
         ScheduledExecutorService ses =
             Executors.newSingleThreadScheduledExecutor();
+        ran = 0;
 
         SingletonTask st1 = new SingletonTask(ses, new Runnable() {
             @Override
             public void run() {
-                ran += 1;
+                ran++;
                 time = System.nanoTime();
             }
         });
         long start = System.nanoTime();
         st1.reschedule(10, TimeUnit.MILLISECONDS);
-        assertFalse("Check that task hasn't run yet", ran > 0);
+        assertFalse("Task has run already", ran > 0);
 
         ses.shutdown();
         ses.awaitTermination(5, TimeUnit.SECONDS);
 
-        assertEquals("Check that task ran", 1, ran);
+        assertEquals("Check that task ran only once failed", 1, ran);
         assertTrue("Check that time passed appropriately",
                    (time - start) >= TimeUnit.NANOSECONDS.convert(10, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void testReschedule() throws InterruptedException {
-        ScheduledExecutorService ses =
-            Executors.newSingleThreadScheduledExecutor();
+        ScheduledExecutorService ses = Executors.newSingleThreadScheduledExecutor();
+        ran = 0;
+        time = 0;
+
+        final long EPSILON_NS = 1500000; // 1.5 ms
+        final int DELAY_MS = 20;
+        final int NUM_OF_ITERATIONS = 8;
+        final int SLEEP_MS = 5;
+        final int AWAIT_SEC = 5;
+        final int EXPECTED_PASS_TIME =
+                NUM_OF_ITERATIONS * SLEEP_MS + (DELAY_MS - SLEEP_MS);
 
         final Object tc = this;
         SingletonTask st1 = new SingletonTask(ses, new Runnable() {
+
             @Override
             public void run() {
                 synchronized (tc) {
-                    ran += 1;
+                    ran++;
                 }
                 time = System.nanoTime();
             }
         });
+
         long start = System.nanoTime();
-        st1.reschedule(20, TimeUnit.MILLISECONDS);
-        Thread.sleep(5);
-        assertFalse("Check that task hasn't run yet", ran > 0);
-        st1.reschedule(20, TimeUnit.MILLISECONDS);
-        Thread.sleep(5);
-        assertFalse("Check that task hasn't run yet", ran > 0);
-        st1.reschedule(20, TimeUnit.MILLISECONDS);
-        Thread.sleep(5);
-        assertFalse("Check that task hasn't run yet", ran > 0);
-        st1.reschedule(20, TimeUnit.MILLISECONDS);
-        Thread.sleep(5);
-        assertFalse("Check that task hasn't run yet", ran > 0);
-        st1.reschedule(20, TimeUnit.MILLISECONDS);
-        Thread.sleep(5);
-        assertFalse("Check that task hasn't run yet", ran > 0);
-        st1.reschedule(20, TimeUnit.MILLISECONDS);
-        Thread.sleep(5);
-        assertFalse("Check that task hasn't run yet", ran > 0);
-        st1.reschedule(20, TimeUnit.MILLISECONDS);
-        Thread.sleep(5);
-        assertFalse("Check that task hasn't run yet", ran > 0);
-        st1.reschedule(20, TimeUnit.MILLISECONDS);
-        Thread.sleep(5);
-        assertFalse("Check that task hasn't run yet", ran > 0);
+        for (int i = 0; i < NUM_OF_ITERATIONS; i++) {
+            st1.reschedule(DELAY_MS, TimeUnit.MILLISECONDS);
+            Thread.sleep(SLEEP_MS);
+            assertFalse("Task has run already", ran > 0);
+        }
 
         ses.shutdown();
-        ses.awaitTermination(5, TimeUnit.SECONDS);
+        ses.awaitTermination(AWAIT_SEC, TimeUnit.SECONDS);
 
-        assertEquals("Check that task ran only once", 1, ran);
+        assertEquals("Check that task ran only once failed", 1, ran);
         assertTrue("Check that time passed appropriately: " + (time - start),
-                (time - start) >= TimeUnit.NANOSECONDS.convert(55, TimeUnit.MILLISECONDS));
+                 (time - start) >= 1000000 * EXPECTED_PASS_TIME - EPSILON_NS);
     }
 
     @Test

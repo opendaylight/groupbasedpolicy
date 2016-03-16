@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
@@ -128,8 +129,9 @@ public class StatisticsManagerImpl implements StatisticsManager, AutoCloseable {
         Optional<StatisticsStore> storeOpt = Optional.absent();
         try {
             storeOpt = rtx.read(LogicalDatastoreType.OPERATIONAL, statsIID).get();
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (InterruptedException | ExecutionException e) {
+            LOG.error("Exception thrown on reading from Datastore: {}", e.getMessage());
+            return null;
         }
         if (storeOpt.isPresent()) {
             StatisticsStore store = storeOpt.get();
