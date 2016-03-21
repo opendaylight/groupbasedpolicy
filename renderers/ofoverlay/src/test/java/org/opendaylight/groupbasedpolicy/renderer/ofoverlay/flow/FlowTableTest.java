@@ -36,7 +36,7 @@ public class FlowTableTest extends OfTableTest {
                 }
             }
         }
-        //table.sync(nodeId, ofWriter);
+        //table.sync(NODE_ID, ofWriter);
         return ofWriter;
     }
 }

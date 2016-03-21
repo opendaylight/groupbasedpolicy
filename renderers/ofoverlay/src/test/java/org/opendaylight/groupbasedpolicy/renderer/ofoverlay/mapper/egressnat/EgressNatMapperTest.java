@@ -50,11 +50,10 @@ public class EgressNatMapperTest extends MapperUtilsTest {
         EgressNatMapper mapper = new EgressNatMapper(ctx, tableId);
 
         // Endpoint
-        Endpoint endpoint = endpointBuilder(new IpAddress(new Ipv4Address(IPV4_1)), new MacAddress(MAC_0),
-                new NodeConnectorId(CONNECTOR_1), null, null).build();
+        Endpoint endpoint = buildEndpoint(IPV4_0, MAC_0, CONNECTOR_1).build();
 
         // L3 endpoints
-        EndpointL3 endpointL3 = endpointL3Builder(IPV4_1, IPV4_2, MAC_0, L2, false).build();
+        EndpointL3 endpointL3 = buildL3Endpoint(IPV4_0, IPV4_1, MAC_0, L2).build();
         List<EndpointL3> endpointsL3 = new ArrayList<>();
         endpointsL3.add(endpointL3);
 

@@ -187,19 +187,19 @@ public class ExternalMapper extends FlowTable {
         // we only use NAT when going to external networks.
         Ipv4Prefix natIp = new Ipv4Prefix(ipv4Address.getValue() + "/32");
         Match match = new MatchBuilder()
-            .setEthernetMatch(FlowUtils.ethernetMatch(null, null, Long.valueOf(FlowUtils.IPv4)))
-            .setLayer3Match(new Ipv4MatchBuilder().setIpv4Source(natIp).build())
-            .setVlanMatch(FlowUtils.vlanMatch(0, false))
-            .build();
+                .setEthernetMatch(FlowUtils.ethernetMatch(null, null, Long.valueOf(FlowUtils.IPv4)))
+                .setLayer3Match(new Ipv4MatchBuilder().setIpv4Source(natIp).build())
+                .setVlanMatch(FlowUtils.vlanMatch(0, false))
+                .build();
         List<ActionBuilder> pushVlanActions = new ArrayList<>();
         pushVlanActions.addAll(FlowUtils.pushVlanActions(vlanId));
         pushVlanActions.add(new ActionBuilder().setOrder(0).setAction(nxOutputRegAction(NxmNxReg7.class)));
         FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "external_nat_push_vlan", match);
         return base().setPriority(priority)
-            .setId(flowid)
-            .setMatch(match)
-            .setInstructions(FlowUtils.instructions(applyActionIns(pushVlanActions)))
-            .build();
+                .setId(flowid)
+                .setMatch(match)
+                .setInstructions(FlowUtils.instructions(applyActionIns(pushVlanActions)))
+                .build();
     }
 
     public static Subnet resolveSubnetForIpv4Address(IndexedTenant t, Ipv4Address ipv4Addr) {
@@ -246,10 +246,10 @@ public class ExternalMapper extends FlowTable {
             pushVlanActions.add(new ActionBuilder().setOrder(0).setAction(nxOutputRegAction(NxmNxReg7.class)));
             FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "external_push_vlan", match);
             flows.add(base().setPriority(priority)
-                .setId(flowid)
-                .setMatch(match)
-                .setInstructions(FlowUtils.instructions(applyActionIns(pushVlanActions)))
-                .build());
+                    .setId(flowid)
+                    .setMatch(match)
+                    .setInstructions(FlowUtils.instructions(applyActionIns(pushVlanActions)))
+                    .build());
         }
         return flows;
     }
@@ -257,9 +257,9 @@ public class ExternalMapper extends FlowTable {
     private Flow defaultFlow() {
         FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "defaultExternalFlow", null);
         Flow flow = base().setPriority(100)
-            .setId(flowid)
-            .setInstructions(instructions(applyActionIns(nxOutputRegAction(NxmNxReg7.class))))
-            .build();
+                .setId(flowid)
+                .setInstructions(instructions(applyActionIns(nxOutputRegAction(NxmNxReg7.class))))
+                .build();
         return flow;
     }
 }

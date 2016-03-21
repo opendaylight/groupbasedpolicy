@@ -139,7 +139,7 @@ public class IngressNatMapper extends FlowTable {
 
         // Flows for ingress NAT translation
         Collection<EndpointL3> l3Endpoints = ctx.getEndpointManager().getL3EndpointsWithNat();
-        OrdinalFactory.EndpointFwdCtxOrdinals epFwdCtxOrdinals = getEndpointOrdinals(endpoint);
+        OrdinalFactory.EndpointFwdCtxOrdinals epFwdCtxOrdinals = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, endpoint);
         EndpointKey endpointKey = endpoint.getKey();
         for (EndpointL3 l3Endpoint : l3Endpoints) {
             L2BridgeDomainId l2Context = l3Endpoint.getL2Context();
@@ -172,20 +172,6 @@ public class IngressNatMapper extends FlowTable {
                     }
                 }
             }
-        }
-    }
-
-    private OrdinalFactory.EndpointFwdCtxOrdinals getEndpointOrdinals(Endpoint endpoint) {
-        try {
-            OrdinalFactory.EndpointFwdCtxOrdinals ordinals = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, endpoint);
-            if (ordinals == null) {
-                LOG.info("getEndpointFwdCtxOrdinals is null for EP {}", endpoint);
-                return null;
-            }
-            return ordinals;
-        } catch (Exception e) {
-            LOG.error("Failed to get endpoint ordinals, endpoint: {}", endpoint);
-            return null;
         }
     }
 }

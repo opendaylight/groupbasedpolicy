@@ -22,14 +22,10 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.MapperUtilsTest;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -39,8 +35,6 @@ import java.util.Set;
 import static org.mockito.Mockito.*;
 
 public class IngressNatMapperTest extends MapperUtilsTest {
-
-    private static final String EPG_ID = "dummy epg id";
 
     @Before
     public void init() {
@@ -56,22 +50,21 @@ public class IngressNatMapperTest extends MapperUtilsTest {
     public void testSyncFlows() throws Exception {
 
         // Endpoints
-        Endpoint endpoint = endpointBuilder(new IpAddress(new Ipv4Address(IPV4_1)), new MacAddress(MAC_0),
-                new NodeConnectorId(CONNECTOR_0), null, null).build();
+        Endpoint endpoint = buildEndpoint(IPV4_0, MAC_0, CONNECTOR_0).build();
         List<Endpoint> endpoints = new ArrayList<>();
         endpoints.add(endpoint);
 
         // L3 endpoints
-        EndpointL3 endpointL3 = endpointL3Builder(IPV4_1, IPV4_2, MAC_0, L2, false).build();
+        EndpointL3 endpointL3 = buildL3Endpoint(IPV4_0, IPV4_1, MAC_0, L2).build();
         List<EndpointL3> endpointsL3 = new ArrayList<>();
         endpointsL3.add(endpointL3);
 
         // EgKEy set
         Set<EgKey> egKeys = new HashSet<>();
-        egKeys.add(new EgKey(new TenantId(TENANT_ID), new EndpointGroupId(EPG_ID)));
+        egKeys.add(new EgKey(TENANT_ID, ENDPOINT_GROUP_1));
 
         when(ctx.getPolicyManager()).thenReturn(policyManager);
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(indexedTenantBuilder());
+        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(getTestIndexedTenant());
         when(ctx.getEndpointManager()).thenReturn(endpointManager);
         when(endpointManager.getL3EndpointsWithNat()).thenReturn(endpointsL3);
         when(endpointManager.getEndpoint(Mockito.any(EpKey.class))).thenReturn(endpoint);
