@@ -142,7 +142,7 @@ public class ExternalMapper extends FlowTable {
                 if (natIpSubnet != null && natIpSubnet.getParent() != null) {
                     L2FloodDomain natEpl2Fd =
                             ctx.getTenant(natL3Ep.getTenant()).resolveL2FloodDomain(natIpSubnet.getParent());
-                    if (natEpl2Fd.getAugmentation(Segmentation.class) != null) {
+                    if (natEpl2Fd != null && natEpl2Fd.getAugmentation(Segmentation.class) != null) {
                         Integer vlanId = natEpl2Fd.getAugmentation(Segmentation.class).getSegmentationId();
                         ofWriter.writeFlow(nodeId, TABLE_ID,
                                 buildPushVlanFlow(natIpAddress.getIpv4Address(), vlanId, 222));

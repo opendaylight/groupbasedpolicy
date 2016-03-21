@@ -8,34 +8,16 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.source;
 
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.addNxTunIdMatch;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.applyActionIns;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.ethernetMatch;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.gotoTableIns;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.instructions;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadRegAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadTunIdAction;
-
-import java.math.BigInteger;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Sets;
 import org.opendaylight.groupbasedpolicy.dto.EgKey;
 import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowIdUtils;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.go.to.table._case.GoToTable;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
@@ -48,10 +30,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev14
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg5;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg6;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Sets;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * <h1>Manage the table that assigns source endpoint group, bridge domain, and
@@ -93,191 +76,100 @@ import com.google.common.collect.Sets;
  *      - {@link GoToTable} DESTINATION MAPPER table
  */
 public class SourceMapper extends FlowTable {
-
-    protected static final Logger LOG = LoggerFactory.getLogger(SourceMapper.class);
-
-    // TODO Li alagalah Improve UT coverage for this class.
-    public static short TABLE_ID;
+    // Priorities
+    private static final int DROP_ALL = 1;
+    private static final int SYNCHRONIZE_EP = 100;
+    private static final int TUNNEL_FLOW = 151;
+    private static final int BROADCAST_FLOW = 152;
+    private final short tableId;
 
     public SourceMapper(OfContext ctx, short tableId) {
         super(ctx);
-        TABLE_ID = tableId;
+        this.tableId = tableId;
     }
 
     @Override
     public short getTableId() {
-        return TABLE_ID;
+        return tableId;
     }
 
     @Override
     public void sync(Endpoint endpoint, OfWriter ofWriter) throws Exception {
-
-        // TODO: only temporary workaround, use src & dst endpoint in implementation
-        NodeId nodeId = ctx.getEndpointManager().getEndpointNodeId(endpoint);
-
-        ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
-
-        // Handle case where packets from from External
-        for (Endpoint ep : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
-            IndexedTenant tenant = ctx.getTenant(ep.getTenant());
-            if (tenant == null)
-                continue;
-
-            EndpointFwdCtxOrdinals epFwdCtxOrds = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, ep);
-            if (epFwdCtxOrds == null) {
-                LOG.debug("getEndpointFwdCtxOrdinals is null for EP {}", ep);
-                continue;
-            }
-
-            createRemoteTunnels(ofWriter, nodeId, ep, epFwdCtxOrds);
-
-            if (ep.getTenant() == null || (ep.getEndpointGroup() == null && ep.getEndpointGroups() == null)) {
-                continue;
-            }
-
-            OfOverlayContext ofc = ep.getAugmentation(OfOverlayContext.class);
-            if (ofc != null && ofc.getNodeConnectorId() != null
-                    && (EndpointManager.isInternal(ep, ctx.getTenant(ep.getTenant()).getExternalImplicitGroups()))) {
-
-                // Sync the local EP information
-                syncEP(ofWriter, nodeId, ep, ofc.getNodeConnectorId(), epFwdCtxOrds);
-            }
+        NodeId endpointNodeId = ctx.getEndpointManager().getEndpointNodeId(endpoint);
+        if (endpointNodeId == null) {
+            LOG.warn("Endpoint {} has no location specified, skipped", endpoint);
+            return;
         }
+        SourceMapperFlows flows = new SourceMapperFlows(endpointNodeId, tableId);
+        syncFlows(flows, endpoint, endpointNodeId, ofWriter);
     }
 
-    private void createRemoteTunnels(OfWriter ofWriter, NodeId nodeId, Endpoint ep, EndpointFwdCtxOrdinals epFwdCtxOrds)
-            throws Exception {
-        Set<EgKey> epgs = new HashSet<>();
+    @VisibleForTesting
+    void syncFlows(SourceMapperFlows flows, Endpoint endpoint, NodeId nodeId, OfWriter ofWriter) {
 
-        // Get EPGs and add to Set to remove duplicates
-        // TODO alagalah Li: test EndpointManager.getEgKeys
-        if (ep.getEndpointGroup() != null) {
-            epgs.add(new EgKey(ep.getTenant(), ep.getEndpointGroup()));
-        }
-        if (ep.getEndpointGroups() != null) {
-            for (EndpointGroupId epgId : ep.getEndpointGroups()) {
-                epgs.add(new EgKey(ep.getTenant(), epgId));
-            }
-        }
+        // Basic drop all flow
+        flows.dropFlow(DROP_ALL, null, ofWriter);
 
-        // Create tunnels on remote Nodes that may talk to us.
-        for (EgKey epg : epgs) {
-            Set<EgKey> peers = Sets.union(Collections.singleton(epg), ctx.getCurrentPolicy().getPeers(epg));
-            for (EgKey peer : peers) {
-                for (NodeId remoteNodeId : ctx.getEndpointManager().getNodesForGroup(peer)) {
-
-                    // Please do not check for remote v local nodeID, we need local to local tunnels
-                    // in the case of chaining - The Great Dr Sunal.
-                    NodeConnectorId tunPort = ctx.getSwitchManager().getTunnelPort(remoteNodeId, TunnelTypeVxlan.class);
-                    if (tunPort == null) {
-                        LOG.trace("No tunnel port for tunnel in SourceMapper between local:{} and remote:{}",
-                                nodeId.getValue(), remoteNodeId.getValue());
-                        continue;
+        // Create remote tunnel/broadcast flows
+        short destinationMapperId = ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER();
+        NodeConnectorId tunnelPort = ctx.getSwitchManager().getTunnelPort(nodeId, TunnelTypeVxlan.class);
+        if (tunnelPort != null) {
+            // Get all original endpoint groups
+            Set<EgKey> endpointGroups = getEndpointGroups(endpoint);
+            for (EgKey endpointGroup : endpointGroups) {
+                // Get all original endpoint peers
+                Set<EgKey> peers = Sets.union(Collections.singleton(endpointGroup),
+                        ctx.getCurrentPolicy().getPeers(endpointGroup));
+                for (EgKey peer : peers) {
+                    Collection<Endpoint> peerEgEndpoints = ctx.getEndpointManager().getEndpointsForGroup(peer);
+                    for (Endpoint peerEgEndpoint : peerEgEndpoints) {
+                        OrdinalFactory.EndpointFwdCtxOrdinals ordinals = getEndpointOrdinals(ctx, peerEgEndpoint);
+                        flows.createTunnelFlow(destinationMapperId, TUNNEL_FLOW, tunnelPort, ordinals,
+                                ofWriter);
+                        flows.createBroadcastFlow(destinationMapperId, BROADCAST_FLOW, tunnelPort,
+                                ordinals, ofWriter);
                     }
-                    ofWriter.writeFlow(remoteNodeId, TABLE_ID, createTunnelFlow(tunPort, epFwdCtxOrds));
-                    ofWriter.writeFlow(remoteNodeId, TABLE_ID, createBroadcastFlow(tunPort, epFwdCtxOrds));
                 }
             }
         }
+
+        if (endpoint.getEndpointGroup() == null && endpoint.getEndpointGroups() == null || endpoint.getTenant() == null) {
+            return;
+        }
+        IndexedTenant tenant = ctx.getTenant(endpoint.getTenant());
+        // Sync the local EP information
+        OrdinalFactory.EndpointFwdCtxOrdinals endpointFwdCtxOrdinals = getEndpointOrdinals(ctx, endpoint);
+        MacAddress macAddress = endpoint.getMacAddress();
+        if (endpointFwdCtxOrdinals != null) {
+            OfOverlayContext ofOverlayContext = endpoint.getAugmentation(OfOverlayContext.class);
+            if (ofOverlayContext != null && ofOverlayContext.getNodeConnectorId() != null &&
+                    (EndpointManager.isInternal(endpoint, tenant.getExternalImplicitGroups()))) {
+                flows.synchronizeEp(destinationMapperId, SYNCHRONIZE_EP, endpointFwdCtxOrdinals, macAddress,
+                        ofOverlayContext.getNodeConnectorId(), ofWriter);
+            }
+        }
     }
 
-    private Flow createBroadcastFlow(NodeConnectorId tunPort, EndpointFwdCtxOrdinals epFwdCtxOrds) {
-
-        int fdId = epFwdCtxOrds.getFdId();
-
-        MatchBuilder mb = new MatchBuilder().setInPort(tunPort);
-        addNxTunIdMatch(mb, fdId);
-
-        // set condition group register to all ones to
-        // bypass
-        // policy enforcement
-        /*
-         * TODO: This breaks distributed policy enforcement
-         * especially wrt multi-action. BAD. Must be addressed
-         * (this is why we can't have nice things).
-         * This can be fixed with new tunnelId ordinal in
-         * Ordinal Factory.
-         */
-
-        Action fdReg = nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(fdId));
-
-        Match match = mb.build();
-        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "tunnelFdId", match);
-        FlowBuilder flowb = base().setId(flowid)
-            .setPriority(Integer.valueOf(150))
-            .setMatch(match)
-            .setInstructions(instructions(applyActionIns(fdReg), gotoTableIns(ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER())));
-        return flowb.build();
+    private OrdinalFactory.EndpointFwdCtxOrdinals getEndpointOrdinals(OfContext ctx, Endpoint endpoint) {
+        try {
+            return OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, endpoint);
+        } catch (Exception e) {
+            LOG.error("Failed to get fwd ctx ordinals for endpoint {}", endpoint);
+            return null;
+        }
     }
 
-    private Flow createTunnelFlow(NodeConnectorId tunPort, EndpointFwdCtxOrdinals epFwdCtxOrds) {
-        // ... this is a remote node.
+    private Set<EgKey> getEndpointGroups(Endpoint endpoint) {
+        Set<EgKey> endpointGroups = new HashSet<>();
+        if (endpoint.getEndpointGroup() != null) {
+            endpointGroups.add(new EgKey(endpoint.getTenant(), endpoint.getEndpointGroup()));
+        }
+        if (endpoint.getEndpointGroups() != null) {
+            for (EndpointGroupId epgId : endpoint.getEndpointGroups()) {
+                endpointGroups.add(new EgKey(endpoint.getTenant(), epgId));
+            }
+        }
 
-        int egId = epFwdCtxOrds.getEpgId();
-        int bdId = epFwdCtxOrds.getBdId();
-        int fdId = epFwdCtxOrds.getFdId();
-        int l3Id = epFwdCtxOrds.getL3Id();
-        int tunnelId = epFwdCtxOrds.getTunnelId();
-
-        MatchBuilder mb = new MatchBuilder().setInPort(tunPort);
-        addNxTunIdMatch(mb, tunnelId);
-
-        Action segReg = nxLoadRegAction(NxmNxReg0.class, BigInteger.valueOf(egId));
-        // set condition group register to all ones to
-        // bypass
-        // policy enforcement
-        /*
-         * TODO: This breaks distributed policy enforcement
-         * especially wrt multi-action. BAD. Must be addressed
-         * (this is why we can't have nice things).
-         * This can be fixed with new tunnelId ordinal in
-         * Ordinal Factory.
-         */
-        Action scgReg = nxLoadRegAction(NxmNxReg1.class, BigInteger.valueOf(0xffffff));
-        Action bdReg = nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(bdId));
-        Action fdReg = nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(fdId));
-        Action vrfReg = nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(l3Id));
-        Match match = mb.build();
-        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "tunnel", match);
-        FlowBuilder flowb = base().setId(flowid)
-            .setPriority(Integer.valueOf(150))
-            .setMatch(match)
-            .setInstructions(
-                    instructions(applyActionIns(segReg, scgReg, bdReg, fdReg, vrfReg),
-                            gotoTableIns(ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER())));
-        return flowb.build();
+        return endpointGroups;
     }
-
-    private void syncEP(OfWriter ofWriter, NodeId nodeId, Endpoint ep, NodeConnectorId ncId, EndpointFwdCtxOrdinals epFwdCtxOrds) throws Exception {
-
-        // TODO alagalah Li/Be: We should also match on EndpointL3 with the appropriate
-        // network containment. This would solve a lot of problems and prepare for EndpointL3 RPC.
-
-        int egId = epFwdCtxOrds.getEpgId();
-        int bdId = epFwdCtxOrds.getBdId();
-        int fdId = epFwdCtxOrds.getFdId();
-        int l3Id = epFwdCtxOrds.getL3Id();
-        int cgId = epFwdCtxOrds.getCgId();
-        int tunnelId = epFwdCtxOrds.getTunnelId();
-
-        Action segReg = nxLoadRegAction(NxmNxReg0.class, BigInteger.valueOf(egId));
-        Action scgReg = nxLoadRegAction(NxmNxReg1.class, BigInteger.valueOf(cgId));
-        Action bdReg = nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(bdId));
-        Action fdReg = nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(fdId));
-        Action vrfReg = nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(l3Id));
-        Action tunIdAction = nxLoadTunIdAction(BigInteger.valueOf(tunnelId), false);
-
-        Match match = new MatchBuilder().setEthernetMatch(ethernetMatch(ep.getMacAddress(), null, null))
-                .setInPort(ncId)
-                .build();
-        FlowId flowid = FlowIdUtils.newFlowId(TABLE_ID, "ep", match);
-        FlowBuilder flowb = base().setPriority(Integer.valueOf(100))
-            .setId(flowid)
-            .setMatch(match)
-            .setInstructions(
-                    instructions(applyActionIns(segReg, scgReg, bdReg, fdReg, vrfReg,tunIdAction),
-                            gotoTableIns(ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER())));
-        ofWriter.writeFlow(nodeId, TABLE_ID, flowb.build());
-    }
-
 }

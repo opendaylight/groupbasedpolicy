@@ -47,8 +47,8 @@ public class EgressNatMapperFlowsTest extends MapperUtilsTest {
 
     @Test
     public void testDropFlow_noEthertype() {
-        Flow testFlow = flowCreator(new FlowId(DROP_ALL), tableId, 100, null,
-                FlowUtils.dropInstructions());
+        Flow testFlow = flowBuilder(new FlowId(DROP_ALL), tableId, 100, null,
+                FlowUtils.dropInstructions()).build();
 
         flows.dropFlow(100, null, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
@@ -59,8 +59,8 @@ public class EgressNatMapperFlowsTest extends MapperUtilsTest {
         MatchBuilder matchBuilder = new MatchBuilder();
         matchBuilder.setEthernetMatch(FlowUtils.ethernetMatch(null, null, FlowUtils.IPv4));
         Match match = matchBuilder.build();
-        Flow testFlow = flowCreator(FlowIdUtils.newFlowId(tableId, DROP, match), tableId, 100, match,
-                FlowUtils.dropInstructions());
+        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, DROP, match), tableId, 100, match,
+                FlowUtils.dropInstructions()).build();
 
         flows.dropFlow(100, FlowUtils.IPv4, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
@@ -71,8 +71,8 @@ public class EgressNatMapperFlowsTest extends MapperUtilsTest {
         MatchBuilder matchBuilder = new MatchBuilder();
         matchBuilder.setEthernetMatch(FlowUtils.ethernetMatch(null, null, FlowUtils.IPv6));
         Match match = matchBuilder.build();
-        Flow testFlow = flowCreator(FlowIdUtils.newFlowId(tableId, DROP, match), tableId, 100, match,
-                FlowUtils.dropInstructions());
+        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, DROP, match), tableId, 100, match,
+                FlowUtils.dropInstructions()).build();
 
         flows.dropFlow(100, FlowUtils.IPv6, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
@@ -83,8 +83,8 @@ public class EgressNatMapperFlowsTest extends MapperUtilsTest {
         MatchBuilder matchBuilder = new MatchBuilder();
         matchBuilder.setEthernetMatch(FlowUtils.ethernetMatch(null, null, FlowUtils.ARP));
         Match match = matchBuilder.build();
-        Flow testFlow = flowCreator(FlowIdUtils.newFlowId(tableId, DROP, match), tableId, 100, match,
-                FlowUtils.dropInstructions());
+        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, DROP, match), tableId, 100, match,
+                FlowUtils.dropInstructions()).build();
 
         flows.dropFlow(100, FlowUtils.ARP, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
@@ -92,14 +92,14 @@ public class EgressNatMapperFlowsTest extends MapperUtilsTest {
 
     @Test
     public void testNatFlows_noAugmentation() {
-        EndpointL3 endpointL3 = endpointL3Creator(null, IPV4_1, MAC_0, L2, false);
+        EndpointL3 endpointL3 = endpointL3Builder(null, IPV4_1, MAC_0, L2, false).build();
         flows.natFlows((short) 6, endpointL3, 100, ofWriter);
         verifyZeroInteractions(ofWriter);
     }
 
     @Test
     public void testNatFlows_ipv4() {
-        EndpointL3 endpointL3 = endpointL3Creator(IPV4_1, IPV4_2, MAC_0, L2, false);
+        EndpointL3 endpointL3 = endpointL3Builder(IPV4_1, IPV4_2, MAC_0, L2, false).build();
         MatchBuilder matchBuilder = new MatchBuilder();
         matchBuilder.setEthernetMatch(FlowUtils.ethernetMatch(null, null, FlowUtils.IPv4))
                 .setLayer3Match(new Ipv4MatchBuilder().setIpv4Source(new Ipv4Prefix(IPV4_2 + IP_PREFIX_32)).build());
@@ -116,8 +116,8 @@ public class EgressNatMapperFlowsTest extends MapperUtilsTest {
         instructions.add(goTo.build());
         instructionsBuilder.setInstruction(instructions);
 
-        Flow testFlow = flowCreator(new FlowId(EGRESS_NAT + new IpAddress(new Ipv4Address(IPV4_2)) + "|" +
-                new IpAddress(new Ipv4Address(IPV4_1))), tableId, 90, match, instructionsBuilder.build());
+        Flow testFlow = flowBuilder(new FlowId(EGRESS_NAT + new IpAddress(new Ipv4Address(IPV4_2)) + "|" +
+                new IpAddress(new Ipv4Address(IPV4_1))), tableId, 90, match, instructionsBuilder.build()).build();
 
         flows.natFlows((short) 6, endpointL3, 90, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
@@ -125,7 +125,7 @@ public class EgressNatMapperFlowsTest extends MapperUtilsTest {
 
     @Test
     public void testNatFlows_ipv6() {
-        EndpointL3 endpointL3 = endpointL3Creator(IPV6_1, IPV6_2, MAC_0, L2, true);
+        EndpointL3 endpointL3 = endpointL3Builder(IPV6_1, IPV6_2, MAC_0, L2, true).build();
         MatchBuilder matchBuilder = new MatchBuilder();
         matchBuilder.setEthernetMatch(FlowUtils.ethernetMatch(null, null, FlowUtils.IPv6))
                 .setLayer3Match(new Ipv6MatchBuilder().setIpv6Source(new Ipv6Prefix(IPV6_2 + IP_PREFIX_128)).build());
@@ -142,8 +142,8 @@ public class EgressNatMapperFlowsTest extends MapperUtilsTest {
         instructions.add(goTo.build());
         instructionsBuilder.setInstruction(instructions);
 
-        Flow testFlow = flowCreator(new FlowId(EGRESS_NAT + new IpAddress(new Ipv6Address(IPV6_2)) + "|" +
-                new IpAddress(new Ipv6Address(IPV6_1))), tableId, 80, match, instructionsBuilder.build());
+        Flow testFlow = flowBuilder(new FlowId(EGRESS_NAT + new IpAddress(new Ipv6Address(IPV6_2)) + "|" +
+                new IpAddress(new Ipv6Address(IPV6_1))), tableId, 80, match, instructionsBuilder.build()).build();
 
         flows.natFlows((short) 6, endpointL3, 80, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);

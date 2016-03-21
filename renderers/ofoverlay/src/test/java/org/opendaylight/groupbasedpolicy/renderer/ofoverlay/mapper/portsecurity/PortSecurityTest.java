@@ -49,14 +49,15 @@ public class PortSecurityTest extends MapperUtilsTest {
         connectors.add(new NodeConnectorId(CONNECTOR_0));
 
         // Prepare endpoint
-        EndpointBuilder endpointBuilder = new EndpointBuilder(endpointCreator(ipAddress, macAddress, connectorId));
-        endpointBuilder.setTenant(tenantCreator().getTenant().getId());
+        EndpointBuilder endpointBuilder = new EndpointBuilder(endpointBuilder(ipAddress, macAddress, connectorId,
+                null, null).build());
+        endpointBuilder.setTenant(indexedTenantBuilder().getTenant().getId());
         Endpoint endpoint = endpointBuilder.build();
 
         when(ctx.getEndpointManager()).thenReturn(endpointManager);
         when(ctx.getSwitchManager()).thenReturn(switchManager);
         when(ctx.getPolicyManager()).thenReturn(policyManager);
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(tenantCreator());
+        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(indexedTenantBuilder());
         when(endpointManager.getEndpointNodeConnectorId(Mockito.any(Endpoint.class)))
                 .thenReturn(new NodeConnectorId(CONNECTOR_0));
         when(switchManager.getTunnelPort(nodeId, TunnelTypeVxlan.class)).thenReturn(new NodeConnectorId(CONNECTOR_0));
@@ -80,7 +81,7 @@ public class PortSecurityTest extends MapperUtilsTest {
         verify(flows, times(1)).l2flow(Mockito.anyShort(), Mockito.any(NodeConnectorId.class),
                 Mockito.any(MacAddress.class), Mockito.anyInt(), eq(ofWriter));
         verify(flows, times(1)).popVlanTagsOnExternalPortFlows(Mockito.anyShort(), Mockito.any(NodeConnectorId.class),
-                eq(l2FloodDomainsCreator()), Mockito.anyInt(), eq(ofWriter));
+                eq(l2FloodDomains()), Mockito.anyInt(), eq(ofWriter));
         verify(flows, times(1)).allowFromExternalPortFlow(Mockito.anyShort(), Mockito.any(NodeConnectorId.class),
                 Mockito.anyInt(), eq(ofWriter));
 
@@ -107,7 +108,7 @@ public class PortSecurityTest extends MapperUtilsTest {
         order.verify(ctx, times(1)).getSwitchManager();
         order.verify(ctx, times(2)).getTenant(Mockito.any(TenantId.class));
         order.verify(flows, times(1)).popVlanTagsOnExternalPortFlows(Mockito.anyShort(), Mockito.any(NodeConnectorId.class),
-                eq(l2FloodDomainsCreator()), Mockito.anyInt(), eq(ofWriter));
+                eq(l2FloodDomains()), Mockito.anyInt(), eq(ofWriter));
         order.verify(flows, times(1)).allowFromExternalPortFlow(Mockito.anyShort(), Mockito.any(NodeConnectorId.class),
                 Mockito.anyInt(), eq(ofWriter));
     }
