@@ -140,7 +140,7 @@ public class PolicyEnforcerTest extends MapperUtilsTest {
         Endpoint ep2 = endpointBuilder(new IpAddress(IPV4_2.toCharArray()), new MacAddress(MAC_1), nodeConnectorId, eg, bd)
                 .build();
         endpointManagerMock.addEndpoint(ep2);
-        ctxMock.addTenant(baseTenant().setPolicy(new PolicyBuilder(baseTenant().getPolicy())
+        ctxMock.addTenant(baseTenantBuilder().setPolicy(new PolicyBuilder(baseTenantBuilder().getPolicy())
             .setContract(ImmutableList.of(baseContract(null).build())).build()).build());
 
         ofWriter = new OfWriter();
@@ -225,7 +225,7 @@ public class PolicyEnforcerTest extends MapperUtilsTest {
         Endpoint ep2 = endpointBuilder(new IpAddress(IPV4_2.toCharArray()), new MacAddress(MAC_1), nodeConnectorId, eg2, bd)
                 .build();
         endpointManagerMock.addEndpoint(ep2);
-        ctxMock.addTenant(baseTenant().setPolicy(new PolicyBuilder(baseTenant().getPolicy())
+        ctxMock.addTenant(baseTenantBuilder().setPolicy(new PolicyBuilder(baseTenantBuilder().getPolicy())
             .setContract(ImmutableList.of(baseContract(subjects).build())).build()).build());
 
         ofWriter = new OfWriter();
@@ -288,7 +288,7 @@ public class PolicyEnforcerTest extends MapperUtilsTest {
             .build();
         endpointManagerMock.addEndpoint(ep2);
 
-        TenantBuilder tb = baseTenant().setPolicy(new PolicyBuilder(baseTenant().getPolicy()).setContract(
+        TenantBuilder tb = baseTenantBuilder().setPolicy(new PolicyBuilder(baseTenantBuilder().getPolicy()).setContract(
                 ImmutableList.of(new ContractBuilder().setId(cid)
                     .setSubject(ImmutableList.of(baseSubject(Direction.Out).build()))
                     .setClause(

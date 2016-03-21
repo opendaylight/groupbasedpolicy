@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.opendaylight.groupbasedpolicy.dto.ConditionGroup;
 import org.opendaylight.groupbasedpolicy.dto.EgKey;
 import org.opendaylight.groupbasedpolicy.dto.EpKey;
@@ -265,5 +266,10 @@ public class OrdinalFactory {
         public int getCgId() {
             return this.cgId;
         }
+    }
+
+    @VisibleForTesting
+    public static void resetPolicyOrdinalValue() {
+        policyOrdinal.set(1);
     }
 }

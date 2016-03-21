@@ -13,6 +13,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.google.common.collect.ImmutableList;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,6 +29,7 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2FloodDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
@@ -36,6 +38,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddressBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.Segmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.SegmentationBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ForwardingContextBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomainBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3ContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.powermock.api.mockito.PowerMockito;
@@ -43,6 +51,9 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import com.google.common.collect.ImmutableSet;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({PolicyManager.class})
@@ -77,7 +88,7 @@ public class ExternalMapperTest extends MapperUtilsTest {
         .setTenant(tid)
         .setMacAddress(mac)
         .setL2Context(bd)
-        .setNetworkContainment(sub)
+        .setNetworkContainment(ext_sub)
         .setEndpointGroup(eg)
         .build();
 
@@ -100,21 +111,31 @@ public class ExternalMapperTest extends MapperUtilsTest {
     }
 
     @Test
-    public void consturctorTest() {
+    public void constructorTest() {
         Assert.assertEquals(tableId, mapper.getTableId());
     }
 
     @Test
     public void testSync() throws Exception {
-        ctxMock.addTenant(baseTenant().build());
+        SegmentationBuilder segmentationBuilder = new SegmentationBuilder();
+        segmentationBuilder.setSegmentationId(1);
+        List<L2FloodDomain> l2FloodDomains = new ArrayList<>();
+        L2FloodDomainBuilder l2FloodDomainBuilder = new L2FloodDomainBuilder();
+        l2FloodDomainBuilder.setId(new L2FloodDomainId(ext_fd));
+        l2FloodDomainBuilder.addAugmentation(Segmentation.class, segmentationBuilder.build());
+        l2FloodDomains.add(l2FloodDomainBuilder.build());
+        ctxMock.addTenant(baseTenantBuilder().setForwardingContext(new ForwardingContextBuilder()
+                .setL3Context(ImmutableList.of(new L3ContextBuilder().setId(l3c).build()))
+                .setL2FloodDomain(l2FloodDomains)
+                .setSubnet(subnet()).build()).build());
         endpointManagerMock.addL3Endpoint(natL3Ep);
         l2Ep = new EndpointBuilder(l2Ep)
-            .addAugmentation(OfOverlayContext.class,new OfOverlayContextBuilder()
-                .setNodeId(nodeId)
-                .build())
-            .build();
+                .addAugmentation(OfOverlayContext.class, new OfOverlayContextBuilder()
+                        .setNodeId(nodeId)
+                        .build())
+                .build();
         endpointManagerMock.addEndpoint(l2Ep);
-        switchManagerMock.addSwitch(nodeId,null,ImmutableSet.of(nodeConnectorId), null);
+        switchManagerMock.addSwitch(nodeId, null, ImmutableSet.of(nodeConnectorId), null);
         mapper.sync(l2Ep, ofWriter);
         verify(ofWriter, times(4)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
     }
@@ -122,7 +143,7 @@ public class ExternalMapperTest extends MapperUtilsTest {
     @Test
     public void testSync_NoExternalPorts() throws Exception {
         // we still need ExternalMapper flows (default output and default drop) to be generated
-        ctxMock.addTenant(baseTenant().build());
+        ctxMock.addTenant(baseTenantBuilder().build());
         mapper.sync(l2Ep, ofWriter);
         verify(ofWriter, times(2)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
     }

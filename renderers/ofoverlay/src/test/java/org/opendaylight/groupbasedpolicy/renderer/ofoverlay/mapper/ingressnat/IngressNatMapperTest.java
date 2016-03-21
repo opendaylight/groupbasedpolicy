@@ -56,13 +56,13 @@ public class IngressNatMapperTest extends MapperUtilsTest {
     public void testSyncFlows() throws Exception {
 
         // Endpoints
-        Endpoint endpoint = endpointCreator(new IpAddress(new Ipv4Address(IPV4_1)), new MacAddress(MAC_0),
-                new NodeConnectorId(CONNECTOR_0));
+        Endpoint endpoint = endpointBuilder(new IpAddress(new Ipv4Address(IPV4_1)), new MacAddress(MAC_0),
+                new NodeConnectorId(CONNECTOR_0), null, null).build();
         List<Endpoint> endpoints = new ArrayList<>();
         endpoints.add(endpoint);
 
         // L3 endpoints
-        EndpointL3 endpointL3 = endpointL3Creator(IPV4_1, IPV4_2, MAC_0, L2, false);
+        EndpointL3 endpointL3 = endpointL3Builder(IPV4_1, IPV4_2, MAC_0, L2, false).build();
         List<EndpointL3> endpointsL3 = new ArrayList<>();
         endpointsL3.add(endpointL3);
 
@@ -71,7 +71,7 @@ public class IngressNatMapperTest extends MapperUtilsTest {
         egKeys.add(new EgKey(new TenantId(TENANT_ID), new EndpointGroupId(EPG_ID)));
 
         when(ctx.getPolicyManager()).thenReturn(policyManager);
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(tenantCreator());
+        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(indexedTenantBuilder());
         when(ctx.getEndpointManager()).thenReturn(endpointManager);
         when(endpointManager.getL3EndpointsWithNat()).thenReturn(endpointsL3);
         when(endpointManager.getEndpoint(Mockito.any(EpKey.class))).thenReturn(endpoint);

@@ -32,8 +32,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg6;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
-
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.*;
 
 public class EgressNatMapperFlows {

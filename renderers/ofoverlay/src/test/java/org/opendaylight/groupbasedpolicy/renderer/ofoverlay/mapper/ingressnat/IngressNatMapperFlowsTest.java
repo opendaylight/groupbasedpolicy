@@ -47,10 +47,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.*;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.outputAction;
 
 public class IngressNatMapperFlowsTest extends MapperUtilsTest {
 
@@ -71,12 +68,13 @@ public class IngressNatMapperFlowsTest extends MapperUtilsTest {
         policyInfo = mock(PolicyInfo.class);
         tableId = 1;
         flows = new IngressNatMapperFlows(nodeId, tableId);
+        OrdinalFactory.resetPolicyOrdinalValue();
     }
 
     @Test
     public void testBaseFlow() {
-        Flow testFlow = flowCreator(FlowIdUtils.newFlowId(GOTO_DESTINATION_MAPPER), tableId, 50, null,
-                FlowUtils.gotoTableInstructions((short) 2));
+        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(GOTO_DESTINATION_MAPPER), tableId, 50, null,
+                FlowUtils.gotoTableInstructions((short) 2)).build();
 
         flows.baseFlow((short) 2, 50, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
@@ -84,7 +82,7 @@ public class IngressNatMapperFlowsTest extends MapperUtilsTest {
 
     @Test
     public void testNatFlow_noAugmentation() {
-        EndpointL3 testEndpointL3 = endpointL3Creator(null, null, null, null, false);
+        EndpointL3 testEndpointL3 = endpointL3Builder(null, null, null, null, false).build();
 
         flows.createNatFlow((short) 3, testEndpointL3, null, 60, ofWriter);
         verifyZeroInteractions(ctx);
@@ -93,12 +91,12 @@ public class IngressNatMapperFlowsTest extends MapperUtilsTest {
 
     @Test
     public void testNatFlow() throws Exception {
-        EndpointL3 testEndpointL3 = endpointL3Creator(IPV4_1, IPV4_2, null, null, false);
-        Endpoint testEndpoint = endpointCreator(null, new MacAddress(MAC_0),
-                new NodeConnectorId(CONNECTOR_0));
+        EndpointL3 testEndpointL3 = endpointL3Builder(IPV4_1, IPV4_2, null, null, false).build();
+        Endpoint testEndpoint = endpointBuilder(null, new MacAddress(MAC_0),
+                new NodeConnectorId(CONNECTOR_0), null, null).build();
 
         when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(tenantCreator());
+        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(indexedTenantBuilder());
         when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
 
         OrdinalFactory.EndpointFwdCtxOrdinals ordinals = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, testEndpoint);
@@ -129,9 +127,9 @@ public class IngressNatMapperFlowsTest extends MapperUtilsTest {
                 IP_PREFIX_32)).build());
         matchBuilder.setEthernetMatch(FlowUtils.ethernetMatch(null, null, FlowUtils.IPv4));
 
-        Flow testFlow = flowCreator(new FlowId(INGRESS_NAT + "|" + new IpAddress(new Ipv4Address(IPV4_1)).toString() +
+        Flow testFlow = flowBuilder(new FlowId(INGRESS_NAT + "|" + new IpAddress(new Ipv4Address(IPV4_1)).toString() +
                         "|" + new IpAddress(new Ipv4Address(IPV4_2)).toString() + "|" + "null"), tableId, 60, matchBuilder.build(),
-                instructionsBuilder.build());
+                instructionsBuilder.build()).build();
 
         flows.createNatFlow((short) 2, testEndpointL3, ordinals, 60, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
@@ -139,16 +137,16 @@ public class IngressNatMapperFlowsTest extends MapperUtilsTest {
 
     @Test
     public void testArpFlow_noAugmentation() {
-        EndpointL3 testEndpointL3 = endpointL3Creator(null, null, null, null, false);
+        EndpointL3 testEndpointL3 = endpointL3Builder(null, null, null, null, false).build();
 
-        flows.createArpFlow(tenantCreator(), testEndpointL3, 60, ofWriter);
+        flows.createArpFlow(indexedTenantBuilder(), testEndpointL3, 60, ofWriter);
         verifyZeroInteractions(ctx);
         verifyZeroInteractions(ofWriter);
     }
 
     @Test
     public void testArpFlow() {
-        EndpointL3 testEndpointL3 = endpointL3Creator(IPV4_1, IPV4_2, MAC_0, null, false);
+        EndpointL3 testEndpointL3 = endpointL3Builder(IPV4_1, IPV4_2, MAC_0, null, false).build();
         List<Instruction> instructions = new ArrayList<>();
         Action[] arpActions = {nxMoveEthSrcToEthDstAction(), setDlSrcAction(new MacAddress(MAC_0)),
                 nxLoadArpOpAction(BigInteger.valueOf(2L)), nxMoveArpShaToArpThaAction(), nxLoadArpShaAction(new BigInteger("0")),
@@ -164,20 +162,20 @@ public class IngressNatMapperFlowsTest extends MapperUtilsTest {
                 + IP_PREFIX_32)).build());
         Match match = matchBuilder.build();
 
-        Flow testFlow = flowCreator(FlowIdUtils.newFlowId(tableId, INGRESS_ARP, match),
-                tableId, 60, match, instructionsBuilder.build());
+        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, INGRESS_ARP, match),
+                tableId, 60, match, instructionsBuilder.build()).build();
 
-        flows.createArpFlow(tenantCreator(), testEndpointL3, 60, ofWriter);
+        flows.createArpFlow(indexedTenantBuilder(), testEndpointL3, 60, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
     }
 
     @Test
     public void testIngressExternalNatFlow() throws Exception {
-        Endpoint testEndpoint = endpointCreator(new IpAddress(new Ipv6Address(IPV6_1)), new MacAddress(MAC_0),
-                new NodeConnectorId(CONNECTOR_0));
+        Endpoint testEndpoint = endpointBuilder(new IpAddress(new Ipv6Address(IPV6_1)), new MacAddress(MAC_0),
+                new NodeConnectorId(CONNECTOR_0), null, null).build();
 
         when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(tenantCreator());
+        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(indexedTenantBuilder());
         when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
 
         OrdinalFactory.EndpointFwdCtxOrdinals ordinals = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, testEndpoint);
@@ -206,8 +204,8 @@ public class IngressNatMapperFlowsTest extends MapperUtilsTest {
         matchBuilder.setLayer3Match(new Ipv6MatchBuilder().setIpv6Source(new Ipv6Prefix(IPV6_1 + IP_PREFIX_128)).build());
         Match match = matchBuilder.build();
 
-        Flow testFlow = flowCreator(FlowIdUtils.newFlowId(tableId, INBOUND_EXTERNAL_IP, match), tableId, 50, match,
-                instructionsBuilder.build());
+        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, INBOUND_EXTERNAL_IP, match), tableId, 50, match,
+                instructionsBuilder.build()).build();
 
         flows.createIngressExternalNatFlows((short) 2, testEndpoint, ordinals, 50, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
@@ -216,11 +214,11 @@ public class IngressNatMapperFlowsTest extends MapperUtilsTest {
 
     @Test
     public void testIngressExternalArpFlow() throws Exception {
-        Endpoint testEndpoint = endpointCreator(new IpAddress(new Ipv4Address(IPV4_1)), new MacAddress(MAC_0),
-                new NodeConnectorId(CONNECTOR_0));
+        Endpoint testEndpoint = endpointBuilder(new IpAddress(new Ipv4Address(IPV4_1)), new MacAddress(MAC_0),
+                new NodeConnectorId(CONNECTOR_0), null, null).build();
 
         when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(tenantCreator());
+        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(indexedTenantBuilder());
         when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
 
         OrdinalFactory.EndpointFwdCtxOrdinals ordinals = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, testEndpoint);
@@ -248,8 +246,8 @@ public class IngressNatMapperFlowsTest extends MapperUtilsTest {
         matchBuilder.setEthernetMatch(FlowUtils.ethernetMatch(new MacAddress(MAC_0), null, FlowUtils.ARP));
         Match match = matchBuilder.build();
 
-        Flow testFlow = flowCreator(FlowIdUtils.newFlowId(tableId, INBOUND_EXTERNAL_ARP, match), tableId, 30, match,
-                instructionsBuilder.build());
+        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, INBOUND_EXTERNAL_ARP, match), tableId, 30, match,
+                instructionsBuilder.build()).build();
 
         flows.createIngressExternalArpFlows((short) 0, testEndpoint, ordinals, 30, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);

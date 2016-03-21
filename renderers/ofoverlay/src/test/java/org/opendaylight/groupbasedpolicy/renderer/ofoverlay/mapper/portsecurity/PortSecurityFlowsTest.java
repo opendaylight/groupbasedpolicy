@@ -51,7 +51,7 @@ public class PortSecurityFlowsTest extends MapperUtilsTest {
 
     @Test
     public void testDropFlow_noEthertype() {
-        Flow testFlow = flowCreator(new FlowId(DROP_ALL), tableId, 100, null, FlowUtils.dropInstructions());
+        Flow testFlow = flowBuilder(new FlowId(DROP_ALL), tableId, 100, null, FlowUtils.dropInstructions()).build();
 
         flows.dropFlow(100, null, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
@@ -62,8 +62,8 @@ public class PortSecurityFlowsTest extends MapperUtilsTest {
         MatchBuilder matchBuilder = new MatchBuilder();
         matchBuilder.setEthernetMatch(FlowUtils.ethernetMatch(null, null, FlowUtils.IPv4));
         Match match = matchBuilder.build();
-        Flow testFlow = flowCreator(FlowIdUtils.newFlowId(tableId, DROP, match), tableId, 100, match,
-                FlowUtils.dropInstructions());
+        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, DROP, match), tableId, 100, match,
+                FlowUtils.dropInstructions()).build();
 
         flows.dropFlow(100, FlowUtils.IPv4, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
@@ -74,8 +74,8 @@ public class PortSecurityFlowsTest extends MapperUtilsTest {
         MatchBuilder matchBuilder = new MatchBuilder();
         matchBuilder.setEthernetMatch(FlowUtils.ethernetMatch(null, null, FlowUtils.IPv6));
         Match match = matchBuilder.build();
-        Flow testFlow = flowCreator(FlowIdUtils.newFlowId(tableId, DROP, match), tableId, 100, match,
-                FlowUtils.dropInstructions());
+        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, DROP, match), tableId, 100, match,
+                FlowUtils.dropInstructions()).build();
 
         flows.dropFlow(100, FlowUtils.IPv6, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
@@ -86,8 +86,8 @@ public class PortSecurityFlowsTest extends MapperUtilsTest {
         MatchBuilder matchBuilder = new MatchBuilder();
         matchBuilder.setEthernetMatch(FlowUtils.ethernetMatch(null, null, FlowUtils.ARP));
         Match match = matchBuilder.build();
-        Flow testFlow = flowCreator(FlowIdUtils.newFlowId(tableId, DROP, match), tableId, 100, match,
-                FlowUtils.dropInstructions());
+        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, DROP, match), tableId, 100, match,
+                FlowUtils.dropInstructions()).build();
 
         flows.dropFlow(100, FlowUtils.ARP, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
@@ -99,8 +99,8 @@ public class PortSecurityFlowsTest extends MapperUtilsTest {
         MatchBuilder matchBuilder = new MatchBuilder();
         matchBuilder.setInPort(new NodeConnectorId(String.valueOf(VXLAN_PORT)));
         Match match = matchBuilder.build();
-        Flow testFlow = flowCreator(FlowIdUtils.newFlowId(tableId, ALLOW, match), tableId, 300, match,
-                FlowUtils.gotoTableInstructions((short) 2));
+        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, ALLOW, match), tableId, 300, match,
+                FlowUtils.gotoTableInstructions((short) 2)).build();
 
         flows.allowFromTunnelFlow((short) 2, 300, new NodeConnectorId(CONNECTOR_0), ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
@@ -113,8 +113,8 @@ public class PortSecurityFlowsTest extends MapperUtilsTest {
         MatchBuilder matchBuilder = new MatchBuilder();
         matchBuilder.setInPort(new NodeConnectorId(String.valueOf(VXLAN_PORT)));
         Match match = matchBuilder.build();
-        Flow testFlow = flowCreator(FlowIdUtils.newFlowId(tableId, ALLOW, match), tableId, 300, match,
-                FlowUtils.gotoTableInstructions((short) 2));
+        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, ALLOW, match), tableId, 300, match,
+                FlowUtils.gotoTableInstructions((short) 2)).build();
 
         flows.allowFromTunnelFlow((short) 2, 300, new NodeConnectorId(CONNECTOR_1), ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
@@ -126,7 +126,7 @@ public class PortSecurityFlowsTest extends MapperUtilsTest {
         IpAddress ipAddress = new IpAddress(new Ipv4Address(IPV4_1));
         MacAddress macAddress = new MacAddress(MAC_0);
         NodeConnectorId connectorId = new NodeConnectorId(CONNECTOR_0);
-        Endpoint testEp = endpointCreator(ipAddress, macAddress, connectorId);
+        Endpoint testEp = endpointBuilder(ipAddress, macAddress, connectorId, null, null).build();
 
         MatchBuilder matchBuilder = new MatchBuilder();
         matchBuilder.setEthernetMatch(FlowUtils.ethernetMatch(macAddress, null, FlowUtils.IPv4))
@@ -135,8 +135,8 @@ public class PortSecurityFlowsTest extends MapperUtilsTest {
                 .setInPort(connectorId);
         Match match = matchBuilder.build();
 
-        Flow testFlow = flowCreator(FlowIdUtils.newFlowId(tableId, L3, match), tableId, 100, match,
-                FlowUtils.gotoTableInstructions((short) 2));
+        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, L3, match), tableId, 100, match,
+                FlowUtils.gotoTableInstructions((short) 2)).build();
 
         flows.l3Flow((short) 2, testEp, new NodeConnectorId(CONNECTOR_0), new MacAddress(MAC_0), 100, false, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
@@ -147,7 +147,7 @@ public class PortSecurityFlowsTest extends MapperUtilsTest {
         IpAddress ipAddress = new IpAddress(new Ipv4Address(IPV4_1));
         MacAddress macAddress = new MacAddress(MAC_1);
         NodeConnectorId connectorId = new NodeConnectorId(CONNECTOR_1);
-        Endpoint testEp = endpointCreator(ipAddress, macAddress, connectorId);
+        Endpoint testEp = endpointBuilder(ipAddress, macAddress, connectorId, null, null).build();
 
         MatchBuilder matchBuilder = new MatchBuilder();
         matchBuilder.setEthernetMatch(FlowUtils.ethernetMatch(macAddress, null, FlowUtils.ARP))
@@ -156,8 +156,8 @@ public class PortSecurityFlowsTest extends MapperUtilsTest {
                 .setInPort(connectorId);
         Match match = matchBuilder.build();
 
-        Flow testFlow = flowCreator(FlowIdUtils.newFlowId(tableId, L3, match), tableId, 100, match,
-                FlowUtils.gotoTableInstructions((short) 2));
+        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, L3, match), tableId, 100, match,
+                FlowUtils.gotoTableInstructions((short) 2)).build();
 
         flows.l3Flow((short) 2, testEp, new NodeConnectorId(CONNECTOR_1), new MacAddress(MAC_1), 100, true, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
@@ -168,7 +168,7 @@ public class PortSecurityFlowsTest extends MapperUtilsTest {
         IpAddress ipAddress = new IpAddress(new Ipv6Address(IPV6_1));
         MacAddress macAddress = new MacAddress(MAC_0);
         NodeConnectorId connectorId = new NodeConnectorId(CONNECTOR_0);
-        Endpoint testEp = endpointCreator(ipAddress, macAddress, connectorId);
+        Endpoint testEp = endpointBuilder(ipAddress, macAddress, connectorId, null, null).build();
 
         MatchBuilder matchBuilder = new MatchBuilder();
         matchBuilder.setEthernetMatch(FlowUtils.ethernetMatch(macAddress, null, FlowUtils.IPv6))
@@ -177,8 +177,8 @@ public class PortSecurityFlowsTest extends MapperUtilsTest {
                 .setInPort(connectorId);
         Match match = matchBuilder.build();
 
-        Flow testFlow = flowCreator(FlowIdUtils.newFlowId(tableId, L3, match), tableId, 100, match,
-                FlowUtils.gotoTableInstructions((short) 2));
+        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, L3, match), tableId, 100, match,
+                FlowUtils.gotoTableInstructions((short) 2)).build();
 
         flows.l3Flow((short) 2, testEp, new NodeConnectorId(CONNECTOR_0), new MacAddress(MAC_0), 100, false, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
@@ -189,7 +189,7 @@ public class PortSecurityFlowsTest extends MapperUtilsTest {
         IpAddress ipAddress = new IpAddress(new Ipv6Address(IPV6_1));
         MacAddress macAddress = new MacAddress(MAC_1);
         NodeConnectorId connectorId = new NodeConnectorId(CONNECTOR_1);
-        Endpoint testEp = endpointCreator(ipAddress, macAddress, connectorId);
+        Endpoint testEp = endpointBuilder(ipAddress, macAddress, connectorId, null, null).build();
 
         flows.l3Flow((short) 2, testEp, new NodeConnectorId(CONNECTOR_1), new MacAddress(MAC_1), 100, true, ofWriter);
         verifyZeroInteractions(ofWriter);
@@ -208,8 +208,8 @@ public class PortSecurityFlowsTest extends MapperUtilsTest {
                 .setInPort(connectorId);
         Match match = matchBuilder.build();
 
-        Flow testFlow = flowCreator(FlowIdUtils.newFlowId(tableId, DHCP, match), tableId, 50, match,
-                FlowUtils.gotoTableInstructions((short) 2));
+        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, DHCP, match), tableId, 50, match,
+                FlowUtils.gotoTableInstructions((short) 2)).build();
 
         flows.l3DhcpDoraFlow((short) 2, new NodeConnectorId(CONNECTOR_1), new MacAddress(MAC_1), 50, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
@@ -225,8 +225,8 @@ public class PortSecurityFlowsTest extends MapperUtilsTest {
                 .setInPort(connectorId);
         Match match = matchBuilder.build();
 
-        Flow testFlow = flowCreator(FlowIdUtils.newFlowId(tableId, L2, match), tableId, 100, match,
-                FlowUtils.gotoTableInstructions((short) 2));
+        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, L2, match), tableId, 100, match,
+                FlowUtils.gotoTableInstructions((short) 2)).build();
 
         flows.l2flow((short) 2, new NodeConnectorId(CONNECTOR_0), new MacAddress(MAC_0), 100, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
@@ -248,10 +248,10 @@ public class PortSecurityFlowsTest extends MapperUtilsTest {
         InstructionsBuilder instructionsBuilder = new InstructionsBuilder();
         instructionsBuilder.setInstruction(instructions);
 
-        List<L2FloodDomain> l2FloodDomains = l2FloodDomainsCreator();
+        List<L2FloodDomain> l2FloodDomains = l2FloodDomains();
 
-        Flow testFlow = flowCreator(FlowIdUtils.newFlowId(tableId, ALLOW_EXTERNAL_POP_VLAN, match), tableId, 200, match,
-                instructionsBuilder.build());
+        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, ALLOW_EXTERNAL_POP_VLAN, match), tableId, 200, match,
+                instructionsBuilder.build()).build();
 
         flows.popVlanTagsOnExternalPortFlows((short) 0, connectorId, l2FloodDomains, 200, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
@@ -265,8 +265,8 @@ public class PortSecurityFlowsTest extends MapperUtilsTest {
         matchBuilder.setInPort(connectorId);
         Match match = matchBuilder.build();
 
-        Flow testFlow = flowCreator(FlowIdUtils.newFlowId(tableId, ALLOW_EXTERNAL, match), tableId, 250, match,
-                FlowUtils.gotoTableInstructions((short) 2));
+        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, ALLOW_EXTERNAL, match), tableId, 250, match,
+                FlowUtils.gotoTableInstructions((short) 2)).build();
         flows.allowFromExternalPortFlow((short) 2, connectorId, 250, ofWriter);
         verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
     }
