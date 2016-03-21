@@ -123,7 +123,8 @@ public class SourceMapper extends FlowTable {
                 for (EgKey peer : peers) {
                     Collection<Endpoint> peerEgEndpoints = ctx.getEndpointManager().getEndpointsForGroup(peer);
                     for (Endpoint peerEgEndpoint : peerEgEndpoints) {
-                        OrdinalFactory.EndpointFwdCtxOrdinals ordinals = getEndpointOrdinals(ctx, peerEgEndpoint);
+                        OrdinalFactory.EndpointFwdCtxOrdinals ordinals =
+                                OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, peerEgEndpoint);
                         flows.createTunnelFlow(destinationMapperId, TUNNEL_FLOW, tunnelPort, ordinals,
                                 ofWriter);
                         flows.createBroadcastFlow(destinationMapperId, BROADCAST_FLOW, tunnelPort,
@@ -138,7 +139,8 @@ public class SourceMapper extends FlowTable {
         }
         IndexedTenant tenant = ctx.getTenant(endpoint.getTenant());
         // Sync the local EP information
-        OrdinalFactory.EndpointFwdCtxOrdinals endpointFwdCtxOrdinals = getEndpointOrdinals(ctx, endpoint);
+        OrdinalFactory.EndpointFwdCtxOrdinals endpointFwdCtxOrdinals =
+                OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, endpoint);
         MacAddress macAddress = endpoint.getMacAddress();
         if (endpointFwdCtxOrdinals != null) {
             OfOverlayContext ofOverlayContext = endpoint.getAugmentation(OfOverlayContext.class);
@@ -147,15 +149,6 @@ public class SourceMapper extends FlowTable {
                 flows.synchronizeEp(destinationMapperId, SYNCHRONIZE_EP, endpointFwdCtxOrdinals, macAddress,
                         ofOverlayContext.getNodeConnectorId(), ofWriter);
             }
-        }
-    }
-
-    private OrdinalFactory.EndpointFwdCtxOrdinals getEndpointOrdinals(OfContext ctx, Endpoint endpoint) {
-        try {
-            return OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, endpoint);
-        } catch (Exception e) {
-            LOG.error("Failed to get fwd ctx ordinals for endpoint {}", endpoint);
-            return null;
         }
     }
 

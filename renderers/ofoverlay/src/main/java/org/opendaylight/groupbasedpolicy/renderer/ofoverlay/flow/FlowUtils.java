@@ -794,4 +794,24 @@ public final class FlowUtils {
                 .setHardTimeout(0)
                 .setIdleTimeout(0);
     }
+
+    /**
+     * Convert string value to byte array
+     *
+     * @param values input value as a (@link String)
+     * @return byte representation of input data
+     */
+    public static byte[] bytesFromHexString(String values) {
+        String target = "";
+        if (values != null) {
+            target = values;
+        }
+        String[] octets = target.split(":");
+
+        byte[] ret = new byte[octets.length];
+        for (int i = 0; i < octets.length; i++) {
+            ret[i] = Integer.valueOf(octets[i], 16).byteValue();
+        }
+        return ret;
+    }
 }

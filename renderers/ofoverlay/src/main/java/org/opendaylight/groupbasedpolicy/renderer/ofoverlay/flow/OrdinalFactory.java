@@ -55,9 +55,8 @@ public class OrdinalFactory {
      * @param tenantId the tenant id
      * @param id a unique id
      * @return the ordinal
-     * @throws Exception throws all exception
      */
-    public static int getContextOrdinal(final TenantId tenantId, final UniqueId id) throws Exception {
+    public static int getContextOrdinal(final TenantId tenantId, final UniqueId id) {
         if (tenantId == null || id == null)
             return 0;
         return getContextOrdinalFromString(tenantId.getValue() + "|" + id.getValue());
@@ -98,7 +97,7 @@ public class OrdinalFactory {
         return getContextOrdinalFromString(destNode.getValue());
     }
 
-    public static int getContextOrdinal(Endpoint ep, NetworkDomainId networkContainment) throws Exception {
+    public static int getContextOrdinal(Endpoint ep, NetworkDomainId networkContainment) {
 
         Set<String> epgs = new TreeSet<>();
 
@@ -125,7 +124,7 @@ public class OrdinalFactory {
 
     }
 
-    public static int getContextOrdinal(Endpoint ep) throws Exception {
+    public static int getContextOrdinal(Endpoint ep) {
 
         Set<String> epgs = new TreeSet<>();
 
@@ -158,7 +157,7 @@ public class OrdinalFactory {
      *        the unique ID for the element
      * @return the 32-bit ordinal value
      */
-    private static int getContextOrdinalFromString(final String id) throws Exception {
+    private static int getContextOrdinalFromString(final String id) {
 
         Integer ord = ordinals.get(id);
         if (ord == null) {
@@ -171,7 +170,7 @@ public class OrdinalFactory {
     }
 
     public static final EndpointFwdCtxOrdinals getEndpointFwdCtxOrdinals(OfContext ctx,
-            Endpoint ep) throws Exception {
+            Endpoint ep) {
         IndexedTenant tenant = ctx.getTenant(ep.getTenant());
         if (tenant == null) {
             LOG.debug("Tenant {} is null", ep.getTenant());
@@ -187,7 +186,7 @@ public class OrdinalFactory {
         private EpKey ep;
         private int epgId = 0, bdId = 0, fdId = 0, l3Id = 0, cgId = 0, tunnelId = 0;
 
-        private EndpointFwdCtxOrdinals(Endpoint ep, OfContext ctx) throws Exception {
+        private EndpointFwdCtxOrdinals(Endpoint ep, OfContext ctx) {
             this.ep = new EpKey(ep.getL2Context(), ep.getMacAddress());
 
             IndexedTenant tenant = ctx.getTenant(ep.getTenant());
@@ -269,6 +268,7 @@ public class OrdinalFactory {
     }
 
     @VisibleForTesting
+    // Used only for unit testing
     public static void resetPolicyOrdinalValue() {
         policyOrdinal.set(1);
     }

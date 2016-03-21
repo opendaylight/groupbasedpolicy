@@ -38,8 +38,10 @@ import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.groupbasedpolicy.util.SetUtils;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointFields;
@@ -638,6 +640,27 @@ public class EndpointManager implements AutoCloseable {
             return null;
         }
         return endpoints.getEndpointL3();
+    }
+
+    /**
+     * Reads L2 endpoint from data store using appropriate {@link EndpointL3}
+     *
+     * @return {@link EndpointL3} if exists, otherwise null
+     */
+    public Endpoint getL2EndpointFromL3(EndpointL3 endpointL3) {
+        if(endpointL3 != null) {
+            L2BridgeDomainId l2Context = endpointL3.getL2Context();
+            MacAddress macAddress = endpointL3.getMacAddress();
+            if (l2Context == null || macAddress == null) {
+                LOG.debug("[L2Context: {}, MacAddress: {}] Cannot read endpoint from DS unless both keys are specified!",
+                        l2Context, macAddress);
+                return null;
+            }
+            EpKey l2EndpointKey = new EpKey(l2Context, macAddress);
+            return endpoints.get(l2EndpointKey);
+        }
+
+        return null;
     }
 
     /**

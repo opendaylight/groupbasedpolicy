@@ -212,7 +212,7 @@ class IngressNatMapperFlows {
     private Flow createOutsideArpFlow(IndexedTenant tenant, int priority, IpAddress outsideDestAddress,
                                       MacAddress toMac, NodeId nodeId) {
         String ikey = outsideDestAddress.getIpv4Address().getValue();
-        BigInteger intMac = new BigInteger(1, bytesFromHexString(toMac.getValue()));
+        BigInteger intMac = new BigInteger(1, FlowUtils.bytesFromHexString(toMac.getValue()));
         MatchBuilder matchBuilder = new MatchBuilder().setEthernetMatch(ethernetMatch(null, null, ARP)).setLayer3Match(
                 new ArpMatchBuilder().setArpOp(1)
                         .setArpTargetTransportAddress(new Ipv4Prefix(ikey + "/32"))
@@ -316,19 +316,5 @@ class IngressNatMapperFlows {
         } else {
             return null;
         }
-    }
-
-    private byte[] bytesFromHexString(String values) {
-        String target = "";
-        if (values != null) {
-            target = values;
-        }
-        String[] octets = target.split(":");
-
-        byte[] ret = new byte[octets.length];
-        for (int i = 0; i < octets.length; i++) {
-            ret[i] = Integer.valueOf(octets[i], 16).byteValue();
-        }
-        return ret;
     }
 }

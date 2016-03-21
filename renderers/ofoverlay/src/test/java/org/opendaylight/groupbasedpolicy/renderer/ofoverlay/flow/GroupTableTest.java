@@ -160,9 +160,9 @@ public class GroupTableTest {
     @Ignore
     @Test
     public void updateTest() throws Exception {
-        //doNothing().when(groupTable).sync(nodeId, ofWriter);
+        //doNothing().when(groupTable).sync(NODE_ID, ofWriter);
 
-        //groupTable.sync(nodeId, ofWriter);
+        //groupTable.sync(NODE_ID, ofWriter);
         //verify(groupTable).sync(any(NodeId.class), any(OfWriter.class));
     }
 
@@ -171,7 +171,7 @@ public class GroupTableTest {
     public void updateTestNoFCN() throws Exception {
         doReturn(null).when(groupTable).getFCNodeFromDatastore(any(NodeId.class));
 
-        //groupTable.sync(nodeId, ofWriter);
+        //groupTable.sync(NODE_ID, ofWriter);
         verify(ofWriter, never()).writeBucket(any(NodeId.class), any(GroupId.class), any(Bucket.class));;
         verify(ofWriter, never()).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
         verify(ofWriter, never()).writeGroup(any(NodeId.class), any(GroupId.class), any(GroupTypes.class),
@@ -185,7 +185,7 @@ public class GroupTableTest {
         when(endpointManager.getGroupsForNode(any(NodeId.class))).thenReturn(
                 Collections.<EgKey>emptySet());
 
-        //groupTable.sync(nodeId, ofWriter);
+        //groupTable.sync(NODE_ID, ofWriter);
         verify(ofWriter).writeGroup(any(NodeId.class), any(GroupId.class));
     }
 
@@ -196,7 +196,7 @@ public class GroupTableTest {
         when(endpointManager.getGroupsForNode(any(NodeId.class))).thenReturn(
                 Collections.<EgKey>emptySet());
 
-        //groupTable.sync(nodeId, ofWriter);
+        //groupTable.sync(NODE_ID, ofWriter);
         verify(ofWriter, never()).writeGroup(any(NodeId.class), any(GroupId.class));
     }
 }

@@ -12,8 +12,6 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowIdUtils;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.MapperUtilsTest;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
@@ -32,22 +30,15 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev14
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg5;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg6;
 
-import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.*;
 
 
 public class SourceMapperFlowsTest extends MapperUtilsTest {
-
-    private static final String DROP = "drop";
-    private static final String DROP_ALL = "dropAll";
-    private static final String TUNNEL = "tunnel";
-    private static final String FLOOD_ID = "tunnelFdId";
 
     private SourceMapperFlows flows;
 
@@ -58,16 +49,16 @@ public class SourceMapperFlowsTest extends MapperUtilsTest {
         endpointManager = mock(EndpointManager.class);
         policyInfo = mock(PolicyInfo.class);
         ofWriter = mock(OfWriter.class);
-        flows = new SourceMapperFlows(nodeId, tableId);
+        flows = new SourceMapperFlows(NODE_ID, tableId);
         OrdinalFactory.resetPolicyOrdinalValue();
     }
 
     @Test
     public void dropFlow_noEthertype() {
-        Flow testFlow = flowBuilder(new FlowId(DROP_ALL), tableId, 100, null, FlowUtils.dropInstructions()).build();
+        Flow testFlow = buildFlow(new FlowId(DROP_ALL), tableId, 100, null, FlowUtils.dropInstructions()).build();
 
         flows.dropFlow(100, null, ofWriter);
-        verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
+        verify(ofWriter, times(1)).writeFlow(NODE_ID, tableId, testFlow);
     }
 
     @Test
@@ -75,11 +66,11 @@ public class SourceMapperFlowsTest extends MapperUtilsTest {
         MatchBuilder matchBuilder = new MatchBuilder();
         matchBuilder.setEthernetMatch(FlowUtils.ethernetMatch(null, null, FlowUtils.IPv4));
         Match match = matchBuilder.build();
-        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, DROP, match), tableId, 100, match,
+        Flow testFlow = buildFlow(FlowIdUtils.newFlowId(tableId, DROP, match), tableId, 100, match,
                 FlowUtils.dropInstructions()).build();
 
         flows.dropFlow(100, FlowUtils.IPv4, ofWriter);
-        verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
+        verify(ofWriter, times(1)).writeFlow(NODE_ID, tableId, testFlow);
     }
 
     @Test
@@ -87,11 +78,11 @@ public class SourceMapperFlowsTest extends MapperUtilsTest {
         MatchBuilder matchBuilder = new MatchBuilder();
         matchBuilder.setEthernetMatch(FlowUtils.ethernetMatch(null, null, FlowUtils.IPv6));
         Match match = matchBuilder.build();
-        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, DROP, match), tableId, 100, match,
+        Flow testFlow = buildFlow(FlowIdUtils.newFlowId(tableId, DROP, match), tableId, 100, match,
                 FlowUtils.dropInstructions()).build();
 
         flows.dropFlow(100, FlowUtils.IPv6, ofWriter);
-        verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
+        verify(ofWriter, times(1)).writeFlow(NODE_ID, tableId, testFlow);
     }
 
     @Test
@@ -99,20 +90,19 @@ public class SourceMapperFlowsTest extends MapperUtilsTest {
         MatchBuilder matchBuilder = new MatchBuilder();
         matchBuilder.setEthernetMatch(FlowUtils.ethernetMatch(null, null, FlowUtils.ARP));
         Match match = matchBuilder.build();
-        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, DROP, match), tableId, 100, match,
+        Flow testFlow = buildFlow(FlowIdUtils.newFlowId(tableId, DROP, match), tableId, 100, match,
                 FlowUtils.dropInstructions()).build();
 
         flows.dropFlow(100, FlowUtils.ARP, ofWriter);
-        verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
+        verify(ofWriter, times(1)).writeFlow(NODE_ID, tableId, testFlow);
     }
 
     @Test
     public void synchronizeEp() throws Exception {
-        Endpoint testEndpoint = endpointBuilder(new IpAddress(new Ipv4Address(IPV4_1)), new MacAddress(MAC_1),
-                new NodeConnectorId(CONNECTOR_1), null, null).build();
+        Endpoint testEndpoint = buildEndpoint(IPV4_0, MAC_1, CONNECTOR_1).build();
 
         when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(indexedTenantBuilder());
+        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(getTestIndexedTenant());
         when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
 
         OrdinalFactory.EndpointFwdCtxOrdinals ordinals = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, testEndpoint);
@@ -120,7 +110,7 @@ public class SourceMapperFlowsTest extends MapperUtilsTest {
         InOrder order = inOrder(ctx);
         order.verify(ctx, times(1)).getEndpointManager();
         order.verify(ctx, times(1)).getCurrentPolicy();
-        verify(ctx, times(2)).getTenant(new TenantId(TENANT_ID));
+        verify(ctx, times(2)).getTenant(TENANT_ID);
         assertNotNull(ordinals);
 
         Action reg0 = FlowUtils.nxLoadRegAction(NxmNxReg0.class, BigInteger.valueOf(1));
@@ -145,20 +135,19 @@ public class SourceMapperFlowsTest extends MapperUtilsTest {
                 .setInPort(new NodeConnectorId(CONNECTOR_1));
         Match match = matchBuilder.build();
 
-        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, "ep", match), tableId, 90, match,
+        Flow testFlow = buildFlow(FlowIdUtils.newFlowId(tableId, "ep", match), tableId, 90, match,
                 instructionsBuilder.build()).build();
 
         flows.synchronizeEp((short) 3, 90, ordinals, new MacAddress(MAC_1), new NodeConnectorId(CONNECTOR_1), ofWriter);
-        verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
+        verify(ofWriter, times(1)).writeFlow(NODE_ID, tableId, testFlow);
     }
 
     @Test
     public void createTunnelFlow() throws Exception {
-        Endpoint testEndpoint = endpointBuilder(new IpAddress(new Ipv4Address(IPV4_1)), new MacAddress(MAC_0),
-                new NodeConnectorId(CONNECTOR_0), null, null).build();
+        Endpoint testEndpoint = buildEndpoint(IPV4_0, MAC_0, CONNECTOR_0).build();
 
         when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(indexedTenantBuilder());
+        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(getTestIndexedTenant());
         when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
 
         OrdinalFactory.EndpointFwdCtxOrdinals ordinals = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, testEndpoint);
@@ -166,7 +155,7 @@ public class SourceMapperFlowsTest extends MapperUtilsTest {
         InOrder order = inOrder(ctx);
         order.verify(ctx, times(1)).getEndpointManager();
         order.verify(ctx, times(1)).getCurrentPolicy();
-        verify(ctx, times(2)).getTenant(new TenantId(TENANT_ID));
+        verify(ctx, times(2)).getTenant(TENANT_ID);
         assertNotNull(ordinals);
 
         Action reg0 = FlowUtils.nxLoadRegAction(NxmNxReg0.class, BigInteger.valueOf(1));
@@ -189,20 +178,19 @@ public class SourceMapperFlowsTest extends MapperUtilsTest {
         FlowUtils.addNxTunIdMatch(matchBuilder, 2);
         Match match = matchBuilder.build();
 
-        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, TUNNEL, match), tableId, 80, match,
+        Flow testFlow = buildFlow(FlowIdUtils.newFlowId(tableId, "tunnel", match), tableId, 80, match,
                 instructionsBuilder.build()).build();
 
         flows.createTunnelFlow((short) 3, 80, new NodeConnectorId(CONNECTOR_0), ordinals, ofWriter);
-        verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
+        verify(ofWriter, times(1)).writeFlow(NODE_ID, tableId, testFlow);
     }
 
     @Test
     public void createBroadcastFlow() throws Exception {
-        Endpoint testEndpoint = endpointBuilder(new IpAddress(new Ipv4Address(IPV4_1)), new MacAddress(MAC_0),
-                new NodeConnectorId(CONNECTOR_1), null, null).build();
+        Endpoint testEndpoint = buildEndpoint(IPV4_0, MAC_0, CONNECTOR_1).build();
 
         when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(indexedTenantBuilder());
+        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(getTestIndexedTenant());
         when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
 
         OrdinalFactory.EndpointFwdCtxOrdinals ordinals = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, testEndpoint);
@@ -210,7 +198,7 @@ public class SourceMapperFlowsTest extends MapperUtilsTest {
         InOrder order = inOrder(ctx);
         order.verify(ctx, times(1)).getEndpointManager();
         order.verify(ctx, times(1)).getCurrentPolicy();
-        verify(ctx, times(2)).getTenant(new TenantId(TENANT_ID));
+        verify(ctx, times(2)).getTenant(TENANT_ID);
         assertNotNull(ordinals);
 
         Action reg5 = FlowUtils.nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(0));
@@ -229,10 +217,10 @@ public class SourceMapperFlowsTest extends MapperUtilsTest {
         FlowUtils.addNxTunIdMatch(matchBuilder, 0);
         Match match = matchBuilder.build();
 
-        Flow testFlow = flowBuilder(FlowIdUtils.newFlowId(tableId, FLOOD_ID, match), tableId, 80, match,
+        Flow testFlow = buildFlow(FlowIdUtils.newFlowId(tableId, "tunnelFdId", match), tableId, 80, match,
                 instructionsBuilder.build()).build();
 
         flows.createBroadcastFlow((short) 3, 80, new NodeConnectorId(CONNECTOR_1), ordinals, ofWriter);
-        verify(ofWriter, times(1)).writeFlow(nodeId, tableId, testFlow);
+        verify(ofWriter, times(1)).writeFlow(NODE_ID, tableId, testFlow);
     }
 }

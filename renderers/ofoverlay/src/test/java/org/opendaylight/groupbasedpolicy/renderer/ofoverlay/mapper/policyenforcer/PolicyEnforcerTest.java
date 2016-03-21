@@ -41,7 +41,6 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.MockSwitchManag
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.PortNumber;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
@@ -51,6 +50,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfigBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.nodes.node.TunnelBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
@@ -102,27 +102,27 @@ public class PolicyEnforcerTest extends MapperUtilsTest {
     private final int allowTunnelFlows = 1;
     private final int layer4flowsIPv4 = 1;
     private final int layer4flowsIPv6 = 1;
-    private final int dropAllFlow = 1;
-    private final int arpFlows = 1;
-    private MockEndpointManager endpointManagerMock;
-    private MockPolicyManager policyManagerMock;
-    private MockSwitchManager switchManagerMock;
-    private MockOfContext ctxMock;
+    private static final String TCP_DST = "tcp_dst_80";
 
     private NodeConnectorId tunnelId =
-            new NodeConnectorId(nodeId.getValue() + ":42");
+            new NodeConnectorId(NODE_ID.getValue() + ":42");
+    private NodeConnectorId nodeConnector = new NodeConnectorId(NODE_ID.getValue() + CONNECTOR_0);
     @Before
     public void setup() throws Exception {
         PowerMockito.stub(PowerMockito.method(PolicyManager.class, "setSfcTableOffset")).toReturn(true);
 
-        endpointManagerMock = new MockEndpointManager();
-        policyManagerMock = new MockPolicyManager(endpointManagerMock);
-        switchManagerMock = new MockSwitchManager();
-        ctxMock = new MockOfContext(null, policyManagerMock, switchManagerMock, endpointManagerMock, null);
-        table = new PolicyEnforcer(ctxMock, ctxMock.getPolicyManager().getTABLEID_POLICY_ENFORCER());
+        endpointManager = new MockEndpointManager();
+        policyManager = new MockPolicyManager(endpointManager);
+        switchManager = new MockSwitchManager();
+        ctx = new MockOfContext(null,
+                             policyManager,
+                             switchManager,
+                             endpointManager,
+                             null);
+        table = new PolicyEnforcer(ctx, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER());
 
-        switchManagerMock.addSwitch(
-                nodeId,
+        ((MockSwitchManager)switchManager).addSwitch(
+                NODE_ID,
                 tunnelId,
                 Collections.<NodeConnectorId>emptySet(),
                 new OfOverlayNodeConfigBuilder().setTunnel(
@@ -134,31 +134,35 @@ public class PolicyEnforcerTest extends MapperUtilsTest {
 
     @Test
     public void testSameEg() throws Exception {
-        Endpoint ep1 = endpointBuilder(new IpAddress(IPV4_1.toCharArray()), new MacAddress(MAC_0), nodeConnectorId, eg, bd)
-                .build();
-        endpointManagerMock.addEndpoint(ep1);
-        Endpoint ep2 = endpointBuilder(new IpAddress(IPV4_2.toCharArray()), new MacAddress(MAC_1), nodeConnectorId, eg, bd)
-                .build();
-        endpointManagerMock.addEndpoint(ep2);
-        ctxMock.addTenant(baseTenantBuilder().setPolicy(new PolicyBuilder(baseTenantBuilder().getPolicy())
+        EndpointBuilder ep1Builder = buildEndpoint(IPV4_0, MAC_0, nodeConnector);
+        ep1Builder.setEndpointGroup(ENDPOINT_GROUP_0);
+        ep1Builder.setL2Context(L2BD_ID);
+        Endpoint ep1 = ep1Builder.build();
+        ((MockEndpointManager)endpointManager).addEndpoint(ep1);
+        EndpointBuilder ep2Builder = buildEndpoint(IPV4_1,MAC_1, nodeConnector);
+        ep2Builder.setEndpointGroup(ENDPOINT_GROUP_1);
+        ep2Builder.setL2Context(L2BD_ID);
+        Endpoint ep2 = ep2Builder.build();
+        ((MockEndpointManager)endpointManager).addEndpoint(ep2);
+        ((MockOfContext)ctx).addTenant(buildTenant().setPolicy(new PolicyBuilder(buildTenant().getPolicy())
             .setContract(ImmutableList.of(baseContract(null).build())).build()).build());
 
         ofWriter = new OfWriter();
         table.sync(ep1, ofWriter);
-        assertTrue(!ofWriter.getTableForNode(nodeId, ctxMock.getPolicyManager().getTABLEID_POLICY_ENFORCER())
+        assertTrue(!ofWriter.getTableForNode(NODE_ID, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())
             .getFlow()
             .isEmpty());
         int count = 0;
         HashMap<String, Flow> flowMap = new HashMap<>();
-        for (Flow f : ofWriter.getTableForNode(nodeId, ctxMock.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow()) {
+        for (Flow f : ofWriter.getTableForNode(NODE_ID, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow()) {
             flowMap.put(f.getId().getValue(), f);
             if (isAllowSameEpg(f)) {
                 count += 1;
             }
         }
         assertEquals(sameEpgFlows, count);
-        int totalFlows = sameEpgFlows + allowTunnelFlows + dropAllFlow;
-        assertEquals(totalFlows, ofWriter.getTableForNode(nodeId, ctxMock.getPolicyManager().getTABLEID_POLICY_ENFORCER())
+        int totalFlows = sameEpgFlows + allowTunnelFlows + layer4flowsIPv4 + layer4flowsIPv6;
+        assertEquals(totalFlows, ofWriter.getTableForNode(NODE_ID, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())
             .getFlow()
             .size());
     }
@@ -178,27 +182,27 @@ public class PolicyEnforcerTest extends MapperUtilsTest {
     @Test
     public void doTestRule() throws Exception {
         Rule rule1 = new RuleBuilder().setActionRef(
-                ImmutableList.of(new ActionRefBuilder().setName(new ActionName("allow")).build()))
+                ImmutableList.of(new ActionRefBuilder().setName(new ActionName(ALLOW)).build()))
             .setClassifierRef(
-                    createClassifierRefs(ImmutableMap.of("tcp_dst_80", Direction.In, "tcp_src_80",
+                    createClassifierRefs(ImmutableMap.of(TCP_DST, Direction.In, TCP_SRC,
                             Direction.In)))
             .build();
         Rule rule2 = new RuleBuilder().setActionRef(
-                ImmutableList.of(new ActionRefBuilder().setName(new ActionName("allow")).build()))
+                ImmutableList.of(new ActionRefBuilder().setName(new ActionName(ALLOW)).build()))
             .setClassifierRef(
-                    createClassifierRefs(ImmutableMap.of("tcp_dst_80", Direction.In, "tcp_src_80",
+                    createClassifierRefs(ImmutableMap.of(TCP_DST, Direction.In, TCP_SRC,
                             Direction.Out)))
             .build();
         Rule rule3 = new RuleBuilder().setActionRef(
-                ImmutableList.of(new ActionRefBuilder().setName(new ActionName("allow")).build()))
+                ImmutableList.of(new ActionRefBuilder().setName(new ActionName(ALLOW)).build()))
             .setClassifierRef(
-                    createClassifierRefs(ImmutableMap.of("tcp_dst_80", Direction.In, "tcp_src_80",
+                    createClassifierRefs(ImmutableMap.of(TCP_DST, Direction.In, TCP_SRC,
                             Direction.Out, "ether_type", Direction.In)))
             .build();
         Rule rule4 = new RuleBuilder().setActionRef(
-                ImmutableList.of(new ActionRefBuilder().setName(new ActionName("allow")).build()))
+                ImmutableList.of(new ActionRefBuilder().setName(new ActionName(ALLOW)).build()))
             .setClassifierRef(
-                    createClassifierRefs(ImmutableMap.of("tcp_dst_80", Direction.In, "tcp_dst_90",
+                    createClassifierRefs(ImmutableMap.of(TCP_DST, Direction.In, "tcp_dst_90",
                             Direction.In)))
             .build();
 
@@ -219,22 +223,26 @@ public class PolicyEnforcerTest extends MapperUtilsTest {
     }
 
     private int doTestDifferentEg(List<Subject> subjects) throws Exception {
-        Endpoint ep1 = endpointBuilder(new IpAddress(IPV4_1.toCharArray()), new MacAddress(MAC_0), nodeConnectorId, eg, bd)
-                .build();
-        endpointManagerMock.addEndpoint(ep1);
-        Endpoint ep2 = endpointBuilder(new IpAddress(IPV4_2.toCharArray()), new MacAddress(MAC_1), nodeConnectorId, eg2, bd)
-                .build();
-        endpointManagerMock.addEndpoint(ep2);
-        ctxMock.addTenant(baseTenantBuilder().setPolicy(new PolicyBuilder(baseTenantBuilder().getPolicy())
+        EndpointBuilder ep1Builder = buildEndpoint(IPV4_0, MAC_0, nodeConnector);
+        ep1Builder.setEndpointGroup(ENDPOINT_GROUP_0);
+        ep1Builder.setL2Context(L2BD_ID);
+        Endpoint ep1 = ep1Builder.build();
+        ((MockEndpointManager)endpointManager).addEndpoint(ep1);
+        EndpointBuilder ep2Builder = buildEndpoint(IPV4_1, MAC_1, nodeConnector);
+        ep2Builder.setEndpointGroup(ENDPOINT_GROUP_1);
+        ep2Builder.setL2Context(L2BD_ID);
+        Endpoint ep2 = ep2Builder.build();
+        ((MockEndpointManager)endpointManager).addEndpoint(ep2);
+        ((MockOfContext)ctx).addTenant(buildTenant().setPolicy(new PolicyBuilder(buildTenant().getPolicy())
             .setContract(ImmutableList.of(baseContract(subjects).build())).build()).build());
 
         ofWriter = new OfWriter();
         table.sync(ep1, ofWriter);
-        assertTrue(!ofWriter.getTableForNode(nodeId, ctxMock.getPolicyManager().getTABLEID_POLICY_ENFORCER())
+        assertTrue(!ofWriter.getTableForNode(NODE_ID, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())
             .getFlow()
             .isEmpty());
         int count = 0;
-        for (Flow f : ofWriter.getTableForNode(nodeId, ctxMock.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow()) {
+        for (Flow f : ofWriter.getTableForNode(NODE_ID, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow()) {
             if (isAllowSameEpg(f)) {
                 count += 1;
             } else if (f.getMatch() != null && Objects.equals(tunnelId, f.getMatch().getInPort())) {
@@ -280,16 +288,21 @@ public class PolicyEnforcerTest extends MapperUtilsTest {
         Condition cond1 = new ConditionBuilder().setName(new ConditionName("cond1")).build();
         Condition cond2 = new ConditionBuilder().setName(new ConditionName("cond2")).build();
 
-        Endpoint ep1 = endpointBuilder(new IpAddress(IPV4_1.toCharArray()), new MacAddress(MAC_0), nodeConnectorId, eg, bd)
-                .setCondition(ImmutableList.of(cond1.getName())).build();
-        endpointManagerMock.addEndpoint(ep1);
-        Endpoint ep2 = endpointBuilder(new IpAddress(IPV4_2.toCharArray()), new MacAddress(MAC_1), nodeConnectorId, eg2, bd)
-            .setCondition(ImmutableList.of(cond1.getName(), cond2.getName()))
-            .build();
-        endpointManagerMock.addEndpoint(ep2);
+        EndpointBuilder ep1Builder = buildEndpoint(IPV4_0, MAC_0, nodeConnector);
+        ep1Builder.setEndpointGroup(ENDPOINT_GROUP_0);
+        ep1Builder.setL2Context(L2BD_ID);
+        ep1Builder.setCondition(ImmutableList.of(cond1.getName())).build();
+        Endpoint ep1 = ep1Builder.build();
+        ((MockEndpointManager)endpointManager).addEndpoint(ep1);
+        EndpointBuilder ep2Builder = buildEndpoint(IPV4_1,MAC_1, nodeConnector);
+        ep2Builder.setEndpointGroup(ENDPOINT_GROUP_1);
+        ep2Builder.setL2Context(L2BD_ID);
+        ep2Builder.setCondition(ImmutableList.of(cond1.getName(), cond2.getName())).build();
+        Endpoint ep2 = ep2Builder.build();
+        ((MockEndpointManager)endpointManager).addEndpoint(ep2);
 
-        TenantBuilder tb = baseTenantBuilder().setPolicy(new PolicyBuilder(baseTenantBuilder().getPolicy()).setContract(
-                ImmutableList.of(new ContractBuilder().setId(cid)
+        TenantBuilder tb = buildTenant().setPolicy(new PolicyBuilder(buildTenant().getPolicy()).setContract(
+                ImmutableList.of(new ContractBuilder().setId(CONTRACT_ID)
                     .setSubject(ImmutableList.of(baseSubject(Direction.Out).build()))
                     .setClause(
                             ImmutableList.of(new ClauseBuilder().setName(new ClauseName("test"))
@@ -310,12 +323,12 @@ public class PolicyEnforcerTest extends MapperUtilsTest {
                                                     .build())).build())
                                 .build()))
                     .build())).build());
-        ctxMock.addTenant(tb.build());
+        ((MockOfContext)ctx).addTenant(tb.build());
 
-        PolicyInfo policy = ctxMock.getCurrentPolicy();
-        List<ConditionName> ep1c = endpointManagerMock.getConditionsForEndpoint(ep1);
+        PolicyInfo policy = ctx.getCurrentPolicy();
+        List<ConditionName> ep1c = endpointManager.getConditionsForEndpoint(ep1);
         ConditionGroup cg1 = policy.getEgCondGroup(new EgKey(tb.getId(), ep1.getEndpointGroup()), ep1c);
-        List<ConditionName> ep2c = endpointManagerMock.getConditionsForEndpoint(ep2);
+        List<ConditionName> ep2c = endpointManager.getConditionsForEndpoint(ep2);
         ConditionGroup cg2 = policy.getEgCondGroup(new EgKey(tb.getId(), ep2.getEndpointGroup()), ep2c);
         int cg1Id = OrdinalFactory.getCondGroupOrdinal(cg1);
         int cg2Id = OrdinalFactory.getCondGroupOrdinal(cg2);
@@ -332,12 +345,14 @@ public class PolicyEnforcerTest extends MapperUtilsTest {
         ofWriter = new OfWriter();
         table.sync(ep1, ofWriter);
         // one layer4 flow for each direction
-        int totalFlows = sameEpgFlows + allowTunnelFlows + layer4flowsIPv4 + layer4flowsIPv6 + arpFlows + dropAllFlow;;
-        assertEquals(totalFlows, ofWriter.getTableForNode(nodeId, ctxMock.getPolicyManager().getTABLEID_POLICY_ENFORCER())
+        int dropAllFlow = 1;
+        int arpFlows = 1;
+        int totalFlows = sameEpgFlows + allowTunnelFlows + layer4flowsIPv4 + layer4flowsIPv6 + arpFlows + dropAllFlow;
+        assertEquals(totalFlows, ofWriter.getTableForNode(NODE_ID, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER())
             .getFlow()
             .size());
         HashMap<String, Flow> flowMap = new HashMap<>();
-        for (Flow f : ofWriter.getTableForNode(nodeId, ctxMock.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow()) {
+        for (Flow f : ofWriter.getTableForNode(NODE_ID, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()).getFlow()) {
             flowMap.put(f.getId().getValue(), f);
             if (f.getMatch() != null && f.getMatch().getEthernetMatch() != null) {
                 count++;
@@ -384,11 +399,11 @@ public class PolicyEnforcerTest extends MapperUtilsTest {
     }
 
     protected ContractBuilder baseContract(List<Subject> subjects) {
-        ContractBuilder contractBuilder = new ContractBuilder().setId(cid).setSubject(subjects);
+        ContractBuilder contractBuilder = new ContractBuilder().setId(CONTRACT_ID).setSubject(subjects);
         // TODO refactor
         if (subjects == null) {
             return contractBuilder.setClause(ImmutableList.of(new ClauseBuilder().setName(new ClauseName("test"))
-                .setSubjectRefs(ImmutableList.<SubjectName>of(new SubjectName("s1")))
+                .setSubjectRefs(ImmutableList.of(new SubjectName("s1")))
                 .build()));
         }
         List<SubjectName> subjectNames = new ArrayList<>();
@@ -405,12 +420,12 @@ public class PolicyEnforcerTest extends MapperUtilsTest {
             .setName(new SubjectName("s1"))
             .setRule(ImmutableList.of(new RuleBuilder()
                 .setActionRef(ImmutableList.of(new ActionRefBuilder()
-                    .setName(new ActionName("allow"))
+                    .setName(new ActionName(ALLOW))
                     .build()))
                 .setClassifierRef(ImmutableList.of(new ClassifierRefBuilder()
-                    .setName(new ClassifierName("tcp_dst_80"))
+                    .setName(new ClassifierName(TCP_DST))
                     .setDirection(direction)
-                    .setInstanceName(new ClassifierName("tcp_dst_80"))
+                    .setInstanceName(new ClassifierName(TCP_DST))
                     .build()))
                 .build()));
     }
