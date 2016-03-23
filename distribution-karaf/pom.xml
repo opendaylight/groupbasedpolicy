@@ -10,13 +10,13 @@
   <parent>
     <groupId>org.opendaylight.controller</groupId>
     <artifactId>karaf-parent</artifactId>
-    <version>1.6.1-SNAPSHOT</version>
+    <version>1.6.1-Beryllium-SR1</version>
     <relativePath />
   </parent>
 
   <artifactId>distribution-karaf</artifactId>
   <groupId>org.opendaylight.groupbasedpolicy</groupId>
-  <version>0.3.1-SNAPSHOT</version>
+  <version>0.3.1-Beryllium-SR1</version>
   <packaging>pom</packaging>
 
   <prerequisites>
@@ -24,8 +24,8 @@
   </prerequisites>
 
   <properties>
-    <groupbasedpolicy.project.version>0.3.1-SNAPSHOT</groupbasedpolicy.project.version>
-    <sfc.version>0.2.1-SNAPSHOT</sfc.version>
+    <groupbasedpolicy.project.version>0.3.1-Beryllium-SR1</groupbasedpolicy.project.version>
+    <sfc.version>0.2.1-Beryllium-SR1</sfc.version>
   </properties>
 
   <dependencyManagement>
