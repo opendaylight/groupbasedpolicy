@@ -10,7 +10,7 @@
   <parent>
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>groupbasedpolicy-renderers</artifactId>
-    <version>0.3.1-Beryllium-SR1</version>
+    <version>0.3.2-SNAPSHOT</version>
     <relativePath>../</relativePath>
   </parent>
 
@@ -18,10 +18,10 @@
   <packaging>bundle</packaging>
 
   <properties>
-    <ovsdb.version>1.2.2-Beryllium-SR1</ovsdb.version>
-    <openflowplugin.version>0.2.1-Beryllium-SR1</openflowplugin.version>
-    <liblldp.version>0.10.1-Beryllium-SR1</liblldp.version>
-    <sfc.version>0.2.1-Beryllium-SR1</sfc.version>
+    <ovsdb.version>1.2.3-SNAPSHOT</ovsdb.version>
+    <openflowplugin.version>0.2.2-SNAPSHOT</openflowplugin.version>
+    <liblldp.version>0.10.2-SNAPSHOT</liblldp.version>
+    <sfc.version>0.2.2-SNAPSHOT</sfc.version>
   </properties>
 
   <dependencies>
