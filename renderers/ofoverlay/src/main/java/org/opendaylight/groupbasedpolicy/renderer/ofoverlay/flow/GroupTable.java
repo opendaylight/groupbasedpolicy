@@ -78,7 +78,11 @@ public class GroupTable extends OfTable {
     }
 
     @Override
-    public void sync(NodeId nodeId, OfWriter ofWriter) throws Exception {
+    public void sync(Endpoint endpoint, OfWriter ofWriter) throws Exception {
+
+        // TODO: only temporary workaround, use src & dst endpoint in implementation
+        NodeId nodeId = ctx.getEndpointManager().getEndpointNodeId(endpoint);
+
         // there appears to be no way of getting only the existing group
         // tables unfortunately, so we have to get the whole goddamned node.
         // Since this is happening concurrently with other things that are

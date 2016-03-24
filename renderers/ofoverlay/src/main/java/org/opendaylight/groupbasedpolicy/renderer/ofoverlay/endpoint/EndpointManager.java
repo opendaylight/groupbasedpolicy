@@ -66,6 +66,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3Context;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ExternalImplicitGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.slf4j.Logger;
@@ -228,6 +229,14 @@ public class EndpointManager implements AutoCloseable {
      */
     public Endpoint getEndpoint(EpKey epKey) {
         return endpoints.get(epKey);
+    }
+
+    /**
+     * Get all endpoint objects
+     * @return the {@link Endpoint} corresponding to the key
+     */
+    public HashSet<Endpoint> getEndpoints() {
+        return new HashSet<>(endpoints.values());
     }
 
     /**
@@ -765,6 +774,28 @@ public class EndpointManager implements AutoCloseable {
             return endpoint.getCondition();
         else
             return Collections.emptyList();
+    }
+
+    /**
+     * @param endpoint - {@link Endpoint} which should contain location
+     * @return {@link NodeId} of node endpoint is placed on
+     */
+    public NodeId getEndpointNodeId(Endpoint endpoint) {
+        if (endpoint.getAugmentation(OfOverlayContext.class) != null) {
+            return endpoint.getAugmentation(OfOverlayContext.class).getNodeId();
+        }
+        return null;
+    }
+
+    /**
+     * @param endpoint - {@link Endpoint} which should contain location
+     * @return {@link NodeConnectorId} of node endpoint is connected to
+     */
+    public NodeConnectorId getEndpointNodeConnectorId(Endpoint endpoint) {
+        if (endpoint.getAugmentation(OfOverlayContext.class) != null) {
+            return endpoint.getAugmentation(OfOverlayContext.class).getNodeConnectorId();
+        }
+        return null;
     }
 
     private void notifyEndpointUpdated(EpKey epKey) {

@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
+package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.ingressnat;
 
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.ARP;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.applyActionIns;
@@ -37,7 +37,12 @@ import org.opendaylight.groupbasedpolicy.dto.EgKey;
 import org.opendaylight.groupbasedpolicy.dto.EpKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowIdUtils;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.external.ExternalMapper;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Prefix;
@@ -53,6 +58,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.Segmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
@@ -154,11 +160,14 @@ public class IngressNatMapper extends FlowTable {
     }
 
     @Override
-    public void sync(NodeId nodeId, OfWriter ofWriter) throws Exception {
+    public void sync(Endpoint endpoint, OfWriter ofWriter) throws Exception {
+
+        // TODO: only temporary workaround, use src & dst endpoint in implementation
+        NodeId nodeId = ctx.getEndpointManager().getEndpointNodeId(endpoint);
 
         /*
          * To support provider networks, all external ingress traffic is currently passed here and
-         * if no match is foud - no NAT is performed and processing continues in DestinationMapper.
+         * if no match is found - no NAT is performed and processing continues in DestinationMapper.
          */
         Flow flow = base()
                 .setTableId(TABLE_ID)

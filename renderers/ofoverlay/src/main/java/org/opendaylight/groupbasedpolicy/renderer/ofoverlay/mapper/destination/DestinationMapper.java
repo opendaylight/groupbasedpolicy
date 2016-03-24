@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
+package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.destination;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.ARP;
@@ -54,7 +54,10 @@ import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowIdUtils;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.groupbasedpolicy.util.TenantUtils;
@@ -227,7 +230,10 @@ public class DestinationMapper extends FlowTable {
     }
 
     @Override
-    public void sync(NodeId nodeId, OfWriter ofWriter) throws Exception {
+    public void sync(Endpoint endpoint, OfWriter ofWriter) throws Exception {
+
+        // TODO: only temporary workaround, use src & dst endpoint in implementation
+        NodeId nodeId = ctx.getEndpointManager().getEndpointNodeId(endpoint);
 
         TenantId currentTenant = null;
 
@@ -1482,7 +1488,7 @@ public class DestinationMapper extends FlowTable {
         return localSubnets;
     }
 
-    static byte[] bytesFromHexString(String values) {
+    public static byte[] bytesFromHexString(String values) {
         String target = "";
         if (values != null) {
             target = values;
