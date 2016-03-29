@@ -7,40 +7,79 @@
  */
 package org.opendaylight.groupbasedpolicy.neutron.ovsdb;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
 
+import org.opendaylight.controller.config.yang.config.neutron_ovsdb.impl.IntegrationBridgeSetting;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
+import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.InventoryHelper;
+import org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.NeutronOvsdbIidFactory;
+import org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper;
+import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.DataTreeChangeHandler;
 import org.opendaylight.ovsdb.southbound.SouthboundConstants;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Uri;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubnetId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.DatapathTypeBase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.DatapathTypeSystem;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbBridgeAugmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbBridgeAugmentationBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbBridgeName;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbBridgeProtocolOpenflow13;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbBridgeRef;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbFailModeSecure;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbNodeAugmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbNodeRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbTerminationPointAugmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.ovsdb.bridge.attributes.ControllerEntry;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.ovsdb.bridge.attributes.ControllerEntryBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.ovsdb.bridge.attributes.ControllerEntryKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.ovsdb.bridge.attributes.ProtocolEntry;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.ovsdb.bridge.attributes.ProtocolEntryBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.ovsdb.node.attributes.ManagedNodeEntry;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.ovsdb.node.attributes.ManagerEntry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.ovsdb.node.attributes.OpenvswitchOtherConfigs;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.ovsdb.node.attributes.OpenvswitchOtherConfigsKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeBuilder;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.node.TerminationPoint;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 
 public class OvsdbNodeListener extends DataTreeChangeHandler<Node> {
 
@@ -48,16 +87,19 @@ public class OvsdbNodeListener extends DataTreeChangeHandler<Node> {
     public static final String NEUTRON_PROVIDER_MAPPINGS_KEY = "provider_mappings";
     private static final String OF_SEPARATOR = ":";
     private static final String OF_INVENTORY_PREFIX = "openflow";
+    private static final String BRIDGE_SEPARATOR = "/bridge/";
+    private static IntegrationBridgeSetting intBrSettings;
 
     private final Map<OvsdbBridgeRef, String> providerPortNameByBridgeRef = new HashMap<>();
     private final Map<InstanceIdentifier<Node>, NeutronBridgeWithExtPort> bridgeByNodeIid = new HashMap<>();
 
-    public OvsdbNodeListener(DataBroker dataProvider) {
+    public OvsdbNodeListener(DataBroker dataProvider, IntegrationBridgeSetting brSettings) {
         super(dataProvider,
                 new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
                         InstanceIdentifier.create(NetworkTopology.class)
                             .child(Topology.class, new TopologyKey(SouthboundConstants.OVSDB_TOPOLOGY_ID))
                             .child(Node.class)));
+        intBrSettings = brSettings;
     }
 
     @Override
@@ -66,19 +108,44 @@ public class OvsdbNodeListener extends DataTreeChangeHandler<Node> {
         OvsdbNodeAugmentation ovsdbNode = node.getAugmentation(OvsdbNodeAugmentation.class);
         if (ovsdbNode != null) {
             LOG.trace("OVSDB node created: {} \n {}", rootIdentifier, node);
-            DataObjectModification<OpenvswitchOtherConfigs> ovsOtherConfigModification =
-                    getProviderMappingsModification(rootNode);
+            DataObjectModification<OpenvswitchOtherConfigs> ovsOtherConfigModification = getProviderMappingsModification(rootNode);
+            boolean integrationBridgePresent = false;
             if (isProviderPortNameChanged(ovsOtherConfigModification) && ovsdbNode.getManagedNodeEntry() != null) {
                 String newProviderPortName = getProviderPortName(ovsOtherConfigModification.getDataAfter());
                 LOG.debug("provider_mappings created {} on node {}", newProviderPortName, node.getNodeId().getValue());
                 for (ManagedNodeEntry mngdNodeEntry : ovsdbNode.getManagedNodeEntry()) {
-                    providerPortNameByBridgeRef.put(mngdNodeEntry.getBridgeRef(), newProviderPortName);
+                    OvsdbBridgeRef bridgeRef = mngdNodeEntry.getBridgeRef();
+                    providerPortNameByBridgeRef.put(bridgeRef, newProviderPortName);
                     LOG.trace("Added Provider port name {} by OVSDB bridge ref {}", newProviderPortName,
                             mngdNodeEntry.getBridgeRef());
+                    NodeKey managedNodeKey = bridgeRef.getValue().firstKeyOf(Node.class);
+                    if (intBrSettings != null && managedNodeKey.getNodeId().getValue().equals(intBrSettings.getName())) {
+                        integrationBridgePresent = true;
+                    }
                 }
             }
-        }
+            if (intBrSettings != null && integrationBridgePresent == false) {
+                final Node bridge = createBridge(rootIdentifier,
+                        managerToControllerEntries(ovsdbNode.getManagerEntry()), intBrSettings.getName());
+                InstanceIdentifier<Node> bridgeNodeIid = NeutronOvsdbIidFactory.nodeIid(
+                        rootIdentifier.firstKeyOf(Topology.class).getTopologyId(), bridge.getNodeId());
+                WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
+                wTx.merge(LogicalDatastoreType.CONFIGURATION, bridgeNodeIid, bridge, true);
+                Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
 
+                    @Override
+                    public void onSuccess(Void result) {
+                        LOG.info("Bridge {} written to datastore." + bridge.getNodeId().getValue());
+                    }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+                        LOG.error("Failed to write bridge {}. Message: {}" + bridge.getNodeId().getValue(),
+                                t.getMessage());
+                    }
+                });
+            }
+        }
         OvsdbBridgeAugmentation ovsdbBridge = node.getAugmentation(OvsdbBridgeAugmentation.class);
         if (ovsdbBridge != null) {
             LOG.trace("OVSDB bridge created: {} \n {}", rootIdentifier, node);
@@ -276,6 +343,59 @@ public class OvsdbNodeListener extends DataTreeChangeHandler<Node> {
             }
         }
         return "";
+    }
+
+    /**
+     * Extracts IP address from URI
+     *
+     * @param uri in format protocol:ip:port
+     * @return IPv4 or IPv6 address as {@link String}.
+     */
+    private static @Nonnull String getIpAddrFromUri(Uri uri) {
+        String otherConfig = uri.getValue();
+        String[] elements = otherConfig.split(":");
+        // IPv6 expression also contains colons
+        if (elements.length < 3) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        // first (protocol) and last (port) elements are filtered
+        for (int i = 1; i < elements.length - 1; i++) {
+            sb.append(elements[i]);
+        }
+        return sb.toString();
+    }
+
+    private List<ControllerEntry> managerToControllerEntries(List<ManagerEntry> managerEntries) {
+        return Lists.transform(managerEntries, new Function<ManagerEntry, ControllerEntry>() {
+
+            @Override
+            public ControllerEntry apply(ManagerEntry managerEntry) {
+                String ipAddr = getIpAddrFromUri(managerEntry.getTarget());
+                Uri uri = new Uri(intBrSettings.getOpenflowProtocol() + OF_SEPARATOR + ipAddr + OF_SEPARATOR
+                        + intBrSettings.getOpenflowPort());
+                return new ControllerEntryBuilder().setTarget(new Uri(uri)).build();
+            }
+        });
+    }
+
+    private Node createBridge(InstanceIdentifier<Node> managedByIid, List<ControllerEntry> controllerEntries,
+            String bridgeName) {
+        OvsdbBridgeAugmentation br = new OvsdbBridgeAugmentationBuilder()
+            .setBridgeName(new OvsdbBridgeName(bridgeName))
+            .setManagedBy(new OvsdbNodeRef(managedByIid))
+            .setControllerEntry(controllerEntries)
+            .setDatapathType(DatapathTypeSystem.class)
+            .setProtocolEntry(
+                    ImmutableList.<ProtocolEntry>of(new ProtocolEntryBuilder().setProtocol(
+                            OvsdbBridgeProtocolOpenflow13.class).build()))
+            .build();
+        NodeKey managerNodeKey = managedByIid.firstKeyOf(Node.class);
+        return new NodeBuilder().setNodeId(
+                new org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId(
+                        managerNodeKey.getNodeId().getValue() + BRIDGE_SEPARATOR + bridgeName))
+            .addAugmentation(OvsdbBridgeAugmentation.class, br)
+            .build();
     }
 
     private static NodeId buildOfNodeId(OvsdbBridgeAugmentation ovsdbBridge) {

@@ -47,6 +47,22 @@ module neutron-ovsdb-impl {
                 }
             }
 
+            container integration-bridge-setting {
+                leaf name {
+                    mandatory true;
+                    type string;
+                }
+                leaf openflow-port {
+                    mandatory true;
+                    type uint16;
+                }
+                leaf openflow-protocol {
+                    mandatory true;
+                    type string {
+                        pattern "^tcp$|^udp$";
+                   }
+                }
+            }
         }
     }
 }
