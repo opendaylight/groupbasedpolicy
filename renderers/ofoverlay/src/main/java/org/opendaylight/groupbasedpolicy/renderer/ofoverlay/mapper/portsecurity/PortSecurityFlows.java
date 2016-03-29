@@ -49,10 +49,8 @@ class PortSecurityFlows {
     private final Short tableId;
 
     PortSecurityFlows(NodeId nodeId, Short tableId) {
-        Preconditions.checkNotNull(nodeId);
-        Preconditions.checkNotNull(tableId);
-        this.nodeId = nodeId;
-        this.tableId = tableId;
+        this.nodeId = Preconditions.checkNotNull(nodeId);
+        this.tableId = Preconditions.checkNotNull(tableId);
     }
 
     /**

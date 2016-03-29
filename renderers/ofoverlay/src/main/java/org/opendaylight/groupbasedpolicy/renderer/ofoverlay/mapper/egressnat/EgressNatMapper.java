@@ -8,44 +8,22 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.egressnat;
 
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.addNxRegMatch;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.applyActionIns;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.ethernetMatch;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.gotoTableIns;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.instructions;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.setIpv4SrcAction;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.setIpv6SrcAction;
-
-import java.util.Collection;
-
+import org.opendaylight.groupbasedpolicy.dto.EpKey;
+import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Prefix;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.go.to.table._case.GoToTable;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer3Match;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv4MatchBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv6MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg6;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import java.util.Collection;
 
 /**
  * <h1>Manage the table that assigns source endpoint group, bridge domain, and
@@ -62,84 +40,51 @@ import org.slf4j.LoggerFactory;
  *      - {@link GoToTable} EXTERNAL MAPPER table<br>
  */
 public class EgressNatMapper extends FlowTable {
-
-    protected static final Logger LOG = LoggerFactory.getLogger(EgressNatMapper.class);
-
-    // TODO Li alagalah Improve UT coverage for this class.
-    public static short TABLE_ID;
+    // Priorities
+    private static final Integer DROP = 1;
+    private static final Integer NAT = 100;
+    private final short tableId;
 
     public EgressNatMapper(OfContext ctx, short tableId) {
         super(ctx);
-        TABLE_ID=tableId;
+        this.tableId = tableId;
     }
 
     @Override
     public short getTableId() {
-        return TABLE_ID;
+        return tableId;
     }
 
     @Override
     public void sync(Endpoint endpoint, OfWriter ofWriter) throws Exception {
+        NodeId endpointNodeId = ctx.getEndpointManager().getEndpointNodeId(endpoint);
+        if (endpointNodeId == null) {
+            LOG.warn("Endpoint {} has no location specified, skipped", endpoint);
+            return;
+        }
+        syncFlows(new EgressNatMapperFlows(endpointNodeId, tableId), endpoint, ofWriter);
+    }
 
-        // TODO: only temporary workaround, use src & dst endpoint in implementation
-        NodeId nodeId = ctx.getEndpointManager().getEndpointNodeId(endpoint);
+    void syncFlows(EgressNatMapperFlows flows, Endpoint endpoint, OfWriter ofWriter) {
 
-        ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
+        // Drop
+        flows.dropFlow(DROP, null, ofWriter);
 
+        // NAT flows
+        short externalMapperId = ctx.getPolicyManager().getTABLEID_EXTERNAL_MAPPER();
         Collection<EndpointL3> l3Endpoints = ctx.getEndpointManager().getL3EndpointsWithNat();
-        for (EndpointL3 l3Ep : l3Endpoints) {
-            Flow flow = addNatFlow(l3Ep);
-            if (flow==null) {
-                continue;
+        EndpointKey endpointKey = endpoint.getKey();
+        for (EndpointL3 l3Endpoint : l3Endpoints) {
+            L2BridgeDomainId l2Context = l3Endpoint.getL2Context();
+            MacAddress macAddress = l3Endpoint.getMacAddress();
+            if (l2Context != null && macAddress != null) {
+                Endpoint l2EpFromL3Ep = ctx.getEndpointManager().getEndpoint(new EpKey(l2Context, macAddress));
+                if(endpointKey.equals(l2EpFromL3Ep.getKey())) {
+                    flows.natFlows(externalMapperId, l3Endpoint, NAT, ofWriter);
+                    // L3 Endpoint found, end of loop
+                    break;
+                }
             }
-            ofWriter.writeFlow(nodeId, TABLE_ID, flow);
         }
-    }
-
-    private Flow addNatFlow(EndpointL3 l3Ep) throws Exception {
-        NatAddress natAugL3Endpoint = l3Ep.getAugmentation(NatAddress.class);
-        // Match on L3 Nat Augmentation in Destination, set to IPAddress/Mac, send to SourceMapper
-        if (natAugL3Endpoint != null) {
-            return buildNatFlow(l3Ep.getIpAddress(), natAugL3Endpoint.getNatAddress(), l3Ep.getTenant(),
-                    l3Ep.getL3Context());
-        }
-        return null;
-    }
-
-    private Flow buildNatFlow(IpAddress insideAddress, IpAddress outsideAddress, TenantId tenantId, L3ContextId l3Ctx) throws Exception {
-        MatchBuilder mb = new MatchBuilder();
-        Action setSrcIp;
-        String insideIpMatch;
-        Layer3Match m;
-
-        FlowId flowid = new FlowId(new StringBuilder().append("EgressNat")
-            .append("|")
-            .append(insideAddress)
-            .append("|")
-            .append(outsideAddress)
-            .toString());
-        if (outsideAddress.getIpv4Address() != null) {
-            setSrcIp = setIpv4SrcAction(outsideAddress.getIpv4Address());
-
-            insideIpMatch = insideAddress.getIpv4Address().getValue() + "/32";
-            m = new Ipv4MatchBuilder().setIpv4Source(new Ipv4Prefix(insideIpMatch)).build();
-            mb.setEthernetMatch(ethernetMatch(null, null, FlowUtils.IPv4)).setLayer3Match(m);
-        } else if (outsideAddress.getIpv6Address() != null) {
-            setSrcIp = setIpv6SrcAction(outsideAddress.getIpv6Address());
-            insideIpMatch = insideAddress.getIpv6Address().getValue() + "/128";
-            m = new Ipv6MatchBuilder().setIpv6Source(new Ipv6Prefix(insideIpMatch)).build();
-            mb.setEthernetMatch(ethernetMatch(null, null, FlowUtils.IPv6)).setLayer3Match(m);
-        } else {
-            return null;
-        }
-
-        addNxRegMatch(mb, RegMatch.of(NxmNxReg6.class, Long.valueOf(OrdinalFactory.getContextOrdinal(tenantId, l3Ctx))));
-
-        FlowBuilder flowb = base().setPriority(Integer.valueOf(100))
-            .setId(flowid)
-            .setMatch(mb.build())
-            .setInstructions(
-                    instructions(applyActionIns(setSrcIp), gotoTableIns(ctx.getPolicyManager().getTABLEID_EXTERNAL_MAPPER())));
-        return flowb.build();
     }
 }
