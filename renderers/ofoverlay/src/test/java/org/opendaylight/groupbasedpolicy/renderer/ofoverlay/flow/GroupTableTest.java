@@ -8,195 +8,264 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.CheckedFuture;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
+import org.mockito.InOrder;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
-import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
-import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
-import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.groupbasedpolicy.dto.EgKey;
-import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.dto.PolicyInfo;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.Action;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.MapperUtilsTest;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.ovs.rev140701.Node;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNode;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.GroupId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.GroupTypes;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.group.Buckets;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.group.buckets.Bucket;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.groups.Group;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.util.concurrent.CheckedFuture;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
-public class GroupTableTest {
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.when;
 
+public class GroupTableTest extends MapperUtilsTest {
+
+    private final GroupId GROUP_ID = new GroupId(27L);
     private GroupTable groupTable;
-
-    private OfContext ofContext;
-
+    // DataStore mocks
     private DataBroker dataBroker;
     private ReadOnlyTransaction readOnlyTransaction;
-    private WriteTransaction writeTransaction;
-    private ReadWriteTransaction readWriteTransaction;
-
-    private CheckedFuture<Optional<FlowCapableNode>, ReadFailedException> checkedFutureFCNRead;
-    private CheckedFuture<Void, TransactionCommitFailedException> checkedFutureWrite;
-    private Optional<FlowCapableNode> optionalFlowCapableNode;
-
+    private CheckedFuture checkedFutureFCNRead;
+    private Optional optionalFlowCapableNode;
     private FlowCapableNode flowCapableNode;
-    private Group group;
-    private List<Group> groups;
-    private Buckets buckets;
-    private Bucket bucket;
-    private NodeId nodeId;
-    private OfWriter ofWriter;
-    private Bucket bucketOther;
-    private EndpointManager endpointManager;
-    private Endpoint localEp;
-    private EgKey egKey;
-    private OfOverlayContext ofc;
-    private NodeConnectorId nodeConnectorId;
 
-    @SuppressWarnings("unchecked")
     @Before
-    public void initialisation() throws Exception {
-        ofContext = mock(OfContext.class);
-        groupTable = spy(new GroupTable(ofContext));
+    public void init() {
+        ctx = mock(OfContext.class);
+        endpointManager = mock(EndpointManager.class);
+        switchManager = mock(SwitchManager.class);
+        policyInfo = mock(PolicyInfo.class);
+        groupTable = new GroupTable(ctx);
+        ofWriter = mock(OfWriter.class);
+        OrdinalFactory.resetPolicyOrdinalValue();
+    }
 
-        dataBroker = mock(DataBroker.class);
-        when(ofContext.getDataBroker()).thenReturn(dataBroker);
+    @Test
+    public void sync_noEpNodeId() throws Exception {
+        initDataStoreMocks();
+        EndpointBuilder endpointBuilder = new EndpointBuilder();
+        Endpoint endpoint = endpointBuilder.build();
 
-        checkedFutureFCNRead =  mock(CheckedFuture.class);
-        optionalFlowCapableNode = mock(Optional.class);
-        flowCapableNode = mock(FlowCapableNode.class);
+        when(ctx.getEndpointManager()).thenReturn(endpointManager);
 
+        groupTable.sync(endpoint, ofWriter);
+
+        verifyZeroInteractions(ofWriter);
+    }
+
+    @Test
+    public void sync_nodeIsNotFlowCapable() throws Exception {
+        initDataStoreMocks();
+        EndpointBuilder endpointBuilder = new EndpointBuilder();
+        OfOverlayContextBuilder ofOverlayContextBuilder = new OfOverlayContextBuilder();
+        ofOverlayContextBuilder.setNodeId(NODE_ID);
+        endpointBuilder.addAugmentation(OfOverlayContext.class, ofOverlayContextBuilder.build());
+        Endpoint endpoint = endpointBuilder.build();
+
+        when(ctx.getEndpointManager()).thenReturn(endpointManager);
+        when(ctx.getDataBroker()).thenReturn(dataBroker);
+        when(endpointManager.getEndpointNodeId(any(Endpoint.class))).thenCallRealMethod();
+        when(dataBroker.newReadOnlyTransaction()).thenReturn(readOnlyTransaction);
+        when(readOnlyTransaction.read(eq(LogicalDatastoreType.OPERATIONAL), any(InstanceIdentifier.class)))
+                .thenReturn(checkedFutureFCNRead);
         when(checkedFutureFCNRead.get()).thenReturn(optionalFlowCapableNode);
+        when(optionalFlowCapableNode.isPresent()).thenReturn(true);
 
+        groupTable.sync(endpoint, ofWriter);
+
+        verify(optionalFlowCapableNode, times(1)).isPresent();
+        verifyZeroInteractions(ofWriter);
+    }
+
+    @Test
+    public void sync_nullOrdinals() throws Exception {
+        initDataStoreMocks();
+        EndpointBuilder endpointBuilder = new EndpointBuilder();
+        OfOverlayContextBuilder ofOverlayContextBuilder = new OfOverlayContextBuilder();
+        ofOverlayContextBuilder.setNodeId(NODE_ID);
+        endpointBuilder.addAugmentation(OfOverlayContext.class, ofOverlayContextBuilder.build());
+        Endpoint endpoint = endpointBuilder.build();
+
+        when(ctx.getEndpointManager()).thenReturn(endpointManager);
+        when(ctx.getDataBroker()).thenReturn(dataBroker);
+        when(endpointManager.getEndpointNodeId(any(Endpoint.class))).thenCallRealMethod();
+        when(dataBroker.newReadOnlyTransaction()).thenReturn(readOnlyTransaction);
+        when(readOnlyTransaction.read(eq(LogicalDatastoreType.OPERATIONAL), any(InstanceIdentifier.class)))
+                .thenReturn(checkedFutureFCNRead);
+        when(checkedFutureFCNRead.get()).thenReturn(optionalFlowCapableNode);
         when(optionalFlowCapableNode.isPresent()).thenReturn(true);
         when(optionalFlowCapableNode.get()).thenReturn(flowCapableNode);
 
+        groupTable.sync(endpoint, ofWriter);
 
-        readOnlyTransaction = mock(ReadOnlyTransaction.class);
+        verify(optionalFlowCapableNode, times(1)).isPresent();
+        verifyZeroInteractions(ofWriter);
+    }
+
+    @Test
+    public void sync() throws Exception {
+        initDataStoreMocks();
+        EndpointBuilder endpointBuilder = new EndpointBuilder();
+        OfOverlayContextBuilder ofOverlayContextBuilder = new OfOverlayContextBuilder();
+        ofOverlayContextBuilder.setNodeId(NODE_ID);
+        endpointBuilder.addAugmentation(OfOverlayContext.class, ofOverlayContextBuilder.build());
+        endpointBuilder.setNetworkContainment(NET_DOMAIN_ID);
+        endpointBuilder.setTenant(buildTenant().getId());
+        Endpoint endpoint = endpointBuilder.build();
+
+        when(ctx.getEndpointManager()).thenReturn(endpointManager);
+        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
+        when(ctx.getDataBroker()).thenReturn(dataBroker);
+        when(ctx.getTenant(any(TenantId.class))).thenReturn(getTestIndexedTenant());
+        when(endpointManager.getEndpointNodeId(any(Endpoint.class))).thenCallRealMethod();
         when(dataBroker.newReadOnlyTransaction()).thenReturn(readOnlyTransaction);
-        when(readOnlyTransaction.read(any(LogicalDatastoreType.class),
-                any(InstanceIdentifier.class))).thenReturn(checkedFutureFCNRead);
+        when(readOnlyTransaction.read(eq(LogicalDatastoreType.OPERATIONAL), any(InstanceIdentifier.class)))
+                .thenReturn(checkedFutureFCNRead);
+        when(checkedFutureFCNRead.get()).thenReturn(optionalFlowCapableNode);
+        when(optionalFlowCapableNode.isPresent()).thenReturn(true);
+        when(optionalFlowCapableNode.get()).thenReturn(flowCapableNode);
 
-        writeTransaction = mock(WriteTransaction.class);
-        when(dataBroker.newWriteOnlyTransaction()).thenReturn(writeTransaction);
-        checkedFutureWrite = mock(CheckedFuture.class);
-        when(writeTransaction.submit()).thenReturn(checkedFutureWrite);
+        groupTable.sync(endpoint, ofWriter);
 
-        readWriteTransaction = mock(ReadWriteTransaction.class);
-        when(dataBroker.newReadWriteTransaction()).thenReturn(readWriteTransaction);
-
-        group = mock(Group.class);
-        groups = Collections.singletonList(group);
-        when(flowCapableNode.getGroup()).thenReturn(groups);
-
-        buckets = mock(Buckets.class);
-        when(group.getBuckets()).thenReturn(buckets);
-        bucket = mock(Bucket.class);
-        when(bucket.getAction()).thenReturn(Collections.singletonList(mock(Action.class)));
-        List<Bucket> bucketList = Collections.singletonList(bucket);
-        when(buckets.getBucket()).thenReturn(bucketList);
-
-        bucketOther = mock(Bucket.class);
-        when(bucketOther.getAction()).thenReturn(Collections.singletonList(mock(Action.class)));
-
-
-        nodeId = mock(NodeId.class);
-        ofWriter = mock(OfWriter.class);
-
-        endpointManager = mock(EndpointManager.class);
-        when(ofContext.getEndpointManager()).thenReturn(endpointManager);
-        localEp = mock(Endpoint.class);
-        when(endpointManager.getEndpointsForNode(nodeId)).thenReturn(Collections.singletonList(
-                localEp));
-        IndexedTenant indexedTenant = mock(IndexedTenant.class);
-        when(ofContext.getTenant(any(TenantId.class))).thenReturn(indexedTenant);
-        EndpointGroup epg = mock(EndpointGroup.class);
-        when(indexedTenant.getEndpointGroup(any(EndpointGroupId.class))).thenReturn(epg);
-        egKey = mock(EgKey.class);
-        when(endpointManager.getGroupsForNode(any(NodeId.class))).thenReturn(
-                new HashSet<>(Collections.singletonList(egKey)));
-        ofc = mock(OfOverlayContext.class);
-        when(localEp.getAugmentation(OfOverlayContext.class)).thenReturn(ofc);
-        nodeConnectorId = mock(NodeConnectorId.class);
-        when(ofc.getNodeConnectorId()).thenReturn(nodeConnectorId);
+        verify(optionalFlowCapableNode, times(1)).isPresent();
+        verify(ofWriter, times(1)).writeGroup(NODE_ID, new GroupId(0L));
     }
 
-    @Ignore
     @Test
-    public void updateTest() throws Exception {
-        //doNothing().when(groupTable).sync(NODE_ID, ofWriter);
+    public void syncGroups_groupsForNode() throws Exception {
+        // Define NodeIds
+        NodeId nodeWithoutTunnel = new NodeId("nodeIdWithoutTunnel");
+        NodeId nodeIdIpV6 = new NodeId("nodeIdIpV6");
+        NodeId nodeIdIpV4 = new NodeId("nodeIdIpV4");
+        Endpoint endpoint = buildEndpoint(IPV4_0, MAC_0, new NodeConnectorId(OPENFLOW + CONNECTOR_0.getValue())).build();
 
-        //groupTable.sync(NODE_ID, ofWriter);
-        //verify(groupTable).sync(any(NodeId.class), any(OfWriter.class));
+        when(ctx.getTenant(any(TenantId.class))).thenReturn(getTestIndexedTenant());
+        when(ctx.getEndpointManager()).thenReturn(endpointManager);
+        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
+
+        OrdinalFactory.EndpointFwdCtxOrdinals ordinals = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, endpoint);
+        Preconditions.checkNotNull(ordinals);
+
+        // EgKeys
+        Set<EgKey> egKeys = new HashSet<>();
+        egKeys.add(new EgKey(buildTenant().getId(), endpoint.getEndpointGroup()));
+        // Nodes
+        Set<NodeId> nodeIds = new HashSet<>();
+        nodeIds.add(NODE_ID);
+        nodeIds.add(nodeWithoutTunnel);
+        nodeIds.add(nodeIdIpV6);
+        nodeIds.add(nodeIdIpV4);
+        // Endpoints
+        Collection<Endpoint> endpoints = new HashSet<>();
+        endpoints.add(buildEndpoint(IPV4_1, MAC_1, CONNECTOR_1).build());
+        endpoints.add(buildEndpoint(IPV4_2, MAC_2, CONNECTOR_2).build());
+
+        when(ctx.getSwitchManager()).thenReturn(switchManager);
+        when(endpointManager.getGroupsForNode(NODE_ID)).thenReturn(egKeys);
+        when(endpointManager.getNodesForGroup(any(EgKey.class))).thenReturn(nodeIds);
+        when(endpointManager.getEndpointsForNode(any(NodeId.class))).thenReturn(endpoints);
+        when(switchManager.getTunnelIP(nodeIdIpV6, TunnelTypeVxlan.class)).thenReturn(new IpAddress(IPV6_1));
+        when(switchManager.getTunnelIP(nodeIdIpV4, TunnelTypeVxlan.class)).thenReturn(new IpAddress(IPV4_1));
+        when(switchManager.getTunnelPort(NODE_ID, TunnelTypeVxlan.class)).thenReturn(CONNECTOR_1);
+        when(policyInfo.getPeers(any(EgKey.class))).thenReturn(egKeys);
+
+        groupTable.syncGroups(NODE_ID, ordinals, endpoint, GROUP_ID, ofWriter);
+
+        // Verify method order
+        InOrder order = inOrder(endpointManager, policyInfo, switchManager, ofWriter);
+        order.verify(endpointManager, times(1)).getGroupsForNode(NODE_ID);
+        order.verify(endpointManager, times(1)).getNodesForGroup(any(EgKey.class));
+        order.verify(policyInfo, times(1)).getPeers(any(EgKey.class));
+        order.verify(endpointManager, times(1)).getNodesForGroup(any(EgKey.class));
+        order.verify(switchManager, times(1)).getTunnelIP(nodeWithoutTunnel, TunnelTypeVxlan.class);
+        order.verify(switchManager, times(1)).getTunnelPort(NODE_ID, TunnelTypeVxlan.class);
+        order.verify(switchManager, times(1)).getTunnelIP(any(NodeId.class), eq(TunnelTypeVxlan.class));
+        order.verify(switchManager, times(1)).getTunnelPort(NODE_ID, TunnelTypeVxlan.class);
+        order.verify(switchManager, times(1)).getTunnelIP(any(NodeId.class), eq(TunnelTypeVxlan.class));
+        order.verify(switchManager, times(1)).getTunnelPort(NODE_ID, TunnelTypeVxlan.class);
+        order.verify(ofWriter, atLeastOnce()).writeBucket(any(NodeId.class), any(GroupId.class), any(Bucket.class));
     }
 
-    @Ignore
     @Test
-    public void updateTestNoFCN() throws Exception {
-        doReturn(null).when(groupTable).getFCNodeFromDatastore(any(NodeId.class));
+    public void syncGroups_externalEpsWithoutLocation() throws Exception {
+        EndpointBuilder endpointBuilder = buildEndpoint(IPV4_0, MAC_0, new NodeConnectorId(OPENFLOW + CONNECTOR_0.getValue()));
+        endpointBuilder.setNetworkContainment(L2FD_ID);
+        Endpoint endpoint = endpointBuilder.build();
 
-        //groupTable.sync(NODE_ID, ofWriter);
-        verify(ofWriter, never()).writeBucket(any(NodeId.class), any(GroupId.class), any(Bucket.class));;
-        verify(ofWriter, never()).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
-        verify(ofWriter, never()).writeGroup(any(NodeId.class), any(GroupId.class), any(GroupTypes.class),
-                any(String.class), any(String.class), any(Boolean.class));
+        when(ctx.getTenant(any(TenantId.class))).thenReturn(getTestIndexedTenant());
+        when(ctx.getEndpointManager()).thenReturn(endpointManager);
+        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
+
+        OrdinalFactory.EndpointFwdCtxOrdinals ordinals = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, endpoint);
+        Preconditions.checkNotNull(ordinals);
+        // EgKeys
+        Set<EgKey> egKeys = new HashSet<>();
+        egKeys.add(new EgKey(buildTenant().getId(), endpoint.getEndpointGroup()));
+        // NodeConnectorIds
+        Set<NodeConnectorId> externalPorts = new HashSet<>();
+        externalPorts.add(new NodeConnectorId(OPENFLOW + CONNECTOR_1.getValue())); // Correct format
+        externalPorts.add(CONNECTOR_2); // NumberFormatException
+        // Endpoints
+        Collection<Endpoint> endpoints = new HashSet<>();
+        EndpointBuilder noLocEndpointBuilder = buildEndpoint(IPV4_1, MAC_1, CONNECTOR_1);
+        noLocEndpointBuilder.setNetworkContainment(L2FD_ID);
+        endpoints.add(noLocEndpointBuilder.build());
+
+        when(ctx.getSwitchManager()).thenReturn(switchManager);
+        when(endpointManager.getGroupsForNode(NODE_ID)).thenReturn(egKeys);
+        when(endpointManager.getExtEpsNoLocForGroup(any(EgKey.class))).thenReturn(endpoints);
+        when(switchManager.getExternalPorts(NODE_ID)).thenReturn(externalPorts);
+
+        groupTable.syncGroups(NODE_ID, ordinals, endpoint, GROUP_ID, ofWriter);
+
+        // Verify method order
+        InOrder order = inOrder(endpointManager, policyInfo, switchManager, ofWriter);
+        order.verify(endpointManager, times(1)).getGroupsForNode(NODE_ID);
+        order.verify(endpointManager, times(1)).getExtEpsNoLocForGroup(any(EgKey.class));
+        order.verify(switchManager, times(1)).getExternalPorts(any(NodeId.class));
+        order.verify(ofWriter, times(1)).writeBucket(any(NodeId.class), any(GroupId.class), any(Bucket.class));
     }
 
-    @Ignore
-    @Test
-    public void syncTestNoGroup() throws Exception {
-        when(ofWriter.groupExists(any(NodeId.class), any(Long.class))).thenReturn(false);
-        when(endpointManager.getGroupsForNode(any(NodeId.class))).thenReturn(
-                Collections.<EgKey>emptySet());
-
-        //groupTable.sync(NODE_ID, ofWriter);
-        verify(ofWriter).writeGroup(any(NodeId.class), any(GroupId.class));
-    }
-
-    @Ignore
-    @Test
-    public void syncTestGroupExists() throws Exception {
-        when(ofWriter.groupExists(any(NodeId.class), any(Long.class))).thenReturn(true);
-        when(endpointManager.getGroupsForNode(any(NodeId.class))).thenReturn(
-                Collections.<EgKey>emptySet());
-
-        //groupTable.sync(NODE_ID, ofWriter);
-        verify(ofWriter, never()).writeGroup(any(NodeId.class), any(GroupId.class));
+    private void initDataStoreMocks() {
+        dataBroker = mock(DataBroker.class);
+        readOnlyTransaction = mock(ReadOnlyTransaction.class);
+        checkedFutureFCNRead = mock(CheckedFuture.class);
+        optionalFlowCapableNode = mock(Optional.class);
+        flowCapableNode = mock(FlowCapableNode.class);
     }
 }
