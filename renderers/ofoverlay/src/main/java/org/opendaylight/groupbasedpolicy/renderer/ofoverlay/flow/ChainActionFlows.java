@@ -210,8 +210,7 @@ public class ChainActionFlows {
         return flowb.build();
     }
 
-    @VisibleForTesting
-    static Flow createExternalFlow(SfcNshHeader sfcNshHeader, NodeConnectorId tunPort, NetworkElements netElements,
+    private static Flow createExternalFlow(SfcNshHeader sfcNshHeader, NodeConnectorId tunPort, NetworkElements netElements,
                                    PolicyManager policyManager, SwitchManager switchManager, Ipv4Address ipTunDest) {
 
         short tableId = policyManager.getTABLEID_EXTERNAL_MAPPER();
@@ -345,8 +344,7 @@ public class ChainActionFlows {
 
     }
 
-    @VisibleForTesting
-    static Integer returnOfPortFromNodeConnector(NodeConnectorId nodeConnectorId) {
+    private static Integer returnOfPortFromNodeConnector(NodeConnectorId nodeConnectorId) {
         String[] elements = StringUtils.split(nodeConnectorId.getValue(), ":");
         if (elements.length != 3)
             return null;
