@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.commons.net.util.SubnetUtils;
+import org.apache.commons.net.util.SubnetUtils.SubnetInfo;
 import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
@@ -26,6 +28,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.ovs.rev140701.Node;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
@@ -38,7 +41,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.M
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddress;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.Segmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
@@ -46,8 +48,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv4MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg5;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
-import org.apache.commons.net.util.SubnetUtils;
-import org.apache.commons.net.util.SubnetUtils.SubnetInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -106,11 +106,15 @@ public class ExternalMapper extends FlowTable {
     @Override
     public void sync(Endpoint endpoint, OfWriter ofWriter) throws Exception {
 
-        // TODO: only temporary workaround, use src & dst endpoint in implementation
         NodeId nodeId = ctx.getEndpointManager().getEndpointNodeId(endpoint);
-
         // Default drop all
         ofWriter.writeFlow(nodeId, TABLE_ID, dropFlow(Integer.valueOf(1), null, TABLE_ID));
+
+        /*
+         * Default Egress flow. Other methods may write to this table to augment egress
+         * functionality, such as bypassing/utilising the NAT table, or ServiceFunctionChaining
+         */
+        ofWriter.writeFlow(nodeId, TABLE_ID, defaultFlow());
 
         /*
          * When source address was translated to NAT address, it has to be figured out
@@ -127,17 +131,17 @@ public class ExternalMapper extends FlowTable {
          * This is why subnet of NAT IP is resolved here.
          */
         Collection<EndpointL3> natL3Endpoints = ctx.getEndpointManager().getL3EndpointsWithNat();
-        if (natL3Endpoints != null) {
-            for (EndpointL3 natL3Ep : natL3Endpoints) {
-                IpAddress natIpAddress = Preconditions.checkNotNull(natL3Ep.getAugmentation(NatAddress.class),
-                        "NAT address augmentation is missing for NAT endpoint: [{}].", natL3Ep.getKey())
-                    .getNatAddress();
+        for (EndpointL3 natL3Ep : natL3Endpoints) {
+            if (endpoint.getL2Context().equals(natL3Ep.getL2Context())
+                    && endpoint.getMacAddress().equals(natL3Ep.getMacAddress())) {
+                IpAddress natIpAddress = natL3Ep.getAugmentation(NatAddress.class).getNatAddress();
                 Subnet natIpSubnet = resolveSubnetForIpv4Address(ctx.getTenant(natL3Ep.getTenant()),
                         Preconditions.checkNotNull(natIpAddress.getIpv4Address(),
-                                "Endpoint {} does not have IPv4 address in NatAddress augmentation.", natL3Ep.getKey()));
+                                "Endpoint {} does not have IPv4 address in NatAddress augmentation.",
+                                natL3Ep.getKey()));
                 if (natIpSubnet != null && natIpSubnet.getParent() != null) {
-                    L2FloodDomain natEpl2Fd = ctx.getTenant(natL3Ep.getTenant()).resolveL2FloodDomain(
-                            natIpSubnet.getParent());
+                    L2FloodDomain natEpl2Fd =
+                            ctx.getTenant(natL3Ep.getTenant()).resolveL2FloodDomain(natIpSubnet.getParent());
                     if (natEpl2Fd.getAugmentation(Segmentation.class) != null) {
                         Integer vlanId = natEpl2Fd.getAugmentation(Segmentation.class).getSegmentationId();
                         ofWriter.writeFlow(nodeId, TABLE_ID,
@@ -154,24 +158,20 @@ public class ExternalMapper extends FlowTable {
          * for applying VLAN tag is generated. The flow matches against REG5 holding
          * the L2FloodDomain and REG7 holding value of an external interface.
          */
-        for (Endpoint ep : ctx.getEndpointManager().getEndpointsForNode(nodeId)) {
-            L2FloodDomain l2Fd = ctx.getTenant(ep.getTenant()).resolveL2FloodDomain(ep.getNetworkContainment());
-            Segmentation segmentation = l2Fd.getAugmentation(Segmentation.class);
-            if (segmentation == null) {
-                continue;
-            }
-            Integer vlanId = segmentation.getSegmentationId();
-            for (Flow flow : buildPushVlanFlow(nodeId, OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, ep).getFdId(),
-                    vlanId, 220)) {
-                ofWriter.writeFlow(nodeId, TABLE_ID, flow);
-            }
+        L2FloodDomain l2Fd = ctx.getTenant(endpoint.getTenant()).resolveL2FloodDomain(endpoint.getNetworkContainment());
+        if (l2Fd == null) {
+            return;
         }
-
-        /*
-         *  Default Egress flow. Other methods may write to this table to augment egress
-         *  functionality, such as bypassing/utilising the NAT table, or ServiceFunctionChaining
-         */
-        ofWriter.writeFlow(nodeId, TABLE_ID, defaultFlow());
+        Segmentation segmentation = l2Fd.getAugmentation(Segmentation.class);
+        EndpointFwdCtxOrdinals endpointOrdinals = OrdinalFactory.getEndpointFwdCtxOrdinals(ctx, endpoint);
+        if (segmentation == null || endpointOrdinals == null) {
+            return;
+        }
+        Integer vlanId = segmentation.getSegmentationId();
+        for (Flow flow : buildPushVlanFlow(nodeId, endpointOrdinals.getFdId(),
+                vlanId, 220)) {
+            ofWriter.writeFlow(nodeId, TABLE_ID, flow);
+        }
     }
 
     /**
