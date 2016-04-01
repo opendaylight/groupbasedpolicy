@@ -9,12 +9,11 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf;
 
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -24,6 +23,7 @@ import java.util.Set;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -34,8 +34,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.policyenforcer.PolicyEnforcer.NetworkElements;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.policyenforcer.PolicyEnforcer.PolicyPair;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.policyenforcer.NetworkElements;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.SfcName;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.SfpName;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.paths.RenderedServicePath;
@@ -47,10 +46,15 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
 
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(ChainAction.class)
 public class ChainActionTest {
 
     private ChainAction chainAction;
@@ -66,7 +70,6 @@ public class ChainActionTest {
     private NodeId nodeId;
     private EndpointFwdCtxOrdinals endpointFwdCtxOrdinals;
     private Endpoint endpoint;
-    private PolicyPair policyPair;
     private EndpointManager endpointManager;
     private EgKey egKey;
     private TenantId tenant = new TenantId("e09a2308-6ffa-40af-92a2-69f54b2cf3e4");
@@ -74,7 +77,7 @@ public class ChainActionTest {
     @SuppressWarnings("unchecked")
     @Before
     public void initialise() throws Exception {
-        chainAction = spy(new ChainAction());
+        chainAction = new ChainAction();
 
         sfcPath = mock(ServiceFunctionPath.class);
         when(sfcPath.getName()).thenReturn(new SfpName("sfcPathName"));
@@ -102,8 +105,6 @@ public class ChainActionTest {
         endpoint = mock(Endpoint.class);
         when(netElements.getSrcEp()).thenReturn(endpoint);
         when(netElements.getSrcEp().getTenant()).thenReturn(tenant);
-        policyPair = mock(PolicyPair.class);
-        when(policyPair.getConsumerEpgId()).thenReturn(Integer.valueOf(5));
 
         endpointManager = mock(EndpointManager.class);
         when(ctx.getEndpointManager()).thenReturn(endpointManager);
@@ -129,10 +130,12 @@ public class ChainActionTest {
         Integer order = Integer.valueOf(0);
         OfWriter ofWriter = mock(OfWriter.class);
 
-        doReturn(sfcPath).when(chainAction).getSfcPath(new SfcName(chainName));
+        PowerMockito.mockStatic(ChainAction.class);
+        when(ChainAction.getSfcPath(new SfcName(chainName))).thenReturn(sfcPath);
+        chainAction.setResolvedSymmetricChains(Collections.singletonList(chainName));
 
         List<ActionBuilder> result =
-                chainAction.updateAction(actions, params, order, netElements, policyPair, ofWriter, ctx, Direction.Out);
+                chainAction.updateAction(actions, params, order, netElements, ofWriter, ctx, Direction.Out);
         Assert.assertNull(result);
     }
 
@@ -144,7 +147,7 @@ public class ChainActionTest {
         OfWriter ofWriter = mock(OfWriter.class);
 
         List<ActionBuilder> result =
-                chainAction.updateAction(actions, null, order, netElements, policyPair, ofWriter, ctx, Direction.In);
+                chainAction.updateAction(actions, null, order, netElements, ofWriter, ctx, Direction.In);
         Assert.assertNull(result);
     }
 
@@ -156,10 +159,12 @@ public class ChainActionTest {
         params.put(ChainActionDefinition.SFC_CHAIN_NAME, null);
         Integer order = Integer.valueOf(0);
         NetworkElements netElements = mock(NetworkElements.class);
-        PolicyPair policyPair = mock(PolicyPair.class);
         OfWriter ofWriter = mock(OfWriter.class);
 
-        chainAction.updateAction(actions, params, order, netElements, policyPair, ofWriter, ctx, Direction.In);
+        List<ActionBuilder> result =
+                chainAction.updateAction(actions, params, order, netElements, ofWriter, ctx, Direction.In);
+
+        Assert.assertNull(result);
     }
 
     @Test
@@ -172,11 +177,12 @@ public class ChainActionTest {
         Integer order = Integer.valueOf(0);
         OfWriter ofWriter = mock(OfWriter.class);
 
-        doReturn(sfcPath).when(chainAction).getSfcPath(new SfcName(chainName));
+        PowerMockito.mockStatic(ChainAction.class);
+        when(ChainAction.getSfcPath(new SfcName(chainName))).thenReturn(sfcPath);
         when(sfcPath.getName()).thenReturn(null);
 
         List<ActionBuilder> result =
-                chainAction.updateAction(actions, params, order, netElements, policyPair, ofWriter, ctx, Direction.Out);
+                chainAction.updateAction(actions, params, order, netElements, ofWriter, ctx, Direction.Out);
         Assert.assertNull(result);
     }
 

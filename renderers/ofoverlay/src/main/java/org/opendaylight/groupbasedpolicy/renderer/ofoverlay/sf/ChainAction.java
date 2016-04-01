@@ -12,6 +12,7 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.ChainAct
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxSetNsiAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxSetNspAction;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -22,9 +23,7 @@ import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
 import org.opendaylight.groupbasedpolicy.dto.ValidationResultBuilder;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.policyenforcer.PolicyEnforcer;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.policyenforcer.PolicyEnforcer.NetworkElements;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.policyenforcer.PolicyEnforcer.PolicyPair;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.policyenforcer.NetworkElements;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcIidFactory;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcNshHeader;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcNshHeader.SfcNshHeaderBuilder;
@@ -73,6 +72,11 @@ import com.google.common.collect.Iterables;
 public class ChainAction extends Action {
 
     private static final Logger LOG = LoggerFactory.getLogger(ChainAction.class);
+    private List<String> resolvedSymmetricChains = new ArrayList<>();;
+
+    public void setResolvedSymmetricChains(List<String> resolvedSymmetricChains) {
+        this.resolvedSymmetricChains = resolvedSymmetricChains;
+    }
 
     @Override
     public ActionDefinitionId getId() {
@@ -86,7 +90,7 @@ public class ChainAction extends Action {
 
     @Override
     public List<ActionBuilder> updateAction(List<ActionBuilder> actions, Map<String, Object> params, Integer order,
-                                            NetworkElements netElements, PolicyPair policyPair, OfWriter ofWriter,
+                                            NetworkElements netElements, OfWriter ofWriter,
                                             OfContext ctx, Direction direction) {
         /*
          * Get the named chain
@@ -113,7 +117,7 @@ public class ChainAction extends Action {
             return null;
         }
 
-        Long returnVnId;
+        Long tunnelId;
 
         /*
          * If path is symmetrical then there are two RSPs.
@@ -134,7 +138,7 @@ public class ChainAction extends Action {
         ReadOnlyTransaction rTx = ctx.getDataBroker().newReadOnlyTransaction();
         RenderedServicePath renderedServicePath;
         RenderedServicePath rsp = getRspByName(rspName, rTx);
-        returnVnId = (long) resolveTunnelId(netElements, false);
+        tunnelId = (long) netElements.getSrcEpOrdinals().getTunnelId();
         if (rsp == null) {
             renderedServicePath = createRsp(sfcPath, rspName);
             if (renderedServicePath != null) {
@@ -148,10 +152,10 @@ public class ChainAction extends Action {
         }
 
         try {
-            if (sfcPath.isSymmetric() && direction.equals(Direction.Out)) {
+        if (sfcPath.isSymmetric() && resolvedSymmetricChains.contains(chainName)) {
                 rspName = new RspName(rspName.getValue() + "-Reverse");
                 rsp = getRspByName(rspName, rTx);
-                returnVnId = (long) resolveTunnelId(netElements, true);
+                tunnelId = (long) netElements.getDstEpOrdinals().getTunnelId();
                 if (rsp == null) {
                     LOG.info("updateAction: Could not find Reverse RSP {} for Chain {}", rspName, chainName);
                     renderedServicePath = createSymmetricRsp(renderedServicePath);
@@ -192,27 +196,18 @@ public class ChainAction extends Action {
             .setNshNsiFromChain((short) (lastRspHop.getServiceIndex().intValue() - 1))
             .setNshNspFromChain(renderedServicePath.getPathId())
             .setNshMetaC1(SfcNshHeader.convertIpAddressToLong(tunnelDest.getIpv4Address()))
-            .setNshMetaC2(returnVnId)
+            .setNshMetaC2(tunnelId)
             .build();
 
-        // Cannot set all actions here. Some actions are destination specific, and we don't know
-        // a destination is to be
-        // chained until we reach this point. Need to write match/action in External Table for
-        // chained packets.
-        actions = addActionBuilder(actions, nxSetNsiAction(sfcNshHeader.getNshNsiToChain()), order);
-        actions = addActionBuilder(actions, nxSetNspAction(sfcNshHeader.getNshNspToChain()), order);
-        createChainTunnelFlows(sfcNshHeader, netElements, ofWriter, ctx);
-        return actions;
-    }
+        createChainTunnelFlows(sfcNshHeader, netElements, ofWriter, ctx, direction);
 
-    // Return tunnelId according to policy direction
-    private int resolveTunnelId(NetworkElements netElements, boolean isReversedPath) {
-        if ((isReversedPath && PolicyEnforcer.checkPolicyOrientation())
-                || (!isReversedPath && !PolicyEnforcer.checkPolicyOrientation())) {
-            return netElements.getDstEpOrdinals().getTunnelId();
+        if (direction.equals(Direction.Out) ) {
+            actions = addActionBuilder(actions, nxSetNsiAction(sfcNshHeader.getNshNsiToChain()), order);
+            actions = addActionBuilder(actions, nxSetNspAction(sfcNshHeader.getNshNspToChain()), order);
         } else {
-            return netElements.getSrcEpOrdinals().getTunnelId();
+            return null;
         }
+        return actions;
     }
 
     private RenderedServicePath createRsp(ServiceFunctionPath sfcPath, RspName rspName) {
@@ -288,7 +283,7 @@ public class ChainAction extends Action {
         }
     }
 
-    public ServiceFunctionPath getSfcPath(SfcName chainName) {
+    public static ServiceFunctionPath getSfcPath(SfcName chainName) {
         ServiceFunctionPaths paths = SfcProviderServicePathAPI.readAllServiceFunctionPaths();
         for (ServiceFunctionPath path : paths.getServiceFunctionPath()) {
             if (path.getServiceChainName().equals(chainName)) {
@@ -324,5 +319,4 @@ public class ChainAction extends Action {
         return ImmutableList.<SupportedParameterValues>of(new SupportedParameterValuesBuilder()
             .setParameterName(new ParameterName(ChainActionDefinition.SFC_CHAIN_NAME)).build());
     }
-
 }
