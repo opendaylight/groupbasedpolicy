@@ -19,8 +19,7 @@ import org.opendaylight.groupbasedpolicy.api.sf.AllowActionDefinition;
 import org.opendaylight.groupbasedpolicy.dto.ValidationResultBuilder;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.policyenforcer.PolicyEnforcer.NetworkElements;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.policyenforcer.PolicyEnforcer.PolicyPair;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.policyenforcer.NetworkElements;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
@@ -52,7 +51,6 @@ public class AllowAction extends Action {
                                             Map<String, Object> params,
                                             Integer order,
                                             NetworkElements netElements,
-                                            PolicyPair policyPair,
                                             OfWriter ofWriter,
                                             OfContext ctx,
                                             Direction direction) {

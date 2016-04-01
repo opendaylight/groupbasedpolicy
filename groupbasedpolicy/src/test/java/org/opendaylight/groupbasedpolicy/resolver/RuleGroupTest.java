@@ -10,9 +10,11 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.groupbasedpolicy.dto.RuleGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.Contract;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ContractKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.Rule;
 
 public class RuleGroupTest {
@@ -38,6 +40,8 @@ public class RuleGroupTest {
 
         subjectValue = "value";
         when(subject.getValue()).thenReturn(subjectValue);
+        ContractId contractId = new ContractId("contract");
+        when(contract.getKey()).thenReturn(new ContractKey(contractId));
 
         ruleGroup = new RuleGroup(rules, order, contractTenant, contract, subject);
     }

@@ -13,11 +13,11 @@ import java.util.Map;
 import org.junit.Ignore;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
-import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 public class FlowTableTest extends OfTableTest {
-    FlowTable table;
+    protected FlowTable table;
     InstanceIdentifier<Table> tiid;
 
     protected void setup() throws Exception {

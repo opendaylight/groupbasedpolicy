@@ -25,6 +25,8 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.outputAction;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
@@ -32,21 +34,27 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.PolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory.EndpointFwdCtxOrdinals;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.policyenforcer.PolicyEnforcer.NetworkElements;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.policyenforcer.NetworkElements;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ChainAction;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcNshHeader;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Prefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.go.to.table._case.GoToTable;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer3Match;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv4MatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._3.match.Ipv6MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg0;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg1;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg4;
@@ -142,37 +150,39 @@ public class ChainActionFlows {
     }
 
     public static void createChainTunnelFlows(SfcNshHeader sfcNshHeader, NetworkElements netElements, OfWriter ofWriter,
-            OfContext ctx) {
+            OfContext ctx, Direction direction) {
 
         NodeId localNodeId = netElements.getLocalNodeId();
-        NodeId destNodeId = netElements.getDstEp().getAugmentation(OfOverlayContext.class).getNodeId();
         EndpointFwdCtxOrdinals epOrdinals = netElements.getSrcEpOrdinals();
 
         NodeConnectorId localNodeTunPort = ctx.getSwitchManager().getTunnelPort(localNodeId, TunnelTypeVxlanGpe.class);
-        NodeConnectorId destNodeTunPort = ctx.getSwitchManager().getTunnelPort(destNodeId, TunnelTypeVxlanGpe.class);
         Ipv4Address tunDestAddress = ctx.getSwitchManager()
             .getTunnelIP(netElements.getDstNodeId(), TunnelTypeVxlanGpe.class)
             .getIpv4Address();
-        if (localNodeTunPort == null || destNodeTunPort == null) {
-            LOG.error("createChainTunnelFlows: No valid VXLAN GPE tunnel for Node {} or Node {}", localNodeId,
-                    destNodeId);
+        if (localNodeTunPort == null) {
+            LOG.error("createChainTunnelFlows: No valid VXLAN GPE tunnel for Node {} ", localNodeId);
             return;
         }
-        ofWriter.writeFlow(localNodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY(), allowFromChainPort(
-                sfcNshHeader, localNodeTunPort, ctx.getPolicyManager().getTABLEID_PORTSECURITY(), ctx));
+        if (direction.equals(Direction.In)) {
+            ofWriter.writeFlow(localNodeId, ctx.getPolicyManager().getTABLEID_PORTSECURITY(), allowFromChainPort(
+                    sfcNshHeader, localNodeTunPort, ctx.getPolicyManager().getTABLEID_PORTSECURITY(), ctx));
 
-        ofWriter.writeFlow(localNodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER(),
-                allowFromChainTunnel(localNodeTunPort, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()));
+            for (Flow flow : createChainTunnelFlow(sfcNshHeader, localNodeTunPort, netElements,
+                    ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER(), ctx)) {
+                ofWriter.writeFlow(localNodeId, ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER(), flow);
+            }
 
-        ofWriter.writeFlow(localNodeId, ctx.getPolicyManager().getTABLEID_EXTERNAL_MAPPER(),
-                createExternalFlow(sfcNshHeader, localNodeTunPort, netElements,
-                        ctx.getPolicyManager(), ctx.getSwitchManager(), tunDestAddress));
+            ofWriter.writeFlow(localNodeId, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER(),
+                    allowFromChainTunnel(localNodeTunPort, ctx.getPolicyManager().getTABLEID_POLICY_ENFORCER()));
 
-        ofWriter.writeFlow(destNodeId, ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER(), createChainTunnelFlow(
-                sfcNshHeader, destNodeTunPort, epOrdinals, ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER(), ctx));
-
-        ofWriter.writeFlow(destNodeId, ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER(), createChainBroadcastFlow(
-                sfcNshHeader, destNodeTunPort, epOrdinals, ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER(), ctx));
+            ofWriter.writeFlow(localNodeId, ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER(),
+                    createChainBroadcastFlow(sfcNshHeader, localNodeTunPort, epOrdinals,
+                            ctx.getPolicyManager().getTABLEID_SOURCE_MAPPER(), ctx));
+        } else {
+            ofWriter.writeFlow(localNodeId, ctx.getPolicyManager().getTABLEID_EXTERNAL_MAPPER(),
+                    createExternalFlow(sfcNshHeader, localNodeTunPort, netElements, ctx.getPolicyManager(),
+                            ctx.getSwitchManager(), tunDestAddress));
+        }
     }
 
     private static Flow createChainBroadcastFlow(SfcNshHeader sfcNshHeader, NodeConnectorId tunPort,
@@ -209,7 +219,8 @@ public class ChainActionFlows {
         org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action outputAction;
 
         Integer priority = 1000;
-        int matchTunnelId = sfcNshHeader.getNshMetaC2().intValue();
+        int matchTunnelId = netElements.getSrcEpOrdinals().getTunnelId();
+        long setTunnelId = netElements.getDstEpOrdinals().getTunnelId();
         Long l3c = (long) netElements.getSrcEpOrdinals().getL3Id();
         loadC1 = nxLoadNshc1RegAction(sfcNshHeader.getNshMetaC1());
 
@@ -224,9 +235,9 @@ public class ChainActionFlows {
         }
 
         org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action loadC2 =
-                nxLoadNshc2RegAction(sfcNshHeader.getNshMetaC2());
+                nxLoadNshc2RegAction(setTunnelId);
         org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action loadChainTunVnid =
-                nxLoadTunIdAction(BigInteger.valueOf(sfcNshHeader.getNshMetaC2()), false);
+                nxLoadTunIdAction(BigInteger.valueOf(setTunnelId), false);
         org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action loadChainTunDest =
                 nxLoadTunIPv4Action(sfcNshHeader.getNshTunIpDst().getValue(), false);
 
@@ -248,19 +259,14 @@ public class ChainActionFlows {
         return flowb.build();
     }
 
-    private static Flow createChainTunnelFlow(SfcNshHeader sfcNshHeader, NodeConnectorId tunPort,
-            EndpointFwdCtxOrdinals epFwdCtxOrds, short tableId, OfContext ctx) {
+    private static List<Flow> createChainTunnelFlow(SfcNshHeader sfcNshHeader, NodeConnectorId tunPort,
+            NetworkElements netElements, short tableId, OfContext ctx) {
 
-        int egId = epFwdCtxOrds.getEpgId();
-        int bdId = epFwdCtxOrds.getBdId();
-        int fdId = epFwdCtxOrds.getFdId();
-        int l3Id = epFwdCtxOrds.getL3Id();
-        int tunnelId = epFwdCtxOrds.getTunnelId();
-
-        MatchBuilder mb = new MatchBuilder().setInPort(tunPort);
-        addNxTunIdMatch(mb, tunnelId);
-        addNxNspMatch(mb, sfcNshHeader.getNshNspFromChain());
-        addNxNsiMatch(mb, sfcNshHeader.getNshNsiFromChain());
+        int egId = netElements.getDstEpOrdinals().getEpgId();
+        int bdId = netElements.getDstEpOrdinals().getBdId();
+        int fdId = netElements.getDstEpOrdinals().getFdId();
+        int l3Id = netElements.getDstEpOrdinals().getL3Id();
+        int tunnelId = netElements.getSrcEpOrdinals().getTunnelId();
 
         org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action segReg =
                 nxLoadRegAction(NxmNxReg0.class, BigInteger.valueOf(egId));
@@ -273,13 +279,40 @@ public class ChainActionFlows {
         org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action vrfReg =
                 nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(l3Id));
 
-        Match match = mb.build();
-        FlowId flowId = FlowIdUtils.newFlowId(tableId, "chaintunnel", match);
-        FlowBuilder flowb =
-                base(tableId).setId(flowId).setPriority(150).setMatch(match).setInstructions(
-                        instructions(applyActionIns(segReg, scgReg, bdReg, fdReg, vrfReg),
-                                gotoTableIns(ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER())));
-        return flowb.build();
+        List<Flow> flows = new ArrayList<>();
+        for (L3Address address : netElements.getDstEp().getL3Address()) {
+            Layer3Match l3Match = null;
+            MatchBuilder mb = null;
+            if (address.getIpAddress() != null) {
+                if (address.getIpAddress().getIpv4Address() != null) {
+                    l3Match = new Ipv4MatchBuilder()
+                        .setIpv4Source(new Ipv4Prefix(address.getIpAddress().getIpv4Address().getValue() + "/32"))
+                        .build();
+                    mb = new MatchBuilder().setInPort(tunPort)
+                        .setLayer3Match(l3Match)
+                        .setEthernetMatch(FlowUtils.ethernetMatch(null, null, FlowUtils.IPv4));
+                } else if (address.getIpAddress().getIpv6Address() != null) {
+                    l3Match = new Ipv6MatchBuilder()
+                        .setIpv6Source(new Ipv6Prefix(address.getIpAddress().getIpv6Address().getValue() + "/128"))
+                        .build();
+                    mb = new MatchBuilder().setInPort(tunPort)
+                        .setLayer3Match(l3Match)
+                        .setEthernetMatch(FlowUtils.ethernetMatch(null, null, FlowUtils.IPv6));
+                }
+            }
+
+            addNxTunIdMatch(mb, tunnelId);
+            addNxNspMatch(mb, sfcNshHeader.getNshNspFromChain());
+            addNxNsiMatch(mb, sfcNshHeader.getNshNsiFromChain());
+
+            Match match = mb.build();
+            FlowId flowId = FlowIdUtils.newFlowId(tableId, "chaintunnel", match);
+            FlowBuilder flowb = base(tableId).setId(flowId).setPriority(150).setMatch(match).setInstructions(
+                    instructions(applyActionIns(segReg, scgReg, bdReg, fdReg, vrfReg),
+                            gotoTableIns(ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER())));
+            flows.add(flowb.build());
+        }
+        return flows;
     }
 
     private static Flow allowFromChainPort(SfcNshHeader sfcNshHeader, NodeConnectorId port, short tableId,

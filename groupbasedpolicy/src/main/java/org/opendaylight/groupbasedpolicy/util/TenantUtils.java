@@ -57,8 +57,10 @@ public class TenantUtils {
         @Override
         public int compare(Rule o1, Rule o2) {
             return ComparisonChain.start()
-                .compare(o1.getOrder(), o2.getOrder(), 
+                .compare(o1.getOrder(), o2.getOrder(),
                          Ordering.natural().nullsLast())
+                .compare(o1.getName().getValue(), o2.getName().getValue(),
+                        Ordering.natural().nullsLast())
                 .result();
         }
         

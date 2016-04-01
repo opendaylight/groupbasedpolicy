@@ -14,8 +14,7 @@ import java.util.Map;
 import org.opendaylight.groupbasedpolicy.api.Validator;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.policyenforcer.PolicyEnforcer.NetworkElements;
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.policyenforcer.PolicyEnforcer.PolicyPair;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.policyenforcer.NetworkElements;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.list.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
@@ -43,7 +42,7 @@ public abstract class Action implements Validator<ActionInstance> {
 
     /**
      * The result represents supported parameters for the action by renderer
-     * 
+     *
      * @return list of supported parameters by the action
      */
     public abstract List<SupportedParameterValues> getSupportedParameterValues();
@@ -57,7 +56,6 @@ public abstract class Action implements Validator<ActionInstance> {
      * @param params the parameters for the action instance
      * @param order the order of the list of actions
      * @param netElements the network elements
-     * @param policyPair the {@link PolicyPair}
      * @param ofWriter the {@link OfWriter}
      * @param ctx the OfContext
      * @param direction the direction of traffic
@@ -67,7 +65,6 @@ public abstract class Action implements Validator<ActionInstance> {
                                                      Map<String, Object> params,
                                                      Integer order,
                                                      NetworkElements netElements,
-                                                     PolicyPair policyPair,
                                                      OfWriter ofWriter,
                                                      OfContext ctx,
                                                      Direction direction);
