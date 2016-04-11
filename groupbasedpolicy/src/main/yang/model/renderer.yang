@@ -12,18 +12,12 @@ module renderer {
     namespace "urn:opendaylight:groupbasedpolicy:renderer";
     prefix "gbp-renderer";
 
-    import gbp-common {
-        prefix gbp-common;
-        revision-date 2014-04-21;
-    }
-    import policy {
-        prefix policy;
-        revision-date 2014-04-21;
-    }
-    import ietf-inet-types {
-        prefix inet;
-        revision-date 2010-09-24;
-    }
+    import gbp-common { prefix gbp-common; revision-date 2014-04-21; }
+    import policy { prefix policy; revision-date 2014-04-21; }
+    import resolved-policy { prefix resolved-policy; revision-date 2015-08-28; }
+    import base-endpoint { prefix base-endpoint; revision-date 2016-04-27; }
+    import forwarding { prefix forwarding; revision-date 2016-04-27; }
+    import ietf-inet-types { prefix inet; revision-date 2010-09-24; }
 
     description
         "This module defines renderer capabilities.";
@@ -36,6 +30,17 @@ module renderer {
     typedef renderer-name {
         type gbp-common:name;
         description "A name for a renderer";
+    }
+
+    typedef policy-name {
+        type string;
+    }
+
+    typedef endpoint-policy-participation {
+        type enumeration {
+            enum PROVIDER;
+            enum CONSUMER;
+        }
     }
 
     grouping supported-string-value-fields {
@@ -95,25 +100,190 @@ module renderer {
         }
     }
 
+    grouping has-peer-endpoints {
+        list peer-endpoint {
+            key "context-type context-id address-type address";
+            uses base-endpoint:address-endpoint-key;
+        }
+    }
+
+    grouping has-peer-containment-endpoints {
+        list peer-containment-endpoint {
+            key "context-type context-id";
+            uses forwarding:context-key;
+        }
+    }
+
+    grouping has-peer-external-endpoints {
+        list peer-external-endpoint {
+            key "context-type context-id address-type address";
+            uses base-endpoint:address-endpoint-key;
+        }
+    }
+
+    grouping has-peer-external-containment-endpoints {
+        list peer-external-containment-endpoint {
+            key "context-type context-id";
+            uses forwarding:context-key;
+        }
+    }
+
+    grouping has-renderer-name {
+        leaf renderer-name {
+            type renderer-name;
+            mandatory true;
+        }
+    }
+
     container renderers {
         description
             "Leaf containing all renderers' description.";
 
-        config false;
-
         list renderer {
             description
-                "A renderer provides a list of capabilities.";
+                "A renderer provides a list of capabilities and status about configured policy.
+                The renderer must store data only to OPER!";
 
             key name;
-
             leaf name {
                 description
                     "A user-visible name for the renderer.";
                 type renderer-name;
             }
 
+            container renderer-nodes {
+                description "Contains location of nodes (network elements) which are configured by the renderer.";
+
+                config false;
+
+                list renderer-node {
+                    key "node-path";
+                    leaf node-path {
+                        description "Path to the node where policy needs to be enforced.";
+                        type instance-identifier;
+                    }
+                }
+            }
+
+            container renderer-policy {
+                description "Policy is named by version and describes desired vs real state.
+                    Desired state of policy described by /renderers/renderer/renderer-policy/configuration and version are stored in CONF.
+                    The real state of policy described by /renderers/renderer/renderer-policy/status and version are stored in OPER.";
+
+                leaf version {
+                    description
+                        "Version in CONF represents desired state of policy while version in OPER means real state.";
+                    type uint32;
+                    mandatory true;
+                }
+
+                container configuration {
+                    description "Renderer tries to apply given policy on devices.";
+                    container endpoint-resolved-policies {
+                        list endpoint-resolved-policy {
+                            description "Policy between renderer-endpoints and peer-endpoints.";
+                            key policy-name;
+                            leaf policy-name {
+                                description "Key is here only as workaround for bugs around unkeyed list. It can be removed anytime.";
+                                type policy-name;
+                            }
+
+                            container resolved-policy {
+                                list rule-group-with-renderer-endpoint-participation {
+                                    description "A specific policy rule group that apply to pair of endpoints.
+                                        Entire rule-group is located on /renderers/renderer/renderer-policy/configuration/rule-groups/rule-group";
+                                    key "tenant-id contract-id subject-name renderer-endpoint-participation";
+                                    uses resolved-policy:has-subject-key;
+                                    leaf renderer-endpoint-participation {
+                                        type endpoint-policy-participation;
+                                    }
+                                }
+                            }
+
+                            container renderer-endpoints-and-peers {
+                                description "Every renderer-endpoint has the same set of peer-endpoints.
+                                    A renderer should not configure a policy when renderer-endpoint is peer-endpoint.";
+                                list renderer-endpoint {
+                                    key "context-type context-id address-type address";
+                                    uses base-endpoint:address-endpoint-key;
+                                }
+                                uses has-peer-endpoints;
+                                uses has-peer-external-endpoints;
+                                uses has-peer-external-containment-endpoints;
+                            }
+                        }
+                    }
+
+                    container rule-groups {
+                        list rule-group {
+                            description "A specific policy rule group that apply to pair of endpoints.
+                                The policy rule group represents the subject with resolved rules.";
+                            key "tenant-id contract-id subject-name";
+                            uses resolved-policy:has-subject-key;
+
+                            uses policy:has-order;
+                            uses resolved-policy:has-resolved-rules;
+                        }
+                    }
+
+                    container endpoints {
+                        list address-endpoint-with-location {
+                            key "context-type context-id address-type address";
+                            uses base-endpoint:address-endpoint-fields;
+                            uses base-endpoint:has-location;
+                            uses has-renderer-name;
+                        }
+
+                        list containment-endpoint-with-location {
+                            key "context-type context-id";
+                            uses base-endpoint:address-endpoint-fields;
+                            uses base-endpoint:has-location;
+                        }
+                    }
+
+                    container forwarding-contexts {
+                        list forwarding-context-by-tenant {
+                            key tenant-id;
+                            uses forwarding:forwarding-with-tenant-fields;
+                        }
+                    }
+                }
+
+                container status {
+                    description "The renderer exposes status of policy here.";
+                    config false;
+
+                    list unconfigured-rule {
+                        key "tenant-id contract-id subject-name renderer-endpoint-participation rule-name";
+                        uses resolved-policy:has-subject-key;
+                        leaf renderer-endpoint-participation {
+                            type endpoint-policy-participation;
+                        }
+                        leaf rule-name {
+                            type gbp-common:rule-name;
+                        }
+
+                        container renderer-endpoints-with-peers {
+                            list renderer-endpoint-with-peers {
+                                key "context-type context-id address-type address";
+                                uses base-endpoint:address-endpoint-key;
+
+                                uses has-peer-endpoints;
+                                uses has-peer-external-endpoints;
+                                uses has-peer-external-containment-endpoints;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // TODO remove - does not make sense anymore
             container interests {
+
+                status deprecated;
+
+                config false;
+
                 description "Represents interests of the renderer.";
 
                 container followed-tenants {
@@ -141,8 +311,10 @@ module renderer {
                 }
             }
 
-
             container capabilities {
+
+                config false;
+
                 description "Capabilities this renderer provides.";
 
                 list supported-classifier-definition {

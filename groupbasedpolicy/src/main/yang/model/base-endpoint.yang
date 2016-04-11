@@ -9,7 +9,7 @@
 module base-endpoint {
     yang-version 1;
 
-    namespace "urn:opendaylight:groupbasedpolicy:endpoints";
+    namespace "urn:opendaylight:groupbasedpolicy:base_endpoint";
     prefix "base-endpoint";
 
     import gbp-common { prefix gbp-common; revision-date 2014-04-21; }
@@ -21,6 +21,7 @@ module base-endpoint {
     }
 
     grouping address-endpoint-key {
+        uses forwarding:context-key;
         uses forwarding:has-address-type;
         leaf address {
             type string;
@@ -28,15 +29,10 @@ module base-endpoint {
         }
     }
 
-    grouping endpoint-key {
-        uses forwarding:context-key;
-        uses address-endpoint-key;
-    }
-
     grouping has-child-endpoints {
         list child-endpoint {
             key "context-type context-id address-type address";
-            uses endpoint-key;
+            uses address-endpoint-key;
         }
     }
 
@@ -51,7 +47,7 @@ module base-endpoint {
             case parent-endpoint-case {
                 list parent-endpoint {
                     key "context-type context-id address-type address";
-                    uses endpoint-key;
+                    uses address-endpoint-key;
                 }
             }
         }
@@ -89,6 +85,18 @@ module base-endpoint {
                         "The last timestamp associated with this endpoint record. This
                         will be used for aging data in the registry.";
         }
+    }
+
+    grouping address-endpoint-fields {
+        uses address-endpoint-key;
+        uses parent-child-endpoints;
+        uses common-endpoint-fields;
+    }
+
+    grouping containment-endpoint-fields {
+        uses forwarding:context-key;
+        uses has-child-endpoints;
+        uses common-endpoint-fields;
     }
 
     grouping has-endpoint-group-conditions {
@@ -162,33 +170,25 @@ module base-endpoint {
                 for policy resolution.";
         config false;
 
-        list address-endpoints-by-containment {
-            key "context-type context-id";
-            uses forwarding:context-key;
-
+        container address-endpoints {
             list address-endpoint {
-                key "address-type address";
-                uses address-endpoint-key;
-
-                uses parent-child-endpoints;
-                uses common-endpoint-fields;
-                min-elements 1;
+                key "context-type context-id address-type address";
+                uses address-endpoint-fields;
             }
         }
 
-        list containment-endpoint {
-            key "context-type context-id";
-            uses forwarding:context-key;
-
-            uses has-child-endpoints;
-            uses common-endpoint-fields;
+        container containment-endpoints {
+            list containment-endpoint {
+                key "context-type context-id";
+                uses containment-endpoint-fields;
+            }
         }
     }
 
     container endpoint-locations {
         list address-endpoint-location {
             key "context-type context-id address-type address";
-            uses endpoint-key;
+            uses address-endpoint-key;
             uses has-location;
         }
 
@@ -208,18 +208,12 @@ module base-endpoint {
         input {
             list address-endpoint-reg {
                 key "context-type context-id address-type address";
-                uses endpoint-key;
-
-                uses parent-child-endpoints;
-                uses common-endpoint-fields;
+                uses address-endpoint-fields;
                 uses has-location;
             }
             list containment-endpoint-reg {
                 key "context-type context-id";
-                uses forwarding:context-key;
-
-                uses has-child-endpoints;
-                uses common-endpoint-fields;
+                uses containment-endpoint-fields;
                 uses has-location;
             }
         }
@@ -231,7 +225,7 @@ module base-endpoint {
         input {
             list address-endpoint-unreg {
                 key "context-type context-id address-type address";
-                uses endpoint-key;
+                uses address-endpoint-key;
             }
             list containment-endpoint-unreg {
                 key "context-type context-id";

@@ -8,14 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.sxp.mapper.impl;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.AsyncFunction;
-import com.google.common.util.concurrent.CheckedFuture;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.JdkFutureAdapters;
-import com.google.common.util.concurrent.ListenableFuture;
 import java.util.Collections;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -23,19 +17,18 @@ import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SxpMapperReactor;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.SxpListenerUtil;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.BaseEndpointService;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.Endpoints;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.RegisterEndpointInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.RegisterEndpointInputBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.NetworkContainment;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.NetworkContainmentBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.AddressEndpoints;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.register.endpoint.input.AddressEndpointReg;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.register.endpoint.input.AddressEndpointRegBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoints.rev160427.BaseEndpointService;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoints.rev160427.Endpoints;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoints.rev160427.RegisterEndpointInput;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoints.rev160427.RegisterEndpointInputBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoints.rev160427.common.endpoint.fields.NetworkContainment;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoints.rev160427.common.endpoint.fields.NetworkContainmentBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoints.rev160427.endpoints.AddressEndpointsByContainment;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoints.rev160427.endpoints.AddressEndpointsByContainmentKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoints.rev160427.endpoints.address.endpoints.by.containment.AddressEndpoint;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoints.rev160427.endpoints.address.endpoints.by.containment.AddressEndpointKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoints.rev160427.register.endpoint.input.AddressEndpointReg;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoints.rev160427.register.endpoint.input.AddressEndpointRegBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.IpPrefixType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointForwardingTemplateBySubnet;
@@ -46,6 +39,14 @@ import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.AsyncFunction;
+import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.JdkFutureAdapters;
+import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * Purpose: exclusively processes sxp master database changes and EGP templates changes
@@ -95,9 +96,8 @@ public class SxpMapperReactorImpl implements SxpMapperReactor {
     private CheckedFuture<Optional<AddressEndpoint>, ReadFailedException> findExistingEndPoint(final ContextId containment,
                                                                                           final String address) {
         KeyedInstanceIdentifier<AddressEndpoint, AddressEndpointKey> addressEndpointPath =
-                InstanceIdentifier.create(Endpoints.class)
-                .child(AddressEndpointsByContainment.class, new AddressEndpointsByContainmentKey(containment, L3Context.class))
-                .child(AddressEndpoint.class, new AddressEndpointKey(address, IpPrefixType.class));
+                InstanceIdentifier.create(Endpoints.class).child(AddressEndpoints.class).child(AddressEndpoint.class,
+                        new AddressEndpointKey(address, IpPrefixType.class, containment, L3Context.class));
         final ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
         final CheckedFuture<Optional<AddressEndpoint>, ReadFailedException> read = rTx.read(
                 LogicalDatastoreType.OPERATIONAL, addressEndpointPath);

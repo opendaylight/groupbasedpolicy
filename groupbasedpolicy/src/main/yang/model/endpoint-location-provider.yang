@@ -6,11 +6,11 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-module endpoint-locations {
+module endpoint-location-provider {
     yang-version 1;
 
-    namespace "urn:opendaylight:groupbasedpolicy:endpoint:location";
-    prefix "endpoints-location";
+    namespace "urn:opendaylight:groupbasedpolicy:endpoint_location_provider";
+    prefix "ep-loc-provider";
 
     import base-endpoint { prefix base-endpoint; revision-date 2016-04-27; }
     import forwarding { prefix forwarding; revision-date 2016-04-27; }
@@ -27,18 +27,18 @@ module endpoint-locations {
         type string;
     }
 
-    container endpoint-locations {
+    container location-providers {
         list location-provider {
             key "provider";
             leaf provider {
                 type provider-name;
             }
-            list endpoint-location {
+            list provider-address-endpoint-location {
                 key "context-type context-id address-type address";
-                uses base-endpoint:endpoint-key;
+                uses base-endpoint:address-endpoint-key;
                 uses base-endpoint:has-location;
             }
-            list containment-endpoint-location {
+            list provider-containment-endpoint-location {
                 key "context-type context-id";
                 uses forwarding:context-key;
                 uses base-endpoint:has-location;

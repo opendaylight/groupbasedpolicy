@@ -44,7 +44,7 @@ module l2-l3-forwarding {
     }
 
     identity ip-prefix-type {
-        description "Values by IP prefix type MUST be compatible with type ietf-inet-types:ipv-prefix.
+        description "Values by IP prefix type MUST be compatible with type ietf-inet-types:ip-prefix.
             This address type can be used only if forwarding:context-type is l3-context.";
         base forwarding:address-type;
     }
