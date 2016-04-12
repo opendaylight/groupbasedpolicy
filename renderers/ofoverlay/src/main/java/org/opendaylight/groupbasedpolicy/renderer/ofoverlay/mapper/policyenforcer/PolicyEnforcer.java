@@ -346,8 +346,8 @@ public class PolicyEnforcer extends FlowTable {
                     if (!oppositeChainNames.containsAll(chainNames)) {
                         return null;
                     }
-                    if ((consumedRules.contains(rule) && (direction.equals(Direction.In)))
-                            || ((!consumedRules.contains(rule)) && direction.equals(Direction.Out))) {
+                    if ((consumedRules.contains(rule) && (direction.equals(Direction.Out)))
+                            || ((!consumedRules.contains(rule)) && direction.equals(Direction.In))) {
                         return new ArrayList<>();
                     }
                 }
