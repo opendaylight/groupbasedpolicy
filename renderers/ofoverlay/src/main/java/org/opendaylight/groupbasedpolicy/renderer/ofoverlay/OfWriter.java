@@ -40,6 +40,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.Fl
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.Table;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.TableBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.GroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.GroupTypes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.group.BucketsBuilder;
@@ -168,6 +170,9 @@ public class OfWriter {
         Preconditions.checkNotNull(flow);
         Preconditions.checkNotNull(nodeId);
 
+        if (flow.getMatch() == null) {
+            flow = new FlowBuilder(flow).setMatch(new MatchBuilder().build()).build();
+        }
         TableBuilder tableBuilder = this.getTableBuilderForNode(nodeId, tableId);
         // transforming List<Flow> to Set (with customized equals/hashCode) to eliminate duplicate entries
         List<Flow> flows = tableBuilder.getFlow();
@@ -264,6 +269,9 @@ public class OfWriter {
             for (Equivalence.Wrapper<Flow> wf : additions) {
                 Flow f = wf.get();
                 if (f != null) {
+                    if (f.getMatch() == null) {
+                        f = new FlowBuilder(f).setMatch(new MatchBuilder().build()).build();
+                    }
                     t.put(LogicalDatastoreType.CONFIGURATION,
                             FlowUtils.createFlowPath(tableIid, f.getId()), f, true);
                 }

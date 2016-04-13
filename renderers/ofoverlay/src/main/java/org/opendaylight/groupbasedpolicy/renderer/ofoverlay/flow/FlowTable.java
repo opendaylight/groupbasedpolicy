@@ -51,7 +51,8 @@ public abstract class FlowTable extends OfTable {
             .setTableId(getTableId())
             .setBarrier(false)
             .setHardTimeout(0)
-            .setIdleTimeout(0);
+            .setIdleTimeout(0)
+            .setMatch(new MatchBuilder().build());
     }
 
     /**
