@@ -9,7 +9,7 @@
 package org.opendaylight.groupbasedpolicy.sxp.mapper.api;
 
 /**
- * Purpose: TODO!
+ * Purpose: process given ip-sgt binding and EP-template in order to create L3-EP
  */
 public interface SxpMapperReactor {
 }
