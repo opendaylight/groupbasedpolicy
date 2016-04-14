@@ -37,6 +37,11 @@
                 <artifactId>sxp-api</artifactId>
                 <version>${sxp.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.opendaylight.sxp</groupId>
+                <artifactId>sxp-core</artifactId>
+                <version>${sxp.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -59,6 +64,14 @@
         <dependency>
             <groupId>org.opendaylight.sxp</groupId>
             <artifactId>sxp-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.opendaylight.sxp</groupId>
+            <artifactId>sxp-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>commons-net</groupId>
+            <artifactId>commons-net</artifactId>
         </dependency>
 
         <!-- testing dependencies -->

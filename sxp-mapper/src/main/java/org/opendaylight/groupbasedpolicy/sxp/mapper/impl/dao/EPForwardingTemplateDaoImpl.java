@@ -61,17 +61,15 @@ public class EPForwardingTemplateDaoImpl implements DSDaoAsync<IpPrefix, Endpoin
                     if (input.isPresent()) {
                         // clean cache
                         cachedDao.invalidateCache();
-                        // iterate through all template entries and update cachedDao at once
+
+                        // iterate through all template entries and update cachedDao
                         final List<EndpointForwardingTemplateBySubnet> templateLot = input.get().getEndpointForwardingTemplateBySubnet();
                         if (templateLot != null) {
                             for (EndpointForwardingTemplateBySubnet template : templateLot) {
                                 cachedDao.update(template.getIpPrefix(), template);
                             }
                         }
-
-                        //TODO: do fastpath search (by key)
-                        //TODO: do slowpath fallback search (by ip-prefix and longest match)
-                        return null;
+                        return cachedDao.read(key);
                     } else {
                         return Optional.absent();
                     }

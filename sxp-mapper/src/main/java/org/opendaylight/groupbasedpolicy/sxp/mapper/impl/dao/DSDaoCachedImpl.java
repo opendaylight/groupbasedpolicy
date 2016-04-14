@@ -8,8 +8,6 @@
 package org.opendaylight.groupbasedpolicy.sxp.mapper.impl.dao;
 
 import com.google.common.base.Optional;
-import java.util.Collections;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import javax.annotation.Nonnull;
@@ -29,22 +27,20 @@ public class DSDaoCachedImpl<K, V extends DataObject> implements DSDaoCached<K, 
     }
 
     @Override
-    public void update(@Nonnull final K key, @Nullable final V value) {
+    public V update(@Nonnull final K key, @Nullable final V value) {
+        final V previousValue;
         if (value != null) {
-            cache.put(key, value);
+            previousValue = cache.put(key, value);
         } else {
-            cache.remove(key);
+            previousValue = cache.remove(key);
         }
+
+        return previousValue;
     }
 
     @Override
     public Optional<V> read(@Nonnull final K key) {
         return Optional.fromNullable(cache.get(key));
-    }
-
-    @Override
-    public Map<K, V> getBackendMapView() {
-        return Collections.unmodifiableMap(cache);
     }
 
     @Override

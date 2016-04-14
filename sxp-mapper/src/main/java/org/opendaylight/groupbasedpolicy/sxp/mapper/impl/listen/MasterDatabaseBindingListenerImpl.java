@@ -46,7 +46,7 @@ public class MasterDatabaseBindingListenerImpl implements MasterDatabaseBindingL
     private static final Logger LOG = LoggerFactory.getLogger(MasterDatabaseBindingListenerImpl.class);
 
     private final SxpMapperReactor sxpMapperReactor;
-    private final DSDaoCached<Sgt, MasterDatabaseBinding> masterDBBindingDaoCached;
+    private final DSDaoCached<IpPrefix, MasterDatabaseBinding> masterDBBindingDaoCached;
     private final DSDaoAsync<Sgt, EndpointPolicyTemplateBySgt> epPolicyTemplateDao;
     private final DSDaoAsync<IpPrefix, EndpointForwardingTemplateBySubnet> epForwardingTemplateDao;
 
@@ -55,7 +55,7 @@ public class MasterDatabaseBindingListenerImpl implements MasterDatabaseBindingL
 
     public MasterDatabaseBindingListenerImpl(final DataBroker dataBroker,
                                              final SxpMapperReactor sxpMapperReactor,
-                                             final DSDaoCached<Sgt, MasterDatabaseBinding> masterDBBindingDaoCached,
+                                             final DSDaoCached<IpPrefix, MasterDatabaseBinding> masterDBBindingDaoCached,
                                              final DSDaoAsync<Sgt, EndpointPolicyTemplateBySgt> epPolicyTemplateDao,
                                              final DSDaoAsync<IpPrefix, EndpointForwardingTemplateBySubnet> epForwardingTemplateDao) {
         this.sxpMapperReactor = Preconditions.checkNotNull(sxpMapperReactor);
@@ -85,7 +85,7 @@ public class MasterDatabaseBindingListenerImpl implements MasterDatabaseBindingL
             } else {
                 final Sgt sgtKey = sxpMasterDBItem.getSecurityGroupTag();
                 final IpPrefix ipPrefixKey = sxpMasterDBItem.getIpPrefix();
-                SxpListenerUtil.updateCachedDao(masterDBBindingDaoCached, sgtKey, change);
+                SxpListenerUtil.updateCachedDao(masterDBBindingDaoCached, ipPrefixKey, change);
 
                 processWithEPPolicyTemplate(sgtKey, sxpMasterDBItem);
                 processWithEPForwardingTemplate(ipPrefixKey, sxpMasterDBItem);
@@ -105,10 +105,11 @@ public class MasterDatabaseBindingListenerImpl implements MasterDatabaseBindingL
                     throw new IllegalArgumentException("no epForwardingTemplate available");
                 } else {
                     // TODO: invoke reactor
-                    return null;
+                    return null; //sxpMapperReactor.processForwardingAndSxpMasterDB(input.get(), sxpMasterDBItem);
                 }
             }
         });
+        //Futures.addCallback(Futures.successfulAsList(rpcResultBag), RPC_FW_RESULT_FUTURE_CALLBACK);
     }
 
     private void processWithEPPolicyTemplate(final Sgt changeKey, final MasterDatabaseBinding sxpMasterDBItem) {
@@ -124,11 +125,12 @@ public class MasterDatabaseBindingListenerImpl implements MasterDatabaseBindingL
                 } else {
                     LOG.trace("processing sxpMasterDB event and epPolicyTemplate for sgt: {}", changeKey);
                     // TODO: invoke reactor
-                    return null;
+                    return null; //sxpMapperReactor.processPolicyAndSxpMasterDB(input.get(), sxpMasterDBItem);
                 }
             }
         });
 
+        //Futures.addCallback(rpcResult, RPC_POLICY_RESULT_FUTURE_CALLBACK);
     }
 
     @Override

@@ -7,18 +7,23 @@
  */
 package org.opendaylight.groupbasedpolicy.sxp.mapper.impl.listen;
 
+import com.google.common.base.Preconditions;
 import java.util.Collection;
 import javax.annotation.Nonnull;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSDaoAsync;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSDaoCached;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.EPTemplateListener;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SxpMapperReactor;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.SxpListenerUtil;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointForwardingTemplateBySubnet;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointPolicyTemplateBySgt;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBinding;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
@@ -32,14 +37,20 @@ public class EPForwardingTemplateListenerImpl implements EPTemplateListener<Endp
     private static final Logger LOG = LoggerFactory.getLogger(EPForwardingTemplateListenerImpl.class);
     private final SxpMapperReactor sxpMapperReactor;
     private final DSDaoCached<IpPrefix, EndpointForwardingTemplateBySubnet> templateCachedDao;
+    private final DSDaoAsync<IpPrefix, MasterDatabaseBinding> masterDBBindingDao;
+    private final DSDaoAsync<Sgt, EndpointPolicyTemplateBySgt> epPolicyTemplateDao;
     private final ListenerRegistration<? extends EPTemplateListener> listenerRegistration;
     private final InstanceIdentifier<EndpointForwardingTemplateBySubnet> templatePath;
 
     public EPForwardingTemplateListenerImpl(final DataBroker dataBroker,
                                             final SxpMapperReactor sxpMapperReactor,
-                                            final DSDaoCached<IpPrefix, EndpointForwardingTemplateBySubnet> templateCachedDao) {
-        this.sxpMapperReactor = sxpMapperReactor;
-        this.templateCachedDao = templateCachedDao;
+                                            final DSDaoCached<IpPrefix, EndpointForwardingTemplateBySubnet> templateCachedDao,
+                                            final DSDaoAsync<IpPrefix, MasterDatabaseBinding> masterDBBindingDao,
+                                            final DSDaoAsync<Sgt, EndpointPolicyTemplateBySgt> epPolicyTemplateDao) {
+        this.sxpMapperReactor = Preconditions.checkNotNull(sxpMapperReactor);
+        this.templateCachedDao = Preconditions.checkNotNull(templateCachedDao);
+        this.masterDBBindingDao = Preconditions.checkNotNull(masterDBBindingDao);
+        this.epPolicyTemplateDao = epPolicyTemplateDao;
         templatePath = EPTemplateListener.SXP_MAPPER_TEMPLATE_PARENT_PATH.child(EndpointForwardingTemplateBySubnet.class);
 
         final DataTreeIdentifier<EndpointForwardingTemplateBySubnet> dataTreeIdentifier = new DataTreeIdentifier<>(

@@ -7,7 +7,6 @@
  */
 package org.opendaylight.groupbasedpolicy.sxp.mapper.api;
 
-import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -31,12 +30,7 @@ public interface DSDaoCached<K, V> extends DSDao<K, V> {
      * @param key   associated to value
      * @param value associated to key
      */
-    void update(@Nonnull K key, @Nullable V value);
-
-    /**
-     * @return unmodifiable view of cache backend map
-     */
-    Map<K, V> getBackendMapView();
+    V update(@Nonnull K key, @Nullable V value);
 
     /**
      * invalidate all cache entries
