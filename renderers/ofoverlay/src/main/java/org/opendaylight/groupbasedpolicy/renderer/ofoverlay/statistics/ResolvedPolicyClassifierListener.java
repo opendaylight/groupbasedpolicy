@@ -84,7 +84,8 @@ public class ResolvedPolicyClassifierListener extends DataTreeChangeHandler<Reso
         // TODO missing impl for case when classifier is changed or removed
     }
 
-    private Map<InstanceIdentifier<Classifier>, Classifier> resolveClassifiers(ResolvedPolicy resolvedPolicy,
+    // TODO move to some util class
+    public static Map<InstanceIdentifier<Classifier>, Classifier> resolveClassifiers(ResolvedPolicy resolvedPolicy,
             InstanceIdentifier<ResolvedPolicy> resolvedPolicyIid) {
         List<PolicyRuleGroupWithEndpointConstraints> policyRgWithEcs =
                 resolvedPolicy.getPolicyRuleGroupWithEndpointConstraints();

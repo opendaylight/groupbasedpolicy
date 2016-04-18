@@ -19,6 +19,7 @@ public class FlowCache {
     private static final Pattern REPLACE_PATTERN = Pattern.compile("^\\w+:(\\w+):.*");
     static final String API_FLOW = "/flow/";
     static final String SUFFIX_JSON = "/json";
+    static final String KEYS_SPLIT_REGEX = ",";
 
     private transient Direction direction;
     private String name;
@@ -28,15 +29,14 @@ public class FlowCache {
     private String[] keyNames;
     private int keyNum;
 
-    private FlowCache() {
-    }
+    private FlowCache() {}
 
     private FlowCache(FlowCacheBuilder builder) {
         this.name = builder.getName();
         this.definition = builder.getDefinition();
         this.direction = builder.getDirection();
 
-        this.keyNames = this.definition.getKeys().split(",");
+        this.keyNames = this.definition.getKeys().split(KEYS_SPLIT_REGEX);
         this.keyNum = this.keyNames.length;
         for (int i = 0; i < this.keyNum; i++) {
             keyNames[i] = parseNullableKeyName(keyNames[i]);

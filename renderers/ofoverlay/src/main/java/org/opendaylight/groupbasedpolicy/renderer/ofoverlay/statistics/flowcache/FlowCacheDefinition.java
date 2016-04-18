@@ -59,7 +59,7 @@ public final class FlowCacheDefinition {
 
     public static class FlowCacheDefinitionBuilder {
 
-        private String value;
+        private String value = "";
         private boolean log = false;
         private final FlowCacheKeysBuilder keysBuilder = new FlowCacheKeysBuilder();
         private final FlowCacheFilterBuilder filterBuilder = new FlowCacheFilterBuilder();
