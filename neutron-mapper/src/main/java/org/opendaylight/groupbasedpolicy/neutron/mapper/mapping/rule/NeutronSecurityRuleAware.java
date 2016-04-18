@@ -18,12 +18,12 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
 import org.opendaylight.groupbasedpolicy.dto.EgKey;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.MappingProcessor;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.StatusCode;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.group.SecGroupDao;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
-import org.opendaylight.neutron.spi.INeutronSecurityRuleAware;
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
@@ -46,6 +46,18 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstanceBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.DirectionBase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.DirectionEgress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.DirectionIngress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeBase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeV4;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeV6;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolBase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolIcmp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolIcmpV6;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolTcp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolUdp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,11 +65,12 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.HashMultiset;
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
 
-public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
+public class NeutronSecurityRuleAware implements MappingProcessor<SecurityRule, NeutronSecurityRule> {
 
     private static final Logger LOG = LoggerFactory.getLogger(NeutronSecurityRuleAware.class);
     private static final String CONTRACT_PROVIDER = "Contract provider: ";
@@ -85,16 +98,76 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
         this.createdActionInstances = checkNotNull(createdActionInstances);
     }
 
+    // copied from Neutron's NeutronSecurityRuleInterface
+    private static final ImmutableBiMap<Class<? extends DirectionBase>,String> DIRECTION_MAP
+    = new ImmutableBiMap.Builder<Class<? extends DirectionBase>,String>()
+    .put(DirectionEgress.class,"egress")
+    .put(DirectionIngress.class,"ingress")
+    .build();
+
+    // copied from Neutron's NeutronSecurityRuleInterface
+    private static final ImmutableBiMap<Class<? extends EthertypeBase>,String> ETHERTYPE_MAP
+    = new ImmutableBiMap.Builder<Class<? extends EthertypeBase>,String>()
+    .put(EthertypeV4.class,"IPv4")
+    .put(EthertypeV6.class,"IPv6")
+    .build();
+
+    // copied from Neutron's NeutronSecurityRuleInterface
+    private static final ImmutableBiMap<Class<? extends ProtocolBase>,String> PROTOCOL_MAP
+    = new ImmutableBiMap.Builder<Class<? extends ProtocolBase>,String>()
+    .put(ProtocolIcmp.class,"icmp")
+    .put(ProtocolTcp.class,"tcp")
+    .put(ProtocolUdp.class,"udp")
+    .put(ProtocolIcmpV6.class,"icmpv6")
+    .build();
+
     @Override
-    public int canCreateNeutronSecurityRule(NeutronSecurityRule securityRule) {
-        LOG.trace("canCreateNeutronSecurityRule - {}", securityRule);
+    public NeutronSecurityRule convertToNeutron(SecurityRule rule) {
+        // copied from Neutron's NeutronSecurityRuleInterface
+        NeutronSecurityRule answer = new NeutronSecurityRule();
+        if (rule.getTenantId() != null) {
+            answer.setTenantID(rule.getTenantId());
+        }
+        if (rule.getDirection() != null) {
+            answer.setSecurityRuleDirection(DIRECTION_MAP.get(rule.getDirection()));
+        }
+        if (rule.getSecurityGroupId() != null) {
+            answer.setSecurityRuleGroupID(rule.getSecurityGroupId().getValue());
+        }
+        if (rule.getRemoteGroupId() != null) {
+            answer.setSecurityRemoteGroupID(rule.getRemoteGroupId().getValue());
+        }
+        if (rule.getRemoteIpPrefix() != null) {
+            answer.setSecurityRuleRemoteIpPrefix(new String(rule.getRemoteIpPrefix().getValue()));
+        }
+        if (rule.getProtocol() != null) {
+            answer.setSecurityRuleProtocol(PROTOCOL_MAP.get(rule.getProtocol()));
+        }
+        if (rule.getEthertype() != null) {
+            answer.setSecurityRuleEthertype(ETHERTYPE_MAP.get(rule.getEthertype()));
+        }
+        if (rule.getPortRangeMin() != null) {
+            answer.setSecurityRulePortMin(rule.getPortRangeMin());
+        }
+        if (rule.getPortRangeMax() != null) {
+            answer.setSecurityRulePortMax(rule.getPortRangeMax());
+        }
+        if (rule.getId() != null) {
+            answer.setID(rule.getId().getValue());
+        }
+        return answer;
+    }
+
+    @Override
+    public int canCreate(NeutronSecurityRule securityRule) {
+        LOG.trace("canCreate securityRule - {}", securityRule);
         // nothing to consider
         return StatusCode.OK;
     }
 
     @Override
-    public void neutronSecurityRuleCreated(NeutronSecurityRule securityRule) {
-        LOG.trace("neutronSecurityRuleCreated - {}", securityRule);
+    public void created(NeutronSecurityRule securityRule) {
+        LOG.trace("created securityRule - {}", securityRule);
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         boolean isNeutronSecurityRuleAdded = addNeutronSecurityRule(securityRule, rwTx);
         if (isNeutronSecurityRuleAdded) {
@@ -249,30 +322,30 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
     }
 
     @Override
-    public int canUpdateNeutronSecurityRule(NeutronSecurityRule delta, NeutronSecurityRule original) {
-        LOG.warn("canUpdateNeutronSecurityRule - Never should be called "
+    public int canUpdate(NeutronSecurityRule delta, NeutronSecurityRule original) {
+        LOG.warn("canUpdate securityRule - Never should be called "
                 + "- neutron API does not allow UPDATE on neutron security group rule. \nDelta: {} \nOriginal: {}",
                 delta, original);
         return StatusCode.BAD_REQUEST;
     }
 
     @Override
-    public void neutronSecurityRuleUpdated(NeutronSecurityRule securityRule) {
-        LOG.warn("neutronSecurityRuleUpdated - Never should be called "
+    public void updated(NeutronSecurityRule securityRule) {
+        LOG.warn("updated securityRule - Never should be called "
                 + "- neutron API does not allow UPDATE on neutron security group rule. \nSecurity group rule: {}",
                 securityRule);
     }
 
     @Override
-    public int canDeleteNeutronSecurityRule(NeutronSecurityRule securityRule) {
-        LOG.trace("canDeleteNeutronSecurityRule - {}", securityRule);
+    public int canDelete(NeutronSecurityRule securityRule) {
+        LOG.trace("canDelete - securityRule - {}", securityRule);
         // nothing to consider
         return StatusCode.OK;
     }
 
     @Override
-    public void neutronSecurityRuleDeleted(NeutronSecurityRule secRule) {
-        LOG.trace("neutronSecurityRuleCreated - {}", secRule);
+    public void deleted(NeutronSecurityRule secRule) {
+        LOG.trace("deleted securityRule - {}", secRule);
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         boolean isNeutronSecurityRuleDeleted = deleteNeutronSecurityRule(secRule, rwTx);
         if (isNeutronSecurityRuleDeleted) {
@@ -429,5 +502,4 @@ public class NeutronSecurityRuleAware implements INeutronSecurityRuleAware {
         return (Strings.isNullOrEmpty(two.getSecurityRemoteGroupID()) || two.getSecurityRemoteGroupID().equals(
                 one.getSecurityRuleGroupID()));
     }
-
 }

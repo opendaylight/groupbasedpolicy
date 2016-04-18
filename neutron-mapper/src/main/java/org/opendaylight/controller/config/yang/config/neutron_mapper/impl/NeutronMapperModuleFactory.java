@@ -31,7 +31,6 @@ public class NeutronMapperModuleFactory extends org.opendaylight.controller.conf
     @Override
     public Module createModule(String instanceName, DependencyResolver dependencyResolver, BundleContext bundleContext) {
         NeutronMapperModule module = (NeutronMapperModule) super.createModule(instanceName, dependencyResolver, bundleContext);
-        module.setBundleContext(bundleContext);
         return module;
     }
 
@@ -42,7 +41,6 @@ public class NeutronMapperModuleFactory extends org.opendaylight.controller.conf
     public Module createModule(String instanceName, DependencyResolver dependencyResolver, DynamicMBeanWithInstance old,
             BundleContext bundleContext) throws Exception {
         NeutronMapperModule module = (NeutronMapperModule) super.createModule(instanceName, dependencyResolver, old, bundleContext);
-        module.setBundleContext(bundleContext);
         return module;
     }
 

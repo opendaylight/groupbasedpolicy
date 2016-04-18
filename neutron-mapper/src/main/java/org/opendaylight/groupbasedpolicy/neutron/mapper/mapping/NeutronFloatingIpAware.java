@@ -16,18 +16,18 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
-import org.opendaylight.neutron.spi.INeutronFloatingIPAware;
 import org.opendaylight.neutron.spi.NeutronFloatingIP;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddressBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.floatingips.attributes.floatingips.Floatingip;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
 
-public class NeutronFloatingIpAware implements INeutronFloatingIPAware {
+public class NeutronFloatingIpAware implements MappingProcessor<Floatingip, NeutronFloatingIP> {
 
     public static final Logger LOG = LoggerFactory.getLogger(NeutronFloatingIpAware.class);
     private final DataBroker dataProvider;
@@ -37,19 +37,45 @@ public class NeutronFloatingIpAware implements INeutronFloatingIPAware {
     }
 
     @Override
-    public int canCreateFloatingIP(NeutronFloatingIP floatingIP) {
-        LOG.trace("canCreateFloatingIP - {}", floatingIP);
+    public NeutronFloatingIP convertToNeutron(Floatingip fip) {
+        NeutronFloatingIP result = new NeutronFloatingIP();
+        result.setID(fip.getUuid().getValue());
+        if (fip.getFloatingNetworkId() != null) {
+            result.setFloatingNetworkUUID(fip.getFloatingNetworkId().getValue());
+        }
+        if (fip.getPortId() != null) {
+            result.setPortUUID(fip.getPortId().getValue());
+        }
+        if (fip.getFixedIpAddress() != null ) {
+            result.setFixedIPAddress(String.valueOf(fip.getFixedIpAddress().getValue()));
+        }
+        if (fip.getFloatingIpAddress() != null) {
+            result.setFloatingIPAddress(String.valueOf(fip.getFloatingIpAddress().getValue()));
+        }
+        if (fip.getTenantId() != null) {
+            result.setTenantID(fip.getTenantId());
+        }
+        if (fip.getRouterId() != null) {
+            result.setRouterUUID(fip.getRouterId().getValue());
+        }
+        result.setStatus(fip.getStatus());
+        return result;
+    }
+
+    @Override
+    public int canCreate(NeutronFloatingIP floatingIP) {
+        LOG.trace("canCreate floatingIP - {}", floatingIP);
         return StatusCode.OK;
     }
 
     @Override
-    public void neutronFloatingIPCreated(NeutronFloatingIP floatingIP) {
-        LOG.trace("neutronFloatingIPCreated - {}", floatingIP);
+    public void created(NeutronFloatingIP floatingIP) {
+        LOG.trace("created floatinIp - {}", floatingIP);
     }
 
     @Override
-    public int canUpdateFloatingIP(NeutronFloatingIP delta, NeutronFloatingIP original) {
-        LOG.trace("canUpdateFloatingIP - delta: {} original: {}", delta, original);
+    public int canUpdate(NeutronFloatingIP delta, NeutronFloatingIP original) {
+        LOG.trace("canUpdate floatingIP - delta: {} original: {}", delta, original);
         String oldFixedIPAddress = Strings.nullToEmpty(original.getFixedIPAddress());
         String newFixedIPAddress = Strings.nullToEmpty(delta.getFixedIPAddress());
         if (oldFixedIPAddress.equals(newFixedIPAddress)) {
@@ -83,19 +109,18 @@ public class NeutronFloatingIpAware implements INeutronFloatingIPAware {
     }
 
     @Override
-    public void neutronFloatingIPUpdated(NeutronFloatingIP floatingIP) {
-        LOG.trace("neutronFloatingIPUpdated - {}", floatingIP);
+    public void updated(NeutronFloatingIP floatingIP) {
+        LOG.trace("updated floatingIP - {}", floatingIP);
     }
 
     @Override
-    public int canDeleteFloatingIP(NeutronFloatingIP floatingIP) {
-        LOG.trace("canDeleteFloatingIP - {}", floatingIP);
+    public int canDelete(NeutronFloatingIP floatingIP) {
+        LOG.trace("canDelete floatingIP - {}", floatingIP);
         return StatusCode.OK;
     }
 
     @Override
-    public void neutronFloatingIPDeleted(NeutronFloatingIP floatingIP) {
-        LOG.trace("neutronFloatingIPDeleted - {}", floatingIP);
+    public void deleted(NeutronFloatingIP floatingIP) {
+        LOG.trace("deleted floatingIP - {}", floatingIP);
     }
-
 }

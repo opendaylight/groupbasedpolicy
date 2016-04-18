@@ -11,7 +11,9 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -28,13 +30,13 @@ import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.neutron.spi.INeutronPortCRUD;
-import org.opendaylight.neutron.spi.INeutronRouterAware;
 import org.opendaylight.neutron.spi.INeutronSubnetCRUD;
 import org.opendaylight.neutron.spi.NeutronCRUDInterfaces;
 import org.opendaylight.neutron.spi.NeutronPort;
 import org.opendaylight.neutron.spi.NeutronRoute;
 import org.opendaylight.neutron.spi.NeutronRouter;
 import org.opendaylight.neutron.spi.NeutronRouter_Interface;
+import org.opendaylight.neutron.spi.NeutronRouter_NetworkReference;
 import org.opendaylight.neutron.spi.NeutronSubnet;
 import org.opendaylight.neutron.spi.Neutron_IPs;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
@@ -57,6 +59,14 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3ContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.SubnetBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.l3.attributes.Routes;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.Routers;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.routers.Router;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.routers.router.Interfaces;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.routers.router.external_gateway_info.ExternalFixedIps;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.Ports;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.Subnets;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +75,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
-public class NeutronRouterAware implements INeutronRouterAware {
+public class NeutronRouterAware implements MappingProcessor<Router, NeutronRouter> {
 
     private static final Logger LOG = LoggerFactory.getLogger(NeutronRouterAware.class);
     private static final String DEFAULT_ROUTE = "0.0.0.0/0";
@@ -78,28 +88,86 @@ public class NeutronRouterAware implements INeutronRouterAware {
     }
 
     @Override
-    public int canCreateRouter(NeutronRouter router) {
-        LOG.trace("canCreateRouter - {}", router);
+    public NeutronRouter convertToNeutron(Router router) {
+        return toNeutron(router);
+    }
+
+    private static NeutronRouter toNeutron(Router router) {
+        NeutronRouter result = new NeutronRouter();
+        result.setID(router.getUuid().getValue());
+        result.setName(router.getName());
+        result.setTenantID(router.getTenantId());
+        result.setAdminStateUp(router.isAdminStateUp());
+        result.setStatus(router.getStatus());
+        result.setDistributed(router.isDistributed());
+        if (router.getGatewayPortId() != null) {
+            result.setGatewayPortId(router.getGatewayPortId().getValue());
+        }
+        if (router.getRoutes() != null) {
+            List<NeutronRoute> routes = new ArrayList<NeutronRoute>();
+            for (Routes route : router.getRoutes()) {
+                NeutronRoute routerRoute = new NeutronRoute();
+                routerRoute.setDestination(String.valueOf(route.getDestination().getValue()));
+                routerRoute.setNextHop(String.valueOf(route.getNexthop().getValue()));
+                routes.add(routerRoute);
+            }
+            result.setRoutes(routes);
+        }
+        if (router.getExternalGatewayInfo() != null) {
+            NeutronRouter_NetworkReference extGwInfo = new NeutronRouter_NetworkReference();
+            extGwInfo.setNetworkID(router.getExternalGatewayInfo().getExternalNetworkId().getValue());
+            extGwInfo.setEnableSNAT(router.getExternalGatewayInfo().isEnableSnat());
+            if (router.getExternalGatewayInfo().getExternalFixedIps() != null) {
+                List<Neutron_IPs> fixedIPs = new ArrayList<Neutron_IPs>();
+                for (ExternalFixedIps mdFixedIP : router.getExternalGatewayInfo().getExternalFixedIps()) {
+                    Neutron_IPs fixedIP = new Neutron_IPs();
+                    fixedIP.setSubnetUUID(mdFixedIP.getSubnetId().getValue());
+                    fixedIP.setIpAddress(String.valueOf(mdFixedIP.getIpAddress().getValue()));
+                    fixedIPs.add(fixedIP);
+                }
+                extGwInfo.setExternalFixedIPs(fixedIPs);
+            }
+            result.setExternalGatewayInfo(extGwInfo);
+        }
+        if (router.getInterfaces() != null) {
+            Map<String, NeutronRouter_Interface> interfaces = new HashMap<String, NeutronRouter_Interface>();
+            for (Interfaces mdInterface : router.getInterfaces()) {
+                NeutronRouter_Interface pojoInterface = new NeutronRouter_Interface();
+                String id = mdInterface.getUuid().getValue();
+                pojoInterface.setID(id);
+                pojoInterface.setTenantID(mdInterface.getTenantId());
+                pojoInterface.setSubnetUUID(mdInterface.getSubnetId().getValue());
+                pojoInterface.setPortUUID(mdInterface.getPortId().getValue());
+                interfaces.put(id, pojoInterface);
+            }
+            result.setInterfaces(interfaces);
+        }
+        return result;
+    }
+
+    @Override
+    public int canCreate(NeutronRouter router) {
+        LOG.trace("canCreate router - {}", router);
         // nothing to consider
         return StatusCode.OK;
     }
 
     @Override
-    public void neutronRouterCreated(NeutronRouter router) {
-        LOG.trace("neutronRouterCreated - {}", router);
+    public void created(NeutronRouter router) {
+        LOG.trace("created router - {}", router);
         // TODO Li msunal external gateway
     }
 
     @Override
-    public int canUpdateRouter(NeutronRouter delta, NeutronRouter original) {
-        LOG.trace("canUpdateRouter - delta: {} original: {}", delta, original);
+    public int canUpdate(NeutronRouter delta, NeutronRouter original) {
+        LOG.trace("canUpdate router - delta: {} original: {}", delta, original);
         // TODO Li msunal external gateway
         return StatusCode.OK;
     }
 
     @Override
-    public void neutronRouterUpdated(NeutronRouter router) {
-        LOG.trace("neutronRouterUpdated - {}", router);
+    public void updated(NeutronRouter router) {
+        LOG.trace("updated router - {}", router);
         if (router.getExternalGatewayInfo() == null || router.getExternalGatewayInfo().getExternalFixedIPs() == null) {
             LOG.trace("neutronRouterUpdated - not an external Gateway");
             return;
@@ -182,7 +250,7 @@ public class NeutronRouterAware implements INeutronRouterAware {
                 routerPort.setTenantID(router.getTenantID());
             }
 
-            boolean isSuccessful = setNewL3ContextToEpsFromSubnet(tenantId, l3Context, subnet, rwTx);
+            boolean isSuccessful = setNewL3ContextToEpsFromSubnet(tenantId, l3Context, subnet, rwTx, epService);
             if (!isSuccessful) {
                 rwTx.cancel();
                 return;
@@ -193,19 +261,19 @@ public class NeutronRouterAware implements INeutronRouterAware {
     }
 
     @Override
-    public int canDeleteRouter(NeutronRouter router) {
-        LOG.trace("canDeleteRouter - {}", router);
+    public int canDelete(NeutronRouter router) {
+        LOG.trace("canDelete router - {}", router);
         // nothing to consider
         return StatusCode.OK;
     }
 
     @Override
-    public void neutronRouterDeleted(NeutronRouter router) {
-        LOG.trace("neutronRouterDeleted - {}", router);
+    public void deleted(NeutronRouter router) {
+        LOG.trace("deleted router - {}", router);
     }
 
-    @Override
-    public int canAttachInterface(NeutronRouter router, NeutronRouter_Interface routerInterface) {
+
+    static int canAttachInterface(NeutronRouter router, NeutronRouter_Interface routerInterface, DataBroker dataProvider) {
         LOG.trace("canAttachInterface - router: {} interface: {}", router, routerInterface);
         try (ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction()) {
             L3ContextId l3ContextIdFromRouterId = new L3ContextId(router.getID());
@@ -229,16 +297,20 @@ public class NeutronRouterAware implements INeutronRouterAware {
         }
     }
 
-    @Override
-    public void neutronRouterInterfaceAttached(NeutronRouter router, NeutronRouter_Interface routerInterface) {
-        LOG.trace("neutronRouterInterfaceAttached - router: {} interface: {}", router, routerInterface);
-        NeutronCRUDInterfaces neutronCRUDInterface = new NeutronCRUDInterfaces().fetchINeutronPortCRUD(this);
-        INeutronPortCRUD portInterface = neutronCRUDInterface.getPortInterface();
-        if (portInterface == null) {
-            LOG.warn("Illegal state - No provider for {}", INeutronPortCRUD.class.getName());
-            return;
+    static NeutronRouter getRouterForPort(String uuid) {
+        Routers routers = NeutronListener.getNeutronDataAfter().getRouters();
+        if (routers != null) {
+            for (Router router : routers.getRouter()) {
+                if (router.getUuid().getValue().equals(uuid)) {
+                    return toNeutron(router);
+                }
+            }
         }
+        return null;
+    }
 
+    static void neutronRouterInterfaceAttached(NeutronRouter router, NeutronRouter_Interface routerInterface, DataBroker dataProvider, EndpointService epService) {
+        LOG.trace("neutronRouterInterfaceAttached - router: {} interface: {}", router, routerInterface);
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         TenantId tenantId = new TenantId(Utils.normalizeUuid(router.getTenantID()));
         L3ContextId l3ContextIdFromRouterId = new L3ContextId(router.getID());
@@ -253,10 +325,22 @@ public class NeutronRouterAware implements INeutronRouterAware {
             l3Context = createL3ContextFromRouter(router);
             rwTx.put(LogicalDatastoreType.CONFIGURATION, l3ContextIidForRouterId, l3Context);
         }
-
         // Based on Neutron Northbound - Port representing router interface
         // contains exactly on fixed IP
-        NeutronPort routerPort = portInterface.getPort(routerInterface.getPortUUID());
+        NeutronPort routerPort = null;
+        Ports ports = NeutronListener.getNeutronDataAfter().getPorts();
+        if(ports != null) {
+            for(Port port : ports.getPort()) {
+                if(port.getUuid().getValue().equals(routerInterface.getPortUUID())) {
+                    routerPort = NeutronPortAware.toNeutron(port);
+                    break;
+                }
+            }
+        }
+        if (routerPort == null) {
+            rwTx.cancel();
+            return;
+        }
         SubnetId subnetId = new SubnetId(routerInterface.getSubnetUUID());
         IpAddress ipAddress = Utils.createIpAddress(routerPort.getFixedIPs().get(0).getIpAddress());
         Subnet subnet = resolveSubnetWithVirtualRouterIp(tenantId, subnetId, ipAddress, rwTx);
@@ -266,7 +350,7 @@ public class NeutronRouterAware implements INeutronRouterAware {
         }
         rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.subnetIid(tenantId, subnet.getId()), subnet);
 
-        boolean isSuccessful = setNewL3ContextToEpsFromSubnet(tenantId, l3Context, subnet, rwTx);
+        boolean isSuccessful = setNewL3ContextToEpsFromSubnet(tenantId, l3Context, subnet, rwTx, epService);
         if (!isSuccessful) {
             rwTx.cancel();
             return;
@@ -286,7 +370,7 @@ public class NeutronRouterAware implements INeutronRouterAware {
             .build();
     }
 
-    private @Nullable Subnet resolveSubnetWithVirtualRouterIp(TenantId tenantId, SubnetId subnetId,
+    private static @Nullable Subnet resolveSubnetWithVirtualRouterIp(TenantId tenantId, SubnetId subnetId,
             IpAddress ipAddress, ReadTransaction rTx) {
         Optional<Subnet> potentialSubnet = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.subnetIid(tenantId, subnetId), rTx);
@@ -300,8 +384,8 @@ public class NeutronRouterAware implements INeutronRouterAware {
         return new SubnetBuilder(potentialSubnet.get()).setVirtualRouterIp(ipAddress).build();
     }
 
-    public boolean setNewL3ContextToEpsFromSubnet(TenantId tenantId, L3Context l3Context, Subnet subnet,
-            ReadWriteTransaction rwTx) {
+    public static boolean setNewL3ContextToEpsFromSubnet(TenantId tenantId, L3Context l3Context, Subnet subnet,
+            ReadWriteTransaction rwTx, EndpointService epService) {
         if (subnet.getParent() == null) {
             LOG.warn("Illegal state - subnet {} does not have a parent.", subnet.getId().getValue());
             return false;
@@ -319,32 +403,34 @@ public class NeutronRouterAware implements INeutronRouterAware {
         rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l2BridgeDomainIid(tenantId, l2BridgeDomain.getId()),
                 l2BridgeDomain);
 
-        NeutronCRUDInterfaces neutronCRUDInterface = new NeutronCRUDInterfaces().fetchINeutronSubnetCRUD(this);
-        INeutronSubnetCRUD subnetInterface = neutronCRUDInterface.getSubnetInterface();
-        if (subnetInterface == null) {
-            LOG.warn("Illegal state - No provider for {}", INeutronSubnetCRUD.class.getName());
-            return false;
-        }
-
         List<L3> l3Eps = new ArrayList<>();
         L3ContextId oldL3ContextId = fwCtx.getL3Context().getId();
-        NeutronSubnet neutronSubnet = subnetInterface.getSubnet(subnet.getId().getValue());
+        NeutronSubnet neutronSubnet = new NeutronSubnet();
+        Subnets subnets = NeutronListener.getNeutronDataAfter().getSubnets();
+            for(org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet s : subnets.getSubnet()) {
+                if(s.getUuid().getValue().equals(subnet.getId().getValue())) {
+                    neutronSubnet = NeutronSubnetAware.toNeutron(s);
+                    break;
+                }
+            }
         List<NeutronPort> portsInNeutronSubnet = neutronSubnet.getPortsInSubnet();
-        for (NeutronPort port : portsInNeutronSubnet) {
-            if (NeutronPortAware.isRouterGatewayPort(port) || NeutronPortAware.isRouterInterfacePort(port)) {
-                continue;
-            }
-            boolean isPortAdded = NeutronPortAware.addNeutronPort(port, rwTx, epService);
-            if (!isPortAdded) {
-                return false;
-            }
-            // TODO Li msunal this has to be rewrite when OFOverlay renderer
-            // will support l3-endpoints.
-            Neutron_IPs firstIp = MappingUtils.getFirstIp(port.getFixedIPs());
-            if (firstIp != null) {
-                l3Eps.add(new L3Builder().setL3Context(oldL3ContextId)
-                    .setIpAddress(Utils.createIpAddress(firstIp.getIpAddress()))
-                    .build());
+        if (portsInNeutronSubnet != null) {
+            for (NeutronPort port : portsInNeutronSubnet) {
+                if (NeutronPortAware.isRouterGatewayPort(port) || NeutronPortAware.isRouterInterfacePort(port)) {
+                    continue;
+                }
+                boolean isPortAdded = NeutronPortAware.addNeutronPort(port, rwTx, epService);
+                if (!isPortAdded) {
+                    return false;
+                }
+                // TODO Li msunal this has to be rewrite when OFOverlay renderer
+                // will support l3-endpoints.
+                Neutron_IPs firstIp = MappingUtils.getFirstIp(port.getFixedIPs());
+                if (firstIp != null) {
+                    l3Eps.add(new L3Builder().setL3Context(oldL3ContextId)
+                        .setIpAddress(Utils.createIpAddress(firstIp.getIpAddress()))
+                        .build());
+                }
             }
         }
         if (neutronSubnet.getGatewayIP() != null) {
@@ -359,28 +445,18 @@ public class NeutronRouterAware implements INeutronRouterAware {
         return true;
     }
 
-    @Override
-    public int canDetachInterface(NeutronRouter router, NeutronRouter_Interface routerInterface) {
+    public static int canDetachInterface(NeutronRouter router, NeutronRouter_Interface routerInterface) {
         LOG.trace("canDetachInterface - router: {} interface: {}", router, routerInterface);
         // nothing to consider
         return StatusCode.OK;
     }
 
-    @Override
-    public void neutronRouterInterfaceDetached(NeutronRouter router, NeutronRouter_Interface routerInterface) {
+    public static void neutronRouterInterfaceDetached(NeutronRouter router, NeutronRouter_Interface routerInterface, DataBroker dataProvider, EndpointService epService) {
         LOG.trace("neutronRouterInterfaceDetached - router: {} interface: {}", router, routerInterface);
-        NeutronCRUDInterfaces neutronCRUDInterface = new NeutronCRUDInterfaces().fetchINeutronSubnetCRUD(this);
-        INeutronSubnetCRUD subnetInterface = neutronCRUDInterface.getSubnetInterface();
-        if (subnetInterface == null) {
-            LOG.warn("Illegal state - No provider for {}", INeutronSubnetCRUD.class.getName());
-            return;
-        }
-
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         TenantId tenantId = new TenantId(Utils.normalizeUuid(router.getTenantID()));
         L3ContextId l3ContextId = new L3ContextId(router.getID());
         SubnetId subnetId = new SubnetId(routerInterface.getSubnetUUID());
-        InstanceIdentifier<L3Context> l3ContextIid = IidFactory.l3ContextIid(tenantId, l3ContextId);
         DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.l3ContextIid(tenantId, l3ContextId), rwTx);
 
@@ -415,8 +491,14 @@ public class NeutronRouterAware implements INeutronRouterAware {
                 potentialNetworkMapping.get().getL3ContextId()).build();
         rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l2BridgeDomainIid(tenantId, l2BridgeDomain.getId()),
                 l2BridgeDomain);
-
-        NeutronSubnet neutronSubnet = subnetInterface.getSubnet(subnetId.getValue());
+        NeutronSubnet neutronSubnet = new NeutronSubnet();
+        Subnets subnets = NeutronListener.getNeutronDataAfter().getSubnets();
+        for (org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet s : subnets.getSubnet()) {
+            if (s.getUuid().getValue().equals(subnet.getId().getValue())) {
+                neutronSubnet = NeutronSubnetAware.toNeutron(s);
+                break;
+            }
+        }
         List<NeutronPort> portsInNeutronSubnet = neutronSubnet.getPortsInSubnet();
         for (NeutronPort port : portsInNeutronSubnet) {
             if (NeutronPortAware.isRouterGatewayPort(port) || NeutronPortAware.isRouterInterfacePort(port)) {
@@ -429,5 +511,4 @@ public class NeutronRouterAware implements INeutronRouterAware {
             }
         }
     }
-
 }

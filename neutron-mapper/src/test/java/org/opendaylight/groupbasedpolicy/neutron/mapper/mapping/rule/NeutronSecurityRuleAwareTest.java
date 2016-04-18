@@ -52,9 +52,9 @@ public class NeutronSecurityRuleAwareTest extends GbpDataBrokerTest {
 
         //create security rule and put to DS
         NeutronSecurityRule neutronRule = buildNeutronSecurityRule();
-        assertEquals(neutronSecurityRuleAware.canCreateNeutronSecurityRule(neutronRule),
+        assertEquals(neutronSecurityRuleAware.canCreate(neutronRule),
                 StatusCode.OK);
-        neutronSecurityRuleAware.neutronSecurityRuleCreated(neutronRule);
+        neutronSecurityRuleAware.created(neutronRule);
 
         //read security rule
         PolicyAssert.assertContractExists(dataProvider, RULE_TENANT_ID, RULE_ID);
@@ -64,13 +64,13 @@ public class NeutronSecurityRuleAwareTest extends GbpDataBrokerTest {
         assertNotNull(readContract);
         assertEquals(readContract.getId().getValue(), RULE_ID);
 
-        assertEquals(neutronSecurityRuleAware.canUpdateNeutronSecurityRule(neutronRule, neutronRule),
+        assertEquals(neutronSecurityRuleAware.canUpdate(neutronRule, neutronRule),
                 StatusCode.BAD_REQUEST);
 
         //delete rule
-        assertEquals(neutronSecurityRuleAware.canDeleteNeutronSecurityRule(neutronRule),
+        assertEquals(neutronSecurityRuleAware.canDelete(neutronRule),
                 StatusCode.OK);
-        neutronSecurityRuleAware.neutronSecurityRuleDeleted(neutronRule);
+        neutronSecurityRuleAware.deleted(neutronRule);
         PolicyAssert.assertContractNotExists(dataProvider, RULE_TENANT_ID, RULE_ID);
     }
 

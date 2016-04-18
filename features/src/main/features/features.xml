@@ -131,6 +131,7 @@
         <feature version="${neutron.version}">odl-neutron-service</feature>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <feature version="${project.version}">odl-groupbasedpolicy-ofoverlay</feature>
+        <bundle>mvn:org.opendaylight.neutron/dummyprovider/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/neutron-mapper/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/neutron-ovsdb/{{VERSION}}</bundle>
         <configfile finalname="${config.configfile.directory}/15-neutron-mapper.xml">mvn:org.opendaylight.groupbasedpolicy/neutron-mapper/{{VERSION}}/xml/config</configfile>

@@ -17,6 +17,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker.RpcRegistration;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronFloatingIpAware;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronListener;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronNetworkAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronNetworkDao;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronPortAware;
@@ -27,16 +28,24 @@ import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.group.SecGroupDa
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.NeutronGbpMapperServiceImpl;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.NeutronSecurityRuleAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.SecRuleDao;
-import org.opendaylight.neutron.spi.INeutronFloatingIPAware;
-import org.opendaylight.neutron.spi.INeutronNetworkAware;
-import org.opendaylight.neutron.spi.INeutronPortAware;
-import org.opendaylight.neutron.spi.INeutronRouterAware;
-import org.opendaylight.neutron.spi.INeutronSecurityGroupAware;
-import org.opendaylight.neutron.spi.INeutronSecurityRuleAware;
-import org.opendaylight.neutron.spi.INeutronSubnetAware;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.NeutronGbpMapperService;
-import org.osgi.framework.BundleContext;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.floatingips.attributes.Floatingips;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.floatingips.attributes.floatingips.Floatingip;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.Routers;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.routers.Router;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.networks.attributes.Networks;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.networks.attributes.networks.Network;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.Ports;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.SecurityGroups;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.security.groups.SecurityGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.SecurityRules;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.Subnets;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.osgi.framework.ServiceRegistration;
 
 public class NeutronMapper implements AutoCloseable {
@@ -44,15 +53,15 @@ public class NeutronMapper implements AutoCloseable {
     private final List<ServiceRegistration<?>> registrations = new ArrayList<ServiceRegistration<?>>();
     private final DataBroker dataProvider;
     private final RpcProviderRegistry providerRegistry;
-    private final BundleContext context;
     private final EndpointService epService;
     private RpcRegistration<NeutronGbpMapperService> rpcRegistration;
+    private NeutronListener neutronListener;
 
-    public NeutronMapper(DataBroker dataProvider, RpcProviderRegistry rpcProvider, BundleContext context) {
+    public NeutronMapper(DataBroker dataProvider, RpcProviderRegistry rpcProvider) {
         this.dataProvider = checkNotNull(dataProvider);
         this.providerRegistry = checkNotNull(rpcProvider);
-        this.context = checkNotNull(context);
         this.epService = rpcProvider.getRpcService(EndpointService.class);
+        neutronListener = new NeutronListener(dataProvider);
         registerAwareProviders();
     }
 
@@ -60,40 +69,29 @@ public class NeutronMapper implements AutoCloseable {
         SecGroupDao secGroupDao = new SecGroupDao();
         SecRuleDao secRuleDao = new SecRuleDao();
         NeutronNetworkDao networkDao = new NeutronNetworkDao();
-
-        ServiceRegistration<INeutronSubnetAware> neutronSubnetAwareRegistration =
-                context.registerService(INeutronSubnetAware.class, new NeutronSubnetAware(dataProvider, networkDao), null);
-        registrations.add(neutronSubnetAwareRegistration);
-
         NeutronSecurityRuleAware securityRuleAware = new NeutronSecurityRuleAware(dataProvider, secRuleDao, secGroupDao);
-        ServiceRegistration<INeutronSecurityRuleAware> neutronSecurityRuleAwareRegistration =
-                context.registerService(INeutronSecurityRuleAware.class, securityRuleAware, null);
-        registrations.add(neutronSecurityRuleAwareRegistration);
-
         NeutronSecurityGroupAware securityGroupAware = new NeutronSecurityGroupAware(dataProvider, securityRuleAware, secGroupDao);
-        ServiceRegistration<INeutronSecurityGroupAware> neutronSecurityGroupAwareRegistration =
-                context.registerService(INeutronSecurityGroupAware.class, securityGroupAware, null);
-        registrations.add(neutronSecurityGroupAwareRegistration);
-
-        ServiceRegistration<INeutronNetworkAware> neutronNetworkAwareRegistration = context.registerService(
-                INeutronNetworkAware.class, new NeutronNetworkAware(dataProvider, securityGroupAware, networkDao), null);
-        registrations.add(neutronNetworkAwareRegistration);
-
-        NeutronPortAware portAware =
-                new NeutronPortAware(dataProvider, epService, securityRuleAware, securityGroupAware);
-        ServiceRegistration<INeutronPortAware> neutronPortAwareRegistration =
-                context.registerService(INeutronPortAware.class, portAware, null);
-        registrations.add(neutronPortAwareRegistration);
-
-        NeutronRouterAware routerAware = new NeutronRouterAware(dataProvider, epService);
-        ServiceRegistration<INeutronRouterAware> neutronRouterAwareRegistration =
-                context.registerService(INeutronRouterAware.class, routerAware, null);
-        registrations.add(neutronRouterAwareRegistration);
-
-        ServiceRegistration<INeutronFloatingIPAware> neutronFloatingIpAwareRegistration = context
-            .registerService(INeutronFloatingIPAware.class, new NeutronFloatingIpAware(dataProvider), null);
-        registrations.add(neutronFloatingIpAwareRegistration);
-
+        neutronListener.registerMappingProviders(
+                InstanceIdentifier.builder(Neutron.class).child(Floatingips.class).child(Floatingip.class).build(),
+                new NeutronFloatingIpAware(dataProvider));
+        neutronListener.registerMappingProviders(
+                InstanceIdentifier.builder(Neutron.class).child(Ports.class).child(Port.class).build(),
+                new NeutronPortAware(dataProvider, epService, securityRuleAware, securityGroupAware));
+        neutronListener.registerMappingProviders(
+                InstanceIdentifier.builder(Neutron.class).child(Routers.class).child(Router.class).build(),
+                new NeutronRouterAware(dataProvider, epService));
+        neutronListener.registerMappingProviders(
+                InstanceIdentifier.builder(Neutron.class).child(SecurityRules.class).child(SecurityRule.class).build(),
+                securityRuleAware);
+        neutronListener.registerMappingProviders(
+                InstanceIdentifier.builder(Neutron.class).child(SecurityGroups.class).child(SecurityGroup.class).build(),
+                securityGroupAware);
+        neutronListener.registerMappingProviders(
+                InstanceIdentifier.builder(Neutron.class).child(Subnets.class).child(Subnet.class).build(),
+                new NeutronSubnetAware(dataProvider, networkDao));
+        neutronListener.registerMappingProviders(
+                InstanceIdentifier.builder(Neutron.class).child(Networks.class).child(Network.class).build(),
+                new NeutronNetworkAware(dataProvider, securityGroupAware, networkDao));
         NeutronGbpMapperService neutronGbpMapperService = new NeutronGbpMapperServiceImpl(dataProvider, securityRuleAware);
         rpcRegistration = providerRegistry.addRpcImplementation(NeutronGbpMapperService.class, neutronGbpMapperService);
     }
@@ -105,6 +103,10 @@ public class NeutronMapper implements AutoCloseable {
     public void close() throws Exception {
         for (ServiceRegistration<?> registration : registrations) {
             registration.unregister();
+        }
+        if (neutronListener != null) {
+            neutronListener.close();
+            neutronListener = null;
         }
         rpcRegistration.close();
     }
