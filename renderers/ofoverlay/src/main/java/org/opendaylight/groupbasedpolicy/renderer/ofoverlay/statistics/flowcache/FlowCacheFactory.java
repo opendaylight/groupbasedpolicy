@@ -8,6 +8,7 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.statistics.flowcache;
 
 import java.util.List;
+import java.util.Objects;
 
 import org.opendaylight.groupbasedpolicy.api.sf.EtherTypeClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.api.sf.IpProtoClassifierDefinition;
@@ -29,7 +30,7 @@ public class FlowCacheFactory {
 
     public static FlowCache createFlowCache(InstanceIdentifier<Classifier> classifierIid, Classifier classifier,
             FlowCacheCons.Value value) {
-        FlowCacheDefinition flowCacheDefinition = creteFlowCacheDefinition(classifier, value);
+        FlowCacheDefinition flowCacheDefinition = createFlowCacheDefinition(classifier, value);
         if (flowCacheDefinition == null) {
             LOG.info("Cannot create flow cache for statistics of classifier {}\n{}", classifierIid, classifier);
             return null;
@@ -40,7 +41,8 @@ public class FlowCacheFactory {
             .build();
     }
 
-    public static FlowCacheDefinition creteFlowCacheDefinition(Classifier classifier, FlowCacheCons.Value value) {
+    public static FlowCacheDefinition createFlowCacheDefinition(Classifier classifier,
+            FlowCacheCons.Value value) {
         FlowCacheDefinitionBuilder fcdBuilder = new FlowCacheDefinitionBuilder();
         if (L4ClassifierDefinition.ID.equals(classifier.getClassifierDefinitionId())) {
             addEthTypeInfoToFlowCache(classifier, fcdBuilder);
@@ -132,10 +134,10 @@ public class FlowCacheFactory {
     private static boolean addTcpUdpPortKeys(Long ipProto, Long port, boolean isDstPort,
             FlowCacheDefinitionBuilder fcdBuilder) {
         if (isDstPort) {
-            if (ipProto == IpProtoClassifierDefinition.TCP_VALUE) {
+            if (Objects.equals(ipProto, IpProtoClassifierDefinition.TCP_VALUE)) {
                 fcdBuilder.getKeysBuilder().addValue(FlowCacheCons.Key.TCP_DST_PORT.get());
                 fcdBuilder.getFilterBuilder().addValue(FlowCacheCons.Key.TCP_DST_PORT.get() + FlowCacheCons.EQ + port);
-            } else if (ipProto == IpProtoClassifierDefinition.UDP_VALUE) {
+            } else if (Objects.equals(ipProto, IpProtoClassifierDefinition.UDP_VALUE)) {
                 fcdBuilder.getKeysBuilder().addValue(FlowCacheCons.Key.UDP_DST_PORT.get());
                 fcdBuilder.getFilterBuilder().addValue(FlowCacheCons.Key.UDP_DST_PORT.get() + FlowCacheCons.EQ + port);
             } else {
@@ -143,10 +145,10 @@ public class FlowCacheFactory {
                 return false;
             }
         } else {
-            if (ipProto == IpProtoClassifierDefinition.TCP_VALUE) {
+            if (Objects.equals(ipProto, IpProtoClassifierDefinition.TCP_VALUE)) {
                 fcdBuilder.getKeysBuilder().addValue(FlowCacheCons.Key.TCP_SRC_PORT.get());
                 fcdBuilder.getFilterBuilder().addValue(FlowCacheCons.Key.TCP_SRC_PORT.get() + FlowCacheCons.EQ + port);
-            } else if (ipProto == IpProtoClassifierDefinition.UDP_VALUE) {
+            } else if (Objects.equals(ipProto, IpProtoClassifierDefinition.UDP_VALUE)) {
                 fcdBuilder.getKeysBuilder().addValue(FlowCacheCons.Key.UDP_SRC_PORT.get());
                 fcdBuilder.getFilterBuilder().addValue(FlowCacheCons.Key.UDP_SRC_PORT.get() + FlowCacheCons.EQ + port);
             } else {

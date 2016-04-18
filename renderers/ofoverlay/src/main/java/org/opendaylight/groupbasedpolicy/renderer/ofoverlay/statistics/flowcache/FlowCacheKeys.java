@@ -39,8 +39,21 @@ public final class FlowCacheKeys {
             return values;
         }
 
+        /**
+         * Sets FlowCache's "key" values by copying {@code String}s from {@code values},
+         * to avoid immutable list put as a parameter.
+         * {@code null}s are omitted.
+         *
+         * @param values List of String
+         * @return FlowCacheKeysBuilder
+         */
         public FlowCacheKeysBuilder setValues(List<String> values) {
-            this.values = Preconditions.checkNotNull(values);
+            Preconditions.checkNotNull(values);
+            for (String value : values) {
+                if (value != null) {
+                    this.values.add(value);
+                }
+            }
             return this;
         }
 
