@@ -648,7 +648,7 @@ public class EndpointManager implements AutoCloseable {
      * @return {@link EndpointL3} if exists, otherwise null
      */
     public Endpoint getL2EndpointFromL3(EndpointL3 endpointL3) {
-        if(endpointL3 != null) {
+        if (endpointL3 != null) {
             L2BridgeDomainId l2Context = endpointL3.getL2Context();
             MacAddress macAddress = endpointL3.getMacAddress();
             if (l2Context == null || macAddress == null) {
@@ -657,9 +657,11 @@ public class EndpointManager implements AutoCloseable {
                 return null;
             }
             EpKey l2EndpointKey = new EpKey(l2Context, macAddress);
-            return endpoints.get(l2EndpointKey);
+            if (endpoints.get(l2EndpointKey) != null) {
+                return endpoints.get(l2EndpointKey);
+            }
+            return externalEndpointsWithoutLocation.get(l2EndpointKey);
         }
-
         return null;
     }
 
