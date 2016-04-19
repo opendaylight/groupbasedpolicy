@@ -12,6 +12,8 @@ import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -19,9 +21,10 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
-import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSDaoAsync;
-import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSDaoCached;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSAsyncDao;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.MasterDatabaseBindingListener;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.api.ReadableByKey;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SimpleCachedDao;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.SxpListenerUtil;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
@@ -36,15 +39,16 @@ import org.slf4j.LoggerFactory;
 /**
  * Purpose: general dao for EndPoint templates
  */
-public class MasterDatabaseBindingDaoImpl implements DSDaoAsync<IpPrefix, MasterDatabaseBinding> {
+public class MasterDatabaseBindingDaoImpl implements DSAsyncDao<IpPrefix, MasterDatabaseBinding>,
+        ReadableByKey<Sgt, MasterDatabaseBinding> {
 
     private static final Logger LOG = LoggerFactory.getLogger(MasterDatabaseBindingDaoImpl.class);
 
     private final DataBroker dataBroker;
-    private final DSDaoCached<IpPrefix, MasterDatabaseBinding> cachedDao;
+    private final SimpleCachedDao<IpPrefix, MasterDatabaseBinding> cachedDao;
 
     public MasterDatabaseBindingDaoImpl(final DataBroker dataBroker,
-                              final DSDaoCached<IpPrefix, MasterDatabaseBinding> cachedDao) {
+                              final SimpleCachedDao<IpPrefix, MasterDatabaseBinding> cachedDao) {
         this.dataBroker = dataBroker;
         this.cachedDao = cachedDao;
     }
@@ -112,7 +116,32 @@ public class MasterDatabaseBindingDaoImpl implements DSDaoAsync<IpPrefix, Master
         return MasterDatabaseBindingListener.SXP_TOPOLOGY_PATH;
     }
 
-    private Optional<MasterDatabaseBinding> lookup(final DSDaoCached<IpPrefix, MasterDatabaseBinding> cachedDao, final IpPrefix key) {
-        return cachedDao.read(key);
+    private Optional<MasterDatabaseBinding> lookup(final SimpleCachedDao<IpPrefix, MasterDatabaseBinding> cachedDao, final IpPrefix key) {
+        return cachedDao.find(key);
+    }
+
+    @Override
+    public ListenableFuture<Collection<MasterDatabaseBinding>> readBy(@Nonnull final Sgt specialKey) {
+        final ListenableFuture<Void> cacheUpdatedFt;
+        if (!cachedDao.isEmpty()) {
+            cacheUpdatedFt = Futures.immediateFuture(null);
+        } else {
+            cacheUpdatedFt = updateCache();
+        }
+
+        return Futures.transform(cacheUpdatedFt, new Function<Void, Collection<MasterDatabaseBinding>>() {
+            @Nullable
+            @Override
+            public Collection<MasterDatabaseBinding> apply(@Nullable final Void input) {
+                final Collection<MasterDatabaseBinding> foundGroups = new ArrayList<>();
+
+                for (MasterDatabaseBinding masterDBItem : cachedDao.values()) {
+                    if (masterDBItem.getSecurityGroupTag().equals(specialKey)) {
+                        foundGroups.add(masterDBItem);
+                    }
+                }
+                return foundGroups;
+            }
+        });
     }
 }

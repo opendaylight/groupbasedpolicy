@@ -14,15 +14,19 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 /**
  * Purpose: util methods for {@link org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointForwardingTemplateBySubnet}
  */
-public class ForwardingTemplateUtil {
+public final class ForwardingTemplateUtil {
 
     public static final String FULL_IPV4_MASK_SUFFIX = "/32";
+
+    private ForwardingTemplateUtil() {
+        throw new IllegalAccessError("constructing util class");
+    }
 
     public static boolean isPlain(final IpPrefix key) {
         return key.getIpv4Prefix().getValue().endsWith(FULL_IPV4_MASK_SUFFIX);
     }
 
-    public static SubnetUtils.SubnetInfo buildSubnetInfo(@Nonnull final IpPrefix value) {
-        return new SubnetUtils(value.getIpv4Prefix().getValue()).getInfo();
+    public static SubnetInfoKeyDecorator buildSubnetInfoKey(@Nonnull final IpPrefix value) {
+        return new SubnetInfoKeyDecorator(new SubnetUtils(value.getIpv4Prefix().getValue()).getInfo());
     }
 }

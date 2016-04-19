@@ -22,7 +22,7 @@ import org.opendaylight.yangtools.yang.binding.DataObject;
  * @param <K> data key type
  * @param <V> data type
  */
-public interface DSDaoAsync<K, V extends DataObject> {
+public interface DSAsyncDao<K, V extends DataObject> {
 
     /**
      * @param key for search

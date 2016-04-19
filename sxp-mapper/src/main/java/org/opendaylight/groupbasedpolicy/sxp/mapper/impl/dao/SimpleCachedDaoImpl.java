@@ -8,21 +8,22 @@
 package org.opendaylight.groupbasedpolicy.sxp.mapper.impl.dao;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Iterables;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSDaoCached;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SimpleCachedDao;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 
 /**
- * Purpose: generic implementation of {@link DSDaoCached}
+ * Purpose: generic implementation of {@link SimpleCachedDao}
  */
-public class DSDaoCachedImpl<K, V extends DataObject> implements DSDaoCached<K, V> {
+public class SimpleCachedDaoImpl<K, V extends DataObject> implements SimpleCachedDao<K, V> {
 
     private final ConcurrentMap<K, V> cache;
 
-    public DSDaoCachedImpl() {
+    public SimpleCachedDaoImpl() {
         cache = new ConcurrentHashMap<>();
     }
 
@@ -39,12 +40,22 @@ public class DSDaoCachedImpl<K, V extends DataObject> implements DSDaoCached<K, 
     }
 
     @Override
-    public Optional<V> read(@Nonnull final K key) {
+    public Optional<V> find(@Nonnull final K key) {
         return Optional.fromNullable(cache.get(key));
     }
 
     @Override
     public void invalidateCache() {
         cache.clear();
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return cache.isEmpty();
+    }
+
+    @Override
+    public Iterable<V> values() {
+        return Iterables.unmodifiableIterable(cache.values());
     }
 }

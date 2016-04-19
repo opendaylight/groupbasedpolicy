@@ -10,12 +10,12 @@ package org.opendaylight.groupbasedpolicy.sxp.mapper.impl;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
-import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSDaoAsync;
-import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSDaoCached;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSAsyncDao;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SimpleCachedDao;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.EPTemplateListener;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SxpMapperReactor;
-import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.dao.DSDaoCachedEPForwardingTemplateImpl;
-import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.dao.DSDaoCachedImpl;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.dao.SimpleCachedDaoEPForwardingTemplateImpl;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.dao.SimpleCachedDaoImpl;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.dao.EPForwardingTemplateDaoImpl;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.dao.EPPolicyTemplateDaoImpl;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.dao.MasterDatabaseBindingDaoImpl;
@@ -28,11 +28,15 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controll
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointPolicyTemplateBySgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBinding;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * SxpMapper provider implementation.
  */
 public class SxpMapperProviderImpl implements AutoCloseable {
+
+    private static final Logger LOG = LoggerFactory.getLogger(SxpMapperProviderImpl.class);
 
     private final DataBroker dataBrokerDependency;
     private final RpcProviderRegistry rpcRegistryDependency;
@@ -42,28 +46,30 @@ public class SxpMapperProviderImpl implements AutoCloseable {
     private final EPTemplateListener epForwardingTemplateListener;
 
     public SxpMapperProviderImpl(final DataBroker dataBroker, final RpcProviderRegistry rpcRegistryDependency) {
+        LOG.info("starting SxmMapper ..");
         this.dataBrokerDependency = dataBroker;
         this.rpcRegistryDependency = rpcRegistryDependency;
 
         final EndpointService endpointService = rpcRegistryDependency.getRpcService(EndpointService.class);
         sxpMapperReactor = new SxpMapperReactorImpl(endpointService);
 
-        final DSDaoCached<Sgt, EndpointPolicyTemplateBySgt> epPolicyTemplateCachedDao = new DSDaoCachedImpl<>();
-        final DSDaoCached<IpPrefix, EndpointForwardingTemplateBySubnet> epForwardingTemplateCachedDao = new DSDaoCachedImpl<>();
-                new DSDaoCachedEPForwardingTemplateImpl();
-        final DSDaoCached<IpPrefix, MasterDatabaseBinding> masterDBBindingCachedDao = new DSDaoCachedImpl<>();
+        final SimpleCachedDao<Sgt, EndpointPolicyTemplateBySgt> epPolicyTemplateCachedDao = new SimpleCachedDaoImpl<>();
+        final SimpleCachedDao<IpPrefix, EndpointForwardingTemplateBySubnet> epForwardingTemplateCachedDao =
+                new SimpleCachedDaoEPForwardingTemplateImpl();
+        final SimpleCachedDao<IpPrefix, MasterDatabaseBinding> masterDBBindingCachedDao = new SimpleCachedDaoImpl<>();
 
-        final DSDaoAsync<Sgt, EndpointPolicyTemplateBySgt> epPolicyTemplateDao = new EPPolicyTemplateDaoImpl(dataBroker, epPolicyTemplateCachedDao);
+        final DSAsyncDao<Sgt, EndpointPolicyTemplateBySgt> epPolicyTemplateDao = new EPPolicyTemplateDaoImpl(dataBroker, epPolicyTemplateCachedDao);
         final EPForwardingTemplateDaoImpl epForwardingTemplateDao = new EPForwardingTemplateDaoImpl(dataBroker,
                 epForwardingTemplateCachedDao);
-        final MasterDatabaseBindingDaoImpl masterDBBindingDao = new MasterDatabaseBindingDaoImpl(dataBroker, masterDBBindingCachedDao);
+        final  MasterDatabaseBindingDaoImpl masterDBBindingDao = new MasterDatabaseBindingDaoImpl(dataBroker, masterDBBindingCachedDao);
 
         sxpDatabaseListener = new MasterDatabaseBindingListenerImpl(dataBroker, sxpMapperReactor, masterDBBindingCachedDao,
                 epPolicyTemplateDao, epForwardingTemplateDao);
         epPolicyTemplateListener = new EPPolicyTemplateListenerImpl(dataBroker, sxpMapperReactor, epPolicyTemplateCachedDao,
-                masterDBBindingDao, epForwardingTemplateDao);
+                masterDBBindingDao);
         epForwardingTemplateListener = new EPForwardingTemplateListenerImpl(dataBroker, sxpMapperReactor, epForwardingTemplateCachedDao,
-                masterDBBindingDao, epPolicyTemplateDao);
+                masterDBBindingDao);
+        LOG.info("started SxmMapper");
     }
 
     // register listeners to ip/sgt and EP-templates (by SGT, by subnet) -> 3x

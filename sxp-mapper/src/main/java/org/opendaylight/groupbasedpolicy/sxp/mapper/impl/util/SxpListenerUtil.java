@@ -12,14 +12,20 @@ import com.google.common.util.concurrent.FutureCallback;
 import javax.annotation.Nullable;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
-import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSDaoCached;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SimpleCachedDao;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 
 /**
  * Purpose: provide general logic used by listeners
  */
-public class SxpListenerUtil {
-    public static <K, V extends DataObject> void updateCachedDao(final DSDaoCached<K, V> valueCachedDao,
+public final class SxpListenerUtil {
+
+    private SxpListenerUtil() {
+        throw new IllegalAccessError("constructing util class");
+    }
+
+
+    public static <K, V extends DataObject> void updateCachedDao(final SimpleCachedDao<K, V> valueCachedDao,
                                                                  final K key,
                                                                  final DataTreeModification<V> change) {
         final V value = change.getRootNode().getDataAfter();

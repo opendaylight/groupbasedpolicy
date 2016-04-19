@@ -18,8 +18,8 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
-import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSDaoAsync;
-import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSDaoCached;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSAsyncDao;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SimpleCachedDao;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.EPTemplateListener;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.SxpListenerUtil;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointPolicyTemplateBySgt;
@@ -30,13 +30,13 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 /**
  * Purpose: general dao for EndPoint templates
  */
-public class EPPolicyTemplateDaoImpl implements DSDaoAsync<Sgt, EndpointPolicyTemplateBySgt> {
+public class EPPolicyTemplateDaoImpl implements DSAsyncDao<Sgt, EndpointPolicyTemplateBySgt> {
 
     private final DataBroker dataBroker;
-    private final DSDaoCached<Sgt, EndpointPolicyTemplateBySgt> cachedDao;
+    private final SimpleCachedDao<Sgt, EndpointPolicyTemplateBySgt> cachedDao;
 
     public EPPolicyTemplateDaoImpl(final DataBroker dataBroker,
-                                   final DSDaoCached<Sgt, EndpointPolicyTemplateBySgt> cachedDao) {
+                                   final SimpleCachedDao<Sgt, EndpointPolicyTemplateBySgt> cachedDao) {
         this.dataBroker = dataBroker;
         this.cachedDao = cachedDao;
     }
@@ -71,8 +71,8 @@ public class EPPolicyTemplateDaoImpl implements DSDaoAsync<Sgt, EndpointPolicyTe
                 .child(EndpointPolicyTemplateBySgt.class, new EndpointPolicyTemplateBySgtKey(key));
     }
 
-    private Optional<EndpointPolicyTemplateBySgt> lookup(final DSDaoCached<Sgt, EndpointPolicyTemplateBySgt> cachedDao, final Sgt key) {
-        return cachedDao.read(key);
+    private Optional<EndpointPolicyTemplateBySgt> lookup(final SimpleCachedDao<Sgt, EndpointPolicyTemplateBySgt> cachedDao, final Sgt key) {
+        return cachedDao.find(key);
     }
 
 }

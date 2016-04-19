@@ -7,33 +7,25 @@
  */
 package org.opendaylight.groupbasedpolicy.sxp.mapper.api;
 
+import com.google.common.base.Optional;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * Purpose: encapsulate access to DS by exposing
  * <dl>
- * <dt>read</dt>
- * <dd>search through cached values</dd>
- * <dt>update</dt>
- * <dd>stores given pair (key, value) to local cache</dd>
+ * <dt>find</dt>
+ * <dd>search through available values (e.g.: in  local cache)</dd>
  * </dl>
  *
  * @param <K> data key type
  * @param <V> data type
  */
-public interface DSDaoCached<K, V> extends DSDao<K, V> {
+public interface SimpleDao<K, V> {
 
     /**
-     * store given pair to local cache
-     *
-     * @param key   associated to value
-     * @param value associated to key
+     * @param key for search
+     * @return value found by key
      */
-    V update(@Nonnull K key, @Nullable V value);
+    Optional<V> find(@Nonnull K key);
 
-    /**
-     * invalidate all cache entries
-     */
-    void invalidateCache();
 }

@@ -14,7 +14,7 @@ import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 /**
- * Purpose: provide listener capability to EB templates
+ * Purpose: provide listener capability to EndPoint templates
  */
 public interface EPTemplateListener<T extends DataObject> extends DataTreeChangeListener<T>, AutoCloseable {
 
