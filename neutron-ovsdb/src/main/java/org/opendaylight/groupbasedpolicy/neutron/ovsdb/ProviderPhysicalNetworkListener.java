@@ -35,8 +35,8 @@ public class ProviderPhysicalNetworkListener extends DataTreeChangeHandler<Provi
     private static final Logger LOG = LoggerFactory.getLogger(ProviderPhysicalNetworkListener.class);
 
     protected ProviderPhysicalNetworkListener(DataBroker dataProvider) {
-        super(dataProvider,
-                new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
+        super(dataProvider);
+        registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
                         InstanceIdentifier.builder(Mappings.class)
                             .child(NeutronByGbpMappings.class)
                             .child(ProviderPhysicalNetworksAsL2FloodDomains.class)

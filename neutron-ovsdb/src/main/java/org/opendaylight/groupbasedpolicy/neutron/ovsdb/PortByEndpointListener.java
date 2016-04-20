@@ -48,13 +48,13 @@ public class PortByEndpointListener extends DataTreeChangeHandler<PortByEndpoint
     private static final String TAP = "tap";
 
     public PortByEndpointListener(DataBroker dataProvider) {
-        super(dataProvider,
-                new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
-                        InstanceIdentifier.builder(Mappings.class)
-                            .child(NeutronByGbpMappings.class)
-                            .child(PortsByEndpoints.class)
-                            .child(PortByEndpoint.class)
-                            .build()));
+        super(dataProvider);
+        registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
+                InstanceIdentifier.builder(Mappings.class)
+                .child(NeutronByGbpMappings.class)
+                .child(PortsByEndpoints.class)
+                .child(PortByEndpoint.class)
+                .build()));
     }
 
     @Override

@@ -26,23 +26,28 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
  * The purpose of this class is to eliminate boilerplate code used in most of
  * {@link DataTreeChangeListener} implementations.
  *
- * @param <T>
+ * @param <T> target class
  */
 public abstract class DataTreeChangeHandler<T extends DataObject> implements DataTreeChangeListener<T>, AutoCloseable {
 
     protected final DataBroker dataProvider;
-    protected final ListenerRegistration<DataTreeChangeHandler<T>> registeredListener;
+    protected ListenerRegistration<DataTreeChangeHandler<T>> registeredListener;
 
     /**
-     * Registers {@link DataTreeChangeListener} for {@code pointOfInterest} by using
-     * {@code dataProvider}
      *
      * @param dataProvider cannot be {@code null}
-     * @param pointOfInterest cannot be {@code null}
-     * @throws NullPointerException if at least one paramter is {@code null}
+     * @throws NullPointerException if <b>dataProvider</b> is {@code null}
      */
-    protected DataTreeChangeHandler(DataBroker dataProvider, DataTreeIdentifier<T> pointOfInterest) {
+    protected DataTreeChangeHandler(DataBroker dataProvider) {
         this.dataProvider = checkNotNull(dataProvider);
+    }
+
+    /**
+     *
+     * @param pointOfInterest identifier of root node
+     * @throws NullPointerException if <b>pointOfInterest</b> is {@code null}
+     */
+    protected void registerDataTreeChangeListener(DataTreeIdentifier<T> pointOfInterest) {
         registeredListener = dataProvider.registerDataTreeChangeListener(checkNotNull(pointOfInterest), this);
     }
 

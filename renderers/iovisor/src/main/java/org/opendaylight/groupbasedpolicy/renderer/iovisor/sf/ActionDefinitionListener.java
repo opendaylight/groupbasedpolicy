@@ -44,7 +44,8 @@ public class ActionDefinitionListener extends DataTreeChangeHandler<ActionDefini
     private static String DELETED = "removed";
 
     public ActionDefinitionListener(DataBroker dataBroker) {
-        super(dataBroker, new DataTreeIdentifier<>(LogicalDatastoreType.CONFIGURATION,
+        super(dataBroker);
+        registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.CONFIGURATION,
                 InstanceIdentifier.builder(SubjectFeatureDefinitions.class).child(ActionDefinition.class).build()));
     }
 

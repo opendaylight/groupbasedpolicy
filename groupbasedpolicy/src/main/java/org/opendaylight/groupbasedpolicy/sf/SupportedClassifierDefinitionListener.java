@@ -53,8 +53,7 @@ public class SupportedClassifierDefinitionListener extends DataTreeChangeHandler
     private final PolicyValidatorRegistry validatorRegistry;
 
     public SupportedClassifierDefinitionListener(DataBroker dataProvider, PolicyValidatorRegistry validatorRegistry) {
-        super(dataProvider, new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
-                IidFactory.supportedClassifierDefinitionIidWildcard()));
+        super(dataProvider);
         this.validatorRegistry = validatorRegistry;
         if (validatorRegistry == null) {
             LOG.info(
@@ -65,6 +64,8 @@ public class SupportedClassifierDefinitionListener extends DataTreeChangeHandler
                     "{} service was found. Automatic registration of simple classifier-instance validators is available for renderers.",
                     PolicyValidatorRegistry.class.getCanonicalName());
         }
+        registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
+                IidFactory.supportedClassifierDefinitionIidWildcard()));
     }
 
     @Override

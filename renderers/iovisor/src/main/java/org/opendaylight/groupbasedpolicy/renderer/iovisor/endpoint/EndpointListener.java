@@ -22,9 +22,10 @@ public class EndpointListener extends DataTreeChangeHandler<EndpointL3> {
     private final EndpointManager endpointManager;
 
     public EndpointListener(DataBroker dataProvider, EndpointManager endpointManager) {
-        super(dataProvider,
-                new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL, IidFactory.l3EndpointsIidWildcard()));
+        super(dataProvider);
         this.endpointManager = endpointManager;
+        registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
+                IidFactory.l3EndpointsIidWildcard()));
     }
 
     @Override

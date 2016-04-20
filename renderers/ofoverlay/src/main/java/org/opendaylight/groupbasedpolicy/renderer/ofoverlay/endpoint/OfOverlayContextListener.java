@@ -39,9 +39,10 @@ public class OfOverlayContextListener extends DataTreeChangeHandler<OfOverlayCon
     private final SwitchManager swManager;
 
     public OfOverlayContextListener(DataBroker dataProvider, SwitchManager swManager) {
-        super(dataProvider, new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL, InstanceIdentifier
-            .builder(Endpoints.class).child(Endpoint.class).augmentation(OfOverlayContext.class).build()));
+        super(dataProvider);
         this.swManager = checkNotNull(swManager);
+        registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL, InstanceIdentifier
+                .builder(Endpoints.class).child(Endpoint.class).augmentation(OfOverlayContext.class).build()));
     }
 
     @Override

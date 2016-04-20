@@ -35,7 +35,8 @@ public class IovisorResolvedEndpointListener
     private static final Logger LOG = LoggerFactory.getLogger(IovisorResolvedEndpointListener.class);
 
     protected IovisorResolvedEndpointListener(DataBroker dataprovider) {
-        super(dataprovider, new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
+        super(dataprovider);
+        registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
                 IovisorIidFactory.iovisorResolvedEndpointsByTenantIdByEndpointGroupIdWildCardIid()));
     }
 
