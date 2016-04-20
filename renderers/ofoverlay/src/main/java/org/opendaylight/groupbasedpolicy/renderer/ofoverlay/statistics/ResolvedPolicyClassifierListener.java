@@ -39,9 +39,10 @@ public class ResolvedPolicyClassifierListener extends DataTreeChangeHandler<Reso
     private final OFStatisticsManager ofStatsManager;
 
     public ResolvedPolicyClassifierListener(DataBroker dataProvider, OFStatisticsManager ofStatsManager) {
-        super(dataProvider, new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
-                InstanceIdentifier.builder(ResolvedPolicies.class).child(ResolvedPolicy.class).build()));
+        super(dataProvider);
         this.ofStatsManager = checkNotNull(ofStatsManager);
+        registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
+                InstanceIdentifier.builder(ResolvedPolicies.class).child(ResolvedPolicy.class).build()));
     }
 
     @Override

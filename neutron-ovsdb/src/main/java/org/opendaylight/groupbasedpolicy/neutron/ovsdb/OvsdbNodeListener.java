@@ -20,6 +20,7 @@ import java.util.Set;
 import javax.annotation.Nonnull;
 
 import org.opendaylight.controller.config.yang.config.neutron_ovsdb.impl.IntegrationBridgeSetting;
+import org.opendaylight.controller.config.yang.config.neutron_ovsdb.impl.NeutronOvsdbModule;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
@@ -94,12 +95,12 @@ public class OvsdbNodeListener extends DataTreeChangeHandler<Node> {
     private final Map<InstanceIdentifier<Node>, NeutronBridgeWithExtPort> bridgeByNodeIid = new HashMap<>();
 
     public OvsdbNodeListener(DataBroker dataProvider, IntegrationBridgeSetting brSettings) {
-        super(dataProvider,
-                new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
-                        InstanceIdentifier.create(NetworkTopology.class)
-                            .child(Topology.class, new TopologyKey(SouthboundConstants.OVSDB_TOPOLOGY_ID))
-                            .child(Node.class)));
+        super(dataProvider);
         intBrSettings = brSettings;
+        this.registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
+                InstanceIdentifier.create(NetworkTopology.class)
+                    .child(Topology.class, new TopologyKey(SouthboundConstants.OVSDB_TOPOLOGY_ID))
+                    .child(Node.class)));
     }
 
     @Override

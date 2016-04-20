@@ -309,7 +309,8 @@ public class PolicyResolver implements PolicyValidatorRegistry, AutoCloseable {
     private class PolicyChangeListener extends DataTreeChangeHandler<Tenant> {
 
         protected PolicyChangeListener(DataBroker dataProvider, DataTreeIdentifier<Tenant> pointOfInterest) {
-            super(dataProvider, pointOfInterest);
+            super(dataProvider);
+            registerDataTreeChangeListener(pointOfInterest);
         }
 
         @Override

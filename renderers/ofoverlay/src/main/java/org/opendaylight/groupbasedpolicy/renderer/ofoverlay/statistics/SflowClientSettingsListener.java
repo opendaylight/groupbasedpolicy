@@ -36,9 +36,10 @@ public class SflowClientSettingsListener extends DataTreeChangeHandler<SflowClie
     private ResolvedPolicyClassifierListener classifierListener;
 
     public SflowClientSettingsListener(DataBroker dataprovider, ScheduledExecutorService executor, StatisticsManager statisticsManager) {
-        super(dataprovider, new DataTreeIdentifier<>(LogicalDatastoreType.CONFIGURATION, IID));
+        super(dataprovider);
         this.statisticsManager = Preconditions.checkNotNull(statisticsManager);
         this.executor = Preconditions.checkNotNull(executor);
+        registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.CONFIGURATION, IID));
     }
 
     @Override

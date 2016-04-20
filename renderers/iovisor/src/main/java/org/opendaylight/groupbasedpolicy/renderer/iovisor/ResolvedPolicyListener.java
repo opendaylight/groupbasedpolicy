@@ -39,9 +39,10 @@ public class ResolvedPolicyListener extends DataTreeChangeHandler<ResolvedPolicy
     private IovisorModuleManager iovisorModuleManager;
 
     public ResolvedPolicyListener(DataBroker dataBroker, IovisorModuleManager iovisorModuleManager) {
-        super(dataBroker, new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
-                InstanceIdentifier.builder(ResolvedPolicies.class).child(ResolvedPolicy.class).build()));
+        super(dataBroker);
         this.iovisorModuleManager = iovisorModuleManager;
+        registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
+                InstanceIdentifier.builder(ResolvedPolicies.class).child(ResolvedPolicy.class).build()));
     }
 
     @Override

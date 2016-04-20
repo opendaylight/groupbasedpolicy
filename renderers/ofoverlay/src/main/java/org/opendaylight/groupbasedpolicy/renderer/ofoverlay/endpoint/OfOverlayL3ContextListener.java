@@ -39,9 +39,10 @@ public class OfOverlayL3ContextListener extends DataTreeChangeHandler<OfOverlayL
     private final SwitchManager swManager;
 
     public OfOverlayL3ContextListener(DataBroker dataProvider, SwitchManager swManager) {
-        super(dataProvider, new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL, InstanceIdentifier
-            .builder(Endpoints.class).child(EndpointL3.class).augmentation(OfOverlayL3Context.class).build()));
+        super(dataProvider);
         this.swManager = checkNotNull(swManager);
+        registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL, InstanceIdentifier
+                .builder(Endpoints.class).child(EndpointL3.class).augmentation(OfOverlayL3Context.class).build()));
     }
 
     @Override

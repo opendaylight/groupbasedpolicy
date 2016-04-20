@@ -46,7 +46,8 @@ public class ClassifierDefinitionListener extends DataTreeChangeHandler<Classifi
         .build();
 
     public ClassifierDefinitionListener(DataBroker dataBroker) {
-        super(dataBroker, new DataTreeIdentifier<>(LogicalDatastoreType.CONFIGURATION,
+        super(dataBroker);
+        registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.CONFIGURATION,
                 InstanceIdentifier.builder(SubjectFeatureDefinitions.class).child(ClassifierDefinition.class).build()));
     }
 

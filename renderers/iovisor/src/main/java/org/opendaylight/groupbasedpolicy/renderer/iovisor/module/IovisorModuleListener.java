@@ -22,7 +22,8 @@ import org.slf4j.LoggerFactory;
 public class IovisorModuleListener extends DataTreeChangeHandler<IovisorModuleInstance> {
 
     public IovisorModuleListener(DataBroker dataProvider) {
-        super(dataProvider, new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
+        super(dataProvider);
+        registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
                 IovisorIidFactory.iovisorModuleInstanceWildCardIid().child(IovisorModuleInstance.class)));
     }
 
