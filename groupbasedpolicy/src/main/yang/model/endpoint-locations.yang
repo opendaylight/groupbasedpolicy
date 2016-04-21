@@ -1,0 +1,103 @@
+/*
+ * Copyright (c) 2015 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
+module endpoint-locations {
+    yang-version 1;
+
+    namespace "urn:opendaylight:groupbasedpolicy:endpoint:location";
+    prefix "endpoints-location";
+
+    import endpoint {
+        prefix endpoint;
+        revision-date 2014-04-21;
+    }
+
+    description
+        "This module defines network element structure for location provider.";
+
+    revision "2016-04-19" {
+        description
+            "Initial revision.";
+    }
+
+    typedef provider-name {
+        type string;
+    }
+
+    grouping has-regular-location {
+        leaf node {
+            mandatory true;
+            type instance-identifier;
+        }
+        leaf node-connector {
+            type instance-identifier;
+        }
+    }
+
+    grouping has-external-location{
+        leaf external-node-mount-point {
+            mandatory true;
+            type instance-identifier;
+        }
+        leaf external-node-location {
+            type string;
+            //TODO switch to external-reference
+        }
+        leaf external-node-connector {
+            type string;
+            //TODO above
+        }
+    }
+
+    grouping has-location {
+        container real-location {
+            choice location-type {
+                case regular-location {
+                    uses has-regular-location;
+                }
+                case external-location {
+                    uses has-external-location;
+                }
+            }
+        }
+        container relative-location {
+            list location {
+                key "node node-connector";
+                uses has-regular-location;
+            }
+            list external-location {
+                key "external-node-mount-point external-node-connector";
+                uses has-external-location;
+            }
+        }
+    }
+
+    container endpoint-locations {
+        list location-provider {
+            key "provider";
+            leaf provider {
+                type provider-name;
+            }
+            list endpoint-location {
+                key "l2-context mac-address";
+                uses endpoint:l2-key;
+                uses has-location;
+            }
+            list l3-endpoint-location {
+                key "l3-context ip-address";
+                uses endpoint:l3-key;
+                uses has-location;
+            }
+            list l3-prefix-endpoint-location {
+                key "l3-context ip-prefix";
+                uses endpoint:l3-prefix-key;
+                uses has-location;
+            }
+        }
+    }
+}
