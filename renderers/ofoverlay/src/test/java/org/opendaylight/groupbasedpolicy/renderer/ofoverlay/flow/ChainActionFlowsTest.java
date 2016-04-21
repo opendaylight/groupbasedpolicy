@@ -75,9 +75,11 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadNshc1RegAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadNshc2RegAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadRegAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadTunGpeNpAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadTunIPv4Action;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadTunIdAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxOutputRegAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxPopNshAction;
 
 public class ChainActionFlowsTest extends MapperUtilsTest {
 
@@ -111,6 +113,7 @@ public class ChainActionFlowsTest extends MapperUtilsTest {
         EgKey destinationEgKey = new EgKey(tenant.getId(), ENDPOINT_GROUP_1);
         // Nsh header
         SfcNshHeaderBuilder nshHeaderBuilder = new SfcNshHeaderBuilder();
+        nshHeaderBuilder.setNshMetaC1(Long.valueOf(0L));
         nshHeaderBuilder.setNshNsiFromChain((short) 250);
         nshHeaderBuilder.setNshNspFromChain(27L);
         SfcNshHeader nshHeader = nshHeaderBuilder.build();
@@ -170,6 +173,7 @@ public class ChainActionFlowsTest extends MapperUtilsTest {
         EgKey destinationEgKey = new EgKey(tenant.getId(), ENDPOINT_GROUP_1);
         // Nsh header
         SfcNshHeaderBuilder nshHeaderBuilder = new SfcNshHeaderBuilder();
+        nshHeaderBuilder.setNshMetaC1(Long.valueOf(0L));
         nshHeaderBuilder.setNshNsiToChain((short) 255);
         nshHeaderBuilder.setNshNspToChain(27L);
         nshHeaderBuilder.setNshTunIpDst(IPV4_2);
@@ -243,7 +247,7 @@ public class ChainActionFlowsTest extends MapperUtilsTest {
         Match match = matchBuilder.build();
         FlowId flowId = FlowIdUtils.newFlowId((short) 0, "chainport", match);
         FlowBuilder flowBuilder = base((short) 0).setId(flowId).setMatch(match)
-                .setPriority(65000).setInstructions(instructions(applyActionIns(nxOutputRegAction(NxmNxReg7.class))));
+                .setPriority(65000).setInstructions(instructions(applyActionIns(nxPopNshAction(), nxOutputRegAction(NxmNxReg7.class))));
         return flowBuilder.build();
     }
 
@@ -263,11 +267,13 @@ public class ChainActionFlowsTest extends MapperUtilsTest {
     private Flow createExternalTestFlow(NetworkElements networkElements) {
         int matchTunnelId = networkElements.getSrcEpOrdinals().getTunnelId();
         long setTunnelId = networkElements.getDstEpOrdinals().getTunnelId();
+        final short TUN_GPE_NP_NSH = 0x4;
 
-        Action loadC1 = nxLoadNshc1RegAction(null);
+        Action loadC1 = nxLoadNshc1RegAction(Long.valueOf(0));
         Action loadC2 = nxLoadNshc2RegAction(setTunnelId);
         Action loadChainTunVnId = nxLoadTunIdAction(BigInteger.valueOf(setTunnelId), false);
         Action loadChainTunDest = nxLoadTunIPv4Action(IPV4_2.getValue(), false);
+        Action loadTunGpeNp = nxLoadTunGpeNpAction(BigInteger.valueOf(TUN_GPE_NP_NSH), false);
         Action outputAction = FlowUtils.createActionResubmit(null, (short) 0);
 
         MatchBuilder matchBuilder = new MatchBuilder();
@@ -280,7 +286,7 @@ public class ChainActionFlowsTest extends MapperUtilsTest {
         Match match = matchBuilder.build();
         FlowId flowId = FlowIdUtils.newFlowId(((short) 6), "chainexternal", match);
         FlowBuilder flowBuilder = base((short) 6).setId(flowId).setPriority(1000).setMatch(match)
-                .setInstructions(instructions(applyActionIns(loadC1, loadC2, loadChainTunDest, loadChainTunVnId,
+                .setInstructions(instructions(applyActionIns(loadC1, loadC2, loadChainTunDest, loadChainTunVnId, loadTunGpeNp,
                         outputAction)));
         return flowBuilder.build();
     }

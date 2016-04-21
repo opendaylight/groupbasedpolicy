@@ -9,6 +9,9 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf;
 
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.ChainActionFlows.createChainTunnelFlows;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxPushNshAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadNshMdtypeAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadNshNpAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxSetNsiAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxSetNspAction;
 
@@ -203,6 +206,9 @@ public class ChainAction extends Action {
         createChainTunnelFlows(sfcNshHeader, netElements, ofWriter, ctx, direction);
 
         if (direction.equals(Direction.Out) ) {
+            actions = addActionBuilder(actions, nxPushNshAction(), order);
+            actions = addActionBuilder(actions, nxLoadNshMdtypeAction(Short.valueOf((short)0x1)), order);
+            actions = addActionBuilder(actions, nxLoadNshNpAction(Short.valueOf((short)0x3)), order);
             actions = addActionBuilder(actions, nxSetNsiAction(sfcNshHeader.getNshNsiToChain()), order);
             actions = addActionBuilder(actions, nxSetNspAction(sfcNshHeader.getNshNspToChain()), order);
         } else {

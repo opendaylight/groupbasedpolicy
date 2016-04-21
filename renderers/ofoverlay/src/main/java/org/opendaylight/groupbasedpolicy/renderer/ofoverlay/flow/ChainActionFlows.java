@@ -19,10 +19,12 @@ import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtil
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadNshc1RegAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadNshc2RegAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadRegAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadTunGpeNpAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadTunIPv4Action;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadTunIdAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxOutputRegAction;
 import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.outputAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxPopNshAction;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -144,6 +146,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class ChainActionFlows {
 
     private static final Logger LOG = LoggerFactory.getLogger(ChainAction.class);
+    private static final short TUN_GPE_NP_NSH = 0x4;
 
     public ChainActionFlows() {
 
@@ -239,6 +242,7 @@ public class ChainActionFlows {
                 nxLoadTunIdAction(BigInteger.valueOf(setTunnelId), false);
         org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action loadChainTunDest =
                 nxLoadTunIPv4Action(sfcNshHeader.getNshTunIpDst().getValue(), false);
+        org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.Action loadTunGpeNp = nxLoadTunGpeNpAction(BigInteger.valueOf(TUN_GPE_NP_NSH), false);
 
         MatchBuilder mb = new MatchBuilder();
         addNxRegMatch(mb, RegMatch.of(NxmNxReg6.class, l3c));
@@ -254,7 +258,7 @@ public class ChainActionFlows {
         FlowId flowId = FlowIdUtils.newFlowId(tableId, "chainexternal", match);
         FlowBuilder flowb =
                 base(tableId).setId(flowId).setPriority(priority).setMatch(match).setInstructions(
-                        instructions(applyActionIns(loadC1, loadC2, loadChainTunDest, loadChainTunVnid, outputAction)));
+                        instructions(applyActionIns(loadC1, loadC2, loadChainTunDest, loadChainTunVnid, loadTunGpeNp, outputAction)));
         return flowb.build();
     }
 
@@ -339,7 +343,7 @@ public class ChainActionFlows {
         FlowId flowId = FlowIdUtils.newFlowId(tableId, "chainport", match);
 
         FlowBuilder flow = base(tableId).setId(flowId).setMatch(match).setPriority(65000).setInstructions(
-                instructions(applyActionIns(nxOutputRegAction(NxmNxReg7.class))));
+                instructions(applyActionIns(nxPopNshAction(), nxOutputRegAction(NxmNxReg7.class))));
         return flow.build();
 
     }
