@@ -193,7 +193,7 @@ public class ChainActionFlowsTest extends MapperUtilsTest {
         ChainActionFlows.createChainTunnelFlows(nshHeader, netElements, ofWriter, ctx, HasDirection.Direction.Out);
 
         // Verify flows and capture arguments
-        verify(ofWriter, times(1)).writeFlow(NODE_ID, (short) 6, createExternalTestFlow());
+        verify(ofWriter, times(1)).writeFlow(NODE_ID, (short) 6, createExternalTestFlow(netElements));
     }
 
     private Flow allowFromChainTestFlow() {
@@ -223,7 +223,7 @@ public class ChainActionFlowsTest extends MapperUtilsTest {
                     .getIpv4Address().getValue() + IP_PREFIX_32)).build();
             MatchBuilder mb = new MatchBuilder().setInPort(CONNECTOR_2).setLayer3Match(l3Match)
                     .setEthernetMatch(FlowUtils.ethernetMatch(null, null, FlowUtils.IPv4));
-            addNxTunIdMatch(mb, 2);
+            addNxTunIdMatch(mb, networkElements.getSrcEpOrdinals().getTunnelId());
             addNxNspMatch(mb, 27L);
             addNxNsiMatch(mb, (short) 250);
             Match match = mb.build();
@@ -260,16 +260,19 @@ public class ChainActionFlowsTest extends MapperUtilsTest {
         return flowBuilder.build();
     }
 
-    private Flow createExternalTestFlow() {
+    private Flow createExternalTestFlow(NetworkElements networkElements) {
+        int matchTunnelId = networkElements.getSrcEpOrdinals().getTunnelId();
+        long setTunnelId = networkElements.getDstEpOrdinals().getTunnelId();
+
         Action loadC1 = nxLoadNshc1RegAction(null);
-        Action loadC2 = nxLoadNshc2RegAction(2L);
-        Action loadChainTunVnId = nxLoadTunIdAction(BigInteger.valueOf(2L), false);
+        Action loadC2 = nxLoadNshc2RegAction(setTunnelId);
+        Action loadChainTunVnId = nxLoadTunIdAction(BigInteger.valueOf(setTunnelId), false);
         Action loadChainTunDest = nxLoadTunIPv4Action(IPV4_2.getValue(), false);
         Action outputAction = FlowUtils.createActionResubmit(null, (short) 0);
 
         MatchBuilder matchBuilder = new MatchBuilder();
         addNxRegMatch(matchBuilder, RegMatch.of(NxmNxReg6.class, 0L));
-        addNxTunIdMatch(matchBuilder, 2);
+        addNxTunIdMatch(matchBuilder, matchTunnelId);
         addNxNspMatch(matchBuilder, 27L);
         addNxNsiMatch(matchBuilder, (short) 255);
 
