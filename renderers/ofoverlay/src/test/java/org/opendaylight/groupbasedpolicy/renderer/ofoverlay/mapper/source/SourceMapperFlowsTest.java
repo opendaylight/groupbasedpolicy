@@ -118,7 +118,7 @@ public class SourceMapperFlowsTest extends MapperUtilsTest {
         Action reg4 = FlowUtils.nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(0));
         Action reg5 = FlowUtils.nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(0));
         Action reg6 = FlowUtils.nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(0));
-        Action tunnelId = FlowUtils.nxLoadTunIdAction(BigInteger.valueOf(2), false);
+        Action tunnelId = FlowUtils.nxLoadTunIdAction(BigInteger.valueOf(ordinals.getTunnelId()), false);
         InstructionsBuilder instructionsBuilder = new InstructionsBuilder();
         List<Instruction> instructions = new ArrayList<>();
         InstructionBuilder ordinalsInstruction = new InstructionBuilder();
@@ -175,7 +175,7 @@ public class SourceMapperFlowsTest extends MapperUtilsTest {
 
         MatchBuilder matchBuilder = new MatchBuilder();
         matchBuilder.setInPort(new NodeConnectorId(CONNECTOR_0));
-        FlowUtils.addNxTunIdMatch(matchBuilder, 2);
+        FlowUtils.addNxTunIdMatch(matchBuilder, ordinals.getTunnelId());
         Match match = matchBuilder.build();
 
         Flow testFlow = buildFlow(FlowIdUtils.newFlowId(tableId, "tunnel", match), tableId, 80, match,
