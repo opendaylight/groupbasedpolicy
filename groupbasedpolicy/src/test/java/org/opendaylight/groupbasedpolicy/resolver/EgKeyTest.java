@@ -1,9 +1,12 @@
 package org.opendaylight.groupbasedpolicy.resolver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.groupbasedpolicy.dto.EgKey;
@@ -15,14 +18,13 @@ public class EgKeyTest {
     private EgKey egKey;
     private TenantId tenantId;
     private EndpointGroupId egId;
-    private String value;
 
     @Before
-    public void initialisation() {
+    public void init() {
         tenantId = mock(TenantId.class);
         egId = mock(EndpointGroupId.class);
 
-        value = "value";
+        String value = "value";
         when(tenantId.getValue()).thenReturn(value);
         when(egId.getValue()).thenReturn(value);
 
@@ -30,67 +32,69 @@ public class EgKeyTest {
     }
 
     @Test
-    public void constructorTest() {
-        Assert.assertEquals(tenantId, egKey.getTenantId());
-        Assert.assertEquals(egId, egKey.getEgId());
+    public void testConstructor() {
+        assertEquals(tenantId, egKey.getTenantId());
+        assertEquals(egId, egKey.getEgId());
     }
 
     @Test
-    public void equalsTest() {
-        Assert.assertTrue(egKey.equals(egKey));
-        Assert.assertFalse(egKey.equals(null));
-        Assert.assertFalse(egKey.equals(new Object()));
+    public void testEquals() {
+        assertTrue(egKey.equals(egKey));
+        assertFalse(egKey.equals(null));
+        assertFalse(egKey.equals(new Object()));
 
         EgKey other;
         other = new EgKey(null, egId);
-        Assert.assertFalse(egKey.equals(other));
-        Assert.assertFalse(other.equals(egKey));
+        assertFalse(egKey.equals(other));
+        assertFalse(other.equals(egKey));
 
         other = new EgKey(tenantId, null);
-        Assert.assertFalse(egKey.equals(other));
-        Assert.assertFalse(other.equals(egKey));
+        assertFalse(egKey.equals(other));
+        assertFalse(other.equals(egKey));
 
         other = new EgKey(tenantId, egId);
-        Assert.assertTrue(egKey.equals(other));
+        assertTrue(egKey.equals(other));
 
         egKey = new EgKey(null, null);
         other = new EgKey(null, null);
-        Assert.assertTrue(egKey.equals(other));
+        assertTrue(egKey.equals(other));
     }
 
     @Test
-    public void compareToTest() {
+    public void testCompareTo() {
         EgKey other = new EgKey(tenantId, egId);
-        Assert.assertEquals(0, egKey.compareTo(other));
+        assertEquals(0, egKey.compareTo(other));
 
         other = new EgKey(null, null);
-        Assert.assertEquals(-1, egKey.compareTo(other));
-        Assert.assertEquals(1, other.compareTo(egKey));
+        assertEquals(-1, egKey.compareTo(other));
+        assertEquals(1, other.compareTo(egKey));
 
         String valueOther = "valu";
         TenantId tenantIdOther = mock(TenantId.class);
         when(tenantIdOther.getValue()).thenReturn(valueOther);
+
         other = new EgKey(tenantIdOther, egId);
-        Assert.assertEquals(1, egKey.compareTo(other));
-        Assert.assertEquals(-1, other.compareTo(egKey));
+        assertEquals(1, egKey.compareTo(other));
+        assertEquals(-1, other.compareTo(egKey));
 
         EndpointGroupId egIdOther = mock(EndpointGroupId.class);
         when(egIdOther.getValue()).thenReturn(valueOther);
+
         other = new EgKey(tenantId, egIdOther);
-        Assert.assertEquals(1, egKey.compareTo(other));
-        Assert.assertEquals(-1, other.compareTo(egKey));
+        assertEquals(1, egKey.compareTo(other));
+        assertEquals(-1, other.compareTo(egKey));
 
         egKey = new EgKey(tenantIdOther, egId);
-        Assert.assertEquals(-1, egKey.compareTo(other));
-        Assert.assertEquals(1, other.compareTo(egKey));
+        assertEquals(-1, egKey.compareTo(other));
+        assertEquals(1, other.compareTo(egKey));
     }
 
     @Test
-    public void toStringTest() {
+    public void testToString() {
         String string = egKey.toString();
-        Assert.assertNotNull(string);
-        Assert.assertFalse(string.isEmpty());
-        Assert.assertTrue(string.contains(tenantId.toString()));
-        Assert.assertTrue(string.contains(egId.toString()));
+        assertNotNull(string);
+        assertFalse(string.isEmpty());
+        assertTrue(string.contains(tenantId.toString()));
+        assertTrue(string.contains(egId.toString()));
     }
 }

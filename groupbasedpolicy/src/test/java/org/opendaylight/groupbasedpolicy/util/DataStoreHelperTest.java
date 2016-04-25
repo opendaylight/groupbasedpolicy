@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2015 Cisco Systems, Inc. and others. All rights reserved.
- * 
+ *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -15,6 +15,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.CheckedFuture;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -26,10 +28,9 @@ import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.CheckedFuture;
-
 public class DataStoreHelperTest {
+
+    private static final String EXCEPTION_MESSAGE = "test exception";
 
     private ReadOnlyTransaction readTransaction;
     private WriteTransaction writeTransaction;
@@ -38,56 +39,50 @@ public class DataStoreHelperTest {
     private CheckedFuture<Optional<?>, ReadFailedException> readFuture;
     private CheckedFuture<Void, TransactionCommitFailedException> submitFuture;
 
-    @SuppressWarnings("unchecked")
     @Before
-    public void initialise() {
+    public void init() {
         readTransaction = mock(ReadOnlyTransaction.class);
         readFuture = mock(CheckedFuture.class);
-        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
-                readFuture);
+        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(readFuture);
 
         writeTransaction = mock(WriteTransaction.class);
         submitFuture = mock(CheckedFuture.class);
         when(writeTransaction.submit()).thenReturn(submitFuture);
 
         readWriteTransaction = mock(ReadWriteTransaction.class);
-        when(readWriteTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
-                readFuture);
+        when(readWriteTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(readFuture);
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
     @Test
-    public void readFromDsTest() throws Exception {
+    public void testReadFromDs() throws Exception {
         Optional<?> optional = mock(Optional.class);
         when(readFuture.checkedGet()).thenReturn((Optional) optional);
         Assert.assertEquals(optional, DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
                 mock(InstanceIdentifier.class), readTransaction));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
-    public void readFromDsTestException() throws Exception {
-        @SuppressWarnings("unused")
-        Optional<?> optional = mock(Optional.class);
-        doThrow(mock(ReadFailedException.class)).when(readFuture).checkedGet();
+    public void testReadFromDs_Exception() throws Exception {
+        doThrow(new ReadFailedException(EXCEPTION_MESSAGE)).when(readFuture).checkedGet();
         Assert.assertEquals(Optional.absent(), DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
                 mock(InstanceIdentifier.class), readTransaction));
     }
 
     @Test
-    public void submitToDsTest() {
+    public void testSubmitToDs() {
         Assert.assertTrue(DataStoreHelper.submitToDs(writeTransaction));
     }
 
     @Test
-    public void submitToDsTestException() throws Exception {
-        doThrow(mock(TransactionCommitFailedException.class)).when(submitFuture).checkedGet();
+    public void testSubmitToDs_Exception() throws Exception {
+        doThrow(new TransactionCommitFailedException(EXCEPTION_MESSAGE)).when(submitFuture).checkedGet();
         Assert.assertFalse(DataStoreHelper.submitToDs(writeTransaction));
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
     @Test
-    public void removeIfExistsTest() throws Exception {
+    public void testRemoveIfExists() throws Exception {
         Optional<?> optional = mock(Optional.class);
         when(optional.isPresent()).thenReturn(true);
         when(readFuture.checkedGet()).thenReturn((Optional) optional);
@@ -96,9 +91,8 @@ public class DataStoreHelperTest {
         verify(readWriteTransaction).delete(any(LogicalDatastoreType.class), any(InstanceIdentifier.class));
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
     @Test
-    public void removeIfExistsTestException() throws Exception {
+    public void testRemoveIfExists_NotExisting() throws Exception {
         Optional<?> optional = mock(Optional.class);
         when(optional.isPresent()).thenReturn(false);
         when(readFuture.checkedGet()).thenReturn((Optional) optional);

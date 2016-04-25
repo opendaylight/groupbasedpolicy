@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2015 Cisco Systems, Inc. and others. All rights reserved.
- * 
+ *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -47,7 +47,7 @@ public class PolicyInfoTest {
     private ConditionSet conditionSet;
 
     @Before
-    public void Initialisation() {
+    public void init() {
         consEgKey = mock(EgKey.class);
         provEgKey = mock(EgKey.class);
         policy = mock(Policy.class);
@@ -56,8 +56,8 @@ public class PolicyInfoTest {
         policyMap.put(consEgKey, provEgKey, policy);
 
         conditionSet = mock(ConditionSet.class);
-        conditionSets = new HashSet<ConditionSet>(Arrays.asList(conditionSet));
-        egConditions = new HashMap<EgKey, Set<ConditionSet>>();
+        conditionSets = new HashSet<>(Collections.singletonList(conditionSet));
+        egConditions = new HashMap<>();
         condEgKey = mock(EgKey.class);
         egConditions.put(condEgKey, conditionSets);
 
@@ -65,7 +65,7 @@ public class PolicyInfoTest {
     }
 
     @Test
-    public void constructorTest() {
+    public void testConstructor() {
         Assert.assertEquals(policyMap, policyInfo.getPolicyMap());
         Assert.assertEquals(policy, policyInfo.getPolicy(consEgKey, provEgKey));
         Assert.assertEquals(Policy.EMPTY, policyInfo.getPolicy(provEgKey, consEgKey));
@@ -73,7 +73,7 @@ public class PolicyInfoTest {
     }
 
     @Test
-    public void getEgCondGroupTest() {
+    public void testGetEgCondGroup() {
         List<ConditionName> conditions = Collections.emptyList();
         ConditionGroup conditionGroup;
 
@@ -87,7 +87,7 @@ public class PolicyInfoTest {
     }
 
     @Test
-    public void getPeersTest() {
+    public void testGetPeers() {
         Set<EgKey> peers;
         peers = policyInfo.getPeers(consEgKey);
         Assert.assertTrue(peers.contains(provEgKey));
