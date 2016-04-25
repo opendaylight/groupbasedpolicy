@@ -11,7 +11,7 @@ module sxp-mapper-model {
     namespace "urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy:sxp-mapper:model";
     prefix "sxpm-model";
 
-    import sxp-database { prefix sxp-database; revision-date 2014-10-02; }
+    import sxp-database { prefix sxp-database; revision-date 2016-03-08; }
     import gbp-common { prefix gbp-common; revision-date 2014-04-21; }
     import ietf-inet-types { prefix inet; revision-date 2010-09-24; }
 
@@ -42,7 +42,7 @@ module sxp-mapper-model {
             }
             leaf-list endpoint-groups {
                type gbp-common:endpoint-group-id;
-               mandatory true;
+               min-elements 1;
                description
                     "The groups associated with this endpoint";
             }
@@ -66,7 +66,7 @@ module sxp-mapper-model {
                type gbp-common:l3-context-id;
                mandatory true;
                description
-                    "The context for the endpoint’s layer 3 address";
+                    "The context for the endpoint's layer 3 address";
             }
         }
     }
