@@ -66,6 +66,11 @@
         <artifactId>groupbasedpolicy-ui-bundle</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>sxp-mapper</artifactId>
+        <version>${project.version}</version>
+      </dependency>
 
       <!-- GBP configuration -->
       <dependency>
