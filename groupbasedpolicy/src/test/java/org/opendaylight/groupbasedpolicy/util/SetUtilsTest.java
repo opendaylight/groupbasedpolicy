@@ -8,41 +8,41 @@
 
 package org.opendaylight.groupbasedpolicy.util;
 
-import java.util.Arrays;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 public class SetUtilsTest {
 
     private Object key;
-    private Object value;
     private Set<Object> nestedSet;
     private ConcurrentMap<Object, Set<Object>> concurrentMap;
 
     @Before
-    public void initialise() {
+    public void init() {
         key = new Object();
-        value = new Object();
-        nestedSet = new HashSet<Object>(Arrays.asList(value));
-        concurrentMap = new ConcurrentHashMap<Object, Set<Object>>();
+        nestedSet = new HashSet<>(Collections.singletonList(new Object()));
+        concurrentMap = new ConcurrentHashMap<>();
     }
 
     @Test
-    public void getNestedSetTest() {
+    public void testGetNestedSet() {
         concurrentMap.put(key, nestedSet);
         Set<Object> inner = SetUtils.getNestedSet(key, concurrentMap);
-        Assert.assertEquals(nestedSet, inner);
+        assertEquals(nestedSet, inner);
     }
 
     @Test
-    public void getNestedSetTestInnerNull() {
+    public void testGetNestedSet_InnerNull() {
         Set<Object> inner = SetUtils.getNestedSet(key, concurrentMap);
-        Assert.assertTrue(inner.isEmpty());
+        assertTrue(inner.isEmpty());
     }
 }

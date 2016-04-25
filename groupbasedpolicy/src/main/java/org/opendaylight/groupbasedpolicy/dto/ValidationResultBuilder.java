@@ -7,13 +7,14 @@
  */
 package org.opendaylight.groupbasedpolicy.dto;
 
-
 import javax.annotation.Nonnull;
 
 import org.opendaylight.groupbasedpolicy.api.ValidationResult;
 import org.opendaylight.yangtools.concepts.Builder;
 
 public final class ValidationResultBuilder implements Builder<ValidationResult> {
+
+    public static final String ILLEGAL_ARG_EX_MSG = "Result message cannot be set to NULL!";
 
     private static final class ValidationResultImpl implements ValidationResult {
 
@@ -81,7 +82,7 @@ public final class ValidationResultBuilder implements Builder<ValidationResult> 
      */
     public ValidationResultBuilder setMessage(@Nonnull String message) {
         if (message == null) {
-            throw new IllegalArgumentException("Result message cannot be set to NULL!");
+            throw new IllegalArgumentException(ILLEGAL_ARG_EX_MSG);
         }
         this.message = message;
         return this;

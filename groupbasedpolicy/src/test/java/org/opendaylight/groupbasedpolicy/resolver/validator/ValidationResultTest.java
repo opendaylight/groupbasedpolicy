@@ -8,7 +8,10 @@
 
 package org.opendaylight.groupbasedpolicy.resolver.validator;
 
-import org.junit.Assert;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -21,34 +24,38 @@ public class ValidationResultTest {
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
+    public static final String VALIDATED = "Validated.";
+    public static final String EMPTY_STRING = "";
+
     ValidationResultBuilder resultBuilder;
-    ValidationResult result;
 
     @Before
-    public void initialisation() {
+    public void init() {
         resultBuilder = new ValidationResultBuilder();
     }
 
     @Test
-    public void successValidationTest() {
-        result = resultBuilder.success().build();
-        Assert.assertTrue(result.isValid());
-        Assert.assertTrue(result.getMessage().equals(""));
+    public void testBuild_WithSuccess() {
+        ValidationResult result = resultBuilder.success().build();
+        assertTrue(result.isValid());
+        assertEquals(EMPTY_STRING, result.getMessage());
     }
 
     @Test
-    public void unsuccessValidationTest() {
-        result = resultBuilder.failed().build();
-        Assert.assertFalse(result.isValid());
-        Assert.assertTrue(result.getMessage().equals(""));
+    public void testBuild_WithFailed() {
+        ValidationResult result = resultBuilder.failed().build();
+        assertFalse(result.isValid());
+        assertEquals(EMPTY_STRING, result.getMessage());
     }
 
     @Test
-    public void messageTest() {
-        result = resultBuilder.setMessage("Validated.").build();
-        Assert.assertTrue(result.getMessage().equals("Validated."));
+    public void testMessage() {
+        ValidationResult result = resultBuilder.setMessage(VALIDATED).build();
+
+        assertEquals(VALIDATED, result.getMessage());
+
         thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("Result message cannot be set to NULL!");
+        thrown.expectMessage(ValidationResultBuilder.ILLEGAL_ARG_EX_MSG);
         resultBuilder.setMessage(null);
     }
 
