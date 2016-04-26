@@ -30,14 +30,19 @@ import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils.Forwar
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
-import org.opendaylight.neutron.spi.INeutronPortAware;
 import org.opendaylight.neutron.spi.NeutronPort;
+import org.opendaylight.neutron.spi.NeutronPort_AllowedAddressPairs;
+import org.opendaylight.neutron.spi.NeutronPort_ExtraDHCPOption;
+import org.opendaylight.neutron.spi.NeutronPort_VIFDetail;
+import org.opendaylight.neutron.spi.NeutronRouter;
+import org.opendaylight.neutron.spi.NeutronRouter_Interface;
 import org.opendaylight.neutron.spi.NeutronSecurityGroup;
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.neutron.spi.Neutron_IPs;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2FloodDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
@@ -70,6 +75,13 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gb
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.external.gateways.as.l3.endpoints.ExternalGatewayAsL3Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.ports.by.endpoints.PortByEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.PortBindingExtension;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.binding.attributes.VifDetails;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.port.attributes.AllowedAddressPairs;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.port.attributes.ExtraDhcpOpts;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.port.attributes.FixedIps;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.Ports;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
@@ -80,8 +92,9 @@ import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
-public class NeutronPortAware implements INeutronPortAware {
+public class NeutronPortAware implements MappingProcessor<Port, NeutronPort> {
 
     public static final Logger LOG = LoggerFactory.getLogger(NeutronPortAware.class);
     private static final String DEVICE_OWNER_DHCP = "network:dhcp";
@@ -100,36 +113,130 @@ public class NeutronPortAware implements INeutronPortAware {
         this.secGrpAware = secGrpAware;
     }
 
-    /**
-     * @see org.opendaylight.neutron.spi.INeutronPortAware#canCreatePort(org.opendaylight.neutron.spi.NeutronPort)
-     */
     @Override
-    public int canCreatePort(NeutronPort port) {
-        LOG.trace("canCreatePort - {}", port);
+    public NeutronPort convertToNeutron(Port port) {
+        return toNeutron(port);
+    }
+
+    static NeutronPort toNeutron(Port port) {
+        NeutronPort result = new NeutronPort();
+        result.setAdminStateUp(port.isAdminStateUp());
+        if (port.getAllowedAddressPairs() != null) {
+            List<NeutronPort_AllowedAddressPairs> pairs = new ArrayList<NeutronPort_AllowedAddressPairs>();
+            for (AllowedAddressPairs mdPair : port.getAllowedAddressPairs()) {
+                NeutronPort_AllowedAddressPairs pair = new NeutronPort_AllowedAddressPairs();
+                pair.setIpAddress(mdPair.getIpAddress());
+                pair.setMacAddress(mdPair.getMacAddress());
+                pairs.add(pair);
+            }
+            result.setAllowedAddressPairs(pairs);
+        }
+        result.setDeviceID(port.getDeviceId());
+        result.setDeviceOwner(port.getDeviceOwner());
+        if (port.getExtraDhcpOpts() != null) {
+            List<NeutronPort_ExtraDHCPOption> options = new ArrayList<NeutronPort_ExtraDHCPOption>();
+            for (ExtraDhcpOpts opt : port.getExtraDhcpOpts()) {
+                NeutronPort_ExtraDHCPOption arg = new NeutronPort_ExtraDHCPOption();
+                arg.setName(opt.getOptName());
+                arg.setValue(opt.getOptValue());
+                arg.setIpVersion(NeutronSubnetAware.IPV_MAP.get(opt.getIpVersion()));
+                options.add(arg);
+            }
+            result.setExtraDHCPOptions(options);
+        }
+        if (port.getFixedIps() != null) {
+            List<Neutron_IPs> ips = new ArrayList<Neutron_IPs>();
+            for (FixedIps mdIP : port.getFixedIps()) {
+                Neutron_IPs ip = new Neutron_IPs();
+                ip.setIpAddress(String.valueOf(mdIP.getIpAddress().getValue()));
+                ip.setSubnetUUID(mdIP.getSubnetId().getValue());
+                ips.add(ip);
+            }
+            result.setFixedIPs(ips);
+        }
+        result.setMacAddress(port.getMacAddress());
+        result.setName(port.getName());
+        result.setNetworkUUID(port.getNetworkId().getValue());
+        if(port.getSecurityGroups() != null) {
+            result.setSecurityGroups(Lists.transform(port.getSecurityGroups(),
+                new Function<Uuid, NeutronSecurityGroup>() {
+
+                    @Override
+                    public NeutronSecurityGroup apply(Uuid uuid) {
+                        NeutronSecurityGroup sg = new NeutronSecurityGroup();
+                        sg.setID(uuid.getValue());
+                        return sg;
+                    }
+                }));
+        }
+        result.setStatus(port.getStatus());
+        if (port.getTenantId() != null) {
+            result.setTenantID(port.getTenantId());
+        }
+        result.setID(port.getUuid().getValue());
+        addExtensions(port, result);
+        return result;
+    }
+
+    protected static void addExtensions(Port port, NeutronPort result) {
+        PortBindingExtension binding = port.getAugmentation(PortBindingExtension.class);
+        result.setBindinghostID(binding.getHostId());
+        if (binding.getVifDetails() != null) {
+            List<NeutronPort_VIFDetail> details = new ArrayList<NeutronPort_VIFDetail>();
+            for (VifDetails vifDetail : binding.getVifDetails()) {
+                NeutronPort_VIFDetail detail = new NeutronPort_VIFDetail();
+                detail.setPortFilter(vifDetail.isPortFilter());
+                detail.setOvsHybridPlug(vifDetail.isOvsHybridPlug());
+                details.add(detail);
+            }
+            result.setVIFDetail(details);
+        }
+        result.setBindingvifType(binding.getVifType());
+        result.setBindingvnicType(binding.getVnicType());
+    }
+
+    @Override
+    public int canCreate(NeutronPort port) {
+        LOG.trace("canCreate port - {}", port);
         // TODO Li msunal this has to be rewrite when OFOverlay renderer will support l3-endpoints.
         List<Neutron_IPs> fixedIPs = port.getFixedIPs();
         if (fixedIPs != null && fixedIPs.size() > 1) {
             LOG.warn("Neutron mapper does not support multiple IPs on the same port.");
             return StatusCode.BAD_REQUEST;
         }
+        NeutronRouter router = (isRouterGatewayPort(port) || isRouterInterfacePort(port)) ? NeutronRouterAware.getRouterForPort(port.getDeviceID()) : null;
+        if (router != null) {
+            return NeutronRouterAware.canAttachInterface(router, createNeutronRouter_InterfaceFrom(port), dataProvider);
+        }
         return StatusCode.OK;
     }
 
-    /**
-     * @see org.opendaylight.neutron.spi.INeutronPortAware#neutronPortCreated(org.opendaylight.neutron.spi.NeutronPort)
-     */
-    @Override
-    public void neutronPortCreated(NeutronPort port) {
-        LOG.trace("neutronPortCreated - {}", port);
-        if (isRouterInterfacePort(port)) {
-            LOG.trace("Port is router interface - {} does nothing. {} handles router iface.",
-                    NeutronPortAware.class.getSimpleName(), NeutronRouterAware.class.getSimpleName());
-            return;
+    private static NeutronRouter_Interface createNeutronRouter_InterfaceFrom(NeutronPort port) {
+        NeutronRouter_Interface nri = new NeutronRouter_Interface();
+        if (port.getID() != null) {
+            nri.setID(port.getID());
+            nri.setPortUUID(port.getID());
         }
-        if (isRouterGatewayPort(port)) {
-            LOG.trace("Port is router gateway - {} does nothing. {} handles router iface.",
-                    NeutronPortAware.class.getSimpleName(), NeutronRouterAware.class.getSimpleName());
-            return;
+        if (port.getTenantID() != null) {
+            nri.setTenantID(port.getTenantID());
+        }
+        if (port.getFixedIPs() != null && port.getFixedIPs().size() == 1) {
+            // supported case
+            nri.setSubnetUUID(port.getFixedIPs().get(0).getSubnetUUID());
+        }
+        return nri;
+    }
+
+    @Override
+    public void created(NeutronPort port) {
+        LOG.trace("created port - {}", port);
+        if (isRouterInterfacePort(port) || isRouterGatewayPort(port)) {
+            NeutronRouter router = NeutronRouterAware.getRouterForPort(port.getDeviceID());
+            if (router != null) {
+                NeutronRouterAware.neutronRouterInterfaceAttached(router, createNeutronRouter_InterfaceFrom(port),
+                        dataProvider, epService);
+                return;
+            }
         }
         if (isFloatingIpPort(port)) {
             LOG.trace("Port is floating ip - {} device id - {}", port.getID(), port.getDeviceID());
@@ -278,13 +385,9 @@ public class NeutronPortAware implements INeutronPortAware {
         return true;
     }
 
-    /**
-     * @see org.opendaylight.neutron.spi.INeutronPortAware#canUpdatePort(org.opendaylight.neutron.spi.NeutronPort,
-     *      org.opendaylight.neutron.spi.NeutronPort)
-     */
     @Override
-    public int canUpdatePort(NeutronPort delta, NeutronPort original) {
-        LOG.trace("canUpdatePort - delta: {} original: {}", delta, original);
+    public int canUpdate(NeutronPort delta, NeutronPort original) {
+        LOG.trace("catUpdate port - delta: {} original: {}", delta, original);
         if (delta.getFixedIPs() == null || delta.getFixedIPs().isEmpty()) {
             return StatusCode.OK;
         }
@@ -294,23 +397,46 @@ public class NeutronPortAware implements INeutronPortAware {
             LOG.warn("Neutron mapper does not support multiple IPs on the same port.");
             return StatusCode.BAD_REQUEST;
         }
+        boolean wasRouterPort = isRouterGatewayPort(original) || isRouterInterfacePort(original);
+        boolean isRouterPort = isRouterGatewayPort(delta) || isRouterInterfacePort(delta);
+        if (wasRouterPort || isRouterPort) {
+            NeutronRouter router = NeutronRouterAware.getRouterForPort(delta.getDeviceID());
+            if (router != null && !wasRouterPort && isRouterPort) {
+                return NeutronRouterAware.
+                        canAttachInterface(router, createNeutronRouter_InterfaceFrom(delta), dataProvider);
+            } else if (router != null && wasRouterPort && !isRouterPort) {
+                return NeutronRouterAware.canDetachInterface(router, createNeutronRouter_InterfaceFrom(delta));
+            }
+        }
         return StatusCode.OK;
     }
 
-    /**
-     * @see org.opendaylight.neutron.spi.INeutronPortAware#neutronPortUpdated(org.opendaylight.neutron.spi.NeutronPort)
-     */
     @Override
-    public void neutronPortUpdated(NeutronPort port) {
-        LOG.trace("neutronPortUpdated - {}", port);
-        if (isRouterInterfacePort(port)) {
-            LOG.trace("Port is router interface - {} does nothing. {} handles router iface.",
-                    NeutronPortAware.class.getSimpleName(), NeutronRouterAware.class.getSimpleName());
-            return;
+    public void updated(NeutronPort port) {
+        LOG.trace("updated port - {}", port);
+        NeutronPort original = null;
+        Ports ports = NeutronListener.getNeutronDataBefore().getPorts();
+        boolean wasRouterPort = false;
+        if (ports != null) {
+            for (Port p : ports.getPort()) {
+                if (p.getUuid().getValue().equals(port.getID())) {
+                    original = toNeutron(p);
+                    wasRouterPort = isRouterGatewayPort(original) || isRouterInterfacePort(original);
+                }
+            }
         }
-        if (isRouterGatewayPort(port)) {
-            LOG.trace("Port is router gateway - {}", port.getID());
-            return;
+        boolean isRouterPort = isRouterGatewayPort(port) || isRouterInterfacePort(port);
+        if (original != null && (wasRouterPort || isRouterPort)) {
+            NeutronRouter router = NeutronRouterAware.getRouterForPort(port.getDeviceID());
+            if (router != null && (!wasRouterPort && isRouterPort)) {
+                NeutronRouterAware.neutronRouterInterfaceAttached(router, createNeutronRouter_InterfaceFrom(port),
+                        dataProvider, epService);
+                return;
+            } else if (router != null && (wasRouterPort && !isRouterPort)) {
+                NeutronRouterAware.neutronRouterInterfaceAttached(router, createNeutronRouter_InterfaceFrom(port),
+                        dataProvider, epService);
+                return;
+            }
         }
         if (isFloatingIpPort(port)) {
             LOG.trace("Port is floating ip - {}", port.getID());
@@ -409,31 +535,26 @@ public class NeutronPortAware implements INeutronPortAware {
         return true;
     }
 
-    /**
-     * @see org.opendaylight.neutron.spi.INeutronPortAware#canDeletePort(org.opendaylight.neutron.spi.NeutronPort)
-     */
     @Override
-    public int canDeletePort(NeutronPort port) {
-        LOG.trace("canDeletePort - {}", port);
-        // nothing to consider
+    public int canDelete(NeutronPort port) {
+        LOG.trace("canDelete port - {}", port);
+        NeutronRouter router = (isRouterGatewayPort(port) || isRouterInterfacePort(port)) ? NeutronRouterAware.getRouterForPort(port.getDeviceID()) : null;
+        if (router != null) {
+            return NeutronRouterAware.canDetachInterface(router, createNeutronRouter_InterfaceFrom(port));
+        }
         return StatusCode.OK;
     }
 
-    /**
-     * @see org.opendaylight.neutron.spi.INeutronPortAware#neutronPortDeleted(org.opendaylight.neutron.spi.NeutronPort)
-     */
     @Override
-    public void neutronPortDeleted(NeutronPort port) {
-        LOG.trace("neutronPortDeleted - {}", port);
-        if (isRouterInterfacePort(port)) {
-            LOG.trace("Port is router interface - {} does nothing. {} handles router iface.",
-                    NeutronPortAware.class.getSimpleName(), NeutronRouterAware.class.getSimpleName());
-            return;
-        }
-        if (isRouterGatewayPort(port)) {
-            LOG.trace("Port is router gateway - {} does nothing. {} handles router iface.",
-                    NeutronPortAware.class.getSimpleName(), NeutronRouterAware.class.getSimpleName());
-            return;
+    public void deleted(NeutronPort port) {
+        LOG.trace("deleted port - {}", port);
+        if (isRouterInterfacePort(port) || isRouterGatewayPort(port)) {
+            NeutronRouter router = NeutronRouterAware.getRouterForPort(port.getDeviceID());
+            if (router != null) {
+                NeutronRouterAware.neutronRouterInterfaceDetached(router, createNeutronRouter_InterfaceFrom(port),
+                        dataProvider, epService);
+                return;
+            }
         }
         if (isFloatingIpPort(port)) {
             LOG.trace("Port is floating ip - {} device id - {}", port.getID(), port.getDeviceID());
@@ -609,5 +730,4 @@ public class NeutronPortAware implements INeutronPortAware {
         }
         return l3s;
     }
-
 }

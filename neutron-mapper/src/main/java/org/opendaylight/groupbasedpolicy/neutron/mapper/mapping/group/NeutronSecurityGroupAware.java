@@ -15,16 +15,17 @@ import java.util.List;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.MappingProcessor;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.StatusCode;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.NeutronSecurityRuleAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
-import org.opendaylight.neutron.spi.INeutronSecurityGroupAware;
 import org.opendaylight.neutron.spi.NeutronSecurityGroup;
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Name;
@@ -32,10 +33,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup.IntraGroupPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroupBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.security.groups.SecurityGroup;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -43,8 +46,9 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
 
-public class NeutronSecurityGroupAware implements INeutronSecurityGroupAware {
+public class NeutronSecurityGroupAware implements MappingProcessor<SecurityGroup, NeutronSecurityGroup> {
 
     private static final Logger LOG = LoggerFactory.getLogger(NeutronSecurityGroupAware.class);
     private final DataBroker dataProvider;
@@ -58,22 +62,43 @@ public class NeutronSecurityGroupAware implements INeutronSecurityGroupAware {
         this.secGroupDao = checkNotNull(secGroupDao);
     }
 
-    /**
-     * @see org.opendaylight.neutron.spi.INeutronSecurityGroupAware#canCreateNeutronSecurityGroup(org.opendaylight.neutron.spi.NeutronSecurityGroup)
-     */
     @Override
-    public int canCreateNeutronSecurityGroup(NeutronSecurityGroup securityGroup) {
-        LOG.trace("canCreateNeutronSecurityGroup - {}", securityGroup);
+    public NeutronSecurityGroup convertToNeutron(SecurityGroup secGroup) {
+        NeutronSecurityGroup neutronSecGroup = new NeutronSecurityGroup();
+        if (secGroup.getUuid() != null) {
+            neutronSecGroup.setID(secGroup.getUuid().getValue());
+        }
+        if (secGroup.getName() != null) {
+            neutronSecGroup.setSecurityGroupName(secGroup.getName());
+        }
+        if (secGroup.getTenantId() != null) {
+            neutronSecGroup.setTenantID(secGroup.getTenantId());
+        }
+        if (secGroup.getSecurityRules() != null) {
+            neutronSecGroup.setSecurityRules(Lists.transform(secGroup.getSecurityRules(),
+                    new Function<Uuid, NeutronSecurityRule>() {
+
+                        @Override
+                        public NeutronSecurityRule apply(Uuid uuid) {
+                            NeutronSecurityRule rule = new NeutronSecurityRule();
+                            rule.setID(uuid.getValue());
+                            return rule;
+                        }
+                    }));
+        }
+        return neutronSecGroup;
+    }
+
+    @Override
+    public int canCreate(NeutronSecurityGroup securityGroup) {
+        LOG.trace("canCreate securityGroup - {}", securityGroup);
         // nothing to consider
         return StatusCode.OK;
     }
 
-    /**
-     * @see org.opendaylight.neutron.spi.INeutronSecurityGroupAware#neutronSecurityGroupCreated(org.opendaylight.neutron.spi.NeutronSecurityGroup)
-     */
     @Override
-    public void neutronSecurityGroupCreated(NeutronSecurityGroup secGroup) {
-        LOG.trace("neutronSecurityGroupCreated - {}", secGroup);
+    public void created(NeutronSecurityGroup secGroup) {
+        LOG.trace("created securityGroup - {}", secGroup);
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         boolean isSecGroupCreated = addNeutronSecurityGroup(secGroup, rwTx);
         if (isSecGroupCreated) {
@@ -158,43 +183,30 @@ public class NeutronSecurityGroupAware implements INeutronSecurityGroupAware {
         return true;
     }
 
-    /**
-     * @see org.opendaylight.neutron.spi.INeutronSecurityGroupAware#canUpdateNeutronSecurityGroup(org.opendaylight.neutron.spi.NeutronSecurityGroup,
-     *      org.opendaylight.neutron.spi.NeutronSecurityGroup)
-     */
     @Override
-    public int canUpdateNeutronSecurityGroup(NeutronSecurityGroup delta, NeutronSecurityGroup original) {
-        LOG.warn("canUpdateNeutronSecurityGroup - Never should be called "
+    public int canUpdate(NeutronSecurityGroup delta, NeutronSecurityGroup original) {
+        LOG.warn("canUpdate securityGroup - Never should be called "
                 + "- neutron API does not allow UPDATE on neutron security group. \nDelta: {} \nOriginal: {}", delta,
                 original);
         return StatusCode.BAD_REQUEST;
     }
 
-    /**
-     * @see org.opendaylight.neutron.spi.INeutronSecurityGroupAware#neutronSecurityGroupUpdated(org.opendaylight.neutron.spi.NeutronSecurityGroup)
-     */
     @Override
-    public void neutronSecurityGroupUpdated(NeutronSecurityGroup securityGroup) {
-        LOG.warn("neutronSecurityGroupUpdated - Never should be called "
+    public void updated(NeutronSecurityGroup securityGroup) {
+        LOG.warn("updated securityGroup - Never should be called "
                 + "- neutron API does not allow UPDATE on neutron security group. \nSecurity group: {}", securityGroup);
     }
 
-    /**
-     * @see org.opendaylight.neutron.spi.INeutronSecurityGroupAware#canDeleteNeutronSecurityGroup(org.opendaylight.neutron.spi.NeutronSecurityGroup)
-     */
     @Override
-    public int canDeleteNeutronSecurityGroup(NeutronSecurityGroup securityGroup) {
-        LOG.trace("canDeleteNeutronSecurityGroup - {}", securityGroup);
+    public int canDelete(NeutronSecurityGroup securityGroup) {
+        LOG.trace("canDelete securityGroup - {}", securityGroup);
         // nothing to consider
         return StatusCode.OK;
     }
 
-    /**
-     * @see org.opendaylight.neutron.spi.INeutronSecurityGroupAware#neutronSecurityGroupDeleted(org.opendaylight.neutron.spi.NeutronSecurityGroup)
-     */
     @Override
-    public void neutronSecurityGroupDeleted(NeutronSecurityGroup secGroup) {
-        LOG.trace("neutronSecurityGroupDeleted - {}", secGroup);
+    public void deleted(NeutronSecurityGroup secGroup) {
+        LOG.trace("deleted securityGroup - {}", secGroup);
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         List<NeutronSecurityRule> secRules = secGroup.getSecurityRules();
         if (secRules != null) {

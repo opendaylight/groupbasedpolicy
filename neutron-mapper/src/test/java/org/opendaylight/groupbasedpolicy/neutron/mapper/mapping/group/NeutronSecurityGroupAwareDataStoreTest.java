@@ -40,7 +40,7 @@ public class NeutronSecurityGroupAwareDataStoreTest extends GbpDataBrokerTest {
         NeutronSecurityGroup secGroup1 = NeutronEntityFactory.securityGroup(secGroupId1, tenantId);
         NeutronSecurityGroup secGroup2 = NeutronEntityFactory.securityGroup(secGroupId2, tenantId);
 
-        groupAware.neutronSecurityGroupCreated(secGroup1);
+        groupAware.created(secGroup1);
 
         PolicyAssert.assertTenantExists(dataBroker, tenantId);
         PolicyAssert.assertContractCount(dataBroker, tenantId, 0);
@@ -50,14 +50,14 @@ public class NeutronSecurityGroupAwareDataStoreTest extends GbpDataBrokerTest {
         PolicyAssert.assertNoConsumerNamedSelectors(dataBroker, tenantId, secGroupId1);
         PolicyAssert.assertIntraGroupPolicy(dataBroker, tenantId, secGroupId1, IntraGroupPolicy.RequireContract);
 
-        groupAware.neutronSecurityGroupDeleted(secGroup1);
+        groupAware.deleted(secGroup1);
 
         PolicyAssert.assertTenantExists(dataBroker, tenantId);
         PolicyAssert.assertContractCount(dataBroker, tenantId, 0);
         PolicyAssert.assertEndpointGroupCount(dataBroker, tenantId, 0);
 
-        groupAware.neutronSecurityGroupCreated(secGroup1);
-        groupAware.neutronSecurityGroupCreated(secGroup2);
+        groupAware.created(secGroup1);
+        groupAware.created(secGroup2);
 
         PolicyAssert.assertTenantExists(dataBroker, tenantId);
         PolicyAssert.assertContractCount(dataBroker, tenantId, 0);
@@ -71,7 +71,7 @@ public class NeutronSecurityGroupAwareDataStoreTest extends GbpDataBrokerTest {
         PolicyAssert.assertNoConsumerNamedSelectors(dataBroker, tenantId, secGroupId2);
         PolicyAssert.assertIntraGroupPolicy(dataBroker, tenantId, secGroupId2, IntraGroupPolicy.RequireContract);
 
-        groupAware.neutronSecurityGroupDeleted(secGroup2);
+        groupAware.deleted(secGroup2);
 
         PolicyAssert.assertTenantExists(dataBroker, tenantId);
         PolicyAssert.assertContractCount(dataBroker, tenantId, 0);
@@ -80,7 +80,7 @@ public class NeutronSecurityGroupAwareDataStoreTest extends GbpDataBrokerTest {
         PolicyAssert.assertNoProviderNamedSelectors(dataBroker, tenantId, secGroupId1);
         PolicyAssert.assertNoConsumerNamedSelectors(dataBroker, tenantId, secGroupId1);
 
-        groupAware.neutronSecurityGroupDeleted(secGroup1);
+        groupAware.deleted(secGroup1);
 
         PolicyAssert.assertTenantExists(dataBroker, tenantId);
         PolicyAssert.assertContractCount(dataBroker, tenantId, 0);
@@ -113,7 +113,7 @@ public class NeutronSecurityGroupAwareDataStoreTest extends GbpDataBrokerTest {
         NeutronSecurityGroup secGroup2 = NeutronEntityFactory.securityGroup(secGroupId2, tenantId,
                 ImmutableList.of(secRule2));
 
-        groupAware.neutronSecurityGroupCreated(secGroup1);
+        groupAware.created(secGroup1);
 
         PolicyAssert.assertTenantExists(dataBroker, tenantId);
         PolicyAssert.assertContractExists(dataBroker, tenantId, secRuleId1);
@@ -130,7 +130,7 @@ public class NeutronSecurityGroupAwareDataStoreTest extends GbpDataBrokerTest {
         PolicyAssert.assertClassifierInstanceExists(dataBroker, secRule1);
         PolicyAssert.assertActionInstanceExists(dataBroker, tenantId, MappingUtils.ACTION_ALLOW.getName());
 
-        groupAware.neutronSecurityGroupDeleted(secGroup1);
+        groupAware.deleted(secGroup1);
 
         PolicyAssert.assertTenantExists(dataBroker, tenantId);
         PolicyAssert.assertContractCount(dataBroker, tenantId, 0);
@@ -140,8 +140,8 @@ public class NeutronSecurityGroupAwareDataStoreTest extends GbpDataBrokerTest {
         // TODO: Uncomment this when the life cycle of the Allow ActionInstance will be clarified.
         // PolicyAssert.assertActionInstanceNotExists(dataBroker, tenantId, MappingUtils.ACTION_ALLOW.getName());
 
-        groupAware.neutronSecurityGroupCreated(secGroup1);
-        groupAware.neutronSecurityGroupCreated(secGroup2);
+        groupAware.created(secGroup1);
+        groupAware.created(secGroup2);
 
         PolicyAssert.assertTenantExists(dataBroker, tenantId);
         PolicyAssert.assertContractExists(dataBroker, tenantId, secRuleId1);
@@ -164,7 +164,7 @@ public class NeutronSecurityGroupAwareDataStoreTest extends GbpDataBrokerTest {
         PolicyAssert.assertClassifierInstanceExists(dataBroker, secRule1);
         PolicyAssert.assertActionInstanceExists(dataBroker, tenantId, MappingUtils.ACTION_ALLOW.getName());
 
-        groupAware.neutronSecurityGroupDeleted(secGroup2);
+        groupAware.deleted(secGroup2);
 
         PolicyAssert.assertTenantExists(dataBroker, tenantId);
         PolicyAssert.assertContractExists(dataBroker, tenantId, secRuleId1);
@@ -181,7 +181,7 @@ public class NeutronSecurityGroupAwareDataStoreTest extends GbpDataBrokerTest {
         PolicyAssert.assertClassifierInstanceExists(dataBroker, secRule1);
         PolicyAssert.assertActionInstanceExists(dataBroker, tenantId, MappingUtils.ACTION_ALLOW.getName());
 
-        groupAware.neutronSecurityGroupDeleted(secGroup1);
+        groupAware.deleted(secGroup1);
 
         PolicyAssert.assertTenantExists(dataBroker, tenantId);
         PolicyAssert.assertContractCount(dataBroker, tenantId, 0);

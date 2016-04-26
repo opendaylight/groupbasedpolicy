@@ -9,7 +9,9 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -27,8 +29,8 @@ import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
-import org.opendaylight.neutron.spi.INeutronNetworkAware;
 import org.opendaylight.neutron.spi.NeutronNetwork;
+import org.opendaylight.neutron.spi.NeutronNetwork_Segment;
 import org.opendaylight.neutron.spi.NeutronSecurityGroup;
 import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
@@ -49,15 +51,25 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3ContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ExternalImplicitGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ExternalImplicitGroupBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.ext.rev150712.NetworkL3Extension;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.NetworkTypeBase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.NetworkTypeFlat;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.NetworkTypeGre;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.NetworkTypeVlan;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.NetworkTypeVxlan;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.networks.attributes.networks.Network;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.provider.ext.rev150712.NetworkProviderExtension;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.provider.ext.rev150712.neutron.networks.network.Segments;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 
-public class NeutronNetworkAware implements INeutronNetworkAware {
+public class NeutronNetworkAware implements MappingProcessor<Network, NeutronNetwork> {
 
     private static final Logger LOG = LoggerFactory.getLogger(NeutronNetworkAware.class);
     private final DataBroker dataProvider;
@@ -71,22 +83,56 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
         this.networkDao = checkNotNull(networkDao);
     }
 
-    /**
-     * @see org.opendaylight.neutron.spi.INeutronNetworkAware#canCreateNetwork(org.opendaylight.neutron.spi.NeutronNetwork)
-     */
+    private static final ImmutableBiMap<Class<? extends NetworkTypeBase>,String> NETWORK_MAP
+    = new ImmutableBiMap.Builder<Class<? extends NetworkTypeBase>,String>()
+    .put(NetworkTypeFlat.class,"flat")
+    .put(NetworkTypeGre.class,"gre")
+    .put(NetworkTypeVlan.class,"vlan")
+    .put(NetworkTypeVxlan.class,"vxlan")
+    .build();
+
     @Override
-    public int canCreateNetwork(NeutronNetwork network) {
-        LOG.trace("canCreateNetwork - {}", network);
+    public NeutronNetwork convertToNeutron(Network network) {
+        NeutronNetwork result = new NeutronNetwork();
+        result.initDefaults();
+        result.setAdminStateUp(network.isAdminStateUp());
+        result.setNetworkName(network.getName());
+        result.setShared(network.isShared());
+        result.setStatus(network.getStatus());
+        result.setTenantID(network.getTenantId());
+        result.setID(network.getUuid().getValue());
+
+        NetworkL3Extension l3Extension = network.getAugmentation(NetworkL3Extension.class);
+        result.setRouterExternal(l3Extension.isExternal());
+
+        NetworkProviderExtension providerExtension = network.getAugmentation(NetworkProviderExtension.class);
+        result.setProviderPhysicalNetwork(providerExtension.getPhysicalNetwork());
+        result.setProviderSegmentationID(providerExtension.getSegmentationId());
+        result.setProviderNetworkType(NETWORK_MAP.get(providerExtension.getNetworkType()));
+        List<NeutronNetwork_Segment> segments = new ArrayList<NeutronNetwork_Segment>();
+        if (providerExtension.getSegments() != null) {
+            for (Segments segment: providerExtension.getSegments()) {
+                NeutronNetwork_Segment neutronSegment = new NeutronNetwork_Segment();
+                neutronSegment.setProviderPhysicalNetwork(segment.getPhysicalNetwork());
+                neutronSegment.setProviderSegmentationID(segment.getSegmentationId());
+                neutronSegment.setProviderNetworkType(NETWORK_MAP.get(segment.getNetworkType()));
+                segments.add(neutronSegment);
+            }
+        }
+        result.setSegments(segments);
+        return result;
+    }
+
+    @Override
+    public int canCreate(NeutronNetwork network) {
+        LOG.trace("canCreate network - {}", network);
         // nothing to consider
         return StatusCode.OK;
     }
 
-    /**
-     * @see org.opendaylight.neutron.spi.INeutronNetworkAware#neutronNetworkCreated(org.opendaylight.neutron.spi.NeutronNetwork)
-     */
     @Override
-    public void neutronNetworkCreated(NeutronNetwork network) {
-        LOG.trace("neutronNetworkCreated - {}", network);
+    public void created(NeutronNetwork network) {
+        LOG.trace("created network - {}", network);
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         L2FloodDomainId l2FdId = new L2FloodDomainId(network.getID());
         TenantId tenantId = new TenantId(Utils.normalizeUuid(network.getTenantID()));
@@ -190,42 +236,29 @@ public class NeutronNetworkAware implements INeutronNetworkAware {
                 NeutronGbpIidFactory.providerPhysicalNetworkAsL2FloodDomainIid(tenantId, l2FdId), provNetAsL2Fd);
     }
 
-    /**
-     * @see org.opendaylight.neutron.spi.INeutronNetworkAware#canUpdateNetwork(org.opendaylight.neutron.spi.NeutronNetwork,
-     *      org.opendaylight.neutron.spi.NeutronNetwork)
-     */
     @Override
-    public int canUpdateNetwork(NeutronNetwork delta, NeutronNetwork original) {
-        LOG.trace("canUpdateNetwork - delta: {} original: {}", delta, original);
+    public int canUpdate(NeutronNetwork delta, NeutronNetwork original) {
+        LOG.trace("canUpdate network - delta: {} original: {}", delta, original);
         // nothing to consider
         return StatusCode.OK;
     }
 
-    /**
-     * @see org.opendaylight.neutron.spi.INeutronNetworkAware#neutronNetworkUpdated(org.opendaylight.neutron.spi.NeutronNetwork)
-     */
     @Override
-    public void neutronNetworkUpdated(NeutronNetwork network) {
-        LOG.trace("neutronNetworkUpdated - {}", network);
+    public void updated(NeutronNetwork network) {
+        LOG.trace("updated network - {}", network);
         // TODO we could update just name
     }
 
-    /**
-     * @see org.opendaylight.neutron.spi.INeutronNetworkAware#canDeleteNetwork(org.opendaylight.neutron.spi.NeutronNetwork)
-     */
     @Override
-    public int canDeleteNetwork(NeutronNetwork network) {
-        LOG.trace("canDeleteNetwork - {}", network);
+    public int canDelete(NeutronNetwork network) {
+        LOG.trace("canDelete network - {}", network);
         // nothing to consider
         return StatusCode.OK;
     }
 
-    /**
-     * @see org.opendaylight.neutron.spi.INeutronNetworkAware#neutronNetworkDeleted(org.opendaylight.neutron.spi.NeutronNetwork)
-     */
     @Override
-    public void neutronNetworkDeleted(NeutronNetwork network) {
-        LOG.trace("neutronNetworkDeleted - {}", network);
+    public void deleted(NeutronNetwork network) {
+        LOG.trace("deleted network - {}", network);
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         TenantId tenantId = new TenantId(Utils.normalizeUuid(network.getTenantID()));
         L2FloodDomainId l2FdId = new L2FloodDomainId(network.getID());

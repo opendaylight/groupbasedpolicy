@@ -138,7 +138,7 @@ public class NeutronSecurityRuleAwareDataStoreTest extends GbpDataBrokerTest {
         NeutronSecurityRule secRule2 = NeutronEntityFactory.securityRuleWithEtherType(secRuleId2, tenantId,
                 NeutronUtils.IPv4, NeutronUtils.INGRESS, secGroupId2, secGroupId1);
 
-        ruleAware.neutronSecurityRuleCreated(secRule1);
+        ruleAware.created(secRule1);
 
         PolicyAssert.assertTenantExists(dataBroker, tenantId);
         PolicyAssert.assertContractExists(dataBroker, tenantId, secRuleId1);
@@ -153,7 +153,7 @@ public class NeutronSecurityRuleAwareDataStoreTest extends GbpDataBrokerTest {
         PolicyAssert.assertClassifierInstanceExists(dataBroker, secRule1);
         PolicyAssert.assertActionInstanceExists(dataBroker, tenantId, MappingUtils.ACTION_ALLOW.getName());
 
-        ruleAware.neutronSecurityRuleCreated(secRule2);
+        ruleAware.created(secRule2);
 
         PolicyAssert.assertTenantExists(dataBroker, tenantId);
         PolicyAssert.assertContractExists(dataBroker, tenantId, secRuleId1);
@@ -174,7 +174,7 @@ public class NeutronSecurityRuleAwareDataStoreTest extends GbpDataBrokerTest {
         PolicyAssert.assertProviderNamedSelectors(epGroup2.get(), ImmutableSet.of(new ContractId(secRuleId2)));
         PolicyAssert.assertConsumerNamedSelectors(epGroup2.get(), ImmutableSet.of(new ContractId(secRuleId1)));
 
-        ruleAware.neutronSecurityRuleDeleted(secRule2);
+        ruleAware.deleted(secRule2);
 
         PolicyAssert.assertTenantExists(dataBroker, tenantId);
         PolicyAssert.assertContractExists(dataBroker, tenantId, secRuleId1);
@@ -196,7 +196,7 @@ public class NeutronSecurityRuleAwareDataStoreTest extends GbpDataBrokerTest {
         PolicyAssert.assertClassifierInstanceExists(dataBroker, secRule1);
         PolicyAssert.assertActionInstanceExists(dataBroker, tenantId, MappingUtils.ACTION_ALLOW.getName());
 
-        ruleAware.neutronSecurityRuleDeleted(secRule1);
+        ruleAware.deleted(secRule1);
 
         PolicyAssert.assertContractCount(dataBroker, tenantId, 0);
         PolicyAssert.assertEndpointGroupExists(dataBroker, tenantId, secGroupId1);
