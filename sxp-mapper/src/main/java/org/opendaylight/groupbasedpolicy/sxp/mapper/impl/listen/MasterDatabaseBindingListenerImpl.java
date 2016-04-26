@@ -24,6 +24,7 @@ import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSAsyncDao;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.MasterDatabaseBindingListener;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SimpleCachedDao;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SxpMapperReactor;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.ForwardingTemplateUtil;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.L3EPServiceUtil;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.SxpListenerUtil;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
@@ -36,7 +37,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.sxp.data
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+import org.opendaylight.yangtools.yang.common.RpcError;
 import org.opendaylight.yangtools.yang.common.RpcResult;
+import org.opendaylight.yangtools.yang.common.RpcResultBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,6 +105,13 @@ public class MasterDatabaseBindingListenerImpl implements MasterDatabaseBindingL
     }
 
     private void processWithEPForwardingTemplate(final IpPrefix changeKey, final MasterDatabaseBinding sxpMasterDBItem) {
+        if (!ForwardingTemplateUtil.isPlain(changeKey)) {
+            // SKIP SUBNET
+            LOG.debug("received ip-sgt binding with subnet ip - SKIPPING: {} - {}",
+                    changeKey, sxpMasterDBItem.getSecurityGroupTag());
+            return;
+        }
+
         final ListenableFuture<Optional<EndpointForwardingTemplateBySubnet>> epForwardingTemplateFuture =
                 epForwardingTemplateDao.read(changeKey);
 
@@ -127,13 +137,18 @@ public class MasterDatabaseBindingListenerImpl implements MasterDatabaseBindingL
         final ListenableFuture<RpcResult<Void>> rpcResult = Futures.transform(epPolicyTemplateFuture, new AsyncFunction<Optional<EndpointPolicyTemplateBySgt>, RpcResult<Void>>() {
             @Override
             public ListenableFuture<RpcResult<Void>> apply(final Optional<EndpointPolicyTemplateBySgt> input) throws Exception {
+                final ListenableFuture<RpcResult<Void>> result;
                 if (input == null || !input.isPresent()) {
                     LOG.debug("no epPolicyTemplate available for sgt: {}", changeKey);
-                    throw new IllegalArgumentException("no epPolicyTemplate available");
+                    result = RpcResultBuilder.<Void>failed()
+                                    .withError(RpcError.ErrorType.APPLICATION,
+                                            "no ip-sgt mapping in sxpMasterDB available for " + changeKey)
+                                    .buildFuture();
                 } else {
                     LOG.trace("processing sxpMasterDB event and epPolicyTemplate for sgt: {}", changeKey);
-                    return sxpMapperReactor.processPolicyAndSxpMasterDB(input.get(), sxpMasterDBItem);
+                    result = sxpMapperReactor.processPolicyAndSxpMasterDB(input.get(), sxpMasterDBItem);
                 }
+                return result;
             }
         });
 

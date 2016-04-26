@@ -13,9 +13,7 @@ import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import javax.annotation.Nonnull;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
@@ -32,7 +30,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controll
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBinding;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+import org.opendaylight.yangtools.yang.common.RpcError;
 import org.opendaylight.yangtools.yang.common.RpcResult;
+import org.opendaylight.yangtools.yang.common.RpcResultBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,15 +87,18 @@ public class EPForwardingTemplateListenerImpl implements EPTemplateListener<Endp
         final ListenableFuture<RpcResult<Void>> allRpcResult = Futures.transform(sxpMasterDbItemFuture, new AsyncFunction<Optional<MasterDatabaseBinding>, RpcResult<Void>>() {
             @Override
             public ListenableFuture<RpcResult<Void>> apply(final Optional<MasterDatabaseBinding> input) throws Exception {
-                if (input == null && input.isPresent()) {
+                final ListenableFuture<RpcResult<Void>> rpcResult;
+                if (input == null || !input.isPresent()) {
                     LOG.debug("no epForwardingTemplate available for sgt: {}", changeKey);
-                    throw new IllegalArgumentException("no epForwardingTemplate available");
+                    rpcResult = RpcResultBuilder.<Void>failed()
+                            .withError(RpcError.ErrorType.APPLICATION,
+                                    "no ip-sgt mapping in sxpMasterDB available for " + changeKey)
+                            .buildFuture();
                 } else {
-                    List<ListenableFuture<RpcResult<Void>>> resultBag = new ArrayList<>();
                     LOG.trace("processing sxpMasterDB event and epForwardingTemplate for sgt: {}", changeKey);
-                    final ListenableFuture<RpcResult<Void>> rpcResult = sxpMapperReactor.processForwardingAndSxpMasterDB(epForwardingTemplate, input.get());
-                    return rpcResult;
+                    rpcResult = sxpMapperReactor.processForwardingAndSxpMasterDB(epForwardingTemplate, input.get());
                 }
+                return rpcResult;
             }
         });
 

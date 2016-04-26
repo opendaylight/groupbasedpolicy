@@ -51,7 +51,7 @@ public class SxpMapperProviderImpl implements AutoCloseable {
         this.rpcRegistryDependency = rpcRegistryDependency;
 
         final EndpointService endpointService = rpcRegistryDependency.getRpcService(EndpointService.class);
-        sxpMapperReactor = new SxpMapperReactorImpl(endpointService);
+        sxpMapperReactor = new SxpMapperReactorImpl(endpointService, dataBroker);
 
         final SimpleCachedDao<Sgt, EndpointPolicyTemplateBySgt> epPolicyTemplateCachedDao = new SimpleCachedDaoImpl<>();
         final SimpleCachedDao<IpPrefix, EndpointForwardingTemplateBySubnet> epForwardingTemplateCachedDao =

@@ -89,6 +89,7 @@ public class EPPolicyTemplateDaoImplTest {
     public void testRead_presentDS() throws Exception {
         Mockito.when(cachedDao.find(Matchers.<Sgt>any())).thenReturn(
                 Optional.<EndpointPolicyTemplateBySgt>absent());
+        Mockito.when(cachedDao.isEmpty()).thenReturn(true);
         Mockito.when(dataBroker.newReadOnlyTransaction()).thenReturn(rTx);
         Mockito.when(rTx.read(Matchers.eq(LogicalDatastoreType.CONFIGURATION),
                 Matchers.<InstanceIdentifier<EndpointPolicyTemplateBySgt>>any())).thenReturn(
