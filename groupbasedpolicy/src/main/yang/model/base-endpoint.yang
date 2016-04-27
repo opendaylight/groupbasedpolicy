@@ -1,0 +1,318 @@
+/*
+ * Copyright (c) 2016 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
+module base-endpoint {
+    yang-version 1;
+
+    namespace "urn:opendaylight:groupbasedpolicy:endpoints";
+    prefix "base-endpoint";
+
+    import gbp-common { prefix gbp-common; revision-date 2014-04-21; }
+    import ietf-inet-types { prefix inet; revision-date 2010-09-24; }
+    import ietf-yang-types { prefix yang; revision-date 2010-09-24; }
+
+    revision "2016-04-27" {
+        description
+                "Initial revision.";
+    }
+
+    typedef address {
+        type string;
+    }
+
+    typedef mac-address {
+        // TODO should be moved to separate yang
+        type address {
+            pattern '[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}';
+        }
+    }
+
+    typedef ipv4-prefix {
+        // TODO should be moved to separate yang
+        type address {
+            pattern
+                '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}'
+              +  '([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])'
+              + '/(([0-9])|([1-2][0-9])|(3[0-2]))';
+        }
+        description
+            "The ipv4-prefix type represents an IPv4 address prefix.
+             The prefix length is given by the number following the
+             slash character and must be less than or equal to 32.
+             A prefix length value of n corresponds to an IP address
+             mask that has n contiguous 1-bits from the most
+             significant bit (MSB) and all other bits set to 0.
+             The canonical format of an IPv4 prefix has all bits of
+             the IPv4 address set to zero that are not part of the
+             IPv4 prefix.";
+    }
+
+    typedef ipv6-prefix {
+        // TODO should be moved to separate yang
+        type address {
+            pattern '((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}'
+                + '((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|'
+                + '(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\.){3}'
+                + '(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))'
+                + '(/(([0-9])|([0-9]{2})|(1[0-1][0-9])|(12[0-8])))';
+            pattern '(([^:]+:){6}(([^:]+:[^:]+)|(.*\..*)))|'
+                + '((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?)'
+                + '(/.+)';
+        }
+        description
+            "The ipv6-prefix type represents an IPv6 address prefix.
+             The prefix length is given by the number following the
+             slash character and must be less than or equal 128.
+             A prefix length value of n corresponds to an IP address
+             mask that has n contiguous 1-bits from the most
+             significant bit (MSB) and all other bits set to 0.
+             The IPv6 address should have all bits that do not belong
+             to the prefix set to zero.
+             The canonical format of an IPv6 prefix has all bits of
+             the IPv6 address set to zero that are not part of the
+             IPv6 prefix.  Furthermore, IPv6 address is represented
+             in the compressed format described in RFC 4291, Section
+             2.2, item 2 with the following additional rules: the ::
+             substitution must be applied to the longest sequence of
+             all-zero 16-bit chunks in an IPv6 address.  If there is
+             a tie, the first sequence of all-zero 16-bit chunks is
+             replaced by ::.  Single all-zero 16-bit chunks are not
+             compressed.  The canonical format uses lowercase
+             characters and leading zeros are not allowed.";
+        reference
+            "RFC 4291: IP Version 6 Addressing Architecture";
+    }
+
+    grouping containment-endpoint-key {
+        leaf containment {
+            type gbp-common:context-id;
+            mandatory true;
+        }
+    }
+
+    grouping address-endpoint-key {
+        leaf address {
+            type address;
+            mandatory true;
+        }
+    }
+
+    grouping endpoint-key {
+        uses containment-endpoint-key;
+        uses address-endpoint-key;
+    }
+
+    grouping has-child-endpoints {
+        list child-endpoint {
+            key "containment address";
+            uses endpoint-key;
+        }
+    }
+
+    grouping parent-child-endpoints {
+        choice parent-endpoint-choice {
+            case parent-containment-endpoint-case {
+                list parent-containment-endpoint {
+                    key "containment";
+                    uses containment-endpoint-key;
+                }
+            }
+            case parent-endpoint-case {
+                list parent-endpoint {
+                    key "containment address";
+                    uses endpoint-key;
+                }
+            }
+        }
+        uses has-child-endpoints;
+    }
+
+    grouping common-endpoint-fields {
+        leaf tenant {
+            type gbp-common:tenant-id;
+            mandatory true;
+            description
+                        "The tenant with which this endpoint is associated";
+        }
+        leaf network-containment {
+            description
+                        "The network domain associated with this endpoint's fowarding
+                        context.";
+            mandatory true;
+            type gbp-common:network-domain-id;
+        }
+        leaf-list endpoint-group {
+            type gbp-common:endpoint-group-id;
+            description
+                        "The groups associated with this endpoint";
+            ordered-by user;
+            min-elements 1;
+        }
+        leaf-list condition {
+            type gbp-common:condition-name;
+            description
+                        "The conditions associated with this endpoint";
+        }
+        leaf timestamp {
+            type int64;
+            description
+                        "The last timestamp associated with this endpoint record. This
+                        will be used for aging data in the registry.";
+        }
+    }
+
+    grouping has-endpoint-group-conditions {
+        description
+                "Base type for object with endpoint group to condition mappings.";
+
+        leaf endpoint-group {
+            description "The endpoint group conditions to assign";
+            type gbp-common:endpoint-group-id;
+        }
+        list endpoint-group-condition {
+            description
+                        "The conditions associated with this endpoint group";
+            key "condition";
+            leaf condition {
+                description "A condition name to associate.";
+                type gbp-common:condition-name;
+            }
+        }
+    }
+
+    grouping has-regular-location {
+        leaf node {
+            mandatory true;
+            type instance-identifier;
+        }
+        leaf node-connector {
+            type instance-identifier;
+        }
+    }
+
+    grouping has-external-location {
+        leaf external-node-mount-point {
+            mandatory true;
+            type instance-identifier;
+        }
+        leaf external-node-location {
+            type string; // TODO switch to external-reference
+        }
+        leaf external-node-connector {
+            type string; // TODO switch to external-reference
+        }
+    }
+
+    grouping has-location {
+        container real-location {
+            choice location-type {
+                case regular-location {
+                    uses has-regular-location;
+                }
+                case external-location {
+                    uses has-external-location;
+                }
+            }
+        }
+        container relative-location {
+            list location {
+                key "node node-connector";
+                uses has-regular-location;
+            }
+            list external-location {
+                key "external-node-mount-point external-node-connector";
+                uses has-external-location;
+            }
+        }
+    }
+
+    container endpoints {
+        description
+                "Repository for operational state data about endpoints needed
+                for policy resolution.";
+        config false;
+
+        list address-endpoints-by-containment {
+            key containment;
+            uses containment-endpoint-key;
+
+            list address-endpoint {
+                key address;
+                uses address-endpoint-key;
+
+                uses parent-child-endpoints;
+                uses common-endpoint-fields;
+                min-elements 1;
+            }
+        }
+
+        list containment-endpoint {
+            key "containment";
+            uses containment-endpoint-key;
+
+            uses has-child-endpoints;
+            uses common-endpoint-fields;
+        }
+    }
+
+    container endpoint-locations {
+        list address-endpoint-location {
+            key "containment address";
+            uses endpoint-key;
+            uses has-location;
+        }
+
+        list containment-endpoint-location {
+            key "containment";
+            uses containment-endpoint-key;
+            uses has-location;
+        }
+    }
+
+    rpc register-endpoint {
+        description
+                "Register a new endpoint into the registry. If there is already
+                an existing endpoint with the same keys, they will be overwritten
+                with the new information.";
+
+        input {
+            list address-endpoint {
+                key "containment address";
+                uses endpoint-key;
+
+                uses parent-child-endpoints;
+                uses common-endpoint-fields;
+                uses has-location;
+            }
+            list containment-endpoint {
+                key "containment";
+                uses containment-endpoint-key;
+
+                uses has-child-endpoints;
+                uses common-endpoint-fields;
+                uses has-location;
+            }
+        }
+    }
+
+    rpc unregister-endpoint {
+        description "Unregister an endpoint or endpoints from the registry.";
+
+        input {
+            list address-endpoint {
+                key "containment address";
+                uses endpoint-key;
+            }
+            list containment-endpoint {
+                key "containment";
+                uses containment-endpoint-key;
+            }
+        }
+    }
+
+}
