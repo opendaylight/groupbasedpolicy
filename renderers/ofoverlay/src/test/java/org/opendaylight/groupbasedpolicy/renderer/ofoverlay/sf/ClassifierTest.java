@@ -9,6 +9,8 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,37 +37,39 @@ public class ClassifierTest {
     Map<String, ParameterValue> params;
 
     @Before
-    public void setUp() {
+    public void init() {
         matches = new ArrayList<>(Collections.singletonList(new MatchBuilder()));
         params = new HashMap<>();
     }
 
     @Test
-    public void updateMatchTest() {
-        Long dstRangeStart = Long.valueOf(8079);
-        Long dstRangeEnd = Long.valueOf(8081);
-        params.putAll(ClassifierTestUtils.createIntValueParam(EtherTypeClassifierDefinition.ETHERTYPE_PARAM,
-                FlowUtils.IPv4));
+    public void testUpdateMatch() {
+        Long dstRangeStart = 8079L;
+        Long dstRangeEnd = 8081L;
+        Long singlePort = 80L;
+        params.putAll(
+                ClassifierTestUtils.createIntValueParam(EtherTypeClassifierDefinition.ETHERTYPE_PARAM, FlowUtils.IPv4));
         params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifierDefinition.PROTO_PARAM,
                 ClassifierTestUtils.TCP));
-        params.putAll(ClassifierTestUtils.createIntValueParam(L4ClassifierDefinition.SRC_PORT_PARAM, 80));
+        params.putAll(ClassifierTestUtils.createIntValueParam(L4ClassifierDefinition.SRC_PORT_PARAM, singlePort));
         params.putAll(ClassifierTestUtils.createRangeValueParam(L4ClassifierDefinition.DST_PORT_RANGE_PARAM,
                 dstRangeStart, dstRangeEnd));
+
         ClassificationResult result = Classifier.L4_CL.updateMatch(matches, params);
+
         assertEquals(true, result.isSuccessfull());
         assertEquals(3, result.getMatchBuilders().size());
         Set<Long> dstPorts = new HashSet<>();
         for (MatchBuilder match : result.getMatchBuilders()) {
-            assertEquals(true, ClassifierTestUtils.IPV4_ETH_TYPE.equals(match.getEthernetMatch().getEthernetType()));
-            assertEquals(true, new TcpMatchBuilder((TcpMatch) match.getLayer4Match()).getTcpSourcePort()
+            assertEquals(ClassifierTestUtils.IPV4_ETH_TYPE, match.getEthernetMatch().getEthernetType());
+            assertSame(singlePort.intValue(),
+                    new TcpMatchBuilder((TcpMatch) match.getLayer4Match()).getTcpSourcePort().getValue());
+            dstPorts.add(new TcpMatchBuilder((TcpMatch) match.getLayer4Match()).getTcpDestinationPort()
                 .getValue()
-                .intValue() == 80);
-            dstPorts.add(Long.valueOf(new TcpMatchBuilder((TcpMatch) match.getLayer4Match()).getTcpDestinationPort()
-                .getValue()
-                .longValue()));
+                .longValue());
         }
-        for (Long i = dstRangeStart; i <= dstRangeEnd; i++) {
-            assertEquals(true, dstPorts.contains((i)));
+        for (Long dstPort = dstRangeStart; dstPort <= dstRangeEnd; dstPort++) {
+            assertTrue(dstPorts.contains(dstPort));
         }
     }
 }

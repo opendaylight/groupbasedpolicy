@@ -52,12 +52,9 @@ public class EtherTypeClassifier extends Classifier {
     public List<SupportedParameterValues> getSupportedParameterValues() {
 
         List<SupportedIntValue> values = ImmutableList.of(
-                new SupportedIntValueBuilder().setValue(EtherTypeClassifierDefinition.ARP_VALUE)
-                        .build(),
-                new SupportedIntValueBuilder().setValue(EtherTypeClassifierDefinition.IPv4_VALUE)
-                        .build(),
-                new SupportedIntValueBuilder().setValue(EtherTypeClassifierDefinition.IPv6_VALUE)
-                        .build());
+                new SupportedIntValueBuilder().setValue(EtherTypeClassifierDefinition.ARP_VALUE).build(),
+                new SupportedIntValueBuilder().setValue(EtherTypeClassifierDefinition.IPv4_VALUE).build(),
+                new SupportedIntValueBuilder().setValue(EtherTypeClassifierDefinition.IPv6_VALUE).build());
         SupportedParameterValuesBuilder b = new SupportedParameterValuesBuilder();
         b.setParameterName(new ParameterName(EtherTypeClassifierDefinition.ETHERTYPE_PARAM));
         b.setParameterType(new IntBuilder().setSupportedIntValue(values).build());
@@ -69,17 +66,16 @@ public class EtherTypeClassifier extends Classifier {
     protected void checkPresenceOfRequiredParams(Map<String, ParameterValue> params) {
         if (params.get(EtherTypeClassifierDefinition.ETHERTYPE_PARAM) == null) {
             throw new IllegalArgumentException(
-                    "Parameter " + EtherTypeClassifierDefinition.ETHERTYPE_PARAM + " not specified.");
+                    "Parameter " + EtherTypeClassifierDefinition.ETHERTYPE_PARAM + " " + MSG_NOT_SPECIFIED);
         }
         if (params.get(EtherTypeClassifierDefinition.ETHERTYPE_PARAM).getIntValue() == null) {
             throw new IllegalArgumentException(
-                    "Value of " + EtherTypeClassifierDefinition.ETHERTYPE_PARAM + " parameter is not present.");
+                    "Value of " + EtherTypeClassifierDefinition.ETHERTYPE_PARAM + " " + MSG_PARAMETER_IS_NOT_PRESENT);
         }
     }
 
     @Override
-    protected List<MatchBuilder> update(List<MatchBuilder> matches,
-            Map<String, ParameterValue> params) {
+    protected List<MatchBuilder> update(List<MatchBuilder> matches, Map<String, ParameterValue> params) {
         Long type = params.get(EtherTypeClassifierDefinition.ETHERTYPE_PARAM).getIntValue();
         for (MatchBuilder match : matches) {
             EthernetMatchBuilder em;
@@ -97,11 +93,11 @@ public class EtherTypeClassifier extends Classifier {
 
     private void equalOrNotSetValidation(EthernetType ethTypeInMatch, long paramValue) {
         if (ethTypeInMatch != null) {
-            if (paramValue != ethTypeInMatch.getType().getValue().longValue()) {
-                throw new IllegalArgumentException(
-                        "Classification conflict detected at " + EtherTypeClassifierDefinition.ETHERTYPE_PARAM + " parameter for values " + ethTypeInMatch
-                                .getType()
-                                .getValue() + " and " + paramValue + ". It is not allowed " + "to assign different values to the same parameter among all the classifiers within one rule.");
+            if (paramValue != ethTypeInMatch.getType().getValue()) {
+                throw new IllegalArgumentException(MSG_CLASSIFICATION_CONFLICT_DETECTED + " at "
+                        + EtherTypeClassifierDefinition.ETHERTYPE_PARAM + " parameter for values "
+                        + ethTypeInMatch.getType().getValue() + " and " + paramValue + ". It is not allowed "
+                        + "to assign different values to the same parameter among all the classifiers within one rule.");
             }
         }
     }

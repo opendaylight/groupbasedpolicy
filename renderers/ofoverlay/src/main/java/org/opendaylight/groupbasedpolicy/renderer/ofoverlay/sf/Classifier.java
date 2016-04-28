@@ -25,6 +25,16 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
  */
 public abstract class Classifier {
 
+    // Messages for exceptions (also for exception tests)
+    public static final String MSG_CLASSIFICATION_CONFLICT_DETECTED = "Classification conflict detected";
+    public static final String MSG_NOT_SPECIFIED = "not specified";
+    public static final String MSG_PARAMETER_IS_NOT_PRESENT = "parameter is not present";
+    public static final String MSG_MUTUALLY_EXCLUSIVE = "mutually exclusive";
+    public static final String MSG_RANGE_VALUE_MISMATCH = "Range value mismatch.";
+    public static final String MSG_NOT_SUPPORTED = "not supported";
+    public static final String MSG_IS_MISSING = "is missing";
+    public static final String MSG_NOT_PRESENT = "not present";
+
     protected final Classifier parent;
 
     public static final EtherTypeClassifier ETHER_TYPE_CL = new EtherTypeClassifier(null);
@@ -58,7 +68,7 @@ public abstract class Classifier {
 
     /**
      * The result represents supported parameters for the classifier by renderer
-     * 
+     *
      * @return list of supported parameters by the classifier
      */
     public abstract List<SupportedParameterValues> getSupportedParameterValues();
@@ -73,8 +83,8 @@ public abstract class Classifier {
      */
     public final ClassificationResult updateMatch(List<MatchBuilder> matches, Map<String, ParameterValue> params) {
         if (params == null) {
-            return new ClassificationResult("Classifier-instance with classifier-definition-id: " + this.getId()
-                    + ". No parameters present.");
+            return new ClassificationResult(
+                    "Classifier-instance with classifier-definition-id: " + this.getId() + ". No parameters present.");
         }
         List<MatchBuilder> matchBuilders = matches;
         try {
@@ -110,10 +120,13 @@ public abstract class Classifier {
     }
 
     /**
-     * Checks presence of required {@code params} in order to decide if classifier can update {@code matches} properly
-     * in  method {@link #update(List, Map)}
-     * @param  params  inserted parameters, not null
-     * @throws  IllegalArgumentException when any of required {@code params} is not present, see {@link #updateMatch(List, Map)}
+     * Checks presence of required {@code params} in order to decide if classifier can update
+     * {@code matches} properly
+     * in method {@link #update(List, Map)}
+     * 
+     * @param params inserted parameters, not null
+     * @throws IllegalArgumentException when any of required {@code params} is not present, see
+     *         {@link #updateMatch(List, Map)}
      */
     protected abstract void checkPresenceOfRequiredParams(Map<String, ParameterValue> params);
 
