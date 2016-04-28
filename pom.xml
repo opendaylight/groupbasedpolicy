@@ -22,7 +22,7 @@
     <module>neutron-mapper</module>
     <module>neutron-ovsdb</module>
     <module>ui-backend</module>
-    <module>groupbasedpolicy-ui</module>
+    <module>groupbasedpolicy-old-ui</module>
     <module>distribution-karaf</module>
     <module>features</module>
     <module>sxp-mapper</module>

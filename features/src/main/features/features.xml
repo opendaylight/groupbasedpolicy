@@ -157,7 +157,7 @@
         <feature version="${dlux.version}">odl-dlux-core</feature>
         <feature version="${dlux.version}">odl-dlux-yangvisualizer</feature>
         <feature version="${project.version}">odl-groupbasedpolicy-uibackend</feature>
-        <bundle>mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-ui-bundle/{{VERSION}}</bundle>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-old-ui-bundle/{{VERSION}}</bundle>
     </feature>
 
     <!--

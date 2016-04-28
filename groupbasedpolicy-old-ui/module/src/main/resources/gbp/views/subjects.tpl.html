@@ -1,0 +1,31 @@
+<div ng-controller="subjectCtrl" ng-init="init()">
+
+    <div ng-include src="view_path+'parts/crud.tpl.html'"></div>
+
+    <section ng-show="internalView.subject">
+        <form name="subjectForm" novalidate="novalidate">
+            <i class="icon-remove align-right" ng-click="close()"></i>
+
+            <div class="rowWrapper">
+                <label class="block basicLabel"><span>Name:</span>
+                    <i class="icon-exclamation-sign red" tooltip="{{subjectForm.name.$error.required ? 'Required field' : subjectForm.name.$error.pattern ? 'Value must start with letter followed by letters and digits without space' : ''}}" ng-show="subjectForm.name.$error.required || subjectForm.name.$error.pattern"></i>
+                </label>
+                <input class="form-control" type="text" ng-model="newSubjectObj.name" name="name" ng-required="true" ng-disabled="internalView.edit !== 'add'" ng-pattern="/^[a-zA-Z]([a-zA-Z0-9\-_.])*$/"/>
+            </div>
+
+            <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newSubjectObj['order']">
+                <label class="block basicLabel"><span>Order:</span>
+                    <i class="icon-exclamation-sign red" tooltip="Required field" ng-show="subjectForm.order.$error.required"></i>
+                    <i class="icon-exclamation-sign red" tooltip="Invalid pattern" ng-show="errors.int32 && !subjectForm.order.$error.required"></i>
+                </label>
+                <input class="form-control" type="text" name="order" ng-required="true" name="order" ng-model="newSubjectObj.order" ng-disabled="internalView.edit === 'view'" ng-change="validate(newSubjectObj.order, errors)"/>
+            </div>
+
+            <button class="btn btn-primary col-md-12" ng-click="save()" ng-hide="internalView.edit === 'view'">Save</button>
+        </form>
+    </section>
+    
+    <section class="formWrapper clearfix" ng-show="selectedSubject">
+        <div ng-include src="view_path+'rules.tpl.html'"></div>
+    </section>
+</div>

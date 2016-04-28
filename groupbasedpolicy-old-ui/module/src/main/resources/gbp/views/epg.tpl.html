@@ -1,0 +1,64 @@
+<div ng-controller="epgCtrl" ng-init="init()">
+    <h2 class="text-center">Endpoint groups</h2>
+
+    <div ng-include src="view_path+'parts/crud.tpl.html'"></div>
+
+    <section class="formWrapper clearfix" ng-show="internalView.epg">
+        <form name="epgForm" novalidate="novalidate">
+            <i class="icon-remove align-right" ng-click="close()"></i>
+
+            <div class="rowWrapper">
+                <label class="block basicLabel">Id:</label>
+                <input class="form-control" type="text" ng-model="newEpgObj.id" ng-disabled="internalView.edit !== 'add'"/>
+            </div>
+
+            <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newEpgObj['name']">
+                <label class="block basicLabel">Name:
+                    <i class="icon-exclamation-sign red" tooltip="{{epgForm.name.$error.required ? 'Required field' : epgForm.name.$error.pattern ? 'Value must start with letter followed by letters and digits without space' : ''}}" ng-show="epgForm.name.$error.required || epgForm.name.$error.pattern"></i>
+                </label>
+                <input class="form-control" type="text" name="name" ng-model="newEpgObj.name" ng-required="true" ng-disabled="internalView.edit === 'view'" ng-pattern="/^[a-zA-Z]([a-zA-Z0-9\-_.])*$/"/>
+            </div>
+
+            <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newEpgObj['description']">
+                <label class="block basicLabel">Description:</label>
+                <input class="form-control" type="text" ng-model="newEpgObj.description" ng-disabled="internalView.edit === 'view'"/>
+            </div>
+
+            <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newEpgObj['intra-group-policy']">
+                <label class="block basicLabel">Intra group policy:</label>
+                <select class="form-control" ng-model="newEpgObj['intra-group-policy']" ng-options="opt for opt in igpOpts" ng-disabled="internalView.edit === 'view'">
+                    <option>--</option>
+                </select>
+            </div>
+
+            <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newEpgObj['network-domain']">
+                <label class="block basicLabel">Network domain:
+                    <i class="icon-exclamation-sign red" tooltip="Invalid pattern" ng-show="epgForm.netDomain.$error.pattern"></i>
+                </label>
+                <input class="form-control" type="text" ng-model="newEpgObj['network-domain']" name="netDomain" ng-pattern="/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/" ng-disabled="internalView.edit === 'view'"/>
+            </div>
+
+            <div class="rowWrapper" ng-hide="internalView.edit === 'view' && !newEpgObj['parent']">
+                <label class="block basicLabel">Parent:</label>
+                <select class="form-control" ng-model="newEpgObj.parent" ng-options="d.id as getDisplayLabel(d, displayLabel) for d in list">
+                    <option>--</option>
+                </select>
+            </div>
+
+            <button class="btn btn-primary col-md-12" ng-click="save()" ng-hide="internalView.edit === 'view'">Save</button>
+        </form>
+    </section>
+
+    <section class="formWrapper clearfix" ng-show="selectedEpg">
+        <div ng-include src="view_path+'cns.tpl.html'"></div>
+    </section>
+
+    <section class="formWrapper clearfix" ng-show="selectedEpg">
+        <div ng-include src="view_path+'pns.tpl.html'"></div>
+    </section>
+
+    <button class="btn btn-primary  bottom-buttons full-width wizard-button" ng-click="showWizard('accessModelWizard')"><i class="icon-magic"></i>Access Model Wizard</button>
+    <button class="btn btn-primary col-md-12 bottom-buttons home" ng-click="toggleExpandedMM('main')">Home</button>
+    <button class="btn btn-primary col-md-12 bottom-buttons back" ng-click="setViewExpand('policyRendererView', 'basic', true); setBreadcrumb('l3', null, false);">Back</button>
+
+</div>

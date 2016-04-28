@@ -1,0 +1,175 @@
+<div ng-controller="l3ContextCtrl" ng-init="init()">
+    <div ng-include src="view_path+'parts/crud.tpl.html'"></div>
+
+    <section class="formWrapper clearfix" ng-show="view.l3context">
+        <form name="l3ContextForm" novalidate="novalidate">
+            <i class="icon-remove align-right" ng-click="close()"></i>
+            <label class="block">Add L3 Context</label>
+
+
+            <div class="rowWrapper">
+                <label class="block basicLabel">Id:</label>
+                <input class="form-control" type="text" ng-model="newL3ContextObj.id" disabled />
+            </div>
+
+            <div class="rowWrapper">
+                <label class="block basicLabel">Name:
+                    <i class="icon-exclamation-sign red" tooltip="{{l3ContextForm.name.$error.required ? 'Required field' : l3ContextForm.name.$error.pattern ? 'Value must start with letter followed by letters and digits without space' : ''}}" ng-show="l3ContextForm.name.$error.required || l3ContextForm.name.$error.pattern"></i>
+                </label>
+                <input class="form-control" type="text" ng-model="newL3ContextObj.name" name="name" ng-required="true" ng-disabled="view.edit === 'view'" ng-pattern="/^[a-zA-Z]([a-zA-Z0-9\-_.])*$/"/>
+            </div>
+
+            <div class="rowWrapper" ng-hide="view.edit === 'view' && !newL3ContextObj.description">
+                <label class="block basicLabel">Description:</label>
+                <input class="form-control" type="text" ng-model="newL3ContextObj.description" ng-disabled="view.edit === 'view'" />
+            </div>
+
+            <button class="btn btn-primary col-md-12" ng-click="save()" ng-hide="view.edit === 'view'">Save</button>
+        </form>
+    </section>
+</div>
+
+<br/><br/>
+
+<div ng-controller="l2BridgeCtrl" ng-init="init()">
+
+    <div ng-include src="view_path+'parts/crud.tpl.html'"></div>
+
+    <section class="formWrapper clearfix" ng-show="view.l2bridge">
+        <form name="l2BridgeForm" novalidate="novalidate">
+            <i class="icon-remove align-right" ng-click="close()"></i>
+            <label class="block">Add L2 Bridge Domain</label>
+
+            <div class="rowWrapper">
+                <label class="block basicLabel">Id:</label>
+                <input class="form-control" type="text" ng-model="newL2BridgeObj.id" disabled />
+            </div>
+
+            <div class="rowWrapper">
+                <label class="block basicLabel">Name:
+                    <i class="icon-exclamation-sign red" tooltip="{{l2BridgeForm.name.$error.required ? 'Required field' : l2BridgeForm.name.$error.pattern ? 'Value must start with letter followed by letters and digits without space' : ''}}" ng-show="l2BridgeForm.name.$error.required || l2BridgeForm.name.$error.pattern"></i>
+                </label>
+                <input class="form-control" type="text" ng-model="newL2BridgeObj.name" name="name" ng-required="true" ng-disabled="view.edit === 'view'" ng-pattern="/^[a-zA-Z]([a-zA-Z0-9\-_.])*$/"/>
+            </div>
+
+            <div class="rowWrapper" ng-hide="view.edit === 'view' && !newL2BridgeObj.description">
+                <label class="block basicLabel">Description:</label>
+                <input class="form-control" type="text" ng-model="newL2BridgeObj.description" ng-disabled="view.edit === 'view'" />
+            </div>
+
+            <div class="rowWrapper" ng-hide="view.edit === 'view' && !newL2BridgeObj.parent">
+                <label class="block basicLabel">Parent:</label>
+                <select class="form-control" ng-model="newL2BridgeObj.parent" ng-options="d.id as getDisplayLabel(d, l3context.labels) for d in l3context.options" ng-disabled="view.edit === 'view'">
+                    <option value="">Select option</option>
+                </select>
+            </div>
+
+            <button class="btn btn-primary col-md-12" ng-click="save()" ng-hide="view.edit === 'view'">Save</button>
+        </form>
+    </section>
+</div>
+
+<br/><br/>
+
+<div ng-controller="l2FloodCtrl" ng-init="init()">
+
+    <div ng-include src="view_path+'parts/crud.tpl.html'"></div>
+
+    <section class="formWrapper clearfix" ng-show="view.l2flood">
+        <form name="l2FloodForm" novalidate="novalidate">
+            <i class="icon-remove align-right" ng-click="close()"></i>
+            <label class="block">Add L2 Flood Domain</label>
+
+            <div class="rowWrapper">
+                <label class="block basicLabel">Id:</label>
+                <input class="form-control" type="text" ng-model="newL2FloodObj.id" disabled />
+            </div>
+
+            <div class="rowWrapper">
+                <label class="block basicLabel">Name:
+                    <i class="icon-exclamation-sign red" tooltip="{{l2FloodForm.name.$error.required ? 'Required field' : l2FloodForm.name.$error.pattern ? 'Value must start with letter followed by letters and digits without space' : ''}}" ng-show="l2FloodForm.name.$error.required || l2FloodForm.name.$error.pattern"></i>
+                </label>
+                <input class="form-control" type="text" ng-model="newL2FloodObj.name" name="name" ng-required="true" ng-disabled="view.edit === 'view'" ng-pattern="/^[a-zA-Z]([a-zA-Z0-9\-_.])*$/"/>
+            </div>
+
+            <div class="rowWrapper" ng-hide="view.edit === 'view' && !newL2FloodObj.description">
+                <label class="block basicLabel">Description:</label>
+                <input class="form-control" type="text" ng-model="newL2FloodObj.description" ng-disabled="view.edit === 'view'" />
+            </div>
+
+            <div class="rowWrapper" ng-hide="view.edit === 'view' && !newL2FloodObj.parent">
+                <label class="block basicLabel">Parent:</label>
+                <select class="form-control" ng-model="newL2FloodObj.parent" ng-options="d.id as getDisplayLabel(d, l2bridge.labels) for d in l2bridge.options" ng-disabled="view.edit === 'view'">
+                    <option value="">Select option</option>
+                </select>
+            </div>
+
+            <button class="btn btn-primary col-md-12" ng-click="save()" ng-hide="view.edit === 'view'">Save</button>
+        </form>
+    </section>
+</div>
+
+<br/><br/>
+
+<div ng-controller="subnetCtrl" ng-init="init()">
+
+    <div ng-include src="view_path+'parts/crud.tpl.html'"></div>
+
+    <section class="formWrapper clearfix" ng-show="view.subnet">
+        <form name="subnetForm" novalidate="novalidate">
+            <i class="icon-remove align-right" ng-click="close()"></i>
+            <label class="block">Add Subnet</label>
+
+            <div class="rowWrapper">
+                <label class="block basicLabel">Id:</label>
+                <input class="form-control" type="text" ng-model="newSubnetObj.id" disabled />
+            </div>
+
+            <div class="rowWrapper">
+                <label class="block basicLabel">Name:
+                    <i class="icon-exclamation-sign red" tooltip="{{subnetForm.name.$error.required ? 'Required field' : subnetForm.name.$error.pattern ? 'Value must start with letter followed by letters and digits without space' : ''}}" ng-show="subnetForm.name.$error.required || subnetForm.name.$error.pattern"></i>
+                </label>
+                <input class="form-control" type="text" ng-model="newSubnetObj.name" name="name" ng-required="true" ng-disabled="view.edit === 'view'" ng-pattern="/^[a-zA-Z]([a-zA-Z0-9\-_.])*$/"/>
+            </div>
+
+            <div class="rowWrapper" ng-hide="view.edit === 'view' && !newSubnetObj.description">
+                <label class="block basicLabel">Description:</label>
+                <input class="form-control" type="text" ng-model="newSubnetObj.description" ng-disabled="view.edit === 'view'"/>
+            </div>
+
+            <div class="rowWrapper" ng-hide="view.edit === 'view' && !newSubnetObj.parent">
+                <label class="block basicLabel">Parent:</label>
+                <select class="form-control" ng-model="newSubnetObj.parent" ng-options="d.id as getDisplayLabel(d, l2L3List.labels) for d in l2L3List.options" ng-disabled="view.edit === 'view'">
+                    <option value="">Select option</option>
+                </select>
+            </div>
+
+            <div class="rowWrapper" ng-hide="view.edit === 'view' && !newSubnetObj['ip-prefix']">
+                <label class="block basicLabel">IP prefix:
+                    <i class="icon-exclamation-sign red" tooltip="Invalid pattern" ng-show="subnetForm.ipPrefix.$error.pattern"></i>
+                </label>
+                <input class="form-control" type="text" ng-model="newSubnetObj['ip-prefix']" name="ipPrefix" ng-pattern="/^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])/(([0-9])|([1-2][0-9])|(3[0-2]))$/" ng-disabled="view.edit === 'view'" />
+            </div>
+
+            <div class="rowWrapper" ng-hide="view.edit === 'view' && !newSubnetObj['virtual-router-ip']">
+                <label class="block basicLabel">Virtual router:
+                    <i class="icon-exclamation-sign red" tooltip="Invalid pattern" ng-show="subnetForm.virtualRouter.$error.pattern"></i>
+                </label>
+                <input class="form-control" type="text" ng-model="newSubnetObj['virtual-router-ip']" name="virtualRouter" ng-pattern="/^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\p{N}\p{L}]+)?$/"
+                ng-model="newSubnetObj['virtual-router-ip']" ng-disabled="view.edit === 'view'" />
+            </div>
+
+            <button class="btn btn-primary col-md-12" ng-click="save()" ng-hide="view.edit === 'view'">Save</button>
+        </form>
+    </section>
+
+    <section class="formWrapper clearfix" ng-show="selectedSubnet">
+        <div ng-include src="view_path+'gateway.tpl.html'"></div>
+    </section>
+
+    <div class="formWrapper clearfix">
+        <button class="btn btn-primary  bottom-buttons full-width wizard-button" ng-click="showWizard('accessModelWizard')"><i class="icon-magic"></i>Access Model Wizard</button>
+        <button class="btn btn-primary col-md-12 bottom-buttons home" ng-click="toggleExpandedMM('main')">Home</button>
+        <button class="btn btn-primary col-md-12 bottom-buttons back" ng-click="setViewExpand('policyRendererView', 'basic', true); setBreadcrumb('l3', null, false);">Back</button>
+    </div>
+</div>

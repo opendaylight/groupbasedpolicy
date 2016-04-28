@@ -63,7 +63,7 @@
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
-        <artifactId>groupbasedpolicy-ui-bundle</artifactId>
+        <artifactId>groupbasedpolicy-old-ui-bundle</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
