@@ -1,14 +1,14 @@
-var modules = ['app/gbp/gbp.module',
-               'app/gbp/gbp.services'
+var modules = ['app/gbp-old/gbp.module',
+               'app/gbp-old/gbp.services'
                ];
 
 
-define(modules, function(gbp) {
+define(modules, function(gbpOld) {
 
-    gbp.register.controller('gbpCtrl', ['$scope', '$rootScope', 'GBPTenantServices','DesignGbpFactory', 'GBPConstants',
+    gbpOld.register.controller('gbpCtrl', ['$scope', '$rootScope', 'GBPTenantServices','DesignGbpFactory', 'GBPConstants',
         function ($scope, $rootScope, GBPTenantServices, DesignGbpFactory, GBPConstants) {
             $rootScope['section_logo'] = 'logo_gbp';
-            $scope.view_path =  'src/app/gbp/views/';
+            $scope.view_path =  'src/app/gbp-old/views/';
 
             $scope.mainView = {
                 main: true,
@@ -161,7 +161,7 @@ define(modules, function(gbp) {
 
     }]);
 
-    gbp.register.controller('governanceCtrl', ['$rootScope','$scope',
+    gbpOld.register.controller('governanceCtrl', ['$rootScope','$scope',
         function ($rootScope, $scope) {
             $scope.menuTpl = 'main-menu';
             $scope.menuBox = null;
@@ -175,7 +175,7 @@ define(modules, function(gbp) {
             $scope.toggleExpanded = function(expand, menu, tplType){
                 var type = tplType ? tplType : 'contentTpl';
                 $scope.menuBox = null;
-                
+
                 $scope[type] = expand;
 
                 if ( menu && menu === false ) {
@@ -183,7 +183,7 @@ define(modules, function(gbp) {
                 }
             };
 
-            
+
 
             $scope.setViewContent = function(tplName, data, broadcast, tplType) {
 
@@ -218,7 +218,7 @@ define(modules, function(gbp) {
                 if ( angular.isFunction(objClickAction[tplName]) ) {
                     objClickAction[tplName]();
                 }
-                
+
             };
 
 
@@ -236,7 +236,7 @@ define(modules, function(gbp) {
 
     }]);
 
-    gbp.register.controller('boxStaticCtrl',['$scope',
+    gbpOld.register.controller('boxStaticCtrl',['$scope',
         function($scope){
 
         $scope.selectedObj = null;
@@ -269,7 +269,7 @@ define(modules, function(gbp) {
 
     }]);
 
-    gbp.register.controller('graphCtrl', ['$scope', function($scope){
+    gbpOld.register.controller('graphCtrl', ['$scope', function($scope){
         var paper = null,
             paperScale = 1;
 
@@ -284,7 +284,7 @@ define(modules, function(gbp) {
             paper.scale(paperScale, paperScale);
         };
 
-        
+
 
         $scope.loadMouseScrollEvent = function(){
             /*mouse wheel event for zooming*/
@@ -305,10 +305,10 @@ define(modules, function(gbp) {
             else {graph.attachEvent("onmousewheel", MouseWheelHandler);}
             /*mouse wheel event for zooming - end*/
         };
-        
+
     }]);
 
-    gbp.register.controller('expressedPolicyCtrl', ['$scope', 'JointGraphFactory', 'JointGraphOffsetFactory', 'GBPConstants',
+    gbpOld.register.controller('expressedPolicyCtrl', ['$scope', 'JointGraphFactory', 'JointGraphOffsetFactory', 'GBPConstants',
         function ($scope, JointGraphFactory, JointGraphOffsetFactory, GBPConstants) {
             var paper = JointGraphFactory.createGraph(),
                 epgItems = [],
@@ -324,7 +324,7 @@ define(modules, function(gbp) {
                 }
             };
 
-            paper.on('cell:pointerdown', function(cell) { 
+            paper.on('cell:pointerdown', function(cell) {
                 if ( angular.isFunction(objClickAction[cell.model.attributes.objType]) ) {
                     objClickAction[cell.model.attributes.objType](cell.model.attributes.objData);
                 }
@@ -410,7 +410,7 @@ define(modules, function(gbp) {
 
                             createEpgLinks(e, item, contractItems);
                         });
-                        
+
                     }
 
                     offsetHobj.epg = JointGraphOffsetFactory.getCurrentOffset(itemsArray.contract, 'y');
@@ -431,11 +431,11 @@ define(modules, function(gbp) {
                     JointGraphFactory.reloadGraph(paper.model);
                 }
             });
-            
+
             loadData();
     }]);
 
-    gbp.register.controller('deliveredPolicyCtrl', ['$scope', 'GPBServices', 'JointGraphFactory', 'GBPGovernanceServices', 'JointGraphOffsetFactory', 'GBPConstants',
+    gbpOld.register.controller('deliveredPolicyCtrl', ['$scope', 'GPBServices', 'JointGraphFactory', 'GBPGovernanceServices', 'JointGraphOffsetFactory', 'GBPConstants',
         function ($scope, GPBServices, JointGraphFactory, GBPGovernanceServices, JointGraphOffsetFactory, GBPConstants) {
             var paper = JointGraphFactory.createGraph(),
                 providerItems = {},
@@ -488,7 +488,7 @@ define(modules, function(gbp) {
                        $scope.setViewContent('epg-detail', { ep: data, epList: getEpList() }, 'SET_SELECTED_EPG','contentTpl');
                 },
                 subject: function(data) {
-                        var obj = { subject: data, 
+                        var obj = { subject: data,
                                     subjList: Object.keys(subjectItems).map(function (k) {
                                                 return subjectItems[k].attributes.objData;
                                             }),
@@ -500,13 +500,13 @@ define(modules, function(gbp) {
                 }
             };
 
-            paper.on('cell:pointerdown', function(cell) { 
+            paper.on('cell:pointerdown', function(cell) {
                 if ( angular.isFunction(objClickAction[cell.model.attributes.objType]) ) {
                     objClickAction[cell.model.attributes.objType](cell.model.attributes.objData);
                 }
             });
 
-            paper.on('cell:pointerdblclick', function(cell) { 
+            paper.on('cell:pointerdblclick', function(cell) {
                 objDblClickAction[cell.model.attributes.objType](cell.model.attributes.objData);
             });
 
@@ -528,8 +528,8 @@ define(modules, function(gbp) {
                     consumerItems = {};
                     subjectItems = {};
 
-                    var classifierInstances = $scope.selectedTenant['subject-feature-instances'] && 
-                                          $scope.selectedTenant['subject-feature-instances']['classifier-instance'] && 
+                    var classifierInstances = $scope.selectedTenant['subject-feature-instances'] &&
+                                          $scope.selectedTenant['subject-feature-instances']['classifier-instance'] &&
                                           $scope.selectedTenant['subject-feature-instances']['classifier-instance'].length > 0 ? $scope.selectedTenant['subject-feature-instances']['classifier-instance'] : [];
 
                     var offsetObj = {
@@ -634,7 +634,7 @@ define(modules, function(gbp) {
             loadData();
     }]);
 
-    gbp.register.controller('subjectDetailCtrl', ['$scope', 'GPBServices', 'JointGraphFactory', 'GBPGovernanceServices', 'JointGraphOffsetFactory', 'GBPConstants',
+    gbpOld.register.controller('subjectDetailCtrl', ['$scope', 'GPBServices', 'JointGraphFactory', 'GBPGovernanceServices', 'JointGraphOffsetFactory', 'GBPConstants',
         function ($scope, GPBServices, JointGraphFactory, GBPGovernanceServices, JointGraphOffsetFactory, GBPConstants) {
             $scope.selectedSubject = null;
             $scope.subjectList = [];
@@ -649,7 +649,7 @@ define(modules, function(gbp) {
                 JointGraphFactory.addItem(paper.model, linkItem);
             };
 
-            paper.on('cell:pointerdown', function(cell) { 
+            paper.on('cell:pointerdown', function(cell) {
                 var objClickAction = {
                     subject: function(data){
                         $scope.setViewContent('subject-content-static',data, 'SET_SEL_STA_OBJ', 'menuBox');
@@ -722,7 +722,7 @@ define(modules, function(gbp) {
             loadData();
     }]);
 
-    gbp.register.controller('epgDetailCtrl', ['$scope', 'JointGraphFactory', 'TopologyDataLoaders', 'GBPEpgServices', 'JointGraphOffsetFactory', 'GBPConstants',
+    gbpOld.register.controller('epgDetailCtrl', ['$scope', 'JointGraphFactory', 'TopologyDataLoaders', 'GBPEpgServices', 'JointGraphOffsetFactory', 'GBPConstants',
         function ($scope, JointGraphFactory, TopologyDataLoaders, GBPEpgServices, JointGraphOffsetFactory, GBPConstants) {
             var paper = JointGraphFactory.createGraph(),
                 epgItem = {},
@@ -743,7 +743,7 @@ define(modules, function(gbp) {
                 loadData();
             };
 
-            paper.on('cell:pointerdown', function(cell) { 
+            paper.on('cell:pointerdown', function(cell) {
                 var objClickAction = {
                     ep: function(data){
                         $scope.setViewContent('ep-content-static',data, 'SET_SEL_STA_OBJ', 'menuBox');
@@ -811,9 +811,9 @@ define(modules, function(gbp) {
             // init();
     }]);
 
-    gbp.register.controller('policyRendererCtrl', ['$scope', '$http', '$timeout', 'PGNServices', 'TopoServices', 'GBPTenantServices', 'GBPConstants', 'JointGraphFactory','GBPJointGraphBuilder',
+    gbpOld.register.controller('policyRendererCtrl', ['$scope', '$http', '$timeout', 'PGNServices', 'TopoServices', 'GBPTenantServices', 'GBPConstants', 'JointGraphFactory','GBPJointGraphBuilder',
         function ($scope, $http, $timeout, PGNServices, TopoServices, GBPTenantServices, GBPConstants, JointGraphFactory, GBPJointGraphBuilder) {
-            
+
             $scope.topologyData = { nodes: [], links: [] };
             $scope.topologyType = null;
             $scope.topologyArgs = {};
@@ -899,19 +899,19 @@ define(modules, function(gbp) {
                 errors.int32 = !(parseInt(value) >= -2147483648 && parseInt(value) <= 2147483647);
             };
 
-            
+
 
             $scope.validateForm = function(form) {
                 return form.$valid;
             };
-          
+
             $scope.$on('GBP_TENANT_RELOAD', function(e, obj){
                 $scope.selectedTenant = obj;
             });
 
     }]);
 
-    gbp.register.controller('linkDataCtrl',['$scope', function($scope){
+    gbpOld.register.controller('linkDataCtrl',['$scope', function($scope){
         $scope.showTable = false;
 
         $scope.show = function(){
@@ -921,7 +921,7 @@ define(modules, function(gbp) {
         $scope.close = function(){
             $scope.showTable = false;
         };
-        
+
         $scope.$on('SET_LINK_DATA', function(e, obj){
            $scope.linkData = obj;
            $scope.show();
@@ -929,7 +929,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('crudCtrl',['$scope',  function($scope){
+    gbpOld.register.controller('crudCtrl',['$scope',  function($scope){
         $scope.selectedObj = null;
         $scope.label = '';
         $scope.q = {};
@@ -953,7 +953,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('contractCtrl', ['$scope','GBPContractServices', '$filter', function($scope, GBPContractServices, $filter){
+    gbpOld.register.controller('contractCtrl', ['$scope','GBPContractServices', '$filter', function($scope, GBPContractServices, $filter){
         $scope.list = [];
         $scope.selectedContract = null;
         $scope.newContractObj = GBPContractServices.createObj();
@@ -981,7 +981,7 @@ define(modules, function(gbp) {
             if ( $scope.selectedTenant ) {
                 $scope.selectedContract = null;
                 path = GBPContractServices.createPathObj($scope.selectedTenant.id);
-                
+
                 GBPContractServices.load(path, function(data){
                     $scope.list = data;
                     // $scope.$broadcast('GBP_CONTRACT_RELOAD');
@@ -1075,7 +1075,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('clauseCtrl', ['$scope','GBPClauseServices', 'GBPSubjectServices', 
+    gbpOld.register.controller('clauseCtrl', ['$scope','GBPClauseServices', 'GBPSubjectServices',
         function($scope, GBPClauseServices, GBPSubjectServices){
         $scope.list = [];
         $scope.selectedClause = null;
@@ -1136,7 +1136,7 @@ define(modules, function(gbp) {
         $scope.init = function() {
             if ( $scope.selectedContract ) {
                 path = GBPClauseServices.createPathObj($scope.selectedTenant.id, $scope.selectedContract.id);
-                
+
                 GBPClauseServices.load(path, function(data){
                     $scope.list = data;
                 }, function(){
@@ -1186,7 +1186,7 @@ define(modules, function(gbp) {
                 $scope.internalView.clause = false;
                 $scope.internalView.edit = "view";
             }
-            
+
             if($scope.internalView.clause) {
                 angular.copy(selectedObj, $scope.newClauseObj);
             }
@@ -1225,7 +1225,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('subjectCtrl', ['$scope','GBPSubjectServices', '$filter', function($scope, GBPSubjectServices, $filter){
+    gbpOld.register.controller('subjectCtrl', ['$scope','GBPSubjectServices', '$filter', function($scope, GBPSubjectServices, $filter){
         $scope.list = [];
         $scope.selectedSubject = null;
         $scope.newSubjectObj = GBPSubjectServices.createObj();
@@ -1254,7 +1254,7 @@ define(modules, function(gbp) {
             if ( $scope.selectedContract ) {
                 $scope.selectedSubject = null;
                 path = GBPSubjectServices.createPathObj($scope.selectedTenant.id, $scope.selectedContract.id);
-                
+
                 GBPSubjectServices.load(path, function(data){
                     $scope.list = data;
                     $scope.sendReloadEventFromRoot('GBP_SUBJECT_RELOAD');
@@ -1345,7 +1345,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('ruleCtrl', ['$scope','GBPRuleServices', '$filter', function($scope, GBPRuleServices, $filter){
+    gbpOld.register.controller('ruleCtrl', ['$scope','GBPRuleServices', '$filter', function($scope, GBPRuleServices, $filter){
         $scope.list = [];
         $scope.selectedRule = null;
         $scope.newRuleObj = GBPRuleServices.createObj();
@@ -1374,7 +1374,7 @@ define(modules, function(gbp) {
             if ( $scope.selectedSubject ) {
                 $scope.selectedRule = null;
                 path = GBPRuleServices.createPathObj($scope.selectedTenant.id, $scope.selectedContract.id, $scope.selectedSubject.name);
-                
+
                 GBPRuleServices.load(path, function(data){
                     $scope.list = data;
                 }, function(){
@@ -1459,7 +1459,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('actionRefCtrl', ['$scope','GBPActionRefsServices', 'GBPActionInstanceServices', '$filter', function($scope, GBPActionRefsServices, GBPActionInstanceServices, $filter){
+    gbpOld.register.controller('actionRefCtrl', ['$scope','GBPActionRefsServices', 'GBPActionInstanceServices', '$filter', function($scope, GBPActionRefsServices, GBPActionInstanceServices, $filter){
         $scope.list = [];
         $scope.selectedActionRef = null;
         $scope.newActionRefObj = GBPActionRefsServices.createObj();
@@ -1499,7 +1499,7 @@ define(modules, function(gbp) {
             if ( $scope.selectedRule ) {
                 $scope.selectedActionRef = null;
                 path = GBPActionRefsServices.createPathObj($scope.selectedTenant.id, $scope.selectedContract.id, $scope.selectedSubject.name, $scope.selectedRule.name);
-                
+
                 GBPActionRefsServices.load(path, function(data){
                     $scope.list = data;
                 }, function(){
@@ -1590,7 +1590,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('classifierRefCtrl', ['$scope','GBPClassifierRefsServices', 'GBPClassifierInstanceServices', '$filter', function($scope, GBPClassifierRefsServices, GBPClassifierInstanceServices, $filter){
+    gbpOld.register.controller('classifierRefCtrl', ['$scope','GBPClassifierRefsServices', 'GBPClassifierInstanceServices', '$filter', function($scope, GBPClassifierRefsServices, GBPClassifierInstanceServices, $filter){
         $scope.list = [];
         $scope.selectedClassifierRef = null;
         $scope.newClassifierRefObj = GBPClassifierRefsServices.createObj();
@@ -1632,7 +1632,7 @@ define(modules, function(gbp) {
             if ( $scope.selectedRule ) {
                 $scope.selectedClassifierRef = null;
                 path = GBPClassifierRefsServices.createPathObj($scope.selectedTenant.id, $scope.selectedContract.id, $scope.selectedSubject.name, $scope.selectedRule.name);
-                
+
 
 
                 GBPClassifierRefsServices.load(path, function(data){
@@ -1725,7 +1725,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('tenantCtrl', ['$scope', 'GBPTenantServices', '$filter', function($scope, GBPTenantServices, $filter){ 
+    gbpOld.register.controller('tenantCtrl', ['$scope', 'GBPTenantServices', '$filter', function($scope, GBPTenantServices, $filter){
         $scope.list = [];
         $scope.selectedTenantObj = null;
         $scope.newTenantObj = GBPTenantServices.createObj();
@@ -1822,7 +1822,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('epgCtrl',['$scope', 'GBPEpgServices', 'GBPContractServices', '$filter',
+    gbpOld.register.controller('epgCtrl',['$scope', 'GBPEpgServices', 'GBPContractServices', '$filter',
         function($scope, GBPEpgServices, GBPContractServices, $filter){
         $scope.selectedEpg = null;
         $scope.newEpgObj = GBPEpgServices.createObj();
@@ -1864,7 +1864,7 @@ define(modules, function(gbp) {
         $scope.init = function() {
             if ($scope.selectedTenant) {
                 path = GBPEpgServices.createPathObj($scope.selectedTenant.id);
-                
+
                 GBPEpgServices.load(path, function(data){
                     $scope.list = data;
                     // $scope.$broadcast('GBP_EPG_RELOAD');
@@ -1962,7 +1962,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('cnsCtrl',['$scope', 'GBPConNamedSelServices', function($scope, GBPConNamedSelServices){
+    gbpOld.register.controller('cnsCtrl',['$scope', 'GBPConNamedSelServices', function($scope, GBPConNamedSelServices){
         $scope.list = [];
         $scope.selectedCNS = null;
         $scope.newCNSObj = GBPConNamedSelServices.createObj();
@@ -2092,7 +2092,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('pnsCtrl',['$scope', 'GBPProNamedSelServices', function($scope, GBPProNamedSelServices){
+    gbpOld.register.controller('pnsCtrl',['$scope', 'GBPProNamedSelServices', function($scope, GBPProNamedSelServices){
         $scope.list = [];
         $scope.selectedPNS = null;
         $scope.newPNSObj = GBPProNamedSelServices.createObj();
@@ -2137,7 +2137,7 @@ define(modules, function(gbp) {
         $scope.init = function() {
             if ($scope.selectedTenant && $scope.selectedEpg) {
                 path = GBPProNamedSelServices.createPathObj($scope.selectedTenant.id, $scope.selectedEpg.id);
-                
+
                 GBPProNamedSelServices.load(path, function(data){
                     $scope.list = data;
                 }, function(){
@@ -2195,7 +2195,7 @@ define(modules, function(gbp) {
                 $scope.internalView.pns = false;
                 $scope.internalView.edit = "view";
             }
-            
+
             if($scope.internalView.pns) {
                 angular.copy(selectedObj, $scope.newPNSObj);
             }
@@ -2221,7 +2221,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('l2FloodCtrl', ['$scope', 'GBPL2FloodDomainServices', 'GBPL2BridgeDomainServices', '$filter', function($scope, GBPL2FloodDomainServices, GBPL2BridgeDomainServices, $filter){ 
+    gbpOld.register.controller('l2FloodCtrl', ['$scope', 'GBPL2FloodDomainServices', 'GBPL2BridgeDomainServices', '$filter', function($scope, GBPL2FloodDomainServices, GBPL2BridgeDomainServices, $filter){
         $scope.list = [];
         $scope.selectedL2Flood = null;
         $scope.newL2FloodObj = GBPL2FloodDomainServices.createObj();
@@ -2259,7 +2259,7 @@ define(modules, function(gbp) {
         $scope.init = function() {
             if ( $scope.selectedTenant ) {
                 path = GBPL2FloodDomainServices.createPathObj($scope.selectedTenant.id);
-                
+
                 GBPL2FloodDomainServices.load(path, function(data){
                     $scope.list = data;
                     // clear objects
@@ -2361,7 +2361,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('l2BridgeCtrl', ['$scope', 'GBPL2BridgeDomainServices', 'GBPL3ContextServices', '$filter', function($scope, GBPL2BridgeDomainServices, GBPL3ContextServices, $filter){ 
+    gbpOld.register.controller('l2BridgeCtrl', ['$scope', 'GBPL2BridgeDomainServices', 'GBPL3ContextServices', '$filter', function($scope, GBPL2BridgeDomainServices, GBPL3ContextServices, $filter){
         $scope.list = [];
         $scope.selectedL2Bridge = null;
         $scope.newL2BridgeObj = GBPL2BridgeDomainServices.createObj();
@@ -2400,7 +2400,7 @@ define(modules, function(gbp) {
         $scope.init = function() {
             if ( $scope.selectedTenant ) {
                 path = GBPL2BridgeDomainServices.createPathObj($scope.selectedTenant.id);
-                
+
                 GBPL2BridgeDomainServices.load(path, function(data){
                     $scope.list = data;
                     $scope.newL2BridgeObj = GBPL2BridgeDomainServices.createObj();
@@ -2504,7 +2504,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('l3ContextCtrl', ['$scope', 'GBPL3ContextServices', '$filter', function($scope, GBPL3ContextServices, $filter){ //GBPContractServices
+    gbpOld.register.controller('l3ContextCtrl', ['$scope', 'GBPL3ContextServices', '$filter', function($scope, GBPL3ContextServices, $filter){ //GBPContractServices
         $scope.list = [];
         $scope.selectedL3Context = null;
         $scope.newL3ContextObj = GBPL3ContextServices.createObj();
@@ -2531,7 +2531,7 @@ define(modules, function(gbp) {
         $scope.init = function() {
             if ( $scope.selectedTenant ) {
                 path = GBPL3ContextServices.createPathObj($scope.selectedTenant.id);
-                
+
                 GBPL3ContextServices.load(path, function(data){
                     $scope.list = data;
                     $scope.newL3ContextObj = GBPL3ContextServices.createObj();
@@ -2578,7 +2578,7 @@ define(modules, function(gbp) {
 
         $scope.reload = function(selectedObj) {
             $scope.selectedL3Context = selectedObj;
-            
+
             $scope.view.edit = $scope.view.edit == "edit" ? $scope.view.edit : "view";
             if(selectedObj){
                 $scope.view.l3context = true;
@@ -2626,7 +2626,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('subnetCtrl', ['$scope', 'GBPSubnetServices', 'GBPL2FloodDomainServices', 'GBPL2BridgeDomainServices', 'GBPL3ContextServices', '$filter', function($scope, GBPSubnetServices, GBPL2FloodDomainServices, GBPL2BridgeDomainServices, GBPL3ContextServices, $filter){ 
+    gbpOld.register.controller('subnetCtrl', ['$scope', 'GBPSubnetServices', 'GBPL2FloodDomainServices', 'GBPL2BridgeDomainServices', 'GBPL3ContextServices', '$filter', function($scope, GBPSubnetServices, GBPL2FloodDomainServices, GBPL2BridgeDomainServices, GBPL3ContextServices, $filter){
         $scope.list = [];
         $scope.selectedSubnet = null;
         $scope.newSubnetObj = GBPSubnetServices.createObj();
@@ -2679,7 +2679,7 @@ define(modules, function(gbp) {
         $scope.init = function() {
             if ( $scope.selectedTenant ) {
                 path = GBPSubnetServices.createPathObj($scope.selectedTenant.id);
-                
+
                 GBPSubnetServices.load(path, function(data){
                     $scope.list = data;
                     $scope.newSubnetObj = GBPSubnetServices.createObj();
@@ -2730,7 +2730,7 @@ define(modules, function(gbp) {
 
         $scope.reload = function(selectedObj) {
             $scope.selectedSubnet = selectedObj;
-            
+
             $scope.view.edit = $scope.view.edit == "edit" ? $scope.view.edit : "view";
             if(selectedObj){
                 $scope.view.subnet = true;
@@ -2776,7 +2776,7 @@ define(modules, function(gbp) {
         $scope.$on('GBP_GATEWAY_RELOAD',function(){
             $scope.init();
         });
-        
+
         $scope.$on('GBP_L3CONTEXT_RELOAD',function(){
             loadL2L3List();
         });
@@ -2794,7 +2794,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('gatewayCtrl', ['$scope', 'GBPGatewayServices', function($scope, GBPGatewayServices){ 
+    gbpOld.register.controller('gatewayCtrl', ['$scope', 'GBPGatewayServices', function($scope, GBPGatewayServices){
         $scope.list = [];
         $scope.gatewayView = false;
         $scope.selectedGateway = null;
@@ -2818,7 +2818,7 @@ define(modules, function(gbp) {
         $scope.init = function() {
             if ( $scope.selectedTenant && $scope.selectedSubnet ) {
                 path = GBPGatewayServices.createPathObj($scope.selectedTenant.id, $scope.selectedSubnet.id);
-                
+
                 GBPGatewayServices.load(path, function(data){
                     $scope.list = data;
                     $scope.newGatewayObj = GBPGatewayServices.createObj();
@@ -2904,7 +2904,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('prefixCtrl', ['$scope', 'GBPPrefixServices', function($scope, GBPPrefixServices){ 
+    gbpOld.register.controller('prefixCtrl', ['$scope', 'GBPPrefixServices', function($scope, GBPPrefixServices){
         $scope.list = [];
         $scope.selectedPrefix = null;
         $scope.newPrefixObj = GBPPrefixServices.createObj();
@@ -2930,7 +2930,7 @@ define(modules, function(gbp) {
         $scope.init = function() {
             if ( $scope.selectedTenant && $scope.selectedSubnet && $scope.selectedGateway) {
                 path = GBPPrefixServices.createPathObj($scope.selectedTenant.id, $scope.selectedSubnet.id, $scope.selectedGateway.gateway);
-                
+
                 GBPPrefixServices.load(path, function(data){
                     $scope.list = data;
                     $scope.newPrefixObj = GBPPrefixServices.createObj();
@@ -3009,7 +3009,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('renderersCtrl', ['$scope', 'GPBServices', function($scope, GPBServices){ //GBPContractServices
+    gbpOld.register.controller('renderersCtrl', ['$scope', 'GPBServices', function($scope, GPBServices){ //GBPContractServices
         $scope.classifierDefinitions = {'options' : [], 'labels' : null};
         $scope.actionDefinitions = {'options' : [], 'labels' : null};
 
@@ -3028,7 +3028,7 @@ define(modules, function(gbp) {
         loadDefinitions();
     }]);
 
-    gbp.register.controller('paramCtrl', ['$scope', 'GPBServices', function($scope, GPBServices){
+    gbpOld.register.controller('paramCtrl', ['$scope', 'GPBServices', function($scope, GPBServices){
         $scope.value = null;
 
         $scope.init = function(param, paramValues) {
@@ -3051,7 +3051,7 @@ define(modules, function(gbp) {
 
         $scope.$on('GBP_SET_PARAM_VALUE', function(event, name, intVal, strVal) {
             //console.info($scope.parameter, ' got GBP_SET_PARAM_VALUE', name, intVal, strVal, event);
-            
+
         });
 
         $scope.$on('GBP_RESET_PARAM', function(event){
@@ -3059,7 +3059,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('classifiersCtrl', ['$scope', 'GBPClassifierInstanceServices', 'GPBServices', '$filter',
+    gbpOld.register.controller('classifiersCtrl', ['$scope', 'GBPClassifierInstanceServices', 'GPBServices', '$filter',
         function($scope, GBPClassifierInstanceServices, GPBServices, $filter){
         $scope.list = [];
         $scope.classifiersView = false;
@@ -3191,7 +3191,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('actionsCtrl', ['$scope', 'GBPActionInstanceServices', 'GPBServices', '$filter',
+    gbpOld.register.controller('actionsCtrl', ['$scope', 'GBPActionInstanceServices', 'GPBServices', '$filter',
         function($scope, GBPActionInstanceServices, GPBServices, $filter){
         $scope.list = [];
         $scope.actionsView = false;
@@ -3324,7 +3324,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('endpointCtrl', ['$scope', 'GBPEndpointServices', 'GPBServices', 'GBPL2FloodDomainServices', 'GBPL2BridgeDomainServices', 'GBPL3ContextServices', 'GBPEpgServices', '$filter', 'GBPSubnetServices',
+    gbpOld.register.controller('endpointCtrl', ['$scope', 'GBPEndpointServices', 'GPBServices', 'GBPL2FloodDomainServices', 'GBPL2BridgeDomainServices', 'GBPL3ContextServices', 'GBPEpgServices', '$filter', 'GBPSubnetServices',
         function($scope, GBPEndpointServices, GPBServices, GBPL2FloodDomainServices, GBPL2BridgeDomainServices, GBPL3ContextServices, GBPEpgServices, $filter, GBPSubnetServices){
         $scope.list = [];
         $scope.selectedEndpoint = null;
@@ -3373,7 +3373,7 @@ define(modules, function(gbp) {
                 $scope.l2context.options = [];
 
                 path = GBPL2FloodDomainServices.createPathObj($scope.selectedTenant.id);
-                    
+
                 GBPL2FloodDomainServices.load(path, function(data){
                     $scope.l2context.options = $scope.l2context.options.concat(data);
                     $scope.networkContainment.options = $scope.networkContainment.options.concat(data);
@@ -3435,7 +3435,7 @@ define(modules, function(gbp) {
                   return arr2.indexOf( el ) < 0;
                 });
             };
-        
+
         $scope.init = function() {
             if ($scope.selectedTenant) {
 
@@ -3590,7 +3590,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('l3EndpointCtrl', ['$scope', 'GBPEndpointL3Services', 'GPBServices', 'GBPEpgServices', 'GBPL3ContextServices', 'GBPL2FloodDomainServices', 'GBPL2BridgeDomainServices', '$filter',
+    gbpOld.register.controller('l3EndpointCtrl', ['$scope', 'GBPEndpointL3Services', 'GPBServices', 'GBPEpgServices', 'GBPL3ContextServices', 'GBPL2FloodDomainServices', 'GBPL2BridgeDomainServices', '$filter',
         function($scope, GBPEndpointL3Services, GPBServices, GBPEpgServices, GBPL3ContextServices, GBPL2FloodDomainServices, GBPL2BridgeDomainServices, $filter){
         $scope.list = [];
         $scope.selectedEndpoint = null;
@@ -3632,7 +3632,7 @@ define(modules, function(gbp) {
                 $scope.l2context.options = [];
 
                 path = GBPL2FloodDomainServices.createPathObj($scope.selectedTenant.id);
-                    
+
                 GBPL2FloodDomainServices.load(path, function(data){
                     $scope.l2context.options = $scope.l2context.options.concat(data);
                 }, function(){
@@ -3666,7 +3666,7 @@ define(modules, function(gbp) {
                     edit: "view"
                 };
             };
-        
+
         $scope.init = function() {
             if ($scope.selectedTenant) {
 
@@ -3822,7 +3822,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('accessModelWizardCtrl', ['$scope', '$filter', 'GBPTenantServices', 'GBPEpgServices', 'GBPContractServices', 'GPBServices', function($scope, $filter, GBPTenantServices, GBPEpgServices, GBPContractServices, GPBServices){ 
+    gbpOld.register.controller('accessModelWizardCtrl', ['$scope', '$filter', 'GBPTenantServices', 'GBPEpgServices', 'GBPContractServices', 'GPBServices', function($scope, $filter, GBPTenantServices, GBPEpgServices, GBPContractServices, GPBServices){
         $scope.wizardPage = null;
 
         $scope.selectedTenant = null;
@@ -3878,7 +3878,7 @@ define(modules, function(gbp) {
                 });
             }
 
-            
+
             path = GBPTenantServices.createPathObj($scope.tenant.id);
             GBPTenantServices.send(path, $scope.tenant, function(data){
                 $scope.wizards.accessModelWizard = false;
@@ -3901,7 +3901,7 @@ define(modules, function(gbp) {
         // };
     }]);
 
-    gbp.register.controller('wizardTenantCtrl', ['$scope', '$filter', 'GBPTenantServices', function($scope, $filter, GBPTenantServices){ 
+    gbpOld.register.controller('wizardTenantCtrl', ['$scope', '$filter', 'GBPTenantServices', function($scope, $filter, GBPTenantServices){
         // $scope.tenantList = [];
         $scope.newTenantObj = GBPTenantServices.createObj();
         $scope.displayLabel = ['name' , 'id'];
@@ -3942,9 +3942,9 @@ define(modules, function(gbp) {
         $scope.getNewTenantObject = function() {
             return GBPTenantServices.createObj();
         };
-    }]); 
+    }]);
 
-    gbp.register.controller('wizardEpgCtrl', ['$scope', '$filter', 'GBPEpgServices', function($scope, $filter, GBPEpgServices){ 
+    gbpOld.register.controller('wizardEpgCtrl', ['$scope', '$filter', 'GBPEpgServices', function($scope, $filter, GBPEpgServices){
         $scope.list = [];
         $scope.newEpgObj = GBPEpgServices.createObj();
         $scope.selectedEpg = null;
@@ -3956,7 +3956,7 @@ define(modules, function(gbp) {
         $scope.igpOpts = ['allow', 'require-contract'];
 
         $scope.init = function() {
-            
+
         };
 
         $scope.showForm = function() {
@@ -4013,9 +4013,9 @@ define(modules, function(gbp) {
             $scope.newEpgObj['provider-named-selector'] = args;
             $scope.updateList($scope.list, $scope.newEpgObj, "id");
         });
-    }]); 
+    }]);
 
-    gbp.register.controller('wizardContractCtrl', ['$scope', '$filter', 'GBPContractServices', function($scope, $filter, GBPContractServices){ 
+    gbpOld.register.controller('wizardContractCtrl', ['$scope', '$filter', 'GBPContractServices', function($scope, $filter, GBPContractServices){
         $scope.list = [];
         $scope.newContractObj = GBPContractServices.createObj();
         $scope.selectedContract = null;
@@ -4026,7 +4026,7 @@ define(modules, function(gbp) {
         $scope.contractFormView = true;
 
         $scope.init = function() {
-            
+
         };
 
         $scope.showForm = function() {
@@ -4083,9 +4083,9 @@ define(modules, function(gbp) {
             $scope.newContractObj['clause'] = args;
             $scope.updateList($scope.list, $scope.newContractObj, "id");
         });
-    }]); 
+    }]);
 
-    gbp.register.controller('wizardCnsCtrl',['$scope', 'GBPConNamedSelServices', function($scope, GBPConNamedSelServices){
+    gbpOld.register.controller('wizardCnsCtrl',['$scope', 'GBPConNamedSelServices', function($scope, GBPConNamedSelServices){
         $scope.list = [];
         $scope.selectedCNS = null;
         $scope.newCNSObj = GBPConNamedSelServices.createObj();
@@ -4199,7 +4199,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('wizardPnsCtrl',['$scope', 'GBPProNamedSelServices', function($scope, GBPProNamedSelServices){
+    gbpOld.register.controller('wizardPnsCtrl',['$scope', 'GBPProNamedSelServices', function($scope, GBPProNamedSelServices){
         $scope.list = [];
         $scope.selectedPNS = null;
         $scope.newPNSObj = GBPProNamedSelServices.createObj();
@@ -4312,7 +4312,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('wizardSubjectCtrl', ['$scope','GBPSubjectServices', '$filter', function($scope, GBPSubjectServices, $filter){
+    gbpOld.register.controller('wizardSubjectCtrl', ['$scope','GBPSubjectServices', '$filter', function($scope, GBPSubjectServices, $filter){
         $scope.list = [];
         $scope.selectedSubject = null;
         $scope.newSubjectObj = GBPSubjectServices.createObj();
@@ -4339,7 +4339,7 @@ define(modules, function(gbp) {
             };
 
         $scope.init = function() {
-            
+
         };
 
         $scope.save = function(){
@@ -4411,7 +4411,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('wizardRuleCtrl', ['$scope','GBPRuleServices', '$filter', function($scope, GBPRuleServices, $filter){
+    gbpOld.register.controller('wizardRuleCtrl', ['$scope','GBPRuleServices', '$filter', function($scope, GBPRuleServices, $filter){
         $scope.list = [];
         $scope.selectedRule = null;
         $scope.newRuleObj = GBPRuleServices.createObj();
@@ -4437,7 +4437,7 @@ define(modules, function(gbp) {
             };
 
         $scope.init = function() {
-            
+
         };
 
         $scope.save = function(){
@@ -4511,7 +4511,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('wizardClauseCtrl', ['$scope','GBPClauseServices', 'GBPSubjectServices', 
+    gbpOld.register.controller('wizardClauseCtrl', ['$scope','GBPClauseServices', 'GBPSubjectServices',
         function($scope, GBPClauseServices, GBPSubjectServices){
         $scope.list = [];
         $scope.selectedClause = null;
@@ -4623,7 +4623,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('wizardActionRefCtrl', ['$scope','GBPActionRefsServices', 'GBPActionInstanceServices', '$filter', function($scope, GBPActionRefsServices, GBPActionInstanceServices, $filter){
+    gbpOld.register.controller('wizardActionRefCtrl', ['$scope','GBPActionRefsServices', 'GBPActionInstanceServices', '$filter', function($scope, GBPActionRefsServices, GBPActionInstanceServices, $filter){
         $scope.list = [];
         $scope.selectedActionRef = null;
         $scope.newActionRefObj = GBPActionRefsServices.createObj();
@@ -4721,7 +4721,7 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('wizardClassifierRefCtrl', ['$scope','GBPClassifierRefsServices', 'GBPClassifierInstanceServices', '$filter', function($scope, GBPClassifierRefsServices, GBPClassifierInstanceServices, $filter){
+    gbpOld.register.controller('wizardClassifierRefCtrl', ['$scope','GBPClassifierRefsServices', 'GBPClassifierInstanceServices', '$filter', function($scope, GBPClassifierRefsServices, GBPClassifierInstanceServices, $filter){
         $scope.list = [];
         $scope.selectedClassifierRef = null;
         $scope.newClassifierRefObj = GBPClassifierRefsServices.createObj();
@@ -4822,9 +4822,9 @@ define(modules, function(gbp) {
         });
     }]);
 
-    gbp.register.controller('rendererStateCtrl', ['$scope', 'GPBServices', function($scope, GPBServices){
+    gbpOld.register.controller('rendererStateCtrl', ['$scope', 'GPBServices', function($scope, GPBServices){
         $scope.data = {'subject-feature-definitions' : {}};
-        $scope.view_path = 'src/app/gbp/views/governance';
+        $scope.view_path = 'src/app/gbp-old/views/governance';
 
         var init = function(){
             GPBServices.getDefinitions(function(classifiersDefs, actionsDefs){
@@ -4834,11 +4834,11 @@ define(modules, function(gbp) {
                 //error
             });
         };
-        
+
         init();
     }]);
 
-    gbp.register.controller('layerCtrl', ['$scope', function($scope){
+    gbpOld.register.controller('layerCtrl', ['$scope', function($scope){
 
         var moveOffset = 1;
         $scope.currentDisplayIndex = 1;
@@ -4850,7 +4850,7 @@ define(modules, function(gbp) {
             if($scope.checkData(value, 'Array')){
                 $scope.setActData($scope.data[$scope.data.length - 1]);
             }
-        }; 
+        };
 
         $scope.toggleExpanded = function(){
             $scope.expanded = !$scope.expanded;
@@ -4884,7 +4884,7 @@ define(modules, function(gbp) {
         };
     }]);
 
-    gbp.register.controller('actionReferenceWizardCtrl', ['$scope', '$filter', 'GBPRuleServices', 'GBPActionInstanceServices', function($scope, $filter, GBPRuleServices, GBPActionInstanceServices){ 
+    gbpOld.register.controller('actionReferenceWizardCtrl', ['$scope', '$filter', 'GBPRuleServices', 'GBPActionInstanceServices', function($scope, $filter, GBPRuleServices, GBPActionInstanceServices){
         $scope.wizardPage = null;
         $scope.path = {};
         $scope.rule = {};
@@ -4920,7 +4920,7 @@ define(modules, function(gbp) {
                         //TODO: error cbk
                     });
                 });
-                
+
             //}
 
             //if($scope.validateForm($scope.rulesForm)){
@@ -4928,7 +4928,7 @@ define(modules, function(gbp) {
                 GBPRuleServices.send(path, $scope.rule, function(data){
 
                     $scope.wizards.actionReferenceWizard = false;
-                    
+
                     //$scope.sendReloadEventFromRoot('GBP_TENANT_RELOAD');
                 }, function(){
                     //TODO: error cbk
@@ -4965,8 +4965,8 @@ define(modules, function(gbp) {
 
     }]);
 
-    gbp.register.controller('actionsRefListCtrl', ['$scope', '$filter', function($scope, $filter){ 
-        
+    gbpOld.register.controller('actionsRefListCtrl', ['$scope', '$filter', function($scope, $filter){
+
         $scope.actionReferenceForm = false;
 
         $scope.showForm = function(object) {
@@ -4992,11 +4992,11 @@ define(modules, function(gbp) {
             $scope.newActionRefObj = null;
         };
 
-        
+
 
     }]);
 
-    gbp.register.controller('actionInstanceWizardCtrl', ['$scope', '$filter', 'GPBServices', 'GBPActionInstanceServices', function($scope, $filter, GPBServices, GBPActionInstanceServices){ 
+    gbpOld.register.controller('actionInstanceWizardCtrl', ['$scope', '$filter', 'GPBServices', 'GBPActionInstanceServices', function($scope, $filter, GPBServices, GBPActionInstanceServices){
         $scope.actionDefinitions = {'options' : [], 'labels' : "name"};
         $scope.newActionObj = GBPActionInstanceServices.createObj();
 
@@ -5034,7 +5034,7 @@ define(modules, function(gbp) {
         };
 
         $scope.saveParam = function() {
-            
+
         };
 
         $scope.addParam = function(name, type, value) {

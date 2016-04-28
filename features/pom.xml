@@ -267,6 +267,10 @@
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>groupbasedpolicy-ui-bundle</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>groupbasedpolicy-old-ui-bundle</artifactId>
     </dependency>
     <dependency>
