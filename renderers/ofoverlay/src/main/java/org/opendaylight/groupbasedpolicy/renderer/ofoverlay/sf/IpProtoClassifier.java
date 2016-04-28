@@ -51,14 +51,10 @@ public class IpProtoClassifier extends Classifier {
     public List<SupportedParameterValues> getSupportedParameterValues() {
 
         List<SupportedIntValue> values = ImmutableList.of(
-                new SupportedIntValueBuilder().setValue(IpProtoClassifierDefinition.ICMP_VALUE)
-                        .build(),
-                new SupportedIntValueBuilder().setValue(IpProtoClassifierDefinition.SCTP_VALUE)
-                        .build(),
-                new SupportedIntValueBuilder().setValue(IpProtoClassifierDefinition.TCP_VALUE)
-                        .build(),
-                new SupportedIntValueBuilder().setValue(IpProtoClassifierDefinition.UDP_VALUE)
-                        .build());
+                new SupportedIntValueBuilder().setValue(IpProtoClassifierDefinition.ICMP_VALUE).build(),
+                new SupportedIntValueBuilder().setValue(IpProtoClassifierDefinition.SCTP_VALUE).build(),
+                new SupportedIntValueBuilder().setValue(IpProtoClassifierDefinition.TCP_VALUE).build(),
+                new SupportedIntValueBuilder().setValue(IpProtoClassifierDefinition.UDP_VALUE).build());
         SupportedParameterValuesBuilder b = new SupportedParameterValuesBuilder();
         b.setParameterName(new ParameterName(IpProtoClassifierDefinition.PROTO_PARAM));
         b.setParameterType(new IntBuilder().setSupportedIntValue(values).build());
@@ -69,12 +65,12 @@ public class IpProtoClassifier extends Classifier {
     @Override
     protected void checkPresenceOfRequiredParams(Map<String, ParameterValue> params) {
         if (params.get(IpProtoClassifierDefinition.PROTO_PARAM) == null) {
-            throw new IllegalArgumentException("Parameter " + IpProtoClassifierDefinition.PROTO_PARAM
-                    + " not specified.");
+            throw new IllegalArgumentException(
+                    "Parameter " + IpProtoClassifierDefinition.PROTO_PARAM + " " + MSG_NOT_SPECIFIED);
         }
         if (params.get(IpProtoClassifierDefinition.PROTO_PARAM).getIntValue() == null) {
-            throw new IllegalArgumentException("Value of " + IpProtoClassifierDefinition.PROTO_PARAM
-                    + " parameter is not present.");
+            throw new IllegalArgumentException(
+                    "Value of " + IpProtoClassifierDefinition.PROTO_PARAM + " " + MSG_PARAMETER_IS_NOT_PRESENT);
         }
     }
 
@@ -98,9 +94,9 @@ public class IpProtoClassifier extends Classifier {
     private void equalOrNotSetValidation(Short protoInMatch, long paramValue) {
         if (protoInMatch != null) {
             if (paramValue != protoInMatch.longValue()) {
-                throw new IllegalArgumentException("Classification conflict detected at " + IpProtoClassifierDefinition.PROTO_PARAM
-                        + " parameter for values " + protoInMatch.shortValue() + " and " + paramValue
-                        + ". It is not allowed "
+                throw new IllegalArgumentException(MSG_CLASSIFICATION_CONFLICT_DETECTED + " at "
+                        + IpProtoClassifierDefinition.PROTO_PARAM + " parameter for values " + protoInMatch + " and "
+                        + paramValue + ". It is not allowed "
                         + "to assign different values to the same parameter among all the classifiers within one rule.");
             }
         }
@@ -113,8 +109,8 @@ public class IpProtoClassifier extends Classifier {
             try {
                 readEthType = match.getEthernetMatch().getEthernetType().getType().getValue();
             } catch (NullPointerException e) {
-                throw new IllegalArgumentException("Parameter " + EtherTypeClassifierDefinition.ETHERTYPE_PARAM
-                        + " is missing.");
+                throw new IllegalArgumentException(
+                        "Parameter " + EtherTypeClassifierDefinition.ETHERTYPE_PARAM + " " + MSG_IS_MISSING);
             }
             if (!FlowUtils.IPv4.equals(readEthType) && !FlowUtils.IPv6.equals(readEthType)) {
                 throw new IllegalArgumentException("Parameter " + EtherTypeClassifierDefinition.ETHERTYPE_PARAM
@@ -125,6 +121,7 @@ public class IpProtoClassifier extends Classifier {
 
     /**
      * Return the IpProtocol value. May return null.
+     *
      * @param params the parameters of classifier-instance inserted by user
      * @return the IpProtocol value
      */

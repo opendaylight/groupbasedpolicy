@@ -100,17 +100,15 @@ public class L4Classifier extends Classifier {
         if (params.get(portParam) != null) {
             StringBuilder paramLog = new StringBuilder();
             if (params.get(portParam).getIntValue() == null) {
-                paramLog.append("Value of ")
-                    .append(portParam)
-                    .append(" parameter is not specified.");
+                paramLog.append("Value of ").append(portParam).append(" parameter " + MSG_NOT_SPECIFIED);
                 throw new IllegalArgumentException(paramLog.toString());
             }
-            if(params.get(portRangeParam) != null) {
+            if (params.get(portRangeParam) != null) {
                 paramLog.append("Source port parameters ")
                     .append(portParam)
                     .append(" and ")
                     .append(portRangeParam)
-                    .append(" are mutually exclusive.");
+                    .append(" are " + MSG_MUTUALLY_EXCLUSIVE);
                 throw new IllegalArgumentException(paramLog.toString());
             }
         }
@@ -124,12 +122,14 @@ public class L4Classifier extends Classifier {
 
     private void validateRangeValue(RangeValue rangeValueParam) {
         if (rangeValueParam == null) {
-            throw new IllegalArgumentException("Range parameter is specifiet but value is not present.");
+            throw new IllegalArgumentException(
+                    "Range parameter is specified but value is " + Classifier.MSG_NOT_PRESENT);
         }
         final Long min = rangeValueParam.getMin();
         final Long max = rangeValueParam.getMax();
         if (min > max) {
-            throw new IllegalArgumentException("Range value mismatch. " + min + " is greater than MAX " + max + ".");
+            throw new IllegalArgumentException(
+                    MSG_RANGE_VALUE_MISMATCH + " MIN " + min + " is greater than MAX " + max + ".");
         }
     }
 
@@ -137,8 +137,10 @@ public class L4Classifier extends Classifier {
     public List<MatchBuilder> update(List<MatchBuilder> matches, Map<String, ParameterValue> params) {
         Set<Long> sPorts = new HashSet<>();
         Set<Long> dPorts = new HashSet<>();
-        addToPortSet(params, L4ClassifierDefinition.SRC_PORT_PARAM, L4ClassifierDefinition.SRC_PORT_RANGE_PARAM, sPorts);
-        addToPortSet(params, L4ClassifierDefinition.DST_PORT_PARAM, L4ClassifierDefinition.DST_PORT_RANGE_PARAM, dPorts);
+        addToPortSet(params, L4ClassifierDefinition.SRC_PORT_PARAM, L4ClassifierDefinition.SRC_PORT_RANGE_PARAM,
+                sPorts);
+        addToPortSet(params, L4ClassifierDefinition.DST_PORT_PARAM, L4ClassifierDefinition.DST_PORT_RANGE_PARAM,
+                dPorts);
         List<MatchBuilder> newMatches = new ArrayList<>();
         for (MatchBuilder matchBuilder : matches) {
             Layer4Match l4Match = matchBuilder.getLayer4Match();
@@ -154,7 +156,8 @@ public class L4Classifier extends Classifier {
         return newMatches;
     }
 
-    private void addToPortSet(Map<String, ParameterValue> params, String portParam, String portRangeParam, Set<Long> portSet) {
+    private void addToPortSet(Map<String, ParameterValue> params, String portParam, String portRangeParam,
+            Set<Long> portSet) {
         if (params.get(portParam) != null) {
             portSet.add(params.get(portParam).getIntValue());
         } else if (params.get(portRangeParam) != null) {
@@ -175,7 +178,7 @@ public class L4Classifier extends Classifier {
             return new SctpMatchBuilder().build();
         }
         throw new IllegalArgumentException("Parameter " + IpProtoClassifierDefinition.PROTO_PARAM + ": value " + ipProto
-                + " is not supported.");
+                + " is " + Classifier.MSG_NOT_SUPPORTED);
     }
 
     private Set<Long> createSetFromRange(RangeValue rangeValueParam) {
@@ -207,7 +210,8 @@ public class L4Classifier extends Classifier {
         if (!sPorts.isEmpty() && dPorts.isEmpty()) {
             for (Long srcPort : sPorts) {
                 equalOrNotSetValidation(udpMatch.getUdpSourcePort(), srcPort.longValue());
-                udpMatches.add(new UdpMatchBuilder(udpMatch).setUdpSourcePort(new PortNumber(srcPort.intValue())).build());
+                udpMatches
+                    .add(new UdpMatchBuilder(udpMatch).setUdpSourcePort(new PortNumber(srcPort.intValue())).build());
             }
         } else if (sPorts.isEmpty() && !dPorts.isEmpty()) {
             for (Long dstPort : dPorts) {
@@ -234,7 +238,8 @@ public class L4Classifier extends Classifier {
         if (!sPorts.isEmpty() && dPorts.isEmpty()) {
             for (Long srcPort : sPorts) {
                 equalOrNotSetValidation(tcpMatch.getTcpSourcePort(), srcPort.longValue());
-                tcpMatches.add(new TcpMatchBuilder(tcpMatch).setTcpSourcePort(new PortNumber(srcPort.intValue())).build());
+                tcpMatches
+                    .add(new TcpMatchBuilder(tcpMatch).setTcpSourcePort(new PortNumber(srcPort.intValue())).build());
             }
         } else if (sPorts.isEmpty() && !dPorts.isEmpty()) {
             for (Long dstPort : dPorts) {
@@ -261,23 +266,24 @@ public class L4Classifier extends Classifier {
         if (!sPorts.isEmpty() && dPorts.isEmpty()) {
             for (Long srcPort : sPorts) {
                 equalOrNotSetValidation(sctpMatch.getSctpSourcePort(), srcPort.longValue());
-                sctpMatches.add(new SctpMatchBuilder(sctpMatch).setSctpSourcePort(new PortNumber(srcPort.intValue()))
-                    .build());
+                sctpMatches
+                    .add(new SctpMatchBuilder(sctpMatch).setSctpSourcePort(new PortNumber(srcPort.intValue())).build());
             }
         } else if (sPorts.isEmpty() && !dPorts.isEmpty()) {
             for (Long dstPort : dPorts) {
                 equalOrNotSetValidation(sctpMatch.getSctpDestinationPort(), dstPort.longValue());
-                sctpMatches.add(new SctpMatchBuilder(sctpMatch).setSctpDestinationPort(new PortNumber(dstPort.intValue()))
-                    .build());
+                sctpMatches.add(new SctpMatchBuilder(sctpMatch)
+                    .setSctpDestinationPort(new PortNumber(dstPort.intValue())).build());
             }
         } else if (!sPorts.isEmpty() && !dPorts.isEmpty()) {
             for (Long srcPort : sPorts) {
                 for (Long dstPort : dPorts) {
                     equalOrNotSetValidation(sctpMatch.getSctpSourcePort(), srcPort.longValue());
                     equalOrNotSetValidation(sctpMatch.getSctpDestinationPort(), dstPort.longValue());
-                    sctpMatches.add(new SctpMatchBuilder(sctpMatch).setSctpSourcePort(new PortNumber(srcPort.intValue()))
-                        .setSctpDestinationPort(new PortNumber(dstPort.intValue()))
-                        .build());
+                    sctpMatches
+                        .add(new SctpMatchBuilder(sctpMatch).setSctpSourcePort(new PortNumber(srcPort.intValue()))
+                            .setSctpDestinationPort(new PortNumber(dstPort.intValue()))
+                            .build());
                 }
             }
         }
@@ -287,7 +293,7 @@ public class L4Classifier extends Classifier {
     private void equalOrNotSetValidation(PortNumber portInMatch, long paramValue) {
         if (portInMatch != null) {
             if (paramValue != portInMatch.getValue().longValue()) {
-                throw new IllegalArgumentException("Classification conflict detected for port values "
+                throw new IllegalArgumentException(Classifier.MSG_CLASSIFICATION_CONFLICT_DETECTED + " for port values "
                         + portInMatch.getValue().longValue() + " and " + paramValue + ". It is not allowed "
                         + "to assign different values to the same parameter among all the classifiers within one rule.");
             }
@@ -301,12 +307,14 @@ public class L4Classifier extends Classifier {
             try {
                 proto = Long.valueOf(match.getIpMatch().getIpProtocol().longValue());
             } catch (NullPointerException e) {
-                throw new IllegalArgumentException("Parameter " + IpProtoClassifierDefinition.PROTO_PARAM + " is missing.");
+                throw new IllegalArgumentException(
+                        "Parameter " + IpProtoClassifierDefinition.PROTO_PARAM + " " + MSG_IS_MISSING);
             }
-            if (!IpProtoClassifierDefinition.TCP_VALUE.equals(proto) && !IpProtoClassifierDefinition.UDP_VALUE.equals(proto)
+            if (!IpProtoClassifierDefinition.TCP_VALUE.equals(proto)
+                    && !IpProtoClassifierDefinition.UDP_VALUE.equals(proto)
                     && !IpProtoClassifierDefinition.SCTP_VALUE.equals(proto)) {
                 throw new IllegalArgumentException("Value of parameter " + IpProtoClassifierDefinition.PROTO_PARAM
-                        + " is not supported.");
+                        + " is " + Classifier.MSG_NOT_SUPPORTED);
             }
         }
     }
