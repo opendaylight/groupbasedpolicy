@@ -118,6 +118,7 @@ public class MasterDatabaseBindingDaoImplTest {
         Mockito.when(cachedDao.find(Matchers.<IpPrefix>any())).thenReturn(
                 Optional.<MasterDatabaseBinding>absent(),
                 Optional.of(MASTER_DB_BINDING_VALUE));
+        Mockito.when(cachedDao.isEmpty()).thenReturn(true);
         Mockito.when(dataBroker.newReadOnlyTransaction()).thenReturn(rTx);
         Mockito.when(rTx.read(Matchers.eq(LogicalDatastoreType.CONFIGURATION),
                 Matchers.<InstanceIdentifier<Topology>>any())).thenReturn(

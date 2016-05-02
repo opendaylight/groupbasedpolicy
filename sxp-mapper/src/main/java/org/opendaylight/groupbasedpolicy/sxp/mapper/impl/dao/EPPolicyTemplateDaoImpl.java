@@ -19,8 +19,8 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSAsyncDao;
-import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SimpleCachedDao;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.EPTemplateListener;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SimpleCachedDao;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.SxpListenerUtil;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointPolicyTemplateBySgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointPolicyTemplateBySgtKey;
@@ -31,6 +31,8 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
  * Purpose: general dao for EndPoint templates
  */
 public class EPPolicyTemplateDaoImpl implements DSAsyncDao<Sgt, EndpointPolicyTemplateBySgt> {
+
+    private static final ListenableFuture<Optional<EndpointPolicyTemplateBySgt>> READ_FUTURE_ABSENT = Futures.immediateFuture(Optional.absent());
 
     private final DataBroker dataBroker;
     private final SimpleCachedDao<Sgt, EndpointPolicyTemplateBySgt> cachedDao;
@@ -46,6 +48,8 @@ public class EPPolicyTemplateDaoImpl implements DSAsyncDao<Sgt, EndpointPolicyTe
         final Optional<EndpointPolicyTemplateBySgt> cachedEndpointPolicyTemplateBySgtalue = lookup(cachedDao, key);
         if (cachedEndpointPolicyTemplateBySgtalue.isPresent()) {
             return Futures.immediateFuture(cachedEndpointPolicyTemplateBySgtalue);
+        } else if (!cachedDao.isEmpty()) {
+            return READ_FUTURE_ABSENT;
         } else {
             final ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
             final CheckedFuture<Optional<EndpointPolicyTemplateBySgt>, ReadFailedException> read =

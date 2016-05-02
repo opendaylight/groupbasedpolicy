@@ -33,7 +33,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
  */
 public class EPForwardingTemplateDaoImpl implements DSAsyncDao<IpPrefix, EndpointForwardingTemplateBySubnet> {
 
-    public static final ListenableFuture<Optional<EndpointForwardingTemplateBySubnet>> READ_FUTURE_ABSENT = Futures.immediateFuture(Optional.absent());
+    private static final ListenableFuture<Optional<EndpointForwardingTemplateBySubnet>> READ_FUTURE_ABSENT = Futures.immediateFuture(Optional.absent());
     private final DataBroker dataBroker;
     private final SimpleCachedDao<IpPrefix, EndpointForwardingTemplateBySubnet> cachedDao;
 
@@ -73,7 +73,7 @@ public class EPForwardingTemplateDaoImpl implements DSAsyncDao<IpPrefix, Endpoin
                                 cachedDao.update(template.getIpPrefix(), template);
                             }
                         }
-                        return cachedDao.find(key);
+                        return lookup(cachedDao, key);
                     } else {
                         return Optional.absent();
                     }

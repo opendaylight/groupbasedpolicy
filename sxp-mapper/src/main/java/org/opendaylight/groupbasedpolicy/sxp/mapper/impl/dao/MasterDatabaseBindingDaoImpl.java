@@ -43,6 +43,7 @@ public class MasterDatabaseBindingDaoImpl implements DSAsyncDao<IpPrefix, Master
         ReadableByKey<Sgt, MasterDatabaseBinding> {
 
     private static final Logger LOG = LoggerFactory.getLogger(MasterDatabaseBindingDaoImpl.class);
+    private static final ListenableFuture<Optional<MasterDatabaseBinding>> READ_FUTURE_ABSENT = Futures.immediateFuture(Optional.absent());
 
     private final DataBroker dataBroker;
     private final SimpleCachedDao<IpPrefix, MasterDatabaseBinding> cachedDao;
@@ -58,6 +59,8 @@ public class MasterDatabaseBindingDaoImpl implements DSAsyncDao<IpPrefix, Master
         final Optional<MasterDatabaseBinding> cachedMasterDatabaseBinding = lookup(cachedDao, key);
         if (cachedMasterDatabaseBinding.isPresent()) {
             return Futures.immediateFuture(cachedMasterDatabaseBinding);
+        } else if (!cachedDao.isEmpty()) {
+            return READ_FUTURE_ABSENT;
         } else {
             final ListenableFuture<Void> cacheUpdatedFt = updateCache();
 

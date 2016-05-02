@@ -14,6 +14,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -31,7 +32,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBinding;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+import org.opendaylight.yangtools.yang.common.RpcError;
 import org.opendaylight.yangtools.yang.common.RpcResult;
+import org.opendaylight.yangtools.yang.common.RpcResultBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,17 +89,24 @@ public class EPPolicyTemplateListenerImpl implements EPTemplateListener<Endpoint
         final ListenableFuture<List<RpcResult<Void>>> rpcResult = Futures.transform(sxpMasterDbItemFuture, new AsyncFunction<Collection<MasterDatabaseBinding>, List<RpcResult<Void>>>() {
             @Override
             public ListenableFuture<List<RpcResult<Void>>> apply(final Collection<MasterDatabaseBinding> input) throws Exception {
+                final ListenableFuture<List<RpcResult<Void>>> result;
                 if (input == null || input.isEmpty()) {
                     LOG.debug("no epPolicyTemplate available from sgt: {}", changeKey);
-                    throw new IllegalArgumentException("no epPolicyTemplate available");
+                    result = Futures.immediateFuture(Collections.singletonList(
+                            RpcResultBuilder.<Void>failed()
+                                    .withError(RpcError.ErrorType.APPLICATION,
+                                            "no ip-sgt mapping in sxpMasterDB available for " + changeKey)
+                                    .build()));
                 } else {
                     LOG.trace("processing sxpMasterDB event and epPolicyTemplate for sgt: {}", changeKey);
                     List<ListenableFuture<RpcResult<Void>>> allResults = new ArrayList<>(input.size());
                     for (MasterDatabaseBinding masterDBItem : input) {
-                            allResults.add(sxpMapperReactor.processPolicyAndSxpMasterDB(epPolicyTemplate, masterDBItem));
+                        allResults.add(sxpMapperReactor.processPolicyAndSxpMasterDB(epPolicyTemplate, masterDBItem));
                     }
-                    return Futures.successfulAsList(allResults);
+                    result = Futures.successfulAsList(allResults);
                 }
+
+                return result;
             }
         });
 
