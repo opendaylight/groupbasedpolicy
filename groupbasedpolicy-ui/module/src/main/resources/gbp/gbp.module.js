@@ -10,7 +10,7 @@ define([
 
     gbp.register = gbp; // for adding services, controllers, directives etc. to angular module before bootstrap
 
-    gbp.config(function ($stateProvider, $compileProvider, $controllerProvider, $provide, NavHelperProvider,
+    gbp.config(function ($stateProvider,$compileProvider,$controllerProvider, $provide, NavHelperProvider,
                          $translateProvider, $translatePartialLoaderProvider) {
         gbp.register = {
             controller: $controllerProvider.register,

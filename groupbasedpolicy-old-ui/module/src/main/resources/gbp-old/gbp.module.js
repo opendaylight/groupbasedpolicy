@@ -1,15 +1,13 @@
-define(['angularAMD', 'app/routingConfig', 'ui-bootstrap', 'Restangular', 'angular-translate'], function() {
+define(['angularAMD', 'app/routingConfig', 'ui-bootstrap', 'Restangular', 'angular-translate-loader-partial'], function() {
 
   var gbpOld = angular.module('app.gbpOld', ['ui.router.state','app.core', 'ui.bootstrap', 'restangular', 'pascalprecht.translate']);
 
     gbpOld.register = gbpOld;
 
-    gbpOld.config(function ($stateProvider, $compileProvider, $controllerProvider, $provide, $translateProvider, NavHelperProvider, $filterProvider) {
+    gbpOld.config(function ($stateProvider, $compileProvider, $controllerProvider, $provide, $translateProvider,
+                            $translatePartialLoaderProvider, NavHelperProvider, $filterProvider) {
 
-    $translateProvider.useStaticFilesLoader({
-      prefix: 'assets/data/locale-',
-      suffix: '.json'
-    });
+        //$translatePartialLoaderProvider.addPart('app/gbp/assets/data/locale');
 
         gbpOld.register = {
       directive : $compileProvider.directive,
