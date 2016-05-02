@@ -126,9 +126,8 @@ public class MasterDatabaseBindingListenerImplTest {
         final InOrder inOrder = Mockito.inOrder(cachedDao, epPolicyTemplateDao, epForwardingTemplateDao, sxpMapper);
         inOrder.verify(cachedDao).update(IP_PREFIX, MASTER_DB_BINDING_VALUE);
         inOrder.verify(epPolicyTemplateDao).read(SGT_1);
-        inOrder.verify(sxpMapper).processPolicyAndSxpMasterDB(epPolicyTemplate, MASTER_DB_BINDING_VALUE);
         inOrder.verify(epForwardingTemplateDao).read(IP_PREFIX);
-        inOrder.verify(sxpMapper).processForwardingAndSxpMasterDB(epForwardingTemplate, MASTER_DB_BINDING_VALUE);
+        inOrder.verify(sxpMapper).processTemplatesAndSxpMasterDB(epPolicyTemplate, epForwardingTemplate, MASTER_DB_BINDING_VALUE);
         inOrder.verifyNoMoreInteractions();
     }
 

@@ -22,9 +22,9 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoints.rev160427.BaseEndpointService;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoints.rev160427.RegisterEndpointInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoints.rev160427.endpoints.address.endpoints.by.containment.AddressEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointForwardingTemplateBySubnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointPolicyTemplateBySgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBinding;
@@ -40,7 +40,7 @@ public class SxpMapperReactorImplTest {
     private static final IpPrefix IP_PREFIX = new IpPrefix(new Ipv4Prefix("10.11.12.1/32"));
 
     @Mock
-    private EndpointService l3EndpointService;
+    private BaseEndpointService l3EndpointService;
     @Mock
     private EndpointPolicyTemplateBySgt epPolicyTemplate;
     @Mock
@@ -62,7 +62,7 @@ public class SxpMapperReactorImplTest {
         Mockito.when(masterDBBinding.getIpPrefix()).thenReturn(IP_PREFIX);
         Mockito.when(dataBroker.newReadOnlyTransaction()).thenReturn(rTx);
         Mockito.when(rTx.read(Matchers.same(LogicalDatastoreType.OPERATIONAL),
-                Matchers.<InstanceIdentifier<EndpointL3>>any())).thenReturn(Futures.immediateCheckedFuture(Optional.absent()));
+                Matchers.<InstanceIdentifier<AddressEndpoint>>any())).thenReturn(Futures.immediateCheckedFuture(Optional.absent()));
     }
 
     @After
@@ -71,14 +71,9 @@ public class SxpMapperReactorImplTest {
     }
 
     @Test
-    public void testProcessPolicyAndSxpMasterDB() throws Exception {
-        sxpMapperReactor.processPolicyAndSxpMasterDB(epPolicyTemplate, masterDBBinding);
-        Mockito.verify(l3EndpointService).registerEndpoint(Matchers.<RegisterEndpointInput>any());
-    }
-
-    @Test
-    public void testProcessForwardingAndSxpMasterDB() throws Exception {
-        sxpMapperReactor.processForwardingAndSxpMasterDB(epForwardingTemplate, masterDBBinding);
+    public void testProcessTemplatesAndSxpMasterDB() throws Exception {
+        Mockito.when(epForwardingTemplate.getIpPrefix()).thenReturn(IP_PREFIX);
+        sxpMapperReactor.processTemplatesAndSxpMasterDB(epPolicyTemplate, epForwardingTemplate, masterDBBinding);
         Mockito.verify(l3EndpointService).registerEndpoint(Matchers.<RegisterEndpointInput>any());
     }
 }

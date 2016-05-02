@@ -17,7 +17,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.commons.net.util.SubnetUtils;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SimpleCachedDao;
-import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.ForwardingTemplateUtil;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.EPTemplateUtil;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.SubnetInfoKeyDecorator;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointForwardingTemplateBySubnet;
@@ -39,7 +39,7 @@ public class SimpleCachedDaoEPForwardingTemplateImpl implements SimpleCachedDao<
     @Override
     public EndpointForwardingTemplateBySubnet update(@Nonnull final IpPrefix key, @Nullable final EndpointForwardingTemplateBySubnet value) {
         final EndpointForwardingTemplateBySubnet previousValue;
-        if (ForwardingTemplateUtil.isPlain(key)) {
+        if (EPTemplateUtil.isPlain(key)) {
             previousValue = updatePlainCache(key, value);
         } else {
             previousValue = updateSubnetCache(key, value);
@@ -50,7 +50,7 @@ public class SimpleCachedDaoEPForwardingTemplateImpl implements SimpleCachedDao<
 
     private EndpointForwardingTemplateBySubnet updateSubnetCache(final IpPrefix key, final EndpointForwardingTemplateBySubnet value) {
         final EndpointForwardingTemplateBySubnet previousValue;
-        final SubnetInfoKeyDecorator subnetKey = ForwardingTemplateUtil.buildSubnetInfoKey(key);
+        final SubnetInfoKeyDecorator subnetKey = EPTemplateUtil.buildSubnetInfoKey(key);
         if (value != null) {
             previousValue = subnetCache.put(subnetKey, value);
         } else {
@@ -72,7 +72,7 @@ public class SimpleCachedDaoEPForwardingTemplateImpl implements SimpleCachedDao<
     @Override
     public Optional<EndpointForwardingTemplateBySubnet> find(@Nonnull final IpPrefix key) {
         final Optional<EndpointForwardingTemplateBySubnet> template;
-        if (ForwardingTemplateUtil.isPlain(key)) {
+        if (EPTemplateUtil.isPlain(key)) {
             final Optional<EndpointForwardingTemplateBySubnet> fastPlain = Optional.fromNullable(plainCache.get(key));
             if (fastPlain.isPresent()) {
                 template = fastPlain;
@@ -80,7 +80,7 @@ public class SimpleCachedDaoEPForwardingTemplateImpl implements SimpleCachedDao<
                 template = lookupSlowSubnet(key.getIpv4Prefix().getValue());
             }
         } else {
-            final SubnetInfoKeyDecorator keyDecorator = ForwardingTemplateUtil.buildSubnetInfoKey(key);
+            final SubnetInfoKeyDecorator keyDecorator = EPTemplateUtil.buildSubnetInfoKey(key);
             final Optional<EndpointForwardingTemplateBySubnet> fastSubnet =
                     Optional.fromNullable(subnetCache.get(keyDecorator));
             if (fastSubnet.isPresent()) {

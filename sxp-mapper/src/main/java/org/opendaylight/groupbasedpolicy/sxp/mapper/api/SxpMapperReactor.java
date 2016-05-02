@@ -21,15 +21,11 @@ public interface SxpMapperReactor {
 
     /**
      * apply sgt/ip binding on policy template and delegate to appropriate GBP service
-     *  @param epPolicyTemplate template
+     * @param epPolicyTemplate policy template
+     * @param epForwardingTemplate forwarding template
      * @param masterDatabaseBinding sxpMasterDB item
      */
-    ListenableFuture<RpcResult<Void>> processPolicyAndSxpMasterDB(EndpointPolicyTemplateBySgt epPolicyTemplate, MasterDatabaseBinding masterDatabaseBinding);
-
-    /**
-     * apply sgt/ip binding on forwarding template and delegate to appropriate GBP service
-     *  @param epForwardingTemplate template
-     * @param masterDatabaseBinding sxpMasterDB item
-     */
-    ListenableFuture<RpcResult<Void>> processForwardingAndSxpMasterDB(EndpointForwardingTemplateBySubnet epForwardingTemplate, MasterDatabaseBinding masterDatabaseBinding);
+    ListenableFuture<RpcResult<Void>> processTemplatesAndSxpMasterDB(EndpointPolicyTemplateBySgt epPolicyTemplate,
+                                                                     EndpointForwardingTemplateBySubnet epForwardingTemplate,
+                                                                     MasterDatabaseBinding masterDatabaseBinding);
 }

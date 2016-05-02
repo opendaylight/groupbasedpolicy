@@ -24,7 +24,7 @@ import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSAsyncDao;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.MasterDatabaseBindingListener;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SimpleCachedDao;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SxpMapperReactor;
-import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.ForwardingTemplateUtil;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.EPTemplateUtil;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.L3EPServiceUtil;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.SxpListenerUtil;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
@@ -93,60 +93,59 @@ public class MasterDatabaseBindingListenerImpl implements MasterDatabaseBindingL
             final MasterDatabaseBinding sxpMasterDBItem = change.getRootNode().getDataAfter();
             if (sxpMasterDBItem == null) {
                 //TODO: cover sgt-ip mapping removal
+                LOG.debug("ip-sgt mapping was removed - NOOP: {}",
+                        change.getRootPath().getRootIdentifier().firstKeyOf(MasterDatabaseBinding.class));
             } else {
-                final Sgt sgtKey = sxpMasterDBItem.getSecurityGroupTag();
                 final IpPrefix ipPrefixKey = sxpMasterDBItem.getIpPrefix();
                 SxpListenerUtil.updateCachedDao(masterDBBindingDaoCached, ipPrefixKey, change);
-
-                processWithEPPolicyTemplate(sgtKey, sxpMasterDBItem);
-                processWithEPForwardingTemplate(ipPrefixKey, sxpMasterDBItem);
+                processWithEPTemplates(sxpMasterDBItem);
             }
         }
     }
 
-    private void processWithEPForwardingTemplate(final IpPrefix changeKey, final MasterDatabaseBinding sxpMasterDBItem) {
-        if (!ForwardingTemplateUtil.isPlain(changeKey)) {
-            // SKIP SUBNET
-            LOG.debug("received ip-sgt binding with subnet ip - SKIPPING: {} - {}",
-                    changeKey, sxpMasterDBItem.getSecurityGroupTag());
-            return;
-        }
+    private void processWithEPTemplates(final MasterDatabaseBinding sxpMasterDBItem) {
+        final ListenableFuture<Optional<EndpointPolicyTemplateBySgt>> epPolicyTemplateFuture =
+                epPolicyTemplateDao.read(sxpMasterDBItem.getSecurityGroupTag());
 
         final ListenableFuture<Optional<EndpointForwardingTemplateBySubnet>> epForwardingTemplateFuture =
-                epForwardingTemplateDao.read(changeKey);
+                epForwardingTemplateDao.read(sxpMasterDBItem.getIpPrefix());
 
-        final ListenableFuture<RpcResult<Void>> rpcResult = Futures.transform(epForwardingTemplateFuture, new AsyncFunction<Optional<EndpointForwardingTemplateBySubnet>, RpcResult<Void>>() {
-            @Override
-            public ListenableFuture<RpcResult<Void>> apply(final Optional<EndpointForwardingTemplateBySubnet> input) throws Exception {
-                if (input == null || !input.isPresent()) {
-                    LOG.debug("no epForwardingTemplate available for ipPrefix: {}", changeKey);
-                    throw new IllegalArgumentException("no epForwardingTemplate available");
-                } else {
-                    LOG.trace("processing sxpMasterDB event and epForwardingTemplate for ip-prefix: {}", changeKey);
-                    return sxpMapperReactor.processForwardingAndSxpMasterDB(input.get(), sxpMasterDBItem);
-                }
-            }
-        });
-        Futures.addCallback(rpcResult, RPC_FW_RESULT_FUTURE_CALLBACK);
-    }
+        final ListenableFuture<EPTemplateUtil.OptionalMutablePair<EndpointPolicyTemplateBySgt, EndpointForwardingTemplateBySubnet>> compositeRead
+                = EPTemplateUtil.compositeRead(epPolicyTemplateFuture, epForwardingTemplateFuture);
 
-    private void processWithEPPolicyTemplate(final Sgt changeKey, final MasterDatabaseBinding sxpMasterDBItem) {
-        final ListenableFuture<Optional<EndpointPolicyTemplateBySgt>> epPolicyTemplateFuture =
-                epPolicyTemplateDao.read(changeKey);
-
-        final ListenableFuture<RpcResult<Void>> rpcResult = Futures.transform(epPolicyTemplateFuture, new AsyncFunction<Optional<EndpointPolicyTemplateBySgt>, RpcResult<Void>>() {
-            @Override
-            public ListenableFuture<RpcResult<Void>> apply(final Optional<EndpointPolicyTemplateBySgt> input) throws Exception {
-                final ListenableFuture<RpcResult<Void>> result;
-                if (input == null || !input.isPresent()) {
-                    LOG.debug("no epPolicyTemplate available for sgt: {}", changeKey);
-                    result = RpcResultBuilder.<Void>failed()
+        final ListenableFuture<RpcResult<Void>> rpcResult = Futures.transform(compositeRead,
+                new AsyncFunction<EPTemplateUtil.OptionalMutablePair<EndpointPolicyTemplateBySgt, EndpointForwardingTemplateBySubnet>, RpcResult<Void>>() {
+                    @Override
+                    public ListenableFuture<RpcResult<Void>> apply(final EPTemplateUtil.OptionalMutablePair<EndpointPolicyTemplateBySgt, EndpointForwardingTemplateBySubnet> input) throws Exception {
+                        final ListenableFuture<RpcResult<Void>> result;
+                        if (input == null) {
+                            LOG.debug("no ep*Templates available for sgt/ip-prefix: {}/{}",
+                                    sxpMasterDBItem.getSecurityGroupTag(),
+                                    sxpMasterDBItem.getIpPrefix());
+                            result = RpcResultBuilder.<Void>failed()
                                     .withError(RpcError.ErrorType.APPLICATION,
-                                            "no ip-sgt mapping in sxpMasterDB available for " + changeKey)
+                                            "no ep-templates available for" + sxpMasterDBItem)
                                     .buildFuture();
-                } else {
-                    LOG.trace("processing sxpMasterDB event and epPolicyTemplate for sgt: {}", changeKey);
-                    result = sxpMapperReactor.processPolicyAndSxpMasterDB(input.get(), sxpMasterDBItem);
+
+                        } else if (!input.getLeft().isPresent()) {
+                            LOG.debug("no epPolicyTemplate available for sgt: {}", sxpMasterDBItem.getSecurityGroupTag());
+                            result = RpcResultBuilder.<Void>failed()
+                                    .withError(RpcError.ErrorType.APPLICATION,
+                                            "no epPolicyTemplate available for " + sxpMasterDBItem)
+                                    .buildFuture();
+                        } else if (!input.getRight().isPresent()) {
+                            LOG.debug("no epForwardingTemplate available for ip-prefix: {}",
+                                    sxpMasterDBItem.getIpPrefix());
+                            result = RpcResultBuilder.<Void>failed()
+                                    .withError(RpcError.ErrorType.APPLICATION,
+                                            "no epForwardingTemplate available for " + sxpMasterDBItem)
+                                    .buildFuture();
+                        } else {
+                            LOG.trace("processing sxpMasterDB event and epPolicyTemplate for sgt/ip-prefix: {}/{}",
+                                    sxpMasterDBItem.getSecurityGroupTag(),
+                                    sxpMasterDBItem.getIpPrefix());
+                            result = sxpMapperReactor.processTemplatesAndSxpMasterDB(input.getLeft().get(),
+                                    input.getRight().get(), sxpMasterDBItem);
                 }
                 return result;
             }

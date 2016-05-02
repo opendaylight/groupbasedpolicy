@@ -14,17 +14,17 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
 
 /**
- * Test for {@link ForwardingTemplateUtil}.
+ * Test for {@link EPTemplateUtil}.
  */
-public class ForwardingTemplateUtilTest {
+public class EPTemplateUtilTest {
 
     public static final IpPrefix IP_PREFIX_24 = new IpPrefix(new Ipv4Prefix("1.2.3.0/24"));
     public static final IpPrefix IP_PREFIX_32 = new IpPrefix(new Ipv4Prefix("1.2.3.4/32"));
 
     @Test
     public void testIsPlain() throws Exception {
-        Assert.assertFalse(ForwardingTemplateUtil.isPlain(IP_PREFIX_24));
-        Assert.assertTrue(ForwardingTemplateUtil.isPlain(IP_PREFIX_32));
+        Assert.assertFalse(EPTemplateUtil.isPlain(IP_PREFIX_24));
+        Assert.assertTrue(EPTemplateUtil.isPlain(IP_PREFIX_32));
     }
 
     @Test
@@ -34,7 +34,7 @@ public class ForwardingTemplateUtilTest {
     }
 
     private void checkSubnetInfoBuilder(final IpPrefix ipPrefix, final String expectedLow, final String expectedHigh, final int expectedCount) {
-        final SubnetInfoKeyDecorator subnetInfoKey = ForwardingTemplateUtil.buildSubnetInfoKey(ipPrefix);
+        final SubnetInfoKeyDecorator subnetInfoKey = EPTemplateUtil.buildSubnetInfoKey(ipPrefix);
         final SubnetUtils.SubnetInfo subnetInfo = subnetInfoKey.getDelegate();
         Assert.assertEquals(expectedLow, subnetInfo.getLowAddress());
         Assert.assertEquals(expectedHigh, subnetInfo.getHighAddress());

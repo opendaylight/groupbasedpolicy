@@ -33,11 +33,14 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointForwardingTemplateBySubnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointForwardingTemplateBySubnetBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointForwardingTemplateBySubnetKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointPolicyTemplateBySgt;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointPolicyTemplateBySgtBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBinding;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBindingBuilder;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
+import org.opendaylight.yangtools.yang.common.RpcResultBuilder;
 
 /**
  * Test for {@link EPForwardingTemplateListenerImpl}.
@@ -65,6 +68,8 @@ public class EPForwardingTemplateListenerImplTest {
     @Mock
     private DSAsyncDao<IpPrefix, MasterDatabaseBinding> masterDBBindingDao;
     @Mock
+    private DSAsyncDao<Sgt, EndpointPolicyTemplateBySgt> epPolicyTemplateDao;
+    @Mock
     private ListenerRegistration<? extends EPTemplateListener> listenerRegistration;
     @Mock
     private DataTreeModification<EndpointForwardingTemplateBySubnet> dataTreeModification;
@@ -72,6 +77,10 @@ public class EPForwardingTemplateListenerImplTest {
     private DataObjectModification<EndpointForwardingTemplateBySubnet> dataObjectModification;
 
     private EPForwardingTemplateListenerImpl listener;
+    public static final Sgt SGT = new Sgt(1);
+    public static final EndpointPolicyTemplateBySgt EP_POLICY_TEMPLATE = new EndpointPolicyTemplateBySgtBuilder()
+            .setSgt(SGT)
+            .build();
 
     public EPForwardingTemplateListenerImplTest() {
         EP_FW_TEMPLATE_VALUE = new EndpointForwardingTemplateBySubnetBuilder()
@@ -83,7 +92,7 @@ public class EPForwardingTemplateListenerImplTest {
     public void setUp() throws Exception {
         Mockito.when(dataBroker.registerDataTreeChangeListener(Matchers.<DataTreeIdentifier>any(),
                 Matchers.<DataTreeChangeListener>any())).thenReturn(listenerRegistration);
-        listener = new EPForwardingTemplateListenerImpl(dataBroker, sxpMapper, simpleCachedDao, masterDBBindingDao);
+        listener = new EPForwardingTemplateListenerImpl(dataBroker, sxpMapper, simpleCachedDao, masterDBBindingDao, epPolicyTemplateDao);
     }
 
     @Test
@@ -92,21 +101,26 @@ public class EPForwardingTemplateListenerImplTest {
         Mockito.when(dataTreeModification.getRootPath()).thenReturn(TEMPLATE_TREE_PATH);
         Mockito.when(dataObjectModification.getDataAfter()).thenReturn(EP_FW_TEMPLATE_VALUE);
 
-        final Sgt sgt = new Sgt(1);
         final IpPrefix ipPrefix = buildIpPrefix("1.2.3.4/32");
-        final MasterDatabaseBinding prefixGroup = new MasterDatabaseBindingBuilder()
-                .setSecurityGroupTag(sgt)
+        final MasterDatabaseBinding masterDBBinding = new MasterDatabaseBindingBuilder()
+                .setSecurityGroupTag(SGT)
                 .setIpPrefix(ipPrefix)
                 .build();
         Mockito.when(masterDBBindingDao.read(Matchers.<IpPrefix>any())).thenReturn(
-                Futures.immediateFuture(Optional.of(prefixGroup)));
+                Futures.immediateFuture(Optional.of(masterDBBinding)));
+        Mockito.when(epPolicyTemplateDao.read(Matchers.<Sgt>any())).thenReturn(
+                Futures.immediateFuture(Optional.of(EP_POLICY_TEMPLATE)));
+        Mockito.when(sxpMapper.processTemplatesAndSxpMasterDB(Matchers.<EndpointPolicyTemplateBySgt>any(),
+                Matchers.<EndpointForwardingTemplateBySubnet>any(),Matchers.<MasterDatabaseBinding>any())).thenReturn(
+                RpcResultBuilder.success((Void) null).buildFuture());
 
         listener.onDataTreeChanged(Collections.singleton(dataTreeModification));
 
-        final InOrder inOrder = Mockito.inOrder(masterDBBindingDao, simpleCachedDao, sxpMapper);
+        final InOrder inOrder = Mockito.inOrder(masterDBBindingDao, simpleCachedDao, epPolicyTemplateDao, sxpMapper);
         inOrder.verify(simpleCachedDao).update(IP_PREFIX_TMPL, EP_FW_TEMPLATE_VALUE);
         inOrder.verify(masterDBBindingDao).read(IP_PREFIX_TMPL);
-        inOrder.verify(sxpMapper).processForwardingAndSxpMasterDB(EP_FW_TEMPLATE_VALUE, prefixGroup);
+        inOrder.verify(epPolicyTemplateDao).read(SGT);
+        inOrder.verify(sxpMapper).processTemplatesAndSxpMasterDB(EP_POLICY_TEMPLATE, EP_FW_TEMPLATE_VALUE, masterDBBinding);
         inOrder.verifyNoMoreInteractions();
     }
 

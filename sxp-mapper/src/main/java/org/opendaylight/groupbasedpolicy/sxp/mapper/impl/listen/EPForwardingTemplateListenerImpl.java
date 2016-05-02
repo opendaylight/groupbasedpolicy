@@ -15,6 +15,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import java.util.Collection;
 import javax.annotation.Nonnull;
+import org.apache.commons.lang3.tuple.Pair;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
@@ -23,10 +24,13 @@ import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSAsyncDao;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.EPTemplateListener;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SimpleCachedDao;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SxpMapperReactor;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.EPTemplateUtil;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.L3EPServiceUtil;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.SxpListenerUtil;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointForwardingTemplateBySubnet;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointPolicyTemplateBySgt;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBinding;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -51,14 +55,17 @@ public class EPForwardingTemplateListenerImpl implements EPTemplateListener<Endp
     private final DSAsyncDao<IpPrefix, MasterDatabaseBinding> masterDBBindingDao;
     private final ListenerRegistration<? extends EPTemplateListener> listenerRegistration;
     private final InstanceIdentifier<EndpointForwardingTemplateBySubnet> templatePath;
+    private final DSAsyncDao<Sgt, EndpointPolicyTemplateBySgt> epPolicyTemplateDao;
 
     public EPForwardingTemplateListenerImpl(final DataBroker dataBroker,
                                             final SxpMapperReactor sxpMapperReactor,
                                             final SimpleCachedDao<IpPrefix, EndpointForwardingTemplateBySubnet> templateCachedDao,
-                                            final DSAsyncDao<IpPrefix, MasterDatabaseBinding> masterDBBindingDao) {
+                                            final DSAsyncDao<IpPrefix, MasterDatabaseBinding> masterDBBindingDao,
+                                            final DSAsyncDao<Sgt, EndpointPolicyTemplateBySgt> epPolicyTemplateDao) {
         this.sxpMapperReactor = Preconditions.checkNotNull(sxpMapperReactor);
         this.templateCachedDao = Preconditions.checkNotNull(templateCachedDao);
         this.masterDBBindingDao = Preconditions.checkNotNull(masterDBBindingDao);
+        this.epPolicyTemplateDao = Preconditions.checkNotNull(epPolicyTemplateDao);
         templatePath = EPTemplateListener.SXP_MAPPER_TEMPLATE_PARENT_PATH.child(EndpointForwardingTemplateBySubnet.class);
 
         final DataTreeIdentifier<EndpointForwardingTemplateBySubnet> dataTreeIdentifier = new DataTreeIdentifier<>(
@@ -77,33 +84,78 @@ public class EPForwardingTemplateListenerImpl implements EPTemplateListener<Endp
             SxpListenerUtil.updateCachedDao(templateCachedDao, changeKey, change);
 
             final EndpointForwardingTemplateBySubnet epForwardingTemplate = change.getRootNode().getDataAfter();
-            processWithSxpMasterDB(changeKey, epForwardingTemplate);
+            processWithEPTemplates(epForwardingTemplate);
         }
     }
 
-    private void processWithSxpMasterDB(final IpPrefix changeKey, final EndpointForwardingTemplateBySubnet epForwardingTemplate) {
-        final ListenableFuture<Optional<MasterDatabaseBinding>> sxpMasterDbItemFuture = masterDBBindingDao.read(changeKey);
+    private void processWithEPTemplates(final EndpointForwardingTemplateBySubnet epForwardingTemplate) {
+        final ListenableFuture<Optional<MasterDatabaseBinding>> sxpMasterDbItemRead =
+                masterDBBindingDao.read(epForwardingTemplate.getIpPrefix());
 
-        final ListenableFuture<RpcResult<Void>> allRpcResult = Futures.transform(sxpMasterDbItemFuture, new AsyncFunction<Optional<MasterDatabaseBinding>, RpcResult<Void>>() {
-            @Override
-            public ListenableFuture<RpcResult<Void>> apply(final Optional<MasterDatabaseBinding> input) throws Exception {
-                final ListenableFuture<RpcResult<Void>> rpcResult;
-                if (input == null || !input.isPresent()) {
-                    LOG.debug("no epForwardingTemplate available for sgt: {}", changeKey);
-                    rpcResult = RpcResultBuilder.<Void>failed()
-                            .withError(RpcError.ErrorType.APPLICATION,
-                                    "no ip-sgt mapping in sxpMasterDB available for " + changeKey)
-                            .buildFuture();
-                } else {
-                    LOG.trace("processing sxpMasterDB event and epForwardingTemplate for sgt: {}", changeKey);
-                    rpcResult = sxpMapperReactor.processForwardingAndSxpMasterDB(epForwardingTemplate, input.get());
-                }
-                return rpcResult;
-            }
-        });
+        // find all available epForwardingTemplates and pair those to sxpMasterDBBinding
+        final ListenableFuture<Optional<Pair<MasterDatabaseBinding, EndpointPolicyTemplateBySgt>>> searchResult =
+                Futures.transform(sxpMasterDbItemRead, createReadAndPairTemplateToBindingFunction(epForwardingTemplate));
 
-        Futures.addCallback(allRpcResult, ANY_RPC_FUTURE_CALLBACK);
+        // invoke sxpMapperReactor.process for every valid combination of sxpMasterDBBinding, epPolicyTemplate, epForwardingTemplate
+        final ListenableFuture<RpcResult<Void>> rpcResult =
+                Futures.transform(searchResult, createProcessAllFunction(epForwardingTemplate));
+
+        Futures.addCallback(rpcResult, ANY_RPC_FUTURE_CALLBACK);
     }
+
+    private AsyncFunction<Optional<Pair<MasterDatabaseBinding, EndpointPolicyTemplateBySgt>>, RpcResult<Void>>
+    createProcessAllFunction(final EndpointForwardingTemplateBySubnet epForwardingTemplate) {
+        return new AsyncFunction<Optional<Pair<MasterDatabaseBinding, EndpointPolicyTemplateBySgt>>, RpcResult<Void>>() {
+            @Override
+            public ListenableFuture<RpcResult<Void>>
+            apply(final Optional<Pair<MasterDatabaseBinding, EndpointPolicyTemplateBySgt>> input) throws Exception {
+                final ListenableFuture<RpcResult<Void>> result;
+                if (input == null || !input.isPresent()) {
+                    LOG.debug("no epPolicyTemplate available for ip-prefix: {}", epForwardingTemplate.getIpPrefix());
+                    result = Futures.immediateFuture(
+                            RpcResultBuilder.<Void>failed()
+                                    .withError(RpcError.ErrorType.APPLICATION,
+                                            "no epForwardingTemplate available for ip-prefix " + epForwardingTemplate.getIpPrefix())
+                                    .build());
+                } else {
+                    LOG.trace("processing epForwardingTemplate event for ip-prefix: {}", epForwardingTemplate.getIpPrefix());
+                    final Pair<MasterDatabaseBinding, EndpointPolicyTemplateBySgt> pair = input.get();
+                    final MasterDatabaseBinding sxpMasterDBBinding = pair.getLeft();
+                    final EndpointPolicyTemplateBySgt epPolicyTemplate = pair.getRight();
+                    LOG.trace("processing epForwardingTemplate event with resolved sxpMasterDb entry and " +
+                                    "epPolicyTemplate for sgt/ip-prefix: {}/{}",
+                            sxpMasterDBBinding.getSecurityGroupTag(), sxpMasterDBBinding.getImplementedInterface());
+                    result = sxpMapperReactor.processTemplatesAndSxpMasterDB(epPolicyTemplate, epForwardingTemplate, sxpMasterDBBinding);
+                }
+
+                return result;
+            }
+        };
+    }
+
+    private AsyncFunction<Optional<MasterDatabaseBinding>, Optional<Pair<MasterDatabaseBinding, EndpointPolicyTemplateBySgt>>>
+    createReadAndPairTemplateToBindingFunction(final EndpointForwardingTemplateBySubnet epFowardingTemplate) {
+        return new AsyncFunction<Optional<MasterDatabaseBinding>, Optional<Pair<MasterDatabaseBinding, EndpointPolicyTemplateBySgt>>>() {
+            @Override
+            public ListenableFuture<Optional<Pair<MasterDatabaseBinding, EndpointPolicyTemplateBySgt>>>
+            apply(final Optional<MasterDatabaseBinding> input) throws Exception {
+                final ListenableFuture<Pair<MasterDatabaseBinding, EndpointPolicyTemplateBySgt>> result;
+                if (input == null || !input.isPresent()) {
+                    LOG.debug("no sxpMasterDB entry available for ip-prefix: {}", epFowardingTemplate.getIpPrefix());
+                    result = Futures.immediateFuture(null);
+                } else {
+                    LOG.trace("processing sxpMasterDB entry for ip-prefix: {}", epFowardingTemplate.getIpPrefix());
+                    final MasterDatabaseBinding masterDBItem = input.get();
+                    final ListenableFuture<Optional<EndpointPolicyTemplateBySgt>> epPolicyTemplateRead =
+                            epPolicyTemplateDao.read(masterDBItem.getSecurityGroupTag());
+                    result = EPTemplateUtil.wrapToPair(masterDBItem, epPolicyTemplateRead);
+                }
+
+                return EPTemplateUtil.wrapToOptional(result);
+            }
+        };
+    }
+
 
     @Override
     public void close() throws Exception {
