@@ -141,9 +141,6 @@ module renderer {
     }
 
     container renderers {
-        description
-            "Leaf containing all renderers' description.";
-
         list renderer {
             description
                 "A renderer provides a list of capabilities and status about configured policy.
@@ -188,6 +185,7 @@ module renderer {
                     description "Renderer tries to apply given policy on devices.";
                     container renderer-endpoints {
                         list renderer-endpoint {
+                            min-elements 1;
                             description "Policy between renderer-endpoint and peer-endpoints (peers).
                                 Renderer configures policy for renderer endpoints.";
                             key "context-type context-id address-type address";
@@ -215,6 +213,7 @@ module renderer {
 
                     container rule-groups {
                         list rule-group {
+                            min-elements 1;
                             description "A specific policy rule group that apply to pair of endpoints.
                                 The policy rule group represents the subject with resolved rules.";
                             key "tenant-id contract-id subject-name";
@@ -227,6 +226,7 @@ module renderer {
 
                     container endpoints {
                         list address-endpoint-with-location {
+                            min-elements 1;
                             key "context-type context-id address-type address";
                             uses base-endpoint:address-endpoint-fields;
                             uses base-endpoint:has-location;
@@ -242,6 +242,7 @@ module renderer {
 
                     container forwarding-contexts {
                         list forwarding-context-by-tenant {
+                            min-elements 1;
                             key tenant-id;
                             uses forwarding:forwarding-with-tenant-fields;
                         }
