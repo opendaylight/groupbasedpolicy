@@ -30,7 +30,7 @@
     <!-- Repos needed by the UI -->
     <repository>mvn:org.opendaylight.dlux/features-dlux/{{VERSION}}/xml/features</repository>
     <!-- Repos needed by IOvisor Renderer -->
-    <repository>mvn:org.opendaylight.aaa/features-aaa/${aaa.version}/xml/features</repository>
+    <repository>mvn:org.opendaylight.aaa/features-aaa-shiro/${aaa.version}/xml/features</repository>
     <!-- Repos needed by sxp-mapper -->
     <repository>mvn:org.opendaylight.sxp/features/${sxp.version}/xml/features</repository>
 
@@ -104,7 +104,7 @@
     <feature name='odl-groupbasedpolicy-iovisor' version='${project.version}'
              description='OpenDaylight :: groupbasedpolicy :: IOVisor Renderer'>
         <feature>war</feature>
-        <feature version='${aaa.version}'>odl-aaa-authn</feature>
+        <feature version='${aaa.version}'>odl-aaa-shiro</feature>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <feature version="${restconf.version}">odl-restconf</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/iovisor-renderer/{{VERSION}}</bundle>

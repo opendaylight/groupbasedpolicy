@@ -185,7 +185,7 @@
     <!-- AAA -->
     <dependency>
       <groupId>org.opendaylight.aaa</groupId>
-      <artifactId>features-aaa</artifactId>
+      <artifactId>features-aaa-shiro</artifactId>
       <version>${aaa.version}</version>
       <classifier>features</classifier>
       <type>xml</type>
