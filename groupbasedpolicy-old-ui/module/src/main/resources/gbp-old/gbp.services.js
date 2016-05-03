@@ -1,12 +1,12 @@
-define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joint) {
+define(['app/gbp-old/gbp.module', 'app/gbp-old/js/joint.clean.build'], function(gbpOld, joint) {
 
-    gbp.register.factory('GBPRestangular', function(Restangular, ENV) {
+    gbpOld.register.factory('GBPRestangular', function(Restangular, ENV) {
         return Restangular.withConfig(function(RestangularConfig) {
             RestangularConfig.setBaseUrl(ENV.getBaseURL("MD_SAL"));
         });
     });
 
-    gbp.register.factory('GBPConstants', function() {
+    gbpOld.register.factory('GBPConstants', function() {
         var c = { colors: {'graph' : {}}, strings: {}, jointElements: {}, objType: {}, numbers: {}};
 
         c.strings.flood = 'flood';
@@ -59,7 +59,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
         return c;
     });
 
-    gbp.register.factory('MockServices', function() {
+    gbpOld.register.factory('MockServices', function() {
 
         var ms = {};
 
@@ -94,7 +94,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
         return ms;
     });
 
-    gbp.register.factory('TopologyDataLoaders', function(GBPRestangular, GBPConstants) {
+    gbpOld.register.factory('TopologyDataLoaders', function(GBPRestangular, GBPConstants) {
         var tdl = {};
 
         tdl.getSubjectsBetweenEndpointGroups = function(storage, tenantId, successCbk, errorCbk) {
@@ -265,7 +265,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
             };
         };
 
-        
+
         tdl.getL2L3 = function(storage, tenantId, successCbk, errorCbk) {
             //l2-bridge-domain
             var lid = 0,
@@ -357,7 +357,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
         return tdl;
     });
 
-    gbp.register.factory('TopoServices', function(TopologyDataLoaders, MockServices, GBPConstants) {
+    gbpOld.register.factory('TopoServices', function(TopologyDataLoaders, MockServices, GBPConstants) {
 
         var ts = {};
 
@@ -410,8 +410,8 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
         loaders[GBPConstants.strings.config] = function(successCbk, errorCbk, args) {
             var storage = args.storage || 'config',
                 tenantId = args.tenantId;
-                
-       
+
+
             TopologyDataLoaders.getSubjectsBetweenEndpointGroups(false, tenantId, function(data){
                 var topo = TopologyDataLoaders.getEpgTopo(data);
                 successCbk(topo.nodes, topo.links);
@@ -484,7 +484,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
         return ts;
     });
 
-    gbp.register.factory('GPBServices', function(GBPRestangular) {
+    gbpOld.register.factory('GPBServices', function(GBPRestangular) {
 
         var s = {};
 
@@ -626,7 +626,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('GBPGovernanceServices', function(TopologyDataLoaders) {
+    gbpOld.register.factory('GBPGovernanceServices', function(TopologyDataLoaders) {
         var s = {};
 
         var subjectInList = function(subjectName, subjectList) {
@@ -660,7 +660,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
             this.addRule = function(rule, classifierInstances) {
                 if(rule['classifier-ref'] && rule['classifier-ref'].length > 0) {
-                    
+
                     rule['classifier-ref'].forEach(function(cr) {
                         //cr['parameters'] = [];
                         classifierInstances.forEach(function(ci) {
@@ -703,13 +703,13 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
                 existingSubject.addProvider(providerEpg);
                 existingSubject.addConsumer(consumerEpg);
-                
+
                 if(subject['ui-rule'] && subject['ui-rule'].length > 0) {
                     subject['ui-rule'].forEach(function(r) {
                         existingSubject.addRule(r, classifierInstances);
                     });
                 }
-                
+
                 if(newSubject) {
                     subjects.push(existingSubject);
                 }
@@ -724,7 +724,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
             };
 
         s.getEPGsAndSubjects = function(tenantId, classifierInstances, successCbk, errorCbk) {
-            TopologyDataLoaders.getSubjectsBetweenEndpointGroups(false, tenantId, 
+            TopologyDataLoaders.getSubjectsBetweenEndpointGroups(false, tenantId,
                 function(data) {
                     var epgPairs = data.output['endpoint-group-pair-with-subject'],
                         consumers = [],
@@ -747,7 +747,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
         return s;
     });
 
-    gbp.register.factory('GBPTenantServices', function(GPBServices) {
+    gbpOld.register.factory('GBPTenantServices', function(GPBServices) {
 
         var s = {};
 
@@ -816,7 +816,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('GBPContractServices', function(GPBServices) {
+    gbpOld.register.factory('GBPContractServices', function(GPBServices) {
 
         var s = {};
 
@@ -879,7 +879,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('GBPClauseServices', function(GPBServices) {
+    gbpOld.register.factory('GBPClauseServices', function(GPBServices) {
 
         var s = {};
 
@@ -959,7 +959,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('GBPSubjectServices', function(GPBServices) {
+    gbpOld.register.factory('GBPSubjectServices', function(GPBServices) {
 
         var s = {};
 
@@ -1024,7 +1024,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('GBPRuleServices', function(GPBServices) {
+    gbpOld.register.factory('GBPRuleServices', function(GPBServices) {
 
         var s = {};
 
@@ -1091,7 +1091,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('GBPClassifierRefsServices', function(GPBServices) {
+    gbpOld.register.factory('GBPClassifierRefsServices', function(GPBServices) {
 
         var s = {};
 
@@ -1162,7 +1162,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('GBPActionRefsServices', function(GPBServices) {
+    gbpOld.register.factory('GBPActionRefsServices', function(GPBServices) {
 
         var s = {};
 
@@ -1231,7 +1231,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('GBPL2FloodDomainServices', function(GPBServices) {
+    gbpOld.register.factory('GBPL2FloodDomainServices', function(GPBServices) {
 
         var s = {};
 
@@ -1296,7 +1296,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('GBPL2BridgeDomainServices', function(GPBServices) {
+    gbpOld.register.factory('GBPL2BridgeDomainServices', function(GPBServices) {
 
         var s = {};
 
@@ -1362,7 +1362,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('GBPL3ContextServices', function(GPBServices) {
+    gbpOld.register.factory('GBPL3ContextServices', function(GPBServices) {
 
         var s = {};
 
@@ -1426,7 +1426,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('GBPSubnetServices', function(GPBServices) {
+    gbpOld.register.factory('GBPSubnetServices', function(GPBServices) {
 
         var s = {};
 
@@ -1493,7 +1493,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('GBPGatewayServices', function(GPBServices) {
+    gbpOld.register.factory('GBPGatewayServices', function(GPBServices) {
 
         var s = {};
 
@@ -1556,7 +1556,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('GBPPrefixServices', function(GPBServices) {
+    gbpOld.register.factory('GBPPrefixServices', function(GPBServices) {
 
         var s = {};
 
@@ -1620,7 +1620,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('GBPClassifierInstanceServices', function(GPBServices) {
+    gbpOld.register.factory('GBPClassifierInstanceServices', function(GPBServices) {
 
         var s = {};
 
@@ -1681,7 +1681,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('GBPActionInstanceServices', function(GPBServices) {
+    gbpOld.register.factory('GBPActionInstanceServices', function(GPBServices) {
 
         var s = {};
 
@@ -1740,7 +1740,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
         s.getDefinitions = function(successCbk, errorCbk) {
             var restObj = GBPRestangular.one('restconf').one('operational').one('policy:subject-feature-definitions');
-                
+
             restObj.get().then(function(data) {
                 successCbk(data['subject-feature-definitions']['action-definition']);
             }, function(res) {
@@ -1752,7 +1752,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('GBPEpgServices', function(GPBServices) {
+    gbpOld.register.factory('GBPEpgServices', function(GPBServices) {
 
         var s = {};
 
@@ -1816,7 +1816,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('GBPConNamedSelServices', function(GPBServices) {
+    gbpOld.register.factory('GBPConNamedSelServices', function(GPBServices) {
 
         var s = {};
 
@@ -1896,7 +1896,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
     });
 
 
-    gbp.register.factory('GBPProNamedSelServices', function(GPBServices) {
+    gbpOld.register.factory('GBPProNamedSelServices', function(GPBServices) {
 
         var s = {};
 
@@ -1975,7 +1975,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('GBPEndpointServices', function(GPBServices) {
+    gbpOld.register.factory('GBPEndpointServices', function(GPBServices) {
 
         var s = {};
 
@@ -2022,16 +2022,16 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
         };
 
         var createDeleteData = function(obj) {
-            var o = { 
-                'input': { 
+            var o = {
+                'input': {
                     'l3': obj['l3-address'],
                     'l2': [
-                        { 
+                        {
                             'l2-context': obj['l2-context'],
                             'mac-address': obj['mac-address']
                         }
-                    ] 
-                } 
+                    ]
+                }
             };
 
             return o;
@@ -2064,7 +2064,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('GBPEndpointL3Services', function(GPBServices) {
+    gbpOld.register.factory('GBPEndpointL3Services', function(GPBServices) {
 
         var s = {};
 
@@ -2115,8 +2115,8 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
         };
 
         var createDeleteData = function(obj) {
-            var o = { 
-                'input': { 
+            var o = {
+                'input': {
                     'l3-prefix': [
                         {
                             'l3-context': obj['l3-context'],
@@ -2125,7 +2125,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
                     ],
                     'l2': obj['endpoint-l2-gateways'],
                     'l3': obj['endpoint-l3-gateways']
-                } 
+                }
             };
 
             return o;
@@ -2159,7 +2159,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('PGNServices', function(GBPRestangular) {
+    gbpOld.register.factory('PGNServices', function(GBPRestangular) {
 
         var s = {};
 
@@ -2207,11 +2207,11 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
                 restObj = GBPRestangular.one('restconf').one('operations'),
                 rpcRes = 'pgn-application:create-or-replace-endpoint-groups',
                 reqData = {
-                               "input": 
+                               "input":
                                 {
                                     "endpoint-group":[
                                     {
-                                        "pgn-application:tenant-id": tenantID, 
+                                        "pgn-application:tenant-id": tenantID,
                                         "pgn-application:id":uuid,
                                         "pgn-application:security-group-tag":sgt,
                                         "pgn-application:name":groupName,
@@ -2236,7 +2236,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
                             "input": {
                                 "endpoint-group":[
                                     {
-                                        "pgn-application:tenant-id": tenantId, 
+                                        "pgn-application:tenant-id": tenantId,
                                         "pgn-application:id":uuid
                                     }
                                 ]
@@ -2270,8 +2270,8 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
                 reqData = {
                                "input": {
                                     "endpoint-group-pair-with-rules": {
-                                        "pgn-application:provider-tenant-id": tenantID, 
-                                        "pgn-application:consumer-tenant-id": tenantID, 
+                                        "pgn-application:provider-tenant-id": tenantID,
+                                        "pgn-application:consumer-tenant-id": tenantID,
                                         "pgn-application:provider-group-id":providerId,
                                         "pgn-application:consumer-group-id":consumerId,
                                         "pgn-application:group-rule": [
@@ -2298,12 +2298,12 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
                 restObj = GBPRestangular.one('restconf').one('operations'),
                 rpcRes = 'pgn-application:unwire-endpoint-groups',
                 reqData = {
-                           "input": 
+                           "input":
                             {
                                 "endpoint-group-pair":[
                                     {
-                                        "pgn-application:provider-tenant-id": tenantId, 
-                                        "pgn-application:consumer-tenant-id": tenantId, 
+                                        "pgn-application:provider-tenant-id": tenantId,
+                                        "pgn-application:consumer-tenant-id": tenantId,
                                         "pgn-application:provider-group-id":providerId,
                                         "pgn-application:consumer-group-id":consumerId
                                     }
@@ -2355,7 +2355,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
         return s;
     });
 
-    gbp.register.factory('DesignGbpFactory', function(){
+    gbpOld.register.factory('DesignGbpFactory', function(){
 
         var dvf = {};
 
@@ -2369,7 +2369,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
     });
 
-    gbp.register.factory('JointGraphOffsetFactory', function(GBPConstants){
+    gbpOld.register.factory('JointGraphOffsetFactory', function(GBPConstants){
         var jgof = {};
 
         jgof.createWHObj = function(w, h) {
@@ -2427,7 +2427,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
         return jgof;
     });
 
-    gbp.register.factory('JointGraphFactory', function(GBPConstants){
+    gbpOld.register.factory('JointGraphFactory', function(GBPConstants){
         var defaulColor = 'blue';
 
         var jgf = {};
@@ -2467,12 +2467,12 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
 
         jgf.createElement = function(elementName, posx, posy, width, height, objectType, object, tooltip, bgcolor, titleName) {
             var setWidth = function(width) {
-                return width < GBPConstants.jointElements.minWidth ? GBPConstants.jointElements.minWidth : 
+                return width < GBPConstants.jointElements.minWidth ? GBPConstants.jointElements.minWidth :
                        width > GBPConstants.jointElements.maxWidth ? GBPConstants.jointElements.maxWidth : width;
             };
 
             var setHeight = function(height) {
-                return height < GBPConstants.jointElements.minHeight ? GBPConstants.jointElements.minHeight : 
+                return height < GBPConstants.jointElements.minHeight ? GBPConstants.jointElements.minHeight :
                        height > GBPConstants.jointElements.maxHeight ? GBPConstants.jointElements.maxHeight : height;
             };
 
@@ -2481,7 +2481,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
             joint.shapes.html.Element = joint.shapes.basic.Generic.extend({
 
                 markup: '<g class="rotatable"><g class="scalable"><rect/><title /></g><text class="text1"></text><text class="text2"></text><title /></g>',
-                
+
                 defaults: joint.util.deepSupplement({
                     type: 'html.Element',
                     attrs: {
@@ -2490,7 +2490,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
                         '.text2': { ref: 'rect', 'ref-x': 0.5, 'ref-y': 0.7, 'y-alignment': 'middle', 'x-alignment': 'middle', cursor: 'pointer'},
                         'title': {text: tooltip},
                     }
-                    
+
                 }, joint.shapes.basic.Generic.prototype.defaults)
             });
 
@@ -2574,7 +2574,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
                 target: { id: targetId },
                 attrs: {
                     '.connection': { stroke: colorIn, 'stroke-width': 2, name: 'normal' },
-                    '.connection-wrap': { 'stroke-width': 10 } 
+                    '.connection-wrap': { 'stroke-width': 10 }
                 },
                 objData: objData
             };
@@ -2600,7 +2600,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
         return jgf;
     });
 
-    gbp.register.factory('GBPJointGraphBuilder', function(GBPRestangular, GBPConstants, JointGraphFactory, JointGraphOffsetFactory, TopologyDataLoaders){
+    gbpOld.register.factory('GBPJointGraphBuilder', function(GBPRestangular, GBPConstants, JointGraphFactory, JointGraphOffsetFactory, TopologyDataLoaders){
         var jgb = {};
 
         var builders = {};
@@ -2645,18 +2645,18 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
                     r = (paperCenterX < paperCenterY ? paperCenterX : paperCenterY ) - circleMargin;
                     degs = 360 / elementsCount * (elementIndex+1) + 180;
                     rads = deg2rad(degs);
-                
+
                 elementWidth = elementWidth ? elementWidth : GBPConstants.jointElements.minWidth;
                 elementHeight = elementHeight ? elementHeight : GBPConstants.jointElements.minHeight;
-                
+
                 if(elementWidth < GBPConstants.jointElements.minWidth){elementWidth = GBPConstants.jointElements.minWidth;}
                 if(elementWidth > GBPConstants.jointElements.maxWidth){elementWidth = GBPConstants.jointElements.maxWidth;}
                 if(elementHeight < GBPConstants.jointElements.minHeight){elementHeight = GBPConstants.jointElements.minHeight;}
                 if(elementHeight > GBPConstants.jointElements.maxHeight){elementHeight = GBPConstants.jointElements.maxHeight;}
-                    
+
                 result.x = paperCenterX + r * Math.cos(rads);
                 result.y = paperCenterY + r * Math.sin(rads);
-                
+
                 degs = degs % 360;
                 if(degs > 90 && degs < 270){
                     result.x = result.x - elementWidth;
@@ -2672,7 +2672,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
                 }
                 return result;
             };
-            
+
             var paperCenterX = (paper.options.width) / 2;
             var paperCenterY = (paper.options.height) / 2;
             topo.nodes.forEach(function(i, index){
@@ -2680,7 +2680,7 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
                     header = 'Epg',
                     width =  Math.max(JointGraphFactory.getLabelLength(label.length), JointGraphFactory.getLabelLength(header.length)),
                     color = GBPConstants.colors[GBPConstants.strings.epg];
-                    
+
                 var itemPos = getXYInCircle(index, topo.nodes.length, paperCenterX, paperCenterY, width, null);
                 var item = JointGraphFactory.createElement(label, itemPos.x, itemPos.y, width, null, GBPConstants.strings.epg , i, label, color, header);
 
@@ -2726,8 +2726,8 @@ define(['app/gbp/gbp.module', 'app/gbp/js/joint.clean.build'], function(gbp, joi
         builders[GBPConstants.strings.config] = function(args, paper) {
             var storage = args.storage || 'config',
                 tenantId = args.tenantId;
-                
-       
+
+
             TopologyDataLoaders.getSubjectsBetweenEndpointGroups(false, tenantId, function(data){
                 setOperConfigTopoData(paper, data);
             }, function(){});

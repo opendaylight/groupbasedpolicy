@@ -1,4 +1,4 @@
-/*! JointJS v0.9.3 - JavaScript diagramming library  2015-05-22 
+/*! JointJS v0.9.3 - JavaScript diagramming library  2015-05-22
 
 
 This Source Code Form is subject to the terms of the Mozilla Public
@@ -11,7 +11,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
         // For AMD.
 
-        define(['app/gbp/js/geometry', 'app/gbp/js/vectorizer', 'jquery', 'app/gbp/js/lodash.min', 'app/gbp/js/backbone-min'], function(g, V, $, _, Backbone) {
+        define(['app/gbp-old/js/geometry', 'app/gbp-old/js/vectorizer', 'jquery', 'app/gbp-old/js/lodash.min', 'app/gbp-old/js/backbone-min'], function(g, V, $, _, Backbone) {
 
             Backbone.$ = $;
 
@@ -46,7 +46,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 }(this, function(root, Backbone, _, $, g, V) {
 
-/*! JointJS v0.9.3 - JavaScript diagramming library  2015-05-22 
+/*! JointJS v0.9.3 - JavaScript diagramming library  2015-05-22
 
 
 This Source Code Form is subject to the terms of the Mozilla Public

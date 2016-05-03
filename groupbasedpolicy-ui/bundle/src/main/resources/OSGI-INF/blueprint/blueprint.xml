@@ -4,16 +4,13 @@
     <bean id="bundle" init-method="initialize" destroy-method="clean" class="org.opendaylight.dlux.loader.DluxModule">
         <property name="httpService" ref="httpService"/>
         <property name="loader" ref="loader"/>
-        <property name="moduleName" value="gbpOld"/>
-        <property name="url" value="/src/app/gbp-old"/>
-        <property name="directory" value="/gbp-old"/>
-        <property name="requireJs" value="app/gbp-old/gbp.module"/>
-        <property name="angularJs" value="app.gbpOld"/>
+        <property name="moduleName" value="gbp"/>
+        <property name="url" value="/src/app/gbp"/>
+        <property name="directory" value="/gbp"/>
+        <property name="requireJs" value="app/gbp/gbp.module"/>
+        <property name="angularJs" value="app.gbp"/>
 		<property name="cssDependencies">
-            <list>
-                 <value>src/app/gbp-old/gbp.css</value>
-                 <value>src/app/gbp-old/js/joint.css</value>
-            </list>
+            <list></list>
         </property>
     </bean>
 </blueprint>
