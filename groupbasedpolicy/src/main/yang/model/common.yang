@@ -99,6 +99,9 @@ module gbp-common {
     }
 
     typedef subnet-id {
+
+        status deprecated;
+
         type network-domain-id;
         description "A unique ID for a subnet";
     }
@@ -109,21 +112,33 @@ module gbp-common {
     }
 
     typedef l2-context-id {
+
+        status deprecated;
+
         type context-id;
         description "A unique ID for a layer 2 context";
     }
 
     typedef l2-bridge-domain-id {
+
+        status deprecated;
+
         type l2-context-id;
         description "A unique ID for a bridge domain";
     }
 
     typedef l2-flood-domain-id {
+
+        status deprecated;
+
         type l2-context-id;
         description "A unique ID for a flood domain";
     }
 
     typedef l3-context-id {
+
+        status deprecated;
+
         type context-id;
         description "A unique ID for a layer 3 context";
     }

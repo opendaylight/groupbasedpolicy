@@ -27,6 +27,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoints.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoints.rev160427.endpoints.address.endpoints.by.containment.AddressEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointForwardingTemplateBySubnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointPolicyTemplateBySgt;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.endpoint.forwarding.template.by.subnet.NetworkContainment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBinding;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcResultBuilder;
@@ -48,6 +49,8 @@ public class SxpMapperReactorImplTest {
     @Mock
     private EndpointForwardingTemplateBySubnet epForwardingTemplate;
     @Mock
+    private NetworkContainment networkContainment;
+    @Mock
     private DataBroker dataBroker;
     @Mock
     private ReadOnlyTransaction rTx;
@@ -63,6 +66,7 @@ public class SxpMapperReactorImplTest {
         Mockito.when(dataBroker.newReadOnlyTransaction()).thenReturn(rTx);
         Mockito.when(rTx.read(Matchers.same(LogicalDatastoreType.OPERATIONAL),
                 Matchers.<InstanceIdentifier<AddressEndpoint>>any())).thenReturn(Futures.immediateCheckedFuture(Optional.absent()));
+        Mockito.when(epForwardingTemplate.getNetworkContainment()).thenReturn(networkContainment);
     }
 
     @After

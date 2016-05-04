@@ -1,0 +1,117 @@
+/*
+ * Copyright (c) 2016 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
+module forwarding {
+    yang-version 1;
+
+    namespace "urn:opendaylight:groupbasedpolicy:forwarding";
+    prefix "forwarding";
+
+    import gbp-common { prefix gbp-common; revision-date 2014-04-21; }
+
+    revision "2016-04-27" {
+        description
+                "Initial revision.";
+    }
+
+    identity address-type {
+        description "Address type used in endoints.";
+    }
+
+    identity network-domain {
+        description "Basic forwarding entity";
+    }
+
+    identity context-type {
+        description "Type of context.";
+        base network-domain;
+    }
+
+    typedef address-type-ref {
+        description "Reference to address type.";
+        type identityref {
+            base address-type;
+        }
+    }
+
+    typedef network-domain-ref {
+        description "Reference to network domain.";
+        type identityref {
+            base network-domain;
+        }
+    }
+
+    typedef context-type-ref {
+        description "Reference to context type.";
+        type identityref {
+            base context-type;
+        }
+    }
+
+    grouping network-domain-key {
+        leaf network-domain-type {
+            type network-domain-ref;
+            mandatory true;
+        }
+        leaf network-domain-id {
+            type gbp-common:network-domain-id;
+            mandatory true;
+        }
+    }
+
+    grouping context-key {
+        leaf context-type {
+            type context-type-ref;
+            mandatory true;
+        }
+        leaf context-id {
+            type gbp-common:context-id;
+            mandatory true;
+        }
+    }
+
+    grouping has-address-type {
+        leaf address-type {
+            type address-type-ref;
+            mandatory true;
+        }
+    }
+
+    container forwarding {
+        list forwarding-by-tenant {
+            key tenant-id;
+            leaf tenant-id {
+                type gbp-common:tenant-id;
+                description
+                            "The tenant with which forwarding-context is associated";
+            }
+
+            list forwarding-context {
+                key "context-type context-id";
+                uses context-key;
+
+                uses has-address-type;
+                container parent {
+                    uses context-key;
+                }
+            }
+
+            list network-domain {
+                key "network-domain-type network-domain-id";
+                uses network-domain-key;
+
+                container parent {
+                    uses context-key;
+                }
+
+                description "Network domain can be augmented with further information.";
+            }
+        }
+    }
+
+}

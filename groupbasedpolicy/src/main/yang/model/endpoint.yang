@@ -188,6 +188,10 @@ module endpoint {
     }
 
     container endpoints {
+
+        // use base-endpoint.yang instead
+        status deprecated;
+
         description
             "Repository for operational state data about endpoints needed for
              policy resolution.";
@@ -229,6 +233,10 @@ module endpoint {
     }
 
     rpc register-endpoint {
+
+        // use base-endpoint.yang instead
+        status deprecated;
+
         description
             "Register a new endpoint into the registry.  If there
              is already an existing endpoint with the same keys, they
@@ -240,6 +248,10 @@ module endpoint {
     }
 
     rpc register-l3-prefix-endpoint {
+
+        // use base-endpoint.yang instead
+        status deprecated;
+
         description
             "Register an L3 Prefix Endpoint to the endpoint registery. If there
             is already an existing endpoint with the same keys, they
@@ -251,6 +263,10 @@ module endpoint {
     }
 
     rpc unregister-endpoint {
+
+        // use base-endpoint.yang instead
+        status deprecated;
+
         description "Unregister an endpoint or endpoints from the registry.";
 
         input {
@@ -270,6 +286,9 @@ module endpoint {
     }
 
     rpc set-endpoint-group-conditions {
+
+        status deprecated;
+
         description
             "Set a list of conditions for a particular endpoint group.
              These conditions will apply to all endpoints in the
@@ -282,6 +301,9 @@ module endpoint {
     }
 
     rpc unset-endpoint-group-conditions {
+
+        status deprecated;
+
         description
             "Remove a list of conditions from an endpoint group.";
 

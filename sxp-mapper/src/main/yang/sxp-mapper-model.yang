@@ -14,6 +14,7 @@ module sxp-mapper-model {
     import sxp-database { prefix sxp-database; revision-date 2016-03-08; }
     import gbp-common { prefix gbp-common; revision-date 2014-04-21; }
     import ietf-inet-types { prefix inet; revision-date 2010-09-24; }
+    import forwarding { prefix forwarding; revision-date 2016-04-27; }
 
     description
         "This module contains the YANG definitions for
@@ -63,16 +64,16 @@ module sxp-mapper-model {
                     "The IP prefix where an endpoint can be connected.";
             }
             leaf l3-context {
-               type gbp-common:l3-context-id;
+               type gbp-common:context-id;
                mandatory true;
                description
                     "The context for the endpoint's layer 3 address";
             }
-            leaf network-containment {
+            container network-containment {
                 description
-                    "The network domain associated with this endpoint's fowarding
-                    context.";
-                type gbp-common:network-domain-id;
+                            "The network domain associated with this endpoint's fowarding
+                            context.";
+                uses forwarding:network-domain-key;
             }
         }
     }

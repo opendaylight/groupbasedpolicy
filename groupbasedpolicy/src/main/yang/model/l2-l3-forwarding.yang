@@ -1,0 +1,90 @@
+/*
+ * Copyright (c) 2016 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
+module l2-l3-forwarding {
+    yang-version 1;
+
+    namespace "urn:opendaylight:groupbasedpolicy:forwarding:l2_l3";
+    prefix "l2-l3-forwarding";
+
+    import forwarding { prefix forwarding; revision-date 2016-04-27; }
+    import ietf-inet-types { prefix inet; revision-date 2010-09-24; }
+    import yang-ext {prefix ext; revision-date 2013-07-09;}
+
+    revision "2016-04-27" {
+        description
+                "Initial revision.";
+    }
+
+    identity l3-context {
+        base forwarding:context-type;
+    }
+
+    identity l2-bridge-domain {
+        base forwarding:context-type;
+    }
+
+    identity l2-flood-domain {
+        base forwarding:context-type;
+    }
+
+    identity subnet {
+        base forwarding:network-domain;
+    }
+
+    identity mac-address-type {
+        description "Values by MAC address type MUST be compatible with type ietf-yang-types:mac-address.
+            This address type can be used only if forwarding:context-type is l2-bridge-domain.";
+        base forwarding:address-type;
+    }
+
+    identity ip-prefix-type {
+        description "Values by IP prefix type MUST be compatible with type ietf-inet-types:ipv-prefix.
+            This address type can be used only if forwarding:context-type is l3-context.";
+        base forwarding:address-type;
+    }
+
+    grouping subnet-fields {
+        leaf ip-prefix {
+            description "The IP prefix that defines the subnet";
+            type inet:ip-prefix;
+        }
+        leaf virtual-router-ip {
+            description
+                "IP address to use for a virtual gateway router
+                 for the subnet, if desired.";
+            type inet:ip-address;
+        }
+        list gateways {
+            description
+                "External gateways for subnets we serve,
+                includes prefixes for static routing";
+            key "gateway";
+            leaf gateway {
+                type inet:ip-address;
+            }
+            list prefixes {
+                key "prefix";
+                leaf prefix {
+                    type inet:ip-prefix;
+                }
+            }
+        }
+    }
+
+    augment "/forwarding:forwarding/forwarding:forwarding-by-tenant/forwarding:network-domain" {
+        ext:augment-identifier "subnet-augment-forwarding";
+        container subnet {
+            when "../forwarding:network-domain-type = 'l2-l3-forwarding:subnet'";
+            uses subnet-fields;
+        }
+    }
+
+    // TODO add augment to renderer.yang
+
+}

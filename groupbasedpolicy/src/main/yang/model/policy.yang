@@ -745,6 +745,10 @@ module policy {
             // ***************
 
             container forwarding-context {
+
+                // use forwarding-context.yang instead
+                status deprecated;
+
                 list l3-context {
                     description
                         "A layer 3 context represents a namespace for layer 3

@@ -13,6 +13,7 @@ module endpoint-locations {
     prefix "endpoints-location";
 
     import base-endpoint { prefix base-endpoint; revision-date 2016-04-27; }
+    import forwarding { prefix forwarding; revision-date 2016-04-27; }
 
     description
         "This module defines network element structure for location provider.";
@@ -33,13 +34,13 @@ module endpoint-locations {
                 type provider-name;
             }
             list endpoint-location {
-                key "containment address";
+                key "context-type context-id address-type address";
                 uses base-endpoint:endpoint-key;
                 uses base-endpoint:has-location;
             }
             list containment-endpoint-location {
-                key "containment";
-                uses base-endpoint:containment-endpoint-key;
+                key "context-type context-id";
+                uses forwarding:context-key;
                 uses base-endpoint:has-location;
             }
         }
