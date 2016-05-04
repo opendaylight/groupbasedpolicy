@@ -126,18 +126,24 @@
         <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-netconf.xml">mvn:org.opendaylight.groupbasedpolicy/netconf-renderer/{{VERSION}}/xml/config</configfile>
     </feature>
 
-
     <!--
          The Neutron provider
     -->
     <feature name='odl-groupbasedpolicy-neutronmapper' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Neutron Mapper mapps neutron APIs to GBP APIs '>
         <feature version="${neutron.version}">odl-neutron-service</feature>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
-        <feature version="${project.version}">odl-groupbasedpolicy-ofoverlay</feature>
         <bundle>mvn:org.opendaylight.neutron/dummyprovider/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/neutron-mapper/{{VERSION}}</bundle>
-        <bundle>mvn:org.opendaylight.groupbasedpolicy/neutron-ovsdb/{{VERSION}}</bundle>
         <configfile finalname="${config.configfile.directory}/15-neutron-mapper.xml">mvn:org.opendaylight.groupbasedpolicy/neutron-mapper/{{VERSION}}/xml/config</configfile>
+    </feature>
+
+    <!--
+         The Neutron provider and OFOVERLAY renderer
+    -->
+    <feature name='odl-groupbasedpolicy-neutron-and-ofoverlay' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Neutron Mapper mapps neutron APIs to GBP APIs '>
+        <feature version="${project.version}">odl-groupbasedpolicy-ofoverlay</feature>
+        <feature version="${project.version}">odl-groupbasedpolicy-neutronmapper</feature>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/neutron-ovsdb/{{VERSION}}</bundle>
         <configfile finalname="${config.configfile.directory}/15-neutron-ovsdb.xml">mvn:org.opendaylight.groupbasedpolicy/neutron-ovsdb/{{VERSION}}/xml/config</configfile>
     </feature>
 
