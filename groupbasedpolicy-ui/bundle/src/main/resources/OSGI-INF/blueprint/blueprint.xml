@@ -7,7 +7,7 @@
         <property name="moduleName" value="gbp"/>
         <property name="url" value="/src/app/gbp"/>
         <property name="directory" value="/gbp"/>
-        <property name="requireJs" value="app/gbp/gbp.module"/>
+        <property name="requireJs" value="app/gbp/main"/>
         <property name="angularJs" value="app.gbp"/>
 		<property name="cssDependencies">
             <list></list>
