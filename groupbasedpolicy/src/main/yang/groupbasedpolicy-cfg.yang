@@ -31,6 +31,14 @@ module groupbasedpolicy-cfg {
         config:java-class "org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry";
     }
 
+    identity base-endpoint-renderer-augmentation-registry {
+        description
+            "base-endpoint-renderer-augmentation-registry service definition";
+
+        base "config:service-type";
+        config:java-class "org.opendaylight.groupbasedpolicy.api.BaseEndpointRendererAugmentationRegistry";
+    }
+
     identity policy-validator-registry {
         description
             "policy-validator-registry service definition";
@@ -59,6 +67,13 @@ module groupbasedpolicy-cfg {
 
         config:provided-service ep-renderer-augmentation-registry;
         config:java-name-prefix EpRendererAugmentationRegistryImpl;
+    }
+
+    identity base-endpoint-renderer-augmentation-registry-impl {
+        base "config:module-type";
+
+        config:provided-service base-endpoint-renderer-augmentation-registry;
+        config:java-name-prefix BaseEndpointRendererAugmentationRegistryImpl;
     }
 
     identity statistics-manager-impl {
@@ -121,6 +136,28 @@ module groupbasedpolicy-cfg {
         }
         case ep-renderer-augmentation-registry-impl {
             when "/config:modules/config:module/config:type = 'ep-renderer-augmentation-registry-impl'";
+
+            //wires in the data-broker service
+            container data-broker {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity mdsal:binding-async-data-broker;
+                    }
+                }
+            }
+            //RPC Registry
+            container rpc-registry {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity mdsal:binding-rpc-registry;
+                    }
+                }
+            }
+        }
+        case base-endpoint-renderer-augmentation-registry-impl {
+            when "/config:modules/config:module/config:type = 'base-endpoint-renderer-augmentation-registry-impl'";
 
             //wires in the data-broker service
             container data-broker {
