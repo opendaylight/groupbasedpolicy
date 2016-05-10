@@ -1,8 +1,36 @@
-Tenant<br/>
-id: {{tenant.data.id}}<br/>
-name: {{tenant.data.name}}<br/>
-description: {{tenant.data.description}}<br/>
+<section flex layout="column">
+    <md-table-container ng-if="tenants.data.length">
+        <table md-table>
+            <thead md-head md-order="tenantsTableQuery.order">
+            <tr md-row>
+                <th md-column md-order-by="data.id"><span>Id</span></th>
+                <th md-column md-order-by="data.name"><span>Name</span></th>
+                <th md-column md-order-by="data.description"><span>Description</span></th>
+                <th md-column><span>Actions</span></th>
+            </tr>
+            </thead>
+            <tbody md-body>
+            <tr md-row ng-repeat="tenant in tenants.data | filter: tenantsTableQuery.filter  | orderBy : tenantsTableQuery.order | limitTo: tenantsTableQuery.limit : (tenantsTableQuery.page -1) * tenantsTableQuery.limit">
+                <td md-cell>{{tenant.data.id}}</td>
+                <td md-cell>{{tenant.data.name}}</td>
+                <td md-cell>{{tenant.data.description}}</td>
+                <td md-cell>
+                    <md-button class="md-icon-button" ng-click="edit(tenant)">
+                        <md-icon>edit</md-icon>
+                    </md-button>
+                    <md-button class="md-icon-button" ng-click="delete(tenant)">
+                        <md-icon>delete</md-icon>
+                    </md-button>
+                </td>
+            </tr>
 
-<section ng-repeat="tenantElement in tenants.data">
-    {{tenantElement.data.id}}, {{tenantElement.data.name}}, {{tenantElement.data.description}}<br/>
+            </tbody>
+        </table>
+        <md-table-pagination md-limit="tenantsTableQuery.limit"
+                             md-page="tenantsTableQuery.page"
+                             md-options="tenantsTableQuery.options"
+                             md-total="{{tenants.data.length}}"
+                             md-page-select="options.pageSelect">
+        </md-table-pagination>
+    </md-table-container>
 </section>

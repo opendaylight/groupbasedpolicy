@@ -1,3 +1,28 @@
-<section class="gbpWrapper clearfix">
-    New GBP UI
-</section>
+<div layout="row" class="gbpUiWrapper" flex>
+    <div layout="column" role="main" flex class="master-view">
+        <md-toolbar>
+            <div class="md-toolbar-tools">
+                <md-button ng-href="#/gbp/index/tenant" ng-click="closeSidePanel()" class="md-primary">Tenant</md-button>
+                <md-button ng-href="#/gbp/index/policy" ng-click="closeSidePanel()" class="md-primary">Policy</md-button>
+                <span flex></span>
+                <md-button ng-if="stateUrl === '/policy'" ng-href="#/gbp/index/policy/epg" ng-click="openSidePanel()" class="md-primary">EPGs</md-button>
+                <md-button ng-if="stateUrl === '/policy'" ng-href="#/gbp/index/policy/contract" ng-click="openSidePanel()" class="md-primary">Contracts</md-button>
+            </div>
+        </md-toolbar>
+        <md-content md-scroll-y flex ui-view></md-content>
+    </div>
+    <md-sidenav class="md-sidenav-right md-whiteframe-z1 detail-view" md-is-locked-open="sidePanelPage">
+        <md-toolbar>
+            <div class="md-toolbar-tools">
+                <h2>
+                    <span>Sidepanel</span>
+                </h2>
+                <span flex></span>
+                <md-button ng-href="#/gbp/index/policy" ng-click="closeSidePanel()" class="md-button">Close panel</md-button>
+            </div>
+        </md-toolbar>
+        <md-content flex>
+            <div flex layout="column" ui-view="sidePanel"></div>
+        </md-content>
+    </md-sidenav>
+</div>

@@ -1,0 +1,17 @@
+{
+  "author": "Daniel Malachovsky",
+  "name": "opendaylight-gbp",
+  "description": "openDayLight GBP UI",
+  "version": "0.1.0",
+  "homepage": "http://opendaylight.org",
+  "license": "EPL-1.0",
+  "bugs": "https://bugs.opendaylight.org/",
+  "repository": {
+    "type": "git",
+    "url": "https://git.opendaylight.org/gerrit/groupbasedpolicy.git"
+  },
+  "dependencies": {
+    "bower": "1.7.7"
+  },
+  "devDependencies": {}
+}

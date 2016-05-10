@@ -1,0 +1,39 @@
+.gbpUiGlobalWrapper {
+    background: #ffffff;
+    margin-bottom: 0!important;
+    min-height: 100%;
+    padding: 0px;
+}
+
+.gbpUiGlobalWrapper .main {
+    top: 0px;
+}
+
+.gbpUiWrapper {
+    background-color: #414042;
+}
+
+.gbpUiWrapper .pageContent {
+    margin: 0px;
+    padding: 0px;
+    width: 100%;
+    height: 100%;
+}
+
+.gbpUiWrapper .side-panel {
+    width: 400px;
+    color: #000 ! important;
+    border: 1px solid #000;
+}
+
+.gbpUiWrapper .h100 {
+    height: 100%;
+}
+
+.gbpUiWrapper.w100 {
+    width: 100%;
+}
+
+.gbpUiWrapper.flt-r {
+    float: right;
+}

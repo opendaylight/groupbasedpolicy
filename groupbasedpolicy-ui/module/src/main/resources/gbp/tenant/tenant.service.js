@@ -4,7 +4,7 @@ define([], function () {
     angular.module('app.gbp').service('TenantService', TenantService);
 
     TenantService.$inject = ['Restangular'];
-
+    /* @ngInject */
     function TenantService(Restangular) {
         /* methods */
         this.createObject = createObject;

@@ -10,7 +10,11 @@
         <property name="requireJs" value="app/gbp/main"/>
         <property name="angularJs" value="app.gbp"/>
 		<property name="cssDependencies">
-            <list></list>
+            <list>
+                <value>src/app/gbp/common/gbp.css</value>
+                <value>src/app/gbp/vendor/angular-material/angular-material.css</value>
+                <value>src/app/gbp/vendor/angular-material-data-table/dist/md-data-table.min.css</value>
+            </list>
         </property>
     </bean>
 </blueprint>
