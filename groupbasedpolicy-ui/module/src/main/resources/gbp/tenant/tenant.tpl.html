@@ -1,0 +1,8 @@
+Tenant<br/>
+id: {{tenant.data.id}}<br/>
+name: {{tenant.data.name}}<br/>
+description: {{tenant.data.description}}<br/>
+
+<section ng-repeat="tenantElement in tenants.data">
+    {{tenantElement.data.id}}, {{tenantElement.data.name}}, {{tenantElement.data.description}}<br/>
+</section>

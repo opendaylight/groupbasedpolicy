@@ -1,12 +1,6 @@
 require.config({
-  paths : {
-
-  },
-
-  shim : {
-
-  },
-
+    paths: {},
+    shim: {},
 });
 
-define(['app/gbp/gbp.module']);
+define(['app/gbp/common/gbp.module']);
