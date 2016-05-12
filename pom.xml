@@ -7,7 +7,7 @@
 
   <groupId>org.opendaylight.groupbasedpolicy</groupId>
   <artifactId>groupbasedpolicy.project</artifactId>
-  <version>0.3.2-SNAPSHOT</version>
+  <version>0.3.2-Beryllium-SR2</version>
   <packaging>pom</packaging>
   <name>groupbasedpolicy</name> <!-- Used by Sonar to set project name -->
 

@@ -7,13 +7,13 @@
   <parent>
     <groupId>org.opendaylight.controller</groupId>
     <artifactId>config-parent</artifactId>
-    <version>0.4.2-SNAPSHOT</version>
+    <version>0.4.2-Beryllium-SR2</version>
     <relativePath/>
   </parent>
 
   <groupId>org.opendaylight.groupbasedpolicy</groupId>
   <artifactId>ui-backend</artifactId>
-  <version>0.3.2-SNAPSHOT</version>
+  <version>0.3.2-Beryllium-SR2</version>
   <packaging>bundle</packaging>
 
   <dependencies>
