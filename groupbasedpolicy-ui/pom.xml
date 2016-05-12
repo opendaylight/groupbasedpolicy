@@ -14,7 +14,7 @@
   <artifactId>groupbasedpolicy-ui</artifactId>
   <name>groupbasedpolicy-ui</name>
   <description>Resources</description>
-  <version>0.3.2-Beryllium-SR2</version>
+  <version>0.3.3-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <prerequisites>

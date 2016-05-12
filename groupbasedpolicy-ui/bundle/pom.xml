@@ -4,7 +4,7 @@
  <parent>
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>groupbasedpolicy-ui</artifactId>
-    <version>0.3.2-Beryllium-SR2</version>
+    <version>0.3.3-SNAPSHOT</version>
   </parent>
 
   <artifactId>groupbasedpolicy-ui-bundle</artifactId>
@@ -12,7 +12,7 @@
   <packaging>bundle</packaging>
 
     <properties>
-        <dlux.version>0.3.2-Beryllium-SR2</dlux.version>
+        <dlux.version>0.3.3-SNAPSHOT</dlux.version>
     </properties>
 
   <dependencies>
