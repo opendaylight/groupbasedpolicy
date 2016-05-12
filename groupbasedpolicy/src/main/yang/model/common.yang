@@ -42,6 +42,9 @@ module gbp-common {
 
     // UUID type from ietf-yang-types@2013-07-15
     typedef uuid {
+
+        status deprecated;
+
         type string {
             pattern '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-'
                 + '[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';

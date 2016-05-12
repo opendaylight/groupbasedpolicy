@@ -188,15 +188,23 @@ module renderer {
                                 type policy-name;
                             }
 
-                            container resolved-policy {
-                                list rule-group-with-renderer-endpoint-participation {
+                            container provided-resolved-policy {
+                                list provided-rule-group {
                                     description "A specific policy rule group that apply to pair of endpoints.
+                                        Renderer Endpoint is a provider of the rule group.
                                         Entire rule-group is located on /renderers/renderer/renderer-policy/configuration/rule-groups/rule-group";
-                                    key "tenant-id contract-id subject-name renderer-endpoint-participation";
+                                    key "tenant-id contract-id subject-name";
                                     uses resolved-policy:has-subject-key;
-                                    leaf renderer-endpoint-participation {
-                                        type endpoint-policy-participation;
-                                    }
+                                }
+                            }
+
+                            container consumed-resolved-policy {
+                                list consumed-rule-group {
+                                    description "A specific policy rule group that apply to pair of endpoints.
+                                        Renderer Endpoint is a consumer of the rule group.
+                                        Entire rule-group is located on /renderers/renderer/renderer-policy/configuration/rule-groups/rule-group";
+                                    key "tenant-id contract-id subject-name";
+                                    uses resolved-policy:has-subject-key;
                                 }
                             }
 
