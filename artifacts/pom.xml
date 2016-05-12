@@ -48,6 +48,11 @@
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
+        <artifactId>ne-location-provider</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
         <artifactId>neutron-mapper</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -116,6 +121,13 @@
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>netconf-renderer</artifactId>
+        <version>${project.version}</version>
+        <type>xml</type>
+        <classifier>config</classifier>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>ne-location-provider</artifactId>
         <version>${project.version}</version>
         <type>xml</type>
         <classifier>config</classifier>

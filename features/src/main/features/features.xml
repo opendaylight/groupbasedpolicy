@@ -39,6 +39,7 @@
         <feature version="${controller.mdsal.version}">odl-mdsal-broker</feature>
         <feature version='${mdsal.version}'>odl-mdsal-binding-base</feature>
         <feature version='${mdsal.model.version}'>odl-mdsal-models</feature>
+        <bundle>mvn:commons-net/commons-net/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy/{{VERSION}}</bundle>
         <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-base.xml">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy/{{VERSION}}/xml/config</configfile>
     </feature>
@@ -170,5 +171,14 @@
         <bundle>mvn:commons-net/commons-net/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/sxp-mapper/{{VERSION}}</bundle>
         <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-sxp-mapper.xml">mvn:org.opendaylight.groupbasedpolicy/sxp-mapper/{{VERSION}}/xml/config</configfile>
+    </feature>
+
+    <!--
+         NE Location Provider
+    -->
+    <feature name='odl-groupbasedpolicy-ne-location-provider' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: NE location provider'>
+        <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/ne-location-provider/{{VERSION}}</bundle>
+        <configfile finalname="${config.configfile.directory}/15-ne-location-provider.xml">mvn:org.opendaylight.groupbasedpolicy/ne-location-provider/{{VERSION}}/xml/config</configfile>
     </feature>
 </features>

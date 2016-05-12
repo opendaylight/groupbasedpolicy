@@ -19,6 +19,7 @@
     <module>artifacts</module>
     <module>groupbasedpolicy</module>
     <module>renderers</module>
+    <module>location-providers</module>
     <module>neutron-mapper</module>
     <module>neutron-ovsdb</module>
     <module>ui-backend</module>

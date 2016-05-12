@@ -144,10 +144,10 @@ module base-endpoint {
     grouping has-location {
         container real-location {
             choice location-type {
-                case regular-location {
+                case regular-location-case {
                     uses has-regular-location;
                 }
-                case external-location {
+                case external-location-case {
                     uses has-external-location;
                 }
             }

@@ -1,0 +1,67 @@
+/*
+ * Copyright (c) 2015 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
+ module network-elements {
+     yang-version 1;
+
+     namespace "urn:opendaylight:groupbasedpolicy:endpoint:network:elements";
+     prefix "network-elements";
+
+     import gbp-common {
+         prefix gbp-common;
+         revision-date 2014-04-21;
+     }
+
+     import ietf-inet-types {
+         prefix inet;
+         revision-date 2010-09-24;
+     }
+
+     description
+         "This module defines network element structure for location provider.";
+
+     revision "2016-04-07" {
+         description
+             "Initial revision.";
+     }
+
+     container network-elements {
+         list network-element {
+             key iid;
+             leaf iid {
+                 description "Path to the network element
+                     represented in topology of southbound plugin.";
+                 type instance-identifier;
+             }
+             list interface {
+                 key "iid";
+                 leaf iid {
+                     description "Path to the interface
+                         represented in topology of southbound plugin.
+                         This should be more like RelativeSchemaPath
+                         from network-element's IID to interface.";
+                     type instance-identifier;
+                 }
+                 list endpoint-network {
+                     description "Set of networks somewhere behind the interface.
+                         Networks where an endpoint can be connected.";
+                     key "l3-context-id ip-prefix";
+                     leaf l3-context-id {
+                         type gbp-common:context-id;
+                     }
+                     leaf ip-prefix {
+                         type inet:ip-prefix;
+                         description
+                             "The IP prefix where an endpoint can be connected.";
+                     }
+                 }
+             }
+         }
+     }
+
+}

@@ -30,6 +30,16 @@
       <groupId>org.opendaylight.mdsal.model</groupId>
       <artifactId>yang-ext</artifactId>
     </dependency>
+    <!-- net utils dependencies -->
+    <dependency>
+      <groupId>com.googlecode.java-ipv6</groupId>
+      <artifactId>java-ipv6</artifactId>
+      <version>0.16</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-net</groupId>
+      <artifactId>commons-net</artifactId>
+    </dependency>
     <!-- testing dependencies -->
     <dependency>
       <groupId>junit</groupId>
@@ -76,6 +86,7 @@
               org.opendaylight.groupbasedpolicy.dto,
               org.opendaylight.groupbasedpolicy.util,
             </Export-Package>
+            <Embed-Dependency>java-ipv6</Embed-Dependency>
           </instructions>
         </configuration>
       </plugin>
