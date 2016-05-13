@@ -4,7 +4,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -17,17 +16,15 @@ import org.opendaylight.groupbasedpolicy.api.sf.L4ClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.statistics.ResolvedPolicyClassifierListener;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.statistics.util.FlowCacheCons;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.statistics.util.IidSflowNameUtil;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.test.ParameterValueList;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.test.TestUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.RuleName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValueBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.classifiers.Classifier;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.classifiers.ClassifierBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.ResolvedPolicy;
@@ -239,39 +236,6 @@ public class FlowCacheFactoryTest {
         return FlowCacheFactory.createFlowCache(
                 TestUtils.getClassifierIid(ResolvedPolicyClassifierListener.resolveClassifiers(rp, rpIid)), classifier,
                 FlowCacheCons.Value.BYTES);
-    }
-
-    @SuppressWarnings("serial")
-    private class ParameterValueList extends ArrayList<ParameterValue> {
-
-        ParameterValueList() {
-            super();
-        }
-
-        private ParameterValueList addEthertype(Long value) {
-            this.add(newParameterValue(EtherTypeClassifierDefinition.ETHERTYPE_PARAM, value));
-            return this;
-        }
-
-        private ParameterValueList addProto(Long value) {
-            this.add(newParameterValue(IpProtoClassifierDefinition.PROTO_PARAM, value));
-            return this;
-        }
-
-        private ParameterValueList addDstPort(Long value) {
-            this.add(newParameterValue(L4ClassifierDefinition.DST_PORT_PARAM, value));
-            return this;
-        }
-
-        private ParameterValueList addSrcPort(Long value) {
-            this.add(newParameterValue(L4ClassifierDefinition.SRC_PORT_PARAM, value));
-            return this;
-        }
-
-        private ParameterValue newParameterValue(String parameterName, Long intValue) {
-            return new ParameterValueBuilder().setName(new ParameterName(parameterName)).setIntValue(intValue).build();
-        }
-
     }
 
 }
