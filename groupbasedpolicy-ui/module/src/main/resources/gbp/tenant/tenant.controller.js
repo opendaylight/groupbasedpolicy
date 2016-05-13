@@ -6,18 +6,57 @@ define([
 
     angular.module('app.gbp').controller('TenantController', TenantController);
 
-    TenantController.$inject = ['$scope', 'TenantService', 'TenantListService'];
+    TenantController.$inject = ['$mdDialog', '$scope', 'TenantListService'];
     /* @ngInject */
-    function TenantController($scope, TenantService, TenantListService) {
-        $scope.tenantsTableQuery = {
-            order: "data.id",
-            limit: 25,
-            page: 1,
-            options: [25, 50, 100],
-            filter: ''
-        };
-
+    function TenantController($mdDialog, $scope, TenantListService) {
+        /* properties */
         $scope.tenants = TenantListService.createList();
-        $scope.tenants.get('config');
+        $scope.tenantsTableQuery = {};
+
+        /* methods */
+        $scope.getTenantList = getTenantList;
+        $scope.openTenantDialog = openTenantDialog;
+
+        init();
+
+        /* Implementations */
+
+        /**
+         * fills $scope.tenants array with data from data store
+         */
+        function getTenantList() {
+            $scope.tenants.get('config');
+        }
+
+        /**
+         * Initializing function
+         */
+        function init() {
+            $scope.tenantsTableQuery = {
+                order: "data.id",
+                limit: 25,
+                page: 1,
+                options: [25, 50, 100],
+                filter: ''
+            };
+
+            getTenantList();
+        }
+
+        function openTenantDialog() {
+            $mdDialog.show({
+                clickOutsideToClose: true,
+                controller: 'AddTenantController',
+                preserveScope: true,
+                templateUrl: 'src/app/gbp/tenant/dialog-add-tenant.tpl.html',
+                parent: angular.element(document.body),
+                scope: $scope,
+                locals: {
+                    //policy: $scope.selectedObjects.policy
+                }
+            });
+        }
+
+
     }
 });
