@@ -3,7 +3,6 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-import java.lang.reflect.Method;
 import java.util.Arrays;
 
 import org.junit.Test;
@@ -13,8 +12,6 @@ import org.opendaylight.groupbasedpolicy.api.sf.L4ClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronEntityFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.PolicyAssert;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronUtils;
-import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.change.action.of.security.group.rules.input.action.ActionChoice;
@@ -28,6 +25,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.Rule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstanceBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.DirectionIngress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeV4;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolTcp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
 
 public class SingleClassifierRuleTest {
 
@@ -37,9 +38,9 @@ public class SingleClassifierRuleTest {
 
     @Test
     public void testConstructorAndGetters() {
-        NeutronSecurityRule secRule = NeutronEntityFactory.securityRuleWithoutGroupIds(
-                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", NeutronUtils.IPv4,
-                NeutronUtils.INGRESS, NeutronUtils.TCP, 8010, 8020);
+        SecurityRule secRule = NeutronEntityFactory.securityRuleWithoutGroupIds(
+                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", EthertypeV4.class,
+                DirectionIngress.class, ProtocolTcp.class, 8010, 8020);
         final int ruleOrder = 1;
         singleClsfRule = new SingleClassifierRule(secRule, ruleOrder, MappingUtils.ALLOW_ACTION_CHOICE);
 

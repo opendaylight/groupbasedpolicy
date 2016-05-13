@@ -7,8 +7,6 @@ import org.junit.Test;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronEntityFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.PolicyAssert;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronUtils;
-import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.Contract;
@@ -16,14 +14,18 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.Subject;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.Rule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.DirectionIngress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeV4;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolTcp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
 
 public class SingleRuleContractTest {
 
     @Test
     public void testConstructorAndGetters() {
-        NeutronSecurityRule secRule = NeutronEntityFactory.securityRuleWithoutGroupIds(
-                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", NeutronUtils.IPv4,
-                NeutronUtils.INGRESS, NeutronUtils.TCP, 8010, 8020);
+        SecurityRule secRule = NeutronEntityFactory.securityRuleWithoutGroupIds(
+                "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", EthertypeV4.class,
+                DirectionIngress.class, ProtocolTcp.class, 8010, 8020);
         int subjectAndRuleOrder = 1;
         SingleRuleContract singleRuleContract = new SingleRuleContract(secRule, subjectAndRuleOrder, new Description(
                 "contractDescription"), MappingUtils.ALLOW_ACTION_CHOICE);

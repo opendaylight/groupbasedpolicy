@@ -33,7 +33,7 @@
     </dependency>
     <dependency>
       <groupId>org.opendaylight.neutron</groupId>
-      <artifactId>neutron-spi</artifactId>
+      <artifactId>model</artifactId>
       <version>${neutron.version}</version>
     </dependency>
     <!-- testing dependencies -->

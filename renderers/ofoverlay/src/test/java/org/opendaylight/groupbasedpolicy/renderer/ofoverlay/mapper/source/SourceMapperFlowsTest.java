@@ -110,14 +110,14 @@ public class SourceMapperFlowsTest extends MapperUtilsTest {
         InOrder order = inOrder(ctx);
         order.verify(ctx, times(1)).getEndpointManager();
         order.verify(ctx, times(1)).getCurrentPolicy();
-        verify(ctx, times(2)).getTenant(TENANT_ID);
+        verify(ctx, times(3)).getTenant(TENANT_ID);
         assertNotNull(ordinals);
 
         Action reg0 = FlowUtils.nxLoadRegAction(NxmNxReg0.class, BigInteger.valueOf(1));
         Action reg1 = FlowUtils.nxLoadRegAction(NxmNxReg1.class, BigInteger.valueOf(0));
-        Action reg4 = FlowUtils.nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(0));
-        Action reg5 = FlowUtils.nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(0));
-        Action reg6 = FlowUtils.nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(0));
+        Action reg4 = FlowUtils.nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(3));
+        Action reg5 = FlowUtils.nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(4));
+        Action reg6 = FlowUtils.nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(5));
         Action tunnelId = FlowUtils.nxLoadTunIdAction(BigInteger.valueOf(ordinals.getTunnelId()), false);
         InstructionsBuilder instructionsBuilder = new InstructionsBuilder();
         List<Instruction> instructions = new ArrayList<>();
@@ -155,14 +155,14 @@ public class SourceMapperFlowsTest extends MapperUtilsTest {
         InOrder order = inOrder(ctx);
         order.verify(ctx, times(1)).getEndpointManager();
         order.verify(ctx, times(1)).getCurrentPolicy();
-        verify(ctx, times(2)).getTenant(TENANT_ID);
+        verify(ctx, times(3)).getTenant(TENANT_ID);
         assertNotNull(ordinals);
 
         Action reg0 = FlowUtils.nxLoadRegAction(NxmNxReg0.class, BigInteger.valueOf(1));
         Action reg1 = FlowUtils.nxLoadRegAction(NxmNxReg1.class, BigInteger.valueOf(0xffffff));
-        Action reg4 = FlowUtils.nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(0));
-        Action reg5 = FlowUtils.nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(0));
-        Action reg6 = FlowUtils.nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(0));
+        Action reg4 = FlowUtils.nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(3));
+        Action reg5 = FlowUtils.nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(4));
+        Action reg6 = FlowUtils.nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(5));
         InstructionsBuilder instructionsBuilder = new InstructionsBuilder();
         List<Instruction> instructions = new ArrayList<>();
         InstructionBuilder ordinalsInstruction = new InstructionBuilder();
@@ -198,10 +198,10 @@ public class SourceMapperFlowsTest extends MapperUtilsTest {
         InOrder order = inOrder(ctx);
         order.verify(ctx, times(1)).getEndpointManager();
         order.verify(ctx, times(1)).getCurrentPolicy();
-        verify(ctx, times(2)).getTenant(TENANT_ID);
+        verify(ctx, times(3)).getTenant(TENANT_ID);
         assertNotNull(ordinals);
 
-        Action reg5 = FlowUtils.nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(0));
+        Action reg5 = FlowUtils.nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(4));
         InstructionsBuilder instructionsBuilder = new InstructionsBuilder();
         List<Instruction> instructions = new ArrayList<>();
         InstructionBuilder ordinalsInstruction = new InstructionBuilder();
@@ -214,7 +214,7 @@ public class SourceMapperFlowsTest extends MapperUtilsTest {
 
         MatchBuilder matchBuilder = new MatchBuilder();
         matchBuilder.setInPort(new NodeConnectorId(CONNECTOR_1));
-        FlowUtils.addNxTunIdMatch(matchBuilder, 0);
+        FlowUtils.addNxTunIdMatch(matchBuilder, 4);
         Match match = matchBuilder.build();
 
         Flow testFlow = buildFlow(FlowIdUtils.newFlowId(tableId, "tunnelFdId", match), tableId, 80, match,

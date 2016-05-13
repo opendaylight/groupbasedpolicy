@@ -13,22 +13,15 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import org.opendaylight.groupbasedpolicy.api.sf.EtherTypeClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.api.sf.IpProtoClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.api.sf.L4ClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronUtils;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
-import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.change.action.of.security.group.rules.input.action.ActionChoice;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.change.action.of.security.group.rules.input.action.action.choice.AllowActionCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.change.action.of.security.group.rules.input.action.action.choice.SfcActionCase;
@@ -51,8 +44,19 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.clause.ConsumerMatchersBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstanceBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.DirectionBase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.DirectionEgress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.DirectionIngress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeBase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeV4;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeV6;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolBase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolIcmp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolIcmpV6;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolTcp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolUdp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
 
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
 public class SecRuleEntityDecoder {
@@ -61,30 +65,15 @@ public class SecRuleEntityDecoder {
         throw new UnsupportedOperationException("Cannot create an instace.");
     }
 
-    public static TenantId getTenantId(NeutronSecurityRule secRule) {
-        return new TenantId(Utils.normalizeUuid(secRule.getSecurityRuleTenantID()));
+    public static ContractId getContractId(SecurityRule secRule) {
+        return new ContractId(secRule.getId().getValue());
     }
 
-    public static EndpointGroupId getProviderEpgId(NeutronSecurityRule secRule) {
-        return new EndpointGroupId(Utils.normalizeUuid(secRule.getSecurityRuleGroupID()));
-    }
-
-    public static @Nullable EndpointGroupId getConsumerEpgId(NeutronSecurityRule secRule) {
-        if (Strings.isNullOrEmpty(secRule.getSecurityRemoteGroupID())) {
-            return null;
-        }
-        return new EndpointGroupId(Utils.normalizeUuid(secRule.getSecurityRemoteGroupID()));
-    }
-
-    public static ContractId getContractId(NeutronSecurityRule secRule) {
-        return new ContractId(Utils.normalizeUuid(secRule.getSecurityRuleUUID()));
-    }
-
-    public static ClassifierInstance getClassifierInstance(NeutronSecurityRule secRule) {
+    public static ClassifierInstance getClassifierInstance(SecurityRule secRule) {
         ClassifierInstanceBuilder classifierBuilder = new ClassifierInstanceBuilder();
         List<ParameterValue> params = new ArrayList<>();
-        Integer portMin = secRule.getSecurityRulePortMin();
-        Integer portMax = secRule.getSecurityRulePortMax();
+        Integer portMin = secRule.getPortRangeMin();
+        Integer portMax = secRule.getPortRangeMax();
         if (portMin != null && portMax != null) {
             classifierBuilder.setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId());
             if (portMin.equals(portMax)) {
@@ -129,7 +118,7 @@ public class SecRuleEntityDecoder {
         return null;
     }
 
-    public static ClassifierRef getClassifierRef(NeutronSecurityRule secRule) {
+    public static ClassifierRef getClassifierRef(SecurityRule secRule) {
         checkNotNull(secRule);
         ClassifierName classifierInstanceName = SecRuleNameDecoder.getClassifierInstanceName(secRule);
         ClassifierRefBuilder classifierRefBuilder = new ClassifierRefBuilder()
@@ -142,42 +131,44 @@ public class SecRuleEntityDecoder {
 
     /**
      * @param secRule
-     * @return direction resolved from {@link NeutronSecurityRule#getSecurityRuleDirection()}
+     * @return direction resolved from {@link SecurityRule#getDirection()}
      * @throws IllegalArgumentException if return value of
-     *         {@link NeutronSecurityRule#getSecurityRuleDirection()} is other than "ingress" or
-     *         "egress"
+     *         {@link SecurityRule#getDirection()} is other than {@link DirectionIngress} or
+     *         {@link DirectionEgress}
      */
-    public static Direction getDirection(NeutronSecurityRule secRule) {
-        String direction = secRule.getSecurityRuleDirection();
-        if (NeutronUtils.INGRESS.equals(direction)) {
+    public static Direction getDirection(SecurityRule secRule) {
+        Class<? extends DirectionBase> direction = secRule.getDirection();
+        if (direction == null) {
+            throw new IllegalArgumentException("Direction cannot be null.");
+        }
+        if (direction.isAssignableFrom(DirectionIngress.class)) {
             return Direction.In;
         }
-        if (NeutronUtils.EGRESS.equals(direction)) {
+        if (direction.isAssignableFrom(DirectionEgress.class)) {
             return Direction.Out;
         }
         throw new IllegalArgumentException("Direction " + direction + " from security group rule "
-                + secRule.getSecurityRuleUUID() + " is not supported. Direction can be only 'ingress' or 'egress'.");
+                + secRule + " is not supported. Direction can be only 'ingress' or 'egress'.");
     }
 
     /**
-     * @param secRule {@link NeutronSecurityRule#getSecurityRuleRemoteIpPrefix()} is used for EIC
+     * @param secRule {@link SecurityRule#getRemoteIpPrefix()} is used for EIC
      *        and subject selection
      * @return clause with the subject and with a consumer matcher containing EIC
      */
-    public static Clause getClause(NeutronSecurityRule secRule) {
+    public static Clause getClause(SecurityRule secRule) {
         checkNotNull(secRule);
         SubjectName subjectName = SecRuleNameDecoder.getSubjectName(secRule);
         ClauseBuilder clauseBuilder =
                 new ClauseBuilder().setSubjectRefs(ImmutableList.of(subjectName)).setName(SecRuleNameDecoder.getClauseName(secRule));
-        String remoteIpPrefix = secRule.getSecurityRuleRemoteIpPrefix();
-        if (!Strings.isNullOrEmpty(remoteIpPrefix)) {
+        IpPrefix remoteIpPrefix = secRule.getRemoteIpPrefix();
+        if (remoteIpPrefix != null) {
             clauseBuilder.setConsumerMatchers(createConsumerMatchersWithEic(remoteIpPrefix));
         }
         return clauseBuilder.build();
     }
 
-    private static ConsumerMatchers createConsumerMatchersWithEic(String remoteIpPrefix) {
-        IpPrefix ipPrefix = Utils.createIpPrefix(remoteIpPrefix);
+    private static ConsumerMatchers createConsumerMatchersWithEic(IpPrefix ipPrefix) {
         PrefixConstraint consumerPrefixConstraint = new PrefixConstraintBuilder().setIpPrefix(ipPrefix).build();
         EndpointIdentificationConstraints eic =
                 new EndpointIdentificationConstraintsBuilder()
@@ -187,13 +178,13 @@ public class SecRuleEntityDecoder {
         return new ConsumerMatchersBuilder().setEndpointIdentificationConstraints(eic).build();
     }
 
-    public static boolean isEtherTypeOfOneWithinTwo(NeutronSecurityRule one, NeutronSecurityRule two) {
+    public static boolean isEtherTypeOfOneWithinTwo(SecurityRule one, SecurityRule two) {
         Long oneEtherType = getEtherType(one);
         Long twoEtherType = getEtherType(two);
         return twoIsNullOrEqualsOne(oneEtherType, twoEtherType);
     }
 
-    public static boolean isProtocolOfOneWithinTwo(NeutronSecurityRule one, NeutronSecurityRule two) {
+    public static boolean isProtocolOfOneWithinTwo(SecurityRule one, SecurityRule two) {
         Long oneProtocol = getProtocol(one);
         Long twoProtocol = getProtocol(two);
         return twoIsNullOrEqualsOne(oneProtocol, twoProtocol);
@@ -207,11 +198,11 @@ public class SecRuleEntityDecoder {
         return false;
     }
 
-    public static boolean isPortsOfOneWithinTwo(NeutronSecurityRule one, NeutronSecurityRule two) {
-        Integer onePortMin = one.getSecurityRulePortMin();
-        Integer onePortMax = one.getSecurityRulePortMax();
-        Integer twoPortMin = two.getSecurityRulePortMin();
-        Integer twoPortMax = two.getSecurityRulePortMax();
+    public static boolean isPortsOfOneWithinTwo(SecurityRule one, SecurityRule two) {
+        Integer onePortMin = one.getPortRangeMin();
+        Integer onePortMax = one.getPortRangeMax();
+        Integer twoPortMin = two.getPortRangeMin();
+        Integer twoPortMax = two.getPortRangeMax();
         if (twoPortMin == null && twoPortMax == null) {
             return true;
         }
@@ -224,22 +215,21 @@ public class SecRuleEntityDecoder {
 
     /**
      * @param secRule
-     * @return {@code null} if {@link NeutronSecurityRule#getSecurityRuleEthertype()} is null or
-     *         empty; value of {@link EtherTypeClassifierDefinition#IPv4_VALUE} or
-     *         {@link EtherTypeClassifierDefinition#IPv6_VALUE}
+     * @return {@code null} if {@link SecurityRule#getEthertype()} is null; Otherwise ethertype
+     *         number
      * @throws IllegalArgumentException if return value of
-     *         {@link NeutronSecurityRule#getSecurityRuleEthertype()} is not empty/null and is other
-     *         than "IPv4" or "IPv6"
+     *         {@link SecurityRule#getEthertype()} is other {@link EthertypeV4} or
+     *         {@link EthertypeV6}
      */
-    public static Long getEtherType(NeutronSecurityRule secRule) {
-        String ethertype = secRule.getSecurityRuleEthertype();
-        if (Strings.isNullOrEmpty(ethertype)) {
+    public static Long getEtherType(SecurityRule secRule) {
+        Class<? extends EthertypeBase> ethertype = secRule.getEthertype();
+        if (ethertype == null) {
             return null;
         }
-        if (NeutronUtils.IPv4.equals(ethertype)) {
+        if (ethertype.isAssignableFrom(EthertypeV4.class)) {
             return EtherTypeClassifierDefinition.IPv4_VALUE;
         }
-        if (NeutronUtils.IPv6.equals(ethertype)) {
+        if (ethertype.isAssignableFrom(EthertypeV6.class)) {
             return EtherTypeClassifierDefinition.IPv6_VALUE;
         }
         throw new IllegalArgumentException("Ethertype " + ethertype + " is not supported.");
@@ -247,36 +237,28 @@ public class SecRuleEntityDecoder {
 
     /**
      * @param secRule
-     * @return {@code null} if {@link NeutronSecurityRule#getSecurityRuleProtocol()} is null or
-     *         empty; Otherwise protocol number
+     * @return {@code null} if {@link SecurityRule#getProtocol()} is null; Otherwise protocol number
      * @throws IllegalArgumentException if return value of
-     *         {@link NeutronSecurityRule#getSecurityRuleProtocol()} is not empty/null and is other
-     *         than "tcp", "udp", "icmp", "icmpv6" or string values that can be decoded to {@link Short}.
+     *         {@link SecurityRule#getProtocol()} is other than {@link ProtocolTcp},
+     *         {@link ProtocolUdp}, {@link ProtocolIcmp}, {@link ProtocolIcmpV6}
      */
-    public static Long getProtocol(NeutronSecurityRule secRule) {
-        String protocol = secRule.getSecurityRuleProtocol();
-        if (Strings.isNullOrEmpty(protocol)) {
+    public static Long getProtocol(SecurityRule secRule) {
+        Class<? extends ProtocolBase> protocol = secRule.getProtocol();
+        if (protocol == null) {
             return null;
         }
-        if (NeutronUtils.TCP.equals(protocol)) {
+        if (protocol.isAssignableFrom(ProtocolTcp.class)) {
             return IpProtoClassifierDefinition.TCP_VALUE;
         }
-        if (NeutronUtils.UDP.equals(protocol)) {
+        if (protocol.isAssignableFrom(ProtocolUdp.class)) {
             return IpProtoClassifierDefinition.UDP_VALUE;
         }
-        if (NeutronUtils.ICMP.equals(protocol)) {
+        if (protocol.isAssignableFrom(ProtocolIcmp.class)) {
             return IpProtoClassifierDefinition.ICMP_VALUE;
         }
-        if (NeutronUtils.ICMPv6.equals(protocol)) {
+        if (protocol.isAssignableFrom(ProtocolIcmpV6.class)) {
             return IpProtoClassifierDefinition.ICMPv6_VALUE;
         }
-        Long protocolNum;
-        try {
-            protocolNum = Long.valueOf(protocol);
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Neutron Security Rule Protocol value " + protocol
-                    + " is not supported.");
-        }
-        return protocolNum;
+        throw new IllegalArgumentException("Neutron Security Rule Protocol value " + protocol + " is not supported.");
     }
 }

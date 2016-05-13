@@ -8,41 +8,46 @@ import org.opendaylight.groupbasedpolicy.api.sf.EtherTypeClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.api.sf.IpProtoClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.api.sf.L4ClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronUtils;
-import org.opendaylight.neutron.spi.NeutronSecurityRule;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClauseName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.DirectionIngress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeV4;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolTcp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRuleBuilder;
 
 public class SecRuleNameDecoderTest {
 
-    private NeutronSecurityRule secRule;
+    private SecurityRuleBuilder secRule;
 
     @Before
     public void setUp() throws Exception {
-        secRule = new NeutronSecurityRule();
+        secRule = new SecurityRuleBuilder().setId(new Uuid("01234567-abcd-ef01-0123-0123456789ab"));
     }
 
     @Test
     public final void testGetClassifierRefName() {
-        secRule.setSecurityRuleDirection(NeutronUtils.INGRESS);
-        secRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
-        ClassifierName clsfInstanceName = SecRuleNameDecoder.getClassifierInstanceName(secRule);
+        secRule.setDirection(DirectionIngress.class);
+        secRule.setEthertype(EthertypeV4.class);
+        ClassifierName clsfInstanceName = SecRuleNameDecoder.getClassifierInstanceName(secRule.build());
         String crName = new StringBuilder().append(Direction.In.name())
             .append(MappingUtils.NAME_DOUBLE_DELIMETER)
             .append(clsfInstanceName.getValue())
             .toString();
         ClassifierName expectedClsfRefName = new ClassifierName(crName);
-        assertEquals(expectedClsfRefName, SecRuleNameDecoder.getClassifierRefName(secRule));
+        assertEquals(expectedClsfRefName, SecRuleNameDecoder.getClassifierRefName(secRule.build()));
     }
 
     @Test
     public final void testGetClassifierInstanceName() {
-        secRule.setSecurityRuleDirection(NeutronUtils.INGRESS);
-        secRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
-        secRule.setSecurityRuleProtocol(NeutronUtils.TCP);
-        secRule.setSecurityRulePortMin(8010);
-        secRule.setSecurityRulePortMax(8020);
+        secRule.setDirection(DirectionIngress.class);
+        secRule.setEthertype(EthertypeV4.class);
+        secRule.setProtocol(ProtocolTcp.class);
+        secRule.setPortRangeMin(8010);
+        secRule.setPortRangeMax(8020);
         StringBuilder frmtBuilder = new StringBuilder();
         frmtBuilder.append(L4ClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_DELIMETER)
@@ -61,27 +66,27 @@ public class SecRuleNameDecoderTest {
             .append(EtherTypeClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_VALUE_DELIMETER)
             .append("%s");
-        String frmtClsfName = String.format(frmtBuilder.toString(), 8010, 8020, secRule.getSecurityRuleProtocol(),
-                secRule.getSecurityRuleEthertype());
+        String frmtClsfName = String.format(frmtBuilder.toString(), 8010, 8020, secRule.getProtocol().getSimpleName(),
+                secRule.getEthertype().getSimpleName());
         ClassifierName expectedClsfInstanceName = new ClassifierName(frmtClsfName);
-        assertEquals(expectedClsfInstanceName, SecRuleNameDecoder.getClassifierInstanceName(secRule));
+        assertEquals(expectedClsfInstanceName, SecRuleNameDecoder.getClassifierInstanceName(secRule.build()));
     }
 
     @Test
     public final void testGetClauseName_noRemoteIpPrefix() {
-        secRule.setSecurityRuleDirection(NeutronUtils.INGRESS);
-        secRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
-        ClauseName expectedClauseName = new ClauseName(SecRuleNameDecoder.getSubjectName(secRule));
-        assertEquals(expectedClauseName, SecRuleNameDecoder.getClauseName(secRule));
+        secRule.setDirection(DirectionIngress.class);
+        secRule.setEthertype(EthertypeV4.class);
+        ClauseName expectedClauseName = new ClauseName(SecRuleNameDecoder.getSubjectName(secRule.build()));
+        assertEquals(expectedClauseName, SecRuleNameDecoder.getClauseName(secRule.build()));
     }
 
     @Test
     public final void testGetClauseName_remoteIpPrefix() {
-        secRule.setSecurityRuleDirection(NeutronUtils.INGRESS);
-        secRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
-        secRule.setSecurityRuleRemoteIpPrefix("10.0.0.0/8");
-        ClauseName expectedClauseName = new ClauseName(SecRuleNameDecoder.getSubjectName(secRule).getValue()
+        secRule.setDirection(DirectionIngress.class);
+        secRule.setEthertype(EthertypeV4.class);
+        secRule.setRemoteIpPrefix(new IpPrefix(new Ipv4Prefix("10.0.0.0/8")));
+        ClauseName expectedClauseName = new ClauseName(SecRuleNameDecoder.getSubjectName(secRule.build()).getValue()
                 + MappingUtils.NAME_DOUBLE_DELIMETER + "10.0.0.0_8");
-        assertEquals(expectedClauseName, SecRuleNameDecoder.getClauseName(secRule));
+        assertEquals(expectedClauseName, SecRuleNameDecoder.getClauseName(secRule.build()));
     }
 }

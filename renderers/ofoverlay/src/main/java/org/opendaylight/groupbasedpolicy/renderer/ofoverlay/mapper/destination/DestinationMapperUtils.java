@@ -10,6 +10,7 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.destination;
 
 
 import com.google.common.base.Preconditions;
+
 import org.opendaylight.groupbasedpolicy.dto.EpKey;
 import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
@@ -17,7 +18,9 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2FloodDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubnetId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.l3.prefix.fields.EndpointL3Gateways;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
@@ -59,10 +62,10 @@ class DestinationMapperUtils {
     }
 
     L3Context getL3ContextForSubnet(IndexedTenant indexedTenant, Subnet subnet) {
-        if (indexedTenant == null) {
+        if (indexedTenant == null || subnet.getParent() == null) {
             return null;
         }
-        return indexedTenant.resolveL3Context(subnet.getId());
+        return indexedTenant.resolveL3Context(new L2FloodDomainId(subnet.getParent().getValue()));
     }
 
     NetworkDomainId getEPNetworkContainment(Endpoint endpoint, IndexedTenant tenant) {

@@ -89,13 +89,13 @@ public class IndexedTenantTest {
             .build();
         IndexedTenant it = new IndexedTenant(t);
 
-        assertNotNull(it.getNetworkDomain(sid));
+        assertNotNull(it.resolveSubnet(sid));
         Collection<Subnet> sns = it.resolveSubnets(sid);
         assertTrue(sns.contains(s));
         assertTrue(sns.contains(s2));
-        assertEquals(l3id, it.resolveL3Context(sid).getId());
-        assertEquals(bdid, it.resolveL2BridgeDomain(sid).getId());
-        assertEquals(fdid, it.resolveL2FloodDomain(sid).getId());
+        assertEquals(l3id, it.resolveL3Context(fdid).getId());
+        assertEquals(bdid, it.resolveL2BridgeDomain(fdid).getId());
+        assertEquals(fdid, it.resolveL2FloodDomain(fdid).getId());
     }
 
     @Test
@@ -111,31 +111,6 @@ public class IndexedTenantTest {
         when(policy.getContract()).thenReturn(contractList);
         ContractId contractId = mock(ContractId.class);
         when(contract.getId()).thenReturn(contractId);
-
-        L3Context l3Context = mock(L3Context.class);
-        List<L3Context> l3ContextList = Arrays.asList(l3Context);
-        when(fwCtx.getL3Context()).thenReturn(l3ContextList);
-        L3ContextId l3ContextId = mock(L3ContextId.class);
-        when(l3Context.getId()).thenReturn(l3ContextId);
-        String l3ContextValue = "contextID";
-        when(l3ContextId.getValue()).thenReturn(l3ContextValue);
-
-        L2BridgeDomain l2BridgeDomain = mock(L2BridgeDomain.class);
-        List<L2BridgeDomain> l2BridgeDomainList = Arrays.asList(l2BridgeDomain);
-        when(fwCtx.getL2BridgeDomain()).thenReturn(l2BridgeDomainList);
-        L2BridgeDomainId l2BridgeDomainId = mock(L2BridgeDomainId.class);
-        when(l2BridgeDomain.getId()).thenReturn(l2BridgeDomainId);
-        String l2BridgeDomainIdValue = "bridgeDomainID";
-        when(l2BridgeDomainId.getValue()).thenReturn(l2BridgeDomainIdValue);
-
-        L2FloodDomain l2FloodDomain = mock(L2FloodDomain.class);
-        List<L2FloodDomain> l2FloodDomainList = Arrays.asList(l2FloodDomain);
-        when(fwCtx.getL2FloodDomain()).thenReturn(l2FloodDomainList);
-        L2FloodDomainId l2FloodDomainId = mock(L2FloodDomainId.class);
-        when(l2FloodDomain.getId()).thenReturn(l2FloodDomainId);
-        String cValue = "floodDomainID";
-        when(l2FloodDomainId.getValue()).thenReturn(cValue);
-
         Subnet subnet = mock(Subnet.class);
         List<Subnet> subnetList = Arrays.asList(subnet);
         when(fwCtx.getSubnet()).thenReturn(subnetList);
@@ -147,16 +122,13 @@ public class IndexedTenantTest {
         when(subnet.getParent()).thenReturn(sParent);
         String sParentValue = "sParentValue";
         when(sParent.getValue()).thenReturn(sParentValue);
-
         SubjectFeatureInstances sfi = mock(SubjectFeatureInstances.class);
         when(policy.getSubjectFeatureInstances()).thenReturn(sfi);
-
         ClassifierInstance ci = mock(ClassifierInstance.class);
         List<ClassifierInstance> ciList = Arrays.asList(ci);
         when(sfi.getClassifierInstance()).thenReturn(ciList);
         ClassifierName ciName = mock(ClassifierName.class);
         when(ci.getName()).thenReturn(ciName);
-
         ActionInstance ai = mock(ActionInstance.class);
         List<ActionInstance> actionList = Arrays.asList(ai);
         when(sfi.getActionInstance()).thenReturn(actionList);
@@ -169,9 +141,6 @@ public class IndexedTenantTest {
         assertEquals(tenant, it.getTenant());
         assertEquals(eg, it.getEndpointGroup(egId));
         assertEquals(contract, it.getContract(contractId));
-        assertEquals(l3Context, it.getNetworkDomain(l3ContextId));
-        assertEquals(l2BridgeDomain, it.getNetworkDomain(l2BridgeDomainId));
-        assertEquals(l2FloodDomain, it.getNetworkDomain(l2FloodDomainId));
         assertEquals(ci, it.getClassifier(ciName));
         assertEquals(ai, it.getAction(actionName));
     }

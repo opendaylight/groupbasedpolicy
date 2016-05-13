@@ -5,16 +5,29 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.StatusCode;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.group.SecGroupDao;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.ConfigDataStoreReader;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.GbpDataBrokerTest;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronEntityFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.PolicyAssert;
-import org.opendaylight.neutron.spi.NeutronSecurityRule;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.Contract;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.DirectionIngress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeV4;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolTcp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.NeutronBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.SecurityGroupsBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.security.groups.SecurityGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRuleBuilder;
 
 public class NeutronSecurityRuleAwareTest extends GbpDataBrokerTest {
 
@@ -45,16 +58,16 @@ public class NeutronSecurityRuleAwareTest extends GbpDataBrokerTest {
     @Test
     public void testNeutronSecurityRuleCreatedAndDeleted() throws Exception {
         DataBroker dataProvider = getDataBroker();
-        SecGroupDao secGroupDao = new SecGroupDao();
-        SecRuleDao secRuleDao = new SecRuleDao();
-        NeutronSecurityRuleAware neutronSecurityRuleAware =
-                new NeutronSecurityRuleAware(dataProvider, secRuleDao, secGroupDao);
+        NeutronSecurityRuleAware neutronSecurityRuleAware = new NeutronSecurityRuleAware(dataProvider);
 
         //create security rule and put to DS
-        NeutronSecurityRule neutronRule = buildNeutronSecurityRule();
-        assertEquals(neutronSecurityRuleAware.canCreate(neutronRule),
-                StatusCode.OK);
-        neutronSecurityRuleAware.created(neutronRule);
+        SecurityRule neutronRule = buildNeutronSecurityRule();
+        List<SecurityGroup> secGroups = new ArrayList<>();
+        secGroups.add(NeutronEntityFactory.securityGroup(neutronRule.getSecurityGroupId().getValue(),
+                neutronRule.getTenantId().getValue()));
+        Neutron neutron = new NeutronBuilder()
+            .setSecurityGroups(new SecurityGroupsBuilder().setSecurityGroup(secGroups).build()).build();
+        neutronSecurityRuleAware.onCreated(neutronRule, neutron);
 
         //read security rule
         PolicyAssert.assertContractExists(dataProvider, RULE_TENANT_ID, RULE_ID);
@@ -64,30 +77,23 @@ public class NeutronSecurityRuleAwareTest extends GbpDataBrokerTest {
         assertNotNull(readContract);
         assertEquals(readContract.getId().getValue(), RULE_ID);
 
-        assertEquals(neutronSecurityRuleAware.canUpdate(neutronRule, neutronRule),
-                StatusCode.BAD_REQUEST);
-
         //delete rule
-        assertEquals(neutronSecurityRuleAware.canDelete(neutronRule),
-                StatusCode.OK);
-        neutronSecurityRuleAware.deleted(neutronRule);
+        neutronSecurityRuleAware.onDeleted(neutronRule, neutron, null);
         PolicyAssert.assertContractNotExists(dataProvider, RULE_TENANT_ID, RULE_ID);
     }
 
-    //create neutron security rule
-    private NeutronSecurityRule buildNeutronSecurityRule() {
-        NeutronSecurityRule neutronSecurityRule = new NeutronSecurityRule();
-        neutronSecurityRule.setSecurityRuleUUID(RULE_ID);
-        neutronSecurityRule.setSecurityRuleTenantID(RULE_TENANT_ID);
-        neutronSecurityRule.setSecurityRuleGroupID(RULE_GROUP_ID);
-        neutronSecurityRule.setSecurityRuleRemoteIpPrefix("192.0.0.1/24");
-        neutronSecurityRule.setSecurityRulePortMin(1000);
-        neutronSecurityRule.setSecurityRulePortMax(5000);
-        neutronSecurityRule.setSecurityRuleProtocol("tcp");
-        neutronSecurityRule.setSecurityRuleEthertype("IPv4");
-        neutronSecurityRule.setSecurityRuleDirection("ingress");
-
-        return neutronSecurityRule;
+    // create neutron security rule
+    private SecurityRule buildNeutronSecurityRule() {
+        return new SecurityRuleBuilder().setId(new Uuid(RULE_ID))
+            .setTenantId(new Uuid(RULE_TENANT_ID))
+            .setSecurityGroupId(new Uuid(RULE_GROUP_ID))
+            .setRemoteIpPrefix(new IpPrefix(new Ipv4Prefix("192.0.0.1/24")))
+            .setPortRangeMin(1000)
+            .setPortRangeMax(5000)
+            .setProtocol(ProtocolTcp.class)
+            .setEthertype(EthertypeV4.class)
+            .setDirection(DirectionIngress.class)
+            .build();
     }
 
 }

@@ -103,7 +103,6 @@ public class ExternalMapperTest extends MapperUtilsTest {
         Tenant tenant = tenantBuilder.build();
         // L2 Endpoint
         EndpointBuilder endpointBuilder = buildEndpoint(IPV4_0, MAC_0, CONNECTOR_0)
-                .setNetworkContainment(L2_FD_ID_EXT)
                 .setL2Context(L2BD_ID);
         // L3 Endpoint with Nat
         EndpointL3Builder endpointL3Builder = buildL3Endpoint(natAddr, IPV4_1, MAC_0, null)
@@ -122,7 +121,7 @@ public class ExternalMapperTest extends MapperUtilsTest {
 
         mapper.sync(endpointBuilder.build(), ofWriter);
 
-        verify(ofWriter, times(4)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
+        verify(ofWriter, times(3)).writeFlow(any(NodeId.class), any(Short.class), any(Flow.class));
     }
 
     @Test
@@ -132,6 +131,8 @@ public class ExternalMapperTest extends MapperUtilsTest {
 
         when(ctx.getEndpointManager()).thenReturn(endpointManager);
         when(ctx.getTenant(any(TenantId.class))).thenReturn(getTestIndexedTenant());
+        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
+        when(ctx.getSwitchManager()).thenReturn(switchManager);
         when(endpointManager.getEndpointNodeId(any(Endpoint.class))).thenReturn(NODE_ID);
 
         mapper.sync(endpointBuilder.build(), ofWriter);

@@ -15,9 +15,9 @@ import org.opendaylight.groupbasedpolicy.api.sf.EtherTypeClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.api.sf.IpProtoClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.api.sf.L4ClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NeutronUtils;
-import org.opendaylight.neutron.spi.NeutronSecurityRule;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClauseName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
@@ -32,215 +32,46 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.Clause;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.clause.ConsumerMatchers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.DirectionBase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.DirectionEgress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.DirectionIngress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeBase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeV4;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeV6;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolBase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolIcmp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolTcp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolUdp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRuleBuilder;
 
 public class SecRuleEntityDecoderTest {
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
-    private NeutronSecurityRule secRule;
+    private SecurityRuleBuilder secRuleBuilder;
 
     @Before
     public void setUp() throws Exception {
-        secRule = new NeutronSecurityRule();
+        secRuleBuilder = new SecurityRuleBuilder().setId(new Uuid("01234567-abcd-ef01-0123-0123456789ab"));
     }
 
     @Test
-    public final void testGetTenantId_lowercaseUuidTenantID() {
-        secRule.setSecurityRuleTenantID("01234567-abcd-ef01-0123-0123456789ab");
+    public final void testGetContractId() {
         Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab",
-                SecRuleEntityDecoder.getTenantId(secRule).getValue());
-    }
-
-    @Test
-    public final void testGetTenantId_uppercaseUuidTenantID() {
-        secRule.setSecurityRuleTenantID("01234567-ABCD-EF01-0123-0123456789AB");
-        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB",
-                SecRuleEntityDecoder.getTenantId(secRule).getValue());
-    }
-
-    @Test
-    public final void testGetTenantId_mixUuidTenantID() {
-        secRule.setSecurityRuleTenantID("01234567-ABCD-ef01-0123-0123456789Ab");
-        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab",
-                SecRuleEntityDecoder.getTenantId(secRule).getValue());
-    }
-
-    @Test
-    public final void testGetTenantId_noSlashLowercaseUuidTenantID() {
-        secRule.setSecurityRuleTenantID("01234567abcdef0101230123456789ab");
-        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab",
-                SecRuleEntityDecoder.getTenantId(secRule).getValue());
-    }
-
-    @Test
-    public final void testGetTenantId_noSlashUppercaseUuidTenantID() {
-        secRule.setSecurityRuleTenantID("01234567ABCDEF0101230123456789AB");
-        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB",
-                SecRuleEntityDecoder.getTenantId(secRule).getValue());
-    }
-
-    @Test
-    public final void testGetTenantId_noSlashMixUuidTenantID() {
-        secRule.setSecurityRuleTenantID("01234567ABCDef0101230123456789Ab");
-        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab",
-                SecRuleEntityDecoder.getTenantId(secRule).getValue());
-    }
-
-    @Test
-    public final void testGetTenantId_emptyUuidTenantID() {
-        secRule.setSecurityRuleTenantID("");
-        thrown.expect(NullPointerException.class);
-        SecRuleEntityDecoder.getTenantId(secRule);
-    }
-
-    @Test
-    public final void testGetTenantId_nullUuidTenantID() {
-        secRule.setSecurityRuleTenantID(null);
-        thrown.expect(NullPointerException.class);
-        SecRuleEntityDecoder.getTenantId(secRule);
-    }
-
-    @Test
-    public final void testGetProviderEpgId_lowercaseUuidGroupID() {
-        secRule.setSecurityRuleGroupID("01234567-abcd-ef01-0123-0123456789ab");
-        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab",
-                SecRuleEntityDecoder.getProviderEpgId(secRule).getValue());
-    }
-
-    @Test
-    public final void testGetProviderEpgId_uppercaseUuidGroupID() {
-        secRule.setSecurityRuleGroupID("01234567-ABCD-EF01-0123-0123456789AB");
-        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB",
-                SecRuleEntityDecoder.getProviderEpgId(secRule).getValue());
-    }
-
-    @Test
-    public final void testGetProviderEpgId_mixUuidGroupID() {
-        secRule.setSecurityRuleGroupID("01234567-ABCD-ef01-0123-0123456789Ab");
-        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab",
-                SecRuleEntityDecoder.getProviderEpgId(secRule).getValue());
-    }
-
-    @Test
-    public final void testGetProviderEpgId_noSlashLowercaseUuidGroupID() {
-        secRule.setSecurityRuleGroupID("01234567abcdef0101230123456789ab");
-        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab",
-                SecRuleEntityDecoder.getProviderEpgId(secRule).getValue());
-    }
-
-    @Test
-    public final void testGetProviderEpgId_noSlashUppercaseUuidGroupID() {
-        secRule.setSecurityRuleGroupID("01234567ABCDEF0101230123456789AB");
-        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB",
-                SecRuleEntityDecoder.getProviderEpgId(secRule).getValue());
-    }
-
-    @Test
-    public final void testGetProviderEpgId_noSlashMixUuidGroupID() {
-        secRule.setSecurityRuleGroupID("01234567ABCDef0101230123456789Ab");
-        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab",
-                SecRuleEntityDecoder.getProviderEpgId(secRule).getValue());
-    }
-
-    @Test
-    public final void testGetProviderEpgId_emptyUuidGroupID() {
-        secRule.setSecurityRuleGroupID("");
-        thrown.expect(IllegalArgumentException.class);
-        SecRuleEntityDecoder.getProviderEpgId(secRule);
-    }
-
-    @Test
-    public final void testGetProviderEpgId_nullUuidGroupID() {
-        secRule.setSecurityRuleGroupID(null);
-        thrown.expect(NullPointerException.class);
-        SecRuleEntityDecoder.getProviderEpgId(secRule);
-    }
-
-    @Test
-    public final void testGetConsumerEpgId_lowercaseUuidRemoteGroupID() {
-        secRule.setSecurityRemoteGroupID("01234567-abcd-ef01-0123-0123456789ab");
-        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab",
-                SecRuleEntityDecoder.getConsumerEpgId(secRule).getValue());
-    }
-
-    @Test
-    public final void testGetConsumerEpgId_uppercaseUuidRemoteGroupID() {
-        secRule.setSecurityRemoteGroupID("01234567-ABCD-EF01-0123-0123456789AB");
-        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB",
-                SecRuleEntityDecoder.getConsumerEpgId(secRule).getValue());
-    }
-
-    @Test
-    public final void testGetConsumerEpgId_mixUuidRemoteGroupID() {
-        secRule.setSecurityRemoteGroupID("01234567-ABCD-ef01-0123-0123456789Ab");
-        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab",
-                SecRuleEntityDecoder.getConsumerEpgId(secRule).getValue());
-    }
-
-    @Test
-    public final void testGetConsumerEpgId_noSlashLowercaseUuidRemoteGroupID() {
-        secRule.setSecurityRemoteGroupID("01234567abcdef0101230123456789ab");
-        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab",
-                SecRuleEntityDecoder.getConsumerEpgId(secRule).getValue());
-    }
-
-    @Test
-    public final void testGetConsumerEpgId_noSlashUppercaseUuidRemoteGroupID() {
-        secRule.setSecurityRemoteGroupID("01234567ABCDEF0101230123456789AB");
-        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB",
-                SecRuleEntityDecoder.getConsumerEpgId(secRule).getValue());
-    }
-
-    @Test
-    public final void testGetConsumerEpgId_noSlashMixUuidRemoteGroupID() {
-        secRule.setSecurityRemoteGroupID("01234567ABCDef0101230123456789Ab");
-        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab",
-                SecRuleEntityDecoder.getConsumerEpgId(secRule).getValue());
-    }
-
-    @Test
-    public final void testGetConsumerEpgId_emptyUuidRemoteGroupID() {
-        secRule.setSecurityRemoteGroupID("");
-        Assert.assertSame(null, SecRuleEntityDecoder.getConsumerEpgId(secRule));
-    }
-
-    @Test
-    public final void testGetConsumerEpgId_nullUuidRemoteGroupID() {
-        secRule.setSecurityRemoteGroupID(null);
-        Assert.assertSame(null, SecRuleEntityDecoder.getConsumerEpgId(secRule));
-    }
-
-    @Test
-    public final void testGetContractId_lowercaseUuidID() {
-        secRule.setSecurityRuleUUID("01234567-abcd-ef01-0123-0123456789ab");
-        Assert.assertEquals("01234567-abcd-ef01-0123-0123456789ab",
-                SecRuleEntityDecoder.getContractId(secRule).getValue());
-    }
-
-    @Test
-    public final void testGetContractId_uppercaseUuidID() {
-        secRule.setSecurityRuleUUID("01234567-ABCD-EF01-0123-0123456789AB");
-        Assert.assertEquals("01234567-ABCD-EF01-0123-0123456789AB",
-                SecRuleEntityDecoder.getContractId(secRule).getValue());
-    }
-
-    @Test
-    public final void testGetContractId_mixUuidID() {
-        secRule.setSecurityRuleUUID("01234567-ABCD-ef01-0123-0123456789Ab");
-        Assert.assertEquals("01234567-ABCD-ef01-0123-0123456789Ab",
-                SecRuleEntityDecoder.getContractId(secRule).getValue());
+                SecRuleEntityDecoder.getContractId(secRuleBuilder.build()).getValue());
     }
 
     @Test
     public final void testGetClassifierInstance_onlyEthertype() {
-        secRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
-        ClassifierInstance ci = SecRuleEntityDecoder.getClassifierInstance(secRule);
+        secRuleBuilder.setEthertype(EthertypeV4.class);
+        ClassifierInstance ci = SecRuleEntityDecoder.getClassifierInstance(secRuleBuilder.build());
         Assert.assertEquals(EtherTypeClassifierDefinition.DEFINITION.getId(), ci.getClassifierDefinitionId());
         // name is ether_type_IPv4
         String expectedName = new StringBuilder().append(EtherTypeClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_VALUE_DELIMETER)
-            .append(NeutronUtils.IPv4)
+            .append(EthertypeV4.class.getSimpleName())
             .toString();
         Assert.assertEquals(expectedName, ci.getName().getValue());
         Assert.assertEquals(expectedName, ci.getName().getValue());
@@ -254,18 +85,18 @@ public class SecRuleEntityDecoderTest {
 
     @Test
     public final void testGetClassifierInstance_EthertypeAndProtocol() {
-        secRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
-        secRule.setSecurityRuleProtocol(NeutronUtils.TCP);
-        ClassifierInstance ci = SecRuleEntityDecoder.getClassifierInstance(secRule);
+        secRuleBuilder.setEthertype(EthertypeV4.class);
+        secRuleBuilder.setProtocol(ProtocolTcp.class);
+        ClassifierInstance ci = SecRuleEntityDecoder.getClassifierInstance(secRuleBuilder.build());
         Assert.assertEquals(IpProtoClassifierDefinition.DEFINITION.getId(), ci.getClassifierDefinitionId());
         // name is ip_proto_tcp__ether_type_IPv4
         String expectedName = new StringBuilder().append(IpProtoClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_VALUE_DELIMETER)
-            .append(NeutronUtils.TCP)
+            .append(ProtocolTcp.class.getSimpleName())
             .append(MappingUtils.NAME_DOUBLE_DELIMETER)
             .append(EtherTypeClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_VALUE_DELIMETER)
-            .append(NeutronUtils.IPv4)
+            .append(EthertypeV4.class.getSimpleName())
             .toString();
         Assert.assertEquals(expectedName, ci.getName().getValue());
         List<ParameterValue> parameterValues = ci.getParameterValue();
@@ -292,27 +123,29 @@ public class SecRuleEntityDecoderTest {
 
     @Test
     public final void testGetClassifierInstance_EthertypeAndProtocolAndPort() {
-        secRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
-        secRule.setSecurityRuleProtocol(NeutronUtils.TCP);
-        secRule.setSecurityRulePortMin(5);
-        secRule.setSecurityRulePortMax(5);
-        ClassifierInstance ci = SecRuleEntityDecoder.getClassifierInstance(secRule);
+        secRuleBuilder.setEthertype(EthertypeV4.class);
+        secRuleBuilder.setProtocol(ProtocolTcp.class);
+        secRuleBuilder.setPortRangeMin(5);
+        secRuleBuilder.setPortRangeMax(5);
+        ClassifierInstance ci = SecRuleEntityDecoder.getClassifierInstance(secRuleBuilder.build());
         Assert.assertEquals(L4ClassifierDefinition.DEFINITION.getId(), ci.getClassifierDefinitionId());
         // name is l4_destport-5__ip_proto-tcp__ether_type-IPv4
         String expectedName = new StringBuilder().append(L4ClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_DELIMETER)
             .append(L4ClassifierDefinition.DST_PORT_PARAM)
             .append(MappingUtils.NAME_VALUE_DELIMETER)
-            .append(secRule.getSecurityRulePortMin())
+            .append(secRuleBuilder.getPortRangeMin())
             .append(MappingUtils.NAME_DOUBLE_DELIMETER)
             .append(IpProtoClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_VALUE_DELIMETER)
-            .append(NeutronUtils.TCP)
+            .append(ProtocolTcp.class.getSimpleName())
             .append(MappingUtils.NAME_DOUBLE_DELIMETER)
             .append(EtherTypeClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_VALUE_DELIMETER)
-            .append(NeutronUtils.IPv4)
+            .append(EthertypeV4.class.getSimpleName())
             .toString();
+        System.out.println(expectedName);
+        System.out.println(ci.getName().getValue());
         Assert.assertEquals(expectedName, ci.getName().getValue());
         List<ParameterValue> parameterValues = ci.getParameterValue();
         Assert.assertNotNull(parameterValues);
@@ -350,11 +183,11 @@ public class SecRuleEntityDecoderTest {
 
     @Test
     public final void testGetClassifierInstance_EthertypeAndProtocolAndPorts() {
-        secRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
-        secRule.setSecurityRuleProtocol(NeutronUtils.TCP);
-        secRule.setSecurityRulePortMin(5);
-        secRule.setSecurityRulePortMax(10);
-        ClassifierInstance ci = SecRuleEntityDecoder.getClassifierInstance(secRule);
+        secRuleBuilder.setEthertype(EthertypeV4.class);
+        secRuleBuilder.setProtocol(ProtocolTcp.class);
+        secRuleBuilder.setPortRangeMin(5);
+        secRuleBuilder.setPortRangeMax(10);
+        ClassifierInstance ci = SecRuleEntityDecoder.getClassifierInstance(secRuleBuilder.build());
         Assert.assertEquals(L4ClassifierDefinition.DEFINITION.getId(), ci.getClassifierDefinitionId());
         // name is l4_destport_range_min-5_max-10__ip_proto-tcp__ether_type-IPv4
         String expectedName = new StringBuilder().append(L4ClassifierDefinition.DEFINITION.getName().getValue())
@@ -362,69 +195,72 @@ public class SecRuleEntityDecoderTest {
             .append(L4ClassifierDefinition.DST_PORT_RANGE_PARAM)
             .append(SecRuleNameDecoder.MIN_PORT)
             .append(MappingUtils.NAME_VALUE_DELIMETER)
-            .append(secRule.getSecurityRulePortMin())
+            .append(secRuleBuilder.getPortRangeMin())
             .append(SecRuleNameDecoder.MAX_PORT)
             .append(MappingUtils.NAME_VALUE_DELIMETER)
-            .append(secRule.getSecurityRulePortMax())
+            .append(secRuleBuilder.getPortRangeMax())
             .append(MappingUtils.NAME_DOUBLE_DELIMETER)
             .append(IpProtoClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_VALUE_DELIMETER)
-            .append(NeutronUtils.TCP)
+            .append(ProtocolTcp.class.getSimpleName())
             .append(MappingUtils.NAME_DOUBLE_DELIMETER)
             .append(EtherTypeClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_VALUE_DELIMETER)
-            .append(NeutronUtils.IPv4)
+            .append(EthertypeV4.class.getSimpleName())
             .toString();
         Assert.assertEquals(expectedName, ci.getName().getValue());
     }
 
     @Test
     public final void testGetClassifierRef() {
-        secRule.setSecurityRuleDirection(NeutronUtils.INGRESS);
-        secRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
-        ClassifierName expectedName = SecRuleNameDecoder.getClassifierRefName(secRule);
-        ClassifierRef cr = SecRuleEntityDecoder.getClassifierRef(secRule);
+        secRuleBuilder.setDirection(DirectionIngress.class);
+        secRuleBuilder.setEthertype(EthertypeV4.class);
+        ClassifierName expectedName = SecRuleNameDecoder.getClassifierRefName(secRuleBuilder.build());
+        ClassifierRef cr = SecRuleEntityDecoder.getClassifierRef(secRuleBuilder.build());
         Assert.assertEquals(expectedName, cr.getName());
     }
 
     @Test
     public final void testGetDirection_directionIngress() {
-        secRule.setSecurityRuleDirection(NeutronUtils.INGRESS);
-        Assert.assertEquals(Direction.In, SecRuleEntityDecoder.getDirection(secRule));
+        secRuleBuilder.setDirection(DirectionIngress.class);
+        Assert.assertEquals(Direction.In, SecRuleEntityDecoder.getDirection(secRuleBuilder.build()));
     }
 
     @Test
     public final void testGetDirection_directionEgress() {
-        secRule.setSecurityRuleDirection(NeutronUtils.EGRESS);
-        Assert.assertEquals(Direction.Out, SecRuleEntityDecoder.getDirection(secRule));
+        secRuleBuilder.setDirection(DirectionEgress.class);
+        Assert.assertEquals(Direction.Out, SecRuleEntityDecoder.getDirection(secRuleBuilder.build()));
     }
 
     @Test
     public final void testGetDirection_directionNull() {
-        secRule.setSecurityRuleDirection(null);
+        secRuleBuilder.setDirection(null);
         thrown.expect(IllegalArgumentException.class);
-        SecRuleEntityDecoder.getDirection(secRule);
+        SecRuleEntityDecoder.getDirection(secRuleBuilder.build());
     }
 
     @Test
     public final void testGetDirection_directionUnknown() {
-        secRule.setSecurityRuleDirection("foo");
+        secRuleBuilder.setDirection(UnknownDirection.class);
         thrown.expect(IllegalArgumentException.class);
-        SecRuleEntityDecoder.getDirection(secRule);
+        SecRuleEntityDecoder.getDirection(secRuleBuilder.build());
+    }
+
+    private static class UnknownDirection extends DirectionBase {
     }
 
     @Test
     public final void testGetClause_noRemoteIpPrefix() {
-        secRule.setSecurityRuleDirection(NeutronUtils.INGRESS);
-        secRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
-        ClauseName expectedClauseName = SecRuleNameDecoder.getClauseName(secRule);
-        Clause clause = SecRuleEntityDecoder.getClause(secRule);
+        secRuleBuilder.setDirection(DirectionIngress.class);
+        secRuleBuilder.setEthertype(EthertypeV4.class);
+        ClauseName expectedClauseName = SecRuleNameDecoder.getClauseName(secRuleBuilder.build());
+        Clause clause = SecRuleEntityDecoder.getClause(secRuleBuilder.build());
         Assert.assertEquals(expectedClauseName, clause.getName());
         List<SubjectName> subjectRefs = clause.getSubjectRefs();
         Assert.assertNotNull(subjectRefs);
         Assert.assertEquals(1, subjectRefs.size());
         SubjectName subjectNameFromClause = subjectRefs.get(0);
-        SubjectName expectedSubjectName = SecRuleNameDecoder.getSubjectName(secRule);
+        SubjectName expectedSubjectName = SecRuleNameDecoder.getSubjectName(secRuleBuilder.build());
         Assert.assertEquals(expectedSubjectName, subjectNameFromClause);
         Assert.assertNull(clause.getConsumerMatchers());
         Assert.assertNull(clause.getProviderMatchers());
@@ -432,17 +268,17 @@ public class SecRuleEntityDecoderTest {
 
     @Test
     public final void testGetClause_remoteIpPrefix() {
-        secRule.setSecurityRuleDirection(NeutronUtils.INGRESS);
-        secRule.setSecurityRuleEthertype(NeutronUtils.IPv4);
-        secRule.setSecurityRuleRemoteIpPrefix("10.0.0.0/8");
-        Clause clause = SecRuleEntityDecoder.getClause(secRule);
-        ClauseName expectedClauseName = SecRuleNameDecoder.getClauseName(secRule);
+        secRuleBuilder.setDirection(DirectionIngress.class);
+        secRuleBuilder.setEthertype(EthertypeV4.class);
+        secRuleBuilder.setRemoteIpPrefix(new IpPrefix(new Ipv4Prefix("10.0.0.0/8")));
+        Clause clause = SecRuleEntityDecoder.getClause(secRuleBuilder.build());
+        ClauseName expectedClauseName = SecRuleNameDecoder.getClauseName(secRuleBuilder.build());
         Assert.assertEquals(expectedClauseName, clause.getName());
         List<SubjectName> subjectRefs = clause.getSubjectRefs();
         Assert.assertNotNull(subjectRefs);
         Assert.assertEquals(1, subjectRefs.size());
         SubjectName subjectNameFromClause = subjectRefs.get(0);
-        SubjectName expectedSubjectName = SecRuleNameDecoder.getSubjectName(secRule);
+        SubjectName expectedSubjectName = SecRuleNameDecoder.getSubjectName(secRuleBuilder.build());
         Assert.assertEquals(expectedSubjectName, subjectNameFromClause);
         Assert.assertNull(clause.getProviderMatchers());
         ConsumerMatchers consumerMatchers = clause.getConsumerMatchers();
@@ -464,220 +300,193 @@ public class SecRuleEntityDecoderTest {
 
     @Test
     public final void testIsEtherTypeOfOneWithinTwo_oneEthTypeIPv4TwoEthTypeIPv4() {
-        NeutronSecurityRule one = createSecRuleWithEtherType(NeutronUtils.IPv4);
-        NeutronSecurityRule two = createSecRuleWithEtherType(NeutronUtils.IPv4);
+        SecurityRule one = secRuleBuilder.setEthertype(EthertypeV4.class).build();
+        SecurityRule two = secRuleBuilder.setEthertype(EthertypeV4.class).build();
         assertTrue(SecRuleEntityDecoder.isEtherTypeOfOneWithinTwo(one, two));
     }
 
     @Test
     public final void testIsEtherTypeOfOneWithinTwo_oneEthTypeIPv4TwoEthTypeNull() {
-        NeutronSecurityRule one = createSecRuleWithEtherType(NeutronUtils.IPv4);
-        NeutronSecurityRule two = createSecRuleWithEtherType(null);
+        SecurityRule one = secRuleBuilder.setEthertype(EthertypeV4.class).build();
+        SecurityRule two = secRuleBuilder.setEthertype(null).build();
         assertTrue(SecRuleEntityDecoder.isEtherTypeOfOneWithinTwo(one, two));
     }
 
     @Test
     public final void testIsEtherTypeOfOneWithinTwo_oneEthTypeNullTwoEthTypeNull() {
-        NeutronSecurityRule one = createSecRuleWithEtherType(null);
-        NeutronSecurityRule two = createSecRuleWithEtherType(null);
+        SecurityRule one = secRuleBuilder.setEthertype(null).build();
+        SecurityRule two = secRuleBuilder.setEthertype(null).build();
         assertTrue(SecRuleEntityDecoder.isEtherTypeOfOneWithinTwo(one, two));
     }
 
     @Test
     public final void testIsEtherTypeOfOneWithinTwo_oneEthTypeIPv4TwoEthTypeIPv6() {
-        NeutronSecurityRule one = createSecRuleWithEtherType(NeutronUtils.IPv4);
-        NeutronSecurityRule two = createSecRuleWithEtherType(NeutronUtils.IPv6);
+        SecurityRule one = secRuleBuilder.setEthertype(EthertypeV4.class).build();
+        SecurityRule two = secRuleBuilder.setEthertype(EthertypeV6.class).build();
         assertFalse(SecRuleEntityDecoder.isEtherTypeOfOneWithinTwo(one, two));
     }
 
     @Test
     public final void testIsEtherTypeOfOneWithinTwo_oneEthTypeNullTwoEthTypeIPv4() {
-        NeutronSecurityRule one = createSecRuleWithEtherType(null);
-        NeutronSecurityRule two = createSecRuleWithEtherType(NeutronUtils.IPv4);
+        SecurityRule one = secRuleBuilder.setEthertype(null).build();
+        SecurityRule two = secRuleBuilder.setEthertype(EthertypeV4.class).build();
         assertFalse(SecRuleEntityDecoder.isEtherTypeOfOneWithinTwo(one, two));
-    }
-
-    private final NeutronSecurityRule createSecRuleWithEtherType(String etherType) {
-        NeutronSecurityRule secRule = new NeutronSecurityRule();
-        secRule.setSecurityRuleEthertype(etherType);
-        return secRule;
     }
 
     @Test
     public void testIsProtocolOfOneWithinTwo_oneProtocolTcpTwoProtocolTcp() {
-        NeutronSecurityRule one = createSecRuleWithProtocol(NeutronUtils.TCP);
-        NeutronSecurityRule two = createSecRuleWithProtocol(NeutronUtils.TCP);
+        SecurityRule one = secRuleBuilder.setProtocol(ProtocolTcp.class).build();
+        SecurityRule two = secRuleBuilder.setProtocol(ProtocolTcp.class).build();
         assertTrue(SecRuleEntityDecoder.isProtocolOfOneWithinTwo(one, two));
     }
 
     @Test
     public void testIsProtocolOfOneWithinTwo_oneProtocolTcpTwoProtocolNull() {
-        NeutronSecurityRule one = createSecRuleWithProtocol(NeutronUtils.TCP);
-        NeutronSecurityRule two = createSecRuleWithProtocol(null);
+        SecurityRule one = secRuleBuilder.setProtocol(ProtocolTcp.class).build();
+        SecurityRule two = secRuleBuilder.setProtocol(null).build();
         assertTrue(SecRuleEntityDecoder.isProtocolOfOneWithinTwo(one, two));
     }
 
     @Test
     public void testIsProtocolOfOneWithinTwo_oneProtocolNullTwoProtocolNull() {
-        NeutronSecurityRule one = createSecRuleWithProtocol(null);
-        NeutronSecurityRule two = createSecRuleWithProtocol(null);
+        SecurityRule one = secRuleBuilder.setProtocol(null).build();
+        SecurityRule two = secRuleBuilder.setProtocol(null).build();
         assertTrue(SecRuleEntityDecoder.isProtocolOfOneWithinTwo(one, two));
     }
 
     @Test
     public void testIsProtocolOfOneWithinTwo_oneProtocolTcpTwoProtocolUdp() {
-        NeutronSecurityRule one = createSecRuleWithProtocol(NeutronUtils.TCP);
-        NeutronSecurityRule two = createSecRuleWithProtocol(NeutronUtils.UDP);
+        SecurityRule one = secRuleBuilder.setProtocol(ProtocolTcp.class).build();
+        SecurityRule two = secRuleBuilder.setProtocol(ProtocolUdp.class).build();
         assertFalse(SecRuleEntityDecoder.isProtocolOfOneWithinTwo(one, two));
     }
 
     @Test
     public void testIsProtocolOfOneWithinTwo_oneProtocolNullTwoProtocolTcp() {
-        NeutronSecurityRule one = createSecRuleWithProtocol(null);
-        NeutronSecurityRule two = createSecRuleWithProtocol(NeutronUtils.TCP);
+        SecurityRule one = secRuleBuilder.setProtocol(null).build();
+        SecurityRule two = secRuleBuilder.setProtocol(ProtocolTcp.class).build();
         assertFalse(SecRuleEntityDecoder.isProtocolOfOneWithinTwo(one, two));
-    }
-
-    private NeutronSecurityRule createSecRuleWithProtocol(String protocol) {
-        NeutronSecurityRule secRule = new NeutronSecurityRule();
-        secRule.setSecurityRuleProtocol(protocol);
-        return secRule;
     }
 
     @Test
     public final void testIsPortsOfOneWithinTwo_onePortMinGtTwoPortMinOnePortMaxLtTwoPortMax() {
-        NeutronSecurityRule one = createSecRuleWithMinMaxPort(6, 9);
-        NeutronSecurityRule two = createSecRuleWithMinMaxPort(5, 10);
+        SecurityRule one = createSecRuleWithMinMaxPort(6, 9);
+        SecurityRule two = createSecRuleWithMinMaxPort(5, 10);
         assertTrue(SecRuleEntityDecoder.isPortsOfOneWithinTwo(one, two));
     }
 
     @Test
     public final void testIsPortsOfOneWithinTwo_onePortMinEqTwoPortMinOnePortMaxEqTwoPortMax() {
-        NeutronSecurityRule one = createSecRuleWithMinMaxPort(5, 10);
-        NeutronSecurityRule two = createSecRuleWithMinMaxPort(5, 10);
+        SecurityRule one = createSecRuleWithMinMaxPort(5, 10);
+        SecurityRule two = createSecRuleWithMinMaxPort(5, 10);
         assertTrue(SecRuleEntityDecoder.isPortsOfOneWithinTwo(one, two));
     }
 
     @Test
     public final void testIsPortsOfOneWithinTwo_onePortMinTwoPortMinNullOnePortMaxTwoPortMaxNull() {
-        NeutronSecurityRule one = createSecRuleWithMinMaxPort(4, 9);
-        NeutronSecurityRule two = createSecRuleWithMinMaxPort(null, null);
+        SecurityRule one = createSecRuleWithMinMaxPort(4, 9);
+        SecurityRule two = createSecRuleWithMinMaxPort(null, null);
         assertTrue(SecRuleEntityDecoder.isPortsOfOneWithinTwo(one, two));
     }
 
     @Test
     public final void testIsPortsOfOneWithinTwo_onePortMinNullTwoPortMinNullOnePortMaxNullTwoPortMaxNull() {
-        NeutronSecurityRule one = createSecRuleWithMinMaxPort(null, null);
-        NeutronSecurityRule two = createSecRuleWithMinMaxPort(null, null);
+        SecurityRule one = createSecRuleWithMinMaxPort(null, null);
+        SecurityRule two = createSecRuleWithMinMaxPort(null, null);
         assertTrue(SecRuleEntityDecoder.isPortsOfOneWithinTwo(one, two));
     }
 
     @Test
     public final void testIsPortsOfOneWithinTwo_onePortMinNullTwoPortMinOnePortMaxNullTwoPortMax() {
-        NeutronSecurityRule one = createSecRuleWithMinMaxPort(null, null);
-        NeutronSecurityRule two = createSecRuleWithMinMaxPort(5, 10);
+        SecurityRule one = createSecRuleWithMinMaxPort(null, null);
+        SecurityRule two = createSecRuleWithMinMaxPort(5, 10);
         assertFalse(SecRuleEntityDecoder.isPortsOfOneWithinTwo(one, two));
     }
 
     @Test
     public final void testIsPortsOfOneWithinTwo_onePortMinLtTwoPortMinOnePortMaxLtTwoPortMax() {
-        NeutronSecurityRule one = createSecRuleWithMinMaxPort(4, 9);
-        NeutronSecurityRule two = createSecRuleWithMinMaxPort(5, 10);
+        SecurityRule one = createSecRuleWithMinMaxPort(4, 9);
+        SecurityRule two = createSecRuleWithMinMaxPort(5, 10);
         assertFalse(SecRuleEntityDecoder.isPortsOfOneWithinTwo(one, two));
     }
 
     @Test
     public final void testIsPortsOfOneWithinTwo_onePortMinGtTwoPortMinOnePortMaxGtTwoPortMax() {
-        NeutronSecurityRule one = createSecRuleWithMinMaxPort(6, 11);
-        NeutronSecurityRule two = createSecRuleWithMinMaxPort(5, 10);
+        SecurityRule one = createSecRuleWithMinMaxPort(6, 11);
+        SecurityRule two = createSecRuleWithMinMaxPort(5, 10);
         assertFalse(SecRuleEntityDecoder.isPortsOfOneWithinTwo(one, two));
     }
 
     @Test
     public final void testIsPortsOfOneWithinTwo_onePortMinLtTwoPortMinOnePortMaxGtTwoPortMax() {
-        NeutronSecurityRule one = createSecRuleWithMinMaxPort(4, 11);
-        NeutronSecurityRule two = createSecRuleWithMinMaxPort(5, 10);
+        SecurityRule one = createSecRuleWithMinMaxPort(4, 11);
+        SecurityRule two = createSecRuleWithMinMaxPort(5, 10);
         assertFalse(SecRuleEntityDecoder.isPortsOfOneWithinTwo(one, two));
     }
 
-    private NeutronSecurityRule createSecRuleWithMinMaxPort(Integer portMin, Integer portMax) {
-        NeutronSecurityRule secRule = new NeutronSecurityRule();
-        secRule.setSecurityRulePortMin(portMin);
-        secRule.setSecurityRulePortMax(portMax);
-        return secRule;
+    private SecurityRule createSecRuleWithMinMaxPort(Integer portMin, Integer portMax) {
+        return secRuleBuilder.setPortRangeMin(portMin).setPortRangeMax(portMax).build();
     }
 
     @Test
     public final void testGetEtherType_ethertypeIPv4() {
-        secRule.setSecurityRuleEthertype("IPv4");
-        Assert.assertEquals(EtherTypeClassifierDefinition.IPv4_VALUE, SecRuleEntityDecoder.getEtherType(secRule));
+        secRuleBuilder.setEthertype(EthertypeV4.class);
+        Assert.assertEquals(EtherTypeClassifierDefinition.IPv4_VALUE, SecRuleEntityDecoder.getEtherType(secRuleBuilder.build()));
     }
 
     @Test
     public final void testGetEtherType_ethertypeIPv6() {
-        secRule.setSecurityRuleEthertype("IPv6");
-        Assert.assertEquals(EtherTypeClassifierDefinition.IPv6_VALUE, SecRuleEntityDecoder.getEtherType(secRule));
+        secRuleBuilder.setEthertype(EthertypeV6.class);
+        Assert.assertEquals(EtherTypeClassifierDefinition.IPv6_VALUE, SecRuleEntityDecoder.getEtherType(secRuleBuilder.build()));
     }
 
     @Test
     public final void testGetEtherType_ethertypeNull() {
-        secRule.setSecurityRuleEthertype(null);
-        Assert.assertNull(SecRuleEntityDecoder.getEtherType(secRule));
-    }
-
-    @Test
-    public final void testGetEtherType_ethertypeEmptyString() {
-        secRule.setSecurityRuleEthertype("");
-        Assert.assertNull(SecRuleEntityDecoder.getEtherType(secRule));
+        secRuleBuilder.setEthertype(null);
+        Assert.assertNull(SecRuleEntityDecoder.getEtherType(secRuleBuilder.build()));
     }
 
     @Test
     public final void testGetEtherType_ethertypeUnknown() {
-        secRule.setSecurityRuleEthertype("foo");
+        secRuleBuilder.setEthertype(UnknownEthertype.class);
         thrown.expect(IllegalArgumentException.class);
-        SecRuleEntityDecoder.getEtherType(secRule);
+        SecRuleEntityDecoder.getEtherType(secRuleBuilder.build());
+    }
+
+    private static class UnknownEthertype extends EthertypeBase {
     }
 
     @Test
     public final void testGetProtocol_protoTcp() {
-        secRule.setSecurityRuleProtocol("tcp");
-        Assert.assertEquals(IpProtoClassifierDefinition.TCP_VALUE, SecRuleEntityDecoder.getProtocol(secRule));
+        secRuleBuilder.setProtocol(ProtocolTcp.class);
+        Assert.assertEquals(IpProtoClassifierDefinition.TCP_VALUE, SecRuleEntityDecoder.getProtocol(secRuleBuilder.build()));
     }
 
     @Test
     public final void testGetProtocol_protoUdp() {
-        secRule.setSecurityRuleProtocol("udp");
-        Assert.assertEquals(IpProtoClassifierDefinition.UDP_VALUE, SecRuleEntityDecoder.getProtocol(secRule));
+        secRuleBuilder.setProtocol(ProtocolUdp.class);
+        Assert.assertEquals(IpProtoClassifierDefinition.UDP_VALUE, SecRuleEntityDecoder.getProtocol(secRuleBuilder.build()));
     }
 
     @Test
     public final void testGetProtocol_protoIcmp() {
-        secRule.setSecurityRuleProtocol("icmp");
-        Assert.assertEquals(IpProtoClassifierDefinition.ICMP_VALUE, SecRuleEntityDecoder.getProtocol(secRule));
-    }
-
-    @Test
-    public final void testGetProtocol_numValue() {
-        secRule.setSecurityRuleProtocol("199");
-        Assert.assertEquals(Long.valueOf(199) , SecRuleEntityDecoder.getProtocol(secRule));
+        secRuleBuilder.setProtocol(ProtocolIcmp.class);
+        Assert.assertEquals(IpProtoClassifierDefinition.ICMP_VALUE, SecRuleEntityDecoder.getProtocol(secRuleBuilder.build()));
     }
 
     @Test
     public final void testGetProtocol_protoNull() {
-        secRule.setSecurityRuleProtocol(null);
-        Assert.assertNull(SecRuleEntityDecoder.getProtocol(secRule));
-    }
-
-    @Test
-    public final void testGetProtocol_protoEmptyString() {
-        secRule.setSecurityRuleProtocol("");
-        Assert.assertNull(SecRuleEntityDecoder.getProtocol(secRule));
+        secRuleBuilder.setProtocol(null);
+        Assert.assertNull(SecRuleEntityDecoder.getProtocol(secRuleBuilder.build()));
     }
 
     @Test
     public final void testGetProtocol_protoUnknown() {
-        secRule.setSecurityRuleProtocol("foo");
+        secRuleBuilder.setProtocol(UnknownProtocol.class);
         thrown.expect(IllegalArgumentException.class);
-        SecRuleEntityDecoder.getProtocol(secRule);
+        SecRuleEntityDecoder.getProtocol(secRuleBuilder.build());
+    }
+
+    private static class UnknownProtocol extends ProtocolBase {
     }
 }

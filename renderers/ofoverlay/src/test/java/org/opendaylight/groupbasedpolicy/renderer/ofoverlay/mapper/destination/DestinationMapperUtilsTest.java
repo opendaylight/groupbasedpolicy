@@ -97,7 +97,8 @@ public class DestinationMapperUtilsTest extends MapperUtilsTest {
     @Test
     public void getL3ContextForSubnet_l3Context() {
         SubnetBuilder subnetBuilder = new SubnetBuilder();
-        subnetBuilder.setId(new SubnetId(L3C_ID));
+        subnetBuilder.setId(SUBNET_0);
+        subnetBuilder.setParent(L2FD_ID);
 
         // expected result
         L3ContextBuilder expectedL3Context = new L3ContextBuilder();
@@ -148,9 +149,7 @@ public class DestinationMapperUtilsTest extends MapperUtilsTest {
         TenantBuilder tenantBuilder = new TenantBuilder(buildTenant().build());
         Tenant tenant = tenantBuilder.build();
         epWithSubnet.setTenant(tenant.getId());
-        epWithSubnet.setNetworkContainment(new NetworkDomainId(SUBNET_0));
         epWithSubnet.setTenant(tenant.getId());
-        epWithSubnet.setNetworkContainment(new NetworkDomainId(SUBNET_1));
         endpoints.add(epWithoutSubnet.build());
         endpoints.add(epWithSubnet.build());
 
@@ -316,7 +315,7 @@ public class DestinationMapperUtilsTest extends MapperUtilsTest {
 
         OrdinalFactory.EndpointFwdCtxOrdinals ordinals = utils.getEndpointOrdinals(endpointBuilder.build());
         assertEquals(ordinals.getEp().toString(), new EpKey(new L2ContextId(L2BD_ID), new MacAddress(MAC_0)).toString());
-        assertEquals(ordinals.getNetworkContainment(), NET_DOMAIN_ID);
+        assertEquals(ordinals.getNetworkContainment(), SUBNET_0);
     }
 
     @Test

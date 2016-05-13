@@ -38,6 +38,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.Fl
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.Flow;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2FloodDomainId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubnetId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddress;
@@ -141,7 +143,7 @@ public class ExternalMapper extends FlowTable {
                                 natL3Ep.getKey()));
                 if (natIpSubnet != null && natIpSubnet.getParent() != null) {
                     L2FloodDomain natEpl2Fd =
-                            ctx.getTenant(natL3Ep.getTenant()).resolveL2FloodDomain(natIpSubnet.getParent());
+                            ctx.getTenant(natL3Ep.getTenant()).resolveL2FloodDomain(new L2FloodDomainId(natIpSubnet.getParent().getValue()));
                     if (natEpl2Fd != null && natEpl2Fd.getAugmentation(Segmentation.class) != null) {
                         Integer vlanId = natEpl2Fd.getAugmentation(Segmentation.class).getSegmentationId();
                         ofWriter.writeFlow(nodeId, TABLE_ID,
@@ -158,7 +160,8 @@ public class ExternalMapper extends FlowTable {
          * for applying VLAN tag is generated. The flow matches against REG5 holding
          * the L2FloodDomain and REG7 holding value of an external interface.
          */
-        L2FloodDomain l2Fd = ctx.getTenant(endpoint.getTenant()).resolveL2FloodDomain(endpoint.getNetworkContainment());
+        Subnet sub = ctx.getTenant(endpoint.getTenant()).resolveSubnet(new SubnetId(endpoint.getNetworkContainment()));
+        L2FloodDomain l2Fd = ctx.getTenant(endpoint.getTenant()).resolveL2FloodDomain(new L2FloodDomainId(sub.getParent().getValue()));
         if (l2Fd == null) {
             return;
         }

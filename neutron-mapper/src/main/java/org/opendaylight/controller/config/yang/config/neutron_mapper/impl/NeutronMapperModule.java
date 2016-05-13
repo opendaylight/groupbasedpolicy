@@ -33,13 +33,11 @@ public class NeutronMapperModule extends org.opendaylight.controller.config.yang
     public java.lang.AutoCloseable createInstance() {
         final NeutronMapper neutronMapper = new NeutronMapper(getDataBrokerDependency(), getRpcRegistryDependency());
         LOG.info("Neutron mapper started.");
-        return new AutoCloseable() {
+        return neutronMapper;
+    }
 
-            @Override
-            public void close() throws Exception {
-                neutronMapper.close();
-            }
-        };
+    public static boolean isDebugEnabled() {
+        return true; // TODO add to config-subsystem
     }
 
 }

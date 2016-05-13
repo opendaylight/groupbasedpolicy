@@ -10,6 +10,7 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
+
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.dto.EgKey;
@@ -24,10 +25,13 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.Fl
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.BucketId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.GroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.group.buckets.BucketBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2FloodDomainId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubnetId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.Segmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.overlay.rev150105.TunnelTypeVxlan;
@@ -137,8 +141,9 @@ public class GroupTable extends OfTable {
             for (Endpoint extEp : ctx.getEndpointManager().getExtEpsNoLocForGroup(endpointGroupKey)) {
                 if (extEp.getNetworkContainment() != null
                         && extEp.getNetworkContainment().equals(endpoint.getNetworkContainment())) {
+                    Subnet subnet = ctx.getTenant(extEp.getTenant()).resolveSubnet(new SubnetId(extEp.getNetworkContainment()));
                     L2FloodDomain l2Fd = ctx.getTenant(extEp.getTenant())
-                            .resolveL2FloodDomain(extEp.getNetworkContainment());
+                            .resolveL2FloodDomain(new L2FloodDomainId(subnet.getParent().getValue()));
                     if (l2Fd != null) {
                         Segmentation segmentation = l2Fd.getAugmentation(Segmentation.class);
                         // external endpoints do not have location augmentation

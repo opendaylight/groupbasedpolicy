@@ -144,7 +144,7 @@ public class GroupTableTest extends MapperUtilsTest {
         OfOverlayContextBuilder ofOverlayContextBuilder = new OfOverlayContextBuilder();
         ofOverlayContextBuilder.setNodeId(NODE_ID);
         endpointBuilder.addAugmentation(OfOverlayContext.class, ofOverlayContextBuilder.build());
-        endpointBuilder.setNetworkContainment(NET_DOMAIN_ID);
+        endpointBuilder.setNetworkContainment(SUBNET_0);
         endpointBuilder.setTenant(buildTenant().getId());
         Endpoint endpoint = endpointBuilder.build();
 
@@ -163,7 +163,7 @@ public class GroupTableTest extends MapperUtilsTest {
         groupTable.sync(endpoint, ofWriter);
 
         verify(optionalFlowCapableNode, times(1)).isPresent();
-        verify(ofWriter, times(1)).writeGroup(NODE_ID, new GroupId(0L));
+        verify(ofWriter, times(1)).writeGroup(NODE_ID, new GroupId(4L));
     }
 
     @Test
@@ -172,7 +172,8 @@ public class GroupTableTest extends MapperUtilsTest {
         NodeId nodeWithoutTunnel = new NodeId("nodeIdWithoutTunnel");
         NodeId nodeIdIpV6 = new NodeId("nodeIdIpV6");
         NodeId nodeIdIpV4 = new NodeId("nodeIdIpV4");
-        Endpoint endpoint = buildEndpoint(IPV4_0, MAC_0, new NodeConnectorId(OPENFLOW + CONNECTOR_0.getValue())).build();
+        Endpoint endpoint = buildEndpoint(IPV4_0, MAC_0, new NodeConnectorId(OPENFLOW + CONNECTOR_0.getValue()))
+                .build();
 
         when(ctx.getTenant(any(TenantId.class))).thenReturn(getTestIndexedTenant());
         when(ctx.getEndpointManager()).thenReturn(endpointManager);
@@ -224,7 +225,7 @@ public class GroupTableTest extends MapperUtilsTest {
     @Test
     public void syncGroups_externalEpsWithoutLocation() throws Exception {
         EndpointBuilder endpointBuilder = buildEndpoint(IPV4_0, MAC_0, new NodeConnectorId(OPENFLOW + CONNECTOR_0.getValue()));
-        endpointBuilder.setNetworkContainment(L2FD_ID);
+        endpointBuilder.setNetworkContainment(SUBNET_1);
         Endpoint endpoint = endpointBuilder.build();
 
         when(ctx.getTenant(any(TenantId.class))).thenReturn(getTestIndexedTenant());
@@ -243,7 +244,6 @@ public class GroupTableTest extends MapperUtilsTest {
         // Endpoints
         Collection<Endpoint> endpoints = new HashSet<>();
         EndpointBuilder noLocEndpointBuilder = buildEndpoint(IPV4_1, MAC_1, CONNECTOR_1);
-        noLocEndpointBuilder.setNetworkContainment(L2FD_ID);
         endpoints.add(noLocEndpointBuilder.build());
 
         when(ctx.getSwitchManager()).thenReturn(switchManager);

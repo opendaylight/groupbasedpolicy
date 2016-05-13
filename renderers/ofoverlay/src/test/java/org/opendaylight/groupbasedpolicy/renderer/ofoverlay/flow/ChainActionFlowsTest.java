@@ -215,9 +215,9 @@ public class ChainActionFlowsTest extends MapperUtilsTest {
         List<Flow> flows = new ArrayList<>();
         Action segReg = nxLoadRegAction(NxmNxReg0.class, BigInteger.valueOf(1L));
         Action scgReg = nxLoadRegAction(NxmNxReg1.class, BigInteger.valueOf(0xffffff));
-        Action bdReg = nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(0L));
-        Action fdReg = nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(0L));
-        Action vrfReg = nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(0L));
+        Action bdReg = nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(3L));
+        Action fdReg = nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(4L));
+        Action vrfReg = nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(5L));
         for (L3Address address : networkElements.getDstEp().getL3Address()) {
             Layer3Match l3Match = new Ipv4MatchBuilder().setIpv4Source(new Ipv4Prefix(address.getIpAddress()
                     .getIpv4Address().getValue() + IP_PREFIX_32)).build();
@@ -251,11 +251,11 @@ public class ChainActionFlowsTest extends MapperUtilsTest {
         MatchBuilder matchBuilder = new MatchBuilder().setInPort(CONNECTOR_2);
         addNxNsiMatch(matchBuilder, (short) 250);
         addNxNspMatch(matchBuilder, 27L);
-        addNxTunIdMatch(matchBuilder, 0);
+        addNxTunIdMatch(matchBuilder, 4);
         Match match = matchBuilder.build();
         FlowId flowId = FlowIdUtils.newFlowId((short) 2, "chainbroadcast", match);
         FlowBuilder flowBuilder = base((short) 2).setId(flowId).setPriority(150).setMatch(match)
-                .setInstructions(instructions(applyActionIns(nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(0))),
+                .setInstructions(instructions(applyActionIns(nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(4))),
                         gotoTableIns(ctx.getPolicyManager().getTABLEID_DESTINATION_MAPPER())));
         return flowBuilder.build();
     }
@@ -271,7 +271,7 @@ public class ChainActionFlowsTest extends MapperUtilsTest {
         Action outputAction = FlowUtils.createActionResubmit(null, (short) 0);
 
         MatchBuilder matchBuilder = new MatchBuilder();
-        addNxRegMatch(matchBuilder, RegMatch.of(NxmNxReg6.class, 0L));
+        addNxRegMatch(matchBuilder, RegMatch.of(NxmNxReg6.class, 5L));
         addNxTunIdMatch(matchBuilder, matchTunnelId);
         addNxNspMatch(matchBuilder, 27L);
         addNxNsiMatch(matchBuilder, (short) 255);

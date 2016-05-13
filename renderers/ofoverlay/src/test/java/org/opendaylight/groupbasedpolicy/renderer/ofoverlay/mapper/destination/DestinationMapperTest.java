@@ -19,6 +19,8 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2FloodDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubnetId;
@@ -37,6 +39,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.TenantBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ForwardingContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.PolicyBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomainBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3Context;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3ContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
@@ -90,7 +96,7 @@ public class DestinationMapperTest extends MapperUtilsTest {
         destinationMapper.syncFlows(flows, endpointBuilder.build(), null, ofWriter);
 
         // Verify usage
-        verify(ctx, times(2)).getTenant(any(TenantId.class));
+        verify(ctx, times(3)).getTenant(any(TenantId.class));
         verify(ctx, times(5)).getEndpointManager();
         verify(ctx, times(2)).getPolicyManager();
         verify(ctx, times(2)).getCurrentPolicy();
@@ -113,6 +119,7 @@ public class DestinationMapperTest extends MapperUtilsTest {
         EndpointBuilder endpointBuilder = buildEndpoint(IPV4_1, MAC_1, CONNECTOR_1);
         // Peer endpoint
         EndpointBuilder peerEndpointBuilder = buildEndpoint(IPV4_2, MAC_0, CONNECTOR_0);
+        peerEndpointBuilder.setNetworkContainment(new SubnetId(SUBNET_1));
         // External Implicit groups
         List<ExternalImplicitGroup> externalImplicitGroups = new ArrayList<>();
         ExternalImplicitGroupBuilder externalImplicitGroupBuilder = new ExternalImplicitGroupBuilder();
@@ -140,8 +147,8 @@ public class DestinationMapperTest extends MapperUtilsTest {
         destinationMapper.syncEndpointFlows(flows, NODE_ID, endpointBuilder.build(), ofWriter);
 
         // Verify usage
-        verify(ctx, times(11)).getTenant(any(TenantId.class));
-        verify(ctx, times(6)).getEndpointManager();
+        verify(ctx, times(14)).getTenant(any(TenantId.class));
+        verify(ctx, times(7)).getEndpointManager();
         verify(ctx, times(1)).getPolicyManager();
         verify(ctx, times(4)).getCurrentPolicy();
         verify(flows, times(1)).createExternalL2Flow(anyShort(), anyInt(), any(Endpoint.class),
@@ -166,11 +173,9 @@ public class DestinationMapperTest extends MapperUtilsTest {
         // Endpoint
         EndpointBuilder endpointBuilder = buildEndpoint(IPV4_1, MAC_1, CONNECTOR_1);
         endpointBuilder.setL3Address(getL3AddressList(IPV4_1, L3C_ID));
-        endpointBuilder.setNetworkContainment(new NetworkDomainId(SUBNET_0));
         Endpoint endpoint = endpointBuilder.build();
         // Peer
         EndpointBuilder peerEndpointBuilder = buildEndpoint(IPV4_2, MAC_0, CONNECTOR_0);
-        peerEndpointBuilder.setNetworkContainment(new NetworkDomainId(SUBNET_0));
         // External implicit groups
         List<Subnet> subnets = new ArrayList<>();
         SubnetBuilder subnetBuilder = new SubnetBuilder();
@@ -190,14 +195,13 @@ public class DestinationMapperTest extends MapperUtilsTest {
         forwardingContextBuilder.setSubnet(subnets);
         forwardingContextBuilder.setL3Context(l3Contexts);
         TenantBuilder peerTenantBuilder = buildTenant();
-        peerTenantBuilder.setForwardingContext(forwardingContextBuilder.build());
+        peerTenantBuilder.setForwardingContext(buildTenant().getForwardingContext());
         peerTenantBuilder.setPolicy(new PolicyBuilder()
                 .setSubjectFeatureInstances(getSubjectFeatureInstances())
                 .setEndpointGroup(getEndpointGroups())
                 .setExternalImplicitGroup(externalImplicitGroups)
                 .build());
         Tenant peerTenant = peerTenantBuilder.build();
-        peerEndpointBuilder.setNetworkContainment(new NetworkDomainId(SUBNET_1));
         Endpoint peerEndpoint = peerEndpointBuilder.build();
         Collection<Endpoint> peerEndpoints = new ArrayList<>();
         peerEndpoints.add(peerEndpoint);
@@ -218,7 +222,7 @@ public class DestinationMapperTest extends MapperUtilsTest {
         destinationMapper.syncEndpointFlows(flows, NODE_ID, endpoint, ofWriter);
 
         // Verify usage
-        verify(ctx, times(13)).getTenant(any(TenantId.class));
+        verify(ctx, times(16)).getTenant(any(TenantId.class));
         verify(ctx, times(9)).getEndpointManager();
         verify(ctx, times(1)).getPolicyManager();
         verify(ctx, times(4)).getCurrentPolicy();
@@ -234,24 +238,40 @@ public class DestinationMapperTest extends MapperUtilsTest {
         endpointBuilder.setNetworkContainment(SUBNET_0);
         // Peer
         EndpointBuilder peerEndpointBuilder = buildEndpoint(IPV4_2, MAC_0, CONNECTOR_0);
+        peerEndpointBuilder.setNetworkContainment(new NetworkDomainId(SUBNET_0));
         // Subnets, l3Context and forwarding context
-        List<Subnet> subnets = new ArrayList<>();
-        SubnetBuilder subnetBuilder = new SubnetBuilder();
-        subnetBuilder.setId(new SubnetId(SUBNET_0));
-        subnetBuilder.setParent(new ContextId(L3C_ID));
-        subnetBuilder.setVirtualRouterIp(new IpAddress(new Ipv4Address(IPV4_2)));
-        subnets.add(subnetBuilder.build());
         List<L3Context> l3Contexts = new ArrayList<>();
         L3ContextBuilder l3ContextBuilder = new L3ContextBuilder();
         l3ContextBuilder.setId(L3C_ID);
         l3Contexts.add(l3ContextBuilder.build());
+
+        List<L2BridgeDomain> l2BDomains = new ArrayList<>();
+        L2BridgeDomainBuilder l2bdBuilder = new L2BridgeDomainBuilder();
+        l2bdBuilder.setId(L2BD_ID);
+        l2bdBuilder.setParent(L3C_ID);
+        l2BDomains.add(l2bdBuilder.build());
+
+        List<L2FloodDomain> l2FDomains = new ArrayList<>();
+        L2FloodDomainBuilder l2fdBuilder = new L2FloodDomainBuilder();
+        l2fdBuilder.setId(L2FD_ID);
+        l2fdBuilder.setParent(L2BD_ID);
+        l2FDomains.add(l2fdBuilder.build());
+
+        List<Subnet> subnets = new ArrayList<>();
+        SubnetBuilder subnetBuilder = new SubnetBuilder();
+        subnetBuilder.setId(SUBNET_0);
+        subnetBuilder.setParent(L2FD_ID);
+        subnetBuilder.setVirtualRouterIp(new IpAddress(IPV4_2));
+        subnets.add(subnetBuilder.build());
+
         ForwardingContextBuilder forwardingContextBuilder = new ForwardingContextBuilder();
         forwardingContextBuilder.setSubnet(subnets);
         forwardingContextBuilder.setL3Context(l3Contexts);
+        forwardingContextBuilder.setL2BridgeDomain(l2BDomains);
+        forwardingContextBuilder.setL2FloodDomain(l2FDomains);
         TenantBuilder peerTenantBuilder = new TenantBuilder(getTestIndexedTenant().getTenant());
-        peerTenantBuilder.setForwardingContext(forwardingContextBuilder.build());
+        peerTenantBuilder.setForwardingContext(buildTenant().getForwardingContext());
         Tenant peerTenant = peerTenantBuilder.build();
-        peerEndpointBuilder.setNetworkContainment(new NetworkDomainId(SUBNET_0));
         Endpoint peerEndpoint = peerEndpointBuilder.build();
         Collection<Endpoint> peerEndpoints = new ArrayList<>();
         peerEndpoints.add(peerEndpoint);
@@ -266,7 +286,7 @@ public class DestinationMapperTest extends MapperUtilsTest {
         destinationMapper.syncFlows(flows, endpointBuilder.build(), NODE_ID, ofWriter);
 
         // Verify usage
-        verify(ctx, times(18)).getTenant(any(TenantId.class));
+        verify(ctx, times(24)).getTenant(any(TenantId.class));
         verify(ctx, times(9)).getEndpointManager();
         verify(ctx, times(2)).getPolicyManager();
         verify(ctx, times(4)).getCurrentPolicy();
@@ -286,19 +306,32 @@ public class DestinationMapperTest extends MapperUtilsTest {
         // Peer
         EndpointBuilder peerEndpointBuilder = buildEndpoint(IPV4_2, MAC_0, CONNECTOR_0);
         // Subnets, l3Context and forwarding context
-        List<Subnet> subnets = new ArrayList<>();
-        SubnetBuilder subnetBuilder = new SubnetBuilder();
-        subnetBuilder.setId(new SubnetId(SUBNET_0));
-        subnetBuilder.setParent(new ContextId(L3C_ID));
-        subnetBuilder.setVirtualRouterIp(new IpAddress(new Ipv4Address(IPV4_2)));
-        subnets.add(subnetBuilder.build());
+
         List<L3Context> l3Contexts = new ArrayList<>();
         L3ContextBuilder l3ContextBuilder = new L3ContextBuilder();
         l3ContextBuilder.setId(L3C_ID);
         l3Contexts.add(l3ContextBuilder.build());
+        List<L2BridgeDomain> l2BDomains = new ArrayList<>();
+        L2BridgeDomainBuilder l2bdBuilder = new L2BridgeDomainBuilder();
+        l2bdBuilder.setId(L2BD_ID);
+        l2bdBuilder.setParent(L3C_ID);
+        l2BDomains.add(l2bdBuilder.build());
+        List<L2FloodDomain> l2FDomains = new ArrayList<>();
+        L2FloodDomainBuilder l2fdBuilder = new L2FloodDomainBuilder();
+        l2fdBuilder.setId(L2FD_ID);
+        l2fdBuilder.setParent(L2BD_ID);
+        l2FDomains.add(l2fdBuilder.build());
+        List<Subnet> subnets = new ArrayList<>();
+        SubnetBuilder subnetBuilder = new SubnetBuilder();
+        subnetBuilder.setId(SUBNET_0);
+        subnetBuilder.setParent(L2FD_ID);
+        subnetBuilder.setVirtualRouterIp(new IpAddress(IPV4_2));
+        subnets.add(subnetBuilder.build());
         ForwardingContextBuilder forwardingContextBuilder = new ForwardingContextBuilder();
         forwardingContextBuilder.setSubnet(subnets);
         forwardingContextBuilder.setL3Context(l3Contexts);
+        forwardingContextBuilder.setL2BridgeDomain(l2BDomains);
+        forwardingContextBuilder.setL2FloodDomain(l2FDomains);
         TenantBuilder peerTenantBuilder = buildTenant();
         peerTenantBuilder.setForwardingContext(forwardingContextBuilder.build());
         Tenant peerTenant = peerTenantBuilder.build();
@@ -306,7 +339,8 @@ public class DestinationMapperTest extends MapperUtilsTest {
         OfOverlayContextBuilder ofOverlayContextBuilder = new OfOverlayContextBuilder();
         ofOverlayContextBuilder.setNodeConnectorId(new NodeConnectorId(CONNECTOR_0));
         ofOverlayContextBuilder.setNodeId(new NodeId("remoteNodeID"));
-        peerEndpointBuilder.setNetworkContainment(new NetworkDomainId(SUBNET_0));
+        peerEndpointBuilder.setNetworkContainment(SUBNET_0);
+        endpointBuilder.setNetworkContainment(SUBNET_0);
         peerEndpointBuilder.addAugmentation(OfOverlayContext.class, ofOverlayContextBuilder.build());
         Endpoint peerEndpoint = peerEndpointBuilder.build();
         Collection<Endpoint> peerEndpoints = new ArrayList<>();
@@ -327,8 +361,8 @@ public class DestinationMapperTest extends MapperUtilsTest {
         destinationMapper.syncEndpointFlows(flows, NODE_ID, endpointBuilder.build(), ofWriter);
 
         // Verify usage
-        verify(ctx, times(13)).getTenant(any(TenantId.class));
-        verify(ctx, times(5)).getEndpointManager();
+        verify(ctx, times(15)).getTenant(any(TenantId.class));
+        verify(ctx, times(6)).getEndpointManager();
         verify(ctx, times(1)).getPolicyManager();
         verify(ctx, times(3)).getCurrentPolicy();
 
@@ -350,14 +384,26 @@ public class DestinationMapperTest extends MapperUtilsTest {
         l3ContextBuilder.setId(L3C_ID);
         l3Contexts.add(l3ContextBuilder.build());
         HashSet<Subnet> subnets = new HashSet<>();
+        List<L2BridgeDomain> l2BDomains = new ArrayList<>();
+        L2BridgeDomainBuilder l2bdBuilder = new L2BridgeDomainBuilder();
+        l2bdBuilder.setId(L2BD_ID);
+        l2bdBuilder.setParent(L3C_ID);
+        l2BDomains.add(l2bdBuilder.build());
+        List<L2FloodDomain> l2FDomains = new ArrayList<>();
+        L2FloodDomainBuilder l2fdBuilder = new L2FloodDomainBuilder();
+        l2fdBuilder.setId(L2FD_ID);
+        l2fdBuilder.setParent(L2BD_ID);
+        l2FDomains.add(l2fdBuilder.build());
         SubnetBuilder subnetBuilder = new SubnetBuilder();
-        subnetBuilder.setId(new SubnetId(SUBNET_0));
-        subnetBuilder.setParent(new ContextId(L3C_ID));
-        subnetBuilder.setVirtualRouterIp(new IpAddress(new Ipv4Address(IPV4_2)));
+        subnetBuilder.setId(SUBNET_0);
+        subnetBuilder.setParent(L2FD_ID);
+        subnetBuilder.setVirtualRouterIp(new IpAddress(IPV4_2));
         subnets.add(subnetBuilder.build());
         ForwardingContextBuilder forwardingContextBuilder = new ForwardingContextBuilder();
         forwardingContextBuilder.setSubnet(new ArrayList<>(subnets));
         forwardingContextBuilder.setL3Context(l3Contexts);
+        forwardingContextBuilder.setL2BridgeDomain(l2BDomains);
+        forwardingContextBuilder.setL2FloodDomain(l2FDomains);
         TenantBuilder tenantBuilder = buildTenant();
         tenantBuilder.setForwardingContext(forwardingContextBuilder.build());
         Tenant tenant = tenantBuilder.build();
@@ -379,21 +425,34 @@ public class DestinationMapperTest extends MapperUtilsTest {
         L3ContextBuilder l3ContextBuilder = new L3ContextBuilder();
         l3ContextBuilder.setId(L3C_ID);
         l3Contexts.add(l3ContextBuilder.build());
+        List<L2BridgeDomain> l2BDomains = new ArrayList<>();
+        L2BridgeDomainBuilder l2bdBuilder = new L2BridgeDomainBuilder();
+        l2bdBuilder.setId(L2BD_ID);
+        l2bdBuilder.setParent(L3C_ID);
+        l2BDomains.add(l2bdBuilder.build());
+        List<L2FloodDomain> l2FDomains = new ArrayList<>();
+        L2FloodDomainBuilder l2fdBuilder = new L2FloodDomainBuilder();
+        l2fdBuilder.setId(L2FD_ID);
+        l2fdBuilder.setParent(L2BD_ID);
+        l2FDomains.add(l2fdBuilder.build());
         HashSet<Subnet> subnets = new HashSet<>();
         SubnetBuilder subnetBuilder = new SubnetBuilder();
-        subnetBuilder.setId(new SubnetId(SUBNET_0));
-        subnetBuilder.setParent(new ContextId(L3C_ID));
+        subnetBuilder.setId(SUBNET_0);
+        subnetBuilder.setParent(L2FD_ID);
         subnetBuilder.setVirtualRouterIp(new IpAddress(IPV4_2));
         subnets.add(subnetBuilder.build());
+
         ForwardingContextBuilder forwardingContextBuilder = new ForwardingContextBuilder();
         forwardingContextBuilder.setL3Context(l3Contexts);
         forwardingContextBuilder.setSubnet(new ArrayList<>(subnets));
+        forwardingContextBuilder.setL2BridgeDomain(l2BDomains);
+        forwardingContextBuilder.setL2FloodDomain(l2FDomains);
         TenantBuilder tenantBuilder = buildTenant();
         tenantBuilder.setForwardingContext(forwardingContextBuilder.build());
         Tenant tenant = tenantBuilder.build();
         Collection<Endpoint> endpoints = new ArrayList<>();
         EndpointBuilder endpointBuilder = buildEndpoint(IPV4_1, MAC_1, CONNECTOR_1);
-        endpointBuilder.setNetworkContainment(new NetworkDomainId(SUBNET_0));
+        endpointBuilder.setNetworkContainment(SUBNET_0);
         Endpoint endpoint = endpointBuilder.build();
         endpoints.add(endpoint);
 
@@ -421,7 +480,7 @@ public class DestinationMapperTest extends MapperUtilsTest {
 
         destinationMapper.syncL3PrefixFlow(flows, l3Prefixes, null, NODE_ID, ofWriter);
 
-        verify(ctx, times(5)).getTenant(any(TenantId.class));
+        verify(ctx, times(6)).getTenant(any(TenantId.class));
         verify(ctx, times(4)).getEndpointManager();
         verify(ctx, times(1)).getSwitchManager();
         verify(ctx, times(1)).getPolicyManager();

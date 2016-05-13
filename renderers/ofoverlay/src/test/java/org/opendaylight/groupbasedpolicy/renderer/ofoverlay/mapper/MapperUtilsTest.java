@@ -97,7 +97,7 @@ public abstract class MapperUtilsTest {
     protected static final EndpointGroupId ENDPOINT_GROUP_0 = new EndpointGroupId("eg0");
     protected static final EndpointGroupId ENDPOINT_GROUP_1 = new EndpointGroupId("eg1");
     protected static final EndpointGroupId ENDPOINT_GROUP_2 = new EndpointGroupId("eg2");
-    protected static final NetworkDomainId NET_DOMAIN_ID = new NetworkDomainId("ndId");
+    protected static final SubnetId NET_DOMAIN_ID = new SubnetId("ndId");
     protected static final L2BridgeDomainId L2BD_ID = new L2BridgeDomainId("l2bdId");
     protected static final L2FloodDomainId L2FD_ID = new L2FloodDomainId("l2fdId");
     protected static final L2FloodDomainId L2_FD_ID_EXT = new L2FloodDomainId("externalL2fdId");
@@ -142,6 +142,15 @@ public abstract class MapperUtilsTest {
         endpointL3Builder.setMacAddress(new MacAddress(mac));
         if (l2bd != null) {
             endpointL3Builder.setL2Context(new L2BridgeDomainId(l2bd));
+        }
+        if(ip.equals(IPV4_0)) {
+            endpointL3Builder.setNetworkContainment(SUBNET_0);
+        }
+        else if(ip.equals(IPV4_1)) {
+            endpointL3Builder.setNetworkContainment(SUBNET_1);
+        }
+        else if(ip.equals(IPV4_2)) {
+            endpointL3Builder.setNetworkContainment(SUBNET_2);
         }
         return endpointL3Builder;
     }
@@ -255,7 +264,15 @@ public abstract class MapperUtilsTest {
         endpointBuilder.setL2Context(new L2BridgeDomainId(L2BD_ID));
         endpointBuilder.setEndpointGroup(ENDPOINT_GROUP_0);
         endpointBuilder.addAugmentation(OfOverlayContext.class, getOfOverlayContext(connector).build());
-        endpointBuilder.setNetworkContainment(NET_DOMAIN_ID);
+        if(l3IpAddress.equals(IPV4_0)) {
+            endpointBuilder.setNetworkContainment(SUBNET_0);
+        }
+        else if(l3IpAddress.equals(IPV4_1)) {
+            endpointBuilder.setNetworkContainment(SUBNET_1);
+        }
+        else if(l3IpAddress.equals(IPV4_2)) {
+            endpointBuilder.setNetworkContainment(SUBNET_2);
+        }
         return endpointBuilder;
     }
 

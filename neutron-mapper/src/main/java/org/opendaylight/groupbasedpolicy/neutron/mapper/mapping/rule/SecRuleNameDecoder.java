@@ -12,14 +12,16 @@ import org.opendaylight.groupbasedpolicy.api.sf.EtherTypeClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.api.sf.IpProtoClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.api.sf.L4ClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
-import org.opendaylight.neutron.spi.NeutronSecurityRule;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClauseName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.RuleName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
-
-import com.google.common.base.Strings;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeBase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolBase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
 
 public class SecRuleNameDecoder {
 
@@ -30,19 +32,19 @@ public class SecRuleNameDecoder {
         throw new UnsupportedOperationException("Cannot create an instance.");
     }
 
-    public static SubjectName getSubjectName(NeutronSecurityRule secRule) {
+    public static SubjectName getSubjectName(SecurityRule secRule) {
         RuleName ruleName = SecRuleNameDecoder.getRuleName(secRule);
         return new SubjectName(ruleName);
     }
 
-    public static RuleName getRuleName(NeutronSecurityRule secRule) {
+    public static RuleName getRuleName(SecurityRule secRule) {
         ClassifierName classifierRefName = SecRuleNameDecoder.getClassifierRefName(secRule);
         String ruleName = new StringBuilder(MappingUtils.ACTION_ALLOW.getName().getValue())
             .append(MappingUtils.NAME_DOUBLE_DELIMETER).append(classifierRefName.getValue()).toString();
         return new RuleName(ruleName);
     }
 
-    public static ClassifierName getClassifierRefName(NeutronSecurityRule secRule) {
+    public static ClassifierName getClassifierRefName(SecurityRule secRule) {
         Direction direction = SecRuleEntityDecoder.getDirection(secRule);
         ClassifierName classifierInstanceName = getClassifierInstanceName(secRule);
         String crName = new StringBuilder().append(direction.name())
@@ -52,10 +54,10 @@ public class SecRuleNameDecoder {
         return new ClassifierName(crName);
     }
 
-    public static ClassifierName getClassifierInstanceName(NeutronSecurityRule secRule) {
+    public static ClassifierName getClassifierInstanceName(SecurityRule secRule) {
         StringBuilder keyBuilder = new StringBuilder();
-        Integer portMin = secRule.getSecurityRulePortMin();
-        Integer portMax = secRule.getSecurityRulePortMax();
+        Integer portMin = secRule.getPortRangeMin();
+        Integer portMax = secRule.getPortRangeMax();
         if (portMin != null && portMax != null) {
             keyBuilder.append(L4ClassifierDefinition.DEFINITION.getName().getValue());
             if (portMin.equals(portMax)) {
@@ -74,35 +76,35 @@ public class SecRuleNameDecoder {
                     .append(portMax.longValue());
             }
         }
-        String protocol = secRule.getSecurityRuleProtocol();
-        if (!Strings.isNullOrEmpty(protocol)) {
+        Class<? extends ProtocolBase> protocol = secRule.getProtocol();
+        if (protocol != null) {
             if (keyBuilder.length() > 0) {
                 keyBuilder.append(MappingUtils.NAME_DOUBLE_DELIMETER);
             }
             keyBuilder.append(IpProtoClassifierDefinition.DEFINITION.getName().getValue())
                 .append(MappingUtils.NAME_VALUE_DELIMETER)
-                .append(protocol);
+                .append(protocol.getSimpleName());
         }
-        String ethertype = secRule.getSecurityRuleEthertype();
-        if (!Strings.isNullOrEmpty(ethertype)) {
+        Class<? extends EthertypeBase> ethertype = secRule.getEthertype();
+        if (ethertype != null) {
             if (keyBuilder.length() > 0) {
                 keyBuilder.append(MappingUtils.NAME_DOUBLE_DELIMETER);
             }
             keyBuilder.append(EtherTypeClassifierDefinition.DEFINITION.getName().getValue())
                 .append(MappingUtils.NAME_VALUE_DELIMETER)
-                .append(ethertype);
+                .append(ethertype.getSimpleName());
         }
         return new ClassifierName(keyBuilder.toString());
     }
 
-    public static ClauseName getClauseName(NeutronSecurityRule secRule) {
-        String remoteIpPrefix = secRule.getSecurityRuleRemoteIpPrefix();
+    public static ClauseName getClauseName(SecurityRule secRule) {
+        IpPrefix remoteIpPrefix = secRule.getRemoteIpPrefix();
         SubjectName subjectName = getSubjectName(secRule);
-        if (Strings.isNullOrEmpty(remoteIpPrefix)) {
+        if (remoteIpPrefix == null) {
             return new ClauseName(subjectName);
         }
-        return new ClauseName(
-                subjectName.getValue() + MappingUtils.NAME_DOUBLE_DELIMETER + remoteIpPrefix.replace('/', '_'));
+        return new ClauseName(subjectName.getValue() + MappingUtils.NAME_DOUBLE_DELIMETER
+                + Utils.getStringIpPrefix(remoteIpPrefix).replace('/', '_'));
     }
 
 }

@@ -14,13 +14,10 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.SecRuleEntityDecoder;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.SecRuleNameDecoder;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
-import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.action.refs.ActionRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
@@ -36,10 +33,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ProviderNamedSelector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 
 public final class PolicyAssert {
 
@@ -88,19 +85,18 @@ public final class PolicyAssert {
         }
     }
 
-    public static void assertContractWithEic(Contract contract, NeutronSecurityRule secRule) {
-        assertEquals(new ContractId(secRule.getSecurityRuleUUID()), contract.getId());
+    public static void assertContractWithEic(Contract contract, SecurityRule secRule) {
+        assertEquals(new ContractId(secRule.getId().getValue()), contract.getId());
         assertNull(contract.getQuality());
         assertNull(contract.getTarget());
         assertOneClauseWithEicWithOneSubject(contract, secRule);
         PolicyAssert.assertOneSubjectWithOneRule(contract, secRule);
     }
 
-    private static void assertOneClauseWithEicWithOneSubject(Contract contract, NeutronSecurityRule secRule) {
+    private static void assertOneClauseWithEicWithOneSubject(Contract contract, SecurityRule secRule) {
         Clause clause = assertOneItem(contract.getClause());
         assertNull(clause.getAnyMatchers());
-        Preconditions.checkArgument(!Strings.isNullOrEmpty(secRule.getSecurityRuleRemoteIpPrefix()));
-        IpPrefix expectedIpPrefix = Utils.createIpPrefix(secRule.getSecurityRuleRemoteIpPrefix());
+        IpPrefix expectedIpPrefix = secRule.getRemoteIpPrefix();
         assertNotNull(clause.getConsumerMatchers());
         IpPrefix ipPrefix = clause.getConsumerMatchers()
             .getEndpointIdentificationConstraints()
@@ -113,30 +109,23 @@ public final class PolicyAssert {
         assertEquals(SecRuleNameDecoder.getSubjectName(secRule), subjectRef);
     }
 
-    public static void assertContract(Contract contract, NeutronSecurityRule secRule) {
-        assertEquals(new ContractId(secRule.getSecurityRuleUUID()), contract.getId());
+    public static void assertContract(Contract contract, SecurityRule secRule) {
+        assertEquals(new ContractId(secRule.getId().getValue()), contract.getId());
         assertNull(contract.getQuality());
         assertNull(contract.getTarget());
         assertOneClauseWithOneSubject(contract, secRule);
         assertOneSubjectWithOneRule(contract, secRule);
     }
 
-    private static void assertOneClauseWithOneSubject(Contract contract, NeutronSecurityRule secRule) {
+    private static void assertOneClauseWithOneSubject(Contract contract, SecurityRule secRule) {
         Clause clause = assertOneItem(contract.getClause());
         assertClauseWithOneSubject(clause, secRule);
     }
 
-    private static void assertOneSubjectWithOneRule(Contract contract, NeutronSecurityRule secRule) {
+    private static void assertOneSubjectWithOneRule(Contract contract, SecurityRule secRule) {
         Subject subject = assertOneItem(contract.getSubject());
         assertSubjectWithOneRule(subject, secRule);
     }
-
-    public static void assertContract(Contract contract, NeutronSecurityRule secRule, Description contractDescription) {
-        assertContract(contract, secRule);
-        assertEquals(contractDescription, contract.getDescription());
-    }
-
-    // asserts for endpoint group
 
     public static void assertEndpointGroupExists(DataBroker dataBroker, String tenantId, String endpointGroupId)
             throws Exception {
@@ -222,11 +211,11 @@ public final class PolicyAssert {
 
     // asserts for classifier
 
-    public static void assertClassifierInstanceExists(DataBroker dataBroker, NeutronSecurityRule secRule)
+    public static void assertClassifierInstanceExists(DataBroker dataBroker, SecurityRule secRule)
             throws Exception {
         ClassifierInstance clsfInstance = SecRuleEntityDecoder.getClassifierInstance(secRule);
         Optional<ClassifierInstance> readClsfInstance = ConfigDataStoreReader.readClassifierInstance(dataBroker,
-                secRule.getSecurityRuleTenantID(), clsfInstance.getName());
+                secRule.getTenantId().getValue(), clsfInstance.getName());
         assertTrue(readClsfInstance.isPresent());
     }
 
@@ -237,11 +226,11 @@ public final class PolicyAssert {
         assertTrue(classifierInstance.isPresent());
     }
 
-    public static void assertClassifierInstanceNotExists(DataBroker dataBroker, NeutronSecurityRule secRule)
+    public static void assertClassifierInstanceNotExists(DataBroker dataBroker, SecurityRule secRule)
             throws Exception {
         ClassifierInstance clsfInstance = SecRuleEntityDecoder.getClassifierInstance(secRule);
         Optional<ClassifierInstance> readClsfInstance = ConfigDataStoreReader.readClassifierInstance(dataBroker,
-                secRule.getSecurityRuleTenantID(), clsfInstance.getName());
+                secRule.getTenantId().getValue(), clsfInstance.getName());
         assertFalse(readClsfInstance.isPresent());
     }
 
@@ -263,7 +252,7 @@ public final class PolicyAssert {
 
     // asserts for clause
 
-    public static void assertClauseWithOneSubject(Clause clause, NeutronSecurityRule secRule) {
+    public static void assertClauseWithOneSubject(Clause clause, SecurityRule secRule) {
         assertNull(clause.getAnyMatchers());
         assertNull(clause.getConsumerMatchers());
         assertNull(clause.getProviderMatchers());
@@ -278,7 +267,7 @@ public final class PolicyAssert {
 
     // asserts for subject
 
-    public static void assertSubjectWithOneRule(Subject subject, NeutronSecurityRule secRule) {
+    public static void assertSubjectWithOneRule(Subject subject, SecurityRule secRule) {
         assertEquals(SecRuleNameDecoder.getSubjectName(secRule), subject.getName());
         Rule rule = assertOneItem(subject.getRule());
         assertRule(rule, secRule);
@@ -286,7 +275,7 @@ public final class PolicyAssert {
 
     // asserts for rule
 
-    public static void assertRule(Rule rule, NeutronSecurityRule secRule) {
+    public static void assertRule(Rule rule, SecurityRule secRule) {
         assertEquals(SecRuleNameDecoder.getRuleName(secRule), rule.getName());
         ActionRef actionRef = assertOneItem(rule.getActionRef());
         assertEquals(MappingUtils.ACTION_ALLOW.getName(), actionRef.getName());
@@ -296,7 +285,7 @@ public final class PolicyAssert {
         assertEquals(SecRuleEntityDecoder.getDirection(secRule), classifierRef.getDirection());
     }
 
-    public static void assertRule(Rule rule, NeutronSecurityRule secRule, int order) {
+    public static void assertRule(Rule rule, SecurityRule secRule, int order) {
         assertRule(rule, secRule);
         assertEquals(order, rule.getOrder().intValue());
     }

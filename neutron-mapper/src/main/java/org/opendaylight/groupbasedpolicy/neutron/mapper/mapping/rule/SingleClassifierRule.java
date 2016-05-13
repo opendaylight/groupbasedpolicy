@@ -15,7 +15,6 @@ import javax.annotation.concurrent.Immutable;
 import org.opendaylight.groupbasedpolicy.api.sf.EtherTypeClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.api.sf.IpProtoClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.api.sf.L4ClassifierDefinition;
-import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.change.action.of.security.group.rules.input.action.ActionChoice;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.change.action.of.security.group.rules.input.action.action.choice.SfcActionCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
@@ -23,6 +22,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.Rule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.RuleBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -34,7 +34,7 @@ public class SingleClassifierRule {
     private final ClassifierRef classifierRef;
     private final Rule rule;
 
-    public SingleClassifierRule(NeutronSecurityRule secRule, int ruleBaseOrder, ActionChoice action) {
+    public SingleClassifierRule(SecurityRule secRule, int ruleBaseOrder, ActionChoice action) {
         classifierInstance = SecRuleEntityDecoder.getClassifierInstance(secRule);
         classifierRef = SecRuleEntityDecoder.getClassifierRef(secRule);
         rule = createRule(
@@ -55,7 +55,7 @@ public class SingleClassifierRule {
         return rule;
     }
 
-    private Rule createRule(int order, NeutronSecurityRule secRule, ActionChoice action) {
+    private Rule createRule(int order, SecurityRule secRule, ActionChoice action) {
         return new RuleBuilder().setName(SecRuleNameDecoder.getRuleName(secRule))
             .setOrder(order)
             .setActionRef(ImmutableList.of(SecRuleEntityDecoder.createActionRefFromActionChoice(action)))

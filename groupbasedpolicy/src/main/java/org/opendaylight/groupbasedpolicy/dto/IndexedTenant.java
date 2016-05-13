@@ -21,6 +21,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2FloodDomainId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubnetId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.NetworkDomain;
@@ -40,7 +43,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Table;
 
 /**
  * Wrap some convenient indexes around a {@link Tenant} object
@@ -55,8 +62,7 @@ public class IndexedTenant {
             new HashMap<>();
     private final Map<ContractId, Contract> contracts =
             new HashMap<>();
-    private final Map<String, NetworkDomain> networkDomains =
-            new HashMap<>();
+    private final Table<String, Class<? extends NetworkDomainId>, NetworkDomain> networkDomains = HashBasedTable.<String, Class<? extends NetworkDomainId>, NetworkDomain>create();
     private final Map<ClassifierName, ClassifierInstance> classifiers =
             new HashMap<>();
     private final Map<ActionName, ActionInstance> actions =
@@ -107,22 +113,22 @@ public class IndexedTenant {
     private void processForwardingContext(ForwardingContext fwCtx) {
         if (fwCtx.getL3Context() != null) {
             for (L3Context c : fwCtx.getL3Context()) {
-                networkDomains.put(c.getId().getValue(), c);
+                networkDomains.put(c.getId().getValue(), L3ContextId.class, c);
             }
         }
         if (fwCtx.getL2BridgeDomain() != null) {
             for (L2BridgeDomain c : fwCtx.getL2BridgeDomain()) {
-                networkDomains.put(c.getId().getValue(), c);
+                networkDomains.put(c.getId().getValue(), L2BridgeDomainId.class, c);
             }
         }
         if (fwCtx.getL2FloodDomain() != null) {
             for (L2FloodDomain c : fwCtx.getL2FloodDomain()) {
-                networkDomains.put(c.getId().getValue(), c);
+                networkDomains.put(c.getId().getValue(), L2FloodDomainId.class, c);
             }
         }
         if (fwCtx.getSubnet() != null) {
             for (Subnet s : fwCtx.getSubnet()) {
-                networkDomains.put(s.getId().getValue(), s);
+                networkDomains.put(s.getId().getValue(), SubnetId.class, s);
                 Set<SubnetId> sset = subnetMap.get(s.getParent().getValue());
                 if (sset == null) {
                     subnetMap.put(s.getParent().getValue(), sset = new HashSet<SubnetId>());
@@ -147,41 +153,31 @@ public class IndexedTenant {
     public Set<ExternalImplicitGroup> getExternalImplicitGroups() {
         return externalImplicitGroups;
     }
-    
-    /**
-     * Look up the network domain specified
-     * @param id the {@link NetworkDomainId}
-     * @return the {@link NetworkDomain} if it exists, or <code>null</code> 
-     * otherwise
-     */
-    public NetworkDomain getNetworkDomain(NetworkDomainId id) {
-        return networkDomains.get(id.getValue());
-    }
 
     /**
      * Look up the endpoint group specified
      * @param id the {@link EndpointGroupId}
-     * @return the {@link EndpointGroup} if it exists, or <code>null</code> 
+     * @return the {@link EndpointGroup} if it exists, or <code>null</code>
      * otherwise
      */
     public EndpointGroup getEndpointGroup(EndpointGroupId id) {
         return endpointGroups.get(id);
     }
-    
+
     /**
      * Look up the contract specified
      * @param id the {@link ContractId}
-     * @return the {@link Contract} if it exists, or <code>null</code> 
+     * @return the {@link Contract} if it exists, or <code>null</code>
      * otherwise
      */
     public Contract getContract(ContractId id) {
         return contracts.get(id);
     }
-    
+
     /**
      * Look up the classifier instance specified
      * @param name the {@link ClassifierName}
-     * @return the {@link ClassifierInstance} if it exists, or <code>null</code> 
+     * @return the {@link ClassifierInstance} if it exists, or <code>null</code>
      * otherwise
      */
     public ClassifierInstance getClassifier(ClassifierName name) {
@@ -191,7 +187,7 @@ public class IndexedTenant {
     /**
      * Look up the classifier instance specified
      * @param name the {@link ActionName}
-     * @return the {@link ActionInstance} if it exists, or <code>null</code> 
+     * @return the {@link ActionInstance} if it exists, or <code>null</code>
      * otherwise
      */
     public ActionInstance getAction(ActionName name) {
@@ -199,45 +195,68 @@ public class IndexedTenant {
     }
 
     /**
-     * Get the layer 3 context for the specified network domain by walking
-     * up the hierarchy
-     * @param id the {@link NetworkDomainId} for the network domain
+     * Get the layer 3 context
+     * @param id the {@link L3ContextId}
      * @return the {@link L3Context} or <code>null</code> if it does not exist
      */
-    public L3Context resolveL3Context(NetworkDomainId id) {
+    public L3Context resolveL3Context(L3ContextId id) {
         return resolveDomain(L3Context.class, id);
     }
 
     /**
-     * Get the layer 2 bridge domain for the specified network domain by walking
+     * Get the layer 3 context for the specified l2 bridge domain by walking
      * up the hierarchy
-     * @param id the {@link NetworkDomainId} for the network domain
-     * @return the {@link L2BridgeDomain} or <code>null</code> if it does
-     * not exist
+     * @param id the {@link L2BridgeDomainId}
+     * @return the {@link L3Context} or <code>null</code> if it does not exist
      */
-    public L2BridgeDomain resolveL2BridgeDomain(NetworkDomainId id) {
+    public L3Context resolveL3Context(L2BridgeDomainId id) {
+        return resolveDomain(L3Context.class, id);
+    }
+
+    /**
+     * Get the layer 3 context for the specified l2 flood domain by walking
+     * up the hierarchy
+     * @param id the {@link L2FloodDomainId}
+     * @return the {@link L3Context} or <code>null</code> if it does not exist
+     */
+    public L3Context resolveL3Context(L2FloodDomainId id) {
+        return resolveDomain(L3Context.class, id);
+    }
+
+    /**
+     * Get the layer 2 bridge domain
+     * @param id the {@link L2BridgeDomainId}
+     * @return the {@link L2BridgeDomain} or <code>null</code> if it does not exist
+     */
+    public L2BridgeDomain resolveL2BridgeDomain(L2BridgeDomainId id) {
         return resolveDomain(L2BridgeDomain.class, id);
     }
 
     /**
-     * Get the layer 2 flood domain for the specified network domain by walking
+     * Get the layer 2 bridge domain for the specified l2 flood domain by walking
      * up the hierarchy
-     * @param id the {@link NetworkDomainId} for the network domain
-     * @return the {@link L2FloodDomain} or <code>null</code> if it does
-     * not exist
+     * @param id the {@link L2FloodDomainId}
+     * @return the {@link L2BridgeDomain} or <code>null</code> if it does not exist
      */
-    public L2FloodDomain resolveL2FloodDomain(NetworkDomainId id) {
+    public L2BridgeDomain resolveL2BridgeDomain(L2FloodDomainId id) {
+        return resolveDomain(L2BridgeDomain.class, id);
+    }
+
+    /**
+     * Get the layer 2 flood domain
+     * @param id the {@link L2FloodDomainId}
+     * @return the {@link L2FloodDomain} or <code>null</code> if it does not exist
+     */
+    public L2FloodDomain resolveL2FloodDomain(L2FloodDomainId id) {
         return resolveDomain(L2FloodDomain.class, id);
     }
 
     /**
      * Get the subnet based on it's ID. Since subnet is on the bottom
-     * of the forwarding hierarchy, there is no other underlying domain
-     * from which {@link Subnet} could be resolved. That is why the
-     * argument refers directly to {@link SubnetId} and not
-     * {@link NetworkDomainId}
+     * of the forwarding hierarchy, there is no other upstream domain
+     * to resolved.
      *
-     * @param id of the {@link Subnet}
+     * @param id of the {@link SubnetId}
      * @return the {@link Subnet} or <code>null</code> if it does
      * not exist
      */
@@ -259,12 +278,12 @@ public class IndexedTenant {
             Set<SubnetId> cursset = subnetMap.get(id.getValue());
             if (cursset != null)
                 sset.addAll(cursset);
-            NetworkDomain d = networkDomains.get(id.getValue());
+            NetworkDomain d = networkDomains.get(id.getValue(), id.getClass());
             if (d == null) break;
             if (d instanceof Subnet) {
                 id = ((Subnet)d).getParent();
                 sset.add(((Subnet) d).getId());
-            } 
+            }
             else if (d instanceof L2BridgeDomain)
                 id = ((L2BridgeDomain)d).getParent();
             else if (d instanceof L2FloodDomain)
@@ -275,7 +294,7 @@ public class IndexedTenant {
         return Collections2.transform(sset, new Function<SubnetId, Subnet>() {
             @Override
             public Subnet apply(SubnetId input) {
-                return (Subnet)networkDomains.get(input.getValue());
+                return (Subnet)networkDomains.get(input.getValue(), SubnetId.class);
             }
         });
     }
@@ -283,7 +302,7 @@ public class IndexedTenant {
     // ******
     // Object
     // ******
-    
+
     @Override
     public int hashCode() {
         return hashCode;
@@ -310,23 +329,27 @@ public class IndexedTenant {
     // Implementation
     // **************
 
-    private <C extends NetworkDomain> C resolveDomain(Class<C> domainClass,
-                                                      NetworkDomainId id) {
-        HashSet<NetworkDomainId> visited = new HashSet<>();        
+    @SuppressWarnings("unchecked")
+    private <C extends NetworkDomain, I extends NetworkDomainId> C resolveDomain(Class<C> domainClass, I id) {
+        SetMultimap<I, Class<? extends NetworkDomainId>> visited = HashMultimap.create();
         while (id != null) {
-            if (visited.contains(id)) return null;
-            visited.add(id);
-            NetworkDomain d = networkDomains.get(id.getValue());
-            if (d == null) return null;
-            if (domainClass.isInstance(d)) return domainClass.cast(d);
-            if (d instanceof Subnet)
-                id = ((Subnet)d).getParent();
-            else if (d instanceof L2BridgeDomain)
-                id = ((L2BridgeDomain)d).getParent();
-            else if (d instanceof L2FloodDomain)
-                id = ((L2FloodDomain)d).getParent();
-            else
+            // TODO condition
+            if (visited.get(id) != null && visited.containsEntry(id, id.getClass())) {
+                return null;
+            }
+            visited.put(id, id.getClass());
+            NetworkDomain d = networkDomains.get(id.getValue(), id.getClass());
+            if (d == null)
+                return null;
+            if (domainClass.isInstance(d))
+                return domainClass.cast(d);
+            if (d instanceof L2BridgeDomain) {
+                id = (I) ((L2BridgeDomain) d).getParent();
+            } else if (d instanceof L2FloodDomain) {
+                id = (I) ((L2FloodDomain) d).getParent();
+            } else {
                 id = null;
+            }
         }
         return null;
     }

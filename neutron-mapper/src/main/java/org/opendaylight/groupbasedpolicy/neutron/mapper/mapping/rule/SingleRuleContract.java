@@ -13,7 +13,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
-import org.opendaylight.neutron.spi.NeutronSecurityRule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.change.action.of.security.group.rules.input.action.ActionChoice;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.Contract;
@@ -22,6 +21,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.Subject;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.SubjectBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.Rule;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
 
 import com.google.common.collect.ImmutableList;
 
@@ -34,11 +34,11 @@ public class SingleRuleContract {
     private final Clause clause;
     private final Contract contract;
 
-    public SingleRuleContract(NeutronSecurityRule secRule, int subjectAndRuleOrder, @Nullable Description contractDescription, ActionChoice action) {
+    public SingleRuleContract(SecurityRule secRule, int subjectAndRuleOrder, @Nullable Description contractDescription, ActionChoice action) {
         this(secRule, new SingleClassifierRule(secRule, subjectAndRuleOrder, action), contractDescription);
     }
 
-    public SingleRuleContract(NeutronSecurityRule secRule, SingleClassifierRule singleClassifierRule,
+    public SingleRuleContract(SecurityRule secRule, SingleClassifierRule singleClassifierRule,
             @Nullable Description contractDescription) {
         checkNotNull(secRule);
         this.singleClassifierRule = checkNotNull(singleClassifierRule);

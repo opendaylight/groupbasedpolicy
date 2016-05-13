@@ -52,8 +52,7 @@ public class SourceMapperTest extends MapperUtilsTest {
         // List of other endpoints (one entry is good enough)
         HashSet<Endpoint> otherEndpoints = new HashSet<>();
         Endpoint otherEndpoint = buildEndpoint(IPV4_1, MAC_1, CONNECTOR_1).build();
-        EndpointBuilder otherEndpointBuilder = new EndpointBuilder(otherEndpoint);
-        otherEndpointBuilder.setEndpointGroup(ENDPOINT_GROUP_0);
+        EndpointBuilder otherEndpointBuilder = new EndpointBuilder(otherEndpoint).setEndpointGroup(ENDPOINT_GROUP_0);
         List<EndpointGroupId> endpointGroupIds = new ArrayList<>();
         endpointGroupIds.add(ENDPOINT_GROUP_1);
         endpointGroupIds.add(ENDPOINT_GROUP_2);
@@ -82,7 +81,7 @@ public class SourceMapperTest extends MapperUtilsTest {
 
         // Verify method usage
         verify(ctx, times(3)).getEndpointManager();
-        verify(ctx, times(5)).getTenant(Mockito.any(TenantId.class));
+        verify(ctx, times(7)).getTenant(Mockito.any(TenantId.class));
         verify(ctx.getPolicyManager(), times(1)).getTABLEID_DESTINATION_MAPPER();
         verify(ctx.getSwitchManager(), times(1)).getTunnelPort(NODE_ID, TunnelTypeVxlan.class);
         verify(ctx.getEndpointManager(), times(1)).getEndpointsForGroup(Mockito.any(EgKey.class));
@@ -126,7 +125,7 @@ public class SourceMapperTest extends MapperUtilsTest {
         sourceMapper.syncFlows(flows, endpointBuilder.build(), NODE_ID, ofWriter);
 
         // Verify OfContext method usage
-        verify(ctx, times(3)).getTenant(Mockito.any(TenantId.class));
+        verify(ctx, times(4)).getTenant(Mockito.any(TenantId.class));
         verify(ctx.getPolicyManager(), times(1)).getTABLEID_DESTINATION_MAPPER();
         verify(ctx.getSwitchManager(), times(1)).getTunnelPort(NODE_ID, TunnelTypeVxlan.class);
 

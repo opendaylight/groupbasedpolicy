@@ -95,7 +95,7 @@ public class IngressNatMapperFlowsTest extends MapperUtilsTest {
         InOrder order = inOrder(ctx);
         order.verify(ctx, times(1)).getEndpointManager();
         order.verify(ctx, times(1)).getCurrentPolicy();
-        verify(ctx, times(2)).getTenant(TENANT_ID);
+        verify(ctx, times(3)).getTenant(TENANT_ID);
         assertNotNull(ordinals);
 
         List<Instruction> instructions = new ArrayList<>();
@@ -103,9 +103,9 @@ public class IngressNatMapperFlowsTest extends MapperUtilsTest {
                 FlowUtils.setDlDstAction(new MacAddress(MAC_0))};
         Action[] ordinalsAction = {FlowUtils.nxLoadRegAction(NxmNxReg0.class, BigInteger.valueOf(1)),
                 FlowUtils.nxLoadRegAction(NxmNxReg1.class, BigInteger.valueOf(0)),
-                FlowUtils.nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(0)),
-                FlowUtils.nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(0)),
-                FlowUtils.nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(0)),
+                FlowUtils.nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(3)),
+                FlowUtils.nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(4)),
+                FlowUtils.nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(5)),
                 FlowUtils.nxLoadTunIdAction(BigInteger.valueOf(ordinals.getTunnelId()), false)};
         instructions.add(new InstructionBuilder().setOrder(0)
                 .setInstruction(FlowUtils.applyActionIns(ArrayUtils.addAll(ipActions, ordinalsAction))).build());
@@ -172,15 +172,15 @@ public class IngressNatMapperFlowsTest extends MapperUtilsTest {
         InOrder order = inOrder(ctx);
         order.verify(ctx, times(1)).getEndpointManager();
         order.verify(ctx, times(1)).getCurrentPolicy();
-        verify(ctx, times(2)).getTenant(TENANT_ID);
+        verify(ctx, times(3)).getTenant(TENANT_ID);
         assertNotNull(ordinals);
 
         List<Instruction> instructions = new ArrayList<>();
         Action[] ordinalsAction = {FlowUtils.nxLoadRegAction(NxmNxReg0.class, BigInteger.valueOf(1)),
                 FlowUtils.nxLoadRegAction(NxmNxReg1.class, BigInteger.valueOf(0)),
-                FlowUtils.nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(0)),
-                FlowUtils.nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(0)),
-                FlowUtils.nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(0)),
+                FlowUtils.nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(3)),
+                FlowUtils.nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(4)),
+                FlowUtils.nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(5)),
                 FlowUtils.nxLoadTunIdAction(BigInteger.valueOf(ordinals.getTunnelId()), false)};
         instructions.add(new InstructionBuilder().setOrder(0)
                 .setInstruction(FlowUtils.applyActionIns(ArrayUtils.addAll(ordinalsAction))).build());
@@ -215,15 +215,15 @@ public class IngressNatMapperFlowsTest extends MapperUtilsTest {
         InOrder order = inOrder(ctx);
         order.verify(ctx, times(1)).getEndpointManager();
         order.verify(ctx, times(1)).getCurrentPolicy();
-        verify(ctx, times(2)).getTenant(TENANT_ID);
+        verify(ctx, times(3)).getTenant(TENANT_ID);
         assertNotNull(ordinals);
 
         List<Instruction> instructions = new ArrayList<>();
         Action[] ordinalsAction = {FlowUtils.nxLoadRegAction(NxmNxReg0.class, BigInteger.valueOf(1)),
                 FlowUtils.nxLoadRegAction(NxmNxReg1.class, BigInteger.valueOf(0)),
-                FlowUtils.nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(0)),
-                FlowUtils.nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(0)),
-                FlowUtils.nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(0)),
+                FlowUtils.nxLoadRegAction(NxmNxReg4.class, BigInteger.valueOf(3)),
+                FlowUtils.nxLoadRegAction(NxmNxReg5.class, BigInteger.valueOf(4)),
+                FlowUtils.nxLoadRegAction(NxmNxReg6.class, BigInteger.valueOf(5)),
                 FlowUtils.nxLoadTunIdAction(BigInteger.valueOf(ordinals.getTunnelId()), false)};
         instructions.add(new InstructionBuilder().setOrder(0)
                 .setInstruction(FlowUtils.applyActionIns(ArrayUtils.addAll(ordinalsAction))).build());

@@ -9,6 +9,7 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.ingressnat;
 
 import com.google.common.base.Preconditions;
+
 import org.apache.commons.lang3.ArrayUtils;
 import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
@@ -26,6 +27,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.ta
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.go.to.table._case.GoToTable;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2FloodDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
@@ -230,7 +232,7 @@ class IngressNatMapperFlows {
         Subnet extSubnet = ExternalMapper.resolveSubnetForIpv4Address(tenant, outsideDestAddress.getIpv4Address());
         L2FloodDomain l2Fd = null;
         if (extSubnet != null && extSubnet.getParent() != null) {
-            l2Fd = tenant.resolveL2FloodDomain(extSubnet.getParent());
+            l2Fd = tenant.resolveL2FloodDomain(new L2FloodDomainId(extSubnet.getParent().getValue()));
         }
         FlowBuilder flowBuilder = base(tableId).setPriority(priority);
         if (l2Fd != null && l2Fd.getAugmentation(Segmentation.class) != null) {
