@@ -1,0 +1,9 @@
+EPG<br/>
+id: {{epg.data.id}}<br/>
+name: {{epg.data.name}}<br/>
+description: {{epg.data.description}}<br/>
+intra-group-policy: {{epg.data.intraGroupPolicy}}<br/>
+
+<div ng-repeat="epgElement in epgs.data">
+    {{epgElement.data.id}}, {{epgElement.data.name}}, {{epgElement.data.description}}, {{epgElement.data.intraGroupPolicy}}, {{epgElement.data.networkDomain}}<br/>
+</div>
