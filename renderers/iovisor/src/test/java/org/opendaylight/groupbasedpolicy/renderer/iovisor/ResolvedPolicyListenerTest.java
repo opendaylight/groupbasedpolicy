@@ -9,16 +9,27 @@
 package org.opendaylight.groupbasedpolicy.renderer.iovisor;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.sun.jersey.api.client.ClientHandlerException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
+import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry;
 import org.opendaylight.groupbasedpolicy.renderer.iovisor.endpoint.EndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.iovisor.module.IovisorModuleManager;
@@ -36,6 +47,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.re
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.module.instances.IovisorModuleInstanceBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.modules.by.tenant.by.endpointgroup.id.iovisor.module.by.tenant.by.endpointgroup.id.IovisorModuleInstanceId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.iovisor.rev151030.iovisor.modules.by.tenant.by.endpointgroup.id.iovisor.module.by.tenant.by.endpointgroup.id.IovisorModuleInstanceIdBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.ResolvedPolicies;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.actions.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.actions.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.classifiers.Classifier;
@@ -44,18 +56,19 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.p
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.resolved.rules.ResolvedRuleBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.ResolvedPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.ResolvedPolicyBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.ResolvedPolicyKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.PolicyRuleGroupWithEndpointConstraints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.PolicyRuleGroupWithEndpointConstraintsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.policy.rule.group.with.endpoint.constraints.PolicyRuleGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.policy.rule.group.with.endpoint.constraints.PolicyRuleGroupBuilder;
-
-import com.google.common.collect.ImmutableList;
-import com.sun.jersey.api.client.ClientHandlerException;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 public class ResolvedPolicyListenerTest extends GbpIovisorDataBrokerTest {
 
     private DataBroker dataBroker;
     private ResolvedPolicyListener resolvedPolicyListener;
+    private DataObjectModification<ResolvedPolicy> rootNode;
+    private Set<DataTreeModification<ResolvedPolicy>> changes;
 
     private TenantId tenantId = new TenantId("tenant1");
     private EndpointGroupId consEpg = new EndpointGroupId("client");
@@ -116,12 +129,52 @@ public class ResolvedPolicyListenerTest extends GbpIovisorDataBrokerTest {
         endpointManager = new EndpointManager(dataBroker, mock(EpRendererAugmentationRegistry.class));
         iovisorModuleManager = mock(IovisorModuleManager.class);
         // iovisorModuleManager = endpointManager.getIovisorModuleManager();
-        resolvedPolicyListener = new ResolvedPolicyListener(dataBroker, iovisorModuleManager);
+        resolvedPolicyListener = spy(new ResolvedPolicyListener(dataBroker, iovisorModuleManager));
+
+        ResolvedPolicyKey key = mock(ResolvedPolicyKey.class);
+        rootNode = mock(DataObjectModification.class);
+        InstanceIdentifier<ResolvedPolicy> rootIdentifier =
+                InstanceIdentifier.builder(ResolvedPolicies.class)
+                        .child(ResolvedPolicy.class, key)
+                        .build();
+        DataTreeIdentifier<ResolvedPolicy> rootPath =
+                new DataTreeIdentifier<>(LogicalDatastoreType.CONFIGURATION, rootIdentifier);
+        DataTreeModification<ResolvedPolicy> change = mock(DataTreeModification.class);
+
+        when(change.getRootNode()).thenReturn(rootNode);
+        when(change.getRootPath()).thenReturn(rootPath);
+
+        changes = ImmutableSet.of(change);
+
+        when(rootNode.getDataAfter()).thenReturn(resolvedPolicy);
     }
 
     @Test(expected = NullPointerException.class)
     public void onWriteTestNull() {
         resolvedPolicyListener.processResolvedPolicyNotification(null);
+    }
+
+    @Test
+    public void testOnWrite() {
+        when(rootNode.getModificationType()).thenReturn(DataObjectModification.ModificationType.WRITE);
+
+        resolvedPolicyListener.onDataTreeChanged(changes);
+
+        verify(resolvedPolicyListener).processResolvedPolicyNotification(eq(resolvedPolicy));
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testOnDelete() {
+        when(rootNode.getModificationType()).thenReturn(DataObjectModification.ModificationType.DELETE);
+
+        resolvedPolicyListener.onDataTreeChanged(changes);
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testOnSubtreeModified() {
+        when(rootNode.getModificationType()).thenReturn(DataObjectModification.ModificationType.SUBTREE_MODIFIED);
+
+        resolvedPolicyListener.onDataTreeChanged(changes);
     }
 
     @Test

@@ -61,8 +61,8 @@ public class IovisorRenderer implements AutoCloseable {
         }
         endpointManager = new EndpointManager(dataBroker, epRendererAugmentationRegistry);
         endpointListener = new EndpointListener(dataBroker, endpointManager);
-        this.resolvedPolicyListener = new ResolvedPolicyListener(dataBroker, endpointManager.getIovisorModuleManager());
-        this.resolvedEndpointListener = new IovisorResolvedEndpointListener(dataBroker);
+        resolvedPolicyListener = new ResolvedPolicyListener(dataBroker, endpointManager.getIovisorModuleManager());
+        resolvedEndpointListener = new IovisorResolvedEndpointListener(dataBroker);
         classifierDefinitionListener = new ClassifierDefinitionListener(dataBroker);
         actionDefinitionListener = new ActionDefinitionListener(dataBroker);
 
