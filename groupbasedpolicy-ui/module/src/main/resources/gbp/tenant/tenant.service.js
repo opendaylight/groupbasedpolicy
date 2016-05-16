@@ -20,6 +20,7 @@ define([], function () {
             /* methods */
             this.setData = setData;
             this.get = get;
+            this.put = put;
 
             /* Implementation */
             /**
@@ -49,6 +50,20 @@ define([], function () {
 
                 return restObj.get().then(function (data) {
                     self.setData(data.tenant[0]);
+                });
+            }
+
+            function put(successCallback) {
+                var self = this;
+
+                var restObj = Restangular.one('restconf').one('config').one('policy:tenants').one('tenant')
+                    .one(self.data.id),
+                    dataObj = {tenant: [self.data]};
+
+                return restObj.customPUT(dataObj).then(function(data) {
+                    successCallback(data);
+                }, function(res) {
+
                 });
             }
         }

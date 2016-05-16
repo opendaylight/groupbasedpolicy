@@ -5,11 +5,12 @@ define([
     'angular-animate',
     'angular-aria',
     'angular-material',
-    'angular-material-data-table'], function () {
+    'angular-material-data-table',
+    'angular-messages'], function () {
 
     var gbp = angular.module('app.gbp',
         [
-            'app.core', 'ui.router.state', 'restangular', 'ngAnimate', 'ngAria', 'ngMaterial', 'md.data.table',
+            'app.core', 'ui.router.state', 'restangular', 'ngAnimate', 'ngAria', 'ngMaterial', 'md.data.table', 'ngMessages'
         ]);
 
     gbp.register = gbp; // for adding services, controllers, directives etc. to angular module before bootstrap
@@ -29,6 +30,7 @@ define([
         NavHelperProvider.addControllerUrl('app/gbp/contract/contract.controller');
         NavHelperProvider.addControllerUrl('app/gbp/epg/epg.controller');
         NavHelperProvider.addControllerUrl('app/gbp/policy/policy.controller');
+        NavHelperProvider.addControllerUrl('app/gbp/tenant/add-tenant.controller');
         NavHelperProvider.addControllerUrl('app/gbp/tenant/tenant.controller');
 
         NavHelperProvider.addToMenu('gbp', {
@@ -38,8 +40,8 @@ define([
             'icon': 'icon-level-down',
             'page': {
                 'title': 'GBP',
-                'description': 'GBP ui',
-            },
+                'description': 'GBP ui'
+            }
         });
 
         var access = routingConfig.accessLevels;
@@ -50,7 +52,7 @@ define([
             // access: access.public,
             views: {
                 'content': {
-                    templateUrl: 'src/app/gbp/common/views/root.tpl.html',
+                    templateUrl: 'src/app/gbp/common/views/root.tpl.html'
 
                 },
             },
@@ -62,7 +64,7 @@ define([
             views: {
                 '': {
                     controller: 'RootGbpCtrl',
-                    templateUrl: 'src/app/gbp/common/views/index.tpl.html',
+                    templateUrl: 'src/app/gbp/common/views/index.tpl.html'
                 },
             },
         });

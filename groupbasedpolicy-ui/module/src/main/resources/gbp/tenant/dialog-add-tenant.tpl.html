@@ -1,0 +1,46 @@
+<md-dialog ng-cloak>
+    <form name="tenantForm">
+        <md-toolbar>
+            <div class="md-toolbar-tools">
+                <h2>Tenant</h2>
+                <span flex></span>
+                <md-button ng-click="closeDialog()" class="md-button">Close dialog</md-button>
+            </div>
+        </md-toolbar>
+        <md-dialog-content style="width:350px;">
+            <div layout="column" class="layout-padding-lr15">
+                <div layout="row">
+                    <md-input-container flex>
+                        <label>Id</label>
+                        <input name="id" ng-model="tenant.data.id" ng-required="true">
+                        <div ng-messages="tenantForm.id.$error" md-auto-hide="false">
+                            <div ng-message="required">Required field</div>
+                        </div>
+                    </md-input-container>
+                    <md-input-container flex>
+                        <label>Name</label>
+                        <input name="name" ng-model="tenant.data.name" ng-required="true">
+                        <div ng-messages="tenantForm.name.$error" md-auto-hide="false">
+                            <div ng-message="required">Required field</div>
+                        </div>
+                    </md-input-container>
+                </div>
+                <div layout="row">
+                    <md-input-container flex>
+                        <label>Description</label>
+                        <input name="description" ng-model="tenant.data.description">
+                    </md-input-container>
+                </div>
+            </div>
+        </md-dialog-content>
+        <md-dialog-actions layout="row">
+            <span flex></span>
+            <md-button ng-click="closeDialog()" class="md-primary">
+                Close
+            </md-button>
+            <md-button ng-click="save()" style="margin-right:20px;" ng-disabled="tenantForm.$invalid" class="md-primary">
+                Save
+            </md-button>
+        </md-dialog-actions>
+    </form>
+</md-dialog>

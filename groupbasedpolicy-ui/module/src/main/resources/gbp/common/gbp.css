@@ -37,3 +37,18 @@
 .gbpUiWrapper.flt-r {
     float: right;
 }
+
+/* LAYOUT */
+.layout-padding-lr15 {
+    padding: 0 15px;
+}
+
+/* TABLES */
+.gbpUiWrapper .md-table span {
+    color: rgba(0,0,0,.87);
+}
+
+/* BUTTONS */
+.gbpUiWrapper button.md-primary span {
+    color: rgb(33,150,243);
+}

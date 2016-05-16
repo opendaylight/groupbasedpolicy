@@ -1,5 +1,9 @@
 <section flex layout="column">
-    <md-table-container ng-if="tenants.data.length">
+    <div flex layout="row">
+        <md-button ng-click="openTenantDialog()" class="md-primary">Add</md-button>
+        <md-button ng-click="getTenantList()" class="md-primary">Reload</md-button>
+    </div>
+    <md-table-container>
         <table md-table>
             <thead md-head md-order="tenantsTableQuery.order">
             <tr md-row>
