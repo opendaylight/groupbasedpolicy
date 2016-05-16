@@ -41,7 +41,7 @@ module endpoint-location-provider {
             list provider-containment-endpoint-location {
                 key "context-type context-id";
                 uses forwarding:context-key;
-                uses base-endpoint:has-location;
+                uses base-endpoint:has-relative-location;
             }
         }
     }

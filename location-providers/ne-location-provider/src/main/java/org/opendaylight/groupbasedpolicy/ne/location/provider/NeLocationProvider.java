@@ -26,9 +26,9 @@ import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.groupbasedpolicy.util.NetUtils;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpoint;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.location.RealLocation;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.location.RealLocationBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.location.real.location.location.type.RegularLocationCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocationBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.InternalLocationCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.network.elements.rev160407.NetworkElements;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.network.elements.rev160407.NetworkElementsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.network.elements.rev160407.network.elements.NetworkElement;
@@ -111,10 +111,10 @@ public class NeLocationProvider implements DataTreeChangeListener<NetworkElement
                             && endpoint.getAddressType().isAssignableFrom(IpPrefixType.class) && NetUtils
                                 .samePrefix(new IpPrefix(endpoint.getAddress().toCharArray()), en.getIpPrefix())) {
                         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
-                        InstanceIdentifier<RealLocation> iid = IidFactory
+                        InstanceIdentifier<AbsoluteLocation> iid = IidFactory
                             .providerAddressEndpointLocationIid(NE_LOCATION_PROVIDER_NAME, IpPrefixType.class,
                                     endpoint.getAddress(), endpoint.getContextType(), endpoint.getContextId())
-                            .child(RealLocation.class)
+                            .child(AbsoluteLocation.class)
                             .build();
                         wtx.put(LogicalDatastoreType.OPERATIONAL, iid, createRealLocation(ne.getIid(), iface.getIid()),
                                 true);
@@ -136,10 +136,10 @@ public class NeLocationProvider implements DataTreeChangeListener<NetworkElement
                             && endpoint.getAddressType().isAssignableFrom(IpPrefixType.class) && NetUtils
                                 .samePrefix(new IpPrefix(endpoint.getAddress().toCharArray()), en.getIpPrefix())) {
                         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
-                        InstanceIdentifier<RealLocation> iid = IidFactory
+                        InstanceIdentifier<AbsoluteLocation> iid = IidFactory
                             .providerAddressEndpointLocationIid(NE_LOCATION_PROVIDER_NAME, IpPrefixType.class,
                                     endpoint.getAddress(), endpoint.getContextType(), endpoint.getContextId())
-                            .child(RealLocation.class)
+                            .child(AbsoluteLocation.class)
                             .build();
                         wtx.delete(LogicalDatastoreType.OPERATIONAL, iid);
                         wtx.submit();
@@ -160,7 +160,7 @@ public class NeLocationProvider implements DataTreeChangeListener<NetworkElement
                     for (NetworkElement ne : nullToEmpty(nes.getNetworkElement())) {
                         for (Interface iface : nullToEmpty(ne.getInterface())) {
                             for (EndpointNetwork en : nullToEmpty(iface.getEndpointNetwork())) {
-                                processDeletedEN(en, ne.getIid(), iface.getIid());
+                                processDeletedEN(en);
                             }
                         }
                     }
@@ -174,7 +174,7 @@ public class NeLocationProvider implements DataTreeChangeListener<NetworkElement
                         for (NetworkElement ne : nullToEmpty(nes.getNetworkElement())) {
                             for (Interface iface : nullToEmpty(ne.getInterface())) {
                                 for (EndpointNetwork en : nullToEmpty(iface.getEndpointNetwork())) {
-                                    processDeletedEN(en, ne.getIid(), iface.getIid());
+                                    processDeletedEN(en);
                                 }
                             }
                         }
@@ -225,7 +225,7 @@ public class NeLocationProvider implements DataTreeChangeListener<NetworkElement
                 NetworkElement ne = netElement.getDataBefore();
                 for (Interface iface : nullToEmpty(ne.getInterface())) {
                     for (EndpointNetwork en : nullToEmpty(iface.getEndpointNetwork())) {
-                        processDeletedEN(en, ne.getIid(), iface.getIid());
+                        processDeletedEN(en);
                     }
                 }
                 networkElements.getNetworkElement().remove(ne);
@@ -237,7 +237,7 @@ public class NeLocationProvider implements DataTreeChangeListener<NetworkElement
                 if (ne != null) {
                     for (Interface iface : nullToEmpty(ne.getInterface())) {
                         for (EndpointNetwork en : nullToEmpty(iface.getEndpointNetwork())) {
-                            processDeletedEN(en, ne.getIid(), iface.getIid());
+                            processDeletedEN(en);
                         }
                     }
                     networkElements.getNetworkElement().remove(ne);
@@ -284,7 +284,7 @@ public class NeLocationProvider implements DataTreeChangeListener<NetworkElement
             case DELETE: {
                 Interface iface = modifiedInterface.getDataBefore();
                 for (EndpointNetwork en : nullToEmpty(iface.getEndpointNetwork())) {
-                    processDeletedEN(en, nodeBefore.getIid(), iface.getIid());
+                    processDeletedEN(en);
                 }
                 int nodeIndex = getIndexOf(nodeBefore);
                 networkElements.getNetworkElement().get(nodeIndex).getInterface().remove(iface);
@@ -296,7 +296,7 @@ public class NeLocationProvider implements DataTreeChangeListener<NetworkElement
                 int nodeIndex = getIndexOf(nodeBefore);
                 if (iface != null) {
                     for (EndpointNetwork en : nullToEmpty(iface.getEndpointNetwork())) {
-                        processDeletedEN(en, nodeBefore.getIid(), iface.getIid());
+                        processDeletedEN(en);
                     }
                     networkElements.getNetworkElement().get(nodeIndex).getInterface().remove(iface);
                 }
@@ -339,7 +339,7 @@ public class NeLocationProvider implements DataTreeChangeListener<NetworkElement
             NetworkElement nodeBefore, Interface ifaceBefore) {
         switch (modifiedEN.getModificationType()) {
             case DELETE: {
-                processDeletedEN(modifiedEN.getDataBefore(), nodeBefore.getIid(), ifaceBefore.getIid());
+                processDeletedEN(modifiedEN.getDataBefore());
                 int nodeIndex = getIndexOf(nodeBefore);
                 int ifaceIndex = getIndexOf(ifaceBefore, nodeIndex);
                 networkElements.getNetworkElement()
@@ -379,10 +379,10 @@ public class NeLocationProvider implements DataTreeChangeListener<NetworkElement
                     && endpoint.getContextId().equals(en.getL3ContextId())
                     && endpoint.getAddressType().isAssignableFrom(IpPrefixType.class)
                     && NetUtils.samePrefix(new IpPrefix(endpoint.getAddress().toCharArray()), en.getIpPrefix())) {
-                InstanceIdentifier<RealLocation> iid = IidFactory
+                InstanceIdentifier<AbsoluteLocation> iid = IidFactory
                     .providerAddressEndpointLocationIid(NE_LOCATION_PROVIDER_NAME, IpPrefixType.class,
                             endpoint.getAddress(), endpoint.getContextType(), endpoint.getContextId())
-                    .child(RealLocation.class)
+                    .child(AbsoluteLocation.class)
                     .build();
                 wtx.put(LogicalDatastoreType.OPERATIONAL, iid, createRealLocation(nodeIID, connectorIID), true);
                 wtx.submit();
@@ -392,18 +392,17 @@ public class NeLocationProvider implements DataTreeChangeListener<NetworkElement
         }
     }
 
-    private void processDeletedEN(EndpointNetwork en, InstanceIdentifier<?> nodeIID,
-            InstanceIdentifier<?> connectorIID) {
+    private void processDeletedEN(EndpointNetwork en) {
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
         for (AddressEndpoint endpoint : endpoints) {
             if (endpoint.getContextType().isAssignableFrom(L3Context.class)
                     && endpoint.getContextId().equals(en.getL3ContextId())
                     && endpoint.getAddressType().isAssignableFrom(IpPrefixType.class)
                     && NetUtils.samePrefix(new IpPrefix(endpoint.getAddress().toCharArray()), en.getIpPrefix())) {
-                InstanceIdentifier<RealLocation> iid = IidFactory
+                InstanceIdentifier<AbsoluteLocation> iid = IidFactory
                     .providerAddressEndpointLocationIid(NE_LOCATION_PROVIDER_NAME, IpPrefixType.class,
                             endpoint.getAddress(), endpoint.getContextType(), endpoint.getContextId())
-                    .child(RealLocation.class)
+                    .child(AbsoluteLocation.class)
                     .build();
                 wtx.delete(LogicalDatastoreType.OPERATIONAL, iid);
                 wtx.submit();
@@ -413,9 +412,9 @@ public class NeLocationProvider implements DataTreeChangeListener<NetworkElement
         }
     }
 
-    private RealLocation createRealLocation(InstanceIdentifier<?> node, InstanceIdentifier<?> iface) {
-        return new RealLocationBuilder()
-            .setLocationType(new RegularLocationCaseBuilder().setNode(node).setNodeConnector(iface).build()).build();
+    private AbsoluteLocation createRealLocation(InstanceIdentifier<?> node, InstanceIdentifier<?> iface) {
+        return new AbsoluteLocationBuilder()
+            .setLocationType(new InternalLocationCaseBuilder().setInternalNode(node).setInternalNodeConnector(iface).build()).build();
     }
 
     private <T> List<T> nullToEmpty(@Nullable List<T> list) {

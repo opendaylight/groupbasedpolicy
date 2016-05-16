@@ -125,22 +125,27 @@ module base-endpoint {
         }
     }
 
-    grouping has-regular-location {
-        leaf node {
+    grouping internal-location-fields {
+        description "Location inside ODL - node and node-connector
+            are represented directly in ODL.";
+        leaf internal-node {
             mandatory true;
             type instance-identifier;
         }
-        leaf node-connector {
+        leaf internal-node-connector {
             type instance-identifier;
         }
     }
 
-    grouping has-external-location {
+    grouping external-location-fields {
+        description "Location outside of ODL - node and node-connector
+            are outside of ODL. external-node-mount-point is path
+            to external system where node and node-connector are located.";
         leaf external-node-mount-point {
             mandatory true;
             type instance-identifier;
         }
-        leaf external-node-location {
+        leaf external-node {
             type string; // TODO switch to external-reference
         }
         leaf external-node-connector {
@@ -148,27 +153,35 @@ module base-endpoint {
         }
     }
 
-    grouping has-location {
-        container real-location {
+    grouping has-absolute-location {
+        container absolute-location {
             choice location-type {
-                case regular-location-case {
-                    uses has-regular-location;
+                case internal-location-case {
+                    uses internal-location-fields;
                 }
                 case external-location-case {
-                    uses has-external-location;
+                    uses external-location-fields;
                 }
             }
         }
-        container relative-location {
-            list location {
-                key "node node-connector";
-                uses has-regular-location;
+    }
+
+    grouping has-relative-location {
+        container relative-locations {
+            list internal-location {
+                key "internal-node internal-node-connector";
+                uses internal-location-fields;
             }
             list external-location {
                 key "external-node-mount-point external-node-connector";
-                uses has-external-location;
+                uses external-location-fields;
             }
         }
+    }
+
+    grouping has-location {
+        uses has-absolute-location;
+        uses has-relative-location;
     }
 
     container endpoints {
@@ -202,7 +215,7 @@ module base-endpoint {
         list containment-endpoint-location {
             key "context-type context-id";
             uses forwarding:context-key;
-            uses has-location;
+            uses has-relative-location;
         }
     }
 
@@ -221,7 +234,7 @@ module base-endpoint {
             list containment-endpoint-reg {
                 key "context-type context-id";
                 uses containment-endpoint-fields;
-                uses has-location;
+                uses has-relative-location;
             }
         }
     }

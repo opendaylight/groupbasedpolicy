@@ -164,7 +164,9 @@ module renderer {
                 list renderer-node {
                     key "node-path";
                     leaf node-path {
-                        description "Path to the node where policy needs to be enforced.";
+                        description "Path to the node where policy needs to be enforced.
+                            This field is matched against internal-node and external-node-mount-point
+                            from base-endoint:endpoint-locations.";
                         type instance-identifier;
                     }
                 }
@@ -234,7 +236,7 @@ module renderer {
                         list containment-endpoint-with-location {
                             key "context-type context-id";
                             uses base-endpoint:address-endpoint-fields;
-                            uses base-endpoint:has-location;
+                            uses base-endpoint:has-relative-location;
                         }
                     }
 
