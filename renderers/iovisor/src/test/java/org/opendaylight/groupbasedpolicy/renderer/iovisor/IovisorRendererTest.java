@@ -8,9 +8,12 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.iovisor;
 
+import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 
 import org.junit.Before;
+import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry;
 import org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistry;
@@ -28,7 +31,24 @@ public class IovisorRendererTest extends GbpIovisorDataBrokerTest {
         dataBroker = getDataBroker();
         epRendererAugReg = mock(EpRendererAugmentationRegistry.class);
         policyValidatorRegistry = mock(PolicyValidatorRegistry.class);
-        iovisorRenderer = new IovisorRenderer(dataBroker, epRendererAugReg, policyValidatorRegistry);
+        iovisorRenderer = spy(new IovisorRenderer(dataBroker, epRendererAugReg, policyValidatorRegistry));
 
     }
+
+    @Test
+    public void testConstructor() throws Exception{
+        IovisorRenderer other = new IovisorRenderer(dataBroker, epRendererAugReg, policyValidatorRegistry);
+        other.close();
+    }
+
+    @Test
+    public void testGetResolvedEndpointListener(){
+         assertNotNull(iovisorRenderer.getResolvedEndpointListener());
+    }
+
+    @Test
+    public void testGetEndPointManager(){
+         assertNotNull(iovisorRenderer.getEndPointManager());
+    }
+
 }
