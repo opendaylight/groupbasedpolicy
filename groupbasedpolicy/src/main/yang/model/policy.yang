@@ -238,6 +238,9 @@ module policy {
     }
 
     grouping has-endpoint-identification-constraints {
+
+        status deprecated;
+
         container endpoint-identification-constraints {
             description
                 "Identify endpoints via other attributes other than conditions.

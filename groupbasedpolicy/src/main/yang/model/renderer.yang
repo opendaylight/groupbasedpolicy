@@ -107,13 +107,6 @@ module renderer {
         }
     }
 
-    grouping has-peer-containment-endpoints {
-        list peer-containment-endpoint {
-            key "context-type context-id";
-            uses forwarding:context-key;
-        }
-    }
-
     grouping has-peer-external-endpoints {
         list peer-external-endpoint {
             key "context-type context-id address-type address";
@@ -132,6 +125,18 @@ module renderer {
         leaf renderer-name {
             type renderer-name;
             mandatory true;
+        }
+    }
+
+    grouping has-rule-group-with-renderer-endpoint-participation {
+        list rule-group-with-renderer-endpoint-participation {
+            description "A specific policy rule group that apply to pair of endpoints.
+                Entire rule-group is located on /renderers/renderer/renderer-policy/configuration/rule-groups/rule-group";
+            key "tenant-id contract-id subject-name renderer-endpoint-participation";
+            uses resolved-policy:has-subject-key;
+            leaf renderer-endpoint-participation {
+                type endpoint-policy-participation;
+            }
         }
     }
 
@@ -179,45 +184,29 @@ module renderer {
 
                 container configuration {
                     description "Renderer tries to apply given policy on devices.";
-                    container endpoint-resolved-policies {
-                        list endpoint-resolved-policy {
-                            description "Policy between renderer-endpoints and peer-endpoints.";
-                            key policy-name;
-                            leaf policy-name {
-                                description "Key is here only as workaround for bugs around unkeyed list. It can be removed anytime.";
-                                type policy-name;
+                    container renderer-endpoints {
+                        list renderer-endpoint {
+                            description "Policy between renderer-endpoint and peer-endpoints (peers).
+                                Renderer configures policy for renderer endpoints.";
+                            key "context-type context-id address-type address";
+                            uses base-endpoint:address-endpoint-key;
+
+                            list peer-endpoint-with-policy {
+                                key "context-type context-id address-type address";
+                                uses base-endpoint:address-endpoint-key;
+                                uses has-rule-group-with-renderer-endpoint-participation;
                             }
 
-                            container provided-resolved-policy {
-                                list provided-rule-group {
-                                    description "A specific policy rule group that apply to pair of endpoints.
-                                        Renderer Endpoint is a provider of the rule group.
-                                        Entire rule-group is located on /renderers/renderer/renderer-policy/configuration/rule-groups/rule-group";
-                                    key "tenant-id contract-id subject-name";
-                                    uses resolved-policy:has-subject-key;
-                                }
+                            list peer-external-endpoint-with-policy {
+                                key "context-type context-id address-type address";
+                                uses base-endpoint:address-endpoint-key;
+                                uses has-rule-group-with-renderer-endpoint-participation;
                             }
 
-                            container consumed-resolved-policy {
-                                list consumed-rule-group {
-                                    description "A specific policy rule group that apply to pair of endpoints.
-                                        Renderer Endpoint is a consumer of the rule group.
-                                        Entire rule-group is located on /renderers/renderer/renderer-policy/configuration/rule-groups/rule-group";
-                                    key "tenant-id contract-id subject-name";
-                                    uses resolved-policy:has-subject-key;
-                                }
-                            }
-
-                            container renderer-endpoints-and-peers {
-                                description "Every renderer-endpoint has the same set of peer-endpoints.
-                                    A renderer should not configure a policy when renderer-endpoint is peer-endpoint.";
-                                list renderer-endpoint {
-                                    key "context-type context-id address-type address";
-                                    uses base-endpoint:address-endpoint-key;
-                                }
-                                uses has-peer-endpoints;
-                                uses has-peer-external-endpoints;
-                                uses has-peer-external-containment-endpoints;
+                            list peer-external-containment-endpoint-with-policy {
+                                key "context-type context-id";
+                                uses forwarding:context-key;
+                                uses has-rule-group-with-renderer-endpoint-participation;
                             }
                         }
                     }
