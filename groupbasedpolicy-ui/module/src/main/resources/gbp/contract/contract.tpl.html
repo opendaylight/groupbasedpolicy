@@ -1,13 +1,122 @@
-<h1>Contrats of tenant: <u>tenant1</u></h1><br /><br />
-<h2><u>contract1:</u></h2><br />
-id: {{contract.data.id}}<br />
-description: {{contract.data.description}}<br />
-parent:{{contract.data.parent}}<br />
-<h2>his containers:</b></h2><br />
-<h3><u>Target object:</u></h3><br />{{contract.data.target}}
-<h3><u>Subject object:</u></h3><br />{{contract.data.subject}}
-<h3><u>Clause object:</u></h3><br />{{contract.data.clause}}
-<h3><u>Quality object:</u></h3><br />{{contract.data.quality}}
-<hr />
-<h2><u>tenant1 contracts list:</u></h2><br />
-<section ng-repeat="contractElement in contracts.data"><h5>{{contractElement.data}}</h5><br /></section>
+<section flex layout="column">
+    <md-table-container ng-if="contracts.data.length" ng-hide="contractId.length">
+        <table md-table>
+            <thead md-head md-order="contractsTableQuery.order">
+            <tr md-row>
+                <th md-column md-order-by="data.id"><span>Id</span></th>
+                <th md-column md-order-by="data.parent"><span>Parent</span></th>
+                <th md-column md-order-by="data.description"><span>Description</span></th>
+                <th md-column><span>Actions</span></th>
+            </tr>
+            </thead>
+            <tbody md-body>
+            <tr md-row ng-repeat="contract in contracts.data | filter: contractsTableQuery.filter  | orderBy : contractsTableQuery.order | limitTo: contractsTableQuery.limit : (contractsTableQuery.page -1) * contractsTableQuery.limit">
+                <td md-cell>{{contract.data.id}}</td>
+                <td md-cell>{{contract.data.parent}}</td>
+                <td md-cell>{{contract.data.description}}</td>
+                <td md-cell>
+                    <md-button class="md-icon-button" ng-click="edit(contract)">
+                        <md-icon>edit</md-icon>
+                    </md-button>
+                    <md-button class="md-icon-button" ng-click="delete(contract)">
+                        <md-icon>delete</md-icon>
+                    </md-button>
+                </td>
+            </tr>
+
+            </tbody>
+        </table>
+        <md-table-pagination md-limit="contractsTableQuery.limit"
+                             md-page="contractsTableQuery.page"
+                             md-options="contractsTableQuery.options"
+                             md-total="{{contracts.data.length}}"
+                             md-page-select="options.pageSelect">
+        </md-table-pagination>
+    </md-table-container>
+
+    <section ng-if="contractId.length">
+        Details of contract: <u>{{contract1}}</u><br /><br />
+        <u>contract1:</u><br />
+        id: {{contract.data.id}}<br />
+        description: {{contract.data.description}}<br />
+        parent:{{contract.data.parent}}<br />
+        his containers:</b><br />
+        <u>Target object:</u><br />{{contract.data.target}}
+        <u>Subject object:</u><br />{{contract.data.subject}}
+        <u>Clause object:</u><br />{{contract.data.clause}}
+        <u>Quality object:</u><br />{{contract.data.quality}}
+    </section>
+
+
+
+
+
+</section>
+
+
+
+
+
+
+
+
+<!-- <div class="md-menu-demo" ng-controller="PositionDemoCtrl as ctrl" ng-cloak style="min-height:350px;">
+  <div class="menu-demo-container" layout-align="start center" layout="column" >
+    <div layout-align="start center" layout="column" style="min-height:150px;" >
+      <h2 class="md-title">Position Mode Demos</h2>
+      <p>The <code>md-position-mode</code> attribute can be used to specify the positioning along the <code>x</code> and <code>y</code> axis.</p>
+      <hr/>
+      <h3 class="md-subhead">Target-Based Position Modes</h3>
+    </div>
+    <div class="menus"  layout-wrap layout="row" layout-fill layout-align="space-between center" style="min-height:200px;">
+      <div layout="column" flex="33" flex-sm="100" layout-align="center center">
+        <p>Target Mode Positioning (default)</p>
+        <md-menu>
+          <md-button aria-label="Open demo menu" class="md-icon-button" ng-click="$mdOpenMenu($event)">
+            <md-icon md-menu-origin md-svg-icon="call:business"></md-icon>
+          </md-button>
+          <md-menu-content width="6">
+            <md-menu-item ng-repeat="item in [1, 2, 3]">
+              <md-button ng-click="ctrl.announceClick($index)">
+                <md-icon md-menu-align-target md-svg-icon="call:no-sim"></md-icon>
+                Option {{item}}
+              </md-button>
+            </md-menu-item>
+          </md-menu-content>
+        </md-menu>
+      </div>
+      <div layout="column" flex-sm="100" flex="33" layout-align="center center">
+        <p>Target mode with <code>md-offset</code></p>
+        <md-menu md-offset="0 -5">
+          <md-button aria-label="Open demo menu" class="md-icon-button" ng-click="ctrl.openMenu($mdOpenMenu, $event)">
+            <md-icon md-menu-origin md-svg-icon="call:ring-volume"></md-icon>
+          </md-button>
+          <md-menu-content width="4">
+            <md-menu-item ng-repeat="item in [1, 2, 3]">
+              <md-button ng-click="ctrl.announceClick($index)"> <span md-menu-align-target>Option</span> {{item}} </md-button>
+            </md-menu-item>
+          </md-menu-content>
+        </md-menu>
+      </div>
+      <div layout="column" flex-sm="100" flex="33" layout-align="center center">
+        <p><code>md-position-mode="target-right target"</code></p>
+        <md-menu md-position-mode="target-right target" >
+          <md-button aria-label="Open demo menu" class="md-icon-button" ng-click="$mdOpenMenu($event)">
+            <md-icon md-menu-origin md-svg-icon="call:portable-wifi-off"></md-icon>
+          </md-button>
+          <md-menu-content width="4" >
+            <md-menu-item ng-repeat="item in [1, 2, 3]">
+              <md-button ng-click="ctrl.announceClick($index)">
+                  <div layout="row">
+                    <p flex>Option {{item}}</p>
+                    <md-icon md-menu-align-target md-svg-icon="call:portable-wifi-off" style="margin: auto 3px auto 0;"></md-icon>
+                  </div>
+              </md-button>
+            </md-menu-item>
+          </md-menu-content>
+        </md-menu>
+      </div>
+    </div>
+    </div>
+  </div>
+</div> -->

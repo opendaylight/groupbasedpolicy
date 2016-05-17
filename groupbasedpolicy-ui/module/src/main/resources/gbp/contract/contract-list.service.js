@@ -12,6 +12,7 @@ define([], function () {
         function ContractList() {
             /* properties */
             this.data = [];
+
             /* methods */
             this.setData = setData;
             this.get = get;
@@ -28,17 +29,19 @@ define([], function () {
                 });
             }
 
-            function get(dataStore) {
+            function get(tenantId) {
                 /* jshint validthis:true */
                 var self = this;
 
-                var restObj = Restangular.one('restconf').one(dataStore).one('policy:tenants')
-                .one('tenant').one('tenant1').one('policy');
+                // var restObj = Restangular.one('restconf').one(dataStore).one('policy:tenants')
+                // .one('tenant').one('tenant1').one('policy');
+                var restObj = Restangular.one('restconf').one('config').one('policy:tenants')
+                    .one('tenant').one(tenantId).one('policy');
 
                 return restObj.get().then(function (data) {
-                    if (data.policy.contract) {
-                        self.setData(data.policy.contract);
-                    }
+                    // if (data.policy.contract) {
+                    //     self.setData(data.policy.contract);
+                    self.setData(data.policy.contract);
                 });
             }
         }
