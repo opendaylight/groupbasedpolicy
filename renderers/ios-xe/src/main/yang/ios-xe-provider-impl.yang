@@ -1,0 +1,68 @@
+/*
+ * Copyright (c) 2016 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
+module ios-xe-provider-impl {
+    yang-version 1;
+    namespace "urn:opendaylight:params:xml:ns:yang:groupbasedpolicy:renderer:ios-xe-provider:impl:config";
+    prefix "ios-xe-provider-impl";
+
+    import config { prefix config; revision-date 2013-04-05; }
+    import opendaylight-md-sal-binding { prefix mdsal; revision-date 2013-10-28; }
+    import ietf-yang-types { prefix "yang"; revision-date 2010-09-24; }
+    import opendaylight-sal-binding-broker-impl { prefix sal-broker; revision-date 2013-10-28;}
+    import groupbasedpolicy-cfg { prefix gbpcfg; revision-date 2015-11-06; }
+
+    description
+        "This module contains the base YANG definitions for
+          ios-xe-provider impl implementation.";
+
+    revision "2016-05-17" {
+        description
+            "Initial revision.";
+    }
+
+    identity ios-xe-provider-impl {
+        base "config:module-type";
+        config:java-name-prefix IosXeProvider;
+    }
+
+    // Augments the 'configuration' choice node under modules/module.
+    augment "/config:modules/config:module/config:configuration" {
+        case ios-xe-provider-impl {
+            when "/config:modules/config:module/config:type = 'ios-xe-provider-impl'";
+
+            // Wires in the data-broker service
+            container data-broker {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity mdsal:binding-async-data-broker;
+                    }
+                }
+            }
+            // binding aware broker
+            container broker {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity mdsal:binding-broker-osgi-registry;
+                    }
+                }
+            }
+            // PolicyProviderRegistry service
+            container policy-validator-registry {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity gbpcfg:policy-validator-registry;
+                    }
+                }
+            }
+        }
+    }
+}

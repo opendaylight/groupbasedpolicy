@@ -1,0 +1,29 @@
+/*
+ * Copyright (c) 2016 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
+module ios-xe-provider {
+     yang-version 1;
+     namespace "urn:opendaylight:params:xml:ns:yang:groupbasedpolicy:renderer:ios-xe-provider:config";
+     prefix "ios-xe-provider";
+
+     import config { prefix config; revision-date 2013-04-05; }
+
+     description
+         "This module contains the base YANG definitions for
+          ios-xe-provider services.";
+
+     revision "2016-05-17" {
+         description
+             "Initial revision.";
+     }
+
+     identity ios-xe-provider {
+         base "config:service-type";
+         config:java-class "org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.IosXeRendererProvider";
+     }
+}
