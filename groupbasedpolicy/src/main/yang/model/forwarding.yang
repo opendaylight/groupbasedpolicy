@@ -29,7 +29,6 @@ module forwarding {
 
     identity context-type {
         description "Type of context.";
-        base network-domain;
     }
 
     typedef address-type-ref {
