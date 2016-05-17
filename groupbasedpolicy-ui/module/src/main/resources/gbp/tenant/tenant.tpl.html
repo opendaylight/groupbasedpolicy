@@ -19,10 +19,10 @@
                 <td md-cell>{{tenant.data.name}}</td>
                 <td md-cell>{{tenant.data.description}}</td>
                 <td md-cell>
-                    <md-button class="md-icon-button" ng-click="edit(tenant)">
+                    <md-button class="md-icon-button" ng-click="openTenantDialog(tenant)">
                         <md-icon>edit</md-icon>
                     </md-button>
-                    <md-button class="md-icon-button" ng-click="delete(tenant)">
+                    <md-button class="md-icon-button w85" ng-click="deleteTenantDialog(tenant)">
                         <md-icon>delete</md-icon>
                     </md-button>
                 </td>

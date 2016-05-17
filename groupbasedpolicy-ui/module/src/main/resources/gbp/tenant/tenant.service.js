@@ -21,6 +21,7 @@ define([], function () {
             this.setData = setData;
             this.get = get;
             this.put = put;
+            this.deleteTenant = deleteTenant;
 
             /* Implementation */
             /**
@@ -61,6 +62,19 @@ define([], function () {
                     dataObj = {tenant: [self.data]};
 
                 return restObj.customPUT(dataObj).then(function(data) {
+                    successCallback(data);
+                }, function(res) {
+
+                });
+            }
+
+            function deleteTenant(successCallback) {
+                var self = this;
+
+                var restObj = Restangular.one('restconf').one('config').one('policy:tenants').one('tenant')
+                    .one(self.data.id);
+
+                return restObj.remove().then(function(data) {
                     successCallback(data);
                 }, function(res) {
 

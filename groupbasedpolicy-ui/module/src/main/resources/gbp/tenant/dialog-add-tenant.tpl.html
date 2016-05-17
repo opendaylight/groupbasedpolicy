@@ -1,4 +1,4 @@
-<md-dialog ng-cloak>
+<md-dialog ng-cloak class="gbpDialogWrapper">
     <form name="tenantForm">
         <md-toolbar>
             <div class="md-toolbar-tools">
@@ -13,15 +13,19 @@
                     <md-input-container flex>
                         <label>Id</label>
                         <input name="id" ng-model="tenant.data.id" ng-required="true">
-                        <div ng-messages="tenantForm.id.$error" md-auto-hide="false">
+                        <div ng-messages="tenantForm.id.$error">
                             <div ng-message="required">Required field</div>
                         </div>
                     </md-input-container>
                     <md-input-container flex>
                         <label>Name</label>
-                        <input name="name" ng-model="tenant.data.name" ng-required="true">
-                        <div ng-messages="tenantForm.name.$error" md-auto-hide="false">
-                            <div ng-message="required">Required field</div>
+                        <input name="name" ng-model="tenant.data.name" ng-pattern="/^[a-zA-Z]([a-zA-Z0-9\\-_.])*$/" ng-required="true">
+                        <div ng-messages="tenantForm.name.$error">
+                            <div ng-message="required">Required field.</div>
+                            <div ng-message="pattern">
+                                Invalid pattern.
+                                <md-tooltip md-direction="right" style="padding-left: 10px;">Value must match: ^[a-zA-Z]([a-zA-Z0-9\\-_.])*$</md-tooltip>
+                            </div>
                         </div>
                     </md-input-container>
                 </div>

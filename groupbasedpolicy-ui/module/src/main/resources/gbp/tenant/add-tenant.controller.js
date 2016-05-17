@@ -5,20 +5,20 @@ define([
 
     angular.module('app.gbp').controller('AddTenantController', AddTenantController);
 
-    AddTenantController.$inject = ['$mdDialog', '$scope', 'TenantService'];
+    AddTenantController.$inject = ['$mdDialog', '$scope', 'TenantService', 'tenant'];
     /* @ngInject */
-    function AddTenantController($mdDialog, $scope, TenantService) {
+    function AddTenantController($mdDialog, $scope, TenantService, tenant) {
         /* properties */
-        $scope.tenant = TenantService.createObject();
+        $scope.tenant = tenant ? tenant : TenantService.createObject();
 
         /* methods */
         $scope.closeDialog = closeDialog;
         $scope.save = save;
-
         /* Implementations */
 
         function closeDialog(){
             $mdDialog.cancel();
+            $scope.getTenantList();
         }
 
         function save() {
@@ -27,5 +27,6 @@ define([
             }, function(err) {
             } );
         }
+
     }
 });
