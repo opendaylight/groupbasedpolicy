@@ -167,6 +167,7 @@ public class PolicyInfoUtils {
                 policyRuleGroupBuilder.setContractId(ruleGrp.getRelatedContract().getId());
                 policyRuleGroupBuilder.setSubjectName(ruleGrp.getRelatedSubject());
                 policyRuleGroupBuilder.setTenantId(ruleGrp.getContractTenant().getId());
+                policyRuleGroupBuilder.setOrder(ruleGrp.getOrder());
                 policyRuleGroupBuilder
                     .setResolvedRule(buildResolvedRules(ruleGrp.getRules(), ruleGrp.getContractTenant()));
                 policyRuleGroups.add(policyRuleGroupBuilder.build());

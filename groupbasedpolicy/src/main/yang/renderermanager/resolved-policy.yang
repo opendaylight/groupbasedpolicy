@@ -220,6 +220,7 @@ module resolved-policy {
                        The policy rule group represents the subject with resolved rules.";
                    key "tenant-id contract-id subject-name";
                    uses has-subject-key;
+                   uses policy:has-order;
                    uses has-resolved-rules;
                }
            }

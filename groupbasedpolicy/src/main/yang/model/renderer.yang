@@ -235,7 +235,7 @@ module renderer {
 
                         list containment-endpoint-with-location {
                             key "context-type context-id";
-                            uses base-endpoint:address-endpoint-fields;
+                            uses base-endpoint:containment-endpoint-fields;
                             uses base-endpoint:has-relative-location;
                         }
                     }
