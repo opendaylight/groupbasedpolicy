@@ -1,0 +1,13 @@
+<h1>Contrats of tenant: <u>tenant1</u></h1><br /><br />
+<h2><u>contract1:</u></h2><br />
+id: {{contract.data.id}}<br />
+description: {{contract.data.description}}<br />
+parent:{{contract.data.parent}}<br />
+<h2>his containers:</b></h2><br />
+<h3><u>Target object:</u></h3><br />{{contract.data.target}}
+<h3><u>Subject object:</u></h3><br />{{contract.data.subject}}
+<h3><u>Clause object:</u></h3><br />{{contract.data.clause}}
+<h3><u>Quality object:</u></h3><br />{{contract.data.quality}}
+<hr />
+<h2><u>tenant1 contracts list:</u></h2><br />
+<section ng-repeat="contractElement in contracts.data"><h5>{{contractElement.data}}</h5><br /></section>
