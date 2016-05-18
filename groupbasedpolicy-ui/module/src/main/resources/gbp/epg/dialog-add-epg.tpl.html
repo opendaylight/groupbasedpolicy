@@ -1,0 +1,68 @@
+<md-dialog ng-cloak class="gbpDialogWrapper">
+    <form name="epgForm">
+        <md-toolbar>
+            <div class="md-toolbar-tools">
+                <h2>EPG</h2>
+                <span flex></span>
+                <md-button ng-click="closeDialog()" class="md-button">Close dialog</md-button>
+            </div>
+        </md-toolbar>
+        <md-dialog-content style="width:350px;">
+            <div layout="column" class="layout-padding-lr15">
+                <div layout="row">
+                    <md-input-container flex>
+                        <label>Id</label>
+                        <input name="id" ng-model="epg.data.id" ng-required="true">
+                        <div ng-messages="epgForm.id.$error" md-auto-hide="false">
+                            <div ng-message="required">Required field</div>
+                        </div>
+                    </md-input-container>
+                    <md-input-container flex>
+                        <label>Name</label>
+                        <input name="name" ng-model="epg.data.name" ng-required="true" ng-pattern="/^[a-zA-Z]([a-zA-Z0-9\\-_.])*$/">
+                        <div ng-messages="epgForm.name.$error" md-auto-hide="false">
+                            <div ng-message="required">Required field</div>
+                            <div ng-message="pattern">
+                                Invalid pattern.
+                                <md-tooltip md-direction="right" style="padding-left: 10px;">Value must matches: ^[a-zA-Z]([a-zA-Z0-9\\-_.])*$</md-tooltip>
+                            </div>
+                        </div>
+                    </md-input-container>
+                </div>
+                <div layout="row">
+                    <md-input-container flex>
+                        <label>Description</label>
+                        <input name="description" ng-model="epg.data.description">
+                    </md-input-container>
+                </div>
+                <div layout="row">
+                    <md-input-container flex>
+                        <label>intra-group-policy</label>
+                        <md-select name="intraGroupPolicy" ng-model="epg.data['intra-group-policy']">
+                            <md-option ng-repeat="igp in ['', 'allow', 'require-contract']" ng-value="igp">{{igp}}</md-option>
+                        </md-select>
+                    </md-input-container>
+                </div>
+                <div layout="row">
+                    <md-input-container flex>
+                        <label>network-domain</label>
+                        <input name="networkDomain" ng-model="epg.data['network-domain']">
+                    </md-input-container>
+                    <md-input-container flex>
+                        <label>parent</label>
+                        <input name="parent" ng-model="epg.data.parent">
+                    </md-input-container>
+                </div>
+            </div>
+        </md-dialog-content>
+        <md-dialog-actions layout="row">
+            <span flex></span>
+            <md-button ng-click="closeDialog()" class="md-primary">
+                Close
+            </md-button>
+            <md-button ng-click="save()" style="margin-right:20px;" ng-disabled="epgForm.$invalid" class="md-primary">
+                Save
+            </md-button>
+        </md-dialog-actions>
+    </form>
+</md-dialog>

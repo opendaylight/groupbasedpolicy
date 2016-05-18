@@ -20,6 +20,8 @@ define([], function() {
             /* methods */
             this.setData = setData;
             this.get = get;
+            this.put = put;
+            this.deleteEpg = deleteEpg;
 
             /* Implementation */
             /**
@@ -30,14 +32,14 @@ define([], function() {
                 this.data.id = data.id;
                 this.data.name = data.name;
                 this.data.description = data.description;
-                this.data.intraGroupPolicy = data['intra-group-policy'];
+                this.data['intra-group-policy'] = data['intra-group-policy'];
 
-                this.data.consumerNamedSelector = data['consumer-named-selector'];
-                this.data.providerNamedSelector = data['provider-named-selector'];
-                this.data.consumerTargetSelector = data['consumer-target-selector'];
-                this.data.providerTargerSelector = data['provider-target-selector'];
+                this.data['consumer-named-selector'] = data['consumer-named-selector'];
+                this.data['provider-named-selector'] = data['provider-named-selector'];
+                this.data['consumer-target-selector'] = data['consumer-target-selector'];
+                this.data['provider-target-selector'] = data['provider-target-selector'];
 
-                this.data.networkDomain = data['network-domain'];
+                this.data['network-domain'] = data['network-domain'];
                 this.data.parent = data.parent;
 
                 this.data.requirement = data.requirement;
@@ -57,6 +59,33 @@ define([], function() {
 
                 return restObj.get().then(function(data) {
                     self.setData(data['endpoint-group'][0]);
+                });
+            }
+
+            function put(idTenant, successCallback) {
+                var self = this;
+
+                var restObj = Restangular.one('restconf').one('config').one('policy:tenants').one('tenant')
+                    .one(idTenant).one('policy').one('endpoint-group').one(self.data.id),
+                    dataObj = {'endpoint-group': [self.data]};
+
+                return restObj.customPUT(dataObj).then(function(data) {
+                    successCallback(data);
+                }, function(res) {
+
+                });
+            }
+
+            function deleteEpg(idTenant, successCallback) {
+                var self = this;
+
+                var restObj = Restangular.one('restconf').one('config').one('policy:tenants').one('tenant')
+                    .one(idTenant).one('policy').one('endpoint-group').one(self.data.id);
+
+                return restObj.remove().then(function(data) {
+                    successCallback(data);
+                }, function(res) {
+
                 });
             }
         }

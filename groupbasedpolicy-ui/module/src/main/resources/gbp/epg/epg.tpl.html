@@ -1,9 +1,45 @@
-EPG<br/>
-id: {{epg.data.id}}<br/>
-name: {{epg.data.name}}<br/>
-description: {{epg.data.description}}<br/>
-intra-group-policy: {{epg.data.intraGroupPolicy}}<br/>
+<section flex layout="column">
+	<div flex layout="row">
+	    <md-button ng-click="openEpgDialog()" class="md-primary">Add</md-button>
+	    <md-button ng-click="getEpgList()" class="md-primary">Reload</md-button>
+	</div>
+    <md-table-container ng-if="epgs.data.length">
+        <table md-table>
+            <thead md-head md-order="epgsTableQuery.order">
+            <tr md-row>
+	            <th md-column md-order-by="data.id"><span>Id</span></th>
+	            <th md-column md-order-by="data.name"><span>Name</span></th>
+	            <th md-column md-order-by="data.description"><span>Description</span></th>
+	            <th md-column md-order-by="data['intra-group-policy']"><span>intra-group-policy</span></th>
+	            <th md-column md-order-by="data['network-domain']"><span>network-domain</span></th>
+	            <th md-column md-order-by="data.parent"><span>Parent</span></th>
+            </tr>
+            </thead>
+            <tbody md-body>
+            <tr md-row ng-repeat="epg in epgs.data | filter: epgsTableQuery.filter  | orderBy : epgsTableQuery.order | limitTo: epgsTableQuery.limit : (epgsTableQuery.page -1) * epgsTableQuery.limit">
+	            <td md-cell>{{epg.data.id}}</td>
+	            <td md-cell>{{epg.data.name}}</td>
+	            <td md-cell>{{epg.data.description}}</td>
+	            <td md-cell>{{epg.data['intra-group-policy']}}</td>
+	            <td md-cell>{{epg.data['network-domain']}}</td>
+	            <td md-cell>{{epg.data.parent}}</td>
+                <td md-cell>
+                    <md-button class="md-icon-button" ng-click="openEpgDialog(epg)">
+                        <md-icon>edit</md-icon>
+                    </md-button>
+                    <md-button class="md-icon-button" ng-click="deleteEpgDialog(epg)">
+                        <md-icon>delete</md-icon>
+                    </md-button>
+                </td>
+            </tr>
 
-<div ng-repeat="epgElement in epgs.data">
-    {{epgElement.data.id}}, {{epgElement.data.name}}, {{epgElement.data.description}}, {{epgElement.data.intraGroupPolicy}}, {{epgElement.data.networkDomain}}<br/>
-</div>
+            </tbody>
+        </table>
+        <md-table-pagination md-limit="epgsTableQuery.limit"
+                             md-page="epgsTableQuery.page"
+                             md-options="epgsTableQuery.options"
+                             md-total="{{epgs.data.length}}"
+                             md-page-select="options.pageSelect">
+        </md-table-pagination>
+    </md-table-container>
+</section>
