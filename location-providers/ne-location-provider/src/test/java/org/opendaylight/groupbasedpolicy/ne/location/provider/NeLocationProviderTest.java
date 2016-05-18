@@ -39,6 +39,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.NetworkContainment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.NetworkContainmentBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.containment.NetworkDomainContainmentBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.AddressEndpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointBuilder;
@@ -150,7 +151,7 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
     public void test_AddressEndpointWrite_NoNE_Overwrite() throws Exception {
         test_AddressEndpointWrite_NoNE_NoOverwrite();
         NetworkContainment nc = new NetworkContainmentBuilder()
-                .setNetworkDomainId(new NetworkDomainId(L3_CONTEXT_ID))
+        .setContainment(new NetworkDomainContainmentBuilder().setNetworkDomainId(new NetworkDomainId(L3_CONTEXT_ID)).build())
                 .build();
         InstanceIdentifier<NetworkContainment> iid = InstanceIdentifier
                 .builder(Endpoints.class)

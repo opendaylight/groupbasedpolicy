@@ -62,10 +62,17 @@ module base-endpoint {
                         "The tenant with which this endpoint is associated";
         }
         container network-containment {
-            description
-                        "The network domain associated with this endpoint's fowarding
-                        context.";
-            uses forwarding:network-domain-key;
+            choice containment {
+                description
+                            "The network domain associated with this endpoint's fowarding
+                            context.";
+                case network-domain-containment {
+                    uses forwarding:network-domain-key;
+                }
+                case forwarding-context-containment {
+                    uses forwarding:context-key;
+                }
+            }
         }
         leaf-list endpoint-group {
             type gbp-common:endpoint-group-id;

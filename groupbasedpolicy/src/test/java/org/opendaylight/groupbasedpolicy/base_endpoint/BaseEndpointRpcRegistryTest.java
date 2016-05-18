@@ -9,6 +9,7 @@
 package org.opendaylight.groupbasedpolicy.base_endpoint;
 
 import com.google.common.util.concurrent.CheckedFuture;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,6 +20,8 @@ import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFaile
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.api.BaseEndpointRendererAugmentation;
 import org.opendaylight.groupbasedpolicy.base_endpoint.BaseEndpointRpcRegistry;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.NetworkContainmentBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.containment.NetworkDomainContainmentBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.register.endpoint.input.AddressEndpointRegKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.register.endpoint.input.ContainmentEndpointRegKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.*;
@@ -26,7 +29,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.RegisterEndpointInputBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.UnregisterEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.UnregisterEndpointInputBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.NetworkContainmentBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.register.endpoint.input.AddressEndpointRegBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.register.endpoint.input.ContainmentEndpointRegBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.unregister.endpoint.input.AddressEndpointUnregBuilder;
@@ -108,8 +110,8 @@ public class BaseEndpointRpcRegistryTest {
                     .setAddress(MAC_ADDRESS)
                     .setAddressType(MacAddressType.class)
                     .setAddressType(AddressType.class)
-                    .setNetworkContainment(new NetworkContainmentBuilder()
-                        .setNetworkDomainId(new NetworkDomainId(DOMAIN)).setNetworkDomainType(Subnet.class).build())
+                    .setNetworkContainment(new NetworkContainmentBuilder().setContainment(new NetworkDomainContainmentBuilder()
+                        .setNetworkDomainId(new NetworkDomainId(DOMAIN)).setNetworkDomainType(Subnet.class).build()).build())
                     .setKey(new AddressEndpointRegKey(MAC_ADDRESS,MacAddressType.class, new ContextId(CONTEXT_ID), L2FloodDomain.class))
                     .setTimestamp(timestamp).build());
 
@@ -119,8 +121,8 @@ public class BaseEndpointRpcRegistryTest {
                     .setContextId(new L2FloodDomainId(FLOOD_DOMAIN))
                     .setContextType(L2FloodDomain.class)
                     .setTenant(new TenantId(TENANT))
-                    .setNetworkContainment(new NetworkContainmentBuilder()
-                        .setNetworkDomainId(new NetworkDomainId(DOMAIN)).setNetworkDomainType(Subnet.class).build())
+                    .setNetworkContainment(new NetworkContainmentBuilder().setContainment(new NetworkDomainContainmentBuilder()
+                        .setNetworkDomainId(new NetworkDomainId(DOMAIN)).setNetworkDomainType(Subnet.class).build()).build())
                     .setKey(new ContainmentEndpointRegKey(new L2FloodDomainId(FLOOD_DOMAIN),L2FloodDomain.class))
                     .build());
 

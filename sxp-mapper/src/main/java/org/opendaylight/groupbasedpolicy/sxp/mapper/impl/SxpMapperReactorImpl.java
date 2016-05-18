@@ -23,6 +23,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.RegisterEndpointInputBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.NetworkContainment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.NetworkContainmentBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.containment.NetworkDomainContainmentBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.AddressEndpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
@@ -73,8 +74,10 @@ public class SxpMapperReactorImpl implements SxpMapperReactor {
         // apply sxpMasterDB to policy template
         final Ipv4Prefix address = new Ipv4Prefix(epForwardingTemplate.getIpPrefix().getIpv4Prefix().getValue());
         final NetworkContainment networkContainment = new NetworkContainmentBuilder()
+            .setContainment(new NetworkDomainContainmentBuilder()
             .setNetworkDomainType(epForwardingTemplate.getNetworkContainment().getNetworkDomainType())
             .setNetworkDomainId(epForwardingTemplate.getNetworkContainment().getNetworkDomainId())
+            .build())
             .build();
         final RegisterEndpointInput epInput = new RegisterEndpointInputBuilder()
                 .setAddressEndpointReg(Collections.singletonList(new AddressEndpointRegBuilder()
