@@ -33,6 +33,9 @@ module endpoint-location-provider {
             leaf provider {
                 type provider-name;
             }
+            leaf priority {
+                type uint32;
+            }
             list provider-address-endpoint-location {
                 key "context-type context-id address-type address";
                 uses base-endpoint:address-endpoint-key;

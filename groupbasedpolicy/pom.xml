@@ -67,6 +67,11 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
+    <dependency>
+        <groupId>org.opendaylight.controller.model</groupId>
+        <artifactId>model-inventory</artifactId>
+        <scope>test</scope>
+    </dependency>
   </dependencies>
 
 <!-- project build -->

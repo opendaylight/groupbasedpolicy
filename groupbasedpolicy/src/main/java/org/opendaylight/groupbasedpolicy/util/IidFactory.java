@@ -11,6 +11,11 @@ package org.opendaylight.groupbasedpolicy.util;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.EndpointLocations;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoint.locations.AddressEndpointLocation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoint.locations.AddressEndpointLocationKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoint.locations.ContainmentEndpointLocation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoint.locations.ContainmentEndpointLocationKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.AddressEndpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.ContainmentEndpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpoint;
@@ -19,6 +24,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.containment.endpoints.ContainmentEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.parent.containment.endpoint._case.ParentContainmentEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.parent.containment.endpoint._case.ParentContainmentEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.relative.location.RelativeLocations;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.relative.location.relative.locations.ExternalLocation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.relative.location.relative.locations.ExternalLocationKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.relative.location.relative.locations.InternalLocation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.relative.location.relative.locations.InternalLocationKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
@@ -108,7 +119,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.statistics
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.statistics.store.rev151215.statistics.store.StatisticRecord;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.statistics.store.rev151215.statistics.store.StatisticRecordKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-import org.opendaylight.yangtools.yang.binding.InstanceIdentifier.InstanceIdentifierBuilder;
 
 public class IidFactory {
 
@@ -406,11 +416,67 @@ public class IidFactory {
             .build();
     }
 
-    public static InstanceIdentifierBuilder<ProviderAddressEndpointLocation> providerAddressEndpointLocationIid(String provider,
+    public static InstanceIdentifier<AddressEndpointLocation> addressEndpointLocationIid(AddressEndpointLocationKey addrEndpointLocationKey) {
+        return InstanceIdentifier.builder(EndpointLocations.class)
+                .child(AddressEndpointLocation.class, addrEndpointLocationKey)
+                .build();
+    }
+
+    public static InstanceIdentifier<ContainmentEndpointLocation> containmentEndpointLocationIid(ContainmentEndpointLocationKey addrEndpointLocationKey) {
+        return InstanceIdentifier.builder(EndpointLocations.class)
+                .child(ContainmentEndpointLocation.class, addrEndpointLocationKey)
+                .build();
+    }
+
+    public static InstanceIdentifier<InternalLocation> internalLocationIid(AddressEndpointLocationKey addrEndpointLocationKey,
+            InternalLocationKey internalLocationKey) {
+        return InstanceIdentifier.builder(EndpointLocations.class)
+                .child(AddressEndpointLocation.class, addrEndpointLocationKey)
+                .child(RelativeLocations.class)
+                .child(InternalLocation.class, internalLocationKey)
+                .build();
+    }
+
+    public static InstanceIdentifier<InternalLocation> internalLocationIid(ContainmentEndpointLocationKey contEndpointLocationKey,
+            InternalLocationKey internalLocationKey) {
+        return InstanceIdentifier.builder(EndpointLocations.class)
+                .child(ContainmentEndpointLocation.class, contEndpointLocationKey)
+                .child(RelativeLocations.class)
+                .child(InternalLocation.class, internalLocationKey)
+                .build();
+    }
+
+    public static InstanceIdentifier<ExternalLocation> externalLocationIid(AddressEndpointLocationKey addrEndpointLocationKey,
+            ExternalLocationKey externalLocationKey) {
+        return InstanceIdentifier.builder(EndpointLocations.class)
+                .child(AddressEndpointLocation.class, addrEndpointLocationKey)
+                .child(RelativeLocations.class)
+                .child(ExternalLocation.class, externalLocationKey)
+                .build();
+    }
+
+    public static InstanceIdentifier<ExternalLocation> externalLocationIid(ContainmentEndpointLocationKey contEndpointLocationKey,
+            ExternalLocationKey externalLocationKey) {
+        return InstanceIdentifier.builder(EndpointLocations.class)
+                .child(ContainmentEndpointLocation.class, contEndpointLocationKey)
+                .child(RelativeLocations.class)
+                .child(ExternalLocation.class, externalLocationKey)
+                .build();
+    }
+
+    public static InstanceIdentifier<AbsoluteLocation> absoluteLocationIid(AddressEndpointLocationKey addrEndpointLocationKey) {
+        return InstanceIdentifier.builder(EndpointLocations.class)
+                .child(AddressEndpointLocation.class, addrEndpointLocationKey)
+                .child(AbsoluteLocation.class)
+                .build();
+    }
+
+    public static InstanceIdentifier<ProviderAddressEndpointLocation> providerAddressEndpointLocationIid(String provider,
             Class<? extends AddressType> addrType, String addr, Class<? extends ContextType> cType,
             ContextId containment) {
         return InstanceIdentifier.builder(LocationProviders.class)
                 .child(LocationProvider.class, new LocationProviderKey(new ProviderName(provider)))
-            .child(ProviderAddressEndpointLocation.class, new ProviderAddressEndpointLocationKey(addr, addrType, containment, cType));
+            .child(ProviderAddressEndpointLocation.class, new ProviderAddressEndpointLocationKey(addr, addrType, containment, cType))
+            .build();
     }
 }

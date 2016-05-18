@@ -11,6 +11,7 @@ package org.opendaylight.controller.config.yang.config.groupbasedpolicy;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistry;
+import org.opendaylight.groupbasedpolicy.location.resolver.LocationResolver;
 import org.opendaylight.groupbasedpolicy.sf.SubjectFeatureDefinitionProvider;
 import org.opendaylight.groupbasedpolicy.sf.SupportedActionDefinitionListener;
 import org.opendaylight.groupbasedpolicy.sf.SupportedClassifierDefinitionListener;
@@ -60,11 +61,13 @@ public class GroupbasedpolicyModule extends org.opendaylight.controller.config.y
         private final SubjectFeatureDefinitionProvider sfdp;
         private final SupportedClassifierDefinitionListener supportedClassifierDefinitionListener;
         private final SupportedActionDefinitionListener supportedActionDefinitionListener;
+        private final LocationResolver locationResolver;
 
         Instance(DataBroker dataProvider, PolicyValidatorRegistry validatorRegistry) throws TransactionCommitFailedException {
             sfdp = new SubjectFeatureDefinitionProvider(dataProvider);
             supportedClassifierDefinitionListener = new SupportedClassifierDefinitionListener(dataProvider, validatorRegistry);
             supportedActionDefinitionListener = new SupportedActionDefinitionListener(dataProvider);
+            locationResolver = new LocationResolver(dataProvider);
         }
 
         @Override
@@ -72,6 +75,7 @@ public class GroupbasedpolicyModule extends org.opendaylight.controller.config.y
             sfdp.close();
             supportedClassifierDefinitionListener.close();
             supportedActionDefinitionListener.close();
+            locationResolver.close();
         }
     }
 
