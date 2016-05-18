@@ -13,6 +13,10 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareProvider;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.IosXeRendererProvider;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.cache.EpPolicyCacheImpl;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.listener.EpPolicyTemplateBySgtListenerImpl;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.listener.RendererConfigurationListenerImpl;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,26 +27,45 @@ public class IosXeRendererProviderImpl implements IosXeRendererProvider, Binding
 
     private static final Logger LOG = LoggerFactory.getLogger(IosXeRendererProviderImpl.class);
 
-    private final DataBroker dataBrokerDependency;
+    private final DataBroker dataBroker;
+    private final RendererName rendererName;
+    private RendererConfigurationListenerImpl rendererConfigurationListener;
+    private EpPolicyTemplateBySgtListenerImpl epPolicyTemplateBySgtListener;
+    private EpPolicyCacheImpl epPolicyCache;
 
-    public IosXeRendererProviderImpl(final DataBroker dataBrokerDependency, final BindingAwareBroker brokerDependency) {
+    public IosXeRendererProviderImpl(final DataBroker dataBroker, final BindingAwareBroker broker,
+                                     final RendererName rendererName) {
         LOG.debug("ios-xe renderer bootstrap");
-        this.dataBrokerDependency = Preconditions.checkNotNull(dataBrokerDependency, "missing dataBroker dependency");
-        brokerDependency.registerProvider(this);
+        this.dataBroker = Preconditions.checkNotNull(dataBroker, "missing dataBroker dependency");
+        this.rendererName = Preconditions.checkNotNull(rendererName, "missing rendererName param");
+        broker.registerProvider(this);
     }
 
     @Override
     public void close() {
         //TODO
         LOG.info("closing ios-xe renderer");
+        if (rendererConfigurationListener != null) {
+            rendererConfigurationListener.close();
+        }
+        if (epPolicyTemplateBySgtListener != null) {
+            epPolicyTemplateBySgtListener.close();
+        }
+        if (epPolicyCache != null) {
+            epPolicyCache.invalidateAll();
+        }
     }
 
     @Override
     public void onSessionInitiated(final BindingAwareBroker.ProviderContext providerContext) {
         LOG.info("starting ios-xe renderer");
         //TODO register listeners:
-        // renderer-configuration endpoints
         // ep-policy-template-by-sgt
+        epPolicyCache = new EpPolicyCacheImpl();
+        epPolicyTemplateBySgtListener = new EpPolicyTemplateBySgtListenerImpl(dataBroker, epPolicyCache);
+        // renderer-configuration endpoints
+        rendererConfigurationListener = new RendererConfigurationListenerImpl(dataBroker, rendererName, epPolicyCache);
         // supported node list maintenance
+        // TODO: upkeep of available renderer-nodes
     }
 }

@@ -26,7 +26,7 @@ public class IosXeProviderModule extends org.opendaylight.groupbasedpolicy.rende
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        return new IosXeRendererProviderImpl(getDataBrokerDependency(), getBrokerDependency());
+        return new IosXeRendererProviderImpl(getDataBrokerDependency(), getBrokerDependency(), getRendererName());
     }
 
 }
