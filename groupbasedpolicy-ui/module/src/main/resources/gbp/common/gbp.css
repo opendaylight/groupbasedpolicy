@@ -47,8 +47,31 @@
 .gbpUiWrapper .md-table span {
     color: rgba(0,0,0,.87);
 }
+.gbpUiWrapper .md-table-pagination span {
+    color: rgba(0,0,0,.87);
+    font-weight: normal;
+}
+.gbpUiWrapper button.md-button.md-icon-button.w85 {
+    width: 85px;
+}
 
 /* BUTTONS */
 .gbpUiWrapper button.md-primary span {
     color: rgb(33,150,243);
+}
+.gbpUiWrapper button .md-icon {
+    width: 30px;
+}
+
+/* DIALOG */
+.gbpDialogWrapper button.md-primary span {
+    color: rgba(0,0,0,0.87);
+}
+.gbpDialogWrapper button.md-primary[disabled] span {
+    color: rgba(0,0,0,0.26);
+}
+
+/* $mdDialog.confirm */
+md-dialog button span {
+    color: #000;
 }

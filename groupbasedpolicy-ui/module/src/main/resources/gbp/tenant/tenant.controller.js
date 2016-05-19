@@ -16,6 +16,7 @@ define([
         /* methods */
         $scope.getTenantList = getTenantList;
         $scope.openTenantDialog = openTenantDialog;
+        $scope.deleteTenantDialog = deleteTenantDialog;
 
         init();
 
@@ -25,6 +26,7 @@ define([
          * fills $scope.tenants array with data from data store
          */
         function getTenantList() {
+            $scope.tenants = TenantListService.createList();
             $scope.tenants.get('config');
         }
 
@@ -43,7 +45,7 @@ define([
             getTenantList();
         }
 
-        function openTenantDialog() {
+        function openTenantDialog(tenantData) {
             $mdDialog.show({
                 clickOutsideToClose: true,
                 controller: 'AddTenantController',
@@ -52,11 +54,28 @@ define([
                 parent: angular.element(document.body),
                 scope: $scope,
                 locals: {
-                    //policy: $scope.selectedObjects.policy
+                    tenant: tenantData
                 }
             });
         }
 
+        function deleteTenantDialog(tenantData) {
+            var confirm = $mdDialog.confirm()
+                .title('Delete tenant')
+                .textContent('Do you want to delete tenant ' + tenantData.data.name + '?')
+                .ok('Delete')
+                .cancel('Cancel');
+
+            $mdDialog.show(confirm).then(function() {
+                tenantData.deleteTenant(
+                    function() {
+                        $scope.getTenantList();
+                    }
+                );
+            }, function() {
+
+            });
+        }
 
     }
 });
