@@ -86,9 +86,13 @@ define([
             access: access.admin,
             templateUrl: 'src/app/gbp/common/views/index.tpl.html',
             views: {
-                '': {
-                    controller: 'PolicyController',
-                    templateUrl: 'src/app/gbp/policy/policy.tpl.html',
+                'main_top': {
+                    controller: 'EpgController',
+                    templateUrl: 'src/app/gbp/epg/epg.tpl.html',
+                },
+                'main_bottom': {
+                    controller: 'ContractController',
+                    templateUrl: 'src/app/gbp/contract/contract.tpl.html',
                 },
             },
         });
@@ -109,16 +113,24 @@ define([
             },
         });
 
-        $stateProvider.state('main.gbp.index.policy.contract', {
-            url: '/contract',
+        $stateProvider.state('main.gbp.index.contract', {
+            url: '/policy/contract',
             access: access.admin,
             templateUrl: 'src/app/gbp/common/views/index.tpl.html',
             views: {
                 '': {
-                    controller: 'PolicyController',
-                    templateUrl: 'src/app/gbp/policy/policy.tpl.html',
+                    controller: 'ContractController',
+                    templateUrl: 'src/app/gbp/contract/contract.tpl.html',
                 },
-                'sidePanel': {
+            },
+        });
+
+        $stateProvider.state('main.gbp.index.contractId', {
+            url: '/policy/contract/{contractId}',
+            access: access.admin,
+            templateUrl: 'src/app/gbp/common/views/index.tpl.html',
+            views: {
+                '': {
                     controller: 'ContractController',
                     templateUrl: 'src/app/gbp/contract/contract.tpl.html',
                 },

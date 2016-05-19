@@ -46,8 +46,11 @@ define([], function () {
             function get(id) {
                 var self = this;
 
+                // var restObj = Restangular.one('restconf').one('config').one('policy:tenants')
+                //             .one('tenant').one('tenant1').one('policy').one('contract').one(this.data.id || id);
+
                 var restObj = Restangular.one('restconf').one('config').one('policy:tenants')
-                            .one('tenant').one('tenant1').one('policy').one('contract').one(this.data.id || id);
+                            .one('tenant').one(id).one('policy').one('contract').one(id);
 
                 return restObj.get().then(function (data) {
                     self.setData(data.contract[0]);

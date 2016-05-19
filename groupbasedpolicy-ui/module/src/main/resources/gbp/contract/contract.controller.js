@@ -6,20 +6,36 @@ define([
 
     angular.module('app.gbp').controller('ContractController', ContractController);
 
-    ContractController.$inject = ['$scope', 'TenantService', 'ContractService', 'ContractListService'];
+    ContractController.$inject = ['$scope', 'TenantListService', 'TenantService', 'ContractService', 'ContractListService', '$stateParams'];
 
-    function ContractController($scope, TenantService, ContractService, ContractListService) {
-        $scope.tenant = TenantService.createObject();
-        $scope.tenant.get('tenant1');
-        console.log('tenant from CONTRACT CTRL:', $scope.tenant);
-
-        $scope.contract = ContractService.createObject();
-        $scope.contract.get('contract1');
-        console.log('contract from CONTRACT CTRL', $scope.contract);
-
+    function ContractController($scope, TenantListService, TenantService, ContractService, ContractListService, $stateParams) {
         $scope.contracts = ContractListService.createList();
-        $scope.contracts.get('config');
-        console.log('contracts from CONTRACT CTRL', $scope.contracts);
+        $scope.contractsTableQuery = {
+            order: 'data.id',
+            limit: 25,
+            page: 1,
+            options: [25, 50, 100],
+            filter: '',
+        };
 
+        getContracts();
+
+        /* if ($stateParams.contractId) {
+            $scope.contractId = $stateParams.contractId;
+            console.log('contract.ctrl.if.$scope.contractId', $scope.contractId);
+            $scope.contract.get($scope.contractId);
+        }
+        else {
+            console.log('contract.ctrl.else.$scope.contractId', $scope.contractId);
+            $scope.contract.get($scope.$parent.tenantId);
+        }*/
+
+        function getContracts() {
+            $scope.contracts.data = [];
+            $scope.contracts.get($scope.rootTenant.data.id);
+        }
+
+
+        $scope.$on('ROOT_TENANT_CHANGED', getContracts);
     }
 });
