@@ -259,6 +259,10 @@
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>vpp-renderer</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>neutron-mapper</artifactId>
     </dependency>
     <dependency>
@@ -322,6 +326,12 @@
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>ne-location-provider</artifactId>
+      <type>xml</type>
+      <classifier>config</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>vpp-renderer</artifactId>
       <type>xml</type>
       <classifier>config</classifier>
     </dependency>

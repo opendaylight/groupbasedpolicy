@@ -148,6 +148,15 @@
     </feature>
 
     <!--
+        The VPP renderer
+    -->
+    <feature name='odl-groupbasedpolicy-vpp' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: VPP renderer '>
+        <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/vpp-renderer/{{VERSION}}</bundle>
+        <configfile finalname="${config.configfile.directory}/15-vpp-renderer.xml">mvn:org.opendaylight.groupbasedpolicy/vpp-renderer/{{VERSION}}/xml/config</configfile>
+    </feature>
+
+    <!--
          The UI Backend
     -->
     <feature name='odl-groupbasedpolicy-uibackend' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: UI Backend provides APIs for UI '>

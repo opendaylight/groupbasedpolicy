@@ -25,6 +25,7 @@
     <module>iovisor</module>
     <module>ovssfc</module>
     <module>netconf</module>
+    <module>vpp</module>
   </modules>
 
   <dependencies>
