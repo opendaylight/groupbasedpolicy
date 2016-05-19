@@ -27,6 +27,7 @@ define([
         /*$translatePartialLoaderProvider.addPart('app/gbp/assets/data/locale');*/
 
         NavHelperProvider.addControllerUrl('app/gbp/common/gbp.controller');
+        NavHelperProvider.addControllerUrl('app/gbp/contract/add-contract.controller');
         NavHelperProvider.addControllerUrl('app/gbp/contract/contract.controller');
         NavHelperProvider.addControllerUrl('app/gbp/epg/epg.controller');
         NavHelperProvider.addControllerUrl('app/gbp/policy/policy.controller');

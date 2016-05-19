@@ -18,7 +18,6 @@ define(['app/gbp/common/gbp.service'], function () {
         $scope.closeSidePanel = closeSidePanel;
         $scope.openSidePanel = openSidePanel;
         $scope.setRootTenant = setRootTenant;
-        $scope.disableButton = disableButton;
 
         RootGbpService.setMainClass();
         console.log('RootGbpCtrl initialized');
@@ -31,7 +30,7 @@ define(['app/gbp/common/gbp.service'], function () {
          * and opens/closes side panel
          */
         function init() {
-            $scope.rootTenants.clear();
+            $scope.rootTenants.clearData();
             $scope.rootTenants.get('config');
         }
 
@@ -62,15 +61,6 @@ define(['app/gbp/common/gbp.service'], function () {
          */
         function openSidePanel() {
             $scope.sidePanelPage = true;
-        }
-
-        function disableButton() {
-            if (Object.keys($scope.rootTenant.data) > 0) {
-                return true;
-            }
-            else {
-                return false;
-            }
         }
 
         function enableButtons() {

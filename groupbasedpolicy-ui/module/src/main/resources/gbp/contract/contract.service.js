@@ -19,6 +19,8 @@ define([], function () {
             /* methods */
             this.setData = setData;
             this.get = get;
+            this.put = put;
+            this.deleteContract = deleteContract;
 
             /* Implementation */
             /**
@@ -46,9 +48,6 @@ define([], function () {
             function get(id) {
                 var self = this;
 
-                // var restObj = Restangular.one('restconf').one('config').one('policy:tenants')
-                //             .one('tenant').one('tenant1').one('policy').one('contract').one(this.data.id || id);
-
                 var restObj = Restangular.one('restconf').one('config').one('policy:tenants')
                             .one('tenant').one(id).one('policy').one('contract').one(id);
 
@@ -56,6 +55,34 @@ define([], function () {
                     self.setData(data.contract[0]);
                 });
             }
+
+            function put(id, successCallback) {
+                var self = this;
+
+                var restObj = Restangular.one('restconf').one('config').one('policy:tenants').one('tenant')
+                    .one(id).one('policy').one('contract').one(self.data.id),
+                    dataObj = { contract: [self.data] };
+
+                return restObj.customPUT(dataObj).then(function (data) {
+                    successCallback(data);
+                }, function (res) {
+
+                });
+            }
+
+            function deleteContract(id, successCallback) {
+                var self = this;
+
+                var restObj = Restangular.one('restconf').one('config').one('policy:tenants').one('tenant')
+                    .one(id).one('policy').one('contract').one(self.data.id);
+
+                return restObj.remove().then(function (data) {
+                    successCallback(data);
+                }, function (res) {
+
+                });
+            }
+
         }
 
         /**
