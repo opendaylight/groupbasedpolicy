@@ -61,6 +61,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_l
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.location.provider.ProviderAddressEndpointLocationKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.AddressType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.ContextType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.Forwarding;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.ForwardingByTenant;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.ForwardingByTenantKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.SubjectFeatureDefinitions;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.Tenants;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
@@ -477,6 +480,17 @@ public class IidFactory {
         return InstanceIdentifier.builder(LocationProviders.class)
                 .child(LocationProvider.class, new LocationProviderKey(new ProviderName(provider)))
             .child(ProviderAddressEndpointLocation.class, new ProviderAddressEndpointLocationKey(addr, addrType, containment, cType))
+            .build();
+    }
+
+    public static InstanceIdentifier<ForwardingByTenant> forwardingByTenantIid(TenantId tenantId) {
+        return forwardingByTenantIid(new ForwardingByTenantKey(tenantId));
+    }
+
+    public static InstanceIdentifier<ForwardingByTenant> forwardingByTenantIid(
+            ForwardingByTenantKey forwardingByTenantKey) {
+        return InstanceIdentifier.builder(Forwarding.class)
+            .child(ForwardingByTenant.class, forwardingByTenantKey)
             .build();
     }
 }

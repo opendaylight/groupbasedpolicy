@@ -1,40 +1,33 @@
 package org.opendaylight.groupbasedpolicy.resolver;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import com.google.common.base.Optional;
 import org.junit.After;
-import org.junit.Assume;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
+import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.test.GbpDataBrokerTest;
-import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.Tenants;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.TenantsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.TenantBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Policy;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.PolicyBuilder;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(DataStoreHelper.class)
+import com.google.common.base.Optional;
+
 public class PolicyResolverTest extends GbpDataBrokerTest {
+
+    private static final TenantId TENANT_ID_1 = new TenantId("tenant_1");
 
     private DataBroker dataProvider;
     private PolicyResolver policyResolver;
-    private final TenantId tenantId = new TenantId("tenant-1");
 
     @Before
     public void init() {
@@ -54,47 +47,43 @@ public class PolicyResolverTest extends GbpDataBrokerTest {
     }
 
     @Test
-    public void testSubscribeTenant_Unknown() {
-        int oldSize = policyResolver.subscribersPerTenant.count(tenantId);
-        Assume.assumeTrue(oldSize == 0);
+    public void testUpdateTenant() throws Exception {
+        PolicyResolver spyPolicyResolver = Mockito.spy(policyResolver);
+        Mockito.when(spyPolicyResolver.isPolicyValid(Mockito.any(Policy.class))).thenReturn(true);
 
-        policyResolver.subscribeTenant(tenantId);
-
-        assertEquals(policyResolver.subscribersPerTenant.count(tenantId), oldSize + 1);
+        WriteTransaction wTx = getDataBroker().newWriteOnlyTransaction();
+        wTx.put(LogicalDatastoreType.OPERATIONAL, InstanceIdentifier.create(Tenants.class),
+                new TenantsBuilder().build());
+        wTx.submit().get();
+        Tenant tenant = new TenantBuilder().setId(TENANT_ID_1).setPolicy(new PolicyBuilder().build()).build();
+        spyPolicyResolver.updateTenant(TENANT_ID_1, tenant);
+        ReadOnlyTransaction rTx = getDataBroker().newReadOnlyTransaction();
+        Optional<Tenant> potentialTenant =
+                rTx.read(LogicalDatastoreType.OPERATIONAL, IidFactory.tenantIid(TENANT_ID_1)).get();
+        Assert.assertTrue(potentialTenant.isPresent());
+        Assert.assertEquals(tenant.getId(), potentialTenant.get().getId());
     }
 
     @Test
-    public void testSubscribeTenant_Known() {
-        Tenant unresolvedTenant = new TenantBuilder().setId(tenantId).build();
-
-        Optional<Tenant> potentialTenant = mock(Optional.class);
-        when(potentialTenant.isPresent()).thenReturn(true);
-        when(potentialTenant.get()).thenReturn(unresolvedTenant);
-
-        PowerMockito.mockStatic(DataStoreHelper.class);
-        when(DataStoreHelper.readFromDs(eq(LogicalDatastoreType.CONFIGURATION),
-                Mockito.<InstanceIdentifier<Tenant>>any(), any(ReadOnlyTransaction.class))).thenReturn(potentialTenant);
-
-        PolicyResolver spy = spy(policyResolver);
-
-        int oldSize = spy.subscribersPerTenant.count(tenantId);
-
-        spy.subscribeTenant(tenantId);
-
-        assertEquals(spy.subscribersPerTenant.count(tenantId), oldSize + 1);
-        verify(spy).updateTenant(eq(tenantId), any(Tenant.class));
+    public void testUpdateTenant_noPolicy() throws Exception {
+        Tenant tenant = new TenantBuilder().setId(TENANT_ID_1).build();
+        policyResolver.updateTenant(TENANT_ID_1, tenant);
+        ReadOnlyTransaction rTx = getDataBroker().newReadOnlyTransaction();
+        Optional<Tenant> potentialTenant =
+                rTx.read(LogicalDatastoreType.OPERATIONAL, IidFactory.tenantIid(TENANT_ID_1)).get();
+        Assert.assertFalse(potentialTenant.isPresent());
     }
 
     @Test
-    public void testUnsubscribeTenant() {
-        int oldSize = policyResolver.subscribersPerTenant.count(tenantId);
-        Assume.assumeTrue(oldSize == 0);
-
-        policyResolver.subscribeTenant(tenantId);
-        assertEquals(policyResolver.subscribersPerTenant.count(tenantId), oldSize + 1);
-
-        policyResolver.unsubscribeTenant(tenantId);
-        assertEquals(policyResolver.subscribersPerTenant.count(tenantId), oldSize);
+    public void testUpdateTenant_nullTenant() throws Exception {
+        Tenant tenant = new TenantBuilder().setId(TENANT_ID_1).build();
+        InstanceIdentifier<Tenant> tenantIid = IidFactory.tenantIid(TENANT_ID_1);
+        WriteTransaction wTx = getDataBroker().newWriteOnlyTransaction();
+        wTx.put(LogicalDatastoreType.OPERATIONAL, tenantIid, tenant);
+        policyResolver.updateTenant(TENANT_ID_1, null);
+        ReadOnlyTransaction rTx = getDataBroker().newReadOnlyTransaction();
+        Optional<Tenant> potentialTenant = rTx.read(LogicalDatastoreType.OPERATIONAL, tenantIid).get();
+        Assert.assertFalse(potentialTenant.isPresent());
     }
 
 }
