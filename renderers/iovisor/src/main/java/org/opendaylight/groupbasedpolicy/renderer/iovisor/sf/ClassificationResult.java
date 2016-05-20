@@ -14,6 +14,7 @@ import com.google.common.base.Preconditions;
 
 public class ClassificationResult {
 
+    static final String DEFAULT_ERROR_MESSAGE = "";
     private final String errorMessage;
     private final boolean isSuccessful;
 
@@ -29,7 +30,7 @@ public class ClassificationResult {
      * @param matches cannot be {@code null}
      */
     public ClassificationResult(List<String> matches) {
-        errorMessage = "";
+        errorMessage = DEFAULT_ERROR_MESSAGE;
         this.isSuccessful = true;
     }
 

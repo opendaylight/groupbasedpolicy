@@ -11,12 +11,12 @@ package org.opendaylight.groupbasedpolicy.renderer.iovisor.sf;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.collect.ImmutableList;
 import org.opendaylight.groupbasedpolicy.api.sf.L4ClassifierDefinition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.parameter.value.RangeValue;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.parameters.type.parameter.type.IntBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.parameters.type.parameter.type.RangeBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.capabilities.supported.classifier.definition.SupportedParameterValues;
@@ -26,12 +26,14 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.supported.range.value.fields.SupportedRangeValue;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.supported.range.value.fields.SupportedRangeValueBuilder;
 
-import com.google.common.collect.ImmutableList;
-
 /**
  * Match against TCP or UDP, and source and/or destination ports
  */
 public class L4Classifier extends Classifier {
+
+    static final String EXC_MSG_PARAM_VALUE_NOT_SPECIFIED = "Value of parameter not specified: ";
+    static final String EXC_MSG_MUT_EXCLUSIVE_PARAMS = "Mutually exclusive parameters: ";
+    static final String EXC_MSG_RANGE_VALUE_MISMATCH = "Range value mismatch: ";
 
     protected L4Classifier(Classifier parent) {
         super(parent);
@@ -87,15 +89,11 @@ public class L4Classifier extends Classifier {
         if (params.get(portParam) != null) {
             StringBuilder paramLog = new StringBuilder();
             if (params.get(portParam).getIntValue() == null) {
-                paramLog.append("Value of ").append(portParam).append(" parameter is not specified.");
+                paramLog.append(EXC_MSG_PARAM_VALUE_NOT_SPECIFIED).append(portParam);
                 throw new IllegalArgumentException(paramLog.toString());
             }
             if (params.get(portRangeParam) != null) {
-                paramLog.append("Source port parameters ")
-                    .append(portParam)
-                    .append(" and ")
-                    .append(portRangeParam)
-                    .append(" are mutually exclusive.");
+                paramLog.append(EXC_MSG_MUT_EXCLUSIVE_PARAMS).append(portParam).append(" and ").append(portRangeParam);
                 throw new IllegalArgumentException(paramLog.toString());
             }
         }
@@ -103,18 +101,14 @@ public class L4Classifier extends Classifier {
 
     private void validateRange(Map<String, ParameterValue> params, String portRangeParam) {
         if (params.get(portRangeParam) != null) {
-            validateRangeValue(params.get(portRangeParam).getRangeValue());
-        }
-    }
-
-    private void validateRangeValue(RangeValue rangeValueParam) {
-        if (rangeValueParam == null) {
-            throw new IllegalArgumentException("Range parameter is specifiet but value is not present.");
-        }
-        final Long min = rangeValueParam.getMin();
-        final Long max = rangeValueParam.getMax();
-        if (min > max) {
-            throw new IllegalArgumentException("Range value mismatch. " + min + " is greater than MAX " + max + ".");
+            if (params.get(portRangeParam).getRangeValue() == null) {
+                throw new IllegalArgumentException(EXC_MSG_PARAM_VALUE_NOT_SPECIFIED + portRangeParam);
+            }
+            Long min = params.get(portRangeParam).getRangeValue().getMin();
+            Long max = params.get(portRangeParam).getRangeValue().getMax();
+            if (min > max) {
+                throw new IllegalArgumentException(EXC_MSG_RANGE_VALUE_MISMATCH + min + ">" + max);
+            }
         }
     }
 
