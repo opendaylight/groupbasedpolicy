@@ -66,11 +66,9 @@ module forwarding {
     grouping context-key {
         leaf context-type {
             type context-type-ref;
-            mandatory true;
         }
         leaf context-id {
             type gbp-common:context-id;
-            mandatory true;
         }
     }
 
@@ -78,6 +76,17 @@ module forwarding {
         leaf address-type {
             type address-type-ref;
             mandatory true;
+        }
+    }
+
+    grouping forwarding-fields {
+
+        container parent {
+            uses context-key;
+        }
+
+        leaf name {
+            type gbp-common:name;
         }
     }
 
@@ -92,20 +101,14 @@ module forwarding {
             key "context-type context-id";
             uses context-key;
 
-            uses has-address-type;
-            container parent {
-                uses context-key;
-            }
+            uses forwarding-fields;
         }
 
         list network-domain {
             key "network-domain-type network-domain-id";
             uses network-domain-key;
 
-            container parent {
-                uses context-key;
-            }
-
+            uses forwarding-fields;
             description "Network domain can be augmented with further information.";
         }
     }
