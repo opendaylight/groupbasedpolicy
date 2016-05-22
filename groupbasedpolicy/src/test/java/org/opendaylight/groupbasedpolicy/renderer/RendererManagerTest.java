@@ -12,14 +12,17 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Collections;
 import java.util.Set;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.groupbasedpolicy.forwarding.NetworkDomainAugmentorRegistryImpl;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.EndpointLocations;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.EndpointLocationsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.Endpoints;
@@ -70,12 +73,15 @@ public class RendererManagerTest {
 
     @Mock
     private DataBroker dataProvider;
+    @Mock
+    private NetworkDomainAugmentorRegistryImpl netDomainAugmentorRegistry;
 
     private RendererManager rendererManager;
 
     @Before
     public void init() {
-        rendererManager = new RendererManager(dataProvider);
+        Mockito.when(netDomainAugmentorRegistry.getEndpointAugmentors()).thenReturn(Collections.emptySet());
+        rendererManager = new RendererManager(dataProvider, netDomainAugmentorRegistry);
     }
 
     /**

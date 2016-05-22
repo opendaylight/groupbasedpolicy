@@ -18,6 +18,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix;
 import org.opendaylight.yangtools.yang.binding.Augmentation;
 
+@Deprecated
 public interface EpRendererAugmentation {
 
     /**
