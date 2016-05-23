@@ -89,7 +89,7 @@ public class PolicyManagerImpl implements PolicyManager {
     private final String policyMapName = "service-chains";
     private Map<DataBroker, PolicyWriter> perDeviceWriterCache = new HashMap<>();
 
-    public enum ActionCase {ALLOW, CHAIN}
+    public enum ActionCase { ALLOW, CHAIN }
 
 
     public PolicyManagerImpl(final DataBroker dataBroker,
@@ -100,7 +100,7 @@ public class PolicyManagerImpl implements PolicyManager {
     }
 
     @Override
-    public ListenableFuture<Boolean> syncPolicy(final Configuration dataAfter, final Configuration dataBefore) {
+    public ListenableFuture<Boolean> syncPolicy(final Configuration dataBefore, final Configuration dataAfter) {
         // CREATE
         for (RendererEndpoint rendererEndpoint : dataAfter.getRendererEndpoints().getRendererEndpoint()) {
             // Get mountpoint

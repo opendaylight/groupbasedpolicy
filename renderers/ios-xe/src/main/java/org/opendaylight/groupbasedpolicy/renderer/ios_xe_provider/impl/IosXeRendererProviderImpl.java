@@ -13,12 +13,14 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareProvider;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.IosXeRendererProvider;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.manager.PolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.cache.EpPolicyCacheImpl;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.listener.EpPolicyTemplateBySgtListenerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.listener.IosXeCapableNodeListenerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.listener.RendererConfigurationListenerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.NodeManager;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerZipImpl;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +38,7 @@ public class IosXeRendererProviderImpl implements IosXeRendererProvider, Binding
     private EpPolicyTemplateBySgtListenerImpl epPolicyTemplateBySgtListener;
     private IosXeCapableNodeListenerImpl iosXeCapableNodeListener;
     private EpPolicyCacheImpl epPolicyCache;
-    private PolicyManagerImpl policyManager;
+    private PolicyManager policyManager;
     private NodeManager nodeManager;
 
     public IosXeRendererProviderImpl(final DataBroker dataBroker, final BindingAwareBroker broker,
@@ -76,10 +78,13 @@ public class IosXeRendererProviderImpl implements IosXeRendererProvider, Binding
         epPolicyTemplateBySgtListener = new EpPolicyTemplateBySgtListenerImpl(dataBroker, epPolicyCache);
         // network-topology
         iosXeCapableNodeListener = new IosXeCapableNodeListenerImpl(dataBroker, nodeManager);
-        // policy-manager
+
+        // policy-manager and delegates
         policyManager = new PolicyManagerImpl(dataBroker, epPolicyCache);
+        final PolicyManager policyManagerZip = new PolicyManagerZipImpl(policyManager);
+
         // renderer-configuration endpoints
-        rendererConfigurationListener = new RendererConfigurationListenerImpl(dataBroker, rendererName, policyManager);
+        rendererConfigurationListener = new RendererConfigurationListenerImpl(dataBroker, rendererName, policyManagerZip);
         // supported node list maintenance
         // TODO: upkeep of available renderer-nodes
     }
