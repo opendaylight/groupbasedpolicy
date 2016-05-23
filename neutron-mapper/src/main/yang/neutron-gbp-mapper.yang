@@ -4,13 +4,17 @@ module neutron-gbp-mapper {
     namespace "urn:opendaylight:groupbasedpolicy:neutron-gbp-mapper";
     prefix "neutron-gbp-mapper";
 
-     import gbp-common { prefix gbp-common; }
+    import gbp-common { prefix gbp-common; }
     import endpoint { prefix gbp-endpoint; }
     import ietf-yang-types { prefix yang; revision-date 2013-07-15; }
     import ietf-inet-types { prefix inet; revision-date 2010-09-24; }
+    import base-endpoint { prefix base-ep; revision-date 2016-04-27; }
+    import forwarding { prefix fwd; revision-date 2016-04-27; }
+    import l2-l3-forwarding { prefix l2-l3; revision-date 2016-04-27; }
 
 
-    description 
+
+    description
         "This module defines the mapping model between Neutron entities and GBP entities.";
 
     revision "2015-05-13" {
@@ -32,6 +36,7 @@ module neutron-gbp-mapper {
             description "Neutron entities by groupbasedpolicy entities";
             container ports-by-endpoints {
                 description "Neutron ports by groupbasedpolicy endpoint";
+                status deprecated;
                 list port-by-endpoint {
                     description "Neutron port key by groupbasedpolicy endpoint key";
                     key "l2-context mac-address";
@@ -39,8 +44,31 @@ module neutron-gbp-mapper {
                     uses neutron-port-key;
                 }
             }
+            container ports-by-base-endpoints {
+                description "Neutron ports by groupbasedpolicy base-endpoint";
+                list port-by-base-endpoint {
+                    description "Neutron port key by groupbasedpolicy base-endpoint key";
+                    key "context-type context-id address-type address";
+                    uses base-ep:address-endpoint-key;
+                    uses neutron-port-key;
+                }
+            }
+
+            container external-gateways-as-endpoints {
+                description "Endpoints that represent Neutron External Gateways for External Subnets.
+                    Please note these ARE NOT Neutron router ports, they are outside of Neutron.";
+                list external-gateway-as-endpoint {
+                    description "Endpoints that represent Neutron External Gateways for External Subnets.
+                        Please note these ARE NOT Neutron router ports, they are outside of Neutron.";
+
+                    key "context-id context-type address address-type";
+
+                    uses base-ep:address-endpoint-key;
+                }
+            }
 
             container external-gateways-as-l3-endpoints {
+                status deprecated; // use external-gateways-as-endpoints
                 description "L3Endpoints that represent Neutron External Gateways for External Subnets.
                     Please note these ARE NOT Neutron router ports, they are outside of Neutron.";
                 list external-gateway-as-l3-endpoint {
@@ -52,6 +80,7 @@ module neutron-gbp-mapper {
             }
 
             container provider-physical-networks-as-l2-flood-domains {
+                status deprecated;
                 list provider-physical-network-as-l2-flood-domain {
                     key "tenant-id l2-flood-domain-id";
                     leaf tenant-id {
@@ -71,17 +100,47 @@ module neutron-gbp-mapper {
                     }
                 }
             }
+
+            container provider-networks-as-l2-flood-domains {
+                list provider-physical-network-as-l2-flood-domain {
+                    key "tenant-id l2-flood-domain-id";
+                    leaf tenant-id {
+                        description "Tenant of L2 Flood Domain";
+                        type gbp-common:tenant-id;
+                    }
+                    leaf l2-flood-domain-id {
+                        type gbp-common:context-id;
+                    }
+                    leaf segmentation-id {
+                        mandatory true;
+                        description "An isolated segment on the physical network. The network-type
+                            attribute defines the segmentation model. For example, if network-type
+                            is vlan, this ID is a vlan identifier.";
+                        type string;
+                    }
+                }
+            }
         }
 
         container gbp-by-neutron-mappings {
             description "Groupbasedpolicy entities by neutron entities";
             container endpoints-by-ports {
                 description "Groupbasedpolicy endpoints by neutron ports";
+                status deprecated;
                 list endpoint-by-port {
                     description "Groupbasedpolicy endpoint key by neutron port key";
                     key port-id;
                     uses neutron-port-key;
                     uses gbp-endpoint:l2-key;
+                }
+            }
+            container base-endpoints-by-ports {
+                description "Groupbasedpolicy base-endpoints by neutron ports";
+                list base-endpoint-by-port {
+                    description "Groupbasedpolicy base-endpoint key by neutron port key";
+                    key port-id;
+                    uses neutron-port-key;
+                    uses base-ep:address-endpoint-key;
                 }
             }
         }

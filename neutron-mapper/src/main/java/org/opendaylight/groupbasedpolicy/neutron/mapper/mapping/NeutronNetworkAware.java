@@ -19,16 +19,20 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.neutron.gbp.util.NeutronGbpIidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.NetworkClient;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.NetworkService;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NetworkUtils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2FloodDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Name;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.provider.physical.networks.as.l2.flood.domains.ProviderPhysicalNetworkAsL2FloodDomain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.provider.physical.networks.as.l2.flood.domains.ProviderPhysicalNetworkAsL2FloodDomainBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.ForwardingContext;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.ForwardingContextBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.provider.networks.as.l2.flood.domains.ProviderPhysicalNetworkAsL2FloodDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.provider.networks.as.l2.flood.domains.ProviderPhysicalNetworkAsL2FloodDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomain;
@@ -61,12 +65,16 @@ public class NeutronNetworkAware implements NeutronAware<Network> {
     public void onCreated(Network network, Neutron neutron) {
         LOG.trace("created network - {}", network);
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
-        L2FloodDomainId l2FdId = new L2FloodDomainId(network.getUuid().getValue());
         TenantId tenantId = new TenantId(network.getTenantId().getValue());
         Name name = null;
+        ContextId ctxId = new ContextId(network.getUuid().getValue());
+        ForwardingContextBuilder fwdCtxBuilder = new ForwardingContextBuilder()
+        .setContextId(ctxId)
+        .setContextType(MappingUtils.L3_CONTEXT);
         if (!Strings.isNullOrEmpty(network.getName())) {
             try {
                 name = new Name(network.getName());
+                fwdCtxBuilder.setName(name);
             } catch (Exception e) {
                 name = null;
                 LOG.info("Name of Neutron Network '{}' is ignored.", network.getName());
@@ -74,16 +82,22 @@ public class NeutronNetworkAware implements NeutronAware<Network> {
             }
         }
 
-        L3ContextId l3ContextId = new L3ContextId(l2FdId);
-        L3Context l3Context = new L3ContextBuilder().setId(l3ContextId).setName(name).build();
-        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l3ContextIid(tenantId, l3Context.getId()), l3Context, true);
+        ForwardingContext l3Context = fwdCtxBuilder.build();
 
-        L2BridgeDomainId l2BdId = new L2BridgeDomainId(l2FdId);
-        L2BridgeDomain l2Bd = new L2BridgeDomainBuilder().setId(l2BdId).setParent(l3Context.getId()).setName(name).build();
-        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l2BridgeDomainIid(tenantId, l2BdId), l2Bd, true);
+        fwdCtxBuilder.setContextType(MappingUtils.L2_BRDIGE_DOMAIN)
 
-        L2FloodDomain l2Fd = new L2FloodDomainBuilder().setId(l2FdId).setParent(l2BdId).setName(name).build();
-        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l2FloodDomainIid(tenantId, l2FdId), l2Fd, true);
+        .setParent(MappingUtils.createParent(ctxId, MappingUtils.L3_CONTEXT));
+        ForwardingContext l2Bd = fwdCtxBuilder.build();
+
+        fwdCtxBuilder.setContextType(MappingUtils.L2_FLOOD_DOMAIN).setParent(
+                MappingUtils.createParent(ctxId, MappingUtils.L2_BRDIGE_DOMAIN));
+        ForwardingContext l2Fd = fwdCtxBuilder.build();
+
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l3ContextIid(tenantId, ctxId), l3Context, true);
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l2BridgeDomainIid(tenantId, ctxId), l2Bd, true);
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l2FloodDomainIid(tenantId, ctxId), l2Fd, true);
+
+        createTenantNetworkDomains(network, tenantId, rwTx);
 
         if (!tenantsWithRouterAndNetworkSeviceEntities.contains(tenantId)) {
             tenantsWithRouterAndNetworkSeviceEntities.add(tenantId);
@@ -97,15 +111,63 @@ public class NeutronNetworkAware implements NeutronAware<Network> {
             NetworkClient.writeConsumerNamedSelector(tenantId, NetworkService.MGMT_CONTRACT_CONSUMER_SELECTOR, rwTx);
         }
         if (!NetworkUtils.getPhysicalNetwork(network).isEmpty() && !NetworkUtils.getSegmentationId(network).isEmpty()) {
-            addProviderPhysicalNetworkMapping(tenantId, l2FdId, NetworkUtils.getSegmentationId(network), rwTx);
+            addProviderPhysicalNetworkMapping(tenantId, ctxId, NetworkUtils.getSegmentationId(network), rwTx);
+            addProviderPhysicalNetworkMapping(tenantId, new L2FloodDomainId(ctxId.getValue()),
+                    NetworkUtils.getSegmentationId(network), rwTx);
         }
         DataStoreHelper.submitToDs(rwTx);
     }
 
+    @Deprecated
+    private void createTenantNetworkDomains(Network network, TenantId tenantId, ReadWriteTransaction rwTx) {
+        Name name;
+        L3ContextBuilder l3CtxBuilder = new L3ContextBuilder();
+        L2FloodDomainBuilder l2FdBuilder = new L2FloodDomainBuilder();
+        L2BridgeDomainBuilder l2BdBuilder = new L2BridgeDomainBuilder();
+        if (!Strings.isNullOrEmpty(network.getName())) {
+            try {
+                name = new Name(network.getName());
+                l3CtxBuilder.setName(name);
+                l2FdBuilder.setName(name);
+                l2BdBuilder.setName(name);
+            } catch (Exception e) {
+                name = null;
+                LOG.info("Name of Neutron Network '{}' is ignored.", network.getName());
+                LOG.debug("Name exception", e);
+            }
+        }
+        L2FloodDomainId l2FdId = new L2FloodDomainId(network.getUuid().getValue());
+        L3ContextId l3ContextId = new L3ContextId(l2FdId);
+        L3Context l3Context = l3CtxBuilder.setId(l3ContextId).build();
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l3ContextIid(tenantId, l3Context.getId()), l3Context, true);
+
+        L2BridgeDomainId l2BdId = new L2BridgeDomainId(l2FdId);
+        L2BridgeDomain l2Bd = l2BdBuilder.setId(l2BdId).setParent(l3Context.getId()).build();
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l2BridgeDomainIid(tenantId, l2BdId), l2Bd, true);
+
+        L2FloodDomain l2Fd = l2FdBuilder.setId(l2FdId).setParent(l2BdId).build();
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l2FloodDomainIid(tenantId, l2FdId), l2Fd, true);
+    }
+
+    private void addProviderPhysicalNetworkMapping(TenantId tenantId, ContextId ctxId, String segmentationId,
+            WriteTransaction wTx) {
+        ProviderPhysicalNetworkAsL2FloodDomain provNetAsL2Fd = new ProviderPhysicalNetworkAsL2FloodDomainBuilder().setTenantId(
+                tenantId)
+            .setL2FloodDomainId(ctxId)
+            .setSegmentationId(segmentationId)
+            .build();
+        wTx.put(LogicalDatastoreType.OPERATIONAL,
+                NeutronGbpIidFactory.providerPhysicalNetworkAsL2FloodDomainIid(tenantId, ctxId), provNetAsL2Fd);
+    }
+
+    @Deprecated
     private void addProviderPhysicalNetworkMapping(TenantId tenantId, L2FloodDomainId l2FdId, String segmentationId,
             WriteTransaction wTx) {
-        ProviderPhysicalNetworkAsL2FloodDomain provNetAsL2Fd = new ProviderPhysicalNetworkAsL2FloodDomainBuilder()
-            .setTenantId(tenantId).setL2FloodDomainId(l2FdId).setSegmentationId(segmentationId).build();
+        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.provider.physical.networks.as.l2.flood.domains.ProviderPhysicalNetworkAsL2FloodDomain provNetAsL2Fd = new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.provider.physical.networks.as.l2.flood.domains.ProviderPhysicalNetworkAsL2FloodDomainBuilder().setTenantId(
+                tenantId)
+            .setL2FloodDomainId(new L2FloodDomainId(l2FdId.getValue()))
+            .setSegmentationId(segmentationId)
+            .build();
         wTx.put(LogicalDatastoreType.OPERATIONAL,
                 NeutronGbpIidFactory.providerPhysicalNetworkAsL2FloodDomainIid(tenantId, l2FdId), provNetAsL2Fd);
     }
@@ -121,6 +183,31 @@ public class NeutronNetworkAware implements NeutronAware<Network> {
         LOG.trace("deleted network - {}", network);
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         TenantId tenantId = new TenantId(network.getTenantId().getValue());
+        ContextId id = new ContextId(network.getUuid().getValue());
+        Optional<ForwardingContext> potentialL2Fd = DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION,
+                IidFactory.l2FloodDomainIid(tenantId, id), rwTx);
+        if (!potentialL2Fd.isPresent()) {
+            LOG.warn("Illegal state - l2-flood-domain {} does not exist.", id.getValue());
+            return;
+        }
+        Optional<ForwardingContext> potentialL2Bd = DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION,
+                IidFactory.l2BridgeDomainIid(tenantId, id), rwTx);
+        if (!potentialL2Bd.isPresent()) {
+            LOG.warn("Illegal state - l2-bridge-domain {} does not exist.", id.getValue());
+            return;
+        }
+        Optional<ForwardingContext> potentialL3Ctx = DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION,
+                IidFactory.l3ContextIid(tenantId, id), rwTx);
+        if (!potentialL3Ctx.isPresent()) {
+            LOG.warn("Illegal state - l3-context {} does not exist.", id.getValue());
+            return;
+        }
+        removeTenantNetworkDomains(network, tenantId, rwTx);
+        DataStoreHelper.submitToDs(rwTx);
+    }
+
+    @Deprecated
+    private void removeTenantNetworkDomains(Network network, TenantId tenantId, ReadWriteTransaction rwTx) {
         L2FloodDomainId l2FdId = new L2FloodDomainId(network.getUuid().getValue());
         Optional<L2FloodDomain> potentialL2Fd = DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.l2FloodDomainIid(tenantId, l2FdId), rwTx);
@@ -136,8 +223,12 @@ public class NeutronNetworkAware implements NeutronAware<Network> {
             LOG.warn("Illegal state - l2-bridge-domain {} does not exist.", l2BdId.getValue());
             return;
         }
-
-        DataStoreHelper.submitToDs(rwTx);
+        L3ContextId l3CtxId = new L3ContextId(l2FdId);
+        Optional<L3Context> potentialL3Ctx = DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION,
+                IidFactory.l3ContextIid(tenantId, l3CtxId), rwTx);
+        if (!potentialL3Ctx.isPresent()) {
+            LOG.warn("Illegal state - l3-context {} does not exist.", l3CtxId.getValue());
+            return;
+        }
     }
-
 }

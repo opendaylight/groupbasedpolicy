@@ -13,6 +13,7 @@ import static org.mockito.Mockito.mock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
@@ -38,11 +39,13 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2FloodDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.RuleName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SelectorName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubnetId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.UniqueId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey;
@@ -51,6 +54,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.LocationProvider;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.location.provider.ProviderAddressEndpointLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.IpPrefixType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.ForwardingByTenant;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.ForwardingContext;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.NetworkDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ActionDefinition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinition;
@@ -220,6 +226,14 @@ public class IidFactoryTest {
 
     @Test
     public void testL2FloodDomainIid() {
+        ContextId id = mock(ContextId.class);
+        InstanceIdentifier<ForwardingContext> identifier = IidFactory.l2FloodDomainIid(tenantId, id);
+        Assert.assertEquals(id, InstanceIdentifier.keyOf(identifier).getContextId());
+        Assert.assertEquals(tenantId, identifier.firstKeyOf(ForwardingByTenant.class).getTenantId());
+    }
+
+    @Test
+    public void testL2FloodDomainIid_tenantApi() {
         L2FloodDomainId l2FloodDomainId = mock(L2FloodDomainId.class);
         InstanceIdentifier<L2FloodDomain> identifier = IidFactory.l2FloodDomainIid(tenantId, l2FloodDomainId);
         Assert.assertEquals(l2FloodDomainId, InstanceIdentifier.keyOf(identifier).getId());
@@ -228,6 +242,14 @@ public class IidFactoryTest {
 
     @Test
     public void testL2BridgeDomainIid() {
+        ContextId id = mock(ContextId.class);
+        InstanceIdentifier<ForwardingContext> identifier = IidFactory.l2BridgeDomainIid(tenantId, id);
+        Assert.assertEquals(id, InstanceIdentifier.keyOf(identifier).getContextId());
+        Assert.assertEquals(tenantId, identifier.firstKeyOf(ForwardingByTenant.class).getTenantId());
+    }
+
+    @Test
+    public void testL2BridgeDomainIid_tenantApi() {
         L2BridgeDomainId l2BridgeDomainId = mock(L2BridgeDomainId.class);
         InstanceIdentifier<L2BridgeDomain> identifier = IidFactory.l2BridgeDomainIid(tenantId, l2BridgeDomainId);
         Assert.assertEquals(l2BridgeDomainId, InstanceIdentifier.keyOf(identifier).getId());
@@ -236,6 +258,14 @@ public class IidFactoryTest {
 
     @Test
     public void testL3ContextIid() {
+        ContextId id = mock(ContextId.class);
+        InstanceIdentifier<ForwardingContext> identifier = IidFactory.l3ContextIid(tenantId, id);
+        Assert.assertEquals(id, InstanceIdentifier.keyOf(identifier).getContextId());
+        Assert.assertEquals(tenantId, identifier.firstKeyOf(ForwardingByTenant.class).getTenantId());
+    }
+
+    @Test
+    public void testL3ContextIid_tenantApi() {
         L3ContextId l3ContextId = mock(L3ContextId.class);
         InstanceIdentifier<L3Context> identifier = IidFactory.l3ContextIid(tenantId, l3ContextId);
         Assert.assertEquals(l3ContextId, InstanceIdentifier.keyOf(identifier).getId());
@@ -287,6 +317,14 @@ public class IidFactoryTest {
 
     @Test
     public void testSubnetIid() {
+        NetworkDomainId id = mock(NetworkDomainId.class);
+        InstanceIdentifier<NetworkDomain> identifier = IidFactory.subnetIid(tenantId, id);
+        Assert.assertEquals(tenantId, identifier.firstKeyOf(ForwardingByTenant.class).getTenantId());
+        Assert.assertEquals(id, identifier.firstKeyOf(NetworkDomain.class).getNetworkDomainId());
+    }
+
+    @Test
+    public void testSubnetIid_tenantApi() {
         SubnetId subnetId = mock(SubnetId.class);
         InstanceIdentifier<Subnet> identifier = IidFactory.subnetIid(tenantId, subnetId);
         Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class).getId());

@@ -22,8 +22,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.containment.endpoints.ContainmentEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.containment.endpoints.ContainmentEndpointKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.parent.containment.endpoint._case.ParentContainmentEndpoint;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.parent.containment.endpoint._case.ParentContainmentEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.relative.location.RelativeLocations;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.relative.location.relative.locations.ExternalLocation;
@@ -41,6 +39,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2FloodDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.RuleName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SelectorName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
@@ -59,11 +58,19 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_l
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.LocationProviderKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.location.provider.ProviderAddressEndpointLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.location.provider.ProviderAddressEndpointLocationKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L2BridgeDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L2FloodDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.AddressType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.ContextType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.Forwarding;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.ForwardingByTenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.ForwardingByTenantKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.ForwardingContext;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.ForwardingContextKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.NetworkDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.NetworkDomainKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.SubjectFeatureDefinitions;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.Tenants;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
@@ -74,15 +81,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinitionKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.TenantKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ForwardingContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Policy;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomainKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomainKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3Context;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3ContextKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.SubnetKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.Contract;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ContractKey;
@@ -122,6 +124,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.statistics
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.statistics.store.rev151215.statistics.store.StatisticRecord;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.statistics.store.rev151215.statistics.store.StatisticRecordKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier.InstanceIdentifierBuilder;
 
 public class IidFactory {
 
@@ -255,29 +258,78 @@ public class IidFactory {
             .build();
     }
 
-    public static InstanceIdentifier<L2FloodDomain> l2FloodDomainIid(TenantId tenantId,
+    public static InstanceIdentifier<NetworkDomain> subnetIid(TenantId tenantId, NetworkDomainId id) {
+        NetworkDomainKey domainKey = new NetworkDomainKey(id, Subnet.class);
+        return createForwardingByTenantIidBuilder(tenantId).child(NetworkDomain.class, domainKey).build();
+    }
+
+    public static InstanceIdentifier<ForwardingContext> l2FloodDomainIid(TenantId tenantId, ContextId id) {
+        ForwardingContextKey domainKey = new ForwardingContextKey(id, L2FloodDomain.class);
+        return createForwardingByTenantIidBuilder(tenantId).child(ForwardingContext.class, domainKey).build();
+    }
+
+    public static InstanceIdentifier<ForwardingContext> l2BridgeDomainIid(TenantId tenantId, ContextId id) {
+        ForwardingContextKey domainKey = new ForwardingContextKey(id, L2BridgeDomain.class);
+        return createForwardingByTenantIidBuilder(tenantId).child(ForwardingContext.class, domainKey).build();
+    }
+
+    public static InstanceIdentifier<ForwardingContext> l3ContextIid(TenantId tenantId, ContextId id) {
+        ForwardingContextKey domainKey = new ForwardingContextKey(id, L3Context.class);
+        return createForwardingByTenantIidBuilder(tenantId).child(ForwardingContext.class, domainKey).build();
+    }
+
+    private static InstanceIdentifierBuilder<ForwardingByTenant> createForwardingByTenantIidBuilder(TenantId tenantId) {
+        return InstanceIdentifier.builder(Forwarding.class).child(ForwardingByTenant.class,
+                new ForwardingByTenantKey(tenantId));
+    }
+
+    @Deprecated
+    public static InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomain> l2FloodDomainIid(TenantId tenantId,
             L2FloodDomainId l2FloodDomainId) {
         return InstanceIdentifier.builder(Tenants.class)
             .child(Tenant.class, new TenantKey(tenantId))
-            .child(ForwardingContext.class)
-            .child(L2FloodDomain.class, new L2FloodDomainKey(l2FloodDomainId))
+            .child(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ForwardingContext.class)
+            .child(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomain.class, new L2FloodDomainKey(l2FloodDomainId))
             .build();
     }
 
-    public static InstanceIdentifier<L2BridgeDomain> l2BridgeDomainIid(TenantId tenantId,
+    @Deprecated
+    public static InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomain> l2BridgeDomainIid(TenantId tenantId,
             L2BridgeDomainId l2BridgeDomainId) {
         return InstanceIdentifier.builder(Tenants.class)
             .child(Tenant.class, new TenantKey(tenantId))
-            .child(ForwardingContext.class)
-            .child(L2BridgeDomain.class, new L2BridgeDomainKey(l2BridgeDomainId))
+            .child(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ForwardingContext.class)
+            .child(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomain.class, new L2BridgeDomainKey(l2BridgeDomainId))
             .build();
     }
 
-    public static InstanceIdentifier<L3Context> l3ContextIid(TenantId tenantId, L3ContextId l3ContextId) {
+    @Deprecated
+    public static InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3Context> l3ContextIid(TenantId tenantId, L3ContextId l3ContextId) {
         return InstanceIdentifier.builder(Tenants.class)
             .child(Tenant.class, new TenantKey(tenantId))
-            .child(ForwardingContext.class)
-            .child(L3Context.class, new L3ContextKey(l3ContextId))
+            .child(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ForwardingContext.class)
+            .child(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3Context.class, new L3ContextKey(l3ContextId))
+            .build();
+    }
+
+    @Deprecated
+    public static InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet> subnetIid(
+            TenantId tenantId, SubnetId subnetId) {
+        return InstanceIdentifier.builder(Tenants.class)
+            .child(Tenant.class, new TenantKey(tenantId))
+            .child(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ForwardingContext.class)
+            .child(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet.class,
+                    new SubnetKey(subnetId))
+            .build();
+    }
+
+    @Deprecated
+    public static InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet> subnetWildcardIid(
+            TenantId tenantId) {
+        return InstanceIdentifier.builder(Tenants.class)
+            .child(Tenant.class, new TenantKey(tenantId))
+            .child(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.ForwardingContext.class)
+            .child(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet.class)
             .build();
     }
 
@@ -315,22 +367,6 @@ public class IidFactory {
 
     public static InstanceIdentifier<Endpoints> endpointsIidWildcard() {
         return ENDPOINTS_IID;
-    }
-
-    public static InstanceIdentifier<Subnet> subnetIid(TenantId tenantId, SubnetId subnetId) {
-        return InstanceIdentifier.builder(Tenants.class)
-            .child(Tenant.class, new TenantKey(tenantId))
-            .child(ForwardingContext.class)
-            .child(Subnet.class, new SubnetKey(subnetId))
-            .build();
-    }
-
-    public static InstanceIdentifier<Subnet> subnetWildcardIid(TenantId tenantId) {
-        return InstanceIdentifier.builder(Tenants.class)
-            .child(Tenant.class, new TenantKey(tenantId))
-            .child(ForwardingContext.class)
-            .child(Subnet.class)
-            .build();
     }
 
     public static InstanceIdentifier<FollowedEndpointGroup> followedEndpointgroupIid(RendererName rendererName,

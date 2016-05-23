@@ -22,10 +22,16 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Name;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubnetId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L2FloodDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.SubnetAugmentForwarding;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.SubnetAugmentForwardingBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.has.subnet.SubnetBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.NetworkDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.NetworkDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.SubnetBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.networks.attributes.networks.Network;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.Subnets;
@@ -71,10 +77,11 @@ public class NeutronSubnetAware implements
         }
 
         Network networkOfSubnet = potentialNetwork.get();
-        Subnet subnet = null;
+
+        NetworkDomain subnetDomain = null;
         if (NetworkUtils.isProviderPhysicalNetwork(networkOfSubnet)) {
             // add virtual router IP only in case it is provider physical network
-            subnet = createSubnet(neutronSubnet, neutronSubnet.getGatewayIp());
+            subnetDomain = createSubnet(neutronSubnet, neutronSubnet.getGatewayIp());
             IpAddress gatewayIp = neutronSubnet.getGatewayIp();
             boolean registeredDefaultRoute = epRegistrator.registerExternalL3PrefixEndpoint(MappingUtils.DEFAULT_ROUTE,
                     new L3ContextId(neutronSubnet.getNetworkId().getValue()), gatewayIp, tenantId);
@@ -84,35 +91,79 @@ public class NeutronSubnetAware implements
                 rwTx.cancel();
                 return;
             }
-        } else if (NetworkUtils.isRouterExternal(networkOfSubnet)) {
-            // virtual router IP is not set and it will be set when router gateway port is set
-            subnet = createSubnet(neutronSubnet, null);
         } else {
-            // virtual router IP is not set and it will be set when router port is attached to
-            // network
-            subnet = createSubnet(neutronSubnet, null);
+            // virtual router IP is not set and it will be set when router gateway port is set
+            // or when a router port is attached to a network
+            subnetDomain = createSubnet(neutronSubnet, null);
         }
-        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.subnetIid(tenantId, subnet.getId()), subnet, true);
-
+        processTenantSubnet(neutronSubnet, networkOfSubnet, tenantId, rwTx);
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.subnetIid(tenantId, subnetDomain.getNetworkDomainId()), subnetDomain, true);
         DataStoreHelper.submitToDs(rwTx);
     }
 
-    public static Subnet createSubnet(
-            org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet neutronSubnet,
+    public static NetworkDomain createSubnet(
+            org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet subnet,
             IpAddress virtualRouterIp) {
-        SubnetBuilder subnetBuilder = new SubnetBuilder();
-        subnetBuilder.setId(new SubnetId(neutronSubnet.getUuid().getValue()));
-        subnetBuilder.setParent(new ContextId(neutronSubnet.getNetworkId().getValue()));
-        if (!Strings.isNullOrEmpty(neutronSubnet.getName())) {
+        SubnetBuilder sb = new SubnetBuilder();
+        sb.setIpPrefix(Utils.createIpPrefix(subnet.getCidr()));
+        sb.setVirtualRouterIp(virtualRouterIp);
+        NetworkDomainBuilder ndb = new NetworkDomainBuilder();
+        if (!Strings.isNullOrEmpty(subnet.getName())) {
             try {
-                subnetBuilder.setName(new Name(neutronSubnet.getName()));
+                ndb.setName(new Name(subnet.getName()));
             } catch (Exception e) {
-                LOG.info("Name '{}' of Neutron Subnet '{}' is ignored.", neutronSubnet.getName(),
-                        neutronSubnet.getUuid().getValue());
+                LOG.info("Name '{}' of Neutron Subnet '{}' is ignored.", subnet.getName(), subnet.getUuid().getValue());
                 LOG.debug("Name exception", e);
             }
         }
-        subnetBuilder.setIpPrefix(Utils.createIpPrefix(neutronSubnet.getCidr()));
+        ndb.setNetworkDomainId(new NetworkDomainId(subnet.getUuid().getValue()));
+        ndb.setNetworkDomainType(MappingUtils.SUBNET);
+        ndb.setParent(MappingUtils.createParent(new NetworkDomainId(subnet.getUuid().getValue()), L2FloodDomain.class));
+        ndb.addAugmentation(SubnetAugmentForwarding.class, new SubnetAugmentForwardingBuilder().setSubnet(sb.build())
+            .build());
+        return ndb.build();
+    }
+
+    @Deprecated
+    private void processTenantSubnet(org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet neutronSubnet, Network networkOfSubnet, TenantId tenantId, ReadWriteTransaction rwTx) {
+        Subnet subnet = null;
+        if (NetworkUtils.isProviderPhysicalNetwork(networkOfSubnet)) {
+            // add virtual router IP only in case it is provider physical network
+            subnet = createTenantSubnet(neutronSubnet, neutronSubnet.getGatewayIp());
+            IpAddress gatewayIp = neutronSubnet.getGatewayIp();
+            boolean registeredDefaultRoute = epRegistrator.registerExternalL3PrefixEndpoint(MappingUtils.DEFAULT_ROUTE,
+                    new L3ContextId(neutronSubnet.getNetworkId().getValue()), gatewayIp, tenantId);
+            if (!registeredDefaultRoute) {
+                LOG.warn("Could not add EndpointL3Prefix as default route. Subnet within provider physical network {}",
+                        neutronSubnet);
+                rwTx.cancel();
+                return;
+            }
+        } else {
+            // virtual router IP is not set and it will be set when router gateway port is set
+            // or when a router port is attached to a network
+            subnet = createTenantSubnet(neutronSubnet, null);
+        }
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.subnetIid(tenantId, subnet.getId()), subnet, true);
+    }
+
+    @Deprecated
+    public static Subnet createTenantSubnet(
+            org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet subnet,
+            IpAddress virtualRouterIp) {
+        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.SubnetBuilder subnetBuilder = new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.SubnetBuilder();
+        subnetBuilder.setId(new SubnetId(subnet.getUuid().getValue()));
+        subnetBuilder.setParent(new ContextId(subnet.getNetworkId().getValue()));
+        if (!Strings.isNullOrEmpty(subnet.getName())) {
+            try {
+                subnetBuilder.setName(new Name(subnet.getName()));
+            } catch (Exception e) {
+                LOG.info("Name '{}' of Neutron Subnet '{}' is ignored.", subnet.getName(),
+                        subnet.getUuid().getValue());
+                LOG.debug("Name exception", e);
+            }
+        }
+        subnetBuilder.setIpPrefix(Utils.createIpPrefix(subnet.getCidr()));
         subnetBuilder.setVirtualRouterIp(virtualRouterIp);
         return subnetBuilder.build();
     }
@@ -132,8 +183,24 @@ public class NeutronSubnetAware implements
             Neutron oldNeutron, Neutron newNeutron) {
         LOG.trace("deleted subnet - {}", neutronSubnet);
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
-        SubnetId subnetId = new SubnetId(neutronSubnet.getUuid().getValue());
+        NetworkDomainId subnetId = new NetworkDomainId(neutronSubnet.getUuid().getValue());
         TenantId tenantId = new TenantId(neutronSubnet.getTenantId().getValue());
+        Optional<NetworkDomain> potentialSubnetDomain = DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION,
+                IidFactory.subnetIid(tenantId, subnetId), rwTx);
+        if (!potentialSubnetDomain.isPresent()) {
+            LOG.warn("Illegal state - subnet network domain {} does not exist.", subnetId.getValue());
+            rwTx.cancel();
+            return;
+        }
+        removeTenantSubnet(tenantId, new SubnetId(subnetId), rwTx);
+
+        // TODO remove default gateway EP in case when subnet is in provider physical network
+
+        DataStoreHelper.submitToDs(rwTx);
+    }
+
+    @Deprecated
+    private void removeTenantSubnet(TenantId tenantId, SubnetId subnetId, ReadWriteTransaction rwTx) {
         Optional<Subnet> potentialSubnet = DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.subnetIid(tenantId, subnetId), rwTx);
         if (!potentialSubnet.isPresent()) {
@@ -141,10 +208,5 @@ public class NeutronSubnetAware implements
             rwTx.cancel();
             return;
         }
-
-        // TODO remove default gateway EP in case when subnet is in provider physical network
-
-        DataStoreHelper.submitToDs(rwTx);
     }
-
 }
