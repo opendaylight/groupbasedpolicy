@@ -21,13 +21,10 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
-import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.cache.DSTreeBasedCache;
-import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.cache.EpPolicyTemplateCacheKey;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicyBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointPolicyTemplateBySgt;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 
 /**
@@ -38,10 +35,11 @@ public class RendererConfigurationListenerImplTest {
 
     private static final RendererName RENDERER_NAME = new RendererName("renderer1");
     private final RendererPolicy policy1;
+    private final RendererPolicy policy2;
     @Mock
     private DataBroker dataBroker;
     @Mock
-    private DSTreeBasedCache<EndpointPolicyTemplateBySgt, EpPolicyTemplateCacheKey, Sgt> cache;
+    private PolicyManagerImpl policyManager;
     @Mock
     private ListenerRegistration<RendererConfigurationListenerImpl> listenerRegistration;
     @Mock
@@ -53,6 +51,7 @@ public class RendererConfigurationListenerImplTest {
 
     public RendererConfigurationListenerImplTest() {
         policy1 = new RendererPolicyBuilder().build();
+        policy2 = new RendererPolicyBuilder().build();
     }
 
     @Before
@@ -61,7 +60,7 @@ public class RendererConfigurationListenerImplTest {
                 Matchers.<DataTreeIdentifier<RendererPolicy>>any(),
                 Matchers.<RendererConfigurationListenerImpl>any()))
                 .thenReturn(listenerRegistration);
-        listener = new RendererConfigurationListenerImpl(dataBroker, RENDERER_NAME, cache);
+        listener = new RendererConfigurationListenerImpl(dataBroker, RENDERER_NAME, policyManager);
     }
 
     @After
@@ -72,6 +71,7 @@ public class RendererConfigurationListenerImplTest {
     @Test
     public void testOnDataTreeChanged_add() throws Exception {
         Mockito.when(rootNode.getDataAfter()).thenReturn(policy1);
+        Mockito.when(rootNode.getDataBefore()).thenReturn(policy2);
         Mockito.when(rootNode.getModificationType()).thenReturn(DataObjectModification.ModificationType.WRITE);
         Mockito.when(dataTreeModification.getRootNode()).thenReturn(rootNode);
 

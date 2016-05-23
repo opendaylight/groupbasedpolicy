@@ -1,4 +1,4 @@
-package org.opendaylight.yang.gen.v1.urn.ios.rev160516;
+package org.opendaylight.yang.gen.v1.urn.ios.rev160308;
 
 
 /**
@@ -10,9 +10,9 @@ package org.opendaylight.yang.gen.v1.urn.ios.rev160516;
  * loss of user code.
  *
  */
-public class QosValueTypeBuilder {
+public class PrecedenceTypeBuilder {
 
-    public static QosValueType getDefaultInstance(java.lang.String defaultValue) {
+    public static PrecedenceType getDefaultInstance(java.lang.String defaultValue) {
         throw new java.lang.UnsupportedOperationException("Not yet implemented");
     }
 

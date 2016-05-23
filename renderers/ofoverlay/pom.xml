@@ -21,7 +21,6 @@
     <ovsdb.version>1.3.0-SNAPSHOT</ovsdb.version>
     <openflowplugin.version>0.3.0-SNAPSHOT</openflowplugin.version>
     <liblldp.version>0.11.0-SNAPSHOT</liblldp.version>
-    <sfc.version>0.3.0-SNAPSHOT</sfc.version>
   </properties>
 
   <dependencies>
@@ -59,7 +58,6 @@
     <dependency>
       <groupId>org.opendaylight.sfc</groupId>
       <artifactId>sfc-provider</artifactId>
-      <version>${sfc.version}</version>
     </dependency>
     <!-- testing dependencies -->
     <dependency>

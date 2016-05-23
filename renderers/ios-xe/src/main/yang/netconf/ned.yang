@@ -21,7 +21,7 @@ module ned {
         "This file was adapted to be parsed by yangtools for groupbasedpolicy project purpose";
 
     revision
-        2016-05-16;
+        2016-03-8;
 
 /// ========================================================================
 /// typedefs
@@ -1758,6 +1758,173 @@ module ned {
         }
     }
 
+    grouping interface-atm-grouping {
+        // Removed body
+    }
+
+    grouping interface-cellular-grouping {
+        //interface * / dialer
+        container dialer {
+            leaf in-band {
+                type empty;
+            }
+            leaf idle-timeout {
+                type uint32;
+            }
+            leaf string {
+                type string;
+            }
+            leaf watch-group {
+                type uint32;
+            }
+        }
+        //interface * / async
+        container async {
+            leaf mode {
+                type enumeration {
+                    enum interactive;
+                }
+            }
+        }
+    }
+
+    grouping interface-common-grouping {
+        // interface * / service-policy
+        container service-policy {
+            tailf:info "Configure QoS Service Policy";
+            description "Configure QoS Service Policy";
+            leaf history {
+                tailf:cli-full-command;
+                tailf:info "Keep history of QoS metrics";
+        	    description "Keep history of QoS metrics";
+                type empty;
+            }
+            leaf "input" {
+                tailf:cli-full-command;
+                tailf:info "Assign policy-map to the input of an interface";
+                description "Assign policy-map to the input of an interface";
+                type string {
+                    tailf:info "WORD;;policy-map name";
+                }
+                tailf:non-strict-leafref {
+                    path "/ios:native/policy-map/name";
+                }
+            }
+            leaf "output" {
+                tailf:cli-full-command;
+                tailf:info "Assign policy-map to the output of an interface";
+                description "Assign policy-map to the output of an interface";
+                type string {
+                    tailf:info "WORD;;policy-map name";
+                }
+                tailf:non-strict-leafref {
+                    path "/ios:native/policy-map/name";
+                }
+            }
+            container "type" {
+                tailf:info "Configure CPL Service Policy";
+                description "Configure CPL Service Policy";
+                container performance-monitor {
+                    tailf:info "Configure media monitor service-policy type";
+                    description "Configure media monitor service-policy type";
+                    tailf:cli-sequence-commands;
+                    tailf:cli-compact-syntax;
+                    leaf direction {
+                        tailf:cli-drop-node-name;
+                        type enumeration {
+                            enum "input" {
+                                tailf:info "Assign policy-map to the input of an interfcae";
+                            }
+                            enum "output" {
+                                tailf:info "Assign policy-map to the output of an interfcae";
+                            }
+                        }
+                    }
+                    leaf name {
+                        tailf:cli-drop-node-name;
+                        type string {
+                            tailf:info "WORD;;policy-map name";
+                        }
+                        tailf:non-strict-leafref {
+                            path "/ios:native/policy-map/name";
+                        }
+                    }
+                }
+                // interface * / service-policy type * / service-chain
+                container service-chain {
+                    tailf:info "Configure Service-chain Service Policy";
+                    description "Configure Service-chain Service Policy";
+                    tailf:cli-sequence-commands;
+                    tailf:cli-compact-syntax;
+                    leaf direction {
+                        tailf:cli-drop-node-name;
+                        type enumeration {
+                            enum "input" {
+                                tailf:info "Assign policy-map to the input of an interfcae";
+                            }
+                            enum "output" {
+                                tailf:info "Assign policy-map to the output of an interfcae";
+                            }
+                        }
+                    }
+                    leaf name {
+                        tailf:cli-drop-node-name;
+                        type string {
+                            tailf:info "WORD;;policy-map name";
+                        }
+                        tailf:non-strict-leafref {
+                            path "/ios:native/policy-map/name";
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    grouping interface-ethernet-grouping {
+        // Removed body
+    }
+
+    grouping interface-grouping {
+        // Removed body
+    }
+
+    grouping interface-overlay-grouping {
+        // Removed body
+    }
+
+    grouping interface-pointtopoint-grouping {
+        // Removed body
+    }
+
+    grouping interface-pseudowire-grouping {
+        // Removed body
+    }
+
+    grouping interface-switch-grouping {
+        // Removed body
+    }
+
+    grouping interface-tunnel-grouping {
+        // Removed body
+    }
+
+    grouping interface-zone-member-grouping {
+        // interface * / zone-member
+        container zone-member {
+            tailf:info "Apply zone name";
+            description "Apply zone name";
+            leaf security {
+                tailf:info "Security zone";
+                description "Security zone";
+                type string;
+                tailf:non-strict-leafref {
+                    path "/ios:native/zone/security/id";
+                }
+            }
+        }
+    }
+
     grouping police-action-drop-grouping {
         leaf drop {
             tailf:info "drop packet";
@@ -2492,6 +2659,10 @@ module ned {
         }
     }
 
+    grouping pseudowire-grouping {
+        // Removed body
+    }
+
     grouping random-detect-grouping {
         leaf min-threshold {
             tailf:cli-drop-node-name;
@@ -2518,6 +2689,7 @@ module ned {
         }
     }
 
+
 /// ========================================================================
 /// native
 /// ========================================================================
@@ -2542,6 +2714,766 @@ module ned {
                 type empty;
             }
         }
+
+/// ========================================================================
+/// interface
+/// ========================================================================
+
+    container interface {
+        tailf:info "Configure interfaces";
+        description "Configure interfaces";
+        tailf:cli-diff-dependency "/ios:native/vrf";
+        tailf:cli-explicit-exit;
+
+        // interface AppNav-Compress
+        list AppNav-Compress {
+            tailf:info "Service-Context Virtual Interface Compress";
+            description "Service-Context Virtual Interface Compress";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+            tailf:cli-suppress-key-abbreviation;
+            key name;
+            leaf name {
+                type uint16 {
+                    tailf:info "<1-1000>;;AppNav-Compress interface number";
+                    range "1..1000";
+                }
+            }
+            uses interface-common-grouping;
+        }
+        // interface AppNav-UnCompress
+        list AppNav-UnCompress {
+            tailf:info "Service-Context Virtual Interface UnCompress";
+            description "Service-Context Virtual Interface UnCompress";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+            tailf:cli-suppress-key-abbreviation;
+            key name;
+            leaf name {
+                type uint16 {
+                    tailf:info "<1-1000>;;AppNav-UnCompress interface number";
+                    range "1..1000";
+                }
+            }
+            uses interface-common-grouping;
+        }
+
+        // interface ATM #
+        list ATM {
+            tailf:info "ATM interface";
+            description "ATM interface";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+            tailf:cli-suppress-key-abbreviation;
+            key name;
+            leaf name {
+                type string {
+                    tailf:info "<slot>/<subslot>/<port>;;ATM interface number";
+                    pattern "([0-9]/){2}([0-9]|(ima[0-9]))(:[0-9])?";
+                }
+            }
+            uses interface-atm-grouping;
+        }
+
+        // subinterface ATM #.#
+        container ATM-subinterface {
+            tailf:cli-drop-node-name;
+            list ATM {
+                tailf:cli-allow-join-with-key {
+                    tailf:cli-display-joined;
+                }
+                tailf:cli-mode-name "config-subif";
+                tailf:cli-suppress-key-abbreviation;
+                key name;
+                leaf name {
+                    type string {
+                        pattern "([0-9]/){2}[0-9]\.([0-9]/){3}[0-9]";
+                    }
+                }
+                uses interface-atm-grouping;
+            }
+        }
+
+        // interface ATM-ACR #
+        list ATM-ACR {
+            tailf:info "ATM-ACR interface";
+            description "ATM-ACR interface";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+            tailf:cli-suppress-key-abbreviation;
+            key name;
+            leaf name {
+                type string {
+                    tailf:info "<slot>/<subslot>/<port>;;ATM-ACR interface number";
+                    pattern "[0-9]";
+                }
+            }
+            uses interface-atm-grouping;
+        }
+
+        // subinterface ATM-ACR #.#
+        container ATM-ACRsubinterface {
+            tailf:cli-drop-node-name;
+            list ATM-ACR {
+                tailf:cli-allow-join-with-key {
+                    tailf:cli-display-joined;
+                }
+                tailf:cli-mode-name "config-subif";
+                tailf:cli-suppress-key-abbreviation;
+                key name;
+                leaf name {
+                    type string {
+                        pattern "[0-9]\.([0-9]/){3}[0-9]";
+                    }
+                }
+                uses interface-atm-grouping;
+            }
+        }
+        // interface BDI
+        list BDI {
+            tailf:info "Bridge-Domain interface";
+            description "Bridge-Domain interface";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+            key name;
+            leaf name {
+                type string {
+                    // pattern "([0-9])+/([0-9])+(/([0-9])+)?";
+                    tailf:info "<1-16000>;;BDI interface number";
+                }
+            }
+            uses interface-common-grouping;
+        }
+
+        // interface CEM #
+        list CEM {
+            tailf:info "Circuit Emulation interface";
+            description "Circuit Emulation interface";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+            tailf:cli-suppress-key-abbreviation;
+            key name;
+            leaf name {
+                type string {
+                    tailf:info "<slot>/<port>;;CEM interface number";
+                    pattern "([0-9]/){2}[0-9]";
+                }
+            }
+            uses interface-atm-grouping;
+        }
+
+        // interface CEM-ACR #
+        list CEM-ACR {
+            tailf:info "Circuit Emulation interface";
+            description "Circuit Emulation interface";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+            tailf:cli-suppress-key-abbreviation;
+            key name;
+            leaf name {
+                type uint8 {
+                    tailf:info "<0-255>;;CEM-ACR interface number";
+                    range "0..255";
+                }
+            }
+            uses interface-atm-grouping;
+        }
+
+        // interface Embedded-Service-Engine
+        list Embedded-Service-Engine {
+            tailf:info "cisco embedded service engine module";
+            description "cisco embedded service engine module";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+            // tailf:cli-full-command;
+            key name;
+            leaf name {
+                type string {
+                    tailf:info "<0-2>/<0-0>;;Embedded-Service-Engine interface number";
+                }
+            }
+            uses interface-common-grouping;
+        }
+
+        // interface FastEthernet
+        list FastEthernet {
+            tailf:info "FastEthernet IEEE 802.3";
+            description "FastEthernet IEEE 802.3";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+                // tailf:cli-full-command;
+            key name;
+            leaf name {
+                type string {
+                    //pattern "([0-9])+(/([0-9])+)*";
+                    tailf:info "<0-66>/<0-128>;;FastEthernet interface number";
+                }
+            }
+            uses interface-ethernet-grouping;
+            uses interface-common-grouping;
+            uses interface-zone-member-grouping;
+            uses interface-switch-grouping; //CATALYST
+        }
+
+        // interface GigabitEthernet
+        list GigabitEthernet {
+            tailf:info "GigabitEthernet IEEE 802.3z";
+            description "GigabitEthernet IEEE 802.3z";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+                // tailf:cli-full-command;
+            key name;
+            leaf name {
+                type string {
+                    //pattern "([0-9])+(/([0-9])+)*";
+                    tailf:info "<0-66>/<0-128>;;"+
+                        "GigabitEthernet interface number";
+                }
+            }
+            leaf media-type {
+                tailf:info "Media type";
+                description "Media type";
+                type enumeration {
+                    enum auto-select {
+                        tailf:info "Use whichever connector is attached";
+                    }
+                    enum rj45 {
+                        tailf:info "Copper";
+                    }
+                    enum sfp {
+                        tailf:info "Fiber";
+                    }
+                }
+            }
+            leaf port-type {
+                //FIXME: tailf:info
+                //FIXME: 3600 only?
+                type enumeration {
+                    enum nni;
+                }
+            }
+            uses interface-ethernet-grouping;
+            uses interface-common-grouping;
+            uses interface-zone-member-grouping;
+            uses interface-switch-grouping; //CATALYST
+        }
+
+        // interface TenGigabitEthernet
+        list TenGigabitEthernet {
+            tailf:info "Ten Gigabit Ethernet";
+            description "Ten Gigabit Ethernet";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+                // tailf:cli-full-command;
+            key name;
+            leaf name {
+                type string {
+                    //pattern "([0-9])+(/([0-9])+)*";
+                    tailf:info "<0-66>/<0-128>;;"+
+                        "TenGigabitEthernet interface number";
+                }
+            }
+            leaf media-type {
+                tailf:info "Media type";
+                description "Media type";
+                type enumeration {
+                    enum auto-select {
+                        tailf:info "Use whichever connector is attached";
+                    }
+                    enum rj45 {
+                        tailf:info "Copper";
+                    }
+                        enum sfp {
+                        tailf:info "Fiber";
+                    }
+                }
+            }
+            leaf port-type {
+                //FIXME: tailf:info
+                //FIXME: 3600 only?
+                type enumeration {
+                    enum nni;
+                }
+            }
+            uses interface-ethernet-grouping;
+            uses interface-common-grouping;
+            uses interface-zone-member-grouping;
+            uses interface-switch-grouping; //CATALYST
+        }
+
+        // interface Loopback
+        list Loopback {
+            // pvh hide Loopback interfaces
+            //    tailf:hidden full;
+            tailf:info "Loopback interface";
+            description "Loopback interface";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+                // tailf:cli-full-command;
+            key name;
+            leaf name {
+                type string {
+                    // pattern "([0-9])+/([0-9])+(/([0-9])+)?";
+                    tailf:info "<0-2147483647>;;Loopback interface number";
+                }
+            }
+            uses interface-common-grouping;
+        }
+
+        list nve {
+            tailf:info "Network virtualization endpoint interface";
+            description "Network virtualization endpoint interface";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+            key name;
+            leaf name {
+                type uint16 {
+                    tailf:info "<1-4096>;;nve interface number";
+                    range "1..4096";
+                }
+            }
+
+            container source-interface {
+                tailf:info "Specify source interface for NVE";
+                description "Specify source interface for NVE";
+                // FIXME: tailf:cli-diff-dependency "/ios:native/interface";
+                uses interface-grouping;
+            }
+            container member {
+                tailf:cli-incomplete-command;
+                tailf:cli-sequence-commands;
+                list vni {
+                    tailf:info "Configure VNI information";
+                    description "Configure VNI information";
+                    tailf:cli-sequence-commands;
+                    tailf:cli-compact-syntax;
+
+                    key vni-range;
+                    leaf vni-range {
+                        type string {
+                            tailf:info "WORD;;VNI range or instance between 4096-16777215 example: 6010-6030 or 7115";
+                        }
+                    }
+                    container mcast-group {
+                        tailf:cli-incomplete-command;
+                        tailf:cli-sequence-commands;
+                        leaf multicast-group-min {
+                            tailf:cli-drop-node-name;
+                            tailf:info "Starting Multicast Group IPv4 Address";
+                            description "Starting Multicast Group IPv4 Address";
+                            type inet:ipv4-address {
+                                tailf:info "A.B.C.D;;IP address";
+                            }
+                        }
+                        leaf multicast-group-max {
+                            tailf:cli-drop-node-name;
+                            tailf:info "Ending Multicast Group IPv4 Address";
+                            description "Ending Multicast Group IPv4 Address";
+                            type inet:ipv4-address {
+                                tailf:info "A.B.C.D;;IP address";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // interface overlay
+        list overlay {
+            tailf:info "Overlay interface";
+            description "Overlay interface";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+            key name;
+            leaf name {
+                type uint16 {
+                    tailf:info "<0-512>;;Overlay interface number";
+                    range "0..512";
+                }
+            }
+            uses interface-common-grouping;
+            uses interface-ethernet-grouping;
+            uses interface-overlay-grouping;
+        }
+
+        // interface Port-channel
+        list Port-channel {
+            tailf:info "Ethernet Channel of interfaces";
+            description "Ethernet Channel of interfaces";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+                // tailf:cli-full-command;
+            key name;
+            leaf name {
+                type uint32 {
+                    tailf:info "<1-512>;;Port-channel interface number";
+                    range "1..512";
+                }
+            }
+            leaf pc-speed {
+                tailf:alt-name "speed";
+                tailf:info "Configure speed operation.";
+                description "Configure speed operation.";
+                type enumeration {
+                    enum "10" {
+                        tailf:info "Force 10 Mbps operation";
+                    }
+                    enum "100" {
+                        tailf:info "Force 100 Mbps operation";
+                    }
+                    enum "1000" {
+                        tailf:info "Enable AUTO speed configuration";
+                    }
+                    enum "nonegotiate" {
+                        //FIXME
+                    }
+                    enum "auto" {
+                        tailf:info "Enable AUTO speed configuration";
+                    }
+                }
+            }
+            uses interface-common-grouping;
+            uses interface-switch-grouping; //CATALYST
+            uses interface-ethernet-grouping;
+        }
+
+        // subinterface Port-channel #.#
+        container Port-channel-subinterface {
+            tailf:cli-drop-node-name;
+            list Port-channel {
+                tailf:cli-allow-join-with-key {
+                    tailf:cli-display-joined;
+                }
+                tailf:cli-mode-name "config-subif";
+                tailf:cli-suppress-key-abbreviation;
+                key name;
+                leaf name {
+                    type string;
+                }
+                uses interface-common-grouping;
+                uses interface-switch-grouping; //CATALYST
+                uses interface-ethernet-grouping;
+            }
+        }
+
+        //interface pseudowire
+        list pseudowire {
+            tailf:info "Pseudowire Interface";
+            description "Pseudowire Interface";
+            tailf:cli-mode-name "config-if";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            key name;
+            leaf name {
+                type uint32 {
+                    tailf:info "<1-231072>;;pseudowire interface number";
+                    range "1..231072";
+                }
+            }
+            uses pseudowire-grouping;
+        }
+        //interface SM
+        list "SM" {
+            tailf:info "SM Interface";
+            description "SM Interface";
+            tailf:cli-mode-name "config-if";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            key name;
+            leaf name {
+                type string {
+                    pattern "([0-9])+(/([0-9])+)?";
+                }
+            }
+            uses interface-common-grouping;
+        }
+        //interface Cellular
+        list Cellular {
+            tailf:info "Cellular Interface";
+            description "Cellular Interface";
+            tailf:cli-mode-name "config-if";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            key name;
+            leaf name {
+                type string {
+                    pattern "([0-9])+(/([0-9])+)?";
+                }
+            }
+            uses interface-common-grouping;
+            uses interface-cellular-grouping;
+        }
+
+        // interface Vlan
+        list Vlan {
+            tailf:info "Catalyst Vlans";
+            description "Catalyst Vlans";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            key name;
+            leaf name {
+                type uint16 {
+                    tailf:info "<1-4094>;;Vlan interface number";
+                    range "1..4094";
+                }
+            }
+            uses interface-common-grouping;
+            uses interface-zone-member-grouping;
+        }
+
+        // interface Group-Async
+        list Group-Async {
+            tailf:info "Async Group interface";
+            description "Async Group interface";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            key name;
+            leaf name {
+                type uint16 {
+                    tailf:info "<0-64>;;Group-Async interface number";
+                    range "0..64";
+                }
+            }
+            leaf physical-layer {
+                tailf:info "Configure sync or async physical layer on serial "+
+                    "interface";
+                description "Configure sync or async physical layer on serial "+
+                    "interface";
+                type enumeration {
+                    enum async {
+                        tailf:info "Configure asynchronous physical layer on serial "
+                        +"interface";
+                    }
+                    enum sync {
+                    tailf:info "Configure synchronous physical layer on serial "+
+                        "interface";
+                    }
+                }
+            }
+            uses interface-common-grouping;
+        }
+
+        // interface Multilink
+        list Multilink {
+            tailf:info "Multilink-group interface";
+            description "Multilink-group interface";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+            tailf:cli-full-command;
+            key name;
+            leaf name {
+                type uint16 {
+                    tailf:info "<1-65535>;;Multilink interface number";
+                    range "1..65535";
+                }
+            }
+            uses interface-common-grouping;
+            uses interface-pointtopoint-grouping;
+        }
+
+        // interface Serial
+        list Serial {
+            tailf:info "Serial interface";
+            description "Serial interface";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+            tailf:cli-full-command;
+            key name;
+            leaf name {
+                type string {
+                    pattern "([0-9])+/([0-9])+/([0-9])+\.([0-9])+/([0-9])+/([0-9])+/([0-9])+:([0-9])";
+                    //FIXME: info + syntax
+                }
+            }
+            uses interface-common-grouping;
+            uses interface-pointtopoint-grouping;
+        }
+
+        // interface Tunnel #
+        list Tunnel {
+            tailf:info "Tunnel interface";
+            description "Tunnel interface";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+            tailf:cli-suppress-key-abbreviation;
+            key name;
+            leaf name {
+                type uint32 {
+                    tailf:info "<0-2147483647>;;Tunnel interface number";
+                }
+            }
+            uses interface-common-grouping;
+
+            // interface Tunnel* / qos
+            container qos {
+                tailf:info "Quality of Service related commands";
+                description "Quality of Service related commands";
+                leaf pre-classify {
+                    tailf:info "Enable QOS classification before packets are tunnel "+
+                        "encapsulated";
+                    description "Enable QOS classification before packets are tunnel "+
+                        "encapsulated";
+                    type empty;
+                }
+            }
+
+            // interface Tunnel* / tunnel
+            uses interface-tunnel-grouping;
+        }
+
+        // interface Virtual-Template
+        list Virtual-Template {
+            tailf:info "Virtual Template interface";
+            description "Virtual Template interface";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+            tailf:cli-full-command;
+            tailf:cli-explicit-exit;
+            key name;
+            leaf name {
+                type uint16 {
+                    tailf:info "<1-4095>;;Virtual-Template interface number";
+                    range "1..4095";
+                }
+            }
+            leaf type {
+                tailf:info "type of the virtual-template";
+                description "type of the virtual-template";
+                tailf:cli-hide-in-submode;
+                type enumeration {
+                    enum ethernet {
+                      tailf:info "Set VT type as ethernet";
+                    }
+                    enum serial {
+                      tailf:info "Set VT type as serial";
+                    }
+                    enum tunnel {
+                      tailf:info "Set VT type as tunnel";
+                    }
+                    enum vpn {
+                      tailf:info "Set VT type as vpn";
+                    }
+                }
+            }
+
+            uses interface-ethernet-grouping;
+            uses interface-common-grouping;
+            uses interface-zone-member-grouping;
+            uses interface-switch-grouping; //CATALYST
+            uses interface-pointtopoint-grouping;
+            // interface Tunnel* / tunnel
+            uses interface-tunnel-grouping;
+        }
+
+        // interface VirtualPortGroup
+        list VirtualPortGroup {
+            tailf:info "Virtual Port Group";
+            description "Virtual Port Group";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+            tailf:cli-full-command;
+            tailf:cli-explicit-exit;
+            key name;
+            leaf name {
+                type uint16 {
+                    tailf:info " <0-31>;;VirtualPortGroup interface number";
+                    range "0..31";
+                }
+            }
+            uses interface-switch-grouping; //CATALYST
+            uses interface-ethernet-grouping;
+            uses interface-common-grouping;
+        }
+        // interface vasileft
+        list vasileft {
+            tailf:info "vasileft";
+            description "vasileft";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+            tailf:cli-full-command;
+            tailf:cli-explicit-exit;
+            key name;
+            leaf name {
+                type uint16 {
+                    tailf:info "<1-2000>;;vasileft interface number";
+                    range "1..2000";
+                }
+            }
+            uses interface-switch-grouping; //CATALYST
+            uses interface-ethernet-grouping;
+            uses interface-common-grouping;
+        }
+
+        // interface vasiright
+        list vasiright {
+            tailf:info "vasiright";
+            description "vasiright";
+            tailf:cli-allow-join-with-key {
+                tailf:cli-display-joined;
+            }
+            tailf:cli-mode-name "config-if";
+            tailf:cli-full-command;
+            tailf:cli-explicit-exit;
+            key name;
+            leaf name {
+                type uint16 {
+                    tailf:info "<1-2000>;;vasiright interface number";
+                    range "1..2000";
+                 }
+            }
+            uses interface-switch-grouping; //CATALYST
+            uses interface-ethernet-grouping;
+            uses interface-common-grouping;
+        }
+    }
+
 
 /// ========================================================================
 /// mls

@@ -1,4 +1,5 @@
-package org.opendaylight.yang.gen.v1.urn.ios.rev160516;
+package org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map._class.pm.policy.monitor.metric.rtp;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map._class.pm.policy.monitor.metric.rtp.ClockRate.Number;
 
 
 /**
@@ -10,9 +11,9 @@ package org.opendaylight.yang.gen.v1.urn.ios.rev160516;
  * loss of user code.
  *
  */
-public class PrecedenceType2Builder {
+public class ClockRateNumberBuilder {
 
-    public static PrecedenceType2 getDefaultInstance(java.lang.String defaultValue) {
+    public static Number getDefaultInstance(java.lang.String defaultValue) {
         throw new java.lang.UnsupportedOperationException("Not yet implemented");
     }
 

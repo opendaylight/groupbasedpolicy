@@ -1,5 +1,4 @@
-package org.opendaylight.yang.gen.v1.urn.ios.rev160516._native.mls.qos;
-import org.opendaylight.yang.gen.v1.urn.ios.rev160516._native.mls.qos.Map.PolicedDscp;
+package org.opendaylight.yang.gen.v1.urn.ios.rev160308;
 
 
 /**
@@ -11,9 +10,9 @@ import org.opendaylight.yang.gen.v1.urn.ios.rev160516._native.mls.qos.Map.Police
  * loss of user code.
  *
  */
-public class MapPolicedDscpBuilder {
+public class QosValueTypeBuilder {
 
-    public static PolicedDscp getDefaultInstance(java.lang.String defaultValue) {
+    public static QosValueType getDefaultInstance(java.lang.String defaultValue) {
         throw new java.lang.UnsupportedOperationException("Not yet implemented");
     }
 

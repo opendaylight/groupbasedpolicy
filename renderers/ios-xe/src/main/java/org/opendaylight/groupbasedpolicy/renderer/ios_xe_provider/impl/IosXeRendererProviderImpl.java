@@ -15,7 +15,10 @@ import org.opendaylight.controller.sal.binding.api.BindingAwareProvider;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.IosXeRendererProvider;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.cache.EpPolicyCacheImpl;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.listener.EpPolicyTemplateBySgtListenerImpl;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.listener.IosXeCapableNodeListenerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.listener.RendererConfigurationListenerImpl;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.NodeManager;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +34,10 @@ public class IosXeRendererProviderImpl implements IosXeRendererProvider, Binding
     private final RendererName rendererName;
     private RendererConfigurationListenerImpl rendererConfigurationListener;
     private EpPolicyTemplateBySgtListenerImpl epPolicyTemplateBySgtListener;
+    private IosXeCapableNodeListenerImpl iosXeCapableNodeListener;
     private EpPolicyCacheImpl epPolicyCache;
+    private PolicyManagerImpl policyManager;
+    private NodeManager nodeManager;
 
     public IosXeRendererProviderImpl(final DataBroker dataBroker, final BindingAwareBroker broker,
                                      final RendererName rendererName) {
@@ -51,6 +57,9 @@ public class IosXeRendererProviderImpl implements IosXeRendererProvider, Binding
         if (epPolicyTemplateBySgtListener != null) {
             epPolicyTemplateBySgtListener.close();
         }
+        if (iosXeCapableNodeListener != null) {
+            iosXeCapableNodeListener.close();
+        }
         if (epPolicyCache != null) {
             epPolicyCache.invalidateAll();
         }
@@ -60,11 +69,17 @@ public class IosXeRendererProviderImpl implements IosXeRendererProvider, Binding
     public void onSessionInitiated(final BindingAwareBroker.ProviderContext providerContext) {
         LOG.info("starting ios-xe renderer");
         //TODO register listeners:
+        // node-manager
+        nodeManager = new NodeManager(dataBroker, providerContext);
         // ep-policy-template-by-sgt
         epPolicyCache = new EpPolicyCacheImpl();
         epPolicyTemplateBySgtListener = new EpPolicyTemplateBySgtListenerImpl(dataBroker, epPolicyCache);
+        // network-topology
+        iosXeCapableNodeListener = new IosXeCapableNodeListenerImpl(dataBroker, nodeManager);
+        // policy-manager
+        policyManager = new PolicyManagerImpl(dataBroker, epPolicyCache);
         // renderer-configuration endpoints
-        rendererConfigurationListener = new RendererConfigurationListenerImpl(dataBroker, rendererName, epPolicyCache);
+        rendererConfigurationListener = new RendererConfigurationListenerImpl(dataBroker, rendererName, policyManager);
         // supported node list maintenance
         // TODO: upkeep of available renderer-nodes
     }
