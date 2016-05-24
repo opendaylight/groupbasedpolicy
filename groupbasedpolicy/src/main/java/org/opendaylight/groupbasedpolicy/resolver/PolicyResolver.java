@@ -19,7 +19,6 @@ import javax.annotation.concurrent.Immutable;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
-import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -38,13 +37,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.Tenants;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.Policy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.SubjectFeatureInstances;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstanceBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.ResolvedPolicies;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.ResolvedPoliciesBuilder;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -52,11 +49,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multimaps;
-import com.google.common.collect.Multiset;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Table;
 
@@ -80,11 +74,7 @@ public class PolicyResolver implements PolicyValidatorRegistry, AutoCloseable {
 
     private final DataBroker dataProvider;
 
-    private final FollowedTenantListener followedTenantListener;
-
     protected final ConcurrentMap<TenantId, IndexedTenant> resolvedTenants;
-
-    protected final Multiset<TenantId> subscribersPerTenant = HashMultiset.create();
 
     private PolicyChangeListener tenantChangeListener;
 
@@ -100,7 +90,6 @@ public class PolicyResolver implements PolicyValidatorRegistry, AutoCloseable {
 
     public PolicyResolver(DataBroker dataProvider) {
         this.dataProvider = dataProvider;
-        followedTenantListener = new FollowedTenantListener(dataProvider, this);
         resolvedTenants = new ConcurrentHashMap<>();
         tenantChangeListener =
                 new PolicyChangeListener(dataProvider, new DataTreeIdentifier<>(LogicalDatastoreType.CONFIGURATION,
@@ -115,9 +104,6 @@ public class PolicyResolver implements PolicyValidatorRegistry, AutoCloseable {
     public void close() throws Exception {
         if (tenantChangeListener != null) {
             tenantChangeListener.close();
-        }
-        if (followedTenantListener != null) {
-            followedTenantListener.close();
         }
     }
 
@@ -145,44 +131,10 @@ public class PolicyResolver implements PolicyValidatorRegistry, AutoCloseable {
         classifierInstanceValidatorsByDefinition.remove(classifierDefinitionId, validator);
     }
 
-    /**
-     * Subscribe the resolver to updates related to a particular tenant.
-     *
-     * @param tenantId the tenant ID to subscribe to
-     */
-    protected void subscribeTenant(TenantId tenantId) {
-        synchronized (subscribersPerTenant) {
-            if (subscribersPerTenant.count(tenantId) == 0) {
-                ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
-                Optional<Tenant> potentialTenant = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
-                        IidFactory.tenantIid(tenantId), rTx);
-                if (potentialTenant.isPresent()) {
-                    updateTenant(tenantId, potentialTenant.get());
-                }
-                rTx.close();
-            }
-            subscribersPerTenant.add(tenantId);
-        }
-    }
-
-    /**
-     * Unsubscribe the resolver from updates related to a particular tenant.
-     *
-     * @param tenantId the tenant ID to unsubscribe from
-     */
-    protected void unsubscribeTenant(TenantId tenantId) {
-        synchronized (subscribersPerTenant) {
-            subscribersPerTenant.remove(tenantId);
-            if (subscribersPerTenant.count(tenantId) == 0) {
-                // nobody is interested in the tenant - can be removed from OPER and resolved policy
-                updateTenant(tenantId, null);
-            }
-        }
-    }
-
     @VisibleForTesting
     void updateTenant(final TenantId tenantId, final Tenant unresolvedTenant) {
         if (dataProvider == null) {
+            LOG.error("Tenant {} will not be resolved because because dataProvider is NULL", tenantId.getValue());
             return;
         }
 
@@ -218,10 +170,6 @@ public class PolicyResolver implements PolicyValidatorRegistry, AutoCloseable {
     }
 
     private void updateResolvedPolicy(WriteTransaction wTx) {
-        if (dataProvider == null) {
-            LOG.error("Couldn't Write Resolved Tenants Policy Info to Datastore because dataProvider is NULL");
-            return;
-        }
         Set<IndexedTenant> indexedTenants = getIndexedTenants(resolvedTenants.values());
         Table<EgKey, EgKey, org.opendaylight.groupbasedpolicy.dto.Policy> policyMap =
                 PolicyResolverUtils.resolvePolicy(indexedTenants);
@@ -242,7 +190,8 @@ public class PolicyResolver implements PolicyValidatorRegistry, AutoCloseable {
         return result;
     }
 
-    private boolean isPolicyValid(Policy policy) {
+    @VisibleForTesting
+    boolean isPolicyValid(Policy policy) {
         if (policy != null && policy.getSubjectFeatureInstances() != null) {
             SubjectFeatureInstances subjectFeatureInstances = policy.getSubjectFeatureInstances();
             if (actionInstancesAreValid(subjectFeatureInstances.getActionInstance())
@@ -316,47 +265,20 @@ public class PolicyResolver implements PolicyValidatorRegistry, AutoCloseable {
         @Override
         protected void onWrite(DataObjectModification<Tenant> rootNode, InstanceIdentifier<Tenant> rootIdentifier) {
             Tenant tenantAfter = rootNode.getDataAfter();
-            synchronized (subscribersPerTenant) {
-                if (subscribersPerTenant.contains(tenantAfter.getId())) {
-                    updateTenant(tenantAfter.getId(), tenantAfter);
-                    tenantAfter.getPolicy().getContract().get(0).getId();
-                    tenantAfter.getPolicy().getContract().get(0).getSubject().get(0).getName();
-                    tenantAfter.getPolicy().getContract().get(0).getSubject().get(0).getRule().get(0).getName();
-                    List<ClassifierRef> cref = tenantAfter.getPolicy()
-                            .getContract()
-                            .get(0)
-                            .getSubject()
-                            .get(0)
-                            .getRule()
-                            .get(0)
-                            .getClassifierRef();
-                    cref.get(0).getInstanceName();
-                    tenantAfter.getPolicy().getSubjectFeatureInstances().getClassifierInstance().get(0).getName();
-                    tenantAfter.getPolicy().getSubjectFeatureInstances().getClassifierInstance().get(0).getParameterValue()
-                            .get(0);
-                }
-            }
+            updateTenant(tenantAfter.getId(), tenantAfter);
         }
 
         @Override
         protected void onDelete(DataObjectModification<Tenant> rootNode, InstanceIdentifier<Tenant> rootIdentifier) {
             TenantId tenantId = rootIdentifier.firstKeyOf(Tenant.class).getId();
-            synchronized (subscribersPerTenant) {
-                if (subscribersPerTenant.contains(tenantId)) {
-                    updateTenant(tenantId, null);
-                }
-            }
+            updateTenant(tenantId, null);
         }
 
         @Override
         protected void onSubtreeModified(DataObjectModification<Tenant> rootNode,
                 InstanceIdentifier<Tenant> rootIdentifier) {
             Tenant tenantAfter = rootNode.getDataAfter();
-            synchronized (subscribersPerTenant) {
-                if (subscribersPerTenant.contains(tenantAfter.getId())) {
-                    updateTenant(tenantAfter.getId(), tenantAfter);
-                }
-            }
+            updateTenant(tenantAfter.getId(), tenantAfter);
         }
 
     }
