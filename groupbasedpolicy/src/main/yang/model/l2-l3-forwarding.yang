@@ -13,6 +13,7 @@ module l2-l3-forwarding {
     prefix "l2-l3-forwarding";
 
     import forwarding { prefix forwarding; revision-date 2016-04-27; }
+    import renderer { prefix renderer; revision-date 2015-11-03; }
     import ietf-inet-types { prefix inet; revision-date 2010-09-24; }
     import yang-ext {prefix ext; revision-date 2013-07-09;}
 
@@ -49,29 +50,32 @@ module l2-l3-forwarding {
         base forwarding:address-type;
     }
 
-    grouping subnet-fields {
-        leaf ip-prefix {
-            description "The IP prefix that defines the subnet";
-            type inet:ip-prefix;
-        }
-        leaf virtual-router-ip {
-            description
-                "IP address to use for a virtual gateway router
-                 for the subnet, if desired.";
-            type inet:ip-address;
-        }
-        list gateways {
-            description
-                "External gateways for subnets we serve,
-                includes prefixes for static routing";
-            key "gateway";
-            leaf gateway {
+    grouping has-subnet {
+        container subnet {
+            when "../forwarding:network-domain-type = 'l2-l3-forwarding:subnet'";
+            leaf ip-prefix {
+                description "The IP prefix that defines the subnet";
+                type inet:ip-prefix;
+            }
+            leaf virtual-router-ip {
+                description
+                    "IP address to use for a virtual gateway router
+                     for the subnet, if desired.";
                 type inet:ip-address;
             }
-            list prefixes {
-                key "prefix";
-                leaf prefix {
-                    type inet:ip-prefix;
+            list gateways {
+                description
+                    "External gateways for subnets we serve,
+                    includes prefixes for static routing";
+                key "gateway";
+                leaf gateway {
+                    type inet:ip-address;
+                }
+                list prefixes {
+                    key "prefix";
+                    leaf prefix {
+                        type inet:ip-prefix;
+                    }
                 }
             }
         }
@@ -79,12 +83,12 @@ module l2-l3-forwarding {
 
     augment "/forwarding:forwarding/forwarding:forwarding-by-tenant/forwarding:network-domain" {
         ext:augment-identifier "subnet-augment-forwarding";
-        container subnet {
-            when "../forwarding:network-domain-type = 'l2-l3-forwarding:subnet'";
-            uses subnet-fields;
-        }
+        uses has-subnet;
     }
 
-    // TODO add augment to renderer.yang
+    augment "/renderer:renderers/renderer:renderer/renderer:renderer-policy/renderer:configuration/renderer:renderer-forwarding/renderer:renderer-forwarding-by-tenant/renderer:renderer-network-domain" {
+        ext:augment-identifier "subnet-augment-renderer";
+        uses has-subnet;
+    }
 
 }

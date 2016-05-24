@@ -26,6 +26,7 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.dto.ConsEpgKey;
 import org.opendaylight.groupbasedpolicy.dto.EpgKeyDto;
 import org.opendaylight.groupbasedpolicy.dto.ProvEpgKey;
+import org.opendaylight.groupbasedpolicy.forwarding.NetworkDomainAugmentorRegistryImpl;
 import org.opendaylight.groupbasedpolicy.renderer.listener.EndpointLocationsListener;
 import org.opendaylight.groupbasedpolicy.renderer.listener.EndpointsListener;
 import org.opendaylight.groupbasedpolicy.renderer.listener.ForwardingListener;
@@ -54,8 +55,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Configuration;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.ConfigurationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Status;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.ForwardingContexts;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.RendererEndpoints;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.RendererForwarding;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.RuleGroups;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.ResolvedPolicies;
@@ -83,6 +84,7 @@ public class RendererManager implements AutoCloseable {
     private static long version = 0;
 
     private final DataBroker dataProvider;
+    private final NetworkDomainAugmentorRegistryImpl netDomainAugmentorRegistry;
     private final Set<RendererName> processingRenderers = new HashSet<>();
     private Map<InstanceIdentifier<?>, RendererName> rendererByNode = new HashMap<>();
     private ResolvedPolicyInfo policyInfo;
@@ -96,8 +98,9 @@ public class RendererManager implements AutoCloseable {
     private final ForwardingListener forwardingListener;
     private final RenderersListener renderersListener;
 
-    public RendererManager(DataBroker dataProvider) {
+    public RendererManager(DataBroker dataProvider, NetworkDomainAugmentorRegistryImpl netDomainAugmentorRegistry) {
         this.dataProvider = checkNotNull(dataProvider);
+        this.netDomainAugmentorRegistry = checkNotNull(netDomainAugmentorRegistry);
         endpointsListener = new EndpointsListener(this, dataProvider);
         endpointLocationsListener = new EndpointLocationsListener(this, dataProvider);
         resolvedPoliciesListener = new ResolvedPoliciesListener(this, dataProvider);
@@ -264,8 +267,9 @@ public class RendererManager implements AutoCloseable {
         RuleGroups ruleGroups = rendererPolicyBuilder.buildRuluGroups(policyInfo);
         configBuilder.setRuleGroups(ruleGroups);
 
-        ForwardingContexts forwardingContexts = rendererPolicyBuilder.buildForwardingContexts(forwarding);
-        configBuilder.setForwardingContexts(forwardingContexts);
+        RendererForwarding rendererForwarding = rendererPolicyBuilder.buildRendererForwarding(forwarding,
+                netDomainAugmentorRegistry.getEndpointAugmentors());
+        configBuilder.setRendererForwarding(rendererForwarding);
 
         return Optional.of(configBuilder.build());
     }

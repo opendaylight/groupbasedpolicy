@@ -61,9 +61,9 @@
                 </module>
                 <module>
                     <type xmlns:groupbasedpolicy="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">
-                        groupbasedpolicy:base-endpoint-renderer-augmentation-registry-impl
+                        groupbasedpolicy:domain-specific-registry-impl
                     </type>
-                    <name>base-endpoint-renderer-augmentation-registry</name>
+                    <name>domain-specific-registry</name>
 
                     <data-broker>
                         <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
@@ -111,12 +111,12 @@
                 </service>
                 <service>
                     <type xmlns:groupbasedpolicy="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">
-                        groupbasedpolicy:base-endpoint-renderer-augmentation-registry
+                        groupbasedpolicy:domain-specific-registry
                     </type>
 
                     <instance>
-                        <name>base-endpoint-renderer-augmentation-registry</name>
-                        <provider>/modules/module[type='base-endpoint-renderer-augmentation-registry-impl'][name='base-endpoint-renderer-augmentation-registry']</provider>
+                        <name>domain-specific-registry</name>
+                        <provider>/modules/module[type='domain-specific-registry-impl'][name='domain-specific-registry']</provider>
                     </instance>
                 </service>
                 <service>

@@ -240,11 +240,30 @@ module renderer {
                         }
                     }
 
-                    container forwarding-contexts {
-                        list forwarding-context-by-tenant {
+                    container renderer-forwarding {
+                        list renderer-forwarding-by-tenant {
                             min-elements 1;
                             key tenant-id;
-                            uses forwarding:forwarding-with-tenant-fields;
+                            leaf tenant-id {
+                                type gbp-common:tenant-id;
+                                description
+                                            "The tenant with which forwarding is associated";
+                            }
+
+                            list renderer-forwarding-context {
+                                key "context-type context-id";
+                                uses forwarding:context-key;
+
+                                uses forwarding:forwarding-fields;
+                            }
+
+                            list renderer-network-domain {
+                                key "network-domain-type network-domain-id";
+                                uses forwarding:network-domain-key;
+
+                                uses forwarding:forwarding-fields;
+                                description "Renderer network domain can be augmented with further information.";
+                            }
                         }
                     }
                 }

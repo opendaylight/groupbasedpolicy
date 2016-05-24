@@ -8,6 +8,7 @@
 
 package org.opendaylight.groupbasedpolicy.api;
 
+@Deprecated
 public interface EpRendererAugmentationRegistry {
 
     /**

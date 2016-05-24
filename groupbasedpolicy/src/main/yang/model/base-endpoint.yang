@@ -206,6 +206,8 @@ module base-endpoint {
     }
 
     container endpoint-locations {
+        config false;
+
         list address-endpoint-location {
             key "context-type context-id address-type address";
             uses address-endpoint-key;

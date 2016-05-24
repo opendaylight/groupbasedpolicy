@@ -9,6 +9,7 @@
 package org.opendaylight.groupbasedpolicy.renderer;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -17,7 +18,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
+import org.opendaylight.groupbasedpolicy.api.NetworkDomainAugmentor;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoint.locations.AddressEndpointLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoint.locations.ContainmentEndpointLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpoint;
@@ -26,6 +29,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.containment.endpoints.ContainmentEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.Forwarding;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.ForwardingByTenant;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.ForwardingContext;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.NetworkDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.peer.endpoints.PeerEndpointKey;
@@ -35,18 +40,16 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.rule.group.with.renderer.endpoint.participation.RuleGroupWithRendererEndpointParticipationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.EndpointsBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.ForwardingContexts;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.ForwardingContextsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.RendererEndpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.RendererEndpointsBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.RendererForwarding;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.RendererForwardingBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.RuleGroups;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.RuleGroupsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.ContainmentEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.ContainmentEndpointWithLocationBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.forwarding.contexts.ForwardingContextByTenant;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.forwarding.contexts.ForwardingContextByTenantBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
@@ -59,14 +62,23 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerExternalEndpointWithPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerExternalEndpointWithPolicyBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerExternalEndpointWithPolicyKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.RendererForwardingByTenant;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.RendererForwardingByTenantBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererForwardingContext;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererForwardingContextBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererNetworkDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererNetworkDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.rule.groups.RuleGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.rule.groups.RuleGroupBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.policy.rule.group.with.endpoint.constraints.PolicyRuleGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.policy.rule.group.with.endpoint.constraints.PolicyRuleGroupKey;
+import org.opendaylight.yangtools.yang.binding.Augmentation;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableTable;
@@ -365,21 +377,78 @@ public class RendererConfigurationBuilder {
             .build();
     }
 
-    // TODO this copies entire Forwarding to ForwardingContexts - it could copy only forwarding used
+    // TODO this copies entire Forwarding to RendererForwarding - it could copy only forwarding used
     // in EPs (renderer EPs + peers)
-    public ForwardingContexts buildForwardingContexts(Forwarding forwarding) {
-        List<ForwardingContextByTenant> forwardingContextByTenant =
-                resolveForwardingContextByTenant(forwarding.getForwardingByTenant());
-        return new ForwardingContextsBuilder().setForwardingContextByTenant(forwardingContextByTenant).build();
+    public RendererForwarding buildRendererForwarding(Forwarding forwarding, Set<NetworkDomainAugmentor> augmentors) {
+        List<RendererForwardingByTenant> forwardingContextByTenant =
+                resolveForwardingContextByTenant(forwarding.getForwardingByTenant(), augmentors);
+        return new RendererForwardingBuilder().setRendererForwardingByTenant(forwardingContextByTenant).build();
     }
 
-    private static List<ForwardingContextByTenant> resolveForwardingContextByTenant(
-            List<ForwardingByTenant> forwardingByTenant) {
-        List<ForwardingContextByTenant> result = new ArrayList<>();
+    private static List<RendererForwardingByTenant> resolveForwardingContextByTenant(
+            List<ForwardingByTenant> forwardingByTenant, Set<NetworkDomainAugmentor> augmentors) {
+        List<RendererForwardingByTenant> result = new ArrayList<>();
         for (ForwardingByTenant fwdByTenant : forwardingByTenant) {
-            result.add(new ForwardingContextByTenantBuilder(fwdByTenant).build());
+            result.add(resolveRendererForwardingByTenant(fwdByTenant, augmentors));
         }
         return result;
+    }
+
+    private static RendererForwardingByTenant resolveRendererForwardingByTenant(ForwardingByTenant fwdByTenant,
+            Set<NetworkDomainAugmentor> augmentors) {
+        List<RendererForwardingContext> rendererForwardingContexts =
+                resolveRendererForwardingContexts(fwdByTenant.getForwardingContext());
+        List<RendererNetworkDomain> rendererNetworkDomains =
+                resolveRendererNetworkDomains(fwdByTenant.getNetworkDomain(), augmentors);
+        return new RendererForwardingByTenantBuilder().setTenantId(fwdByTenant.getTenantId())
+            .setRendererForwardingContext(rendererForwardingContexts)
+            .setRendererNetworkDomain(rendererNetworkDomains)
+            .build();
+    }
+
+    private static List<RendererForwardingContext> resolveRendererForwardingContexts(
+            @Nullable List<ForwardingContext> fwdCtx) {
+        if (fwdCtx == null) {
+            return Collections.emptyList();
+        }
+        return FluentIterable.from(fwdCtx).transform(new Function<ForwardingContext, RendererForwardingContext>() {
+
+            @Override
+            public RendererForwardingContext apply(ForwardingContext input) {
+                return new RendererForwardingContextBuilder().setContextId(input.getContextId())
+                    .setContextType(input.getContextType())
+                    .setName(input.getName())
+                    .setParent(input.getParent())
+                    .build();
+            }
+        }).toList();
+    }
+
+    private static List<RendererNetworkDomain> resolveRendererNetworkDomains(@Nullable List<NetworkDomain> netDomains,
+            Set<NetworkDomainAugmentor> augmentors) {
+        if (netDomains == null) {
+            return Collections.emptyList();
+        }
+        return FluentIterable.from(netDomains).transform(new Function<NetworkDomain, RendererNetworkDomain>() {
+
+            @Override
+            public RendererNetworkDomain apply(NetworkDomain input) {
+                RendererNetworkDomainBuilder rendererNetworkDomainBuilder =
+                        new RendererNetworkDomainBuilder().setNetworkDomainId(input.getNetworkDomainId())
+                            .setNetworkDomainType(input.getNetworkDomainType())
+                            .setName(input.getName())
+                            .setParent(input.getParent());
+                for (NetworkDomainAugmentor augmentor : augmentors) {
+                    Entry<Class<? extends Augmentation<RendererNetworkDomain>>, Augmentation<RendererNetworkDomain>> networkDomainAugmentation =
+                            augmentor.buildRendererNetworkDomainAugmentation(input);
+                    if (networkDomainAugmentation != null) {
+                        rendererNetworkDomainBuilder.addAugmentation(networkDomainAugmentation.getKey(),
+                                networkDomainAugmentation.getValue());
+                    }
+                }
+                return rendererNetworkDomainBuilder.build();
+            }
+        }).toList();
     }
 
 }

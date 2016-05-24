@@ -408,17 +408,6 @@ public class IidFactory {
             .build();
     }
 
-    public static InstanceIdentifier<ParentContainmentEndpoint> parentContainmentEndpointIid(
-            AddressEndpointKey addressEndpointKey, ParentContainmentEndpointKey parentContainmentEndpointKey) {
-        return InstanceIdentifier
-            .builder(
-                    org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.Endpoints.class)
-            .child(AddressEndpoints.class)
-            .child(AddressEndpoint.class, addressEndpointKey)
-            .child(ParentContainmentEndpoint.class, parentContainmentEndpointKey)
-            .build();
-    }
-
     public static InstanceIdentifier<AddressEndpointLocation> addressEndpointLocationIid(AddressEndpointLocationKey addrEndpointLocationKey) {
         return InstanceIdentifier.builder(EndpointLocations.class)
                 .child(AddressEndpointLocation.class, addrEndpointLocationKey)

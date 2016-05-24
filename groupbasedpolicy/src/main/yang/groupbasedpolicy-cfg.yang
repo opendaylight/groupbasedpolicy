@@ -31,12 +31,12 @@ module groupbasedpolicy-cfg {
         config:java-class "org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry";
     }
 
-    identity base-endpoint-renderer-augmentation-registry {
+    identity domain-specific-registry {
         description
-            "base-endpoint-renderer-augmentation-registry service definition";
+            "domain-specific-registry service definition";
 
         base "config:service-type";
-        config:java-class "org.opendaylight.groupbasedpolicy.api.BaseEndpointRendererAugmentationRegistry";
+        config:java-class "org.opendaylight.groupbasedpolicy.api.DomainSpecificRegistry";
     }
 
     identity policy-validator-registry {
@@ -69,11 +69,11 @@ module groupbasedpolicy-cfg {
         config:java-name-prefix EpRendererAugmentationRegistryImpl;
     }
 
-    identity base-endpoint-renderer-augmentation-registry-impl {
+    identity domain-specific-registry-impl {
         base "config:module-type";
 
-        config:provided-service base-endpoint-renderer-augmentation-registry;
-        config:java-name-prefix BaseEndpointRendererAugmentationRegistryImpl;
+        config:provided-service domain-specific-registry;
+        config:java-name-prefix DomainSpecificRegistry;
     }
 
     identity statistics-manager-impl {
@@ -156,8 +156,8 @@ module groupbasedpolicy-cfg {
                 }
             }
         }
-        case base-endpoint-renderer-augmentation-registry-impl {
-            when "/config:modules/config:module/config:type = 'base-endpoint-renderer-augmentation-registry-impl'";
+        case domain-specific-registry-impl {
+            when "/config:modules/config:module/config:type = 'domain-specific-registry-impl'";
 
             //wires in the data-broker service
             container data-broker {

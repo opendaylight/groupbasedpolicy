@@ -9,6 +9,7 @@
 package org.opendaylight.groupbasedpolicy.renderer;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -22,6 +23,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
+import org.opendaylight.groupbasedpolicy.forwarding.NetworkDomainAugmentorRegistryImpl;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.EndpointLocations;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.EndpointLocationsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.EndpointsBuilder;
@@ -43,7 +45,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.ForwardingBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.ForwardingByTenantBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.with.tenant.fields.ForwardingContextBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.ForwardingContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.Tenants;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.Renderers;
@@ -56,8 +58,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNodeBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Configuration;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.Endpoints;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.ForwardingContexts;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.RendererEndpoints;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.RendererForwarding;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.RuleGroups;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.ResolvedPolicies;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.ResolvedPoliciesBuilder;
@@ -92,6 +94,8 @@ public class RendererManagerDataBrokerTest {
     @Mock
     private DataBroker dataProvider;
     @Mock
+    private NetworkDomainAugmentorRegistryImpl netDomainAugmentorRegistry;
+    @Mock
     private WriteTransaction wTx;
     @Mock
     private CheckedFuture<Void, TransactionCommitFailedException> submitFuture;
@@ -102,7 +106,8 @@ public class RendererManagerDataBrokerTest {
     public void init() {
         Mockito.when(dataProvider.newWriteOnlyTransaction()).thenReturn(wTx);
         Mockito.when(wTx.submit()).thenReturn(submitFuture);
-        rendererManager = new RendererManager(dataProvider);
+        Mockito.when(netDomainAugmentorRegistry.getEndpointAugmentors()).thenReturn(Collections.emptySet());
+        rendererManager = new RendererManager(dataProvider, netDomainAugmentorRegistry);
         RendererManager.resetVersion();
     }
 
@@ -173,9 +178,9 @@ public class RendererManagerDataBrokerTest {
         Assert.assertNotNull(rendererEndpoints);
         Assert.assertEquals(2, rendererEndpoints.getRendererEndpoint().size());
 
-        ForwardingContexts forwardingContexts = configuration.getForwardingContexts();
-        Assert.assertNotNull(forwardingContexts);
-        Assert.assertEquals(1, forwardingContexts.getForwardingContextByTenant().size());
+        RendererForwarding rendererForwarding = configuration.getRendererForwarding();
+        Assert.assertNotNull(rendererForwarding);
+        Assert.assertEquals(1, rendererForwarding.getRendererForwardingByTenant().size());
 
         Endpoints endpoints = configuration.getEndpoints();
         Assert.assertNotNull(endpoints);
@@ -274,9 +279,9 @@ public class RendererManagerDataBrokerTest {
         Assert.assertNotNull(rendererEndpoints);
         Assert.assertEquals(1, rendererEndpoints.getRendererEndpoint().size());
 
-        ForwardingContexts forwardingContexts = configuration.getForwardingContexts();
-        Assert.assertNotNull(forwardingContexts);
-        Assert.assertEquals(1, forwardingContexts.getForwardingContextByTenant().size());
+        RendererForwarding rendererForwarding = configuration.getRendererForwarding();
+        Assert.assertNotNull(rendererForwarding);
+        Assert.assertEquals(1, rendererForwarding.getRendererForwardingByTenant().size());
 
         Endpoints endpoints = configuration.getEndpoints();
         Assert.assertNotNull(endpoints);
@@ -357,9 +362,9 @@ public class RendererManagerDataBrokerTest {
         Assert.assertNotNull(rendererEndpoints);
         Assert.assertEquals(1, rendererEndpoints.getRendererEndpoint().size());
 
-        ForwardingContexts forwardingContexts = configuration.getForwardingContexts();
-        Assert.assertNotNull(forwardingContexts);
-        Assert.assertEquals(1, forwardingContexts.getForwardingContextByTenant().size());
+        RendererForwarding rendererForwarding = configuration.getRendererForwarding();
+        Assert.assertNotNull(rendererForwarding);
+        Assert.assertEquals(1, rendererForwarding.getRendererForwardingByTenant().size());
 
         Endpoints endpoints = configuration.getEndpoints();
         Assert.assertNotNull(endpoints);

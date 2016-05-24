@@ -90,33 +90,29 @@ module forwarding {
         }
     }
 
-    grouping forwarding-with-tenant-fields {
-        leaf tenant-id {
-            type gbp-common:tenant-id;
-            description
-                        "The tenant with which forwarding-context is associated";
-        }
-
-        list forwarding-context {
-            key "context-type context-id";
-            uses context-key;
-
-            uses forwarding-fields;
-        }
-
-        list network-domain {
-            key "network-domain-type network-domain-id";
-            uses network-domain-key;
-
-            uses forwarding-fields;
-            description "Network domain can be augmented with further information.";
-        }
-    }
-
     container forwarding {
         list forwarding-by-tenant {
             key tenant-id;
-            uses forwarding-with-tenant-fields;
+            leaf tenant-id {
+                type gbp-common:tenant-id;
+                description
+                            "The tenant with which forwarding-context is associated";
+            }
+
+            list forwarding-context {
+                key "context-type context-id";
+                uses context-key;
+
+                uses forwarding-fields;
+            }
+
+            list network-domain {
+                key "network-domain-type network-domain-id";
+                uses network-domain-key;
+
+                uses forwarding-fields;
+                description "Network domain can be augmented with further information.";
+            }
         }
     }
 
