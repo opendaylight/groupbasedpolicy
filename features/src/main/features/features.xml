@@ -33,6 +33,8 @@
     <repository>mvn:org.opendaylight.aaa/features-aaa-shiro/${aaa.version}/xml/features</repository>
     <!-- Repos needed by sxp-mapper -->
     <repository>mvn:org.opendaylight.sxp/features/${sxp.version}/xml/features</repository>
+    <!-- Repos needed by iosxe renderer -->
+    <repository>mvn:org.opendaylight.netconf/features-netconf-connector/${netconf.version}/xml/features</repository>
 
     <!-- The common GBP components -->
     <feature name='odl-groupbasedpolicy-base' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Base Copmonents'>
@@ -195,5 +197,18 @@
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/ne-location-provider/{{VERSION}}</bundle>
         <configfile finalname="${config.configfile.directory}/15-ne-location-provider.xml">mvn:org.opendaylight.groupbasedpolicy/ne-location-provider/{{VERSION}}/xml/config</configfile>
+    </feature>
+
+    <!--
+       IOS-XE renderer
+   -->
+    <feature name='odl-groupbasedpolicy-ios-xe' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: ios-xe renderer'>
+        <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
+        <feature version="${sfc.version}">odl-sfc-provider</feature>
+        <feature version="${sxp.version}">odl-sxp-core</feature>
+        <feature version="${netconf.version}">odl-netconf-topology</feature>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/sxp-mapper/{{VERSION}}</bundle>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/ios-xe-renderer/{{VERSION}}</bundle>
+        <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-ios-xe-renderer.xml">mvn:org.opendaylight.groupbasedpolicy/ios-xe-renderer/{{VERSION}}/xml/config</configfile>
     </feature>
 </features>

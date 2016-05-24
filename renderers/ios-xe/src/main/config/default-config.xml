@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2016 Cisco Systems, Inc. and others.  All rights reserved.
+  ~
+  ~ This program and the accompanying materials are made available under the
+  ~ terms of the Eclipse Public License v1.0 which accompanies this distribution,
+  ~ and is available at http://www.eclipse.org/legal/epl-v10.html
+  -->
+
+<!-- vi: set et smarttab sw=4 tabstop=4: -->
+
+<snapshot>
+    <configuration>
+        <data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <modules xmlns="urn:opendaylight:params:xml:ns:yang:controller:config">
+                <module>
+                    <type xmlns:iosxe="urn:opendaylight:params:xml:ns:yang:groupbasedpolicy:renderer:ios-xe-provider:impl:config">
+                        iosxe:ios-xe-provider-impl
+                    </type>
+                    <name>ios-xe-provider-impl</name>
+
+                    <data-broker>
+                      <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
+                      <name>binding-data-broker</name>
+                    </data-broker>
+
+                    <broker>
+                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-broker-osgi-registry</type>
+                        <name>binding-osgi-broker</name>
+                    </broker>
+
+                    <policy-validator-registry>
+                        <type xmlns:gbp="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">gbp:policy-validator-registry</type>
+                        <name>policy-validator-registry</name>
+                    </policy-validator-registry>
+
+                    <renderer-name>ios-xe</renderer-name>
+                </module>
+            </modules>
+        </data>
+
+    </configuration>
+
+    <required-capabilities>
+        <capability>urn:opendaylight:params:xml:ns:yang:groupbasedpolicy:renderer:ios-xe-provider:impl:config?module=ios-xe-provider-impl&amp;revision=2016-05-17</capability>
+    </required-capabilities>
+
+</snapshot>
