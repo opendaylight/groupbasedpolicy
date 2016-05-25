@@ -25,6 +25,9 @@ import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.P
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicyBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.ConfigurationBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.RuleGroupsBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.rule.groups.RuleGroupBuilder;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 
 /**
@@ -50,8 +53,20 @@ public class RendererConfigurationListenerImplTest {
     private RendererConfigurationListenerImpl listener;
 
     public RendererConfigurationListenerImplTest() {
-        policy1 = new RendererPolicyBuilder().build();
-        policy2 = new RendererPolicyBuilder().build();
+        policy1 = createRendererPolicy(0);
+        policy2 = createRendererPolicy(1);
+    }
+
+    private RendererPolicy createRendererPolicy(final int order) {
+        return new RendererPolicyBuilder()
+                .setConfiguration(new ConfigurationBuilder().setRuleGroups(
+                        new RuleGroupsBuilder()
+                                .setRuleGroup(Collections.singletonList(new RuleGroupBuilder()
+                                        .setOrder(order)
+                                        .build()))
+                                .build())
+                        .build())
+                .build();
     }
 
     @Before
@@ -61,22 +76,46 @@ public class RendererConfigurationListenerImplTest {
                 Matchers.<RendererConfigurationListenerImpl>any()))
                 .thenReturn(listenerRegistration);
         listener = new RendererConfigurationListenerImpl(dataBroker, RENDERER_NAME, policyManager);
+        Mockito.verify(dataBroker).registerDataTreeChangeListener(Matchers.<DataTreeIdentifier<RendererPolicy>>any(),
+                Matchers.<RendererConfigurationListenerImpl>any());
     }
 
     @After
     public void tearDown() throws Exception {
-        Mockito.verifyNoMoreInteractions(listenerRegistration);
+        Mockito.verifyNoMoreInteractions(listenerRegistration, dataBroker, policyManager);
     }
 
     @Test
     public void testOnDataTreeChanged_add() throws Exception {
+        Mockito.when(rootNode.getDataBefore()).thenReturn(null);
         Mockito.when(rootNode.getDataAfter()).thenReturn(policy1);
-        Mockito.when(rootNode.getDataBefore()).thenReturn(policy2);
         Mockito.when(rootNode.getModificationType()).thenReturn(DataObjectModification.ModificationType.WRITE);
         Mockito.when(dataTreeModification.getRootNode()).thenReturn(rootNode);
 
         listener.onDataTreeChanged(Collections.singleton(dataTreeModification));
-        //TODO: verify on policy manager
+        Mockito.verify(policyManager).syncPolicy(policy1.getConfiguration(), null);
+    }
+
+    @Test
+    public void testOnDataTreeChanged_update() throws Exception {
+        Mockito.when(rootNode.getDataBefore()).thenReturn(policy1);
+        Mockito.when(rootNode.getDataAfter()).thenReturn(policy2);
+        Mockito.when(rootNode.getModificationType()).thenReturn(DataObjectModification.ModificationType.WRITE);
+        Mockito.when(dataTreeModification.getRootNode()).thenReturn(rootNode);
+
+        listener.onDataTreeChanged(Collections.singleton(dataTreeModification));
+        Mockito.verify(policyManager).syncPolicy(policy2.getConfiguration(), policy1.getConfiguration());
+    }
+
+    @Test
+    public void testOnDataTreeChanged_remove() throws Exception {
+        Mockito.when(rootNode.getDataBefore()).thenReturn(policy2);
+        Mockito.when(rootNode.getDataAfter()).thenReturn(null);
+        Mockito.when(rootNode.getModificationType()).thenReturn(DataObjectModification.ModificationType.WRITE);
+        Mockito.when(dataTreeModification.getRootNode()).thenReturn(rootNode);
+
+        listener.onDataTreeChanged(Collections.singleton(dataTreeModification));
+        Mockito.verify(policyManager).syncPolicy(null, policy2.getConfiguration());
     }
 
     @Test

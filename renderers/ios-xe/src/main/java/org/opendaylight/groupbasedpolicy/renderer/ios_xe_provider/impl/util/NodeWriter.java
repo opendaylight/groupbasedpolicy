@@ -62,7 +62,7 @@ public class NodeWriter {
 
     private RendererNodes buildRendererNodes() {
         RendererNodesBuilder rendererNodesBuilder = new RendererNodesBuilder();
-        rendererNodesBuilder.setRendererNode(rendererNodesCache);
+        rendererNodesBuilder.setRendererNode(new ArrayList<>(rendererNodesCache));
         return rendererNodesBuilder.build();
     }
 
