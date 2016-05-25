@@ -21,6 +21,7 @@
     <module>renderers</module>
     <module>location-providers</module>
     <module>neutron-mapper</module>
+    <module>neutron-vpp-mapper</module>
     <module>neutron-ovsdb</module>
     <module>ui-backend</module>
     <module>groupbasedpolicy-ui</module>

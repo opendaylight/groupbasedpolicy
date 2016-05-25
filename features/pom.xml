@@ -276,6 +276,10 @@
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>neutron-vpp-mapper</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>neutron-ovsdb</artifactId>
     </dependency>
     <dependency>
@@ -351,6 +355,12 @@
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>neutron-mapper</artifactId>
+      <type>xml</type>
+      <classifier>config</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>neutron-vpp-mapper</artifactId>
       <type>xml</type>
       <classifier>config</classifier>
     </dependency>
