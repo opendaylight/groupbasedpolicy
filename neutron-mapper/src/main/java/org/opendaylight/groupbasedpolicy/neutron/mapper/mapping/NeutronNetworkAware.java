@@ -16,6 +16,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.domain_extension.l2_l3.util.L2L3IidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.gbp.util.NeutronGbpIidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.NetworkClient;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.NetworkService;
@@ -93,9 +94,9 @@ public class NeutronNetworkAware implements NeutronAware<Network> {
                 MappingUtils.createParent(ctxId, MappingUtils.L2_BRDIGE_DOMAIN));
         ForwardingContext l2Fd = fwdCtxBuilder.build();
 
-        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l3ContextIid(tenantId, ctxId), l3Context, true);
-        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l2BridgeDomainIid(tenantId, ctxId), l2Bd, true);
-        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l2FloodDomainIid(tenantId, ctxId), l2Fd, true);
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.l3ContextIid(tenantId, ctxId), l3Context, true);
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.l2BridgeDomainIid(tenantId, ctxId), l2Bd, true);
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.l2FloodDomainIid(tenantId, ctxId), l2Fd, true);
 
         createTenantNetworkDomains(network, tenantId, rwTx);
 
@@ -185,19 +186,19 @@ public class NeutronNetworkAware implements NeutronAware<Network> {
         TenantId tenantId = new TenantId(network.getTenantId().getValue());
         ContextId id = new ContextId(network.getUuid().getValue());
         Optional<ForwardingContext> potentialL2Fd = DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.l2FloodDomainIid(tenantId, id), rwTx);
+                L2L3IidFactory.l2FloodDomainIid(tenantId, id), rwTx);
         if (!potentialL2Fd.isPresent()) {
             LOG.warn("Illegal state - l2-flood-domain {} does not exist.", id.getValue());
             return;
         }
         Optional<ForwardingContext> potentialL2Bd = DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.l2BridgeDomainIid(tenantId, id), rwTx);
+                L2L3IidFactory.l2BridgeDomainIid(tenantId, id), rwTx);
         if (!potentialL2Bd.isPresent()) {
             LOG.warn("Illegal state - l2-bridge-domain {} does not exist.", id.getValue());
             return;
         }
         Optional<ForwardingContext> potentialL3Ctx = DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.l3ContextIid(tenantId, id), rwTx);
+                L2L3IidFactory.l3ContextIid(tenantId, id), rwTx);
         if (!potentialL3Ctx.isPresent()) {
             LOG.warn("Illegal state - l3-context {} does not exist.", id.getValue());
             return;

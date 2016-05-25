@@ -28,8 +28,9 @@
     <!-- project specific dependencies -->
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>groupbasedpolicy</artifactId>
+      <artifactId>l2-l3-domain-extension</artifactId>
       <version>${project.version}</version>
+      <type>bundle</type>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.neutron</groupId>

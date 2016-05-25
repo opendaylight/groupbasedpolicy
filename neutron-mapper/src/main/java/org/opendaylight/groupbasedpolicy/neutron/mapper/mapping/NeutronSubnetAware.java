@@ -12,6 +12,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.domain_extension.l2_l3.util.L2L3IidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.EndpointRegistrator;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NetworkUtils;
@@ -97,7 +98,7 @@ public class NeutronSubnetAware implements
             subnetDomain = createSubnet(neutronSubnet, null);
         }
         processTenantSubnet(neutronSubnet, networkOfSubnet, tenantId, rwTx);
-        rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.subnetIid(tenantId, subnetDomain.getNetworkDomainId()), subnetDomain, true);
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.subnetIid(tenantId, subnetDomain.getNetworkDomainId()), subnetDomain, true);
         DataStoreHelper.submitToDs(rwTx);
     }
 
@@ -186,7 +187,7 @@ public class NeutronSubnetAware implements
         NetworkDomainId subnetId = new NetworkDomainId(neutronSubnet.getUuid().getValue());
         TenantId tenantId = new TenantId(neutronSubnet.getTenantId().getValue());
         Optional<NetworkDomain> potentialSubnetDomain = DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.subnetIid(tenantId, subnetId), rwTx);
+                L2L3IidFactory.subnetIid(tenantId, subnetId), rwTx);
         if (!potentialSubnetDomain.isPresent()) {
             LOG.warn("Illegal state - subnet network domain {} does not exist.", subnetId.getValue());
             rwTx.cancel();

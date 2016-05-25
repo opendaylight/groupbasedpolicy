@@ -23,6 +23,11 @@
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
+        <artifactId>l2-l3-domain-extension</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
         <artifactId>ofoverlay-renderer</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -101,6 +106,13 @@
       <dependency>
         <groupId>org.opendaylight.groupbasedpolicy</groupId>
         <artifactId>groupbasedpolicy</artifactId>
+        <version>${project.version}</version>
+        <type>xml</type>
+        <classifier>config</classifier>
+      </dependency>
+      <dependency>
+        <groupId>org.opendaylight.groupbasedpolicy</groupId>
+        <artifactId>l2-l3-domain-extension</artifactId>
         <version>${project.version}</version>
         <type>xml</type>
         <classifier>config</classifier>

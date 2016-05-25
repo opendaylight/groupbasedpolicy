@@ -13,7 +13,6 @@ import static org.mockito.Mockito.mock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
@@ -39,13 +38,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2FloodDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.RuleName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SelectorName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubnetId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.UniqueId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointKey;
@@ -53,10 +50,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.LocationProvider;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.location.provider.ProviderAddressEndpointLocation;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.IpPrefixType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.AddressType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.ContextType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.ForwardingByTenant;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.ForwardingContext;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.NetworkDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.has.classifier.refs.ClassifierRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ActionDefinition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinition;
@@ -95,7 +91,6 @@ public class IidFactoryTest {
 
     private final String LOCATION_PROVIDER_NAME = "location-provider";
     private final String IP_ADDRESS = "192.68.50.71";
-    private final String IP_PREFIX = "192.168.50.0/24";
     private final String L3_CONTEXT_ID = "l3Context";
     private final String CONNECTOR = "connector";
 
@@ -225,27 +220,11 @@ public class IidFactoryTest {
     }
 
     @Test
-    public void testL2FloodDomainIid() {
-        ContextId id = mock(ContextId.class);
-        InstanceIdentifier<ForwardingContext> identifier = IidFactory.l2FloodDomainIid(tenantId, id);
-        Assert.assertEquals(id, InstanceIdentifier.keyOf(identifier).getContextId());
-        Assert.assertEquals(tenantId, identifier.firstKeyOf(ForwardingByTenant.class).getTenantId());
-    }
-
-    @Test
     public void testL2FloodDomainIid_tenantApi() {
         L2FloodDomainId l2FloodDomainId = mock(L2FloodDomainId.class);
         InstanceIdentifier<L2FloodDomain> identifier = IidFactory.l2FloodDomainIid(tenantId, l2FloodDomainId);
         Assert.assertEquals(l2FloodDomainId, InstanceIdentifier.keyOf(identifier).getId());
         Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class).getId());
-    }
-
-    @Test
-    public void testL2BridgeDomainIid() {
-        ContextId id = mock(ContextId.class);
-        InstanceIdentifier<ForwardingContext> identifier = IidFactory.l2BridgeDomainIid(tenantId, id);
-        Assert.assertEquals(id, InstanceIdentifier.keyOf(identifier).getContextId());
-        Assert.assertEquals(tenantId, identifier.firstKeyOf(ForwardingByTenant.class).getTenantId());
     }
 
     @Test
@@ -257,19 +236,17 @@ public class IidFactoryTest {
     }
 
     @Test
-    public void testL3ContextIid() {
-        ContextId id = mock(ContextId.class);
-        InstanceIdentifier<ForwardingContext> identifier = IidFactory.l3ContextIid(tenantId, id);
-        Assert.assertEquals(id, InstanceIdentifier.keyOf(identifier).getContextId());
-        Assert.assertEquals(tenantId, identifier.firstKeyOf(ForwardingByTenant.class).getTenantId());
-    }
-
-    @Test
     public void testL3ContextIid_tenantApi() {
         L3ContextId l3ContextId = mock(L3ContextId.class);
         InstanceIdentifier<L3Context> identifier = IidFactory.l3ContextIid(tenantId, l3ContextId);
         Assert.assertEquals(l3ContextId, InstanceIdentifier.keyOf(identifier).getId());
         Assert.assertEquals(tenantId, identifier.firstKeyOf(Tenant.class).getId());
+    }
+
+    @Test
+    public void testForwardingByTenantIid() {
+        InstanceIdentifier<ForwardingByTenant> forwardingByTenantIid = IidFactory.forwardingByTenantIid(tenantId);
+        Assert.assertEquals(tenantId, forwardingByTenantIid.firstKeyOf(ForwardingByTenant.class).getTenantId());
     }
 
     @Test
@@ -313,14 +290,6 @@ public class IidFactoryTest {
     public void testEndpointIidWildcard() {
         InstanceIdentifier<Endpoints> identifier = IidFactory.endpointsIidWildcard();
         Assert.assertNotNull(identifier);
-    }
-
-    @Test
-    public void testSubnetIid() {
-        NetworkDomainId id = mock(NetworkDomainId.class);
-        InstanceIdentifier<NetworkDomain> identifier = IidFactory.subnetIid(tenantId, id);
-        Assert.assertEquals(tenantId, identifier.firstKeyOf(ForwardingByTenant.class).getTenantId());
-        Assert.assertEquals(id, identifier.firstKeyOf(NetworkDomain.class).getNetworkDomainId());
     }
 
     @Test
@@ -396,19 +365,16 @@ public class IidFactoryTest {
     }
 
     @Test
-    public void  testeExternalImplicitGroupIid(){
-        InstanceIdentifier<ExternalImplicitGroup>
-                identifier = IidFactory.externalImplicitGroupIid(tenantId, epgId);
+    public void testeExternalImplicitGroupIid() {
+        InstanceIdentifier<ExternalImplicitGroup> identifier = IidFactory.externalImplicitGroupIid(tenantId, epgId);
         Assert.assertEquals(epgId, identifier.firstKeyOf(ExternalImplicitGroup.class).getId());
     }
 
     @Test
     public void testProviderAddressEndpointLocationIid() {
         ContextId l3Context = new ContextId(L3_CONTEXT_ID);
-        InstanceIdentifier<ProviderAddressEndpointLocation> identifier = IidFactory
-            .providerAddressEndpointLocationIid(LOCATION_PROVIDER_NAME, IpPrefixType.class, IP_ADDRESS,
-                    org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context.class,
-                    l3Context);
+        InstanceIdentifier<ProviderAddressEndpointLocation> identifier = IidFactory.providerAddressEndpointLocationIid(
+                LOCATION_PROVIDER_NAME, AddressType.class, IP_ADDRESS, ContextType.class, l3Context);
         Assert.assertEquals(LOCATION_PROVIDER_NAME,
                 identifier.firstKeyOf(LocationProvider.class).getProvider().getValue());
         Assert.assertEquals(IP_ADDRESS, identifier.firstKeyOf(ProviderAddressEndpointLocation.class).getAddress());
@@ -418,15 +384,11 @@ public class IidFactoryTest {
     @Test
     public void testAddressEndpointIid() {
         ContextId l3Context = new ContextId(L3_CONTEXT_ID);
-        InstanceIdentifier<AddressEndpoint> identifier =
-                IidFactory.addressEndpointIid(new AddressEndpointKey(IP_ADDRESS, IpPrefixType.class, l3Context,
-                        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context.class
-                        ));
-        Assert.assertEquals(IpPrefixType.class, identifier.firstKeyOf(AddressEndpoint.class).getAddressType());
+        InstanceIdentifier<AddressEndpoint> identifier = IidFactory.addressEndpointIid(
+                new AddressEndpointKey(IP_ADDRESS, AddressType.class, l3Context, ContextType.class));
+        Assert.assertEquals(AddressType.class, identifier.firstKeyOf(AddressEndpoint.class).getAddressType());
         Assert.assertEquals(IP_ADDRESS, identifier.firstKeyOf(AddressEndpoint.class).getAddress());
-        Assert.assertEquals(
-                org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context.class,
-                identifier.firstKeyOf(AddressEndpoint.class).getContextType());
+        Assert.assertEquals(ContextType.class, identifier.firstKeyOf(AddressEndpoint.class).getContextType());
         Assert.assertEquals(l3Context, identifier.firstKeyOf(AddressEndpoint.class).getContextId());
     }
 
@@ -434,14 +396,12 @@ public class IidFactoryTest {
     public void testAddressEndpointLocationIid() {
         ContextId l3Context = new ContextId(L3_CONTEXT_ID);
         AddressEndpointLocationKey addrEndpointLocationKey =
-                new AddressEndpointLocationKey(IP_ADDRESS, IpPrefixType.class, l3Context,
-                        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context.class);
-        InstanceIdentifier<AddressEndpointLocation> iid = IidFactory.addressEndpointLocationIid(addrEndpointLocationKey);
-        Assert.assertEquals(IpPrefixType.class, iid.firstKeyOf(AddressEndpointLocation.class).getAddressType());
+                new AddressEndpointLocationKey(IP_ADDRESS, AddressType.class, l3Context, ContextType.class);
+        InstanceIdentifier<AddressEndpointLocation> iid =
+                IidFactory.addressEndpointLocationIid(addrEndpointLocationKey);
+        Assert.assertEquals(AddressType.class, iid.firstKeyOf(AddressEndpointLocation.class).getAddressType());
         Assert.assertEquals(IP_ADDRESS, iid.firstKeyOf(AddressEndpointLocation.class).getAddress());
-        Assert.assertEquals(
-                org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context.class,
-                iid.firstKeyOf(AddressEndpointLocation.class).getContextType());
+        Assert.assertEquals(ContextType.class, iid.firstKeyOf(AddressEndpointLocation.class).getContextType());
         Assert.assertEquals(l3Context, iid.firstKeyOf(AddressEndpointLocation.class).getContextId());
     }
 
@@ -449,12 +409,10 @@ public class IidFactoryTest {
     public void testContainmentEndpointLocationIid() {
         ContextId l3Context = new ContextId(L3_CONTEXT_ID);
         ContainmentEndpointLocationKey contEndpointLocationKey =
-                new ContainmentEndpointLocationKey(l3Context,
-                        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context.class);
-        InstanceIdentifier<ContainmentEndpointLocation> iid = IidFactory.containmentEndpointLocationIid(contEndpointLocationKey);
-        Assert.assertEquals(
-                org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context.class,
-                iid.firstKeyOf(ContainmentEndpointLocation.class).getContextType());
+                new ContainmentEndpointLocationKey(l3Context, ContextType.class);
+        InstanceIdentifier<ContainmentEndpointLocation> iid =
+                IidFactory.containmentEndpointLocationIid(contEndpointLocationKey);
+        Assert.assertEquals(ContextType.class, iid.firstKeyOf(ContainmentEndpointLocation.class).getContextType());
         Assert.assertEquals(l3Context, iid.firstKeyOf(ContainmentEndpointLocation.class).getContextId());
     }
 
@@ -462,15 +420,13 @@ public class IidFactoryTest {
     public void internalLocationIid_AddrEndpoint() {
         ContextId l3Context = new ContextId(L3_CONTEXT_ID);
         AddressEndpointLocationKey addrEndpointLocationKey =
-                new AddressEndpointLocationKey(IP_ADDRESS, IpPrefixType.class, l3Context,
-                        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context.class);
+                new AddressEndpointLocationKey(IP_ADDRESS, AddressType.class, l3Context, ContextType.class);
         InternalLocationKey internalLocationKey = new InternalLocationKey(nodeIid, connectorIid);
-        InstanceIdentifier<InternalLocation> iid = IidFactory.internalLocationIid(addrEndpointLocationKey, internalLocationKey);
-        Assert.assertEquals(IpPrefixType.class, iid.firstKeyOf(AddressEndpointLocation.class).getAddressType());
+        InstanceIdentifier<InternalLocation> iid =
+                IidFactory.internalLocationIid(addrEndpointLocationKey, internalLocationKey);
+        Assert.assertEquals(AddressType.class, iid.firstKeyOf(AddressEndpointLocation.class).getAddressType());
         Assert.assertEquals(IP_ADDRESS, iid.firstKeyOf(AddressEndpointLocation.class).getAddress());
-        Assert.assertEquals(
-                org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context.class,
-                iid.firstKeyOf(AddressEndpointLocation.class).getContextType());
+        Assert.assertEquals(ContextType.class, iid.firstKeyOf(AddressEndpointLocation.class).getContextType());
         Assert.assertEquals(l3Context, iid.firstKeyOf(AddressEndpointLocation.class).getContextId());
         Assert.assertEquals(nodeIid, iid.firstKeyOf(InternalLocation.class).getInternalNode());
         Assert.assertEquals(connectorIid, iid.firstKeyOf(InternalLocation.class).getInternalNodeConnector());
@@ -480,13 +436,11 @@ public class IidFactoryTest {
     public void internalLocationIid_ContEndpoint() {
         ContextId l3Context = new ContextId(L3_CONTEXT_ID);
         ContainmentEndpointLocationKey contEndpointLocationKey =
-                new ContainmentEndpointLocationKey(l3Context,
-                        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context.class);
+                new ContainmentEndpointLocationKey(l3Context, ContextType.class);
         InternalLocationKey internalLocationKey = new InternalLocationKey(nodeIid, connectorIid);
-        InstanceIdentifier<InternalLocation> iid = IidFactory.internalLocationIid(contEndpointLocationKey, internalLocationKey);
-        Assert.assertEquals(
-                org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context.class,
-                iid.firstKeyOf(ContainmentEndpointLocation.class).getContextType());
+        InstanceIdentifier<InternalLocation> iid =
+                IidFactory.internalLocationIid(contEndpointLocationKey, internalLocationKey);
+        Assert.assertEquals(ContextType.class, iid.firstKeyOf(ContainmentEndpointLocation.class).getContextType());
         Assert.assertEquals(l3Context, iid.firstKeyOf(ContainmentEndpointLocation.class).getContextId());
         Assert.assertEquals(nodeIid, iid.firstKeyOf(InternalLocation.class).getInternalNode());
         Assert.assertEquals(connectorIid, iid.firstKeyOf(InternalLocation.class).getInternalNodeConnector());
@@ -496,15 +450,13 @@ public class IidFactoryTest {
     public void externalLocationIid_AddrEndpoint() {
         ContextId l3Context = new ContextId(L3_CONTEXT_ID);
         AddressEndpointLocationKey addrEndpointLocationKey =
-                new AddressEndpointLocationKey(IP_ADDRESS, IpPrefixType.class, l3Context,
-                        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context.class);
+                new AddressEndpointLocationKey(IP_ADDRESS, AddressType.class, l3Context, ContextType.class);
         ExternalLocationKey externalLocationKey = new ExternalLocationKey(CONNECTOR, nodeIid);
-        InstanceIdentifier<ExternalLocation> iid = IidFactory.externalLocationIid(addrEndpointLocationKey, externalLocationKey);
-        Assert.assertEquals(IpPrefixType.class, iid.firstKeyOf(AddressEndpointLocation.class).getAddressType());
+        InstanceIdentifier<ExternalLocation> iid =
+                IidFactory.externalLocationIid(addrEndpointLocationKey, externalLocationKey);
+        Assert.assertEquals(AddressType.class, iid.firstKeyOf(AddressEndpointLocation.class).getAddressType());
         Assert.assertEquals(IP_ADDRESS, iid.firstKeyOf(AddressEndpointLocation.class).getAddress());
-        Assert.assertEquals(
-                org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context.class,
-                iid.firstKeyOf(AddressEndpointLocation.class).getContextType());
+        Assert.assertEquals(ContextType.class, iid.firstKeyOf(AddressEndpointLocation.class).getContextType());
         Assert.assertEquals(l3Context, iid.firstKeyOf(AddressEndpointLocation.class).getContextId());
         Assert.assertEquals(CONNECTOR, iid.firstKeyOf(ExternalLocation.class).getExternalNodeConnector());
         Assert.assertEquals(nodeIid, iid.firstKeyOf(ExternalLocation.class).getExternalNodeMountPoint());
@@ -514,13 +466,11 @@ public class IidFactoryTest {
     public void externalLocationIid_ContEndpoint() {
         ContextId l3Context = new ContextId(L3_CONTEXT_ID);
         ContainmentEndpointLocationKey addrEndpointLocationKey =
-                new ContainmentEndpointLocationKey(l3Context,
-                        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context.class);
+                new ContainmentEndpointLocationKey(l3Context, ContextType.class);
         ExternalLocationKey externalLocationKey = new ExternalLocationKey(CONNECTOR, nodeIid);
-        InstanceIdentifier<ExternalLocation> iid = IidFactory.externalLocationIid(addrEndpointLocationKey, externalLocationKey);
-        Assert.assertEquals(
-                org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context.class,
-                iid.firstKeyOf(ContainmentEndpointLocation.class).getContextType());
+        InstanceIdentifier<ExternalLocation> iid =
+                IidFactory.externalLocationIid(addrEndpointLocationKey, externalLocationKey);
+        Assert.assertEquals(ContextType.class, iid.firstKeyOf(ContainmentEndpointLocation.class).getContextType());
         Assert.assertEquals(l3Context, iid.firstKeyOf(ContainmentEndpointLocation.class).getContextId());
         Assert.assertEquals(CONNECTOR, iid.firstKeyOf(ExternalLocation.class).getExternalNodeConnector());
         Assert.assertEquals(nodeIid, iid.firstKeyOf(ExternalLocation.class).getExternalNodeMountPoint());
@@ -530,14 +480,11 @@ public class IidFactoryTest {
     public void absoluteLocationIid() {
         ContextId l3Context = new ContextId(L3_CONTEXT_ID);
         AddressEndpointLocationKey addrEndpointLocationKey =
-                new AddressEndpointLocationKey(IP_ADDRESS, IpPrefixType.class, l3Context,
-                        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context.class);
+                new AddressEndpointLocationKey(IP_ADDRESS, AddressType.class, l3Context, ContextType.class);
         InstanceIdentifier<AbsoluteLocation> iid = IidFactory.absoluteLocationIid(addrEndpointLocationKey);
-        Assert.assertEquals(IpPrefixType.class, iid.firstKeyOf(AddressEndpointLocation.class).getAddressType());
+        Assert.assertEquals(AddressType.class, iid.firstKeyOf(AddressEndpointLocation.class).getAddressType());
         Assert.assertEquals(IP_ADDRESS, iid.firstKeyOf(AddressEndpointLocation.class).getAddress());
-        Assert.assertEquals(
-                org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context.class,
-                iid.firstKeyOf(AddressEndpointLocation.class).getContextType());
+        Assert.assertEquals(ContextType.class, iid.firstKeyOf(AddressEndpointLocation.class).getContextType());
         Assert.assertEquals(l3Context, iid.firstKeyOf(AddressEndpointLocation.class).getContextId());
     }
 }

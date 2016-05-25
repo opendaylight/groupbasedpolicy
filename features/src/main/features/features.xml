@@ -134,8 +134,10 @@
     <feature name='odl-groupbasedpolicy-neutronmapper' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Neutron Mapper mapps neutron APIs to GBP APIs '>
         <feature version="${neutron.version}">odl-neutron-service</feature>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.neutron/dummyprovider/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/neutron-mapper/{{VERSION}}</bundle>
+        <configfile finalname="${config.configfile.directory}/15-l2-l3-domain-extension.xml">mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}/xml/config</configfile>
         <configfile finalname="${config.configfile.directory}/15-neutron-mapper.xml">mvn:org.opendaylight.groupbasedpolicy/neutron-mapper/{{VERSION}}/xml/config</configfile>
     </feature>
 
@@ -154,7 +156,9 @@
     -->
     <feature name='odl-groupbasedpolicy-vpp' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: VPP renderer '>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/vpp-renderer/{{VERSION}}</bundle>
+        <configfile finalname="${config.configfile.directory}/15-l2-l3-domain-extension.xml">mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}/xml/config</configfile>
         <configfile finalname="${config.configfile.directory}/15-vpp-renderer.xml">mvn:org.opendaylight.groupbasedpolicy/vpp-renderer/{{VERSION}}/xml/config</configfile>
     </feature>
 
@@ -195,8 +199,10 @@
     <feature name='odl-groupbasedpolicy-sxp-mapper' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: sxp-mapper'>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <feature version="${sxp.version}">odl-sxp-core</feature>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}</bundle>
         <bundle>mvn:commons-net/commons-net/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/sxp-mapper/{{VERSION}}</bundle>
+        <configfile finalname="${config.configfile.directory}/15-l2-l3-domain-extension.xml">mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}/xml/config</configfile>
         <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-sxp-mapper.xml">mvn:org.opendaylight.groupbasedpolicy/sxp-mapper/{{VERSION}}/xml/config</configfile>
     </feature>
 
@@ -205,20 +211,24 @@
     -->
     <feature name='odl-groupbasedpolicy-ne-location-provider' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: NE location provider'>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/ne-location-provider/{{VERSION}}</bundle>
+        <configfile finalname="${config.configfile.directory}/15-l2-l3-domain-extension.xml">mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}/xml/config</configfile>
         <configfile finalname="${config.configfile.directory}/15-ne-location-provider.xml">mvn:org.opendaylight.groupbasedpolicy/ne-location-provider/{{VERSION}}/xml/config</configfile>
     </feature>
 
     <!--
        IOS-XE renderer
-   -->
+    -->
     <feature name='odl-groupbasedpolicy-ios-xe' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: ios-xe renderer'>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <feature version="${sfc.version}">odl-sfc-provider</feature>
         <feature version="${sxp.version}">odl-sxp-core</feature>
         <feature version="${netconf.version}">odl-netconf-topology</feature>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/sxp-mapper/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/ios-xe-renderer/{{VERSION}}</bundle>
+        <configfile finalname="${config.configfile.directory}/15-l2-l3-domain-extension.xml">mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}/xml/config</configfile>
         <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-ios-xe-renderer.xml">mvn:org.opendaylight.groupbasedpolicy/ios-xe-renderer/{{VERSION}}/xml/config</configfile>
     </feature>
 </features>

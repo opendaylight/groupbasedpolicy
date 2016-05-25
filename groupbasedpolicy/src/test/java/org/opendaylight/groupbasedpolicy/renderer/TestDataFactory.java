@@ -82,25 +82,25 @@ public class TestDataFactory {
     }
 
     public static AddressEndpointBuilder defaultAdrEp(String address, EndpointGroupId... epgs) {
-        return new AddressEndpointBuilder().setContextType(DummyContextType.class)
+        return new AddressEndpointBuilder().setContextType(ContextType.class)
             .setContextId(CTX_1)
-            .setAddressType(DummyAddressType.class)
+            .setAddressType(AddressType.class)
             .setAddress(address)
             .setTenant(TENANT_ID)
             .setEndpointGroup(Arrays.asList(epgs))
             .setNetworkContainment(
                     new NetworkContainmentBuilder().setContainment(new ForwardingContextContainmentBuilder()
-                        .setContextType(DummyContextType.class).setContextId(CTX_1).build()).build());
+                        .setContextType(ContextType.class).setContextId(CTX_1).build()).build());
     }
 
     public static ContainmentEndpointBuilder defaultContEp(EndpointGroupId... epgs) {
-        return new ContainmentEndpointBuilder().setContextType(DummyContextType.class)
+        return new ContainmentEndpointBuilder().setContextType(ContextType.class)
             .setContextId(CTX_1)
             .setTenant(TENANT_ID)
             .setEndpointGroup(Arrays.asList(epgs))
             .setNetworkContainment(
                     new NetworkContainmentBuilder().setContainment(new ForwardingContextContainmentBuilder()
-                        .setContextType(DummyContextType.class).setContextId(CTX_1).build()).build());
+                        .setContextType(ContextType.class).setContextId(CTX_1).build()).build());
     }
 
     public static ResolvedRuleBuilder defaultResolvedRule(RuleName ruleName) {
@@ -135,8 +135,4 @@ public class TestDataFactory {
             .setPolicyRuleGroupWithEndpointConstraints(ImmutableList.of(blueRuleGrpWithoutCons));
     }
 
-    public static abstract class DummyContextType extends ContextType {
-    };
-    public static abstract class DummyAddressType extends AddressType {
-    };
 }
