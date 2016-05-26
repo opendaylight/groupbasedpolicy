@@ -11,15 +11,15 @@ package org.opendaylight.controller.config.yang.config.vpp_provider.impl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class VppProviderModule extends org.opendaylight.controller.config.yang.config.vpp_provider.impl.AbstractVppProviderModule {
+public class GbpVppProviderModule extends org.opendaylight.controller.config.yang.config.vpp_provider.impl.AbstractGbpVppProviderModule {
 
-    private static final Logger LOG = LoggerFactory.getLogger(VppProviderModule.class);
+    private static final Logger LOG = LoggerFactory.getLogger(GbpVppProviderModule.class);
 
-    public VppProviderModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {
+    public GbpVppProviderModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {
         super(identifier, dependencyResolver);
     }
 
-    public VppProviderModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver, org.opendaylight.controller.config.yang.config.vpp_provider.impl.VppProviderModule oldModule, java.lang.AutoCloseable oldInstance) {
+    public GbpVppProviderModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver, org.opendaylight.controller.config.yang.config.vpp_provider.impl.GbpVppProviderModule oldModule, java.lang.AutoCloseable oldInstance) {
         super(identifier, dependencyResolver, oldModule, oldInstance);
     }
 

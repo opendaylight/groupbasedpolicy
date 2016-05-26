@@ -47,6 +47,17 @@ module neutron-vpp-mapper-impl {
                 }
             }
 
+            leaf vhostSocketPath {
+                description "Base system directory path for the vhost user host socket filehandle";
+                type string;
+                default "/tmp/";
+            }
+
+            leaf vhostSocketPrefix {
+                description "Prefix for the vhost user host socket filehandle";
+                type string;
+                default "socket_";
+            }
         }
     }
 }

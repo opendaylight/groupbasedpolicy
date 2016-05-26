@@ -29,7 +29,7 @@ module vpp-provider-impl {
     identity vpp-provider-impl {
         base "config:module-type";
 
-        config:java-name-prefix VppProvider;
+        config:java-name-prefix GbpVppProvider;
     }
 
     // Augments the 'configuration' choice node under modules/module.

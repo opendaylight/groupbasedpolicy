@@ -26,6 +26,17 @@ module vpp-renderer {
         list vpp-endpoint {
             key "context-type context-id address-type address";
             uses base-ep:address-endpoint-key;
+
+            leaf vpp-interface-name {
+                description "Name of interface for the endpoint on VPP";
+                type string;
+            }
+
+            leaf description {
+                description "Additional description of the vpp-endpoint";
+                type string;
+            }
+
             choice interface-type-choice {
                 case vhost-user-case {
                     leaf socket {

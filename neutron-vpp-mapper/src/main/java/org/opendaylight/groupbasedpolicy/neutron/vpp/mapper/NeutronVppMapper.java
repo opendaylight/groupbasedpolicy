@@ -18,6 +18,26 @@ public class NeutronVppMapper implements AutoCloseable {
     NeutronListener neutronListener;
     private static final Logger LOG = LoggerFactory.getLogger(NeutronVppMapper.class);
 
+    private String socketPath;
+
+    private String socketPrefix;
+
+    public String getSocketPath() {
+        return socketPath;
+    }
+
+    public void setSocketPath(String socketPath) {
+        this.socketPath = socketPath;
+    }
+
+    public String getSocketPrefix() {
+        return socketPrefix;
+    }
+
+    public void setSocketPrefix(String socketPrefix) {
+        this.socketPrefix = socketPrefix;
+    }
+
     public NeutronVppMapper(DataBroker dataBroker) {
         neutronListener = new NeutronListener(dataBroker);
         LOG.info("Neutron VPP started!");
