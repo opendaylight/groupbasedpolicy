@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2015 Huawei Technologies and others. All rights reserved.
- * 
+ *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -9,6 +9,7 @@ package org.opendaylight.groupbasedpolicy.renderer.faas;
 
 import java.util.concurrent.ScheduledExecutorService;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.common.rev151013.Uuid;
@@ -45,7 +46,8 @@ public class FaasTenantManagerListener implements DataChangeListener {
         });
     }
 
-    private void executeEvent(final AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
+    @VisibleForTesting
+    void executeEvent(final AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
         // Remove
         for (InstanceIdentifier<?> iid : change.getRemovedPaths()) {
             DataObject old = change.getOriginalData().get(iid);
