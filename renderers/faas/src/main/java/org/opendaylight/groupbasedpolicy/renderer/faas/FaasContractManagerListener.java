@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2015 Huawei Technologies and others. All rights reserved.
- * 
+ *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -15,6 +15,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
@@ -96,7 +97,8 @@ public class FaasContractManagerListener implements DataChangeListener {
         });
     }
 
-    private void executeEvent(final AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
+    @VisibleForTesting
+    void executeEvent(final AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
         // Create
         for (DataObject dao : change.getCreatedData().values()) {
             if (dao instanceof Contract) {
@@ -109,7 +111,7 @@ public class FaasContractManagerListener implements DataChangeListener {
         Map<InstanceIdentifier<?>, DataObject> dao = change.getUpdatedData();
         for (Map.Entry<InstanceIdentifier<?>, DataObject> entry : dao.entrySet()) {
             if (entry.getValue() instanceof Contract) {
-                Contract contract = (Contract) dao;
+                Contract contract = (Contract) entry.getValue();
                 LOG.debug("Contract {} is Updated.", contract.getId().getValue());
                 UlnDatastoreApi.submitSecurityGroupsToDs(initSecurityGroupBuilder(contract).build());
             }

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2015 Huawei Technologies and others. All rights reserved.
- * 
+ *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -19,6 +19,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
@@ -82,8 +84,6 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Optional;
-
 public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(FaasPolicyManager.class);
@@ -93,7 +93,8 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
     private final DataBroker dataProvider;
     protected final Map<Pair<EndpointGroupId, TenantId>, List<SubnetId>> epgSubnetsMap = new HashMap<>();
     private final ConcurrentHashMap<TenantId, Uuid> mappedTenants = new ConcurrentHashMap<>();
-    protected final ConcurrentHashMap<TenantId, ArrayList<ListenerRegistration<DataChangeListener>>> registeredTenants = new ConcurrentHashMap<TenantId, ArrayList<ListenerRegistration<DataChangeListener>>>();
+    protected final ConcurrentHashMap<TenantId, ArrayList<ListenerRegistration<DataChangeListener>>> registeredTenants =
+            new ConcurrentHashMap<>();
 
     public FaasPolicyManager(DataBroker dataBroker, ScheduledExecutorService executor) {
         this.dataProvider = dataBroker;
@@ -250,7 +251,7 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
             /*
              * tenant registrations
              */
-            ArrayList<ListenerRegistration<DataChangeListener>> list = new ArrayList<ListenerRegistration<DataChangeListener>>();
+            ArrayList<ListenerRegistration<DataChangeListener>> list = new ArrayList<>();
             ListenerRegistration<DataChangeListener> reg;
             // contracts
             reg = dataProvider.registerDataChangeListener(LogicalDatastoreType.CONFIGURATION,
@@ -316,7 +317,8 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
         }
     }
 
-    private void registerFollowedEndpointgroup(TenantId gbpTenantId, EndpointGroupId epgId) {
+    @VisibleForTesting
+    void registerFollowedEndpointgroup(TenantId gbpTenantId, EndpointGroupId epgId) {
         if (epgId == null) {
             return;
         }
@@ -339,7 +341,7 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
         if (val != null) {
             return val;
         }
-        Uuid faasTenantId = null;
+        Uuid faasTenantId;
         if (isUUid(tenantId.getValue())) {
             faasTenantId = new Uuid(tenantId.getValue());
         } else {
@@ -370,7 +372,8 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
         ArrayList<ListenerRegistration<DataChangeListener>> list = registeredTenants.remove(tenantId);
         if (list != null) {
             for (ListenerRegistration<DataChangeListener> reg : list) {
-                reg.close();
+                if (reg != null)
+                    reg.close();
             }
             LOG.debug("Unregistered tenant {}", tenantId);
         }
@@ -385,7 +388,8 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
         return registeredTenants.containsKey(tenantId);
     }
 
-    private boolean handledPolicy(ResolvedPolicy policy) {
+    @VisibleForTesting
+    boolean handledPolicy(ResolvedPolicy policy) {
         if (!policy.getConsumerTenantId().equals(policy.getProviderTenantId())) {
             // FAAS always assumes consumer and provider EPGs belong to the same tenant
             LOG.warn(
@@ -393,10 +397,7 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
                     policy.getConsumerTenantId().getValue(), policy.getProviderTenantId().getValue());
             return false;
         }
-        if (!isTenantRegistered(policy.getConsumerTenantId())) {
-            return false;
-        }
-        return true;
+        return isTenantRegistered(policy.getConsumerTenantId());
     }
 
     private boolean isEqualService(ResolvedPolicy newPolicy, ResolvedPolicy oldPolicy) {
@@ -413,10 +414,8 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
     private void registerSubnetWithEpg(EndpointGroupId epgId, TenantId tenantId, SubnetId subnetId, boolean updateLn) {
         synchronized (this) {
             List<SubnetId> subnets = cloneAndGetEpgSubnets(epgId, tenantId);
-            for (SubnetId id : subnets) {
-                if (id.equals(subnetId)) {
-                    return;
-                }
+            if(subnets.contains(subnetId)){
+                return;
             }
             subnets.add(subnetId);
             epgSubnetsMap.put(new Pair<>(epgId, tenantId), subnets);
@@ -427,7 +426,8 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
         }
     }
 
-    private void removeLogicalNetwork(ResolvedPolicy oldPolicy) {
+    @VisibleForTesting
+    void removeLogicalNetwork(ResolvedPolicy oldPolicy) {
         if (oldPolicy == null) {
             return;
         }
@@ -812,7 +812,8 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
         return builder;
     }
 
-    protected boolean needToCreateLogicalNetwork(ServiceCommunicationLayer comLayer, List<SubnetId> consSubnetIds,
+    @VisibleForTesting
+    boolean needToCreateLogicalNetwork(ServiceCommunicationLayer comLayer, List<SubnetId> consSubnetIds,
             List<SubnetId> provSubnetIds, TenantId tenantId, ContractId contractId, EndpointGroup providerEpg,
             EndpointGroup consumerEpg, ExternalImplicitGroup externalImplicitGroup) {
         Optional<LogicalNetwork> lnOp = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
@@ -841,10 +842,8 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
             return true;
         }
         Set<SubnetId> lnProvSubnets = new HashSet<>(logicalNet.getProviderNetwork().getGbpSubnetId());
-        if (lnProvSubnets.size() != provSubnetIds.size() || !lnProvSubnets.containsAll(provSubnetIds)) {
-            return true;
-        }
-        return false;
+        return lnProvSubnets.size() != provSubnetIds.size() || !lnProvSubnets.containsAll(
+                provSubnetIds);
     }
 
     private ServiceCommunicationLayer findLayerNetwork(TenantId tenantId, List<SubnetId> consSubnetIds,
@@ -950,7 +949,8 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
         return null;
     }
 
-    protected L3Context readL3ContextInstance(TenantId tenantId, L3ContextId l3cId) {
+    @VisibleForTesting
+    L3Context readL3ContextInstance(TenantId tenantId, L3ContextId l3cId) {
         ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
         InstanceIdentifier<L3Context> iid = IidFactory.l3ContextIid(tenantId, l3cId);
         Optional<L3Context> l2Op = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, iid, rTx);
@@ -962,7 +962,8 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
         return l2Op.get();
     }
 
-    protected L2BridgeDomain readL2BridgeDomainInstance(TenantId tenantId, L2BridgeDomainId l2bId) {
+    @VisibleForTesting
+    L2BridgeDomain readL2BridgeDomainInstance(TenantId tenantId, L2BridgeDomainId l2bId) {
         ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
         InstanceIdentifier<L2BridgeDomain> iid = IidFactory.l2BridgeDomainIid(tenantId, l2bId);
         Optional<L2BridgeDomain> l2Op = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, iid, rTx);
@@ -974,7 +975,8 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
         return l2Op.get();
     }
 
-    protected L2FloodDomain readL2FloodDomain(L2FloodDomainId l2fId, TenantId tenantId) {
+    @VisibleForTesting
+    L2FloodDomain readL2FloodDomain(L2FloodDomainId l2fId, TenantId tenantId) {
         ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
         InstanceIdentifier<L2FloodDomain> iid = IidFactory.l2FloodDomainIid(tenantId, l2fId);
         Optional<L2FloodDomain> l2Op = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, iid, rTx);
@@ -1023,7 +1025,8 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
         removeTenantLogicalNetwork(gbpTenantId, faasTenantId, true);
     }
 
-    private void removeTenantLogicalNetwork(TenantId gbpTenantId, Uuid faasTenantId, boolean unregister) {
+    @VisibleForTesting
+    void removeTenantLogicalNetwork(TenantId gbpTenantId, Uuid faasTenantId, boolean unregister) {
         UlnDatastoreApi.removeTenantFromDsIfExists(faasTenantId);
         synchronized (this) {
             mappedTenants.remove(gbpTenantId);
