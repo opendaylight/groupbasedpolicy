@@ -69,22 +69,22 @@ import com.google.common.collect.PeekingIterator;
 public class NeutronMapper implements DataTreeChangeListener<Neutron>, AutoCloseable {
 
     private final static SecurityRuleBuilder EIG_INGRESS_IPV4_SEC_RULE_BUILDER = new SecurityRuleBuilder()
-        .setId(new Uuid("19b85ad2-bdfc-11e5-9912-ba0be0483c18"))
+        .setId(new Uuid("0a629f80-2408-11e6-b67b-9e71128cae77"))
         .setDirection(DirectionIngress.class)
         .setEthertype(EthertypeV4.class)
         .setSecurityGroupId(MappingUtils.EIG_UUID);
     private final static SecurityRuleBuilder EIG_EGRESS_IPV4_SEC_RULE_BUILDER = new SecurityRuleBuilder()
-        .setId(new Uuid("19b85ad2-bdfc-11e5-9912-ba0be0483c18"))
+        .setId(new Uuid("0f1789be-2408-11e6-b67b-9e71128cae77"))
         .setDirection(DirectionEgress.class)
         .setEthertype(EthertypeV4.class)
         .setSecurityGroupId(MappingUtils.EIG_UUID);
     private final static SecurityRuleBuilder EIG_INGRESS_IPV6_SEC_RULE_BUILDER = new SecurityRuleBuilder()
-        .setId(new Uuid("19b85ad2-bdfc-11e5-9912-ba0be0483c18"))
+        .setId(new Uuid("139b7f90-2408-11e6-b67b-9e71128cae77"))
         .setDirection(DirectionIngress.class)
         .setEthertype(EthertypeV6.class)
         .setSecurityGroupId(MappingUtils.EIG_UUID);
     private final static SecurityRuleBuilder EIG_EGRESS_IPV6_SEC_RULE_BUILDER = new SecurityRuleBuilder()
-        .setId(new Uuid("19b85ad2-bdfc-11e5-9912-ba0be0483c18"))
+        .setId(new Uuid("17517202-2408-11e6-b67b-9e71128cae77"))
         .setDirection(DirectionEgress.class)
         .setEthertype(EthertypeV6.class)
         .setSecurityGroupId(MappingUtils.EIG_UUID);
