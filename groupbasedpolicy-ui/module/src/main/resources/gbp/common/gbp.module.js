@@ -6,11 +6,13 @@ define([
     'angular-aria',
     'angular-material',
     'angular-material-data-table',
-    'angular-messages'], function () {
+    'angular-messages',
+    'app/gbp/common/topology/next_topology.module',], function () {
 
     var gbp = angular.module('app.gbp',
         [
-            'app.core', 'ui.router.state', 'restangular', 'ngAnimate', 'ngAria', 'ngMaterial', 'md.data.table', 'ngMessages'
+            'app.core', 'ui.router.state', 'restangular', 'ngAnimate', 'ngAria', 'ngMaterial', 'md.data.table',
+            'ngMessages', 'app.nextTopo',
         ]);
 
     gbp.register = gbp; // for adding services, controllers, directives etc. to angular module before bootstrap
@@ -31,6 +33,7 @@ define([
         NavHelperProvider.addControllerUrl('app/gbp/contract/contract.controller');
         NavHelperProvider.addControllerUrl('app/gbp/epg/epg.controller');
         NavHelperProvider.addControllerUrl('app/gbp/policy/policy.controller');
+        NavHelperProvider.addControllerUrl('app/gbp/resolved-policy/resolved-policy.controller');
         NavHelperProvider.addControllerUrl('app/gbp/tenant/add-tenant.controller');
         NavHelperProvider.addControllerUrl('app/gbp/tenant/tenant.controller');
 
@@ -134,6 +137,18 @@ define([
                 '': {
                     controller: 'ContractController',
                     templateUrl: 'src/app/gbp/contract/contract.tpl.html',
+                },
+            },
+        });
+
+        $stateProvider.state('main.gbp.index.resolvedPolicy', {
+            url: '/resolved-policy',
+            access: access.admin,
+            templateUrl: 'src/app/gbp/common/views/index.tpl.html',
+            views: {
+                '': {
+                    controller: 'ResolvedPolicyController',
+                    templateUrl: 'src/app/gbp/resolved-policy/resolved-policy.tpl.html',
                 },
             },
         });

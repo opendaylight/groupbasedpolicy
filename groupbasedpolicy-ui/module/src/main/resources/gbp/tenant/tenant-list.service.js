@@ -13,10 +13,18 @@ define([], function () {
             /* properties */
             this.data = [];
             /* methods */
+            this.clearData = clearData;
             this.setData = setData;
             this.get = get;
 
             /* Implementation */
+
+            function clearData() {
+                var self = this;
+
+                self.data = [];
+            }
+
             /**
              * fills TenantList object with data
              * @param data

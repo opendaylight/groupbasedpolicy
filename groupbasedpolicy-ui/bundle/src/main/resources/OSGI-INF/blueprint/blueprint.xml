@@ -15,6 +15,7 @@
                 <value>src/app/gbp/vendor/angular-material/angular-material.css</value>
                 <value>src/app/gbp/vendor/angular-material-data-table/dist/md-data-table.min.css</value>
                 <value>src/app/gbp/vendor/roboto-fontface/css/roboto-fontface.css</value>
+                <value>src/app/gbp/vendor/NeXt/css/next.min.css</value>
             </list>
         </property>
     </bean>
