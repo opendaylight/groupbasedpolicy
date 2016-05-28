@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2015 Huawei Technologies and others. All rights reserved.
- * 
+ *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
@@ -85,7 +86,8 @@ public class FaasEndpointManagerListener implements DataChangeListener, AutoClos
         });
     }
 
-    private void executeEvent(final AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
+    @VisibleForTesting
+    void executeEvent(final AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
 
         // Create
         for (DataObject dao : change.getCreatedData().values()) {
@@ -97,25 +99,25 @@ public class FaasEndpointManagerListener implements DataChangeListener, AutoClos
                     processEndpoint(endpoint);
                 }
             } else if (dao instanceof EndpointL3) {
-                LOG.debug("Created EndpointL3 {}", (EndpointL3) dao);
+                LOG.debug("Created EndpointL3 {}", dao);
             } else if (dao instanceof EndpointL3Prefix) {
-                LOG.warn("Not Handled Event Yet by Faas Renderer. Created EndpointL3Prefix {}", (EndpointL3Prefix) dao);
+                LOG.warn("Not Handled Event Yet by Faas Renderer. Created EndpointL3Prefix {}", dao);
             }
         }
         // Update
         Map<InstanceIdentifier<?>, DataObject> dao = change.getUpdatedData();
         for (Map.Entry<InstanceIdentifier<?>, DataObject> entry : dao.entrySet()) {
             if (entry.getValue() instanceof Endpoint) {
-                Endpoint endpoint = (Endpoint) dao;
+                Endpoint endpoint = (Endpoint) entry.getValue();
                 LOG.debug("Updated Endpoint {}", endpoint);
                 if (validate(endpoint)) {
                     policyManager.registerTenant(endpoint.getTenant(), endpoint.getEndpointGroup());
                     processEndpoint(endpoint);
                 }
             } else if (entry.getValue() instanceof EndpointL3) {
-                LOG.debug("Updated EndpointL3 {}", (EndpointL3) dao);
+                LOG.debug("Updated EndpointL3 {}", entry.getValue());
             } else if (entry.getValue() instanceof EndpointL3Prefix) {
-                LOG.warn("Not Handled Event Yet by Faas Renderer. Updated EndpointL3Prefix {}", (EndpointL3Prefix) dao);
+                LOG.warn("Not Handled Event Yet by Faas Renderer. Updated EndpointL3Prefix {}", entry.getValue());
             }
         }
         // Remove
@@ -125,17 +127,17 @@ public class FaasEndpointManagerListener implements DataChangeListener, AutoClos
                 continue;
             }
             if (old instanceof Endpoint) {
-                Endpoint endpoint = (Endpoint) dao;
+                Endpoint endpoint = (Endpoint) old;
                 LOG.debug("Removed Endpoint {}", endpoint);
                 removeFaasEndpointLocationIfExist(endpoint.getTenant(), endpoint.getL2Context(),
                         endpoint.getMacAddress());
             } else if (old instanceof EndpointL3) {
-                EndpointL3 endpoint = (EndpointL3) dao;
+                EndpointL3 endpoint = (EndpointL3) old;
                 LOG.debug("Removed EndpointL3 {}", endpoint);
                 removeFaasEndpointLocationIfExist(endpoint.getTenant(), endpoint.getL2Context(),
                         endpoint.getMacAddress());
             } else if (old instanceof EndpointL3Prefix) {
-                LOG.warn("Not Handled Event Yet by Faas Renderer. Removed EndpointL3Prefix {}", (EndpointL3Prefix) old);
+                LOG.warn("Not Handled Event Yet by Faas Renderer. Removed EndpointL3Prefix {}", old);
             }
         }
     }
@@ -158,7 +160,7 @@ public class FaasEndpointManagerListener implements DataChangeListener, AutoClos
         }
         epLocBuilder.setUuid(epId);
         Uuid faasSubnetId = getFaasSubnetId(endpoint);
-        List<PrivateIps> privateIpAddresses = new ArrayList<PrivateIps>();
+        List<PrivateIps> privateIpAddresses = new ArrayList<>();
         for (L3Address ip : endpoint.getL3Address()) {
             PrivateIpsBuilder ipBuilder = new PrivateIpsBuilder();
             ipBuilder.setIpAddress(ip.getIpAddress());

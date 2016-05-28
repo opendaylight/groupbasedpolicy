@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016 Huawei Technologies and others. All rights reserved.
- * 
+ *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -64,8 +64,6 @@ import org.powermock.modules.junit4.PowerMockRunner;
 
 import com.google.common.util.concurrent.CheckedFuture;
 
-@PrepareForTest(UlnDatastoreApi.class)
-@RunWith(PowerMockRunner.class)
 public class FaasPolicyManagerTest {
 
     private InstanceIdentifier<DataObject> policyId;
@@ -90,7 +88,6 @@ public class FaasPolicyManagerTest {
         change = mock(AsyncDataChangeEvent.class);
         policyId = mock(InstanceIdentifier.class);
         dataProvider = mock(DataBroker.class);
-        PowerMockito.mockStatic(UlnDatastoreApi.class);
         WriteTransaction writeTransaction = mock(WriteTransaction.class);
         when(dataProvider.newWriteOnlyTransaction()).thenReturn(writeTransaction);
         CheckedFuture<Void, TransactionCommitFailedException> checkedFuture = mock(CheckedFuture.class);
