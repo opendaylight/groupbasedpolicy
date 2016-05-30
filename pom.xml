@@ -18,6 +18,7 @@
   <modules>
     <module>artifacts</module>
     <module>groupbasedpolicy</module>
+    <module>domain-extensions</module>
     <module>renderers</module>
     <module>location-providers</module>
     <module>neutron-mapper</module>

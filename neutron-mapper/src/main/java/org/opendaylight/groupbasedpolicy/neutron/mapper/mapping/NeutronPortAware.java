@@ -18,6 +18,7 @@ import javax.annotation.Nullable;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.domain_extension.l2_l3.util.L2L3IidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.gbp.util.NeutronGbpIidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.EndpointRegistrator;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.NetworkClient;
@@ -128,11 +129,11 @@ public class NeutronPortAware implements NeutronAware<Port> {
                 .setContextType(MappingUtils.L2_BRDIGE_DOMAIN)
                 .setParent(MappingUtils.createParent(routerL3Context, MappingUtils.L3_CONTEXT))
                 .build();
-            rwTx.merge(LogicalDatastoreType.CONFIGURATION, IidFactory.l2BridgeDomainIid(tenantId, l2BdId), l2Bd);
+            rwTx.merge(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.l2BridgeDomainIid(tenantId, l2BdId), l2Bd);
             // set virtual router IP for subnet
             NetworkDomain subnetDomain = NeutronSubnetAware.createSubnet(
                     routerPortSubnet, portIpWithSubnet.getIpAddress());
-            rwTx.merge(LogicalDatastoreType.CONFIGURATION, IidFactory.subnetIid(tenantId, subnetDomain.getNetworkDomainId()), subnetDomain);
+            rwTx.merge(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.subnetIid(tenantId, subnetDomain.getNetworkDomainId()), subnetDomain);
 
             // does the same for tenant forwarding domains
             processTenantForwarding(routerPortSubnet, routerL3Context, portIpWithSubnet, tenantId, rwTx);
@@ -526,9 +527,9 @@ public class NeutronPortAware implements NeutronAware<Port> {
                 .setParent(MappingUtils.createParent(l3Context, MappingUtils.L3_CONTEXT))
                 .build();
             rwTx.merge(LogicalDatastoreType.CONFIGURATION,
-                    IidFactory.l2BridgeDomainIid(tenantId, fwdCtx.getContextId()), fwdCtx);
+                    L2L3IidFactory.l2BridgeDomainIid(tenantId, fwdCtx.getContextId()), fwdCtx);
             NetworkDomain subnet = NeutronSubnetAware.createSubnet(routerPortSubnet, null);
-            rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.subnetIid(tenantId, subnet.getNetworkDomainId()),
+            rwTx.put(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.subnetIid(tenantId, subnet.getNetworkDomainId()),
                     subnet);
             DataStoreHelper.submitToDs(rwTx);
         } else if (PortUtils.isDhcpPort(port)) {

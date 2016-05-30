@@ -10,6 +10,7 @@ package org.opendaylight.groupbasedpolicy.api;
 
 import java.util.Map;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.NetworkDomain;
@@ -31,6 +32,6 @@ public interface NetworkDomainAugmentor {
      */
     @Nullable
     Map.Entry<Class<? extends Augmentation<RendererNetworkDomain>>, Augmentation<RendererNetworkDomain>> buildRendererNetworkDomainAugmentation(
-            NetworkDomain input);
+            @Nonnull NetworkDomain input);
 
 }

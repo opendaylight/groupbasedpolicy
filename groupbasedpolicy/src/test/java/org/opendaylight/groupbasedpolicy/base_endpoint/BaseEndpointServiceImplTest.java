@@ -58,11 +58,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.IpPrefixType;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L2FloodDomain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.MacAddressType;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.Subnet;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.AddressType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.ContextType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.NetworkDomain;
 import org.opendaylight.yangtools.yang.common.RpcResult;
 
 import com.google.common.base.Optional;
@@ -77,27 +75,26 @@ public class BaseEndpointServiceImplTest extends CustomDataBrokerTest {
     private static final String CONTEXT_ID = "testContext";
     private static final long timestamp = 1234567890L;
     private static final NetworkDomainContainment networkDomainContainment = new NetworkDomainContainmentBuilder()
-        .setNetworkDomainId(new NetworkDomainId(DOMAIN)).setNetworkDomainType(Subnet.class).build();
+        .setNetworkDomainId(new NetworkDomainId(DOMAIN)).setNetworkDomainType(NetworkDomain.class).build();
     private static final ParentEndpoint BASE_L3_PARENT = new ParentEndpointBuilder().setAddress(IP_ADDRESS)
-        .setAddressType(IpPrefixType.class)
+        .setAddressType(AddressType.class)
         .setContextId(new ContextId(CONTEXT_ID))
-        .setContextType(L3Context.class)
+        .setContextType(ContextType.class)
         .build();
     private static final ChildEndpoint BASE_L2_CHILD = new ChildEndpointBuilder().setAddress(MAC_ADDRESS)
-        .setAddressType(MacAddressType.class)
+        .setAddressType(AddressType.class)
         .setContextId(new ContextId(CONTEXT_ID))
-        .setContextType(L2FloodDomain.class)
+        .setContextType(ContextType.class)
         .build();
     private static final ParentContainmentEndpoint BASE_CONT_PARENT = new ParentContainmentEndpointBuilder()
-        .setContextId(new ContextId(CONTEXT_ID)).setContextType(L2FloodDomain.class).build();
+        .setContextId(new ContextId(CONTEXT_ID)).setContextType(ContextType.class).build();
 
     private DataBroker dataProvider;
     private BaseEndpointServiceImpl baseEndpointRpcRegistry;
 
     @Override
     public Collection<Class<?>> getClassesFromModules() {
-        return ImmutableList.of(Endpoints.class, AddressEndpoints.class, ContainmentEndpoints.class,
-                MacAddressType.class, IpPrefixType.class);
+        return ImmutableList.of(Endpoints.class, AddressEndpoints.class, ContainmentEndpoints.class);
     }
 
     @Before
@@ -410,10 +407,10 @@ public class BaseEndpointServiceImplTest extends CustomDataBrokerTest {
     private AddressEndpointBuilder createBaseL2EpBuilder() {
         return new AddressEndpointBuilder().setTimestamp(timestamp)
             .setContextId(new ContextId(CONTEXT_ID))
-            .setContextType(L2FloodDomain.class)
+            .setContextType(ContextType.class)
             .setTenant(new TenantId(TENANT))
             .setAddress(MAC_ADDRESS)
-            .setAddressType(MacAddressType.class)
+            .setAddressType(AddressType.class)
             .setNetworkContainment(new NetworkContainmentBuilder().setContainment(networkDomainContainment).build())
             .setTimestamp(timestamp);
     }
@@ -421,10 +418,10 @@ public class BaseEndpointServiceImplTest extends CustomDataBrokerTest {
     private AddressEndpointBuilder createBaseL3EpBuilder() {
         return new AddressEndpointBuilder().setTimestamp(timestamp)
             .setContextId(new ContextId(CONTEXT_ID))
-            .setContextType(L3Context.class)
+            .setContextType(ContextType.class)
             .setTenant(new TenantId(TENANT))
             .setAddress(IP_ADDRESS)
-            .setAddressType(IpPrefixType.class)
+            .setAddressType(AddressType.class)
             .setNetworkContainment(new NetworkContainmentBuilder().setContainment(networkDomainContainment).build())
             .setTimestamp(timestamp);
     }
@@ -432,7 +429,7 @@ public class BaseEndpointServiceImplTest extends CustomDataBrokerTest {
     private ContainmentEndpointBuilder createBaseContEpBuilder() {
         return new ContainmentEndpointBuilder().setTimestamp(timestamp)
             .setContextId(new ContextId(CONTEXT_ID))
-            .setContextType(L2FloodDomain.class)
+            .setContextType(ContextType.class)
             .setTenant(new TenantId(TENANT))
             .setNetworkContainment(new NetworkContainmentBuilder().setContainment(networkDomainContainment).build());
     }

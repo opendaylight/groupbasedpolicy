@@ -43,6 +43,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.RuleName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.ContextType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.ForwardingBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.ForwardingByTenantBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.ForwardingContextBuilder;
@@ -143,7 +144,7 @@ public class RendererManagerDataBrokerTest {
                 .setForwardingByTenant(
                         Arrays.asList(new ForwardingByTenantBuilder().setTenantId(TestDataFactory.TENANT_ID)
                             .setForwardingContext(Arrays.asList(new ForwardingContextBuilder()
-                                .setContextType(TestDataFactory.DummyContextType.class)
+                                .setContextType(ContextType.class)
                                 .setContextId(TestDataFactory.CTX_1)
                                 .build()))
                             .build()))
@@ -244,7 +245,7 @@ public class RendererManagerDataBrokerTest {
                 .setForwardingByTenant(
                         Arrays.asList(new ForwardingByTenantBuilder().setTenantId(TestDataFactory.TENANT_ID)
                             .setForwardingContext(Arrays.asList(new ForwardingContextBuilder()
-                                .setContextType(TestDataFactory.DummyContextType.class)
+                                .setContextType(ContextType.class)
                                 .setContextId(TestDataFactory.CTX_1)
                                 .build()))
                             .build()))
@@ -327,7 +328,7 @@ public class RendererManagerDataBrokerTest {
                 .setForwardingByTenant(
                         Arrays.asList(new ForwardingByTenantBuilder().setTenantId(TestDataFactory.TENANT_ID)
                             .setForwardingContext(Arrays.asList(new ForwardingContextBuilder()
-                                .setContextType(TestDataFactory.DummyContextType.class)
+                                .setContextType(ContextType.class)
                                 .setContextId(TestDataFactory.CTX_1)
                                 .build()))
                             .build()))

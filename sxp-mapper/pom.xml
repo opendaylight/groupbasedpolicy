@@ -57,7 +57,7 @@
         </dependency>
         <dependency>
             <groupId>org.opendaylight.groupbasedpolicy</groupId>
-            <artifactId>groupbasedpolicy</artifactId>
+            <artifactId>l2-l3-domain-extension</artifactId>
         </dependency>
 
         <!-- sxp deps -->

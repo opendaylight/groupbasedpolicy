@@ -244,6 +244,10 @@
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>l2-l3-domain-extension</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>ofoverlay-renderer</artifactId>
     </dependency>
     <dependency>
@@ -307,6 +311,12 @@
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>groupbasedpolicy</artifactId>
+      <type>xml</type>
+      <classifier>config</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>l2-l3-domain-extension</artifactId>
       <type>xml</type>
       <classifier>config</classifier>
     </dependency>

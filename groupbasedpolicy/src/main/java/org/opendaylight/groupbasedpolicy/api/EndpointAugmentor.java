@@ -17,6 +17,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.ContainmentEndpointWithLocation;
 import org.opendaylight.yangtools.yang.binding.Augmentation;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Map;
 
@@ -35,7 +36,7 @@ public interface EndpointAugmentor {
      */
     @Nullable
     Map.Entry<Class<? extends Augmentation<AddressEndpoint>>, Augmentation<AddressEndpoint>> buildAddressEndpointAugmentation(
-            AddressEndpointReg input);
+            @Nonnull AddressEndpointReg input);
 
     /**
      * Creates pair of {@link ContainmentEndpoint} augmentation. Augmentation is domain specific.
@@ -48,7 +49,7 @@ public interface EndpointAugmentor {
      */
     @Nullable
     Map.Entry<Class<? extends Augmentation<ContainmentEndpoint>>, Augmentation<ContainmentEndpoint>> buildContainmentEndpointAugmentation(
-            ContainmentEndpointReg input);
+            @Nonnull ContainmentEndpointReg input);
 
     /**
      * Creates pair of {@link AddressEndpointWithLocation} augmentation. Augmentation is domain
@@ -60,7 +61,7 @@ public interface EndpointAugmentor {
      */
     @Nullable
     Map.Entry<Class<? extends Augmentation<AddressEndpointWithLocation>>, Augmentation<AddressEndpointWithLocation>> buildAddressEndpointWithLocationAugmentation(
-            AddressEndpoint input);
+            @Nonnull AddressEndpoint input);
 
     /**
      * Creates pair of {@link ContainmentEndpointWithLocation} augmentation. Augmentation is domain
@@ -72,5 +73,5 @@ public interface EndpointAugmentor {
      */
     @Nullable
     Map.Entry<Class<? extends Augmentation<ContainmentEndpointWithLocation>>, Augmentation<ContainmentEndpointWithLocation>> buildContainmentEndpointWithLocationAugmentation(
-            ContainmentEndpoint input);
+            @Nonnull ContainmentEndpoint input);
 }

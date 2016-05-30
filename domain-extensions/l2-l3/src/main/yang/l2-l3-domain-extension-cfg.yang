@@ -1,0 +1,48 @@
+/*
+ * Copyright (c) 2016 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
+module l2-l3-domain-extension-cfg {
+    yang-version 1;
+    namespace "urn:opendaylight:params:xml:ns:yang:controller:config:domain_extension:l2_l3:impl";
+    prefix "gbpcfg";
+
+    import config { prefix config; revision-date 2013-04-05; }
+    import opendaylight-md-sal-binding { prefix mdsal; revision-date 2013-10-28; }
+    import groupbasedpolicy-cfg { prefix gbpcfg; revision-date 2015-11-06; }
+
+    description
+        "This module contains the base YANG definitions for
+          l2-l3 domain exstension implementation.";
+
+    revision "2016-05-25" {
+        description
+            "Initial revision.";
+    }
+
+    identity l2-l3-domain-extension-impl {
+        base "config:module-type";
+
+        config:java-name-prefix L2L3DomainExtension;
+    }
+
+    // Augments the 'configuration' choice node under modules/module.
+    augment "/config:modules/config:module/config:configuration" {
+        case l2-l3-domain-extension-impl {
+            when "/config:modules/config:module/config:type = 'l2-l3-domain-extension-impl'";
+
+            // DomainSpecificRegistry service
+            container domain-specific-registry {
+                uses config:service-ref {
+                    refine type {
+                        config:required-identity gbpcfg:domain-specific-registry;
+                    }
+                }
+            }
+        }
+    }
+}

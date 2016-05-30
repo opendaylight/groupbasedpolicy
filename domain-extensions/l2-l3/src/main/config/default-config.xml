@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- vi: set et smarttab sw=4 tabstop=4: -->
+<!--
+ Copyright (c) 2016 Cisco Systems, Inc. and others.  All rights reserved.
+
+ This program and the accompanying materials are made available under the
+ terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ and is available at http://www.eclipse.org/legal/epl-v10.html
+-->
+<snapshot>
+    <configuration>
+        <data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <modules xmlns="urn:opendaylight:params:xml:ns:yang:controller:config">
+                <module>
+                    <type xmlns:l2l3="urn:opendaylight:params:xml:ns:yang:controller:config:domain_extension:l2_l3:impl">
+                        l2l3:l2-l3-domain-extension-impl
+                    </type>
+                    <name>l2-l3-domain-extension-impl</name>
+
+                    <domain-specific-registry>
+                        <type xmlns:gbp="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">gbp:domain-specific-registry</type>
+                        <name>domain-specific-registry</name>
+                    </domain-specific-registry>
+                </module>
+            </modules>
+        </data>
+
+    </configuration>
+
+    <required-capabilities>
+        <capability>urn:opendaylight:params:xml:ns:yang:controller:config:domain_extension:l2_l3:impl?module=l2-l3-domain-extension-cfg&amp;revision=2016-05-25</capability>
+    </required-capabilities>
+
+</snapshot>

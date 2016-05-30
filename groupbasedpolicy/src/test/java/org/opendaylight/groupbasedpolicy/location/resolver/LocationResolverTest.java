@@ -42,8 +42,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_l
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.location.provider.ProviderAddressEndpointLocationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.location.provider.ProviderAddressEndpointLocationKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.location.provider.ProviderContainmentEndpointLocationBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.IpPrefixType;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.AddressType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.ContextType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
@@ -84,12 +84,11 @@ public class LocationResolverTest extends CustomDataBrokerTest {
 
     @Override
     public Collection<Class<?>> getClassesFromModules() {
-        return ImmutableList.<Class<?>>of(LocationProvider.class, Nodes.class, L3Context.class,
-                EndpointLocations.class);
+        return ImmutableList.<Class<?>>of(LocationProvider.class, Nodes.class, EndpointLocations.class);
     }
 
     @Test
-    public void test_LocationProviderWrite() throws Exception {
+    public void testOnDataTreeChanged_write() throws Exception {
         AbsoluteLocation absoluteLocation =
                 new AbsoluteLocationBuilder().setLocationType(new InternalLocationCaseBuilder()
                     .setInternalNode(nodeIid1).setInternalNodeConnector(connectorIid).build()).build();
@@ -101,14 +100,14 @@ public class LocationResolverTest extends CustomDataBrokerTest {
         LocationProvider provider = new LocationProviderBuilder().setProvider(new ProviderName(PROVIDER_NAME))
             .setProviderAddressEndpointLocation(
                     Collections.singletonList(new ProviderAddressEndpointLocationBuilder()
-                        .setKey(new ProviderAddressEndpointLocationKey(ADDRESS, IpPrefixType.class, contextId,
-                                L3Context.class))
+                        .setKey(new ProviderAddressEndpointLocationKey(ADDRESS, AddressType.class, contextId,
+                                ContextType.class))
                         .setAbsoluteLocation(absoluteLocation)
                         .setRelativeLocations(relativeLocations)
                         .build()))
             .setProviderContainmentEndpointLocation(
                     Collections.singletonList(new ProviderContainmentEndpointLocationBuilder().setContextId(contextId)
-                        .setContextType(L3Context.class)
+                        .setContextType(ContextType.class)
                         .setRelativeLocations(relativeLocations)
                         .build()))
             .build();
@@ -126,19 +125,19 @@ public class LocationResolverTest extends CustomDataBrokerTest {
         EndpointLocations readLocations = read.get();
         assertNotNull(readLocations.getAddressEndpointLocation());
         assertEquals(1, readLocations.getAddressEndpointLocation().size());
-        assertEquals(new AddressEndpointLocationKey(ADDRESS, IpPrefixType.class, contextId, L3Context.class),
+        assertEquals(new AddressEndpointLocationKey(ADDRESS, AddressType.class, contextId, ContextType.class),
                 readLocations.getAddressEndpointLocation().get(0).getKey());
         assertEquals(absoluteLocation, readLocations.getAddressEndpointLocation().get(0).getAbsoluteLocation());
         assertNotNull(readLocations.getContainmentEndpointLocation());
         assertEquals(1, readLocations.getContainmentEndpointLocation().size());
-        assertEquals(new ContainmentEndpointLocationKey(contextId, L3Context.class),
+        assertEquals(new ContainmentEndpointLocationKey(contextId, ContextType.class),
                 readLocations.getContainmentEndpointLocation().get(0).getKey());
         assertEquals(relativeLocations, readLocations.getContainmentEndpointLocation().get(0).getRelativeLocations());
     }
 
     @Test
-    public void test_LocationProviderOverWrite() throws Exception {
-        test_LocationProviderWrite();
+    public void testOnDataTreeChanged_overWrite() throws Exception {
+        testOnDataTreeChanged_write();
         AbsoluteLocation absoluteLocation =
                 new AbsoluteLocationBuilder().setLocationType(new InternalLocationCaseBuilder()
                     .setInternalNode(nodeIid2).setInternalNodeConnector(connectorIid).build()).build();
@@ -150,14 +149,14 @@ public class LocationResolverTest extends CustomDataBrokerTest {
         LocationProvider provider = new LocationProviderBuilder().setProvider(new ProviderName(PROVIDER_NAME))
             .setProviderAddressEndpointLocation(
                     Collections.singletonList(new ProviderAddressEndpointLocationBuilder()
-                        .setKey(new ProviderAddressEndpointLocationKey(ADDRESS, IpPrefixType.class, contextId,
-                                L3Context.class))
+                        .setKey(new ProviderAddressEndpointLocationKey(ADDRESS, AddressType.class, contextId,
+                                ContextType.class))
                         .setAbsoluteLocation(absoluteLocation)
                         .setRelativeLocations(relativeLocations)
                         .build()))
             .setProviderContainmentEndpointLocation(
                     Collections.singletonList(new ProviderContainmentEndpointLocationBuilder().setContextId(contextId)
-                        .setContextType(L3Context.class)
+                        .setContextType(ContextType.class)
                         .setRelativeLocations(relativeLocations)
                         .build()))
             .build();
@@ -175,19 +174,19 @@ public class LocationResolverTest extends CustomDataBrokerTest {
         EndpointLocations readLocations = read.get();
         assertNotNull(readLocations.getAddressEndpointLocation());
         assertEquals(1, readLocations.getAddressEndpointLocation().size());
-        assertEquals(new AddressEndpointLocationKey(ADDRESS, IpPrefixType.class, contextId, L3Context.class),
+        assertEquals(new AddressEndpointLocationKey(ADDRESS, AddressType.class, contextId, ContextType.class),
                 readLocations.getAddressEndpointLocation().get(0).getKey());
         assertEquals(absoluteLocation, readLocations.getAddressEndpointLocation().get(0).getAbsoluteLocation());
         assertNotNull(readLocations.getContainmentEndpointLocation());
         assertEquals(1, readLocations.getContainmentEndpointLocation().size());
-        assertEquals(new ContainmentEndpointLocationKey(contextId, L3Context.class),
+        assertEquals(new ContainmentEndpointLocationKey(contextId, ContextType.class),
                 readLocations.getContainmentEndpointLocation().get(0).getKey());
         assertEquals(relativeLocations, readLocations.getContainmentEndpointLocation().get(0).getRelativeLocations());
     }
 
     @Test
-    public void test_LocationProviderDelete() throws Exception {
-        test_LocationProviderWrite();
+    public void testOnDataTreeChanged_delete() throws Exception {
+        testOnDataTreeChanged_write();
         InstanceIdentifier<LocationProvider> iid = InstanceIdentifier.builder(LocationProviders.class)
             .child(LocationProvider.class, new LocationProviderKey(new ProviderName(PROVIDER_NAME)))
             .build();
@@ -218,15 +217,15 @@ public class LocationResolverTest extends CustomDataBrokerTest {
     }
 
     @Test
-    public void test_LocationProviderModify() throws Exception {
-        test_LocationProviderWrite();
+    public void testOnDataTreeChanged_modify() throws Exception {
+        testOnDataTreeChanged_write();
         AbsoluteLocation absoluteLocation =
                 new AbsoluteLocationBuilder().setLocationType(new InternalLocationCaseBuilder()
                     .setInternalNode(nodeIid2).setInternalNodeConnector(connectorIid).build()).build();
         InstanceIdentifier<AbsoluteLocation> iid = InstanceIdentifier.builder(LocationProviders.class)
             .child(LocationProvider.class, new LocationProviderKey(new ProviderName(PROVIDER_NAME)))
             .child(ProviderAddressEndpointLocation.class,
-                    new ProviderAddressEndpointLocationKey(ADDRESS, IpPrefixType.class, contextId, L3Context.class))
+                    new ProviderAddressEndpointLocationKey(ADDRESS, AddressType.class, contextId, ContextType.class))
             .child(AbsoluteLocation.class)
             .build();
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
@@ -240,7 +239,7 @@ public class LocationResolverTest extends CustomDataBrokerTest {
         EndpointLocations readLocations = read.get();
         assertNotNull(readLocations.getAddressEndpointLocation());
         assertEquals(1, readLocations.getAddressEndpointLocation().size());
-        assertEquals(new AddressEndpointLocationKey(ADDRESS, IpPrefixType.class, contextId, L3Context.class),
+        assertEquals(new AddressEndpointLocationKey(ADDRESS, AddressType.class, contextId, ContextType.class),
                 readLocations.getAddressEndpointLocation().get(0).getKey());
         assertEquals(absoluteLocation, readLocations.getAddressEndpointLocation().get(0).getAbsoluteLocation());
     }

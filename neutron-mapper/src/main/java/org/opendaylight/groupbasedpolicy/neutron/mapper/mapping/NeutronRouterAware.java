@@ -18,6 +18,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.domain_extension.l2_l3.util.L2L3IidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.gbp.util.NeutronGbpIidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.EndpointRegistrator;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
@@ -88,7 +89,7 @@ public class NeutronRouterAware implements NeutronAware<Router> {
 
         ContextId routerl3ContextId = new ContextId(router.getUuid().getValue());
         TenantId tenantId = new TenantId(router.getTenantId().getValue());
-        InstanceIdentifier<ForwardingContext> routerL3CtxIid = IidFactory.l3ContextIid(tenantId, routerl3ContextId);
+        InstanceIdentifier<ForwardingContext> routerL3CtxIid = L2L3IidFactory.l3ContextIid(tenantId, routerl3ContextId);
         ForwardingContextBuilder fwdCtxBuilder = new ForwardingContextBuilder();
         Name routerName = null;
         if (!Strings.isNullOrEmpty(router.getName())) {
@@ -168,11 +169,11 @@ public class NeutronRouterAware implements NeutronAware<Router> {
             addNeutronExtGwGbpMapping(routerL3CtxId, gatewayIp, rwTx);
             NetworkDomain subnetDomain = createSubnetWithVirtualRouterIp(gatewayIp, new NetworkDomainId(ipWithSubnetFromGwPort.getSubnetId()
                 .getValue()));
-            rwTx.merge(LogicalDatastoreType.CONFIGURATION, IidFactory.subnetIid(tenantId, subnetDomain.getNetworkDomainId()),
+            rwTx.merge(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.subnetIid(tenantId, subnetDomain.getNetworkDomainId()),
                     subnetDomain);
             ContextId l2BdId = new ContextId(potentialSubnet.get().getNetworkId().getValue());
             Optional<ForwardingContext> optBd = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
-                    IidFactory.l2BridgeDomainIid(tenantId, l2BdId), rwTx);
+                    L2L3IidFactory.l2BridgeDomainIid(tenantId, l2BdId), rwTx);
             if (!optBd.isPresent()) {
                 LOG.warn(
                         "Could not read L2-Bridge-Domain {} Modifiaction of it's parent to L3-Context of router {} aborted.",
@@ -183,7 +184,7 @@ public class NeutronRouterAware implements NeutronAware<Router> {
             ForwardingContext l2BdWithGw = new ForwardingContextBuilder(optBd.get())
             .setParent(MappingUtils.createParent(routerL3CtxId, MappingUtils.L3_CONTEXT))
             .build();
-            rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l2BridgeDomainIid(tenantId, l2BdId),
+            rwTx.put(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.l2BridgeDomainIid(tenantId, l2BdId),
                     l2BdWithGw);
         }
         updateTenantForwarding(newNeutron, oldRouter, newRouter, new L3ContextId(routerL3CtxId), tenantId, rwTx);
