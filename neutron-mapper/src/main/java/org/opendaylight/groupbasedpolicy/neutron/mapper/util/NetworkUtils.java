@@ -64,7 +64,7 @@ public class NetworkUtils {
         if (external == null) {
             return false;
         }
-        return true;
+        return external;
     }
 
     public static @Nonnull String getPhysicalNetwork(Network network) {
