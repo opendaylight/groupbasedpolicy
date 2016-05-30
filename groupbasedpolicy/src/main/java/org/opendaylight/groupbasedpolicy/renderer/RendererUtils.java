@@ -32,6 +32,9 @@ public class RendererUtils {
         }
         Builder<InstanceIdentifier<?>, RendererName> renderersByNodeBuilder = ImmutableMultimap.builder();
         for (Renderer renderer : renderers) {
+            if (renderer.getRendererNodes() == null) {
+                continue;
+            }
             List<RendererNode> rendererNodes = renderer.getRendererNodes().getRendererNode();
             if (rendererNodes == null) {
                 continue;

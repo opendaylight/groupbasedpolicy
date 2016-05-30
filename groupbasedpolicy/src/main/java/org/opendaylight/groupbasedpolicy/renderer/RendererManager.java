@@ -91,6 +91,8 @@ public class RendererManager implements AutoCloseable {
     private EndpointInfo epInfo;
     private EndpointLocationInfo epLocInfo;
     private Forwarding forwarding;
+    private boolean changesWaitingToProcess = false;
+    private boolean currentVersionHasConfig = false;
 
     private final EndpointsListener endpointsListener;
     private final EndpointLocationsListener endpointLocationsListener;
@@ -110,21 +112,25 @@ public class RendererManager implements AutoCloseable {
 
     public synchronized void endpointsUpdated(final Endpoints endpoints) {
         epInfo = new EndpointInfo(endpoints);
+        changesWaitingToProcess = true;
         processState();
     }
 
     public synchronized void endpointLocationsUpdated(final EndpointLocations epLocations) {
         epLocInfo = new EndpointLocationInfo(epLocations);
+        changesWaitingToProcess = true;
         processState();
     }
 
     public synchronized void resolvedPoliciesUpdated(final ResolvedPolicies resolvedPolicies) {
         policyInfo = new ResolvedPolicyInfo(resolvedPolicies);
+        changesWaitingToProcess = true;
         processState();
     }
 
     public synchronized void forwardingUpdated(final Forwarding forwarding) {
         this.forwarding = forwarding;
+        changesWaitingToProcess = true;
         processState();
     }
 
@@ -138,7 +144,7 @@ public class RendererManager implements AutoCloseable {
             rendererByNode.put(nodePath, renderers.asList().get(0));
         }
         if (processingRenderers.isEmpty()) {
-            processState();
+            changesWaitingToProcess = true;
         } else {
             LOG.debug("Waiting for renderers. Version {} needs to be processed by renderers: {}", version,
                     processingRenderers);
@@ -161,6 +167,7 @@ public class RendererManager implements AutoCloseable {
                 }
             }
         }
+        processState();
     }
 
     private void processState() {
@@ -172,44 +179,66 @@ public class RendererManager implements AutoCloseable {
         if (rendererByNode.values().isEmpty()) {
             return;
         }
-
-        version++;
+        if (!changesWaitingToProcess) {
+            return;
+        }
         Map<RendererName, RendererConfigurationBuilder> rendererConfigBuilderByRendererName = createRendererConfigBuilders();
-        List<Renderer> renderers = new ArrayList<>();
         Set<RendererName> rendererNames = new HashSet<>(rendererByNode.values());
+        boolean newVersionHasConfig = false;
+        Map<RendererName, Optional<Configuration>> configsByRendererName = new HashMap<>();
         for (RendererName rendererName : rendererNames) {
             RendererConfigurationBuilder rendererPolicyBuilder = rendererConfigBuilderByRendererName.get(rendererName);
             Optional<Configuration> potentialConfig = createConfiguration(rendererPolicyBuilder);
-            RendererPolicy rendererPolicy = null;
             if (potentialConfig.isPresent()) {
-                LOG.debug("Created configuration for renderer with version {}", rendererName.getValue(), version);
-                rendererPolicy =
-                        new RendererPolicyBuilder().setVersion(version).setConfiguration(potentialConfig.get()).build();
+                newVersionHasConfig = true;
+            }
+            configsByRendererName.put(rendererName, potentialConfig);
+        }
+        if (newVersionHasConfig || currentVersionHasConfig) {
+            version++;
+            if (!writeRenderersConfigs(configsByRendererName)) {
+                LOG.warn("Version {} was not dispatched successfully. Previous version is valid until next update.",
+                        version);
+                for (RendererName rendererName : rendererConfigBuilderByRendererName.keySet()) {
+                    processingRenderers.remove(rendererName);
+                }
+                version--;
+                changesWaitingToProcess = true;
+                return;
             } else {
-                rendererPolicy =
-                        new RendererPolicyBuilder().setVersion(version).build();
+                currentVersionHasConfig = newVersionHasConfig;
+            }
+        }
+        changesWaitingToProcess = false;
+    }
+
+    private boolean writeRenderersConfigs(Map<RendererName, Optional<Configuration>> configsByRendererName) {
+        List<Renderer> renderers = new ArrayList<>();
+        for (RendererName rendererName : configsByRendererName.keySet()) {
+            RendererPolicy rendererPolicy = null;
+            if (configsByRendererName.get(rendererName).isPresent()) {
+                rendererPolicy = new RendererPolicyBuilder().setVersion(version)
+                    .setConfiguration(configsByRendererName.get(rendererName).get())
+                    .build();
+
+            } else {
+                rendererPolicy = new RendererPolicyBuilder().setVersion(version).build();
             }
             renderers.add(new RendererBuilder().setName(rendererName).setRendererPolicy(rendererPolicy).build());
             processingRenderers.add(rendererName);
+            LOG.debug("Created configuration for renderer {} with version {}", rendererName.getValue(), version);
         }
         WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
         wTx.put(LogicalDatastoreType.CONFIGURATION, InstanceIdentifier.create(Renderers.class),
                 new RenderersBuilder().setRenderer(renderers).build());
-        if (!DataStoreHelper.submitToDs(wTx)) {
-            LOG.warn("Version {} was not dispatched successfully. Previous version is valid till next update.",
-                    version);
-            for (RendererName rendererName : rendererConfigBuilderByRendererName.keySet()) {
-                processingRenderers.remove(rendererName);
-            }
-            version--;
-        }
+        return DataStoreHelper.submitToDs(wTx);
     }
 
     /**
      * Entry is added to the result map only if:<br>
      * 1. There is at least one Address EP with absolute location
      * 2. There is a renderer responsible for that EP
-     * 
+     *
      * @return
      */
     private Map<RendererName, RendererConfigurationBuilder> createRendererConfigBuilders() {
@@ -355,6 +384,9 @@ public class RendererManager implements AutoCloseable {
             return;
         }
         for (AddressEndpointKey peerAdrEpKey : peerAdrEps) {
+            if (isSameKeys(rendererEpKey, peerAdrEpKey)) {
+                continue;
+            }
             ExternalImplicitGroup eig = policy.getExternalImplicitGroup();
             if (eig != null) {
                 if (!epLocInfo.hasRelativeLocation(peerAdrEpKey)) {
@@ -394,6 +426,16 @@ public class RendererManager implements AutoCloseable {
             return true;
         } else if (rendererEpParticipation == EndpointPolicyParticipation.CONSUMER
                 && ExternalImplicitGroup.ConsumerEpg == eig) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isSameKeys(RendererEndpointKey rendererEpKey, AddressEndpointKey peerAdrEpKey) {
+        if (rendererEpKey.getAddress().equals(peerAdrEpKey.getAddress())
+                && rendererEpKey.getAddressType().equals(peerAdrEpKey.getAddressType())
+                && rendererEpKey.getContextId().equals(peerAdrEpKey.getContextId())
+                && rendererEpKey.getContextType().equals(peerAdrEpKey.getContextType())) {
             return true;
         }
         return false;

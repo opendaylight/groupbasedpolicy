@@ -10,9 +10,11 @@ package org.opendaylight.groupbasedpolicy.resolver;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.util.DataTreeChangeHandler;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.Forwarding;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.ForwardingByTenant;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
@@ -23,6 +25,8 @@ public class ForwardingResolver extends DataTreeChangeHandler<ForwardingByTenant
 
     public ForwardingResolver(DataBroker dataProvider) {
         super(dataProvider);
+        registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.CONFIGURATION,
+                InstanceIdentifier.builder(Forwarding.class).child(ForwardingByTenant.class).build()));
     }
 
     @Override

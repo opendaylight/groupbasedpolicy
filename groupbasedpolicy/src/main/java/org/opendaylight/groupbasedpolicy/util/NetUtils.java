@@ -99,8 +99,8 @@ public final class NetUtils {
         if (prefix1.getIpv4Prefix() != null && prefix2.getIpv4Prefix() != null) {
             SubnetUtils fromPrefix1 = new SubnetUtils(prefix1.getIpv4Prefix().getValue());
             SubnetUtils fromPrefix2 = new SubnetUtils(prefix2.getIpv4Prefix().getValue());
-            if (fromPrefix1.getInfo().isInRange(fromPrefix2.getInfo().getHighAddress())
-                    && fromPrefix2.getInfo().isInRange(fromPrefix1.getInfo().getHighAddress())) {
+            if (fromPrefix1.getInfo().getNetworkAddress().equals(fromPrefix2.getInfo().getNetworkAddress())
+                    && fromPrefix1.getInfo().getNetmask().equals(fromPrefix2.getInfo().getNetmask())) {
                 return true;
             }
         } else if (prefix1.getIpv6Prefix() != null && prefix2.getIpv6Prefix() != null) {
