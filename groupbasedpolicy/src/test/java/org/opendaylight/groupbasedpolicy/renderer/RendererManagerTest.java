@@ -22,6 +22,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.groupbasedpolicy.base_endpoint.EndpointAugmentorRegistryImpl;
 import org.opendaylight.groupbasedpolicy.forwarding.NetworkDomainAugmentorRegistryImpl;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.EndpointLocations;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.EndpointLocationsBuilder;
@@ -75,13 +76,16 @@ public class RendererManagerTest {
     private DataBroker dataProvider;
     @Mock
     private NetworkDomainAugmentorRegistryImpl netDomainAugmentorRegistry;
+    @Mock
+    private EndpointAugmentorRegistryImpl epAugmentorRegistry;
 
     private RendererManager rendererManager;
 
     @Before
     public void init() {
-        Mockito.when(netDomainAugmentorRegistry.getEndpointAugmentors()).thenReturn(Collections.emptySet());
-        rendererManager = new RendererManager(dataProvider, netDomainAugmentorRegistry);
+        Mockito.when(netDomainAugmentorRegistry.getNetworkDomainAugmentors()).thenReturn(Collections.emptySet());
+        Mockito.when(epAugmentorRegistry.getEndpointAugmentors()).thenReturn(Collections.emptySet());
+        rendererManager = new RendererManager(dataProvider, netDomainAugmentorRegistry, epAugmentorRegistry);
     }
 
     /**

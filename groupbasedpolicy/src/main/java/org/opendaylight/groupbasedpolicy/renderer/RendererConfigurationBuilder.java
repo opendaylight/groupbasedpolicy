@@ -20,6 +20,7 @@ import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import org.opendaylight.groupbasedpolicy.api.EndpointAugmentor;
 import org.opendaylight.groupbasedpolicy.api.NetworkDomainAugmentor;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoint.locations.AddressEndpointLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoint.locations.ContainmentEndpointLocation;
@@ -271,11 +272,11 @@ public class RendererConfigurationBuilder {
     }
 
     public Endpoints buildEndoints(EndpointInfo epInfo, EndpointLocationInfo epLocInfo,
-            Map<InstanceIdentifier<?>, RendererName> rendererByNode) {
+            Map<InstanceIdentifier<?>, RendererName> rendererByNode, Set<EndpointAugmentor> augmentors) {
         List<AddressEndpointWithLocation> epsWithLoc =
-                resolveEpsWithLoc(getAddressEndpointKeys(), epInfo, epLocInfo, rendererByNode);
+                resolveEpsWithLoc(getAddressEndpointKeys(), epInfo, epLocInfo, rendererByNode, augmentors);
         List<ContainmentEndpointWithLocation> contEpsWithLoc =
-                resolveContEpsWithLoc(getContainmentEndpointKeys(), epInfo, epLocInfo);
+                resolveContEpsWithLoc(getContainmentEndpointKeys(), epInfo, epLocInfo, augmentors);
         return new EndpointsBuilder().setAddressEndpointWithLocation(epsWithLoc)
             .setContainmentEndpointWithLocation(contEpsWithLoc)
             .build();
@@ -283,7 +284,7 @@ public class RendererConfigurationBuilder {
 
     private static List<AddressEndpointWithLocation> resolveEpsWithLoc(Set<AddressEndpointKey> epKeys,
             EndpointInfo epInfo, EndpointLocationInfo epLocInfo,
-            Map<InstanceIdentifier<?>, RendererName> rendererByNode) {
+            Map<InstanceIdentifier<?>, RendererName> rendererByNode, Set<EndpointAugmentor> augmentors) {
         List<AddressEndpointWithLocation> result = new ArrayList<>();
         for (AddressEndpointKey epKey : epKeys) {
             Optional<AddressEndpoint> potentialEp = epInfo.getEndpoint(epKey);
@@ -291,7 +292,7 @@ public class RendererConfigurationBuilder {
             Optional<AddressEndpointLocation> potentionalEpLoc = epLocInfo.getAdressEndpointLocation(epKey);
             Preconditions.checkArgument(potentionalEpLoc.isPresent());
             RendererName rendererName = resolveRendererName(potentionalEpLoc.get(), rendererByNode);
-            result.add(createEpWithLoc(potentialEp.get(), potentionalEpLoc.get(), rendererName));
+            result.add(createEpWithLoc(potentialEp.get(), potentionalEpLoc.get(), rendererName, augmentors));
         }
         return result;
     }
@@ -306,8 +307,9 @@ public class RendererConfigurationBuilder {
     }
 
     private static AddressEndpointWithLocation createEpWithLoc(AddressEndpoint ep, AddressEndpointLocation epLoc,
-            RendererName rendererName) {
-        return new AddressEndpointWithLocationBuilder().setAddress(ep.getAddress())
+            RendererName rendererName, Set<EndpointAugmentor> augmentors) {
+        AddressEndpointWithLocationBuilder addrEpWithLoc = new AddressEndpointWithLocationBuilder()
+            .setAddress(ep.getAddress())
             .setAddressType(ep.getAddressType())
             .setContextId(ep.getContextId())
             .setContextType(ep.getContextType())
@@ -320,12 +322,19 @@ public class RendererConfigurationBuilder {
             .setTimestamp(ep.getTimestamp())
             .setAbsoluteLocation(epLoc.getAbsoluteLocation())
             .setRelativeLocations(epLoc.getRelativeLocations())
-            .setRendererName(rendererName)
-            .build();
+            .setRendererName(rendererName);
+        for (EndpointAugmentor augmentor : augmentors) {
+            Entry<Class<? extends Augmentation<AddressEndpointWithLocation>>, Augmentation<AddressEndpointWithLocation>> addrEpWithLocAug =
+                    augmentor.buildAddressEndpointWithLocationAugmentation(ep);
+            if (addrEpWithLocAug != null) {
+                addrEpWithLoc.addAugmentation(addrEpWithLocAug.getKey(), addrEpWithLocAug.getValue());
+            }
+        }
+        return addrEpWithLoc.build();
     }
 
     private static List<ContainmentEndpointWithLocation> resolveContEpsWithLoc(Set<ContainmentEndpointKey> contEpKeys,
-            EndpointInfo epInfo, EndpointLocationInfo epLocInfo) {
+            EndpointInfo epInfo, EndpointLocationInfo epLocInfo, Set<EndpointAugmentor> augmentors) {
         List<ContainmentEndpointWithLocation> result = new ArrayList<>();
         for (ContainmentEndpointKey contEpKey : contEpKeys) {
             Optional<ContainmentEndpoint> potentialContEp = epInfo.getContainmentEndpoint(contEpKey);
@@ -333,14 +342,15 @@ public class RendererConfigurationBuilder {
             Optional<ContainmentEndpointLocation> potentialContEpLoc =
                     epLocInfo.getContainmentEndpointLocation(contEpKey);
             Preconditions.checkArgument(potentialContEpLoc.isPresent());
-            result.add(createContEpWithLoc(potentialContEp.get(), potentialContEpLoc.get()));
+            result.add(createContEpWithLoc(potentialContEp.get(), potentialContEpLoc.get(), augmentors));
         }
         return result;
     }
 
     private static ContainmentEndpointWithLocation createContEpWithLoc(ContainmentEndpoint contEp,
-            ContainmentEndpointLocation contEpLoc) {
-        return new ContainmentEndpointWithLocationBuilder().setContextId(contEp.getContextId())
+            ContainmentEndpointLocation contEpLoc, Set<EndpointAugmentor> augmentors) {
+        ContainmentEndpointWithLocationBuilder contEpWithLoc = new ContainmentEndpointWithLocationBuilder()
+            .setContextId(contEp.getContextId())
             .setContextType(contEp.getContextType())
             .setTenant(contEp.getTenant())
             .setChildEndpoint(contEp.getChildEndpoint())
@@ -348,8 +358,15 @@ public class RendererConfigurationBuilder {
             .setCondition(contEp.getCondition())
             .setNetworkContainment(contEp.getNetworkContainment())
             .setTimestamp(contEp.getTimestamp())
-            .setRelativeLocations(contEpLoc.getRelativeLocations())
-            .build();
+            .setRelativeLocations(contEpLoc.getRelativeLocations());
+        for (EndpointAugmentor augmentor : augmentors) {
+            Entry<Class<? extends Augmentation<ContainmentEndpointWithLocation>>, Augmentation<ContainmentEndpointWithLocation>> contEpWithLocAug =
+                    augmentor.buildContainmentEndpointWithLocationAugmentation(contEp);
+            if (contEpWithLocAug != null) {
+                contEpWithLoc.addAugmentation(contEpWithLocAug.getKey(), contEpWithLocAug.getValue());
+            }
+        }
+        return contEpWithLoc.build();
     }
 
     public RuleGroups buildRuluGroups(ResolvedPolicyInfo policyInfo) {

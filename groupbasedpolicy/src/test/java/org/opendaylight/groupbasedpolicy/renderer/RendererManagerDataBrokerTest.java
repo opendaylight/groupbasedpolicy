@@ -23,6 +23,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
+import org.opendaylight.groupbasedpolicy.base_endpoint.EndpointAugmentorRegistryImpl;
 import org.opendaylight.groupbasedpolicy.forwarding.NetworkDomainAugmentorRegistryImpl;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.EndpointLocations;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.EndpointLocationsBuilder;
@@ -97,6 +98,8 @@ public class RendererManagerDataBrokerTest {
     @Mock
     private NetworkDomainAugmentorRegistryImpl netDomainAugmentorRegistry;
     @Mock
+    private EndpointAugmentorRegistryImpl epAugmentorRegistry;
+    @Mock
     private WriteTransaction wTx;
     @Mock
     private CheckedFuture<Void, TransactionCommitFailedException> submitFuture;
@@ -107,8 +110,9 @@ public class RendererManagerDataBrokerTest {
     public void init() {
         Mockito.when(dataProvider.newWriteOnlyTransaction()).thenReturn(wTx);
         Mockito.when(wTx.submit()).thenReturn(submitFuture);
-        Mockito.when(netDomainAugmentorRegistry.getEndpointAugmentors()).thenReturn(Collections.emptySet());
-        rendererManager = new RendererManager(dataProvider, netDomainAugmentorRegistry);
+        Mockito.when(netDomainAugmentorRegistry.getNetworkDomainAugmentors()).thenReturn(Collections.emptySet());
+        Mockito.when(epAugmentorRegistry.getEndpointAugmentors()).thenReturn(Collections.emptySet());
+        rendererManager = new RendererManager(dataProvider, netDomainAugmentorRegistry, epAugmentorRegistry);
         RendererManager.resetVersion();
     }
 

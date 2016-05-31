@@ -57,7 +57,7 @@ public class DomainSpecificRegistryModule extends org.opendaylight.controller.co
             endpointAugmentorRegistryImpl = new EndpointAugmentorRegistryImpl();
             netDomainAugmentorRegistryImpl = new NetworkDomainAugmentorRegistryImpl();
             baseEndpointServiceImpl = new BaseEndpointServiceImpl(dataProvider, rpcRegistry, endpointAugmentorRegistryImpl);
-            rendererManager = new RendererManager(dataProvider, netDomainAugmentorRegistryImpl);
+            rendererManager = new RendererManager(dataProvider, netDomainAugmentorRegistryImpl, endpointAugmentorRegistryImpl);
         }
 
         @Override

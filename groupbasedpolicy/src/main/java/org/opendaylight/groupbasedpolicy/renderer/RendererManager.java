@@ -23,6 +23,7 @@ import javax.annotation.Nullable;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.base_endpoint.EndpointAugmentorRegistryImpl;
 import org.opendaylight.groupbasedpolicy.dto.ConsEpgKey;
 import org.opendaylight.groupbasedpolicy.dto.EpgKeyDto;
 import org.opendaylight.groupbasedpolicy.dto.ProvEpgKey;
@@ -85,6 +86,7 @@ public class RendererManager implements AutoCloseable {
 
     private final DataBroker dataProvider;
     private final NetworkDomainAugmentorRegistryImpl netDomainAugmentorRegistry;
+    private final EndpointAugmentorRegistryImpl epAugmentorRegistry;
     private final Set<RendererName> processingRenderers = new HashSet<>();
     private Map<InstanceIdentifier<?>, RendererName> rendererByNode = new HashMap<>();
     private ResolvedPolicyInfo policyInfo;
@@ -100,9 +102,11 @@ public class RendererManager implements AutoCloseable {
     private final ForwardingListener forwardingListener;
     private final RenderersListener renderersListener;
 
-    public RendererManager(DataBroker dataProvider, NetworkDomainAugmentorRegistryImpl netDomainAugmentorRegistry) {
+    public RendererManager(DataBroker dataProvider, NetworkDomainAugmentorRegistryImpl netDomainAugmentorRegistry,
+            EndpointAugmentorRegistryImpl epAugmentorRegistry) {
         this.dataProvider = checkNotNull(dataProvider);
         this.netDomainAugmentorRegistry = checkNotNull(netDomainAugmentorRegistry);
+        this.epAugmentorRegistry = checkNotNull(epAugmentorRegistry);
         endpointsListener = new EndpointsListener(this, dataProvider);
         endpointLocationsListener = new EndpointLocationsListener(this, dataProvider);
         resolvedPoliciesListener = new ResolvedPoliciesListener(this, dataProvider);
@@ -290,14 +294,14 @@ public class RendererManager implements AutoCloseable {
         configBuilder.setRendererEndpoints(rendererEndpoints);
 
         org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.Endpoints endpoints =
-                rendererPolicyBuilder.buildEndoints(epInfo, epLocInfo, rendererByNode);
+                rendererPolicyBuilder.buildEndoints(epInfo, epLocInfo, rendererByNode, epAugmentorRegistry.getEndpointAugmentors());
         configBuilder.setEndpoints(endpoints);
 
         RuleGroups ruleGroups = rendererPolicyBuilder.buildRuluGroups(policyInfo);
         configBuilder.setRuleGroups(ruleGroups);
 
         RendererForwarding rendererForwarding = rendererPolicyBuilder.buildRendererForwarding(forwarding,
-                netDomainAugmentorRegistry.getEndpointAugmentors());
+                netDomainAugmentorRegistry.getNetworkDomainAugmentors());
         configBuilder.setRendererForwarding(rendererForwarding);
 
         return Optional.of(configBuilder.build());

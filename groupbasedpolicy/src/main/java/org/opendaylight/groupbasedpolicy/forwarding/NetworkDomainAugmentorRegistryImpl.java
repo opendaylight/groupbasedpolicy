@@ -36,7 +36,7 @@ public class NetworkDomainAugmentorRegistryImpl implements NetworkDomainAugmento
         }
     }
 
-    public Set<NetworkDomainAugmentor> getEndpointAugmentors() {
+    public Set<NetworkDomainAugmentor> getNetworkDomainAugmentors() {
         return augmentors;
     }
 
