@@ -1,0 +1,89 @@
+<md-content>
+	breadcrumb
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Contract info</md-subheader>
+	<div layout="row" class="layout-padding-lr15 layout-row">
+	    <span flex="50" class="flex-50"><strong>Contract ID</strong></span>
+	    <span flex="" class="ng-binding flex">{{sidePanelObject.data.id}}</span>
+	</div>
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Subject list ({{sidePanelObject.data.subject.length}})</md-subheader>
+    <md-list>
+    	<ng-repeat ng-repeat="subject in sidePanelObject.data.subject">
+	    	<md-list-item ng-click="openSidePanelChild(subject, 'subject')">
+	    		{{subject.name}}
+	    		<md-content ng-show="subject.expanded" class="md-whiteframe-2dp ng-scope flex layout-margin">
+	    			<div layout="row" class="layout-row">
+	    		        <span flex="50" class="flex-50"><strong>Rule list</strong></span>
+	    				<span flex class="ng-binding flex">{{subject.rule[0].name}}</span>
+    				</div>
+	    		</md-content>
+	    	</md-list-item>
+    	</ng-repeat>
+    </md-list>
+
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Clause list ({{sidePanelObject.data.clause.length}})</md-subheader>
+    <md-list>
+    	<ng-repeat ng-repeat="clause in sidePanelObject.data.clause">
+	    	<md-list-item ng-click="openSidePanelChild(clause, 'clause')">
+	    		{{clause.name}}
+	    		<md-content ng-show="clause.expanded" class="md-whiteframe-2dp ng-scope flex layout-margin">
+	    			<div layout="row" class="layout-row">
+	    		        <span flex="50" class="flex-50"><strong>Subject refs</strong></span>
+	    				<span flex class="ng-binding flex">{{clause['subject-refs'][0]}}</span>
+    				</div>
+	    		</md-content>
+	    	</md-list-item>
+    	</ng-repeat>
+    </md-list>
+
+    <div ng-if="subjectList">
+	    <md-input-container>
+	      <label>rule-list</label>
+	      <md-select ng-model="ruleList">
+	        <md-option ng-repeat="ruleList in sidePanelObject.subject[subjectList].rule" value="{{$index}}">
+	          {{ruleList.name}}
+	        </md-option>
+	      </md-select>
+	    </md-input-container>
+
+	    <div ng-if="ruleList">
+		    <md-subheader class="md-primary">rule list - order</md-subheader>
+		    <div>{{sidePanelObject.subject[subjectList].rule[ruleList].order}}</div>
+		    <md-input-container>
+		      <label>action-ref list</label>
+		      <md-select ng-model="actionRefList">
+		        <md-option ng-repeat="actionRefList in sidePanelObject.subject[subjectList].rule[ruleList]['action-ref']" value="{{$index}}">
+		          {{actionRefList.name}}
+		        </md-option>
+		      </md-select>
+		    </md-input-container>
+
+		    <div ng-if="actionRefList">
+			    <md-subheader class="md-primary">action-ref list - order</md-subheader>
+			    <div>{{sidePanelObject.subject[subjectList].rule[ruleList][actionRefList].order}}</div>
+		    </div>
+
+		    <md-input-container>
+		      <label>classifier-ref list</label>
+		      <md-select ng-model="actionRefList">
+		        <md-option ng-repeat="classifierRefList in sidePanelObject.subject[subjectList].rule[ruleList][classifier-ref]" value="{{$index}}">
+		          {{classifierRefList.name}}
+		        </md-option>
+		      </md-select>
+		    </md-input-container>
+
+		    <div ng-if="classifierRefList">
+			    <md-subheader class="md-primary">classifier-ref list - name</md-subheader>
+			    <div>{{sidePanelObject.subject[subjectList].rule[ruleList][classifierRefList].name}}</div>
+			    <md-subheader class="md-primary">classifier-ref list - instance-name</md-subheader>
+			    <div>{{sidePanelObject.subject[subjectList].rule[ruleList][classifierRefList]['instance-name']}}</div>
+			    <md-subheader class="md-primary">classifier-ref list - connection-tracking</md-subheader>
+			    <div>{{sidePanelObject.subject[subjectList].rule[ruleList][classifierRefList]['connection-tracking']}}</div>
+			    <md-subheader class="md-primary">classifier-ref list - direction</md-subheader>
+			    <div>{{sidePanelObject.subject[subjectList].rule[ruleList][classifierRefList].direction}}</div>
+		    </div>
+	    </div>
+    </div>
+</md-content>

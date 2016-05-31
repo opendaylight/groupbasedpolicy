@@ -1,0 +1,47 @@
+<md-content>
+	breadcrumb
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Endpoint-group info</md-subheader>
+	<div layout="row" class="layout-padding-lr15 layout-row">
+	    <span flex="50" class="flex-50"><strong>Endpoint-group ID</strong></span>
+	    <span flex="" class="ng-binding flex">{{sidePanelObject.data.id}}</span>
+	</div>
+	<div layout="row" class="layout-padding-lr15 layout-row">
+	    <span flex="50" class="flex-50"><strong>intra-group-policy</strong></span>
+	    <span flex="" class="ng-binding flex">{{sidePanelObject.data['intra-group-policy']}}</span>
+	</div>
+
+	<md-divider></md-divider>
+	<div ng-if="sidePanelObject.data['provider-named-selector']">
+	    <md-subheader class="md-primary">Provider-named selectors ({{sidePanelObject.data['provider-named-selector'].length}})</md-subheader>
+	    <md-list>
+	    	<ng-repeat ng-repeat="providerNamedSelector in sidePanelObject.data['provider-named-selector']">
+		    	<md-list-item ng-click="openSidePanelObjId(providerNamedSelector.contract[0], sidePanelObject.data.parentTenant, 'contract' ,'operational');">
+		    		{{providerNamedSelector.name}}
+		    		<md-content ng-show="providerNamedSelector.expanded" class="md-whiteframe-2dp ng-scope flex layout-margin">
+		    			<div layout="row" class="layout-row">
+		    		        <span flex="50" class="flex-50"><strong>Contract ID</strong></span>
+		    				<span flex class="ng-binding flex">{{providerNamedSelector.contract[0]}}</span>
+	    				</div>
+		    		</md-content>
+		    	</md-list-item>
+	    	</ng-repeat>
+	    </md-list>
+    </div>
+	<div ng-if="sidePanelObject.data['consumer-named-selector']">
+	    <md-subheader class="md-primary">Consumer-named selectors ({{sidePanelObject.data['consumer-named-selector'].length}})</md-subheader>
+	    <md-list>
+	    	<ng-repeat ng-repeat="consumerNamedSelector in sidePanelObject.data['consumer-named-selector']">
+		    	<md-list-item ng-click="openSidePanelObjId(consumerNamedSelector.contract[0], sidePanelObject.data.parentTenant, 'contract' ,'operational');">
+		    		{{consumerNamedSelector.name}}
+		    		<md-content ng-show="consumerNamedSelector.expanded" class="md-whiteframe-2dp ng-scope flex layout-margin">
+		    			<div layout="row" class="layout-row">
+		    		        <span flex="50" class="flex-50"><strong>Contract ID</strong></span>
+		    				<span flex class="ng-binding flex">{{consumerNamedSelector.contract[0]}}</span>
+	    				</div>
+		    		</md-content>
+		    	</md-list-item>
+	    	</ng-repeat>
+	    </md-list>
+    </div>
+</md-content>

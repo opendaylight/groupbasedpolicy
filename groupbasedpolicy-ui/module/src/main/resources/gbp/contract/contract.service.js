@@ -45,11 +45,11 @@ define([], function () {
              * @param id
              * @returns {*}
              */
-            function get(id) {
+            function get(idContract, idTenant, apiType) {
                 var self = this;
 
-                var restObj = Restangular.one('restconf').one('config').one('policy:tenants')
-                            .one('tenant').one(id).one('policy').one('contract').one(id);
+                var restObj = Restangular.one('restconf').one(apiType).one('policy:tenants')
+                            .one('tenant').one(idTenant).one('policy').one('contract').one(idContract);
 
                 return restObj.get().then(function (data) {
                     self.setData(data.contract[0]);
