@@ -46,6 +46,15 @@ module vpp-provider-impl {
                     }
                 }
             }
+            // binding aware broker
+            container broker {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity mdsal:binding-broker-osgi-registry;
+                    }
+                }
+            }
         }
     }
 }

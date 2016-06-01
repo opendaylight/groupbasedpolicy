@@ -11,7 +11,12 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp;
 import com.google.common.collect.ImmutableList;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.Interfaces;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.interfaces._interface.VhostUser;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
@@ -21,6 +26,7 @@ public class VppRendererDataBrokerTest extends CustomDataBrokerTest {
     @Nonnull
     @Override
     public Collection<Class<?>> getClassesFromModules() {
-        return ImmutableList.of(Interfaces.class, Interface.class, VhostUser.class);
+        return ImmutableList.of(Interfaces.class, Interface.class, VhostUser.class, NetworkTopology.class,
+                Topology.class, Node.class, NetconfNode.class, Renderer.class);
     }
 }

@@ -30,7 +30,7 @@ public class GbpVppProviderModule extends org.opendaylight.controller.config.yan
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        final VppRenderer vppRenderer = new VppRenderer(getDataBrokerDependency());
+        final VppRenderer vppRenderer = new VppRenderer(getDataBrokerDependency(), getBrokerDependency());
 
         LOG.info("VPP Renderer instance has been created");
 
