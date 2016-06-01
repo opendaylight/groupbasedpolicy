@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
+ * Copyright (c) 2016 Cisco Systems, Inc. and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -25,7 +25,9 @@ public class NeutronVppMapperModule extends org.opendaylight.controller.config.y
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        NeutronVppMapper neutronVppMapper = new NeutronVppMapper(getDataBrokerDependency());
+        String vhostSocketPath = getVhostSocketPath();
+        String vhostSocketPrefix = getVhostSocketPrefix();
+        NeutronVppMapper neutronVppMapper = new NeutronVppMapper(vhostSocketPath, vhostSocketPrefix, getDataBrokerDependency());
         return neutronVppMapper;
     }
 

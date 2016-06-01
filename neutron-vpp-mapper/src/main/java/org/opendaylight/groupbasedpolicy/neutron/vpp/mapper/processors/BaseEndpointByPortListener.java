@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
+ * Copyright (c) 2016 Cisco Systems, Inc. and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -20,7 +20,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gb
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-public class BaseEndpointByPortListener extends DataTreeChangeHandler<BaseEndpointByPort> implements MappingProvider<Port> {
+public class BaseEndpointByPortListener extends DataTreeChangeHandler<BaseEndpointByPort> implements
+        MappingProvider<Port> {
 
     private final PortHandler portHandler;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
+ * Copyright (c) 2016 Cisco Systems, Inc. and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -18,28 +18,9 @@ public class NeutronVppMapper implements AutoCloseable {
     NeutronListener neutronListener;
     private static final Logger LOG = LoggerFactory.getLogger(NeutronVppMapper.class);
 
-    private String socketPath;
-
-    private String socketPrefix;
-
-    public String getSocketPath() {
-        return socketPath;
-    }
-
-    public void setSocketPath(String socketPath) {
-        this.socketPath = socketPath;
-    }
-
-    public String getSocketPrefix() {
-        return socketPrefix;
-    }
-
-    public void setSocketPrefix(String socketPrefix) {
-        this.socketPrefix = socketPrefix;
-    }
-
-    public NeutronVppMapper(DataBroker dataBroker) {
-        neutronListener = new NeutronListener(dataBroker);
+    public NeutronVppMapper(String socketPath, String socketPrefix, DataBroker dataBroker) {
+        SocketInfo socketInfo = new SocketInfo(socketPath, socketPrefix);
+        neutronListener = new NeutronListener(dataBroker, socketInfo);
         LOG.info("Neutron VPP started!");
     }
 
