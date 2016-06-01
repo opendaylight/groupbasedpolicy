@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2016 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -12,6 +12,8 @@ module vpp-renderer {
     namespace "urn:opendaylight:groupbasedpolicy:vpp_renderer";
     prefix "vpp-renderer";
 
+    import base-endpoint { prefix base-ep; revision-date 2016-04-27; }
+
     description
         "This module is a baseline for the group-based policy vpp renderer model.";
 
@@ -20,23 +22,25 @@ module vpp-renderer {
             "Initial revision.";
     }
 
-    import base-endpoint { prefix base-ep; revision-date 2016-04-27; }
-
     container config {
         list vpp-endpoint {
+            description "Renderer creates/removes interface on VPP node based on given parameters.";
+
             key "context-type context-id address-type address";
             uses base-ep:address-endpoint-key;
 
+            leaf vpp-node-path {
+                description "Path to a node representing mount-point to VPP instance.";
+                type instance-identifier;
+            }
             leaf vpp-interface-name {
                 description "Name of interface for the endpoint on VPP";
                 type string;
             }
-
             leaf description {
                 description "Additional description of the vpp-endpoint";
                 type string;
             }
-
             choice interface-type-choice {
                 case vhost-user-case {
                     leaf socket {
