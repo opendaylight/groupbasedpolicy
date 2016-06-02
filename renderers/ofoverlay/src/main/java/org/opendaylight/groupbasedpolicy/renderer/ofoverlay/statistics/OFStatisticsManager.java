@@ -49,6 +49,8 @@ public class OFStatisticsManager implements AutoCloseable {
     // key is String (not a full IpAddress) because
     // we will get String from REST query to sFlow
     private static ConcurrentMap<String, EndpointL3> endpointL3ByIpMap = new ConcurrentHashMap<>();
+    private static final int CONNECT_TIMEOUT_MILLISEC = 20000;
+    private static final int READ_TIMEOUT_MILLISEC = 30000;
 
     private static final Logger LOG = LoggerFactory.getLogger(OFStatisticsManager.class);
 
@@ -94,7 +96,8 @@ public class OFStatisticsManager implements AutoCloseable {
         epgsByContractId.put(contractId, Pair.of(consEpgKey, provEpgKey));
         boolean isFlowCacheNew = flowCacheNames.add(flowCacheName);
         if (isFlowCacheNew) {
-            SFlowRTConnection sFlowRTConnection = new SFlowRTConnection(executor, sflowCollectorUri, flowCache);
+            SFlowRTConnection sFlowRTConnection = new SFlowRTConnection(executor, sflowCollectorUri, flowCache, new JsonRestClient(sflowCollectorUri, CONNECT_TIMEOUT_MILLISEC,
+                    READ_TIMEOUT_MILLISEC));
             ScheduledFuture<?> collectStatsTask = this.executor.scheduleWithFixedDelay(new ReadGbpFlowCacheTask(flowCacheName, sFlowRTConnection,
                     statisticsManager, MAX_FLOWS, MIN_VALUE_IN_FLOW, AGG_MODE), 0, delay, TimeUnit.SECONDS);
             collectStatsTasks.add(collectStatsTask);

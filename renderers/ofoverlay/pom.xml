@@ -97,6 +97,11 @@
       <version>1.5.2</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.sun.jersey.jersey-test-framework</groupId>
+      <artifactId>jersey-test-framework-grizzly2</artifactId>
+      <scope>test</scope>
+    </dependency>
 
   </dependencies>
 

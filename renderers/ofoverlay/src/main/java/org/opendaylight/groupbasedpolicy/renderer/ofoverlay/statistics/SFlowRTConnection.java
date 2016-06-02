@@ -21,11 +21,11 @@ public class SFlowRTConnection {
 
     private static final Logger LOG = LoggerFactory.getLogger(SFlowRTConnection.class);
 
-    private static final int CONNECT_TIMEOUT_MILLISEC = 20000;
-    private static final int READ_TIMEOUT_MILLISEC = 30000;
     private static final String GET = "GET";
     private static final String PUT = "PUT";
     private static final String DELETE = "DELETE";
+
+    static final String EX_MSG_NOT_INITIALIZED = "SFlowRTConnection is not initialized.";
 
     private final FlowCache flowCache;
     private JsonRestClient client;
@@ -33,13 +33,11 @@ public class SFlowRTConnection {
     private final ScheduledExecutorService executor;
     private final String collectorUri;
 
-    public SFlowRTConnection(ScheduledExecutorService executor, String collectorUri, FlowCache flowCache) {
+    public SFlowRTConnection(ScheduledExecutorService executor, String collectorUri, FlowCache flowCache, JsonRestClient client) {
         this.executor = Preconditions.checkNotNull(executor);
         this.collectorUri = Preconditions.checkNotNull(collectorUri);
         this.flowCache = Preconditions.checkNotNull(flowCache);
-
-        this.client = new JsonRestClient(collectorUri, CONNECT_TIMEOUT_MILLISEC,
-                READ_TIMEOUT_MILLISEC);
+        this.client = client;
         initialize();
     }
 
@@ -60,7 +58,7 @@ public class SFlowRTConnection {
     public JsonRestClientResponse get(String path,
             MultivaluedMap<String, String> params) {
         if (!isInitialized()) {
-            throw new IllegalStateException("SFlowRTConnection is not initialized.");
+            throw new IllegalStateException(EX_MSG_NOT_INITIALIZED);
         }
         try {
             JsonRestClientResponse responce = client.get(path, params);
@@ -75,7 +73,7 @@ public class SFlowRTConnection {
     @Nullable
     public JsonRestClientResponse put(String path, String someJson) {
         if (!isInitialized()) {
-            throw new IllegalStateException("SFlowRTConnection is not initialized.");
+            throw new IllegalStateException(EX_MSG_NOT_INITIALIZED);
         }
         return putWithoutInitCheck(path, someJson);
     }
@@ -95,7 +93,7 @@ public class SFlowRTConnection {
 
     public JsonRestClientResponse delete(String path) {
         if (!isInitialized()) {
-            throw new IllegalStateException("SFlowRTConnection is not initialized.");
+            throw new IllegalStateException(EX_MSG_NOT_INITIALIZED);
         }
         try {
             JsonRestClientResponse responce = client.delete(path);

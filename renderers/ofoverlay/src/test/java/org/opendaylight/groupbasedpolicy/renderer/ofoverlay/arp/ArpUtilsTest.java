@@ -8,6 +8,9 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.arp;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+
 import java.net.InetAddress;
 
 import org.junit.Assert;
@@ -66,5 +69,12 @@ public class ArpUtilsTest {
                 result.contains("getSenderProtocolAddress()=" + InetAddress.getByAddress(spa).getHostAddress()));
         Assert.assertTrue(
                 result.contains("getTargetProtocolAddress()=" + InetAddress.getByAddress(tpa).getHostAddress()));
+    }
+
+    @Test
+    public void testBytesToMac(){
+        byte[] macBytes = {0,1,0,1,0,1};
+        assertEquals(new MacAddress("00:01:00:01:00:01"), ArpUtils.bytesToMac(macBytes));
+        assertNull(ArpUtils.bytesToMac(null));
     }
 }
