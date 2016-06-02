@@ -18,6 +18,7 @@ import javax.ws.rs.core.MultivaluedMap;
 
 import org.opendaylight.groupbasedpolicy.api.StatisticsManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.statistics.flowcache.FlowCacheData;
+import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.statistics.util.SFlowQueryParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,9 +32,6 @@ public class ReadGbpFlowCacheTask implements Runnable {
 
     private static final Type LIST_OF_FLOW_CACHE_DATA = new TypeToken<List<FlowCacheData>>() {}.getType();
     private static final Gson GSON = new Gson();
-    private static final String MAX_FLOWS_PARAM = "maxFlows";
-    private static final String MIN_VALUE_PARAM = "minValue";
-    private static final String AGG_MODE_PARAM = "aggMode";
 
     private final SFlowRTConnection sFlowRTConnection;
     private final StatisticsManager statisticsManager;
@@ -55,9 +53,9 @@ public class ReadGbpFlowCacheTask implements Runnable {
     @Override
     public void run() {
         MultivaluedMap<String, String> params = new MultivaluedMapImpl();
-        params.add(MAX_FLOWS_PARAM, maxFlows);
-        params.add(MIN_VALUE_PARAM, minValue);
-        params.add(AGG_MODE_PARAM, aggMode);
+        params.add(SFlowQueryParams.MAX_FLOWS, maxFlows);
+        params.add(SFlowQueryParams.MIN_VALUE, minValue);
+        params.add(SFlowQueryParams.AGG_MODE, aggMode);
         JsonRestClientResponse result = sFlowRTConnection.get(path, params);
 
         if (result != null && result.getJsonResponse() != null) {

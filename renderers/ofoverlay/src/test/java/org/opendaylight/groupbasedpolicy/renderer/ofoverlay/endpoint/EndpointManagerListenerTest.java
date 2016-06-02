@@ -31,8 +31,7 @@ public class EndpointManagerListenerTest {
         endpointManager = mock(EndpointManager.class);
         DataBroker dataProvider = mock(DataBroker.class);
 
-        EndpointManagerListener endpointManagerListener =
-                new EndpointManagerListener(dataProvider, endpointManager);
+        EndpointManagerListener endpointManagerListener = new EndpointManagerListener(dataProvider, endpointManager);
         tester = new DataChangeListenerTester(endpointManagerListener);
         tester.setRemovedPath(endpointId);
     }
@@ -45,8 +44,7 @@ public class EndpointManagerListenerTest {
         tester.callOnDataChanged();
 
         verify(endpointManager, times(3)).processEndpoint(any(Endpoint.class), any(Endpoint.class));
-        verify(endpointManager, never()).processL3Endpoint(any(EndpointL3.class),
-                any(EndpointL3.class));
+        verify(endpointManager, never()).processL3Endpoint(any(EndpointL3.class), any(EndpointL3.class));
     }
 
     @Test
@@ -57,8 +55,7 @@ public class EndpointManagerListenerTest {
         tester.callOnDataChanged();
 
         verify(endpointManager, never()).processEndpoint(any(Endpoint.class), any(Endpoint.class));
-        verify(endpointManager, times(3)).processL3Endpoint(any(EndpointL3.class),
-                any(EndpointL3.class));
+        verify(endpointManager, times(3)).processL3Endpoint(any(EndpointL3.class), any(EndpointL3.class));
     }
 
     @Test
@@ -69,8 +66,7 @@ public class EndpointManagerListenerTest {
         tester.callOnDataChanged();
 
         verify(endpointManager, never()).processEndpoint(any(Endpoint.class), any(Endpoint.class));
-        verify(endpointManager, never()).processL3Endpoint(any(EndpointL3.class),
-                any(EndpointL3.class));
+        verify(endpointManager, never()).processL3Endpoint(any(EndpointL3.class), any(EndpointL3.class));
     }
 
 }

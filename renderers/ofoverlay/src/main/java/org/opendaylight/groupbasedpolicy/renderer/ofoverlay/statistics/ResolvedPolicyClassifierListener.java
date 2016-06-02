@@ -51,9 +51,11 @@ public class ResolvedPolicyClassifierListener extends DataTreeChangeHandler<Reso
         ResolvedPolicy resolvedPolicy = rootNode.getDataAfter();
         Map<InstanceIdentifier<Classifier>, Classifier> classifierByIid =
                 resolveClassifiers(resolvedPolicy, rootIdentifier);
-        for (Entry<InstanceIdentifier<Classifier>, Classifier> classfierEntry : classifierByIid.entrySet()) {
-            LOG.trace("New classifier created: {}\n{}", classfierEntry.getKey(), classfierEntry.getValue());
-            ofStatsManager.pullStatsForClassifier(classfierEntry.getKey(), classfierEntry.getValue());
+        for (Entry<InstanceIdentifier<Classifier>, Classifier> classifierEntry : classifierByIid.entrySet()) {
+            LOG.trace("New classifier created: {}\n{}", classifierEntry.getKey(),
+                    classifierEntry.getValue());
+            ofStatsManager.pullStatsForClassifier(classifierEntry.getKey(),
+                    classifierEntry.getValue());
         }
     }
 
