@@ -24,9 +24,9 @@ import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.NodeManager;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopologyBuilder;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyBuilder;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeBuilder;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 
 /**
@@ -40,19 +40,19 @@ public class IosXeCapableNodeListenerImplTest {
     @Mock
     private NodeManager nodeManager;
     @Mock
-    private ListenerRegistration<DataTreeChangeListener<NetworkTopology>> listenerRegistration;
+    private ListenerRegistration<DataTreeChangeListener<Node>> listenerRegistration;
     @Mock
-    private DataTreeModification<NetworkTopology> dataTreeModification;
+    private DataTreeModification<Node> dataTreeModification;
     @Mock
-    private DataObjectModification<NetworkTopology> rootNode;
+    private DataObjectModification<Node> rootNode;
 
     private IosXeCapableNodeListenerImpl listener;
 
     @Before
     public void setUp() throws Exception {
         Mockito.when(dataBroker.registerDataTreeChangeListener(
-                Matchers.<DataTreeIdentifier<NetworkTopology>>any(),
-                Matchers.<DataTreeChangeListener<NetworkTopology>>any()))
+                Matchers.<DataTreeIdentifier<Node>>any(),
+                Matchers.<DataTreeChangeListener<Node>>any()))
                 .thenReturn(listenerRegistration);
         listener = new IosXeCapableNodeListenerImpl(dataBroker, nodeManager);
         Mockito.verify(dataBroker).registerDataTreeChangeListener(
@@ -67,44 +67,42 @@ public class IosXeCapableNodeListenerImplTest {
 
     @Test
     public void testOnDataTreeChanged_add() throws Exception {
-        final NetworkTopology networkTopology = createNetworkTopology("topology-id-1");
+        final Node topologyNode = createNetworkTopologyNode("topology-node-id-1");
         Mockito.when(dataTreeModification.getRootNode()).thenReturn(rootNode);
-        Mockito.when(rootNode.getDataBefore()).thenReturn(networkTopology);
+        Mockito.when(rootNode.getDataBefore()).thenReturn(topologyNode);
         Mockito.when(rootNode.getDataAfter()).thenReturn(null);
 
         listener.onDataTreeChanged(Collections.singleton(dataTreeModification));
-        Mockito.verify(nodeManager).syncNodes(null, networkTopology.getTopology());
+        Mockito.verify(nodeManager).syncNodes(null, topologyNode);
     }
 
 
     @Test
     public void testOnDataTreeChanged_update() throws Exception {
-        final NetworkTopology networkTopologyBefore = createNetworkTopology("topology-id-1");
-        final NetworkTopology networkTopologyAfter = createNetworkTopology("topology-id-2");
+        final Node topologyNodeBefore = createNetworkTopologyNode("topology-node-id-1");
+        final Node topologyNodeAfter = createNetworkTopologyNode("topology-node-id-2");
         Mockito.when(dataTreeModification.getRootNode()).thenReturn(rootNode);
-        Mockito.when(rootNode.getDataBefore()).thenReturn(networkTopologyBefore);
-        Mockito.when(rootNode.getDataAfter()).thenReturn(networkTopologyAfter);
+        Mockito.when(rootNode.getDataBefore()).thenReturn(topologyNodeBefore);
+        Mockito.when(rootNode.getDataAfter()).thenReturn(topologyNodeAfter);
 
         listener.onDataTreeChanged(Collections.singleton(dataTreeModification));
-        Mockito.verify(nodeManager).syncNodes(networkTopologyAfter.getTopology(), networkTopologyBefore.getTopology());
+        Mockito.verify(nodeManager).syncNodes(topologyNodeAfter, topologyNodeBefore);
     }
 
     @Test
     public void testOnDataTreeChanged_remove() throws Exception {
-        final NetworkTopology networkTopology = createNetworkTopology("topology-id-2");
+        final Node topologyNode = createNetworkTopologyNode("topology-node-id-2");
         Mockito.when(dataTreeModification.getRootNode()).thenReturn(rootNode);
         Mockito.when(rootNode.getDataBefore()).thenReturn(null);
-        Mockito.when(rootNode.getDataAfter()).thenReturn(networkTopology);
+        Mockito.when(rootNode.getDataAfter()).thenReturn(topologyNode);
 
         listener.onDataTreeChanged(Collections.singleton(dataTreeModification));
-        Mockito.verify(nodeManager).syncNodes(networkTopology.getTopology(), null);
+        Mockito.verify(nodeManager).syncNodes(topologyNode, null);
     }
 
-    private NetworkTopology createNetworkTopology(final String topologyId) {
-        return new NetworkTopologyBuilder()
-                .setTopology(Collections.singletonList(new TopologyBuilder()
-                        .setTopologyId(new TopologyId(topologyId))
-                        .build()))
+    private Node createNetworkTopologyNode(final String nodeId) {
+        return new NodeBuilder()
+                .setNodeId(new NodeId(nodeId))
                 .build();
     }
 

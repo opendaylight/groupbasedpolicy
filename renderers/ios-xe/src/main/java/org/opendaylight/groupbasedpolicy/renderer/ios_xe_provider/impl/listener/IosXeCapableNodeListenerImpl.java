@@ -17,6 +17,8 @@ import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.NodeManager;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
@@ -27,7 +29,7 @@ import java.util.Collection;
 
 import static org.opendaylight.sfc.provider.SfcProviderDebug.printTraceStart;
 
-public class IosXeCapableNodeListenerImpl implements DataTreeChangeListener<NetworkTopology>, AutoCloseable {
+public class IosXeCapableNodeListenerImpl implements DataTreeChangeListener<Node>, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(IosXeCapableNodeListenerImpl.class);
     private final NodeManager nodeManager;
@@ -37,29 +39,21 @@ public class IosXeCapableNodeListenerImpl implements DataTreeChangeListener<Netw
 
     public IosXeCapableNodeListenerImpl(final DataBroker dataBroker, final NodeManager nodeManager) {
         this.nodeManager = Preconditions.checkNotNull(nodeManager);
-        final DataTreeIdentifier<NetworkTopology> networkTopologyPath = new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
-                InstanceIdentifier.builder(NetworkTopology.class).build());
+        final DataTreeIdentifier<Node> networkTopologyPath = new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
+                InstanceIdentifier.builder(NetworkTopology.class).child(Topology.class).child(Node.class).build());
         listenerRegistration = Preconditions.checkNotNull(dataBroker
                 .registerDataTreeChangeListener(networkTopologyPath, this));
         LOG.info("network-topology listener registered");
     }
 
     @Override
-    public void onDataTreeChanged(@Nonnull Collection<DataTreeModification<NetworkTopology>> changes) {
+    public void onDataTreeChanged(@Nonnull Collection<DataTreeModification<Node>> changes) {
         printTraceStart(LOG);
-        for (DataTreeModification<NetworkTopology> modification : changes) {
-            DataObjectModification<NetworkTopology> rootNode = modification.getRootNode();
-            NetworkTopology dataAfter = rootNode.getDataAfter();
-            NetworkTopology dataBefore = rootNode.getDataBefore();
-            if (dataAfter != null && dataBefore == null) {
-                nodeManager.syncNodes(dataAfter.getTopology(), null);
-            }
-            else if (dataAfter == null && dataBefore != null) {
-                nodeManager.syncNodes(null, dataBefore.getTopology());
-            }
-            else if (dataAfter != null) {
-                nodeManager.syncNodes(dataAfter.getTopology(), dataBefore.getTopology());
-            }
+        for (DataTreeModification<Node> modification : changes) {
+            DataObjectModification<Node> rootNode = modification.getRootNode();
+            Node dataAfter = rootNode.getDataAfter();
+            Node dataBefore = rootNode.getDataBefore();
+            nodeManager.syncNodes(dataAfter, dataBefore);
         }
     }
 

@@ -13,6 +13,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.NodeManager;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.Renderers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
@@ -20,6 +21,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererNodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererNodesBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNode;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNodeKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,19 +38,21 @@ public class NodeWriter {
         rendererNodesCache = new ArrayList<>();
     }
 
-    public void write(RendererNode node) {
+    public void cache(RendererNode node) {
         rendererNodesCache.add(node);
     }
 
+    /**
+     * Put all cached items to data store
+     *
+     * @param dataBroker appropriate data provider
+     */
     public void commitToDatastore(DataBroker dataBroker) {
         RendererNodes rendererNodes = buildRendererNodes();
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
-        InstanceIdentifier<RendererNodes> Iid = InstanceIdentifier.builder(Renderers.class)
-                .child(Renderer.class, new RendererKey(new RendererName("ios-xe-renderer"))) // TODO unify renderer name
-                .child(RendererNodes.class)
-                .build();
+        InstanceIdentifier<RendererNodes> iid = buildRendererNodesIid();
         try {
-            wtx.merge(LogicalDatastoreType.OPERATIONAL, Iid, rendererNodes, true);
+            wtx.merge(LogicalDatastoreType.OPERATIONAL, iid, rendererNodes, true);
             CheckedFuture<Void, TransactionCommitFailedException> submitFuture = wtx.submit();
             submitFuture.checkedGet();
             // Clear cache
@@ -60,10 +64,47 @@ public class NodeWriter {
         }
     }
 
+    /**
+     * Removes all cached items from data store
+     *
+     * @param dataBroker appropriate data provider
+     */
+    public void removeFromDatastore(DataBroker dataBroker) {
+        WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
+        for (RendererNode nodeToRemove : rendererNodesCache) {
+            InstanceIdentifier<RendererNode> iid = buildRendererNodeIid(nodeToRemove);
+            try {
+                wtx.delete(LogicalDatastoreType.OPERATIONAL, iid);
+                CheckedFuture<Void, TransactionCommitFailedException> submitFuture = wtx.submit();
+                submitFuture.checkedGet();
+                // Clear cache
+            } catch (TransactionCommitFailedException e) {
+                LOG.error("Write transaction failed to {}", e.getMessage());
+            } catch (Exception e) {
+                LOG.error("Failed to .. {}", e.getMessage());
+            }
+        }
+        rendererNodesCache.clear();
+    }
+
+    private InstanceIdentifier<RendererNodes> buildRendererNodesIid() {
+        return InstanceIdentifier.builder(Renderers.class)
+                .child(Renderer.class, new RendererKey(new RendererName(NodeManager.iosXeRenderer))) // TODO unify renderer name
+                .child(RendererNodes.class)
+                .build();
+    }
+
+    private InstanceIdentifier<RendererNode> buildRendererNodeIid(RendererNode rendererNode) {
+        return InstanceIdentifier.builder(Renderers.class)
+                .child(Renderer.class, new RendererKey(new RendererName(NodeManager.iosXeRenderer))) // TODO unify renderer name
+                .child(RendererNodes.class)
+                .child(RendererNode.class, new RendererNodeKey(rendererNode.getNodePath()))
+                .build();
+    }
+
     private RendererNodes buildRendererNodes() {
         RendererNodesBuilder rendererNodesBuilder = new RendererNodesBuilder();
         rendererNodesBuilder.setRendererNode(new ArrayList<>(rendererNodesCache));
         return rendererNodesBuilder.build();
     }
-
 }

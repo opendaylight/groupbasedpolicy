@@ -66,7 +66,7 @@ public class NodeWriterTest {
     @Test
     public void testCommitToDatastore_with_node() throws Exception {
         final RendererNode node = new RendererNodeBuilder().build();
-        nodeWriter.write(node);
+        nodeWriter.cache(node);
         nodeWriter.commitToDatastore(dataBroker);
 
         commonChecks();
