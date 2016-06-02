@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
+ * Copyright (c) 2016 Cisco Systems, Inc. and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -23,6 +23,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.neutron.vpp.mapper.SocketInfo;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
@@ -31,6 +32,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier.PathArgument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 
@@ -41,14 +43,14 @@ public class NeutronListener implements DataTreeChangeListener<Neutron>, Closeab
     private final Set<MappingProvider<? extends DataObject>> dataChangeProviders = new LinkedHashSet<>();
     protected ListenerRegistration<NeutronListener> registeredListener;
 
-    public NeutronListener(DataBroker dataBroker) {
-        registerHandlersAndListeners(dataBroker);
+    public NeutronListener(DataBroker dataBroker, SocketInfo socketInfo) {
+        registerHandlersAndListeners(dataBroker, socketInfo);
         registeredListener = dataBroker.registerDataTreeChangeListener(new DataTreeIdentifier<>(
                 LogicalDatastoreType.CONFIGURATION, InstanceIdentifier.builder(Neutron.class).build()), this);
     }
 
-    private void registerHandlersAndListeners(DataBroker dataBroker) {
-        PortHandler portHandler = new PortHandler(dataBroker);
+    private void registerHandlersAndListeners(DataBroker dataBroker, SocketInfo socketInfo) {
+        PortHandler portHandler = new PortHandler(dataBroker, socketInfo);
         dataChangeProviders.add(new BaseEndpointByPortListener(portHandler, dataBroker));
     }
 
@@ -113,6 +115,16 @@ public class NeutronListener implements DataTreeChangeListener<Neutron>, Closeab
                 break;
             }
         }
+    }
+
+    @VisibleForTesting
+    void clearDataChangeProviders() {
+        dataChangeProviders.clear();
+    }
+
+    @VisibleForTesting
+    <T extends DataObject> void addDataChangeProvider(MappingProvider<T> t) {
+        dataChangeProviders.add(t);
     }
 
     @Override
