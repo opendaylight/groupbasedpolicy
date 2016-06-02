@@ -115,7 +115,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.statistics
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.statistics.store.rev151215.statistics.store.StatisticRecord;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.statistics.store.rev151215.statistics.store.StatisticRecordKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-import org.opendaylight.yangtools.yang.binding.InstanceIdentifier.InstanceIdentifierBuilder;
 
 public class IidFactory {
 
@@ -465,12 +464,22 @@ public class IidFactory {
                 .build();
     }
 
-    public static InstanceIdentifier<ProviderAddressEndpointLocation> providerAddressEndpointLocationIid(String provider,
-            Class<? extends AddressType> addrType, String addr, Class<? extends ContextType> cType,
+    public static InstanceIdentifier<ProviderAddressEndpointLocation> providerAddressEndpointLocationIid(
+            String provider, Class<? extends AddressType> addrType, String addr, Class<? extends ContextType> cType,
             ContextId containment) {
+        return providerAddressEndpointLocationIid(new ProviderName(provider),
+                new ProviderAddressEndpointLocationKey(addr, addrType, containment, cType));
+    }
+
+    public static InstanceIdentifier<ProviderAddressEndpointLocation> providerAddressEndpointLocationIid(
+            ProviderName provider, ProviderAddressEndpointLocationKey providerAddressEndpointLocationKey) {
+        return locationProviderIid(provider).child(ProviderAddressEndpointLocation.class,
+                providerAddressEndpointLocationKey);
+    }
+
+    public static InstanceIdentifier<LocationProvider> locationProviderIid(ProviderName provider) {
         return InstanceIdentifier.builder(LocationProviders.class)
-                .child(LocationProvider.class, new LocationProviderKey(new ProviderName(provider)))
-            .child(ProviderAddressEndpointLocation.class, new ProviderAddressEndpointLocationKey(addr, addrType, containment, cType))
+            .child(LocationProvider.class, new LocationProviderKey(provider))
             .build();
     }
 

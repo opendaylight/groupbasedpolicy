@@ -2,6 +2,7 @@
 package org.opendaylight.groupbasedpolicy.renderer.vpp.manager;
 
 import com.google.common.base.Optional;
+import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.CheckedFuture;
 import org.junit.After;
 import org.junit.Assert;
@@ -74,7 +75,7 @@ public class VppManagerDataStoreTest extends VppRendererDataBrokerTest {
         Mockito.when(mountPoint.getService(Matchers.<Class<DataBroker>>any())).thenReturn(Optional.of(dataBroker2));
         dataBroker = getDataBroker();
         vppNodeManager = new VppNodeManager(dataBroker, providerContext);
-        vppNodeListener = new VppNodeListener(dataBroker, vppNodeManager);
+        vppNodeListener = new VppNodeListener(dataBroker, vppNodeManager, new EventBus());
     }
 
     private Node createNode(final String name, NetconfNodeConnectionStatus.ConnectionStatus status) {

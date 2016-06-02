@@ -8,10 +8,10 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.commands;
 
-import com.google.common.base.Preconditions;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General.Operations;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceBuilder;
@@ -21,11 +21,14 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VppInterfaceAugmentationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.interfaces._interface.L2Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.interfaces._interface.VhostUserBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.interfaces._interface.l2.interconnection.BridgeBasedBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.l2.attributes.interconnection.BridgeBasedBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class VhostUserCommand extends AbstractInterfaceCommand {
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+
+public class VhostUserCommand extends AbstractInterfaceCommand<VhostUserCommand> {
 
     private static final Logger LOG = LoggerFactory.getLogger(VhostUserCommand.class);
     private String socket;
@@ -64,15 +67,15 @@ public class VhostUserCommand extends AbstractInterfaceCommand {
         switch (getOperation()) {
 
             case PUT:
-                LOG.info("Executing Add operation for command: {}", this);
+                LOG.debug("Executing Add operation for command: {}", this);
                 put(readWriteTransaction);
                 break;
             case DELETE:
-                LOG.info("Executing Delete operation for command: {}", this);
+                LOG.debug("Executing Delete operation for command: {}", this);
                 delete(readWriteTransaction);
                 break;
             case MERGE:
-                LOG.info("Executing Update operation for command: {}", this);
+                LOG.debug("Executing Update operation for command: {}", this);
                 merge(readWriteTransaction);
                 break;
             default:
@@ -82,8 +85,6 @@ public class VhostUserCommand extends AbstractInterfaceCommand {
     }
 
     private void put(ReadWriteTransaction readWriteTransaction) {
-        Preconditions.checkNotNull(name, "Interface name should not be null");
-
         InterfaceBuilder interfaceBuilder = getVhostUserInterfaceBuilder();
 
         readWriteTransaction.put(LogicalDatastoreType.CONFIGURATION,
@@ -91,8 +92,6 @@ public class VhostUserCommand extends AbstractInterfaceCommand {
     }
 
     private void merge(ReadWriteTransaction readWriteTransaction) {
-        Preconditions.checkNotNull(name, "Interface name should not be null");
-
         InterfaceBuilder interfaceBuilder = getVhostUserInterfaceBuilder();
 
             readWriteTransaction.merge(LogicalDatastoreType.CONFIGURATION,
@@ -110,14 +109,14 @@ public class VhostUserCommand extends AbstractInterfaceCommand {
                         .setLinkUpDownTrapEnable(Interface.LinkUpDownTrapEnable.Enabled);
 
         // Create the vhost augmentation
-        VppInterfaceAugmentation vppAugmentation =
-                new VppInterfaceAugmentationBuilder()
-                        .setVhostUser(new VhostUserBuilder().setRole(role).setSocket(socket).build())
-                        .setL2(new L2Builder()
-                                .setInterconnection(new BridgeBasedBuilder().setBridgeDomain(bridgeDomain).build()).build())
-                        .build();
+        VppInterfaceAugmentationBuilder vppAugmentationBuilder = new VppInterfaceAugmentationBuilder()
+            .setVhostUser(new VhostUserBuilder().setRole(role).setSocket(socket).build());
+        if (!Strings.isNullOrEmpty(bridgeDomain)) {
+            vppAugmentationBuilder.setL2(new L2Builder()
+                .setInterconnection(new BridgeBasedBuilder().setBridgeDomain(bridgeDomain).build()).build());
+        }
 
-        interfaceBuilder.addAugmentation(VppInterfaceAugmentation.class, vppAugmentation);
+        interfaceBuilder.addAugmentation(VppInterfaceAugmentation.class, vppAugmentationBuilder.build());
         return interfaceBuilder;
     }
 
@@ -130,6 +129,15 @@ public class VhostUserCommand extends AbstractInterfaceCommand {
         }
 
     }
+
+    @Override
+    public String toString() {
+        return "VhostUserCommand [socket=" + socket + ", role=" + role + ", bridgeDomain=" + bridgeDomain
+                + ", operation=" + operation + ", name=" + name + ", description=" + description + ", enabled="
+                + enabled + "]";
+    }
+
+
 
     public static class VhostUserCommandBuilder {
 
@@ -213,7 +221,9 @@ public class VhostUserCommand extends AbstractInterfaceCommand {
         public VhostUserCommand build() {
             Preconditions.checkArgument(this.name != null);
             Preconditions.checkArgument(this.operation != null);
-            Preconditions.checkArgument(this.socket != null);
+            if (operation == Operations.PUT) {
+                Preconditions.checkArgument(this.socket != null);
+            }
 
             return new VhostUserCommand(this);
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
+ * Copyright (c) 2016 Cisco Systems, Inc. and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -11,15 +11,19 @@ package org.opendaylight.controller.config.yang.config.vpp_provider.impl;
 import java.util.List;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.MountPointService;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareProvider;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppEndpointListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppNodeListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.manager.VppNodeManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.sf.AllowAction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.sf.EtherTypeClassifier;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.RendererBuilder;
@@ -35,6 +39,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -52,9 +57,13 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
             .setSupportedParameterValues(new EtherTypeClassifier(null).getSupportedParameterValues())
             .build());
 
-    private DataBroker dataBroker;
+    private final DataBroker dataBroker;
+
     private VppNodeManager vppNodeManager;
+    private InterfaceManager interfaceManager;
+
     private VppNodeListener vppNodeListener;
+    private VppEndpointListener vppEndpointListener;
 
     public VppRenderer(DataBroker dataBroker, BindingAwareBroker bindingAwareBroker) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
@@ -67,6 +76,12 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         if (vppNodeListener != null) {
             vppNodeListener.close();
         }
+        if (vppEndpointListener != null) {
+            vppEndpointListener.close();
+        }
+        if (interfaceManager != null) {
+            interfaceManager.close();
+        }
         unregisterFromRendererManager();
     }
 
@@ -74,9 +89,16 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
     public void onSessionInitiated(BindingAwareBroker.ProviderContext providerContext) {
         LOG.info("starting vpp renderer");
 
-        // vpp-node-manager
+        MountPointService mountService = Preconditions.checkNotNull(providerContext.getSALService(MountPointService.class));
+        MountedDataBrokerProvider mountDataProvider = new MountedDataBrokerProvider(mountService);
         vppNodeManager = new VppNodeManager(dataBroker, providerContext);
-        vppNodeListener = new VppNodeListener(dataBroker, vppNodeManager);
+
+        EventBus dtoEventBus = new EventBus("DTO events");
+        interfaceManager = new InterfaceManager(mountDataProvider, dataBroker);
+        dtoEventBus.register(interfaceManager);
+
+        vppNodeListener = new VppNodeListener(dataBroker, vppNodeManager, dtoEventBus);
+        vppEndpointListener = new VppEndpointListener(dataBroker, dtoEventBus);
 
         registerToRendererManager();
     }
