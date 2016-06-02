@@ -8,7 +8,7 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.util;
 
-import org.opendaylight.groupbasedpolicy.renderer.vpp.manager.VppNodeManager;
+import org.opendaylight.controller.config.yang.config.vpp_provider.impl.VppRenderer;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.Interfaces;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
@@ -38,14 +38,14 @@ public class VppIidFactory {
 
     public static InstanceIdentifier<RendererNodes> getRendererNodesIid() {
         return InstanceIdentifier.builder(Renderers.class)
-            .child(Renderer.class, new RendererKey(VppNodeManager.vppRenderer))
+            .child(Renderer.class, new RendererKey(VppRenderer.NAME))
             .child(RendererNodes.class)
             .build();
     }
 
     public static InstanceIdentifier<RendererNode> getRendererNodeIid(RendererNode rendererNode) {
         return InstanceIdentifier.builder(Renderers.class)
-            .child(Renderer.class, new RendererKey(VppNodeManager.vppRenderer))
+            .child(Renderer.class, new RendererKey(VppRenderer.NAME))
             .child(RendererNodes.class)
             .child(RendererNode.class, new RendererNodeKey(rendererNode.getNodePath()))
             .build();

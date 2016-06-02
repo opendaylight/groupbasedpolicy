@@ -13,6 +13,7 @@ import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
+import org.opendaylight.controller.config.yang.config.vpp_provider.impl.VppRenderer;
 import org.opendaylight.controller.md.sal.binding.api.*;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
@@ -109,7 +110,7 @@ public class VppManagerDataStoreTest extends VppRendererDataBrokerTest {
         ReadOnlyTransaction readOnlyTransaction = dataBroker.newReadOnlyTransaction();
         CheckedFuture<Optional<Renderer>, ReadFailedException> future =
                 readOnlyTransaction.read(LogicalDatastoreType.OPERATIONAL,
-                        VppIidFactory.getRendererIID(new RendererKey(VppNodeManager.vppRenderer)));
+                        VppIidFactory.getRendererIID(new RendererKey(VppRenderer.NAME)));
         Optional<Renderer> rendererOptional = future.checkedGet();
 
         Assert.assertTrue(rendererOptional.isPresent());
@@ -129,7 +130,7 @@ public class VppManagerDataStoreTest extends VppRendererDataBrokerTest {
         ReadOnlyTransaction readOnlyTransaction = dataBroker.newReadOnlyTransaction();
         CheckedFuture<Optional<Renderer>, ReadFailedException> future =
                 readOnlyTransaction.read(LogicalDatastoreType.OPERATIONAL,
-                        VppIidFactory.getRendererIID(new RendererKey(VppNodeManager.vppRenderer)));
+                        VppIidFactory.getRendererIID(new RendererKey(VppRenderer.NAME)));
         Optional<Renderer> rendererOptional = future.checkedGet();
 
         Assert.assertTrue(rendererOptional.isPresent());
@@ -146,7 +147,7 @@ public class VppManagerDataStoreTest extends VppRendererDataBrokerTest {
         ReadOnlyTransaction readOnlyTransaction2 = dataBroker.newReadOnlyTransaction();
         CheckedFuture<Optional<Renderer>, ReadFailedException> future2 =
                 readOnlyTransaction2.read(LogicalDatastoreType.OPERATIONAL,
-                        VppIidFactory.getRendererIID(new RendererKey(VppNodeManager.vppRenderer)));
+                        VppIidFactory.getRendererIID(new RendererKey(VppRenderer.NAME)));
         Optional<Renderer> rendererOptional2 = future2.checkedGet();
 
         Assert.assertTrue(rendererOptional2.isPresent());

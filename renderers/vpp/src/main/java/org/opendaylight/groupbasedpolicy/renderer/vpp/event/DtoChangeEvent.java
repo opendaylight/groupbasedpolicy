@@ -132,4 +132,9 @@ public abstract class DtoChangeEvent<T extends DataObject> {
         return true;
     }
 
+    @Override
+    public String toString() {
+        return "DtoChangeEvent [iid=" + iid + ", before=" + before + ", after=" + after + "]";
+    }
+
 }

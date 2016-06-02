@@ -18,13 +18,16 @@ import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFaile
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareProvider;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.RendererPolicyListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppEndpointListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppNodeListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.manager.VppNodeManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.VppRendererPolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.sf.AllowAction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.sf.EtherTypeClassifier;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.RendererBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.RendererKey;
@@ -48,6 +51,8 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(VppRenderer.class);
 
+    public static final RendererName NAME = new RendererName("vpp-renderer");
+
     private final List<SupportedActionDefinition> actionDefinitions =
             ImmutableList.of(new SupportedActionDefinitionBuilder().setActionDefinitionId(new AllowAction().getId())
                 .setSupportedParameterValues(new AllowAction().getSupportedParameterValues())
@@ -61,9 +66,11 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
 
     private VppNodeManager vppNodeManager;
     private InterfaceManager interfaceManager;
+    private VppRendererPolicyManager vppRendererPolicyManager;
 
     private VppNodeListener vppNodeListener;
     private VppEndpointListener vppEndpointListener;
+    private RendererPolicyListener rendererPolicyListener;
 
     public VppRenderer(DataBroker dataBroker, BindingAwareBroker bindingAwareBroker) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
@@ -78,6 +85,9 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         }
         if (vppEndpointListener != null) {
             vppEndpointListener.close();
+        }
+        if (rendererPolicyListener != null) {
+            rendererPolicyListener.close();
         }
         if (interfaceManager != null) {
             interfaceManager.close();
@@ -96,9 +106,12 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         EventBus dtoEventBus = new EventBus("DTO events");
         interfaceManager = new InterfaceManager(mountDataProvider, dataBroker);
         dtoEventBus.register(interfaceManager);
+        vppRendererPolicyManager = new VppRendererPolicyManager(interfaceManager, dataBroker);
+        dtoEventBus.register(vppRendererPolicyManager);
 
         vppNodeListener = new VppNodeListener(dataBroker, vppNodeManager, dtoEventBus);
         vppEndpointListener = new VppEndpointListener(dataBroker, dtoEventBus);
+        rendererPolicyListener = new RendererPolicyListener(dataBroker, dtoEventBus);
 
         registerToRendererManager();
     }
@@ -106,7 +119,7 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
     private void registerToRendererManager() {
         WriteTransaction writeTransaction = dataBroker.newWriteOnlyTransaction();
 
-        Renderer renderer = new RendererBuilder().setName(VppNodeManager.vppRenderer)
+        Renderer renderer = new RendererBuilder().setName(VppRenderer.NAME)
             .setRendererNodes(new RendererNodesBuilder().build())
             .setCapabilities(new CapabilitiesBuilder().setSupportedActionDefinition(actionDefinitions)
                 .setSupportedClassifierDefinition(classifierDefinitions)
@@ -133,19 +146,19 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
 
     private void unregisterFromRendererManager() {
         WriteTransaction writeTransaction = dataBroker.newWriteOnlyTransaction();
-        writeTransaction.delete(LogicalDatastoreType.OPERATIONAL, VppIidFactory.getRendererIID(new RendererKey(VppNodeManager.vppRenderer)));
+        writeTransaction.delete(LogicalDatastoreType.OPERATIONAL, VppIidFactory.getRendererIID(new RendererKey(VppRenderer.NAME)));
 
         CheckedFuture<Void, TransactionCommitFailedException> future = writeTransaction.submit();
         Futures.addCallback(future, new FutureCallback<Void>() {
 
             @Override
             public void onFailure(Throwable throwable) {
-                LOG.error("Could not unregister renderer {}: {}", VppNodeManager.vppRenderer, throwable);
+                LOG.error("Could not unregister renderer {}: {}", VppRenderer.NAME, throwable);
             }
 
             @Override
             public void onSuccess(Void result) {
-                LOG.debug("Renderer {} successfully unregistered.", VppNodeManager.vppRenderer);
+                LOG.debug("Renderer {} successfully unregistered.", VppRenderer.NAME);
             }
         });
     }

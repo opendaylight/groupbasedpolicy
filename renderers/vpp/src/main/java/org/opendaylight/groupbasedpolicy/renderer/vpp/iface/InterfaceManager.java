@@ -9,9 +9,12 @@
 package org.opendaylight.groupbasedpolicy.renderer.vpp.iface;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
+import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.ConfigCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.VhostUserCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.VhostUserCommand.VhostUserCommandBuilder;
@@ -19,20 +22,34 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.event.NodeOperEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.VppEndpointConfEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General.Operations;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.LocationType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint.InterfaceTypeChoice;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.VhostUserCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VhostUserRole;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VppInterfaceAugmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.interfaces._interface.L2;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.interfaces._interface.L2Builder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.l2.attributes.Interconnection;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.l2.attributes.interconnection.BridgeBased;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.l2.attributes.interconnection.BridgeBasedBuilder;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.eventbus.Subscribe;
+import com.google.common.util.concurrent.AsyncFunction;
+import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 
 public class InterfaceManager implements AutoCloseable {
 
@@ -46,7 +63,7 @@ public class InterfaceManager implements AutoCloseable {
     }
 
     @Subscribe
-    public void vppEndpointChanged(VppEndpointConfEvent event) {
+    public synchronized void vppEndpointChanged(VppEndpointConfEvent event) {
         switch (event.getDtoModificationType()) {
             case CREATED:
                 vppEndpointCreated(event.getAfter().get());
@@ -136,7 +153,7 @@ public class InterfaceManager implements AutoCloseable {
     }
 
     @Subscribe
-    public void vppNodeChanged(NodeOperEvent event) {
+    public synchronized void vppNodeChanged(NodeOperEvent event) {
         switch (event.getDtoModificationType()) {
             case CREATED:
                 if (event.isAfterConnected()) {
@@ -179,6 +196,176 @@ public class InterfaceManager implements AutoCloseable {
         VhostUserCommand vhostUserCommand =
                 builder.setOperation(operations).setDescription(vppEp.getDescription()).build();
         return Optional.of(vhostUserCommand);
+    }
+
+    /**
+     * Adds bridge domain to an interface if the interface exist.<br>
+     * It rewrites bridge domain in case it already exist.<br>
+     * {@link VppEndpointLocationProvider#VPP_ENDPOINT_LOCATION_PROVIDER} will update location
+     * when the interface is created successfully.<br>
+     * If the interface does not exist or other problems occur {@link ListenableFuture} will fail
+     * as {@link Futures#immediateFailedFuture(Throwable)} with {@link Exception}
+     * containing message in {@link Exception#getMessage()}
+     * 
+     * @param bridgeDomainName bridge domain
+     * @param addrEpWithLoc {@link AddressEndpointWithLocation} containing
+     *        {@link ExternalLocationCase} where
+     *        {@link ExternalLocationCase#getExternalNodeMountPoint()} MUST NOT be {@code null}
+     *        and {@link ExternalLocationCase#getExternalNodeConnector()} MUST NOT be {@code null}
+     * @return {@link ListenableFuture}
+     */
+    public synchronized @Nonnull ListenableFuture<Void> addBridgeDomainToInterface(@Nonnull String bridgeDomainName,
+            @Nonnull AddressEndpointWithLocation addrEpWithLoc) {
+        ExternalLocationCase epLoc = resolveAndValidateLocation(addrEpWithLoc);
+        InstanceIdentifier<?> vppNodeIid = epLoc.getExternalNodeMountPoint();
+        String interfacePath = epLoc.getExternalNodeConnector();
+
+        Optional<InstanceIdentifier<Interface>> optInterfaceIid =
+                VppPathMapper.interfaceToInstanceIdentifier(interfacePath);
+        if (!optInterfaceIid.isPresent()) {
+            return Futures.immediateFailedFuture(
+                    new Exception("Cannot resolve interface instance-identifier for interface path" + interfacePath));
+        }
+        InstanceIdentifier<Interface> interfaceIid = optInterfaceIid.get();
+
+        Optional<DataBroker> potentialVppDataProvider = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
+        if (!potentialVppDataProvider.isPresent()) {
+            return Futures.immediateFailedFuture(new Exception("Cannot get data broker for mount point " + vppNodeIid));
+        }
+
+        ReadWriteTransaction rwTx = potentialVppDataProvider.get().newReadWriteTransaction();
+        CheckedFuture<Optional<Interface>, ReadFailedException> futureIface =
+                rwTx.read(LogicalDatastoreType.CONFIGURATION, interfaceIid);
+        return Futures.transform(futureIface, new AsyncFunction<Optional<Interface>, Void>() {
+
+            @Override
+            public ListenableFuture<Void> apply(Optional<Interface> optIface) throws Exception {
+                if (!optIface.isPresent()) {
+                    return Futures.immediateFailedFuture(new Exception("Iterface "
+                            + interfaceIid.firstKeyOf(Interface.class) + " does not exist on node " + vppNodeIid));
+                }
+
+                String existingBridgeDomain = resolveBridgeDomain(optIface.get());
+                if (bridgeDomainName.equals(existingBridgeDomain)) {
+                    String nodePath = VppPathMapper.bridgeDomainToRestPath(bridgeDomainName);
+                    if (!nodePath.equals(epLoc.getExternalNode())) {
+                        vppEndpointLocationProvider.updateExternalNodeLocationForEndpoint(nodePath,
+                                addrEpWithLoc.getKey());
+                    }
+                    return Futures.immediateFuture(null);
+                }
+
+                InstanceIdentifier<L2> l2Iid =
+                        interfaceIid.builder().augmentation(VppInterfaceAugmentation.class).child(L2.class).build();
+                L2 l2 = new L2Builder()
+                    .setInterconnection(new BridgeBasedBuilder().setBridgeDomain(bridgeDomainName).build()).build();
+                rwTx.merge(LogicalDatastoreType.CONFIGURATION, l2Iid, l2);
+                return Futures.transform(rwTx.submit(), new Function<Void, Void>() {
+
+                    @Override
+                    public Void apply(Void input) {
+                        String nodePath = VppPathMapper.bridgeDomainToRestPath(bridgeDomainName);
+                        vppEndpointLocationProvider.updateExternalNodeLocationForEndpoint(nodePath,
+                                addrEpWithLoc.getKey());
+                        return null;
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * <p>
+     * Removes bridge domain (if exist) from an interface (if exist).<br>
+     * {@link VppEndpointLocationProvider#VPP_ENDPOINT_LOCATION_PROVIDER} will update endpoint
+     * location.
+     * <p>
+     * If the interface does not exist or other problems occur {@link ListenableFuture} will fail
+     * as {@link Futures#immediateFailedFuture(Throwable)} with {@link Exception}
+     * containing message in {@link Exception#getMessage()}
+     * 
+     * @param addrEpWithLoc {@link AddressEndpointWithLocation} containing
+     *        {@link ExternalLocationCase} where
+     *        {@link ExternalLocationCase#getExternalNodeMountPoint()} MUST NOT be {@code null}
+     *        and {@link ExternalLocationCase#getExternalNodeConnector()} MUST NOT be {@code null}
+     * @return {@link ListenableFuture}
+     */
+    public synchronized @Nonnull ListenableFuture<Void> deleteBridgeDomainFromInterface(
+            @Nonnull AddressEndpointWithLocation addrEpWithLoc) {
+        ExternalLocationCase epLoc = resolveAndValidateLocation(addrEpWithLoc);
+        InstanceIdentifier<?> vppNodeIid = epLoc.getExternalNodeMountPoint();
+        String interfacePath = epLoc.getExternalNodeConnector();
+
+        Optional<InstanceIdentifier<Interface>> optInterfaceIid =
+                VppPathMapper.interfaceToInstanceIdentifier(interfacePath);
+        if (!optInterfaceIid.isPresent()) {
+            return Futures.immediateFailedFuture(
+                    new Exception("Cannot resolve interface instance-identifier for interface path" + interfacePath));
+        }
+        InstanceIdentifier<Interface> interfaceIid = optInterfaceIid.get();
+
+        Optional<DataBroker> potentialVppDataProvider = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
+        if (!potentialVppDataProvider.isPresent()) {
+            return Futures.immediateFailedFuture(new Exception("Cannot get data broker for mount point " + vppNodeIid));
+        }
+
+        ReadWriteTransaction rwTx = potentialVppDataProvider.get().newReadWriteTransaction();
+        CheckedFuture<Optional<Interface>, ReadFailedException> futureIface =
+                rwTx.read(LogicalDatastoreType.CONFIGURATION, interfaceIid);
+        return Futures.transform(futureIface, new AsyncFunction<Optional<Interface>, Void>() {
+
+            @Override
+            public ListenableFuture<Void> apply(Optional<Interface> optIface) throws Exception {
+                if (!optIface.isPresent()) {
+                    // interface does not exist so we consider job done
+                    return Futures.immediateFuture(null);
+                }
+
+                String existingBridgeDomain = resolveBridgeDomain(optIface.get());
+                if (Strings.isNullOrEmpty(existingBridgeDomain)) {
+                    // bridge domain does not exist on interface so we consider job done
+                    vppEndpointLocationProvider.updateExternalNodeLocationForEndpoint(null, addrEpWithLoc.getKey());
+                    return Futures.immediateFuture(null);
+                }
+
+                InstanceIdentifier<L2> l2Iid =
+                        interfaceIid.builder().augmentation(VppInterfaceAugmentation.class).child(L2.class).build();
+                rwTx.delete(LogicalDatastoreType.CONFIGURATION, l2Iid);
+                return Futures.transform(rwTx.submit(), new Function<Void, Void>() {
+
+                    @Override
+                    public Void apply(Void input) {
+                        vppEndpointLocationProvider.updateExternalNodeLocationForEndpoint(null, addrEpWithLoc.getKey());
+                        return null;
+                    }
+                });
+            }
+        });
+    }
+
+    private static ExternalLocationCase resolveAndValidateLocation(AddressEndpointWithLocation addrEpWithLoc) {
+        LocationType locationType = addrEpWithLoc.getAbsoluteLocation().getLocationType();
+        if (!(locationType instanceof ExternalLocationCase)) {
+            throw new IllegalArgumentException("Endpoint does not have external location " + addrEpWithLoc);
+        }
+        ExternalLocationCase result = (ExternalLocationCase) locationType;
+        if (result.getExternalNodeMountPoint() == null || result.getExternalNodeConnector() == null) {
+            throw new IllegalArgumentException(
+                    "Endpoint does not have external-node-mount-point or external-node-connector " + addrEpWithLoc);
+        }
+        return result;
+    }
+
+    private static @Nullable String resolveBridgeDomain(@Nonnull Interface iface) {
+        VppInterfaceAugmentation vppInterfaceAugmentation = iface.getAugmentation(VppInterfaceAugmentation.class);
+        L2 existingL2 = vppInterfaceAugmentation.getL2();
+        if (existingL2 != null) {
+            Interconnection interconnection = existingL2.getInterconnection();
+            if (interconnection instanceof BridgeBased) {
+                return ((BridgeBased) interconnection).getBridgeDomain();
+            }
+        }
+        return null;
     }
 
     private static boolean hasNodeAndInterface(VppEndpoint vppEp) {
