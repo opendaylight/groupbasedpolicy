@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util;
+package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer;
 
 import com.google.common.util.concurrent.CheckedFuture;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;

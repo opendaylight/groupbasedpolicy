@@ -34,11 +34,14 @@ import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev1407
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.ServiceFunctionPathsBuilder;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.service.function.paths.ServiceFunctionPath;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.service.function.paths.ServiceFunctionPathBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ClassMap;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValueBuilder;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Test for {@link PolicyManagerUtil}.
@@ -66,6 +69,12 @@ public class PolicyManagerUtilTest {
     }
 
     @Test
+    public void testCreateClassMap() {
+        ClassMap cm = PolicyManagerUtil.createClassMap("testName", null);
+        assertNotNull(cm);
+    }
+
+    @Test
     public void testGetServicePath() throws Exception {
         final ParameterValue paramValueSfc = new ParameterValueBuilder()
                 .setName(new ParameterName(ChainActionDefinition.SFC_CHAIN_NAME))
@@ -80,7 +89,7 @@ public class PolicyManagerUtilTest {
         Mockito.when(roTx.read(LogicalDatastoreType.CONFIGURATION, InstanceIdentifier.create(ServiceFunctionPaths.class)))
                 .thenReturn(Futures.immediateCheckedFuture(Optional.of(sfPaths)));
 
-        final ServiceFunctionPath servicePath = PolicyManagerUtil.getServicePath(Collections.singletonList(paramValueSfc));
+        final ServiceFunctionPath servicePath = ServiceChainingUtil.getServicePath(Collections.singletonList(paramValueSfc));
         Assert.assertEquals(serviceFunctionPath, servicePath);
     }
 
@@ -93,7 +102,7 @@ public class PolicyManagerUtilTest {
         Mockito.when(roTx.read(Matchers.eq(LogicalDatastoreType.OPERATIONAL), rendererServicePathIICaptor.capture()))
                 .thenReturn(Futures.immediateCheckedFuture(Optional.of(renderedSP)));
 
-        final RenderedServicePath renderedPath = PolicyManagerUtil.createRenderedPath(serviceFunctionPath, tenantId);
+        final RenderedServicePath renderedPath = ServiceChainingUtil.createRenderedPath(serviceFunctionPath, tenantId);
         Assert.assertEquals(renderedSP, renderedPath);
         final InstanceIdentifier<RenderedServicePath> ii = rendererServicePathIICaptor.getValue();
         Assert.assertEquals("sfp-name-01tenant-id-01-gbp-rsp", ii.firstKeyOf(RenderedServicePath.class).getName().getValue());
@@ -109,7 +118,7 @@ public class PolicyManagerUtilTest {
                 .thenReturn(Futures.immediateCheckedFuture(Optional.of(renderedServicePath)));
 
 
-        final RenderedServicePath symmetricRenderedPath = PolicyManagerUtil.createSymmetricRenderedPath(
+        final RenderedServicePath symmetricRenderedPath = ServiceChainingUtil.createSymmetricRenderedPath(
                 serviceFunctionPath, renderedServicePath, tenantId);
         Assert.assertEquals(renderedServicePath, symmetricRenderedPath);
         final InstanceIdentifier<RenderedServicePath> ii = rendererServicePathIICaptor.getValue();

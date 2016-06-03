@@ -9,103 +9,315 @@
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util;
 
 import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
-import org.opendaylight.sfc.provider.api.SfcProviderRenderedPathAPI;
-import org.opendaylight.sfc.provider.api.SfcProviderServicePathAPI;
-import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.RspName;
-import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.SfcName;
-import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.CreateRenderedPathInput;
-import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.CreateRenderedPathInputBuilder;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriter;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.paths.RenderedServicePath;
-import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.ServiceFunctionPaths;
-import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.service.function.paths.ServiceFunctionPath;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308.ClassNameType;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308.PolicyActionType;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._class.map.match.grouping.SecurityGroup;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._class.map.match.grouping.SecurityGroupBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._class.map.match.grouping.security.group.Destination;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._class.map.match.grouping.security.group.DestinationBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._class.map.match.grouping.security.group.Source;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._class.map.match.grouping.security.group.SourceBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._interface.common.grouping.ServicePolicy;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._interface.common.grouping.ServicePolicyBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._interface.common.grouping.service.policy.TypeBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._interface.common.grouping.service.policy.type.ServiceChain;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._interface.common.grouping.service.policy.type.ServiceChainBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ClassMap;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ClassMapBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ClassMapKey;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.PolicyMap;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.PolicyMapBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.PolicyMapKey;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native._class.map.Match;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native._class.map.MatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map.Class;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map.ClassBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map.ClassKey;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map._class.ActionList;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map._class.ActionListBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map._class.ActionListKey;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map._class.AppnavPolicyBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map._class.action.list.action.param.ForwardCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map._class.action.list.action.param.forward._case.ForwardBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map._class.action.list.action.param.forward._case.forward.ServicePath;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map._class.action.list.action.param.forward._case.forward.ServicePathBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map._class.action.list.action.param.forward._case.forward.ServicePathKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.AddressEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.LocationType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.rule.group.with.renderer.endpoint.participation.RuleGroupWithRendererEndpointParticipation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Configuration;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointWithPolicy;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.rule.groups.RuleGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.actions.Action;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.classifiers.Classifier;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.resolved.rules.ResolvedRule;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.AddressEndpointWithLocationAug;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.ActionCase.CHAIN;
+import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction.In;
+import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction.Out;
+import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation.CONSUMER;
+import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation.PROVIDER;
 
 public class PolicyManagerUtil {
 
     private static final Logger LOG = LoggerFactory.getLogger(PolicyManagerUtil.class);
 
-    public static ServiceFunctionPath getServicePath(List<ParameterValue> params) {
-        if (params == null || params.isEmpty()) {
-            LOG.error("Cannot found service path, parameter value is null");
-            return null;
+    public static void syncPolicyEntities(final Sgt sourceSgt, final Sgt destinationSgt, PolicyWriter policyWriter,
+                                          final Configuration dataAfter, final PeerEndpointWithPolicy peerEndpoint) {
+        // Class map
+        final String classMapName = PolicyManagerUtil.generateClassMapName(sourceSgt.getValue(), destinationSgt.getValue());
+        final Match match = PolicyManagerUtil.createSecurityGroupMatch(sourceSgt.getValue(), destinationSgt.getValue());
+        final ClassMap classMap = PolicyManagerUtil.createClassMap(classMapName, match);
+        final Map<PolicyManagerImpl.ActionCase, Action> actionMap = PolicyManagerUtil.getActionInDirection(dataAfter, peerEndpoint);
+        if (actionMap == null || actionMap.isEmpty()) {
+            return;
         }
-        Map<String, Object> paramsMap = new HashMap<>();
-        for (ParameterValue value : params) {
-            if (value.getName() == null)
-                continue;
-            if (value.getIntValue() != null) {
-                paramsMap.put(value.getName().getValue(), value.getIntValue());
-            } else if (value.getStringValue() != null) {
-                paramsMap.put(value.getName().getValue(), value.getStringValue());
-            }
+        policyWriter.cache(classMap);
+
+        // Policy map entry
+        if (actionMap.containsKey(PolicyManagerImpl.ActionCase.CHAIN)) {
+            ServiceChainingUtil.resolveChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, classMapName, policyWriter);
         }
-        String chainName = null;
-        for (String name : paramsMap.keySet()) {
-            if (name.equals(ChainActionDefinition.SFC_CHAIN_NAME)) {
-                chainName = (String) paramsMap.get(name);
-            }
-        }
-        if (chainName == null) {
-            LOG.error("Cannot found service path, chain name is null");
-            return null;
-        }
-        ServiceFunctionPath serviceFunctionPath = findServiceFunctionPath(new SfcName(chainName));
-        if (serviceFunctionPath == null) {
-            LOG.error("Service function path not found for name {}", chainName);
-            return null;
-        }
-        return serviceFunctionPath;
     }
 
-    public static RenderedServicePath createRenderedPath(ServiceFunctionPath sfp, TenantId tenantId) {
-        RenderedServicePath renderedServicePath;
-        // Try to read existing RSP
-        RspName rspName = new RspName(sfp.getName().getValue() + tenantId.getValue() + "-gbp-rsp");
-        renderedServicePath = SfcProviderRenderedPathAPI.readRenderedServicePath(rspName);
-        if (renderedServicePath != null) {
-            return renderedServicePath;
+    public static Sgt findSgtTag(final AddressEndpointKey endpointKey,
+                                 final List<AddressEndpointWithLocation> endpointsWithLocation) {
+        if (endpointKey == null || endpointsWithLocation == null) {
+            return null;
         }
-        LOG.info("Rendered service path with name {} not found, creating a new one ..", rspName.getValue());
-        CreateRenderedPathInput input = new CreateRenderedPathInputBuilder()
-                .setParentServiceFunctionPath(sfp.getName().getValue())
-                .setName(rspName.getValue())
-                .setSymmetric(sfp.isSymmetric())
-                .build();
-        renderedServicePath = SfcProviderRenderedPathAPI.createRenderedServicePathAndState(sfp, input);
-        LOG.info("Rendered service path {} created", rspName.getValue());
-        return renderedServicePath;
+        final AddressEndpointWithLocation endpointWithLocation = RendererPolicyUtil.lookupEndpoint(endpointKey,
+                endpointsWithLocation);
+        final AddressEndpointWithLocationAug augmentation = endpointWithLocation.getAugmentation(AddressEndpointWithLocationAug.class);
+        if (augmentation == null) {
+            return null;
+        }
+
+        return augmentation.getSgt();
     }
 
-    private static ServiceFunctionPath findServiceFunctionPath(SfcName chainName) {
-        ServiceFunctionPaths allPaths = SfcProviderServicePathAPI.readAllServiceFunctionPaths();
-        for (ServiceFunctionPath serviceFunctionPath : allPaths.getServiceFunctionPath()) {
-            if (serviceFunctionPath.getServiceChainName().equals(chainName)) {
-                return serviceFunctionPath;
+    private static Match createSecurityGroupMatch(final int sourceTag, final int destinationTag) {
+        final SecurityGroupBuilder sgBuilder = new SecurityGroupBuilder();
+        final Source source = new SourceBuilder().setTag(sourceTag).build();
+        final Destination destination = new DestinationBuilder().setTag(destinationTag).build();
+        sgBuilder.setDestination(destination)
+                .setSource(source);
+        final SecurityGroup securityGroup = sgBuilder.build();
+        final MatchBuilder matchBuilder = new MatchBuilder();
+        matchBuilder.setSecurityGroup(securityGroup);
+        return matchBuilder.build();
+    }
+
+    static ClassMap createClassMap(final String classMapName, final Match match) {
+        final ClassMapBuilder cmBuilder = new ClassMapBuilder();
+        cmBuilder.setName(classMapName)
+                .setKey(new ClassMapKey(classMapName))
+                .setPrematch(ClassMap.Prematch.MatchAll)
+                .setMatch(match);
+        return cmBuilder.build();
+    }
+
+    static TenantId getTenantId(final PeerEndpointWithPolicy peer) {
+        for (RuleGroupWithRendererEndpointParticipation ruleGroup :
+                peer.getRuleGroupWithRendererEndpointParticipation()) {
+            if (ruleGroup.getTenantId() != null) {
+                return ruleGroup.getTenantId();
             }
         }
         return null;
     }
 
-    public static RenderedServicePath createSymmetricRenderedPath(ServiceFunctionPath sfp, RenderedServicePath rsp,
-                                                                  TenantId tenantId) {
-        RenderedServicePath reversedRenderedPath;
-        // Try to read existing RSP
-        RspName rspName = new RspName(sfp.getName().getValue() + tenantId.getValue() + "-gbp-rsp-Reverse");
-        reversedRenderedPath = SfcProviderRenderedPathAPI.readRenderedServicePath(rspName);
-        if (reversedRenderedPath != null) {
-            return reversedRenderedPath;
+    static String generateClassMapName(final int sourceTag, final int destinationTag) {
+        return "srcTag" + sourceTag + "_dstTag" + destinationTag;
+    }
+
+    static Class createPolicyEntry(final String policyClassName, final RenderedServicePath renderedPath,
+                                   final PolicyManagerImpl.ActionCase actionCase) {
+        // Forward Case
+        final ForwardCaseBuilder forwardCaseBuilder = new ForwardCaseBuilder();
+        if (actionCase.equals(CHAIN) && renderedPath != null) {
+            // Chain Action
+            final ForwardBuilder forwardBuilder = new ForwardBuilder();
+            final List<ServicePath> servicePaths = new ArrayList<>();
+            final ServicePathBuilder servicePathBuilder = new ServicePathBuilder();
+            servicePathBuilder.setKey(new ServicePathKey(renderedPath.getPathId()))
+                    .setServicePathId(renderedPath.getPathId())
+                    .setServiceIndex(renderedPath.getStartingIndex());
+            servicePaths.add(servicePathBuilder.build());
+            forwardBuilder.setServicePath(servicePaths);
+            forwardCaseBuilder.setForward(forwardBuilder.build());
         }
-        LOG.info("Reversed rendered service path with name {} not found, creating a new one ..", rspName.getValue());
-        reversedRenderedPath = SfcProviderRenderedPathAPI.createSymmetricRenderedServicePathAndState(rsp);
-        LOG.info("Rendered service path {} created", rspName.getValue());
-        return reversedRenderedPath;
+        // Create Action List
+        final List<ActionList> actionList = new ArrayList<>();
+        final ActionListBuilder actionListBuilder = new ActionListBuilder();
+        actionListBuilder.setKey(new ActionListKey(PolicyActionType.Forward))
+                .setActionType(PolicyActionType.Forward)
+                .setActionParam(forwardCaseBuilder.build());
+        actionList.add(actionListBuilder.build());
+        // Build class entry
+        final ClassBuilder policyClassBuilder = new ClassBuilder();
+        policyClassBuilder.setName(new ClassNameType(policyClassName))
+                .setKey(new ClassKey(new ClassNameType(policyClassName)))
+                .setActionList(actionList);
+        return policyClassBuilder.build();
+    }
+
+    public static PolicyMap createPolicyMap(final String policyMapName, final List<Class> policyMapEntries) {
+        // Create default class entry
+        final AppnavPolicyBuilder appnavPolicyBuilder = new AppnavPolicyBuilder();
+        appnavPolicyBuilder.setPassThrough(true);
+        final ClassBuilder defaultBuilder = new ClassBuilder();
+        defaultBuilder.setName(new ClassNameType("class-default"))
+                .setKey(new ClassKey(new ClassNameType("class-default")))
+                .setAppnavPolicy(appnavPolicyBuilder.build());
+        policyMapEntries.add(defaultBuilder.build());
+        // Construct policy map
+        final PolicyMapBuilder policyMapBuilder = new PolicyMapBuilder();
+        policyMapBuilder.setName(policyMapName)
+                .setKey(new PolicyMapKey(policyMapName))
+                .setType(PolicyMap.Type.ServiceChain)
+                .setXmlClass(policyMapEntries);
+        return policyMapBuilder.build();
+    }
+
+    public static ServicePolicy createServicePolicy(final String chainName, final ServiceChain.Direction direction) {
+        // Service Chain
+        final ServiceChainBuilder serviceChainBuilder = new ServiceChainBuilder();
+        serviceChainBuilder.setName(chainName) // Same as the policy map name
+                .setDirection(direction);
+        // Service policy
+        final TypeBuilder typeBuilder = new TypeBuilder();
+        typeBuilder.setServiceChain(serviceChainBuilder.build());
+        // Service Policy
+        ServicePolicyBuilder servicePolicyBuilder = new ServicePolicyBuilder();
+        servicePolicyBuilder.setType(typeBuilder.build());
+
+        return servicePolicyBuilder.build();
+    }
+
+    public static InstanceIdentifier getAbsoluteLocationMountpoint(final RendererEndpoint endpoint,
+                                                                   final List<AddressEndpointWithLocation> endpointsWithLocation) {
+        if (endpointsWithLocation.isEmpty()) {
+            return null;
+        }
+        AddressEndpointWithLocation endpointWithLocation = RendererPolicyUtil.lookupEndpoint(endpoint,
+                endpointsWithLocation);
+        final AbsoluteLocation absoluteLocation = endpointWithLocation.getAbsoluteLocation();
+        final LocationType locationType = absoluteLocation.getLocationType();
+        ExternalLocationCase location = (ExternalLocationCase) locationType;
+        if (location == null) {
+            LOG.warn("Endpoint {} does not contain info about external location",
+                    endpointWithLocation.getKey().toString());
+            return null;
+        }
+        return location.getExternalNodeMountPoint();
+    }
+
+    public static String getInterfaceNameForPolicyMap(final RendererEndpoint endpoint,
+                                                      final List<AddressEndpointWithLocation> endpointsWithLocation) {
+        if (endpoint == null || endpointsWithLocation == null) {
+            return null;
+        }
+        final AddressEndpointWithLocation endpointWithLocation = RendererPolicyUtil.lookupEndpoint(endpoint,
+                endpointsWithLocation);
+        final AbsoluteLocation absoluteLocation = endpointWithLocation.getAbsoluteLocation();
+        final LocationType locationType = absoluteLocation.getLocationType();
+        final ExternalLocationCase location = (ExternalLocationCase) locationType;
+        if (location == null) {
+            LOG.warn("Endpoint {} does not contain info about external location",
+                    endpointWithLocation.getKey().toString());
+            return null;
+        }
+        return location.getExternalNodeConnector();
+    }
+
+
+    private static Map<PolicyManagerImpl.ActionCase, Action> getActionInDirection(final Configuration data, final PeerEndpointWithPolicy peer) {
+        final List<ResolvedRule> rulesInDirection = new ArrayList<>();
+        // Find all rules in desired direction
+        for (RuleGroupWithRendererEndpointParticipation ruleGroupKey :
+                peer.getRuleGroupWithRendererEndpointParticipation()) {
+            final EndpointPolicyParticipation participation = ruleGroupKey.getRendererEndpointParticipation();
+            final RuleGroup ruleGroup = findRuleGroup(data, ruleGroupKey);
+            if (ruleGroup == null || ruleGroup.getResolvedRule() == null) {
+                continue;
+            }
+
+            for (ResolvedRule resolvedRule : ruleGroup.getResolvedRule()) {
+                if (resolvedRule == null) {
+                    continue;
+                }
+                if (resolvedRule.getClassifier() == null || resolvedRule.getAction() == null) {
+                    continue;
+                }
+                // TODO only first Classifier used
+                final Classifier classifier = resolvedRule.getClassifier().get(0);
+                final HasDirection.Direction direction = classifier.getDirection();
+                if ((participation.equals(PROVIDER) && direction.equals(Out)) ||
+                        (participation.equals(CONSUMER) && direction.equals(In))) {
+                    rulesInDirection.add(resolvedRule);
+                }
+            }
+        }
+        if (rulesInDirection.isEmpty()) {
+            return null;
+        }
+        // TODO use only first rule with ActionDefinitionID for now
+        final Map<PolicyManagerImpl.ActionCase, Action> result = new HashMap<>();
+        for (ResolvedRule resolvedRule : rulesInDirection) {
+            // TODO only first action used for now
+            final Action action = resolvedRule.getAction().get(0);
+            if (action.getActionDefinitionId() != null) {
+                final ActionDefinitionId actionDefinitionId = action.getActionDefinitionId();
+                // Currently only chain action is supported
+                if (actionDefinitionId.equals(ChainActionDefinition.ID)) {
+                    result.put(PolicyManagerImpl.ActionCase.CHAIN, action);
+                    return result;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static RuleGroup findRuleGroup(final Configuration data,
+                                           final RuleGroupWithRendererEndpointParticipation ruleGroupWithParticipation) {
+        final TenantId tenantId = ruleGroupWithParticipation.getTenantId();
+        final ContractId contractId = ruleGroupWithParticipation.getContractId();
+        final SubjectName subjectName = ruleGroupWithParticipation.getSubjectName();
+        for (RuleGroup ruleGroup : data.getRuleGroups().getRuleGroup()) {
+            if (!ruleGroup.getTenantId().equals(tenantId)) {
+                continue;
+            }
+            if (!ruleGroup.getContractId().equals(contractId)) {
+                continue;
+            }
+            if (ruleGroup.getSubjectName().equals(subjectName)) {
+                return ruleGroup;
+            }
+        }
+        return null;
     }
 
 }
