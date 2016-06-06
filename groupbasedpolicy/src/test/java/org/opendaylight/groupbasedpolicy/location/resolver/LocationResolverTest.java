@@ -115,7 +115,7 @@ public class LocationResolverTest extends CustomDataBrokerTest {
             .child(LocationProvider.class, provider.getKey())
             .build();
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
-        wtx.put(LogicalDatastoreType.OPERATIONAL, iid, provider);
+        wtx.put(LogicalDatastoreType.CONFIGURATION, iid, provider);
         wtx.submit().get();
 
         ReadOnlyTransaction rtx = dataBroker.newReadOnlyTransaction();
@@ -164,7 +164,7 @@ public class LocationResolverTest extends CustomDataBrokerTest {
             .child(LocationProvider.class, provider.getKey())
             .build();
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
-        wtx.put(LogicalDatastoreType.OPERATIONAL, iid, provider);
+        wtx.put(LogicalDatastoreType.CONFIGURATION, iid, provider);
         wtx.submit().get();
 
         ReadOnlyTransaction rtx = dataBroker.newReadOnlyTransaction();
@@ -191,7 +191,7 @@ public class LocationResolverTest extends CustomDataBrokerTest {
             .child(LocationProvider.class, new LocationProviderKey(new ProviderName(PROVIDER_NAME)))
             .build();
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
-        wtx.delete(LogicalDatastoreType.OPERATIONAL, iid);
+        wtx.delete(LogicalDatastoreType.CONFIGURATION, iid);
         wtx.submit().get();
 
         ReadOnlyTransaction rtx = dataBroker.newReadOnlyTransaction();
@@ -229,7 +229,7 @@ public class LocationResolverTest extends CustomDataBrokerTest {
             .child(AbsoluteLocation.class)
             .build();
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
-        wtx.put(LogicalDatastoreType.OPERATIONAL, iid, absoluteLocation);
+        wtx.put(LogicalDatastoreType.CONFIGURATION, iid, absoluteLocation);
         wtx.submit().get();
 
         ReadOnlyTransaction rtx = dataBroker.newReadOnlyTransaction();

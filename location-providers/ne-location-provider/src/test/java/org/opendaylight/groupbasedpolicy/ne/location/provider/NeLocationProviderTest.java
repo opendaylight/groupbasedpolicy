@@ -369,7 +369,7 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
         ReadOnlyTransaction rtx = dataBroker.newReadOnlyTransaction();
         InstanceIdentifier<LocationProviders> locationIid = InstanceIdentifier.builder(LocationProviders.class).build();
         CheckedFuture<Optional<LocationProviders>, ReadFailedException> read =
-                rtx.read(LogicalDatastoreType.OPERATIONAL, locationIid);
+                rtx.read(LogicalDatastoreType.CONFIGURATION, locationIid);
         assertTrue(read.get().isPresent());
         rtx.close();
         LocationProviders locations = read.get().get();
@@ -412,7 +412,7 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
         ReadOnlyTransaction rtx = dataBroker.newReadOnlyTransaction();
         InstanceIdentifier<LocationProviders> locationIid = InstanceIdentifier.builder(LocationProviders.class).build();
         CheckedFuture<Optional<LocationProviders>, ReadFailedException> read =
-                rtx.read(LogicalDatastoreType.OPERATIONAL, locationIid);
+                rtx.read(LogicalDatastoreType.CONFIGURATION, locationIid);
         assertTrue(read.get().isPresent());
         rtx.close();
         LocationProviders locations = read.get().get();
@@ -457,7 +457,7 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
         ReadOnlyTransaction rtx = dataBroker.newReadOnlyTransaction();
         InstanceIdentifier<LocationProviders> locationIid = InstanceIdentifier.builder(LocationProviders.class).build();
         CheckedFuture<Optional<LocationProviders>, ReadFailedException> read =
-                rtx.read(LogicalDatastoreType.OPERATIONAL, locationIid);
+                rtx.read(LogicalDatastoreType.CONFIGURATION, locationIid);
         assertTrue(read.get().isPresent());
         rtx.close();
         LocationProviders locations = read.get().get();
