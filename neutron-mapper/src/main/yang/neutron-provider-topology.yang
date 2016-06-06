@@ -1,0 +1,99 @@
+module neutron-provider-topology {
+    // vi: set et smarttab sw=4 tabstop=4:
+
+    yang-version 1;
+    namespace "urn:opendaylight:params:xml:ns:yang:neutron:provider:topology";
+    prefix "neutron-provider";
+
+    organization "Cisco Systems, Inc.";
+
+    contact "Wojciech Dec <wdec@cisco.com>";
+
+    description
+        "Base model describing a Neutron network physical provider network, and
+        and mappings to a device's physical interfaces.
+
+        Copyright (c) 2016 Cisco Systems, Inc. and others.  All rights reserved.
+
+        This program and the accompanying materials are made available under the
+        terms of the Eclipse Public License v1.0 which accompanies this distribution,
+        and is available at http://www.eclipse.org/legal/epl-v10.html";
+
+    revision "2016-06-06" {
+        description "Initial cut";
+    }
+
+    import network-topology { prefix nt; revision-date 2013-10-21; }
+    import neutron-networks { prefix neutron-netw; revision-date "2015-07-12"; }
+    import opendaylight-l2-types { prefix l2-types; revision-date "2013-08-27"; }
+    import odl-external-reference { prefix extref; }
+    import yang-ext { prefix ext; revision-date "2013-07-09"; }
+
+    augment "/nt:network-topology/nt:topology/nt:topology-types" {
+        ext:augment-identifier "topology-types-neutron-provider-augment";
+        container neutron-provider-topology {
+            presence "Indicates a Neutron Physical Provider topology";
+        }
+    }
+
+    augment "/nt:network-topology/nt:topology" {
+        ext:augment-identifier "topology-neutron-provider-augment";
+        when "./nt:topology-types/neutron-provider-topology";
+
+        leaf physical-provider-type {
+            description "Technology used by the physical provider net";
+            type neutron-netw:network-type;
+        }
+
+        choice provider-parameters {
+            container vlan {
+                description "Used to check or assign vlan values";
+                when "../type = neutron-netw:provider-type-vlan";
+                container vlan-range {
+                    leaf start {
+                        description "Lowest VLAN";
+                        type l2-types:vlan-id;
+                    }
+                    leaf end {
+                        type l2-types:vlan-id;
+                        must "current() >= ../start"{}
+                    }
+                }
+            }
+        }
+    }
+
+    augment "/nt:network-topology/nt:topology/nt:node/nt:termination-point" {
+        ext:augment-identifier "termination-neutron-provider-augment";
+        when "./nt:topology-types/neutron-provider-topology";
+
+        choice interface-type {
+            container physical-interface {
+                description
+                    "Reference to physical ethernet interface that need to be added
+                     into the provider bridge. This interface is a direct system interface
+                     reference configured by the user prior to the device
+                     being attached.";
+
+                leaf interface-name {
+                    type string;
+                    mandatory true;
+                }
+            }
+        }
+    }
+
+    augment "/nt:network-topology/nt:topology/nt:link" {
+        when "../nt:topology-types/neutron-provider-topology";
+        ext:augment-identifier "link-neutron-provider-augment";
+        leaf physical-interface {
+            description
+                "Reference to the network element interface.
+
+                This reference needs to be resolved against the supporting
+                node's operational data store.";
+            config false;
+            type extref:external-reference;
+        }
+    }
+}
