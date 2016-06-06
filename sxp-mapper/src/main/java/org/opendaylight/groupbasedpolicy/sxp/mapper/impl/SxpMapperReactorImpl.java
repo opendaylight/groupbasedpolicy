@@ -8,8 +8,14 @@
 
 package org.opendaylight.groupbasedpolicy.sxp.mapper.impl;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.AsyncFunction;
+import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.JdkFutureAdapters;
+import com.google.common.util.concurrent.ListenableFuture;
 import java.util.Collections;
-
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -32,8 +38,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.IpPrefixType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.AddressEndpointRegAug;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.AddressEndpointRegAugBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointForwardingTemplateBySubnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointPolicyTemplateBySgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBinding;
@@ -42,14 +46,6 @@ import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.AsyncFunction;
-import com.google.common.util.concurrent.CheckedFuture;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.JdkFutureAdapters;
-import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * Purpose: exclusively processes sxp master database changes and EGP templates changes
@@ -81,8 +77,6 @@ public class SxpMapperReactorImpl implements SxpMapperReactor {
             .setNetworkDomainId(epForwardingTemplate.getNetworkContainment().getNetworkDomainId())
             .build())
                     .build();
-        AddressEndpointRegAug sgtAugmentation =
-                new AddressEndpointRegAugBuilder().setSgt(masterDBBinding.getSecurityGroupTag()).build();
         final RegisterEndpointInput epInput = new RegisterEndpointInputBuilder().setAddressEndpointReg(
                 Collections.singletonList(new AddressEndpointRegBuilder().setAddressType(IpPrefixType.class)
                     .setAddress(address.getValue())
@@ -92,7 +86,6 @@ public class SxpMapperReactorImpl implements SxpMapperReactor {
                     .setCondition(epPolicyTemplate.getConditions())
                     .setTenant(epPolicyTemplate.getTenant())
                     .setEndpointGroup(epPolicyTemplate.getEndpointGroups())
-                    .addAugmentation(AddressEndpointRegAug.class, sgtAugmentation)
                     .build()))
                 .build();
                 epForwardingTemplate.getL3Context();

@@ -8,22 +8,34 @@
 package org.opendaylight.groupbasedpolicy.sxp.mapper.impl.dao;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InOrder;
 import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.Spy;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SimpleCachedDao;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.EPTemplateUtil;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.SxpMapper;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointPolicyTemplateBySgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointPolicyTemplateBySgtBuilder;
@@ -46,6 +58,13 @@ public class EPPolicyTemplateDaoImplTest {
     private SimpleCachedDao<Sgt, EndpointPolicyTemplateBySgt> cachedDao;
     @Mock
     private ReadOnlyTransaction rTx;
+    @Spy
+    private EpPolicyTemplateValueKeyFactory keyFactory = new EpPolicyTemplateValueKeyFactory(
+            EPTemplateUtil.createEndpointGroupIdOrdering(), EPTemplateUtil.createConditionNameOrdering());
+    @Captor
+    ArgumentCaptor<Sgt> sgtCapt;
+    @Captor
+    ArgumentCaptor<EndpointPolicyTemplateBySgt> epPolicyTemplateCapt;
 
     private EPPolicyTemplateDaoImpl dao;
 
@@ -57,7 +76,7 @@ public class EPPolicyTemplateDaoImplTest {
 
     @Before
     public void setUp() throws Exception {
-        dao = new EPPolicyTemplateDaoImpl(dataBroker, cachedDao);
+        dao = new EPPolicyTemplateDaoImpl(dataBroker, cachedDao, keyFactory);
     }
 
     @Test
@@ -95,6 +114,7 @@ public class EPPolicyTemplateDaoImplTest {
                 Matchers.<InstanceIdentifier<EndpointPolicyTemplateBySgt>>any())).thenReturn(
                 Futures.<Optional<EndpointPolicyTemplateBySgt>, ReadFailedException>immediateCheckedFuture(
                         Optional.of(EP_POLICY_TEMPLATE_VALUE)));
+        Mockito.doCallRealMethod().when(keyFactory).sortValueKeyLists(Matchers.<EndpointPolicyTemplateBySgt>any());
 
         final ListenableFuture<Optional<EndpointPolicyTemplateBySgt>> read = dao.read(KEY_1);
         Assert.assertTrue(read.isDone());
@@ -114,5 +134,82 @@ public class EPPolicyTemplateDaoImplTest {
 
         final InstanceIdentifier<EndpointPolicyTemplateBySgt> readPath = dao.buildReadPath(KEY_1);
         Assert.assertEquals(expectedPath, readPath);
+    }
+
+    @Test
+    public void testReadBy_single() throws Exception {
+        final EpPolicyTemplateValueKey key = new EpPolicyTemplateValueKey(new TenantId("tn1"),
+                buildEndpointGroupIds(new String[]{"epg1", "epg2"}),
+                buildConditions(new String[]{"cn1", "cn2"}));
+
+        Mockito.doCallRealMethod().when(keyFactory).createKeyWithDefaultOrdering(Matchers.<EndpointPolicyTemplateBySgt>any());
+
+        Mockito.when(cachedDao.values()).thenReturn(Lists.newArrayList(
+                createEpPolicytemplate(new Sgt(1), new String[]{"cn2", "cn1"}, new String[]{"epg1", "epg2"}, "tn1"),
+                createEpPolicytemplate(new Sgt(2), new String[]{"cn1", "cn2"}, new String[]{"epg2", "epg1"}, "tn1"),
+                createEpPolicytemplate(new Sgt(3), new String[]{"cn2", "cn1"}, new String[]{"epg2", "epg1"}, "tn1"),
+                createEpPolicytemplate(new Sgt(4), new String[]{"cn1", "cn2"}, new String[]{"epg1", "epg2"}, "tn1")
+        ));
+
+        final Collection<EndpointPolicyTemplateBySgt> policyTemplates = dao.readBy(key);
+        Assert.assertEquals(1, policyTemplates.size());
+        Assert.assertEquals(4, Iterables.getFirst(policyTemplates, null).getSgt().getValue().intValue());
+    }
+
+    @Test
+    public void testRead_unsortedLists() throws Exception {
+        final EndpointPolicyTemplateBySgt epPolicytemplateUnsorted = createEpPolicytemplate(new Sgt(1),
+                new String[]{"cn2", "cn1"}, new String[]{"epg2", "epg1"}, "tn1");
+
+        Mockito.doCallRealMethod().when(keyFactory).createKeyWithDefaultOrdering(Matchers.<EndpointPolicyTemplateBySgt>any());
+
+        Mockito.when(cachedDao.find(Matchers.<Sgt>any())).thenReturn(
+                Optional.<EndpointPolicyTemplateBySgt>absent());
+        Mockito.when(cachedDao.isEmpty()).thenReturn(true);
+        Mockito.when(dataBroker.newReadOnlyTransaction()).thenReturn(rTx);
+
+        Mockito.when(rTx.read(Matchers.eq(LogicalDatastoreType.CONFIGURATION),
+                Matchers.<InstanceIdentifier<EndpointPolicyTemplateBySgt>>any())).thenReturn(
+                Futures.<Optional<EndpointPolicyTemplateBySgt>, ReadFailedException>immediateCheckedFuture(
+                        Optional.of(epPolicytemplateUnsorted)));
+
+        dao.read(new Sgt(1));
+
+        Mockito.verify(cachedDao).update(sgtCapt.capture(), epPolicyTemplateCapt.capture());
+        Mockito.verify(cachedDao).find(sgtCapt.capture());
+
+        Assert.assertEquals(1, sgtCapt.getValue().getValue().intValue());
+        final EndpointPolicyTemplateBySgt template = epPolicyTemplateCapt.getValue();
+        Assert.assertEquals(1, template.getSgt().getValue().intValue());
+        Assert.assertEquals("tn1", template.getTenant().getValue());
+        Assert.assertEquals(buildEndpointGroupIds(new String[]{"epg1", "epg2"}), template.getEndpointGroups());
+        Assert.assertEquals(buildConditions(new String[]{"cn1", "cn2"}), template.getConditions());
+    }
+
+
+    private EndpointPolicyTemplateBySgt createEpPolicytemplate(final Sgt sgt, final String[] conditionNames,
+                                                               final String[] epgIds, final String tenant) {
+        return new EndpointPolicyTemplateBySgtBuilder()
+                .setSgt(sgt)
+                .setEndpointGroups(buildEndpointGroupIds(epgIds))
+                .setConditions(buildConditions(conditionNames))
+                .setTenant(new TenantId(tenant))
+                .build();
+    }
+
+    private static List<EndpointGroupId> buildEndpointGroupIds(final String[] names) {
+        final List<EndpointGroupId> endpointGroupIds = new ArrayList<>();
+        for (String epgId : names) {
+            endpointGroupIds.add(new EndpointGroupId(epgId));
+        }
+        return endpointGroupIds;
+    }
+
+    private static List<ConditionName> buildConditions(final String[] names) {
+        final List<ConditionName> conditions = new ArrayList<>();
+        for (String condition : names) {
+            conditions.add(new ConditionName(condition));
+        }
+        return conditions;
     }
 }

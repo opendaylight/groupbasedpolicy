@@ -8,7 +8,9 @@
 package org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util;
 
 import com.google.common.base.Function;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
+import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import java.util.ArrayList;
@@ -19,6 +21,8 @@ import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.net.util.SubnetUtils;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointForwardingTemplateBySubnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointPolicyTemplateBySgt;
 
@@ -28,6 +32,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controll
 public final class EPTemplateUtil {
 
     public static final String FULL_IPV4_MASK_SUFFIX = "/32";
+    private static final Comparable EMPTY_COMPARABLE = "";
 
     private EPTemplateUtil() {
         throw new IllegalAccessError("constructing util class");
@@ -97,6 +102,32 @@ public final class EPTemplateUtil {
             @Override
             public Optional<V> apply(@Nullable final V input) {
                 return Optional.fromNullable(input);
+            }
+        });
+    }
+
+    public static Ordering<EndpointGroupId> createEndpointGroupIdOrdering() {
+        return Ordering.natural().onResultOf(new Function<EndpointGroupId, Comparable>() {
+            @Nullable
+            @Override
+            public Comparable apply(@Nullable final EndpointGroupId input) {
+                if (input == null) {
+                    return EMPTY_COMPARABLE;
+                }
+                return MoreObjects.firstNonNull(input.getValue(), EMPTY_COMPARABLE);
+            }
+        });
+    }
+
+    public static Ordering<ConditionName> createConditionNameOrdering() {
+        return Ordering.natural().onResultOf(new Function<ConditionName, Comparable>() {
+            @Nullable
+            @Override
+            public Comparable apply(@Nullable final ConditionName input) {
+                if (input == null) {
+                    return EMPTY_COMPARABLE;
+                }
+                return MoreObjects.firstNonNull(input.getValue(), EMPTY_COMPARABLE);
             }
         });
     }

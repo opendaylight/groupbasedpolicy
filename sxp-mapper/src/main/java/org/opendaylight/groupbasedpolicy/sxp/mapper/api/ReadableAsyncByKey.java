@@ -5,23 +5,23 @@
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
-
 package org.opendaylight.groupbasedpolicy.sxp.mapper.api;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import java.util.Collection;
 import javax.annotation.Nonnull;
 
 /**
- * Purpose: simple search interface allowing for custom key and returning list of values
+ * Purpose: simple asynchronous search interface allowing for custom key and returning list of values
  *
  * @param <X> special key type
  * @param <V> value type
  */
-public interface ReadableByKey<X, V> {
+public interface ReadableAsyncByKey<X, V> {
 
     /**
      * @param specialKey custom key to search by
      * @return list of found values
      */
-    Collection<V> readBy(@Nonnull X specialKey);
+    ListenableFuture<Collection<V>> readBy(@Nonnull X specialKey);
 }

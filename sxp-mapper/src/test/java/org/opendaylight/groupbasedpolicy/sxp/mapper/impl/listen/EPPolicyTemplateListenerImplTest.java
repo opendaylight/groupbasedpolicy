@@ -27,7 +27,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSAsyncDao;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.EPTemplateListener;
-import org.opendaylight.groupbasedpolicy.sxp.mapper.api.ReadableByKey;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.api.ReadableAsyncByKey;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SimpleCachedDao;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SxpMapperReactor;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
@@ -69,7 +69,7 @@ public class EPPolicyTemplateListenerImplTest {
     @Mock
     private DSAsyncDao<IpPrefix, EndpointForwardingTemplateBySubnet> epForwardingTemplateDao;
     @Mock
-    private ReadableByKey<Sgt, MasterDatabaseBinding> masterDBDao;
+    private ReadableAsyncByKey<Sgt, MasterDatabaseBinding> masterDBDao;
     @Mock
     private ListenerRegistration<? extends EPTemplateListener> listenerRegistration;
     @Mock

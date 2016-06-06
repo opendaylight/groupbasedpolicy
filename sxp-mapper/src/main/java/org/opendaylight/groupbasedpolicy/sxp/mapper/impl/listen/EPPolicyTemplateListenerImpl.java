@@ -25,7 +25,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSAsyncDao;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.EPTemplateListener;
-import org.opendaylight.groupbasedpolicy.sxp.mapper.api.ReadableByKey;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.api.ReadableAsyncByKey;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SimpleCachedDao;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SxpMapperReactor;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.EPTemplateUtil;
@@ -58,13 +58,13 @@ public class EPPolicyTemplateListenerImpl implements EPTemplateListener<Endpoint
     private final InstanceIdentifier<EndpointPolicyTemplateBySgt> templatePath;
     private final SxpMapperReactor sxpMapperReactor;
     private final SimpleCachedDao<Sgt, EndpointPolicyTemplateBySgt> templateCachedDao;
-    private final ReadableByKey<Sgt, MasterDatabaseBinding> masterDBBindingDao;
+    private final ReadableAsyncByKey<Sgt, MasterDatabaseBinding> masterDBBindingDao;
     private final DSAsyncDao<IpPrefix, EndpointForwardingTemplateBySubnet> epForwardingTemplateDao;
 
     public EPPolicyTemplateListenerImpl(final DataBroker dataBroker,
                                         final SxpMapperReactor sxpMapperReactor,
                                         final SimpleCachedDao<Sgt, EndpointPolicyTemplateBySgt> templateCachedDao,
-                                        final ReadableByKey<Sgt, MasterDatabaseBinding> masterDBBindingDao,
+                                        final ReadableAsyncByKey<Sgt, MasterDatabaseBinding> masterDBBindingDao,
                                         final DSAsyncDao<IpPrefix, EndpointForwardingTemplateBySubnet> epForwardingTemplateDao) {
         this.sxpMapperReactor = Preconditions.checkNotNull(sxpMapperReactor);
         this.templateCachedDao = Preconditions.checkNotNull(templateCachedDao);

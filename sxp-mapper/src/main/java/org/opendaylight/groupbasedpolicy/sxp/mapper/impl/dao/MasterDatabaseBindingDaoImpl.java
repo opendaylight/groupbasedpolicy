@@ -23,7 +23,7 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSAsyncDao;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.MasterDatabaseBindingListener;
-import org.opendaylight.groupbasedpolicy.sxp.mapper.api.ReadableByKey;
+import org.opendaylight.groupbasedpolicy.sxp.mapper.api.ReadableAsyncByKey;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SimpleCachedDao;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.SxpListenerUtil;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  * Purpose: general dao for EndPoint templates
  */
 public class MasterDatabaseBindingDaoImpl implements DSAsyncDao<IpPrefix, MasterDatabaseBinding>,
-        ReadableByKey<Sgt, MasterDatabaseBinding> {
+        ReadableAsyncByKey<Sgt, MasterDatabaseBinding> {
 
     private static final Logger LOG = LoggerFactory.getLogger(MasterDatabaseBindingDaoImpl.class);
     private static final ListenableFuture<Optional<MasterDatabaseBinding>> READ_FUTURE_ABSENT = Futures.immediateFuture(Optional.absent());
