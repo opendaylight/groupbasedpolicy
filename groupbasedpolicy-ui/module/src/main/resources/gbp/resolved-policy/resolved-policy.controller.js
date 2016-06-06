@@ -12,6 +12,8 @@ define(['app/gbp/resolved-policy/resolved-policy.service'], function () {
             links: [],
         };
 
+        $scope.resolvedPolicy = {};
+
         $scope.cbkFunctions = {
             clickNode: function(node){
                 var epg = EpgService.createObject();
@@ -31,10 +33,11 @@ define(['app/gbp/resolved-policy/resolved-policy.service'], function () {
                 // NextTopologyService.fadeInAllLayers();
             },
             clickLink: function(link){
-                var contract = ContractService.createObject();
-                contract.get(link['_data-id'], link['_model']['_data']['tenantId'], 'operational');
-                contract.data.parentTenant = link['_model']['_data']['tenantId'];
-                $scope.openSidePanel('resolved-policy/contract-sidepanel', contract, null);
+                //var contract = ContractService.createObject();
+                //contract.get(link['_model']['_data'].contract, link['_model']['_data'].tenant, 'operational');
+                //contract.data.parentTenant = link['_model']['_data'].tenant;
+                var resolvedContract = $scope.resolvedPolicy[link['_model']['_data'].id];
+                $scope.openSidePanel('resolved-policy/contract-sidepanel', resolvedContract, null);
                 $scope.$apply();
             },
             // topologyGenerated: function(){
@@ -57,14 +60,52 @@ define(['app/gbp/resolved-policy/resolved-policy.service'], function () {
 
         function fillTopologyData() {
             var topoData = {nodes: [], links: [],};
+
             resolvedPolicies.data.forEach(function(rp) {
                 topoData.nodes.push(createNode(rp['consumer-epg-id'], rp['consumer-tenant-id']));
                 topoData.nodes.push(createNode(rp['provider-epg-id'], rp['provider-tenant-id']));
-                // topoData.links.push(createLink(rp['policy-rule-group-with-endpoint-constraints'][0]['policy-rule-group'][0]['contract-id'], rp['consumer-epg-id'], rp['provider-epg-id']));
+
+                fillResolvedPolicy(rp);
+                topoData.links = getContracts(rp);
             });
 
             $scope.topologyData = topoData;
             $scope.topologyLoaded = true;
+        }
+
+        function fillResolvedPolicy(data) {
+            if(data['policy-rule-group-with-endpoint-constraints']) {
+                processPolicyRuleGroupWithEpConstraints(
+                    data['policy-rule-group-with-endpoint-constraints'],
+                    data['provider-epg-id'],
+                    data['consumer-epg-id']);
+            }
+
+        }
+
+        function processPolicyRuleGroupWithEpConstraints(data, providerEpgId, consumerEpgId) {
+            data.forEach(function(element) {
+                element['policy-rule-group'].forEach(function(el) {
+                    var linkId = generateLinkId(el['contract-id'], providerEpgId, consumerEpgId);
+
+                    if(!$scope.resolvedPolicy.hasOwnProperty(linkId)) {
+                        $scope.resolvedPolicy[linkId] = {
+                            'contract-id': el['contract-id'],
+                            'subjects': {},
+                        };
+                    }
+
+                    if(!$scope.resolvedPolicy[linkId].subjects.hasOwnProperty(el['subject-name'])) {
+                        $scope.resolvedPolicy[linkId].subjects[el['subject-name']] = {'resolved-rule': []};
+                    }
+
+                    $scope.resolvedPolicy[linkId].subjects[el['subject-name']]['resolved-rule'].push(el['resolved-rule']);
+                })
+            })
+        }
+
+        function generateLinkId(contractId, providerEpgId, consumerEpgId) {
+            return contractId + '_' + providerEpgId + '_' + consumerEpgId;
         }
 
         function createNode(nodeName, tenantId) {
@@ -76,12 +117,33 @@ define(['app/gbp/resolved-policy/resolved-policy.service'], function () {
             };
         }
 
-        function createLink(linkName, source, target) {
+        function createLink( source, target, contract, tenant) {
             return {
-                'id' : linkName,
-                'source' : source,
-                'target' : target,
+                'id': generateLinkId(contract, source, target),
+                'source': source,
+                'target': target,
+                'tenant': tenant,
             };
+        }
+
+        function getContracts(data) {
+            var retVal = [];
+
+            if( data['policy-rule-group-with-endpoint-constraints'] &&
+                data['policy-rule-group-with-endpoint-constraints'][0]['policy-rule-group']) {
+                data['policy-rule-group-with-endpoint-constraints'][0]['policy-rule-group'].forEach(function(prg) {
+                        retVal.push(
+                            createLink(
+                                data['provider-epg-id'],
+                                data['consumer-epg-id'],
+                                prg['contract-id'],
+                                prg['tenant-id']
+                            )
+                        )
+                    });
+            }
+
+            return retVal;
         }
     }
 
