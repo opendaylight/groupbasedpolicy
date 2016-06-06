@@ -1,0 +1,31 @@
+<md-subheader class="md-primary">Endpoint properties</md-subheader>
+<div layout="row" class="layout-padding-5-15">
+    <span flex="35"><strong>Context type</strong></span><span flex>{{ sidePanelObject['context-type'] }}</span>
+</div>
+<div layout="row" class="layout-padding-5-15">
+    <span flex="35"><strong>Context Id</strong></span><span flex>{{ sidePanelObject['context-id'] }}</span>
+</div>
+<div layout="row" class="layout-padding-5-15">
+    <span flex="35"><strong>Address type</strong></span><span flex>{{ sidePanelObject['address-type'] }}</span>
+</div>
+<div layout="row" class="layout-padding-5-15">
+    <span flex="35"><strong>address</strong></span><span flex>{{ sidePanelObject.address }}</span>
+</div>
+<md-divider></md-divider>
+<div layout="row" class="layout-padding-5-15">
+    <span flex="35"><strong>Network domain Id</strong></span><span flex>{{ sidePanelObject['network-containment']['network-domain-id'] }}</span>
+</div>
+<div layout="row" class="layout-padding-5-15">
+    <span flex="35"><strong>Network domain type</strong></span><span flex>{{ sidePanelObject['network-containment']['network-domain-type'] }}</span>
+</div>
+<div layout="row" class="layout-padding-5-15">
+    <span flex="35"><strong>Tenant</strong></span><span flex>{{ sidePanelObject.tenant }}</span>
+</div>
+<div layout="row" class="layout-padding-5-15">
+    <span flex="35"><strong>Timestamp</strong></span><span flex>{{ sidePanelObject.timestamp | date: 'short'}}</span>
+</div>
+<div layout="row" class="layout-padding-5-15">
+    <span flex="35"><strong>Endpoint group</strong></span><span ng-repeat="epg in sidePanelObject['endpoint-group']" flex>{{ epg }}
+        <span ng-if="!$last">, </span>
+    </span>
+</div>

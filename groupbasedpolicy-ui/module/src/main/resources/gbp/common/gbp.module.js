@@ -31,6 +31,8 @@ define([
         NavHelperProvider.addControllerUrl('app/gbp/common/gbp.controller');
         NavHelperProvider.addControllerUrl('app/gbp/contract/add-contract.controller');
         NavHelperProvider.addControllerUrl('app/gbp/contract/contract.controller');
+        NavHelperProvider.addControllerUrl('app/gbp/endpoints/endpoints.controller');
+        NavHelperProvider.addControllerUrl('app/gbp/endpoints/add-endpoint.controller');
         NavHelperProvider.addControllerUrl('app/gbp/epg/epg.controller');
         NavHelperProvider.addControllerUrl('app/gbp/policy/policy.controller');
         NavHelperProvider.addControllerUrl('app/gbp/resolved-policy/resolved-policy.controller');
@@ -149,6 +151,18 @@ define([
                 '': {
                     controller: 'ResolvedPolicyController',
                     templateUrl: 'src/app/gbp/resolved-policy/resolved-policy.tpl.html',
+                },
+            },
+        });
+
+        $stateProvider.state('main.gbp.index.endpoints', {
+            url: '/endpoints',
+            access: access.admin,
+            templateUrl: 'src/app/gbp/common/views/index.tpl.html',
+            views: {
+                '': {
+                    controller: 'EndpointsController',
+                    templateUrl: 'src/app/gbp/endpoints/endpoints.tpl.html',
                 },
             },
         });

@@ -1,0 +1,43 @@
+<section flex layout="column">
+    <div flex layout="row">
+        <md-button ng-click="openEndpointDialog()" class="md-primary">Add</md-button>
+        <md-button ng-click="getEndpointsList()" class="md-primary">Reload</md-button>
+    </div>
+    <md-table-container ng-if="endpoints.data.length">
+        <table md-table>
+            <thead md-head md-order="endpointsTableQuery.order">
+            <tr md-row>
+                <th md-column md-order-by="data['context-id']"><span>Context Id</span></th>
+                <th md-column md-order-by="data.address"><span>Address</span></th>
+                <th md-column md-order-by="data.tenant"><span>Tenant</span></th>
+                <th md-column ><span>Endpoint Group</span></th>
+                <th md-column><span>Actions</span></th>
+            </tr>
+            </thead>
+            <tbody md-body>
+            <tr md-row ng-repeat="endpoint in endpoints.data | filter: endpointsTableQuery.filter  | orderBy : endpointsTableQuery.order | limitTo: endpointsTableQuery.limit : (endpointsTableQuery.page -1) * endpointsTableQuery.limit">
+                <td md-cell class="pointer" ng-click="openSidePanel('endpoints/side_panel_endpoints_detail', endpoint.data, null);">{{ endpoint.data['context-id'] }}</td>
+                <td md-cell class="pointer" ng-click="openSidePanel('endpoints/side_panel_endpoints_detail', endpoint.data, null);">{{ endpoint.data.address }}</td>
+                <td md-cell class="pointer" ng-click="openSidePanel('endpoints/side_panel_endpoints_detail', endpoint.data, null);">{{ endpoint.data.tenant }}</td>
+                <td md-cell ng-repeat="epg in endpoint.data['endpoint-group']">{{ epg }}
+                    <span ng-if="!$last">, </span>
+                </td>
+                <td md-cell>
+                    <md-button class="md-icon-button" ng-click="openEndpointDialog(endpoint)">
+                        <md-icon>edit</md-icon>
+                    </md-button>
+                    <md-button class="md-icon-button" ng-click="deleteEndpointDialog(endpoint)">
+                        <md-icon>delete</md-icon>
+                    </md-button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <md-table-pagination md-limit="endpointsTableQuery.limit"
+                             md-page="endpointsTableQuery.page"
+                             md-options="endpointsTableQuery.options"
+                             md-total="{{endpoints.data.length}}"
+                             md-page-select="options.pageSelect">
+        </md-table-pagination>
+    </md-table-container>
+</section>
