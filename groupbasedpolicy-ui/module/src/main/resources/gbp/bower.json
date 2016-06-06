@@ -6,6 +6,7 @@
     "angular-aria": "~1.5.0",
     "angular-material": "1.0.5",
     "roboto-fontface": "~0.4.3",
-    "angular-material-data-table": "~0.9.11"
+    "angular-material-data-table": "~0.9.11",
+    "NeXt": "~0.9.1"
   }
 }

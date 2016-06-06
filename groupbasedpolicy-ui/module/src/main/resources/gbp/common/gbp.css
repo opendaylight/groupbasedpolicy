@@ -71,6 +71,10 @@
     color: rgba(0,0,0,0.26);
 }
 
+text.node-label {
+    pointer-events: all;
+}
+
 /* $mdDialog.confirm */
 md-dialog button span {
     color: #000;

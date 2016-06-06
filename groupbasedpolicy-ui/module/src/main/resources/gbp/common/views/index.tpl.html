@@ -2,23 +2,21 @@
     <div layout="column" role="main" flex class="master-view">
         <md-toolbar>
             <div class="md-toolbar-tools">
-                <md-button ng-href="#/gbp/index/tenant" ng-click="closeSidePanel()" class="md-primary">Tenant</md-button>
-                <!-- <md-button ng-href="#/gbp/index/policy" ng-click="closeSidePanel()" class="md-primary">Policy</md-button> -->
-
+                <!--<md-button ng-href="#/gbp/index/tenant" ng-click="closeSidePanel()" class="md-primary">Tenant</md-button>
                 <md-menu class="md-primary" class="md-toolbar-tools" style="background-color:rgb(33,150,243);color:black;">
                     <md-button ng-click="$mdOpenMenu($event)" style="background-color:rgb(33,150,243);color:black;">Policy</md-button>
                     <md-menu-content style="background-color:rgb(33,150,243);color:black;">
                         <md-button ng-click="" ng-disabled="policyDisabled" ng-href="#/gbp/index/policy/epg" style="background-color:rgb(33,150,243);color:black;">EPGs</md-button>
                         <md-button ng-click="" ng-disabled="policyDisabled" ng-href="#/gbp/index/policy/contract" style="background-color:rgb(33,150,243);color:black;">Contracts</md-button>
                     </md-menu-content>
-                </md-menu>
+                </md-menu>-->
+                <md-button ng-click="" ng-href="#/gbp/index/resolved-policy" style="background-color:rgb(33,150,243);color:black;">Resolved Policy</md-button>
+                <md-button ng-click="" ng-href="#/gbp/index/endpoints" style="background-color:rgb(33,150,243);color:black;">Endpoints</md-button>
 
                 <span flex></span>
                 <md-select ng-model="rootTenant" ng-change="setRootTenant()">
                     <md-option ng-repeat="item in rootTenants.data" ng-value="{{item}}">{{item.data.id}}</md-option>
                 </md-select>
-                <!-- <md-button ng-if="stateUrl === '/policy'" ng-href="#/gbp/index/policy/epg" ng-click="openSidePanel()" class="md-primary">EPGs</md-button>
-                <md-button ng-if="stateUrl === '/policy'" ng-href="#/gbp/index/policy/contract" ng-click="openSidePanel()" class="md-primary">Contracts</md-button> -->
             </div>
         </md-toolbar>
         <!-- <md-content md-scroll-y flex ui-view></md-content> -->
