@@ -25,3 +25,4 @@ maven-metadata-local.xml
 .DS_Store
 *.ipr
 *.iws
+*.log
