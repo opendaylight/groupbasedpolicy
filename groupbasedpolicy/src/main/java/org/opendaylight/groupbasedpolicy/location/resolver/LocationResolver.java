@@ -55,7 +55,7 @@ public class LocationResolver implements DataTreeChangeListener<LocationProvider
         this.dataBroker = dataBroker;
         this.realLocations = new HashMap<>();
         this.listenerRegistation = dataBroker.registerDataTreeChangeListener(
-                new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
+                new DataTreeIdentifier<>(LogicalDatastoreType.CONFIGURATION,
                         InstanceIdentifier.builder(LocationProviders.class).child(LocationProvider.class).build()),
                 this);
     }

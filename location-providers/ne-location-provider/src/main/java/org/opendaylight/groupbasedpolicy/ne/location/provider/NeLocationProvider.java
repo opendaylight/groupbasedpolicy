@@ -117,7 +117,7 @@ public class NeLocationProvider implements DataTreeChangeListener<NetworkElement
                             .providerAddressEndpointLocationIid(NE_LOCATION_PROVIDER_NAME, IpPrefixType.class,
                                     endpoint.getAddress(), endpoint.getContextType(), endpoint.getContextId())
                             .child(AbsoluteLocation.class);
-                        wtx.put(LogicalDatastoreType.OPERATIONAL, iid, createRealLocation(ne.getIid(), iface.getIid()),
+                        wtx.put(LogicalDatastoreType.CONFIGURATION, iid, createRealLocation(ne.getIid(), iface.getIid()),
                                 true);
                         LOG.debug("New location created for endpoint {}", endpoint);
                         return;
@@ -139,7 +139,7 @@ public class NeLocationProvider implements DataTreeChangeListener<NetworkElement
                             .providerAddressEndpointLocationIid(NE_LOCATION_PROVIDER_NAME, IpPrefixType.class,
                                     endpoint.getAddress(), endpoint.getContextType(), endpoint.getContextId())
                             .child(AbsoluteLocation.class);
-                        wtx.delete(LogicalDatastoreType.OPERATIONAL, iid);
+                        wtx.delete(LogicalDatastoreType.CONFIGURATION, iid);
                         LOG.debug("Location deleted for endpoint {}", endpoint);
                         return;
                     }
@@ -381,7 +381,7 @@ public class NeLocationProvider implements DataTreeChangeListener<NetworkElement
                     .providerAddressEndpointLocationIid(NE_LOCATION_PROVIDER_NAME, IpPrefixType.class,
                             endpoint.getAddress(), endpoint.getContextType(), endpoint.getContextId())
                     .child(AbsoluteLocation.class);
-                wtx.put(LogicalDatastoreType.OPERATIONAL, iid, createRealLocation(nodeIID, connectorIID), true);
+                wtx.put(LogicalDatastoreType.CONFIGURATION, iid, createRealLocation(nodeIID, connectorIID), true);
                 LOG.debug("New location created for endpoint {}", endpoint);
                 return;
             }
@@ -398,7 +398,7 @@ public class NeLocationProvider implements DataTreeChangeListener<NetworkElement
                     .providerAddressEndpointLocationIid(NE_LOCATION_PROVIDER_NAME, IpPrefixType.class,
                             endpoint.getAddress(), endpoint.getContextType(), endpoint.getContextId())
                     .child(AbsoluteLocation.class);
-                wtx.delete(LogicalDatastoreType.OPERATIONAL, iid);
+                wtx.delete(LogicalDatastoreType.CONFIGURATION, iid);
                 LOG.debug("Location deleted for endpoint {}", endpoint);
                 return;
             }
