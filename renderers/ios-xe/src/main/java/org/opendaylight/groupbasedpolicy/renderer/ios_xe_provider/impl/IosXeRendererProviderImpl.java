@@ -18,8 +18,6 @@ import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareProvider;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.IosXeRendererProvider;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.manager.PolicyManager;
-import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.cache.EpPolicyCacheImpl;
-import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.listener.EpPolicyTemplateBySgtListenerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.listener.IosXeCapableNodeListenerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.listener.RendererConfigurationListenerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.NodeManager;
@@ -59,9 +57,7 @@ public class IosXeRendererProviderImpl implements IosXeRendererProvider, Binding
     private final DataBroker dataBroker;
     private final RendererName rendererName;
     private RendererConfigurationListenerImpl rendererConfigurationListener;
-    private EpPolicyTemplateBySgtListenerImpl epPolicyTemplateBySgtListener;
     private IosXeCapableNodeListenerImpl iosXeCapableNodeListener;
-    private EpPolicyCacheImpl epPolicyCache;
     private PolicyManager policyManager;
     private NodeManager nodeManager;
 
@@ -80,14 +76,8 @@ public class IosXeRendererProviderImpl implements IosXeRendererProvider, Binding
         if (rendererConfigurationListener != null) {
             rendererConfigurationListener.close();
         }
-        if (epPolicyTemplateBySgtListener != null) {
-            epPolicyTemplateBySgtListener.close();
-        }
         if (iosXeCapableNodeListener != null) {
             iosXeCapableNodeListener.close();
-        }
-        if (epPolicyCache != null) {
-            epPolicyCache.invalidateAll();
         }
     }
 
@@ -97,14 +87,11 @@ public class IosXeRendererProviderImpl implements IosXeRendererProvider, Binding
         //TODO register listeners:
         // node-manager
         nodeManager = new NodeManager(dataBroker, providerContext);
-        // ep-policy-template-by-sgt
-        epPolicyCache = new EpPolicyCacheImpl();
-        epPolicyTemplateBySgtListener = new EpPolicyTemplateBySgtListenerImpl(dataBroker, epPolicyCache);
         // network-topology
         iosXeCapableNodeListener = new IosXeCapableNodeListenerImpl(dataBroker, nodeManager);
 
         // policy-manager and delegates
-        policyManager = new PolicyManagerImpl(dataBroker, epPolicyCache);
+        policyManager = new PolicyManagerImpl(dataBroker);
         final PolicyManager policyManagerZip = new PolicyManagerZipImpl(policyManager);
 
         // renderer-configuration endpoints
