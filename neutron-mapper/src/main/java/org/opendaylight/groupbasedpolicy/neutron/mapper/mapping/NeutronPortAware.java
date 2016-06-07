@@ -129,7 +129,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
                 .setContextType(MappingUtils.L2_BRDIGE_DOMAIN)
                 .setParent(MappingUtils.createParent(routerL3Context, MappingUtils.L3_CONTEXT))
                 .build();
-            rwTx.merge(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.l2BridgeDomainIid(tenantId, l2BdId), l2Bd);
+            rwTx.merge(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.l2BridgeDomainIid(tenantId, l2BdId), l2Bd, true);
             // set virtual router IP for subnet
             NetworkDomain subnetDomain = NeutronSubnetAware.createSubnet(
                     routerPortSubnet, portIpWithSubnet.getIpAddress());
@@ -165,7 +165,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
 
             ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
             registerBaseEndpointAndStoreMapping(
-                    ImmutableList.<AddressEndpointReg>of(l2BaseEp.build(), l3BaseEp.build()), port, rwTx);
+                    ImmutableList.of(l2BaseEp.build(), l3BaseEp.build()), port, rwTx);
             registerEndpointAndStoreMapping(epInBuilder.build(), port, rwTx);
             DataStoreHelper.submitToDs(rwTx);
         } else if (PortUtils.isNormalPort(port)) {
@@ -222,7 +222,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
             TenantId tenantId, ReadWriteTransaction rwTx) {
         L2BridgeDomainId l2BdId = new L2BridgeDomainId(routerPortSubnet.getNetworkId().getValue());
         L2BridgeDomain l2Bd = new L2BridgeDomainBuilder().setId(l2BdId).setParent(new L3ContextId(routerL3Context)).build();
-        rwTx.merge(LogicalDatastoreType.CONFIGURATION, IidFactory.l2BridgeDomainIid(tenantId, l2BdId), l2Bd);
+        rwTx.merge(LogicalDatastoreType.CONFIGURATION, IidFactory.l2BridgeDomainIid(tenantId, l2BdId), l2Bd, true);
         // set virtual router IP for subnet
         org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet subnet = NeutronSubnetAware.createTenantSubnet(
                 routerPortSubnet, portIpWithSubnet.getIpAddress());

@@ -9,7 +9,7 @@ import java.util.Set;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.test.GbpDataBrokerTest;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronMapperDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.PolicyAssert;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
@@ -19,7 +19,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
 
-public class NetworkServiceTest extends GbpDataBrokerTest {
+public class NetworkServiceTest extends NeutronMapperDataBrokerTest {
 
     // dhcp
     private static final SubjectName DHCP_SUBJECT_NAME = new SubjectName("ALLOW_DHCP");

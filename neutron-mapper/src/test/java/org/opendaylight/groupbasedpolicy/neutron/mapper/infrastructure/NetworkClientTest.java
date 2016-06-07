@@ -7,14 +7,14 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.test.GbpDataBrokerTest;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronMapperDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.PolicyAssert;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SelectorName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ConsumerNamedSelectorBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ConsumerNamedSelectorKey;
 
-public class NetworkClientTest extends GbpDataBrokerTest {
+public class NetworkClientTest extends NeutronMapperDataBrokerTest {
 
     private final String tenantID = "00000000-0000-0000-0000-000000000001";
     private final SelectorName selector = new SelectorName("dummy-selector");

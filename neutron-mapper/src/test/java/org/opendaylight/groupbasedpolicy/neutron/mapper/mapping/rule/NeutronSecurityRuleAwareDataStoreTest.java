@@ -11,7 +11,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.ConfigDataStoreReader;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.test.GbpDataBrokerTest;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronMapperDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronEntityFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.PolicyAssert;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
@@ -46,7 +46,7 @@ import com.google.common.collect.ImmutableSet;
  * datastore
  */
 
-public class NeutronSecurityRuleAwareDataStoreTest extends GbpDataBrokerTest {
+public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrokerTest {
 
     @Test
     public final void testAddNeutronSecurityRule_rulesWithRemoteIpPrefix() throws Exception {

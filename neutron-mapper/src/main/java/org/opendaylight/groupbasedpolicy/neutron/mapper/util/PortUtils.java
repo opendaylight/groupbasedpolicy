@@ -24,10 +24,10 @@ import com.google.common.base.Optional;
 
 public class PortUtils {
 
-    private static final String DEVICE_OWNER_DHCP = "network:dhcp";
-    private static final String DEVICE_OWNER_ROUTER_IFACE = "network:router_interface";
-    private static final String DEVICE_OWNER_ROUTER_GATEWAY = "network:router_gateway";
-    private static final String DEVICE_OWNER_FLOATING_IP = "network:floatingip";
+    public static final String DEVICE_OWNER_DHCP = "network:dhcp";
+    public static final String DEVICE_OWNER_ROUTER_IFACE = "network:router_interface";
+    public static final String DEVICE_OWNER_ROUTER_GATEWAY = "network:router_gateway";
+    public static final String DEVICE_OWNER_FLOATING_IP = "network:floatingip";
 
     public static Optional<Port> findPort(Uuid uuid, @Nullable Ports ports) {
         if (ports == null || ports.getPort() == null) {

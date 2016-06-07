@@ -11,7 +11,7 @@ import java.util.List;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.ConfigDataStoreReader;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.test.GbpDataBrokerTest;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronMapperDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronEntityFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.PolicyAssert;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
@@ -29,7 +29,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRuleBuilder;
 
-public class NeutronSecurityRuleAwareTest extends GbpDataBrokerTest {
+public class NeutronSecurityRuleAwareTest extends NeutronMapperDataBrokerTest {
 
     private static final String RULE_ID = "00000000-0000-0000-0000-000000000001";
     private static final String RULE_TENANT_ID = "00000000-0000-0000-0000-000000000002";
