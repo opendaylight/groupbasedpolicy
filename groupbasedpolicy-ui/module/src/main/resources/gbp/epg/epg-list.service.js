@@ -32,7 +32,8 @@ define([], function() {
                 /* jshint validthis:true */
                 var self = this;
 
-                var restObj = Restangular.one('restconf').one(dataStore).one('policy:tenants').one('tenant').one(idTenant).one('policy');
+                var restObj = Restangular.one('restconf').one(dataStore).one('policy:tenants').one('tenant')
+                    .one(idTenant).one('policy');
 
                 return restObj.get().then(function(data) {
                     if (data.policy['endpoint-group']) {

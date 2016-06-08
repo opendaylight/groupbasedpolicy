@@ -1,46 +1,133 @@
 <md-content>
-	breadcrumb
-	<md-divider></md-divider>
-	<md-subheader class="md-primary">Endpoint-group info</md-subheader>
-	<div layout="row" class="layout-padding-lr15 layout-row">
-	    <span flex="50" class="flex-50"><strong>Endpoint-group ID</strong></span>
-	    <span flex="" class="ng-binding flex">{{sidePanelObject.data.id}}</span>
-	</div>
-	<div layout="row" class="layout-padding-lr15 layout-row">
-	    <span flex="50" class="flex-50"><strong>intra-group-policy</strong></span>
-	    <span flex="" class="ng-binding flex">{{sidePanelObject.data['intra-group-policy']}}</span>
-	</div>
-
-	<md-divider></md-divider>
-	<div ng-if="sidePanelObject.data['provider-named-selector']">
-	    <md-subheader class="md-primary">Provider-named selectors ({{sidePanelObject.data['provider-named-selector'].length}})</md-subheader>
+	<div ng-if="selectedNode == null">
+		<div layout="row" class="layout-padding-lr15 layout-row">
+			<ul class="breadcrumbs">
+				<li class="breadcrumb">Endpoint-groups</li>
+			</ul>
+		</div>
+		<md-divider></md-divider>
+		<md-divider></md-divider>
+	    <md-subheader class="md-primary">Endpoint-groups ({{sidePanelObject.data.length}})</md-subheader>
 	    <md-list>
-	    	<ng-repeat ng-repeat="providerNamedSelector in sidePanelObject.data['provider-named-selector']">
-		    	<md-list-item ng-click="openSidePanelObjId(providerNamedSelector.contract[0], sidePanelObject.data.parentTenant, 'contract' ,'operational');">
-		    		{{providerNamedSelector.name}}
-		    		<md-content ng-show="providerNamedSelector.expanded" class="md-whiteframe-2dp ng-scope flex layout-margin">
-		    			<div layout="row" class="layout-row">
-		    		        <span flex="50" class="flex-50"><strong>Contract ID</strong></span>
-		    				<span flex class="ng-binding flex">{{providerNamedSelector.contract[0]}}</span>
-	    				</div>
-		    		</md-content>
+	    	<ng-repeat ng-repeat="epg in sidePanelObject.data">
+		    	<md-list-item ng-click="openSidePanel('resolved-policy/epg-sidepanel', epg, null)" ng-mouseenter="highlightNode(epg.data.id)" ng-mouseleave="fadeAll()">
+		    		{{epg.data.id}}
 		    	</md-list-item>
 	    	</ng-repeat>
 	    </md-list>
-    </div>
-	<div ng-if="sidePanelObject.data['consumer-named-selector']">
-	    <md-subheader class="md-primary">Consumer-named selectors ({{sidePanelObject.data['consumer-named-selector'].length}})</md-subheader>
-	    <md-list>
-	    	<ng-repeat ng-repeat="consumerNamedSelector in sidePanelObject.data['consumer-named-selector']">
-		    	<md-list-item ng-click="openSidePanelObjId(consumerNamedSelector.contract[0], sidePanelObject.data.parentTenant, 'contract' ,'operational');">
-		    		{{consumerNamedSelector.name}}
-		    		<md-content ng-show="consumerNamedSelector.expanded" class="md-whiteframe-2dp ng-scope flex layout-margin">
-		    			<div layout="row" class="layout-row">
-		    		        <span flex="50" class="flex-50"><strong>Contract ID</strong></span>
-		    				<span flex class="ng-binding flex">{{consumerNamedSelector.contract[0]}}</span>
-	    				</div>
+	</div>
+	<div ng-if="selectedNode">
+		<div layout="row" class="layout-padding-lr15 layout-row">
+			<ul class="breadcrumbs">
+				<li class="breadcrumb" ng-click="deselectEpg()" role="button">Endpoint-groups</li>
+				<li class="breadcrumb"><i class="material-icons">keyboard_arrow_right</i></li>
+				<li class="breadcrumb">{{selectedNode.data.id}}</li>
+			</ul>
+		</div>
+		<md-divider></md-divider>
+		<md-divider></md-divider>
+		<md-subheader class="md-primary">Endpoint-group info</md-subheader>
+		<div layout="row" class="layout-padding-lr15 layout-row">
+		    <span flex="50" class="flex-50"><strong>Endpoint-group ID</strong></span>
+		    <span flex="" class="ng-binding flex">{{sidePanelObject.data.id}}</span>
+		</div>
+		<div layout="row" class="layout-padding-lr15 layout-row layout-padding-b15">
+		    <span flex="50" class="flex-50"><strong>intra-group-policy</strong></span>
+		    <span flex="" class="ng-binding flex">
+		    	<i ng-class="sidePanelObject.data['intra-group-policy']" class="fa fa-circle status-circle flex-5" flex="5">
+			    	<md-tooltip md-direction="right">
+			    		{{sidePanelObject.data['intra-group-policy']}}
+			    	</md-tooltip>
+		    	</i>
+		    </span>
+		</div>
+		<md-divider></md-divider>
+		<div ng-if="sidePanelObject.data['provider-named-selector']">
+		    <md-subheader class="md-primary">Provider-named selectors ({{sidePanelObject.data['provider-named-selector'].length}})</md-subheader>
+		    <md-list>
+		    	<ng-repeat ng-repeat="providerNamedSelector in sidePanelObject.data['provider-named-selector']">
+			    	<md-list-item class="expander" ng-click="openSidePanelContract(providerNamedSelector.contract[0])">
+			    		{{providerNamedSelector.name}}
+			    		<md-content class="md-whiteframe-2dp ng-scope layout-margin">
+			    			<div flex>
+				    			<div layout="row" class="layout-row">
+				    		        <span flex="50" class="flex-50"><strong>Contract ID</strong></span>
+				    				<span flex class="ng-binding flex">{{providerNamedSelector.contract[0]}}</span>
+			    				</div>
+		    				</div>
+			    		</md-content>
+			    	</md-list-item>
+		    	</ng-repeat>
+		    </md-list>
+	    </div>
+		<div ng-if="sidePanelObject.data['consumer-named-selector']">
+		    <md-subheader class="md-primary">Consumer-named selectors ({{sidePanelObject.data['consumer-named-selector'].length}})</md-subheader>
+		    <md-list>
+		    	<ng-repeat ng-repeat="consumerNamedSelector in sidePanelObject.data['consumer-named-selector']">
+			    	<md-list-item class="expander" ng-click="openSidePanelContract(consumerNamedSelector.contract[0]);">
+			    		{{consumerNamedSelector.name}}
+			    		<md-content class="md-whiteframe-2dp ng-scope layout-margin">
+			    			<div flex>
+				    			<div layout="row" class="layout-row">
+				    		        <span flex="50" class="flex-50"><strong>Contract ID</strong></span>
+				    				<span flex class="ng-binding flex">{{consumerNamedSelector.contract[0]}}</span>
+			    				</div>
+		    				</div>
+			    		</md-content>
+			    	</md-list-item>
+		    	</ng-repeat>
+		    </md-list>
+	    </div>
+	    <md-divider></md-divider>
+	    <md-subheader class="md-primary">
+    		<div layout="row" class="layout-row">
+    			<span>Endpoints ({{endpoints.data.length}})</span>
+    			<span class="flex" flex></span>
+    			<md-button class="md-button md-primary md-button md-ink-ripple expand-button" type="button" ng-click="expandAll(endpoints.data)" aria-label="Expand all">            
+    	            <i class="fa fa-expand ng-scope"></i>
+    	        	<div class="md-ripple-container"></div>
+    	        	<md-tooltip md-direction="bottom">
+    	        		Expand all
+    	        	</md-tooltip>
+    	    	</md-button>
+    	    	<md-button class="md-button md-primary md-button md-ink-ripple expand-button" type="button" ng-click="collapseAll(endpoints.data)" aria-label="Collapse all">
+    				<i class="fa fa-compress ng-scope"></i>
+    	    	    <div class="md-ripple-container"></div>
+    	        	<md-tooltip md-direction="bottom">
+    	        		Collapse all
+    	        	</md-tooltip>
+    	    	</md-button>
+        	</div>
+	    </md-subheader>
+	    <md-list class="expander">
+	    	<ng-repeat ng-repeat="endpoint in endpoints.data">
+	    		<md-list-item ng-click="toggleExpanded(endpoint)">
+	    			<span>{{endpoint.data['context-id']}}</span>
+		    		<md-content ng-show="endpoint.expanded" class="md-whiteframe-2dp ng-scope layout-margin">
+			    		<div flex>
+			    			<div layout="row" class="layout-row">
+			    		        <span flex="50" class="flex-50"><strong>Context Type</strong></span>
+			    				<span flex class="ng-binding flex">{{endpoint.data['context-type']}}</span>
+		    				</div>
+			    			<div layout="row" class="layout-row">
+			    		        <span flex="50" class="flex-50"><strong>Address</strong></span>
+			    				<span flex class="ng-binding flex">{{endpoint.data.address}}</span>
+		    				</div>
+			    			<div layout="row" class="layout-row">
+			    		        <span flex="50" class="flex-50"><strong>Address Type</strong></span>
+			    				<span flex class="ng-binding flex">{{endpoint.data['address-type']}}</span>
+		    				</div>
+			    			<div layout="row" class="layout-row">
+			    		        <span flex="50" class="flex-50"><strong>Network Domain ID</strong></span>
+			    				<span flex class="ng-binding flex">{{endpoint.data['network-containment']['network-domain-id']}}</span>
+		    				</div>
+			    			<div layout="row" class="layout-row">
+			    		        <span flex="50" class="flex-50"><strong>Network Domain Type</strong></span>
+			    				<span flex class="ng-binding flex">{{endpoint.data['network-containment']['network-domain-type']}}</span>
+		    				</div>
+						</div>
 		    		</md-content>
-		    	</md-list-item>
+	    		</md-list-item>
 	    	</ng-repeat>
 	    </md-list>
     </div>

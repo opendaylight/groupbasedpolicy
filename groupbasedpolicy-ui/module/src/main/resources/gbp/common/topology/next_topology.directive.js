@@ -59,7 +59,7 @@ define(['next-ui'], function() {
 
 					// App events - if app is resized
 					app.on('resize', function(){
-						topo.adaptToContainer();
+						scope.topo.adaptToContainer();
 					});
 
 					// Attach topo to app
@@ -327,7 +327,7 @@ define(['next-ui'], function() {
                                 var stageScale = this.stageScale();
                                 var line = this.reverse() ? this.line().negate() : this.line();
                                 var lineEl = this.view('line');
-                                var newLine = line.translate(offset).pad(25 * stageScale, stageScale);
+                                var newLine = line.translate(offset).pad(25 * stageScale, 17 * stageScale);
                                 lineEl.sets({
                                     x1: newLine.start.x,
                                     y1: newLine.start.y,

@@ -35,11 +35,11 @@ define([], function () {
                 self.data = [];
             }
 
-            function get(tenantId) {
+            function get(dataStore, tenantId) {
                 /* jshint validthis:true */
                 var self = this;
 
-                var restObj = Restangular.one('restconf').one('config').one('policy:tenants')
+                var restObj = Restangular.one('restconf').one(dataStore).one('policy:tenants')
                     .one('tenant').one(tenantId).one('policy');
 
                 return restObj.get().then(function (data) {

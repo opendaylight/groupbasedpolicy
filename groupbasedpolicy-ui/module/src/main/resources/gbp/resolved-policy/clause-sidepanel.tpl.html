@@ -1,15 +1,24 @@
-<md-content>
-	breadcrumb
-	<md-divider></md-divider>
-	<md-subheader class="md-primary">Clause info</md-subheader>
+<md-content flex>
 	<div layout="row" class="layout-padding-lr15 layout-row">
-	    <span flex="50" class="flex-50"><strong>Clause name</strong></span>
-	    <span flex="" class="ng-binding flex">{{sidePanelObject.name}}</span>
+		<ul class="breadcrumbs">
+			<li class="breadcrumb" ng-click="deselectContract()" role="button">Contracts</li>
+			<li class="breadcrumb"><i class="material-icons">keyboard_arrow_right</i></li>
+			<li class="breadcrumb" ng-click="openSidePanelTpl('contract')" role="button">{{selectedNode.data.id}}</li>
+			<li class="breadcrumb"><i class="material-icons">keyboard_arrow_right</i></li>
+			<li class="breadcrumb">{{selectedNode.data.clause[clauseIndex].name}}</li>
+		</ul>
 	</div>
 	<md-divider></md-divider>
-	<md-subheader class="md-primary">Subject refs ({{sidePanelObject['subject-refs'].length}})</md-subheader>
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Clause info</md-subheader>
+	<div layout="row" class="layout-padding-lr15 layout-row layout-padding-b15">
+	    <span flex="50" class="flex-50"><strong>Clause name</strong></span>
+	    <span flex="" class="ng-binding flex">{{selectedNode.data.clause[clauseIndex].name}}</span>
+	</div>
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Subject refs ({{selectedNode.data.clause[clauseIndex]['subject-refs'].length}})</md-subheader>
     <md-list>
-    	<ng-repeat ng-repeat="ref in sidePanelObject['subject-refs']">
+    	<ng-repeat ng-repeat="ref in selectedNode.data.clause[clauseIndex]['subject-refs']">
 	    	<md-list-item ng-click="toggleExpanded(ref)">
 	    		{{ref}}
 	    		<md-content ng-show="ref.expanded" class="md-whiteframe-2dp ng-scope flex layout-margin">
