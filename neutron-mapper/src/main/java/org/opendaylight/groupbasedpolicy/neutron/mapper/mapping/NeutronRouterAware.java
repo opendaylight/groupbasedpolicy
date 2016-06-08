@@ -118,7 +118,7 @@ public class NeutronRouterAware implements NeutronAware<Router> {
             l3ContextBuilder.setName(name);
         }
         L3Context l3Context = l3ContextBuilder.setId(l3ContextId).build();
-        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l3ContextIid(tenantId, l3ContextId), l3Context);
+        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l3ContextIid(tenantId, l3ContextId), l3Context, true);
     }
 
     @Override
@@ -176,7 +176,7 @@ public class NeutronRouterAware implements NeutronAware<Router> {
                     L2L3IidFactory.l2BridgeDomainIid(tenantId, l2BdId), rwTx);
             if (!optBd.isPresent()) {
                 LOG.warn(
-                        "Could not read L2-Bridge-Domain {} Modifiaction of it's parent to L3-Context of router {} aborted.",
+                        "Could not read L2-Bridge-Domain {}. Modification of its parent to L3-Context of router {} aborted.",
                         l2BdId, newRouter.getUuid());
                 rwTx.cancel();
                 return;
@@ -224,7 +224,7 @@ public class NeutronRouterAware implements NeutronAware<Router> {
              l3Context = optL3Context.get();
          } else { // add L3 context if missing
              l3Context = createL3CtxFromRouter(newRouter);
-             rwTx.put(LogicalDatastoreType.CONFIGURATION, l3ContextIid, l3Context);
+             rwTx.put(LogicalDatastoreType.CONFIGURATION, l3ContextIid, l3Context, true);
          }
 
          if (newRouter.getGatewayPortId() != null && oldRouter.getGatewayPortId() == null) {
@@ -257,8 +257,9 @@ public class NeutronRouterAware implements NeutronAware<Router> {
                  return;
              }
              IpAddress gatewayIp =  potentialSubnet.get().getGatewayIp();
+             NetworkDomainId networkContainment = new NetworkDomainId(ipWithSubnetFromGwPort.getSubnetId().getValue());
              boolean registeredExternalGateway = epRegistrator.registerL3EpAsExternalGateway(tenantId, gatewayIp,
-                     l3ContextId, new NetworkDomainId(ipWithSubnetFromGwPort.getSubnetId().getValue()));
+                     l3ContextId, networkContainment);
              if (!registeredExternalGateway) {
                  LOG.warn("Could not add L3Prefix as gateway of default route. Gateway port {}", gwPort);
                  rwTx.cancel();
@@ -285,7 +286,7 @@ public class NeutronRouterAware implements NeutronAware<Router> {
                      IidFactory.l2BridgeDomainIid(tenantId, l2BdId), rwTx);
              if (!optBd.isPresent()) {
                  LOG.warn(
-                         "Could not read L2-Bridge-Domain {} Modifiaction of it's parent to L3-Context of router {} aborted.",
+                         "Could not read L2-Bridge-Domain {}. Modification of its parent to L3-Context of router {} aborted.",
                          l2BdId, newRouter.getUuid());
                  rwTx.cancel();
                  return;
