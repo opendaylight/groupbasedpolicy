@@ -13,6 +13,8 @@ module vpp-renderer {
     prefix "vpp-renderer";
 
     import base-endpoint { prefix base-ep; revision-date 2016-04-27; }
+    import network-topology { prefix nt; revision-date 2013-10-21; }
+    import opendaylight-l2-types { prefix l2-types; revision-date "2013-08-27"; }
 
     description
         "This module is a baseline for the group-based policy vpp renderer model.";
@@ -20,6 +22,27 @@ module vpp-renderer {
     revision "2016-04-25" {
         description
             "Initial revision.";
+    }
+
+    identity network-type-base {
+        description "Base for Network Types.";
+    }
+
+    identity flat-network {
+        description "Flat Provider Network Type";
+        base network-type-base;
+    }
+
+    identity vlan-network {
+        description "VLAN Provider Network Type";
+        base network-type-base;
+    }
+
+    typedef network-type {
+        description "Type of Network.";
+        type identityref {
+            base network-type-base;
+        }
     }
 
     container config {
@@ -49,6 +72,39 @@ module vpp-renderer {
                             length 1..255;
                         }
                     }
+                }
+            }
+        }
+
+        list bridge-domain {
+            key "id";
+            leaf id {
+                description "Same as in VBD.";
+                type string;
+            }
+            leaf description {
+               type string;
+            }
+            leaf type {
+                mandatory true;
+                type network-type;
+            }
+            leaf vlan {
+                when "type = 'vlan-network'";
+                type l2-types:vlan-id;
+            }
+            list physical-location-ref {
+                description
+                    "Refers to physical interfaces on vpp nodes through which external
+                     nodes belonging to the same bridge-domain can be reached.";
+                key "node-id";
+                leaf node-id {
+                    description "Refers to a VPP node.";
+                    type nt:node-id;
+                }
+                leaf-list interface {
+                    description "Physical interface on the VPP node.";
+                    type string;
                 }
             }
         }

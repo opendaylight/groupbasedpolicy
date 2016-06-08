@@ -20,12 +20,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gb
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-public class BaseEndpointByPortListener extends DataTreeChangeHandler<BaseEndpointByPort> implements
+public class PortAware extends DataTreeChangeHandler<BaseEndpointByPort> implements
         MappingProvider<Port> {
 
     private final PortHandler portHandler;
 
-    protected BaseEndpointByPortListener(PortHandler portHandler, DataBroker dataProvider) {
+    protected PortAware(PortHandler portHandler, DataBroker dataProvider) {
         super(dataProvider);
         this.portHandler = portHandler;
         registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,

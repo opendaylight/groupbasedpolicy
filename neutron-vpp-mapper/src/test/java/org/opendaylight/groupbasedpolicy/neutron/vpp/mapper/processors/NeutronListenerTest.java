@@ -40,7 +40,7 @@ public class NeutronListenerTest extends AbstractDataBrokerTest {
     private Port port;
     private BaseEndpointByPort bebp;
     private NeutronListener neutronListener;
-    private BaseEndpointByPortListener baseEpByPortListener;
+    private PortAware baseEpByPortListener;
 
     @Before
     public void init() {
@@ -50,7 +50,7 @@ public class NeutronListenerTest extends AbstractDataBrokerTest {
         dataBroker = getDataBroker();
         neutronListener = new NeutronListener(dataBroker, socketInfo);
         neutronListener.clearDataChangeProviders();
-        baseEpByPortListener = Mockito.spy(new BaseEndpointByPortListener(new PortHandler(
+        baseEpByPortListener = Mockito.spy(new PortAware(new PortHandler(
                 dataBroker, socketInfo), dataBroker));
         neutronListener.addDataChangeProvider(baseEpByPortListener);
     }
@@ -69,7 +69,7 @@ public class NeutronListenerTest extends AbstractDataBrokerTest {
                         .child(GbpByNeutronMappings.class)
                         .child(BaseEndpointsByPorts.class)
                         .child(BaseEndpointByPort.class)
-                        .build())), any(BaseEndpointByPortListener.class));
+                        .build())), any(PortAware.class));
         neutronListener.close();
     }
 

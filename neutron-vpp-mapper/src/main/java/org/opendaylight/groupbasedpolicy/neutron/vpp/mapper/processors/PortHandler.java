@@ -56,12 +56,12 @@ public class PortHandler implements TransactionChainListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(MappingProvider.class);
 
-    private static final String COMPUTE_OWNER = "compute";
+    private static final String[] COMPUTE_OWNER = {"compute"};
     private static final String VHOST_USER = "vhostuser";
     private static final String NETCONF_TOPOLOGY_ID = "topology-netconf";
 
     private BindingTransactionChain transactionChain;
-    BaseEndpointByPortListener portByBaseEpListener;
+    PortAware portByBaseEpListener;
     DataBroker dataBroker;
     SocketInfo socketInfo;
 
@@ -106,8 +106,12 @@ public class PortHandler implements TransactionChainListener {
             String vifType = portBindingExt.getVifType();
             String deviceOwner = port.getDeviceOwner();
             if (vifType != null && deviceOwner != null) {
-                if (vifType.contains(VHOST_USER) && deviceOwner.contains(COMPUTE_OWNER)) {
-                    return true;
+                if (vifType.contains(VHOST_USER)) {
+                    for (String computeOwner : COMPUTE_OWNER) {
+                        if (deviceOwner.contains(computeOwner)) {
+                            return true;
+                        }
+                    }
                 }
             }
         }

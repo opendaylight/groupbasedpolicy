@@ -51,7 +51,8 @@ public class NeutronListener implements DataTreeChangeListener<Neutron>, Closeab
 
     private void registerHandlersAndListeners(DataBroker dataBroker, SocketInfo socketInfo) {
         PortHandler portHandler = new PortHandler(dataBroker, socketInfo);
-        dataChangeProviders.add(new BaseEndpointByPortListener(portHandler, dataBroker));
+        dataChangeProviders.add(new PortAware(portHandler, dataBroker));
+        dataChangeProviders.add(new NetworkAware(dataBroker));
     }
 
     @Override
