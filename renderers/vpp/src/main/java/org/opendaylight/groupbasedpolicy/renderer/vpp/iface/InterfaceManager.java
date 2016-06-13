@@ -33,9 +33,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VppInterfaceAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.interfaces._interface.L2;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.interfaces._interface.L2Builder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.l2.attributes.Interconnection;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.l2.attributes.interconnection.BridgeBased;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.l2.attributes.interconnection.BridgeBasedBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.l2.base.attributes.Interconnection;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.l2.base.attributes.interconnection.BridgeBased;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.l2.base.attributes.interconnection.BridgeBasedBuilder;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -250,7 +250,7 @@ public class InterfaceManager implements AutoCloseable {
                     String nodePath = VppPathMapper.bridgeDomainToRestPath(bridgeDomainName);
                     if (!nodePath.equals(epLoc.getExternalNode())) {
                         vppEndpointLocationProvider.updateExternalNodeLocationForEndpoint(nodePath,
-                                addrEpWithLoc.getKey());
+                                epLoc.getExternalNodeMountPoint(), addrEpWithLoc.getKey());
                     }
                     return Futures.immediateFuture(null);
                 }
@@ -266,7 +266,7 @@ public class InterfaceManager implements AutoCloseable {
                     public Void apply(Void input) {
                         String nodePath = VppPathMapper.bridgeDomainToRestPath(bridgeDomainName);
                         vppEndpointLocationProvider.updateExternalNodeLocationForEndpoint(nodePath,
-                                addrEpWithLoc.getKey());
+                                epLoc.getExternalNodeMountPoint(), addrEpWithLoc.getKey());
                         return null;
                     }
                 });
@@ -324,7 +324,8 @@ public class InterfaceManager implements AutoCloseable {
                 String existingBridgeDomain = resolveBridgeDomain(optIface.get());
                 if (Strings.isNullOrEmpty(existingBridgeDomain)) {
                     // bridge domain does not exist on interface so we consider job done
-                    vppEndpointLocationProvider.updateExternalNodeLocationForEndpoint(null, addrEpWithLoc.getKey());
+                    vppEndpointLocationProvider.updateExternalNodeLocationForEndpoint(null,
+                            epLoc.getExternalNodeMountPoint(), addrEpWithLoc.getKey());
                     return Futures.immediateFuture(null);
                 }
 
@@ -335,7 +336,8 @@ public class InterfaceManager implements AutoCloseable {
 
                     @Override
                     public Void apply(Void input) {
-                        vppEndpointLocationProvider.updateExternalNodeLocationForEndpoint(null, addrEpWithLoc.getKey());
+                        vppEndpointLocationProvider.updateExternalNodeLocationForEndpoint(null,
+                                epLoc.getExternalNodeMountPoint(), addrEpWithLoc.getKey());
                         return null;
                     }
                 });

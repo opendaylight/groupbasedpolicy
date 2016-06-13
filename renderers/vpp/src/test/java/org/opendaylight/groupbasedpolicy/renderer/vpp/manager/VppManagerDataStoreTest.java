@@ -1,9 +1,9 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.manager;
 
-import com.google.common.base.Optional;
-import com.google.common.eventbus.EventBus;
-import com.google.common.util.concurrent.CheckedFuture;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -14,7 +14,11 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.opendaylight.controller.config.yang.config.vpp_provider.impl.VppRenderer;
-import org.opendaylight.controller.md.sal.binding.api.*;
+import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.MountPoint;
+import org.opendaylight.controller.md.sal.binding.api.MountPointService;
+import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
+import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
@@ -33,13 +37,16 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev15
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.netconf.node.connection.status.AvailableCapabilitiesBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.netconf.node.connection.status.UnavailableCapabilitiesBuilder;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeBuilder;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.google.common.base.Optional;
+import com.google.common.eventbus.EventBus;
+import com.google.common.util.concurrent.CheckedFuture;
 
 /**
  * Test for {@link VppNodeManager} and {@link VppNodeListener}.
@@ -51,8 +58,8 @@ public class VppManagerDataStoreTest extends VppRendererDataBrokerTest {
     private static final String INTERFACES_CAPABILITY =
             "(urn:ietf:params:xml:ns:yang:ietf-interfaces?revision=2014-05-08)ietf-interfaces";
     private static final String NODE_NAME = "testVpp";
-
-    private final InstanceIdentifier<Node> nodeIid = VppIidFactory.getNodeIid(new NodeKey(new NodeId(NODE_NAME)));
+    private static final InstanceIdentifier<Node> NODE_IID = VppIidFactory
+        .getNodeIid(new TopologyKey(new TopologyId("topology-netconf")), new NodeKey(new NodeId(NODE_NAME)));
 
     @Mock
     BindingAwareBroker.ProviderContext providerContext;
@@ -103,7 +110,7 @@ public class VppManagerDataStoreTest extends VppRendererDataBrokerTest {
         WriteTransaction writeTransaction = dataBroker.newWriteOnlyTransaction();
         Node testVppNode = createNode(NODE_NAME, NetconfNodeConnectionStatus.ConnectionStatus.Connected);
 
-        writeTransaction.put(LogicalDatastoreType.OPERATIONAL, nodeIid, testVppNode, true);
+        writeTransaction.put(LogicalDatastoreType.OPERATIONAL, NODE_IID, testVppNode, true);
 
         writeTransaction.submit();
 
@@ -115,7 +122,7 @@ public class VppManagerDataStoreTest extends VppRendererDataBrokerTest {
 
         Assert.assertTrue(rendererOptional.isPresent());
         Assert.assertEquals(1, rendererOptional.get().getRendererNodes().getRendererNode().size());
-        Assert.assertEquals(nodeIid, rendererOptional.get().getRendererNodes().getRendererNode().get(0).getNodePath());
+        Assert.assertEquals(NODE_IID, rendererOptional.get().getRendererNodes().getRendererNode().get(0).getNodePath());
     }
 
     @Test
@@ -123,7 +130,7 @@ public class VppManagerDataStoreTest extends VppRendererDataBrokerTest {
         WriteTransaction writeTransaction = dataBroker.newWriteOnlyTransaction();
         Node testVppNode = createNode(NODE_NAME, NetconfNodeConnectionStatus.ConnectionStatus.Connected);
 
-        writeTransaction.put(LogicalDatastoreType.OPERATIONAL, nodeIid, testVppNode, true);
+        writeTransaction.put(LogicalDatastoreType.OPERATIONAL, NODE_IID, testVppNode, true);
 
         writeTransaction.submit();
 
@@ -135,12 +142,12 @@ public class VppManagerDataStoreTest extends VppRendererDataBrokerTest {
 
         Assert.assertTrue(rendererOptional.isPresent());
         Assert.assertEquals(1, rendererOptional.get().getRendererNodes().getRendererNode().size());
-        Assert.assertEquals(nodeIid, rendererOptional.get().getRendererNodes().getRendererNode().get(0).getNodePath());
+        Assert.assertEquals(NODE_IID, rendererOptional.get().getRendererNodes().getRendererNode().get(0).getNodePath());
 
         WriteTransaction writeTransaction2 = dataBroker.newWriteOnlyTransaction();
         Node testVppNode2 = createNode(NODE_NAME, NetconfNodeConnectionStatus.ConnectionStatus.Connecting);
 
-        writeTransaction2.put(LogicalDatastoreType.OPERATIONAL, nodeIid, testVppNode2, true);
+        writeTransaction2.put(LogicalDatastoreType.OPERATIONAL, NODE_IID, testVppNode2, true);
 
         writeTransaction2.submit();
 
