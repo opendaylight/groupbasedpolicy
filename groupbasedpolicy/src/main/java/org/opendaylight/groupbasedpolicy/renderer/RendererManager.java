@@ -141,15 +141,17 @@ public class RendererManager implements AutoCloseable {
     public synchronized void renderersUpdated(final Renderers renderersCont) {
         ImmutableMultimap<InstanceIdentifier<?>, RendererName> renderersByNode =
                 RendererUtils.resolveRenderersByNodes(renderersCont.getRenderer());
+        Map<InstanceIdentifier<?>, RendererName> oldRendererByNode = rendererByNode;
         rendererByNode = new HashMap<>();
         for (InstanceIdentifier<?> nodePath : renderersByNode.keySet()) {
             ImmutableCollection<RendererName> renderers = renderersByNode.get(nodePath);
             // only first renderer is used
             rendererByNode.put(nodePath, renderers.asList().get(0));
         }
-        if (processingRenderers.isEmpty()) {
+        if (!rendererByNode.equals(oldRendererByNode)) {
             changesWaitingToProcess = true;
-        } else {
+        }
+        if (!processingRenderers.isEmpty()) {
             LOG.debug("Waiting for renderers. Version {} needs to be processed by renderers: {}", version,
                     processingRenderers);
             ImmutableMap<RendererName, Renderer> rendererByName =
