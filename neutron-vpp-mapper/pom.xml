@@ -37,11 +37,6 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.opendaylight.neutron</groupId>
-      <artifactId>neutron-spi</artifactId>
-      <version>${neutron.version}</version>
-    </dependency>
-    <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>vpp-renderer</artifactId>
       <version>${project.version}</version>

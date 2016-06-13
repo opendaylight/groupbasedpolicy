@@ -21,6 +21,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeBase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolBase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.SecurityRuleAttributes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
 
 public class SecRuleNameDecoder {
@@ -76,14 +77,20 @@ public class SecRuleNameDecoder {
                     .append(portMax.longValue());
             }
         }
-        Class<? extends ProtocolBase> protocol = secRule.getProtocol();
+        SecurityRuleAttributes.Protocol protocol = secRule.getProtocol();
         if (protocol != null) {
             if (keyBuilder.length() > 0) {
                 keyBuilder.append(MappingUtils.NAME_DOUBLE_DELIMETER);
             }
+            String protocolString = "";
+            if (protocol.getUint8() != null) {
+                protocolString = protocol.getUint8().toString();
+            } else if (protocol.getIdentityref() != null) {
+                protocolString = protocol.getIdentityref().getSimpleName();
+            }
             keyBuilder.append(IpProtoClassifierDefinition.DEFINITION.getName().getValue())
                 .append(MappingUtils.NAME_VALUE_DELIMETER)
-                .append(protocol.getSimpleName());
+                .append(protocolString);
         }
         Class<? extends EthertypeBase> ethertype = secRule.getEthertype();
         if (ethertype != null) {

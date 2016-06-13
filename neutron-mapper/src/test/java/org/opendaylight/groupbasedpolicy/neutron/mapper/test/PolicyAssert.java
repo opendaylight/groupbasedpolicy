@@ -86,7 +86,7 @@ public final class PolicyAssert {
     }
 
     public static void assertContractWithEic(Contract contract, SecurityRule secRule) {
-        assertEquals(new ContractId(secRule.getId().getValue()), contract.getId());
+        assertEquals(new ContractId(secRule.getUuid().getValue()), contract.getId());
         assertNull(contract.getQuality());
         assertNull(contract.getTarget());
         assertOneClauseWithEicWithOneSubject(contract, secRule);
@@ -110,7 +110,7 @@ public final class PolicyAssert {
     }
 
     public static void assertContract(Contract contract, SecurityRule secRule) {
-        assertEquals(new ContractId(secRule.getId().getValue()), contract.getId());
+        assertEquals(new ContractId(secRule.getUuid().getValue()), contract.getId());
         assertNull(contract.getQuality());
         assertNull(contract.getTarget());
         assertOneClauseWithOneSubject(contract, secRule);

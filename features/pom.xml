@@ -158,11 +158,6 @@
       <version>${neutron.version}</version>
       <type>xml</type>
     </dependency>
-    <dependency>
-      <groupId>org.opendaylight.neutron</groupId>
-      <artifactId>dummyprovider</artifactId>
-      <version>${neutron.version}</version>
-    </dependency>
 
     <!-- Faas -->
     <dependency>

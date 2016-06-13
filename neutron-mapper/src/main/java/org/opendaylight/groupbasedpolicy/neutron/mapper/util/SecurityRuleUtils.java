@@ -33,7 +33,7 @@ public class SecurityRuleUtils {
             return Optional.absent();
         }
         for (SecurityRule secRule : securityRules.getSecurityRule()) {
-            if (secRule.getId().equals(uuid)) {
+            if (secRule.getUuid().equals(uuid)) {
                 return Optional.of(secRule);
             }
         }

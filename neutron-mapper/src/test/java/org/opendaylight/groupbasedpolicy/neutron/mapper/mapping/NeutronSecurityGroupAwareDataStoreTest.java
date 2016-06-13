@@ -107,7 +107,6 @@ public class NeutronSecurityGroupAwareDataStoreTest extends NeutronMapperDataBro
         SecurityGroup secGroupA = new SecurityGroupBuilder().setUuid(new Uuid(uuid))
             .setTenantId(new Uuid(tenantId))
             .setName("correctName")
-            .setDescription("correct description")
             .build();
         groupAware.onCreated(secGroupA, null);
 
@@ -121,7 +120,6 @@ public class NeutronSecurityGroupAwareDataStoreTest extends NeutronMapperDataBro
         SecurityGroup secGroupA = new SecurityGroupBuilder().setUuid(new Uuid(uuid))
             .setTenantId(new Uuid(tenantId))
             .setName("123")
-            .setDescription(longDescription)
             .build();
         groupAware.onCreated(secGroupA, null);
 
