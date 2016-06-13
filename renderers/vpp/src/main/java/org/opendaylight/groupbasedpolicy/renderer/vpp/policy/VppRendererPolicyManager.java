@@ -8,6 +8,13 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.policy;
 
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import javax.annotation.Nonnull;
 
 import org.opendaylight.controller.config.yang.config.vpp_provider.impl.VppRenderer;
@@ -16,56 +23,57 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.NodeOperEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.RendererPolicyConfEvent;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.NetworkContainment;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.Containment;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.containment.ForwardingContextContainment;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.containment.NetworkDomainContainment;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L2FloodDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicyBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.MapDifference;
+import com.google.common.collect.MapDifference.ValueDifference;
+import com.google.common.collect.Maps;
+import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Sets.SetView;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 
 public class VppRendererPolicyManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(VppRendererPolicyManager.class);
-    private final InterfaceManager ifaceManager;
     private final DataBroker dataProvider;
+    private ForwardingManager fwManager;
 
-    public VppRendererPolicyManager(@Nonnull InterfaceManager ifaceManager, @Nonnull DataBroker dataProvider) {
-        this.ifaceManager = Preconditions.checkNotNull(ifaceManager);
+    public VppRendererPolicyManager(@Nonnull ForwardingManager fwManager, @Nonnull DataBroker dataProvider) {
+        this.fwManager = Preconditions.checkNotNull(fwManager);
         this.dataProvider = Preconditions.checkNotNull(dataProvider);
     }
 
     @Subscribe
     public void rendererPolicyChanged(RendererPolicyConfEvent event) {
-        RendererPolicyBuilder responseBulder = new RendererPolicyBuilder();
+        RendererPolicyBuilder responseBuilder = new RendererPolicyBuilder();
         switch (event.getDtoModificationType()) {
             case CREATED:
-                responseBulder.setVersion(event.getAfter().get().getVersion());
+                LOG.trace("CREATED : {}", event);
+                responseBuilder.setVersion(event.getAfter().get().getVersion());
                 rendererPolicyCreated(event.getAfter().get());
                 break;
             case UPDATED:
+                LOG.trace("UPDATED: {}", event);
                 RendererPolicy rPolicyBefore = event.getBefore().get();
                 RendererPolicy rPolicyAfter = event.getAfter().get();
-                responseBulder.setVersion(rPolicyAfter.getVersion());
+                responseBuilder.setVersion(rPolicyAfter.getVersion());
                 if (!isConfigurationChanged(rPolicyBefore, rPolicyAfter)) {
                     LOG.debug("Configuration is not changed only updating config version from {} to {}",
                             rPolicyBefore.getVersion(), rPolicyAfter.getVersion());
@@ -75,12 +83,13 @@ public class VppRendererPolicyManager {
                 }
                 break;
             case DELETED:
-                responseBulder.setVersion(event.getBefore().get().getVersion());
+                LOG.trace("DELETED: {}", event);
+                responseBuilder.setVersion(event.getBefore().get().getVersion());
                 rendererPolicyDeleted(event.getBefore().get());
                 break;
         }
         WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
-        RendererPolicy response = responseBulder.build();
+        RendererPolicy response = responseBuilder.build();
         wTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.rendererIid(VppRenderer.NAME).child(RendererPolicy.class),
                 response, true);
         Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
@@ -107,130 +116,109 @@ public class VppRendererPolicyManager {
     private void rendererPolicyUpdated(RendererPolicy rPolicyBefore, RendererPolicy rPolicyAfter) {
         PolicyContext policyCtxBefore = new PolicyContext(rPolicyBefore);
         PolicyContext policyCtxAfter = new PolicyContext(rPolicyAfter);
+
+        MapDifference<String, Collection<NodeId>> vppNodesByL2FlDiff =
+                createDiffForVppNodesByL2Fd(policyCtxBefore, policyCtxAfter);
+        SetMultimap<String, NodeId> removedVppNodesByL2Fd = HashMultimap.create();
+        SetMultimap<String, NodeId> createdVppNodesByL2Fd = HashMultimap.create();
+        for (Entry<String, ValueDifference<Collection<NodeId>>> entry : vppNodesByL2FlDiff.entriesDiffering()
+            .entrySet()) {
+            String bridgeDomain = entry.getKey();
+            Collection<NodeId> beforeNodes = entry.getValue().leftValue();
+            Collection<NodeId> afterNodes = entry.getValue().rightValue();
+            if (beforeNodes != null && afterNodes != null) {
+                SetView<NodeId> removedNodes = Sets.difference(new HashSet<>(beforeNodes), new HashSet<>(afterNodes));
+                removedVppNodesByL2Fd.putAll(bridgeDomain, removedNodes);
+                SetView<NodeId> createdNodes = Sets.difference(new HashSet<>(afterNodes), new HashSet<>(beforeNodes));
+                createdVppNodesByL2Fd.putAll(bridgeDomain, createdNodes);
+            } else if (beforeNodes != null) {
+                removedVppNodesByL2Fd.putAll(bridgeDomain, beforeNodes);
+            } else if (afterNodes != null) {
+                createdVppNodesByL2Fd.putAll(bridgeDomain, afterNodes);
+            }
+        }
+        Map<String, Collection<NodeId>> removedL2Fds = vppNodesByL2FlDiff.entriesOnlyOnLeft();
+        for (Entry<String, Collection<NodeId>> entry : removedL2Fds.entrySet()) {
+            String bridgeDomain = entry.getKey();
+            Collection<NodeId> removedNodes = entry.getValue();
+            if (removedNodes != null) {
+                removedVppNodesByL2Fd.putAll(bridgeDomain, removedNodes);
+            }
+        }
+        Map<String, Collection<NodeId>> createdL2Fds = vppNodesByL2FlDiff.entriesOnlyOnRight();
+        for (Entry<String, Collection<NodeId>> entry : createdL2Fds.entrySet()) {
+            String bridgeDomain = entry.getKey();
+            Collection<NodeId> createdNodes = entry.getValue();
+            if (createdNodes != null) {
+                createdVppNodesByL2Fd.putAll(bridgeDomain, createdNodes);
+            }
+        }
+
         ImmutableSet<RendererEndpointKey> rendEpsBefore = policyCtxBefore.getPolicyTable().rowKeySet();
         ImmutableSet<RendererEndpointKey> rendEpsAfter = policyCtxAfter.getPolicyTable().rowKeySet();
 
         SetView<RendererEndpointKey> removedRendEps = Sets.difference(rendEpsBefore, rendEpsAfter);
-        removedRendEps.forEach(rEpKey -> rendererEndpointDeleted(rEpKey, policyCtxBefore));
+        removedRendEps.forEach(rEpKey -> fwManager.removeForwardingForEndpoint(rEpKey, policyCtxBefore));
+
+        fwManager.removeVxlanBridgeDomainsOnNodes(removedVppNodesByL2Fd);
+        fwManager.createVxlanBridgeDomainsOnNodes(createdVppNodesByL2Fd);
 
         SetView<RendererEndpointKey> createdRendEps = Sets.difference(rendEpsAfter, rendEpsBefore);
-        createdRendEps.forEach(rEpKey -> rendererEndpointCreated(rEpKey, policyCtxAfter));
+        createdRendEps.forEach(rEpKey -> fwManager.createForwardingForEndpoint(rEpKey, policyCtxAfter));
 
         SetView<RendererEndpointKey> updatedRendEps = Sets.intersection(rendEpsBefore, rendEpsAfter);
         // TODO think about all cases, but keep it simple for now
-        updatedRendEps.forEach(rEpKey -> rendererEndpointDeleted(rEpKey, policyCtxBefore));
-        updatedRendEps.forEach(rEpKey -> rendererEndpointCreated(rEpKey, policyCtxAfter));
+        updatedRendEps.forEach(rEpKey -> fwManager.removeForwardingForEndpoint(rEpKey, policyCtxBefore));
+        updatedRendEps.forEach(rEpKey -> fwManager.createForwardingForEndpoint(rEpKey, policyCtxAfter));
+    }
+
+    private static MapDifference<String, Collection<NodeId>> createDiffForVppNodesByL2Fd(PolicyContext policyCtxBefore,
+            PolicyContext policyCtxAfter) {
+        ImmutableSet<RendererEndpointKey> rendEpsBefore = policyCtxBefore.getPolicyTable().rowKeySet();
+        ImmutableSet<RendererEndpointKey> rendEpsAfter = policyCtxAfter.getPolicyTable().rowKeySet();
+        SetMultimap<String, NodeId> vppNodesByL2FdBefore = resolveVppNodesByL2Fd(rendEpsBefore, policyCtxBefore);
+        SetMultimap<String, NodeId> vppNodesByL2FdAfter = resolveVppNodesByL2Fd(rendEpsAfter, policyCtxBefore);
+        return Maps.difference(vppNodesByL2FdBefore.asMap(), vppNodesByL2FdAfter.asMap());
     }
 
     private void rendererPolicyCreated(RendererPolicy rPolicy) {
         PolicyContext policyCtx = new PolicyContext(rPolicy);
+        ImmutableSet<RendererEndpointKey> rEpKeys = policyCtx.getPolicyTable().rowKeySet();
 
-        // TODO create topology for each L2FloodDomain in RendererForwarding
+        SetMultimap<String, NodeId> vppNodesByL2Fd = resolveVppNodesByL2Fd(rEpKeys, policyCtx);
+        fwManager.createVxlanBridgeDomainsOnNodes(vppNodesByL2Fd);
 
-        policyCtx.getPolicyTable().rowKeySet().forEach(rEpKey -> rendererEndpointCreated(rEpKey, policyCtx));
-    }
-
-    private void rendererEndpointCreated(RendererEndpointKey rEpKey, PolicyContext policyCtx) {
-        AddressEndpointWithLocation rEp = policyCtx.getAddrEpByKey().get(KeyFactory.addressEndpointKey(rEpKey));
-        ExternalLocationCase rEpLoc = resolveAndValidateLocation(rEp);
-        if (Strings.isNullOrEmpty(rEpLoc.getExternalNodeConnector())) {
-            // TODO add it to the status for renderer manager
-            LOG.info("Rednerer endpoint does not have external-node-connector therefore it is ignored {}", rEp);
-            return;
-        }
-
-        // TODO add rEpLoc.getExternalNodeMountPoint() to VBD as node
-
-        if (Strings.isNullOrEmpty(rEpLoc.getExternalNode())) {
-            String l2FloodDomain = resolveL2FloodDomain(rEp.getNetworkContainment());
-            if (Strings.isNullOrEmpty(l2FloodDomain)) {
-                // TODO add it to the status for renderer manager
-                LOG.info("Rednerer endpoint does not have l2FloodDomain as network containment {}", rEp);
-                return;
-            }
-            ListenableFuture<Void> futureAddBridgeDomainToInterface =
-                    ifaceManager.addBridgeDomainToInterface(l2FloodDomain, rEp);
-            Futures.addCallback(futureAddBridgeDomainToInterface, new FutureCallback<Void>() {
-
-                @Override
-                public void onSuccess(Void result) {
-                    LOG.debug("Interface added to bridge-domain {} for endpoint {}", l2FloodDomain, rEp);
-                }
-
-                @Override
-                public void onFailure(Throwable t) {
-                    // TODO add it to the status for renderer manager
-                    LOG.warn("Interface was not added to bridge-domain {} for endpoint {}", l2FloodDomain, rEp, t);
-                }
-            });
-        }
+        rEpKeys.forEach(rEpKey -> fwManager.createForwardingForEndpoint(rEpKey, policyCtx));
     }
 
     private void rendererPolicyDeleted(RendererPolicy rendererPolicy) {
         PolicyContext policyCtx = new PolicyContext(rendererPolicy);
+        ImmutableSet<RendererEndpointKey> rEpKeys = policyCtx.getPolicyTable().rowKeySet();
 
-        // TODO delete topology for each L2FloodDomain in RendererForwarding
+        rEpKeys.forEach(rEpKey -> fwManager.removeForwardingForEndpoint(rEpKey, policyCtx));
 
-        policyCtx.getPolicyTable().rowKeySet().forEach(rEpKey -> rendererEndpointDeleted(rEpKey, policyCtx));
+        SetMultimap<String, NodeId> vppNodesByL2Fd = resolveVppNodesByL2Fd(rEpKeys, policyCtx);
+        fwManager.removeVxlanBridgeDomainsOnNodes(vppNodesByL2Fd);
     }
 
-    private void rendererEndpointDeleted(RendererEndpointKey rEpKey, PolicyContext policyCtx) {
-        AddressEndpointWithLocation rEp = policyCtx.getAddrEpByKey().get(KeyFactory.addressEndpointKey(rEpKey));
-        ExternalLocationCase rEpLoc = resolveAndValidateLocation(rEp);
-        if (Strings.isNullOrEmpty(rEpLoc.getExternalNodeConnector())) {
-            // nothing was created for endpoint therefore nothing is removed
-            return;
-        }
-
-        // TODO remove rEpLoc.getExternalNodeMountPoint() to VBD as node
-
-        if (!Strings.isNullOrEmpty(rEpLoc.getExternalNode())) {
-            ListenableFuture<Void> futureAddBridgeDomainToInterface = ifaceManager.deleteBridgeDomainFromInterface(rEp);
-            Futures.addCallback(futureAddBridgeDomainToInterface, new FutureCallback<Void>() {
-
-                @Override
-                public void onSuccess(Void result) {
-                    LOG.debug("bridge-domain was deleted from interface for endpoint {}", rEp);
-                }
-
-                @Override
-                public void onFailure(Throwable t) {
-                    // TODO add it to the status for renderer manager
-                    LOG.warn("bridge-domain was not deleted from interface for endpoint {}", rEp, t);
+    private static SetMultimap<String, NodeId> resolveVppNodesByL2Fd(Set<RendererEndpointKey> rEpKeys,
+            PolicyContext policyCtx) {
+        SetMultimap<String, NodeId> vppNodesByL2Fd = HashMultimap.create();
+        rEpKeys.stream()
+            .map(rEpKey -> KeyFactory.addressEndpointKey(rEpKey))
+            .map(addrEpKey -> policyCtx.getAddrEpByKey().get(addrEpKey))
+            .collect(Collectors.toSet())
+            .forEach(addrEpWithLoc -> {
+                Optional<String> optL2Fd =
+                        ForwardingManager.resolveL2FloodDomain(addrEpWithLoc.getNetworkContainment());
+                if (optL2Fd.isPresent()) {
+                    ExternalLocationCase rEpLoc = ForwardingManager.resolveAndValidateLocation(addrEpWithLoc);
+                    InstanceIdentifier<?> externalNodeMountPoint = rEpLoc.getExternalNodeMountPoint();
+                    NodeId vppNode = externalNodeMountPoint.firstKeyOf(Node.class).getNodeId();
+                    vppNodesByL2Fd.put(optL2Fd.get(), vppNode);
                 }
             });
-        }
-    }
-
-    private static String resolveL2FloodDomain(NetworkContainment netCont) {
-        if (netCont == null) {
-            return null;
-        }
-        Containment containment = netCont.getContainment();
-        if (containment instanceof ForwardingContextContainment) {
-            ForwardingContextContainment fwCtxCont = (ForwardingContextContainment) containment;
-            if (fwCtxCont.getContextType().isAssignableFrom(L2FloodDomain.class)) {
-                return fwCtxCont.getContextId() == null ? null : fwCtxCont.getContextId().getValue();
-            }
-        }
-        if (containment instanceof NetworkDomainContainment) {
-            // TODO address missing impl
-            LOG.info("Network domain containment in endpoint is not supported yet. {}", netCont);
-            return null;
-        }
-        return null;
-    }
-
-    private static ExternalLocationCase resolveAndValidateLocation(AddressEndpointWithLocation addrEpWithLoc) {
-        LocationType locationType = addrEpWithLoc.getAbsoluteLocation().getLocationType();
-        if (!(locationType instanceof ExternalLocationCase)) {
-            throw new IllegalStateException("Endpoint does not have external location " + addrEpWithLoc);
-        }
-        ExternalLocationCase result = (ExternalLocationCase) locationType;
-        if (result.getExternalNodeMountPoint() == null) {
-            throw new IllegalStateException("Endpoint does not have external-node-mount-point " + addrEpWithLoc);
-        }
-        return result;
+        return vppNodesByL2Fd;
     }
 
     @Subscribe

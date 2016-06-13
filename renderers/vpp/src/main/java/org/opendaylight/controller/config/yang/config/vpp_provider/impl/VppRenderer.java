@@ -23,7 +23,9 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.RendererPolicyListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppEndpointListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppNodeListener;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.manager.BridgeDomainManagerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.manager.VppNodeManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.ForwardingManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.VppRendererPolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.sf.AllowAction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.sf.EtherTypeClassifier;
@@ -107,14 +109,16 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
     public void onSessionInitiated(BindingAwareBroker.ProviderContext providerContext) {
         LOG.info("starting vpp renderer");
 
-        MountPointService mountService = Preconditions.checkNotNull(providerContext.getSALService(MountPointService.class));
+        MountPointService mountService =
+                Preconditions.checkNotNull(providerContext.getSALService(MountPointService.class));
         MountedDataBrokerProvider mountDataProvider = new MountedDataBrokerProvider(mountService);
         vppNodeManager = new VppNodeManager(dataBroker, providerContext);
 
         EventBus dtoEventBus = new EventBus("DTO events");
         interfaceManager = new InterfaceManager(mountDataProvider, dataBroker, NETCONF_WORKER);
         dtoEventBus.register(interfaceManager);
-        vppRendererPolicyManager = new VppRendererPolicyManager(interfaceManager, dataBroker);
+        ForwardingManager fwManager = new ForwardingManager(interfaceManager, new BridgeDomainManagerImpl(dataBroker));
+        vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, dataBroker);
         dtoEventBus.register(vppRendererPolicyManager);
 
         vppNodeListener = new VppNodeListener(dataBroker, vppNodeManager, dtoEventBus);
@@ -151,10 +155,10 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         });
     }
 
-
     private void unregisterFromRendererManager() {
         WriteTransaction writeTransaction = dataBroker.newWriteOnlyTransaction();
-        writeTransaction.delete(LogicalDatastoreType.OPERATIONAL, VppIidFactory.getRendererIID(new RendererKey(VppRenderer.NAME)));
+        writeTransaction.delete(LogicalDatastoreType.OPERATIONAL,
+                VppIidFactory.getRendererIID(new RendererKey(VppRenderer.NAME)));
 
         CheckedFuture<Void, TransactionCommitFailedException> future = writeTransaction.submit();
         Futures.addCallback(future, new FutureCallback<Void>() {
