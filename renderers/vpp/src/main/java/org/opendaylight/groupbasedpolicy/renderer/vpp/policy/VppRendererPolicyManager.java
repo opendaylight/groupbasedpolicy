@@ -143,6 +143,11 @@ public class VppRendererPolicyManager {
 
         if (Strings.isNullOrEmpty(rEpLoc.getExternalNode())) {
             String l2FloodDomain = resolveL2FloodDomain(rEp.getNetworkContainment());
+            if (Strings.isNullOrEmpty(l2FloodDomain)) {
+                // TODO add it to the status for renderer manager
+                LOG.info("Rednerer endpoint does not have l2FloodDomain as network containment {}", rEp);
+                return;
+            }
             ListenableFuture<Void> futureAddBridgeDomainToInterface =
                     ifaceManager.addBridgeDomainToInterface(l2FloodDomain, rEp);
             Futures.addCallback(futureAddBridgeDomainToInterface, new FutureCallback<Void>() {

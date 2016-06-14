@@ -27,6 +27,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_l
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.location.provider.ProviderAddressEndpointLocationKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocationKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -123,17 +124,19 @@ public class VppEndpointLocationProvider implements AutoCloseable {
         });
     }
 
-    private static ProviderAddressEndpointLocationKey createProviderAddressEndpointLocationKey(VppEndpoint vppEndpoint) {
+    private static ProviderAddressEndpointLocationKey createProviderAddressEndpointLocationKey(
+            VppEndpoint vppEndpoint) {
         return new ProviderAddressEndpointLocationKey(vppEndpoint.getAddress(), vppEndpoint.getAddressType(),
                 vppEndpoint.getContextId(), vppEndpoint.getContextType());
     }
 
     public void updateExternalNodeLocationForEndpoint(@Nullable String nodePath,
-            @Nonnull AddressEndpointWithLocationKey addrEpWithLocKey) {
+            InstanceIdentifier<?> externalNodeMountPoint, @Nonnull AddressEndpointWithLocationKey addrEpWithLocKey) {
         ProviderAddressEndpointLocationKey provAddrEpLocKey =
                 KeyFactory.providerAddressEndpointLocationKey(addrEpWithLocKey);
-        AbsoluteLocation absoluteLocation = new AbsoluteLocationBuilder()
-            .setLocationType(new ExternalLocationCaseBuilder().setExternalNode(nodePath).build()).build();
+        AbsoluteLocation absoluteLocation =
+                new AbsoluteLocationBuilder().setLocationType(new ExternalLocationCaseBuilder()
+                    .setExternalNodeMountPoint(externalNodeMountPoint).setExternalNode(nodePath).build()).build();
         ProviderAddressEndpointLocation providerAddressEndpointLocation = new ProviderAddressEndpointLocationBuilder()
             .setKey(provAddrEpLocKey).setAbsoluteLocation(absoluteLocation).build();
         WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();

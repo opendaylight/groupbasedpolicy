@@ -19,7 +19,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNodeKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
@@ -51,10 +50,15 @@ public class VppIidFactory {
             .build();
     }
 
-    public static InstanceIdentifier<Node> getNodeIid(NodeKey key) {
-        TopologyKey topologyKey = new TopologyKey(new TopologyId("topology-netconf"));
+    public static InstanceIdentifier<Node> getNodeIid(TopologyKey topologyKey, NodeKey nodeKey) {
         return InstanceIdentifier.builder(NetworkTopology.class)
-                .child(Topology.class,topologyKey)
-                .child(Node.class, key).build();
+            .child(Topology.class, topologyKey)
+            .child(Node.class, nodeKey)
+            .build();
+    }
+
+    public static InstanceIdentifier<Topology> getTopologyIid(TopologyKey bridgeDomainKey) {
+        return InstanceIdentifier.builder(NetworkTopology.class)
+                .child(Topology.class, bridgeDomainKey).build();
     }
 }
