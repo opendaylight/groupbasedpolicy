@@ -137,4 +137,10 @@ public class PolicyContext {
         return addrEpByKey;
     }
 
+    @Override
+    public String toString() {
+        return "PolicyContext [policy=" + policy + ", policyTable=" + policyTable + ", ruleGroupByKey=" + ruleGroupByKey
+                + ", addrEpByKey=" + addrEpByKey + "]";
+    }
+
 }

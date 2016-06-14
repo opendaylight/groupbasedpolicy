@@ -134,7 +134,7 @@ public abstract class DtoChangeEvent<T extends DataObject> {
 
     @Override
     public String toString() {
-        return "DtoChangeEvent [iid=" + iid + ", before=" + before + ", after=" + after + "]";
+        return getClass().getSimpleName() + " [iid=" + iid + ", before=" + before + ", after=" + after + "]";
     }
 
 }

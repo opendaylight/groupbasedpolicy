@@ -8,6 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.iface;
 
+import java.util.concurrent.ExecutorService;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -56,9 +58,11 @@ public class InterfaceManager implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(InterfaceManager.class);
     private final MountedDataBrokerProvider mountDataProvider;
     private final VppEndpointLocationProvider vppEndpointLocationProvider;
+    private final ExecutorService netconfWorker;
 
-    public InterfaceManager(@Nonnull MountedDataBrokerProvider mountDataProvider, @Nonnull DataBroker dataProvider) {
+    public InterfaceManager(@Nonnull MountedDataBrokerProvider mountDataProvider, @Nonnull DataBroker dataProvider, @Nonnull ExecutorService netconfWorker) {
         this.mountDataProvider = Preconditions.checkNotNull(mountDataProvider);
+        this.netconfWorker = Preconditions.checkNotNull(netconfWorker);
         this.vppEndpointLocationProvider = new VppEndpointLocationProvider(dataProvider);
     }
 
@@ -112,7 +116,7 @@ public class InterfaceManager implements AutoCloseable {
                 LOG.error("Create interface on VPP command was NOT successful:\nVPP: {}\nCommand: {}", vppNodeIid,
                         createIfaceWithoutBdCommand, t);
             }
-        });
+        }, netconfWorker);
     }
 
     private void vppEndpointDeleted(VppEndpoint vppEndpoint) {
@@ -149,7 +153,7 @@ public class InterfaceManager implements AutoCloseable {
                 LOG.error("Delete interface on VPP command was NOT successful:\nVPP: {}\nCommand: {}", vppNodeIid,
                         deleteIfaceWithoutBdCommand, t);
             }
-        });
+        }, netconfWorker);
     }
 
     @Subscribe
@@ -269,9 +273,9 @@ public class InterfaceManager implements AutoCloseable {
                                 epLoc.getExternalNodeMountPoint(), addrEpWithLoc.getKey());
                         return null;
                     }
-                });
+                }, netconfWorker);
             }
-        });
+        }, netconfWorker);
     }
 
     /**
@@ -340,9 +344,9 @@ public class InterfaceManager implements AutoCloseable {
                                 epLoc.getExternalNodeMountPoint(), addrEpWithLoc.getKey());
                         return null;
                     }
-                });
+                }, netconfWorker);
             }
-        });
+        }, netconfWorker);
     }
 
     private static ExternalLocationCase resolveAndValidateLocation(AddressEndpointWithLocation addrEpWithLoc) {

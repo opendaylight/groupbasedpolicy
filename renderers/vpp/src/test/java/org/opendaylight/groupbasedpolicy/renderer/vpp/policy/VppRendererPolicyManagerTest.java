@@ -90,6 +90,7 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.base.Optional;
+import com.google.common.util.concurrent.MoreExecutors;
 
 @RunWith(MockitoJUnitRunner.class)
 public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
@@ -163,7 +164,7 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         dataBroker = getDataBroker();
         Mockito.when(mountedDataProviderMock.getDataBrokerForMountPoint(Mockito.any(InstanceIdentifier.class)))
             .thenReturn(Optional.of(mountPointDataBroker));
-        ifaceManager = new InterfaceManager(mountedDataProviderMock, dataBroker);
+        ifaceManager = new InterfaceManager(mountedDataProviderMock, dataBroker, MoreExecutors.newDirectExecutorService());
         vppRendererPolicyManager = new VppRendererPolicyManager(ifaceManager, dataBroker);
     }
 
