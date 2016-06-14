@@ -42,8 +42,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 public class PolicyWriter {
 
@@ -95,7 +93,7 @@ public class PolicyWriter {
         serviceChains.add(serviceChain);
     }
 
-    public void commitToDatastore() {
+    public CheckedFuture<Void, TransactionCommitFailedException> commitToDatastore() {
         WriteTransaction wtx = mountpoint.newWriteOnlyTransaction();
         // GBP
         // Class maps
@@ -142,21 +140,10 @@ public class PolicyWriter {
             }
         }
 
-        CheckedFuture<Void, TransactionCommitFailedException> submitFuture = null;
-        try {
-            submitFuture = wtx.submit();
-            submitFuture.checkedGet(2, TimeUnit.SECONDS);
-            LOG.trace("configuration pushed to device: {}", submitFuture);
-        } catch (TransactionCommitFailedException e) {
-            LOG.error("Write transaction failed to {}", e.getMessage());
-        } catch (TimeoutException e) {
-            LOG.warn("Write transaction timed out: {}", submitFuture, e);
-        } catch (Exception e) {
-            LOG.error("Failed to .. {}", e.getMessage());
-        }
+        return wtx.submit();
     }
 
-    public void removeFromDatastore() {
+    public CheckedFuture<Void, TransactionCommitFailedException> removeFromDatastore() {
         ReadWriteTransaction wtx = mountpoint.newReadWriteTransaction();
         //GBP
         // Interface
@@ -202,17 +189,7 @@ public class PolicyWriter {
             LOG.info("Local forwarder removed from node {}", nodeId.getValue());
         }
 
-        CheckedFuture<Void, TransactionCommitFailedException> submitFuture = null;
-        try {
-            submitFuture = wtx.submit();
-            submitFuture.checkedGet(2, TimeUnit.SECONDS);
-        } catch (TransactionCommitFailedException e) {
-            LOG.error("Write transaction failed to {}", e.getMessage());
-        } catch (TimeoutException e) {
-            LOG.warn("Write transaction timed out: {}", submitFuture, e);
-        } catch (Exception e) {
-            LOG.error("Failed to .. {}", e.getMessage());
-        }
+        return wtx.submit();
     }
 
     private InstanceIdentifier<ClassMap> classMapInstanceIdentifier(ClassMap classMap) {

@@ -108,23 +108,42 @@ public class ServiceChainingUtil {
         final Action action = actionMap.get(PolicyManagerImpl.ActionCase.CHAIN);
         final ServiceFunctionPath servicePath = ServiceChainingUtil.getServicePath(action.getParameterValue());
         if (servicePath == null) {
+            //TODO: dump particular resolvedRule-rule-peerEP-EP combinantions to status
             return;
         }
         final TenantId tenantId = PolicyManagerUtil.getTenantId(peerEndpoint);
         if (tenantId == null) {
+            //TODO: dump particular resolvedRule-rule-peerEP-EP combinantions to status
             return;
         }
         final RenderedServicePath renderedPath = ServiceChainingUtil.createRenderedPath(servicePath, tenantId);
         // Create appropriate service path && remote forwarder
-        setSfcPart(renderedPath, policyWriter);
+        final boolean sfcPartSucessful = setSfcPart(renderedPath, policyWriter);
+        if (!sfcPartSucessful) {
+            //TODO: dump particular resolvedRule-rule-peerEP-EP combinantions to status
+            return;
+        }
 
-        entries.add(PolicyManagerUtil.createPolicyEntry(classMapName, renderedPath, PolicyManagerImpl.ActionCase.CHAIN));
-        if (servicePath.isSymmetric()) {
+        // atomic creation of symmetric policy-entries
+        final Class policyEntry = PolicyManagerUtil.createPolicyEntry(classMapName, renderedPath, PolicyManagerImpl.ActionCase.CHAIN);
+        if (!servicePath.isSymmetric()) {
+            entries.add(policyEntry);
+        } else {
             // symmetric path is in opposite direction. Roles of renderer and peer endpoint will invert
-            RenderedServicePath symmetricPath = ServiceChainingUtil
+            final RenderedServicePath symmetricPath = ServiceChainingUtil
                     .createSymmetricRenderedPath(servicePath, renderedPath, tenantId);
-            final String oppositeClassMapName = PolicyManagerUtil.generateClassMapName(destinationSgt.getValue(), sourceSgt.getValue());
-            entries.add(PolicyManagerUtil.createPolicyEntry(oppositeClassMapName, symmetricPath, PolicyManagerImpl.ActionCase.CHAIN));
+            if (symmetricPath == null) {
+                //TODO: dump particular resolvedRule-rule-peerEP-EP combinantions to status
+                return;
+            } else {
+                final String oppositeClassMapName = PolicyManagerUtil.generateClassMapName(destinationSgt.getValue(),
+                        sourceSgt.getValue());
+                final Class policyEntrySymmetric = PolicyManagerUtil.createPolicyEntry(oppositeClassMapName,
+                        symmetricPath, PolicyManagerImpl.ActionCase.CHAIN);
+
+                entries.add(policyEntry);
+                entries.add(policyEntrySymmetric);
+            }
         }
         policyWriter.cache(entries);
     }
@@ -226,19 +245,20 @@ public class ServiceChainingUtil {
         return null;
     }
 
-    private static void setSfcPart(final RenderedServicePath renderedServicePath, PolicyWriter policyWriter) {
+    private static boolean setSfcPart(final RenderedServicePath renderedServicePath, PolicyWriter policyWriter) {
+        // TODO: break into smaller methods with partial result
         if (renderedServicePath != null && renderedServicePath.getRenderedServicePathHop() != null &&
                 !renderedServicePath.getRenderedServicePathHop().isEmpty()) {
             final RenderedServicePathHop firstHop = renderedServicePath.getRenderedServicePathHop().get(0);
             if (firstHop == null) {
                 LOG.error("Rendered service path {} does not contain any hop", renderedServicePath.getName().getValue());
-                return;
+                return false;
             }
             final SffName sffName = firstHop.getServiceFunctionForwarder();
             final ServiceFunctionForwarder serviceFunctionForwarder = SfcProviderServiceForwarderAPI.readServiceFunctionForwarder(sffName);
             if (serviceFunctionForwarder == null) {
                 LOG.error("Sff with name {} does not exist", sffName.getValue());
-                return;
+                return false;
             }
             // Forwarders
             //
@@ -265,7 +285,7 @@ public class ServiceChainingUtil {
                     || serviceFunctionForwarder.getIpMgmtAddress().getIpv4Address() == null) {
                 LOG.error("Cannot create remote forwarder, SFF {} does not contain management ip address",
                         sffName.getValue());
-                return;
+                return false;
             }
             final String sffMgmtIpAddress = serviceFunctionForwarder.getIpMgmtAddress().getIpv4Address().getValue();
             // If local SFF has the same ip as first hop sff, it's the same SFF; no need to create a remote one
@@ -295,6 +315,9 @@ public class ServiceChainingUtil {
             chainBuilder.setServicePath(servicePaths);
             final ServiceChain serviceChain = chainBuilder.build();
             policyWriter.cache(serviceChain);
+            return true;
+        } else {
+            return false;
         }
     }
 

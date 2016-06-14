@@ -9,6 +9,7 @@ import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ren
 import static org.powermock.api.support.membermodification.MemberMatcher.method;
 import static org.powermock.api.support.membermodification.MemberModifier.stub;
 
+import com.google.common.util.concurrent.Futures;
 import java.util.Collections;
 import java.util.List;
 
@@ -123,6 +124,7 @@ public class PolicyManagerImplTest {
         nodeManager = mock(NodeManager.class);
         policyManager = new PolicyManagerImpl(mountpoint, nodeManager);
         when(mountpoint.newWriteOnlyTransaction()).thenReturn(writeTransaction);
+        when(writeTransaction.submit()).thenReturn(Futures.immediateCheckedFuture((Void) null));
     }
 
     @Test

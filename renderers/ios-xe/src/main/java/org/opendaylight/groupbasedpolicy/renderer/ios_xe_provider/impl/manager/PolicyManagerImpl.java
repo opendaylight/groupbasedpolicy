@@ -11,13 +11,21 @@ package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager;
 import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Create;
 import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Delete;
 
+import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.AsyncFunction;
+import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import javax.annotation.Nullable;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.manager.PolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriter;
@@ -36,10 +44,6 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-
 public class PolicyManagerImpl implements PolicyManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(PolicyManagerImpl.class);
@@ -55,18 +59,36 @@ public class PolicyManagerImpl implements PolicyManager {
 
     @Override
     public ListenableFuture<Boolean> syncPolicy(final Configuration dataAfter, final Configuration dataBefore,
-            long version) {
-        ListenableFuture<Boolean> result = Futures.immediateFuture(false);
+                                                final long version) {
+        final ListenableFuture<Boolean> result;
         if (dataBefore == null && dataAfter != null) {
             result = syncPolicy(dataAfter, Create);
-        } else if (dataBefore != null && dataAfter != null) {
-            // TODO implement
-            return Futures.immediateFuture(false);
-        } else if (dataBefore != null) {
+        } else if (dataBefore != null && dataAfter == null) {
             result = syncPolicy(dataBefore, Delete);
+        } else {
+            // TODO implement
+            result = Futures.immediateFuture(false);
         }
+
         reportVersion(version);
-        return result;
+
+        // chain version update (TODO: status)
+        return Futures.transform(result, new AsyncFunction<Boolean, Boolean>() {
+            @Override
+            public ListenableFuture<Boolean> apply(final Boolean input) throws Exception {
+                if (input != null && input) {
+                    return Futures.transform(reportVersion(version), new Function<Void, Boolean>() {
+                        @Nullable
+                        @Override
+                        public Boolean apply(@Nullable final Void input) {
+                            return Boolean.TRUE;
+                        }
+                    });
+                } else {
+                    return Futures.immediateFuture(input);
+                }
+            }
+        });
     }
 
     private ListenableFuture<Boolean> syncPolicy(final Configuration dataAfter, DsAction action) {
@@ -79,16 +101,20 @@ public class PolicyManagerImpl implements PolicyManager {
         for (RendererEndpoint rendererEndpoint : dataAfter.getRendererEndpoints().getRendererEndpoint()) {
             if (dataAfter.getEndpoints() == null || dataAfter.getEndpoints().getAddressEndpointWithLocation() == null) {
                 LOG.debug("renderer-endpoint: missing address-endpoint-with-location");
+                //TODO: dump all resolvedRule-rule-peerEP-EP combinantions to status
                 continue;
             }
+
             final List<AddressEndpointWithLocation> endpointsWithLocation = dataAfter.getEndpoints()
                     .getAddressEndpointWithLocation();
             final InstanceIdentifier mountpointIid = PolicyManagerUtil.getAbsoluteLocationMountpoint(rendererEndpoint, endpointsWithLocation);
             final DataBroker mountpoint = nodeManager.getNodeMountPoint(mountpointIid);
             if (mountpoint == null) {
                 LOG.debug("no data-broker for mount-point [{}] available", mountpointIid);
+                //TODO: dump all resolvedRule-rule-peerEP-EP combinantions to status
                 continue;
             }
+
             // Find policy writer
             PolicyWriter policyWriter = policyWriterPerDeviceCache.get(mountpoint);
             if (policyWriter == null) {
@@ -99,6 +125,7 @@ public class PolicyManagerImpl implements PolicyManager {
                 if (interfaceName == null || managementIpAddress == null) {
                     LOG.debug("can not create policyWriter: interface={}, managementIpAddress={}",
                             interfaceName, managementIpAddress);
+                    //TODO: dump all resolvedRule-rule-peerEP-EP combinantions to status
                     continue;
                 }
                 policyWriter = new PolicyWriter(mountpoint, interfaceName, managementIpAddress, policyMapName, nodeId);
@@ -114,28 +141,43 @@ public class PolicyManagerImpl implements PolicyManager {
                 if (sourceSgt == null || destinationSgt == null) {
                     LOG.debug("endpoint-policy: missing sgt value(sourceSgt={}, destinationSgt={})",
                             sourceSgt, destinationSgt);
+                    //TODO: dump particular resolvedRule-rule-peerEP-EP combinantions to status
                     continue;
                 }
                 PolicyManagerUtil.syncPolicyEntities(sourceSgt, destinationSgt, policyWriter, dataAfter, peerEndpoint);
             }
         }
+
+        //TODO: return real (cumulated) future
+        final List<CheckedFuture<Void, TransactionCommitFailedException>> allFutureResults = new ArrayList<>();
         if (action.equals(Create)) {
-            policyWriterPerDeviceCache.values().forEach(PolicyWriter::commitToDatastore);
-            return Futures.immediateFuture(true);
+            policyWriterPerDeviceCache.values().forEach(pw -> allFutureResults.add(pw.commitToDatastore()));
         } else if (action.equals(Delete)) {
-            policyWriterPerDeviceCache.values().forEach(PolicyWriter::removeFromDatastore);
-            return Futures.immediateFuture(true);
+            policyWriterPerDeviceCache.values().forEach(pw -> allFutureResults.add(pw.removeFromDatastore()));
+        } else {
+            LOG.info("unsupported policy manage action: {}", action);
+
         }
-        return Futures.immediateFuture(false);
+
+        final ListenableFuture<List<Void>> cumulativeResult = Futures.allAsList(allFutureResults);
+
+        return Futures.transform(cumulativeResult, new Function<List<Void>, Boolean>() {
+            @Nullable
+            @Override
+            public Boolean apply(@Nullable final List<Void> input) {
+                LOG.trace("considering all submits as successful - otherwise there will be exception");
+                return Boolean.TRUE;
+            }
+        });
     }
 
-    private void reportVersion(long version) {
+    private CheckedFuture<Void, TransactionCommitFailedException> reportVersion(long version) {
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
         InstanceIdentifier<RendererPolicy> iid = InstanceIdentifier.create(Renderers.class)
                 .child(Renderer.class, new RendererKey(NodeManager.iosXeRenderer))
                 .child(RendererPolicy.class);
         wtx.merge(LogicalDatastoreType.OPERATIONAL, iid, new RendererPolicyBuilder().setVersion(version).build());
-        wtx.submit();
+        return wtx.submit();
     }
 
     @Override
