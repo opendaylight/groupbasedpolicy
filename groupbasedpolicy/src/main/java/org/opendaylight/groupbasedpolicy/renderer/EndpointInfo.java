@@ -99,4 +99,40 @@ public class EndpointInfo {
         return containmentEpsByEpg.get(epg);
     }
 
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((addressEpByKey == null) ? 0 : addressEpByKey.hashCode());
+        result = prime * result + ((containmentEpByKey == null) ? 0 : containmentEpByKey.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        EndpointInfo other = (EndpointInfo) obj;
+        if (addressEpByKey == null) {
+            if (other.addressEpByKey != null)
+                return false;
+        } else if (!DtoEquivalenceUtils.equalsAddressEpByKey(addressEpByKey, other.addressEpByKey))
+            return false;
+        if (containmentEpByKey == null) {
+            if (other.containmentEpByKey != null)
+                return false;
+        } else if (!DtoEquivalenceUtils.equalsContainmentEpByKey(containmentEpByKey, other.containmentEpByKey))
+            return false;
+        return true;
+    }
+
+    @Override
+    public String toString() {
+        return "EndpointInfo [addressEpByKey=" + addressEpByKey + ", containmentEpByKey=" + containmentEpByKey + "]";
+    }
+
 }
