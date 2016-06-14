@@ -182,6 +182,7 @@ md-dialog-content > div:first-child {
     color: rgb(33, 150, 243);
 }
 
+<<<<<<< HEAD
 .layout-padding-r10 {
     padding-right: 10px;
 }
@@ -202,7 +203,7 @@ md-dialog-content > div:first-child {
 .status-circle.require-contract {
     color: orange;
 }
-
+=======
 md-ink-bar {
     background: red !important;
 }
@@ -222,11 +223,4 @@ md-tab-item.md-tab.ng-scope.ng-isolate-scope.md-ink-ripple.md-active > span {
 div.md-primary.md-subheader > div > span > span {
     color: rgb(33,150,243);
 }
-
-li > md-autocomplete-parent-scope > span {
-    color: rgba(0,0,0,.54);
-}
-
-md-content > div.md-secondary.md-subheader > div > span > span {
-    color: rgb(33,150,243) !important;
-}
+>>>>>>> c391bea... Endpoints
