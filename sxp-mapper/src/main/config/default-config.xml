@@ -25,6 +25,12 @@
                         <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-rpc-registry</type>
                         <name>binding-rpc-broker</name>
                     </rpc-registry>
+                    <domain-specific-registry>
+                        <type xmlns:gbp="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">
+                            gbp:domain-specific-registry
+                        </type>
+                        <name>domain-specific-registry</name>
+                    </domain-specific-registry>
                 </module>
             </modules>
         </data>

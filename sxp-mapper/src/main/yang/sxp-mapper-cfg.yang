@@ -13,6 +13,7 @@ module sxp-mapper-cfg {
 
     import config { prefix config; revision-date 2013-04-05; }
     import opendaylight-md-sal-binding { prefix mdsal; revision-date 2013-10-28; }
+    import groupbasedpolicy-cfg {prefix gbpcfg; revision-date 2015-11-06; }
 
     description
         "This module contains the base YANG definitions for
@@ -51,6 +52,15 @@ module sxp-mapper-cfg {
                     refine type {
                         mandatory true;
                         config:required-identity mdsal:binding-rpc-registry;
+                    }
+                }
+            }
+            //Domain specific registry
+            container domain-specific-registry {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity gbpcfg:domain-specific-registry;
                     }
                 }
             }

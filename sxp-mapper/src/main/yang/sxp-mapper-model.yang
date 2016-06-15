@@ -15,6 +15,9 @@ module sxp-mapper-model {
     import gbp-common { prefix gbp-common; revision-date 2014-04-21; }
     import ietf-inet-types { prefix inet; revision-date 2010-09-24; }
     import forwarding { prefix forwarding; revision-date 2016-04-27; }
+    import base-endpoint { prefix base-edpoint; revision-date 2016-04-27; }
+    import yang-ext { prefix ext; revision-date 2013-07-09; }
+    import renderer { prefix renderer; revision-date 2015-11-03; }
 
     description
         "This module contains the YANG definitions for
@@ -76,5 +79,28 @@ module sxp-mapper-model {
                 uses forwarding:network-domain-key;
             }
         }
+    }
+
+    grouping sxp-sgt {
+        description "SGT leaf dedicated for endpoint-rpc, endpoint container and renderer configuration
+            (attach by augmentation)";
+        leaf sgt {
+            type sxp-database:sgt;
+        }
+    }
+
+    augment "/base-endpoint:register-endpoint/base-endpoint:input/base-endpoint:address-endpoint-reg" {
+        ext:augment-identifier "address-endpoint-reg-aug";
+        uses sxp-sgt;
+    }
+
+    augment "/base-endpoint:endpoints/base-endpoint:address-endpoints/base-endpoint:address-endpoint" {
+        ext:augment-identifier "address-endpoint-aug";
+        uses sxp-sgt;
+    }
+
+    augment "renderer:renderers/renderer:renderer/renderer:renderer-policy/renderer:configuration/renderer:endpoints/renderer:address-endpoint-with-location" {
+        ext:augment-identifier "address-endpoint-with-location-aug";
+        uses sxp-sgt;
     }
 }

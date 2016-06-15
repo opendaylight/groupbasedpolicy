@@ -10,6 +10,8 @@ package org.opendaylight.groupbasedpolicy.sxp.mapper.impl;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
+import org.opendaylight.groupbasedpolicy.api.DomainSpecificRegistry;
+import org.opendaylight.groupbasedpolicy.api.EndpointAugmentor;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.DSAsyncDao;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.EPTemplateListener;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SimpleCachedDao;
@@ -38,17 +40,17 @@ public class SxpMapperProviderImpl implements AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(SxpMapperProviderImpl.class);
 
-    private final DataBroker dataBrokerDependency;
-    private final RpcProviderRegistry rpcRegistryDependency;
     private final MasterDatabaseBindingListenerImpl sxpDatabaseListener;
     private final SxpMapperReactor sxpMapperReactor;
     private final EPTemplateListener epPolicyTemplateListener;
     private final EPTemplateListener epForwardingTemplateListener;
+    private final DomainSpecificRegistry domainSpecificRegistry;
+    private final EndpointAugmentor sxpEndpointAugmentor;
 
-    public SxpMapperProviderImpl(final DataBroker dataBroker, final RpcProviderRegistry rpcRegistryDependency) {
+    public SxpMapperProviderImpl(final DataBroker dataBroker, final RpcProviderRegistry rpcRegistryDependency,
+            final DomainSpecificRegistry domainSpecificRegistry) {
         LOG.info("starting SxmMapper ..");
-        this.dataBrokerDependency = dataBroker;
-        this.rpcRegistryDependency = rpcRegistryDependency;
+        this.domainSpecificRegistry = domainSpecificRegistry;
 
         final BaseEndpointService endpointService = rpcRegistryDependency.getRpcService(BaseEndpointService.class);
         sxpMapperReactor = new SxpMapperReactorImpl(endpointService, dataBroker);
@@ -69,6 +71,8 @@ public class SxpMapperProviderImpl implements AutoCloseable {
                 masterDBBindingDao, epForwardingTemplateDao);
         epForwardingTemplateListener = new EPForwardingTemplateListenerImpl(dataBroker, sxpMapperReactor, epForwardingTemplateCachedDao,
                 masterDBBindingDao, epPolicyTemplateDao);
+        sxpEndpointAugmentor = new SxpEndpointAugmentorImpl();
+        domainSpecificRegistry.getEndpointAugmentorRegistry().register(sxpEndpointAugmentor);
         LOG.info("started SxmMapper");
     }
 
@@ -78,5 +82,6 @@ public class SxpMapperProviderImpl implements AutoCloseable {
         sxpDatabaseListener.close();
         epPolicyTemplateListener.close();
         epForwardingTemplateListener.close();
+        domainSpecificRegistry.getEndpointAugmentorRegistry().unregister(sxpEndpointAugmentor);
     }
 }

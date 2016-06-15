@@ -30,6 +30,7 @@ public class SxpMapperProviderModule extends org.opendaylight.controller.config.
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        return new SxpMapperProviderImpl(getDataBrokerDependency(), getRpcRegistryDependency());
+        return new SxpMapperProviderImpl(getDataBrokerDependency(), getRpcRegistryDependency(),
+                getDomainSpecificRegistryDependency());
     }
 }
