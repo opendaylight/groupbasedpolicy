@@ -117,7 +117,7 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         EventBus dtoEventBus = new EventBus("DTO events");
         interfaceManager = new InterfaceManager(mountDataProvider, dataBroker, NETCONF_WORKER);
         dtoEventBus.register(interfaceManager);
-        ForwardingManager fwManager = new ForwardingManager(interfaceManager, new BridgeDomainManagerImpl(dataBroker));
+        ForwardingManager fwManager = new ForwardingManager(interfaceManager, new BridgeDomainManagerImpl(dataBroker), dataBroker);
         vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, dataBroker);
         dtoEventBus.register(vppRendererPolicyManager);
 

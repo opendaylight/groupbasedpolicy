@@ -19,12 +19,21 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.BridgeDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.BridgeDomainKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.bridge.domain.PhysicalLocationRef;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.VlanId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VxlanVni;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyTypesVbridgeAugment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyTypesVbridgeAugmentBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyVbridgeAugment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyVbridgeAugmentBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.topology.types.VbridgeTopologyBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vlan.rev160429.NodeVbridgeVlanAugment;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vlan.rev160429.NodeVbridgeVlanAugmentBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vlan.rev160429.TunnelTypeVlan;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vlan.rev160429.network.topology.topology.tunnel.parameters.VlanNetworkParametersBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev160429.TunnelTypeVxlan;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev160429.network.topology.topology.tunnel.parameters.VxlanTunnelParametersBuilder;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
@@ -38,6 +47,7 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.TopologyTypes;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.TopologyTypesBuilder;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.node.attributes.SupportingNodeBuilder;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -60,12 +70,71 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
     }
 
     @Override
-    public ListenableFuture<Void> createVxlanBridgeDomainOnVppNode(@Nonnull String bridgeDomainName,
-            @Nonnull VxlanVni vni, NodeId vppNode) {
+    public ListenableFuture<Void> createVxlanBridgeDomainOnVppNode(@Nonnull String bridgeDomainName, VxlanVni vni,
+            @Nonnull NodeId vppNodeId) {
+        TopologyVbridgeAugment topoAug = new TopologyVbridgeAugmentBuilder().setTunnelType(TunnelTypeVxlan.class)
+            .setArpTermination(false)
+            .setFlood(true)
+            .setForward(true)
+            .setLearn(true)
+            .setUnknownUnicastFlood(true)
+            .setTunnelParameters(new VxlanTunnelParametersBuilder().setVni(vni).build())
+            .build();
+        return createBridgeDomainOnVppNode(bridgeDomainName, topoAug, createBasicVppNodeBuilder(vppNodeId).build());
+    }
+
+    @Override
+    public ListenableFuture<Void> createVlanBridgeDomainOnVppNode(@Nonnull String bridgeDomainName,
+            @Nonnull VlanId vlanId, @Nonnull NodeId vppNodeId) {
+        TopologyVbridgeAugment topoAug = new TopologyVbridgeAugmentBuilder().setTunnelType(TunnelTypeVlan.class)
+            .setArpTermination(false)
+            .setFlood(true)
+            .setForward(true)
+            .setLearn(true)
+            .setUnknownUnicastFlood(true)
+            .setTunnelParameters(new VlanNetworkParametersBuilder().setVlanId(vlanId).build())
+            .build();
+        InstanceIdentifier<BridgeDomain> bridgeDomainConfigIid = InstanceIdentifier.builder(Config.class)
+            .child(BridgeDomain.class, new BridgeDomainKey(bridgeDomainName))
+            .build();
+        ReadOnlyTransaction rTx = dataProvder.newReadOnlyTransaction();
+        CheckedFuture<Optional<BridgeDomain>, ReadFailedException> futureTopology = rTx.read(
+                LogicalDatastoreType.CONFIGURATION, bridgeDomainConfigIid);
+        rTx.close();
+        return Futures.transform(futureTopology, new AsyncFunction<Optional<BridgeDomain>, Void>() {
+
+            @Override
+            public ListenableFuture<Void> apply(Optional<BridgeDomain> optBridgeDomainConf) throws Exception {
+                if (optBridgeDomainConf.isPresent() && optBridgeDomainConf.get().getPhysicalLocationRef() != null) {
+                    for (PhysicalLocationRef ref : optBridgeDomainConf.get().getPhysicalLocationRef()) {
+                        if (ref.getInterface() != null && ref.getInterface().size() > 0) {
+                            NodeVbridgeVlanAugment vppNodeVlanAug = new NodeVbridgeVlanAugmentBuilder().setSuperInterface(
+                                    ref.getInterface().get(0)).build();
+                            Node vppNode = createBasicVppNodeBuilder(vppNodeId).addAugmentation(vppNodeVlanAug.getClass(),
+                                    vppNodeVlanAug).build();
+                            return createBridgeDomainOnVppNode(bridgeDomainName, topoAug, vppNode);
+                        }
+                    }
+                }
+                return Futures.immediateFailedFuture(new Throwable("Failed to apply config for VLAN bridge domain "
+                        + bridgeDomainName));
+            }
+        });
+    }
+
+    private NodeBuilder createBasicVppNodeBuilder(NodeId nodeId) {
+        return new NodeBuilder().setNodeId(nodeId).setSupportingNode(
+                Arrays.asList(new SupportingNodeBuilder().setTopologyRef(SUPPORTING_TOPOLOGY_NETCONF)
+                    .setNodeRef(nodeId)
+                    .build()));
+    }
+
+    private ListenableFuture<Void> createBridgeDomainOnVppNode(@Nonnull String bridgeDomainName,
+            final TopologyVbridgeAugment vBridgeAug, Node vppNode) {
         TopologyKey topologyKey = new TopologyKey(new TopologyId(bridgeDomainName));
         ReadOnlyTransaction rTx = dataProvder.newReadOnlyTransaction();
-        CheckedFuture<Optional<Topology>, ReadFailedException> futureTopology =
-                rTx.read(LogicalDatastoreType.CONFIGURATION, VppIidFactory.getTopologyIid(topologyKey));
+        CheckedFuture<Optional<Topology>, ReadFailedException> futureTopology = rTx.read(
+                LogicalDatastoreType.CONFIGURATION, VppIidFactory.getTopologyIid(topologyKey));
         rTx.close();
         return Futures.transform(futureTopology, new AsyncFunction<Optional<Topology>, Void>() {
 
@@ -73,29 +142,15 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
             public ListenableFuture<Void> apply(Optional<Topology> optTopology) throws Exception {
                 WriteTransaction wTx = dataProvder.newWriteOnlyTransaction();
                 if (!optTopology.isPresent()) {
-                    TopologyVbridgeAugment vbridgeAugment =
-                            new TopologyVbridgeAugmentBuilder().setTunnelType(TunnelTypeVxlan.class)
-                                .setArpTermination(false)
-                                .setFlood(true)
-                                .setForward(true)
-                                .setLearn(true)
-                                .setUnknownUnicastFlood(true)
-                                .setTunnelParameters(new VxlanTunnelParametersBuilder().setVni(vni).build())
-                                .build();
                     Topology topology = new TopologyBuilder().setKey(topologyKey)
                         .setTopologyTypes(VBRIDGE_TOPOLOGY_TYPE)
-                        .addAugmentation(TopologyVbridgeAugment.class, vbridgeAugment)
+                        .addAugmentation(TopologyVbridgeAugment.class, vBridgeAug)
                         .build();
-
                     wTx.put(LogicalDatastoreType.CONFIGURATION, VppIidFactory.getTopologyIid(topology.getKey()),
                             topology, true);
                 }
-                Node node = new NodeBuilder().setNodeId(vppNode)
-                    .setSupportingNode(Arrays.asList(new SupportingNodeBuilder()
-                        .setTopologyRef(SUPPORTING_TOPOLOGY_NETCONF).setNodeRef(vppNode).build()))
-                    .build();
-                wTx.put(LogicalDatastoreType.CONFIGURATION, VppIidFactory.getNodeIid(topologyKey, node.getKey()),
-                        node);
+                wTx.put(LogicalDatastoreType.CONFIGURATION, VppIidFactory.getNodeIid(topologyKey, vppNode.getKey()),
+                        vppNode);
                 return wTx.submit();
             }
         });

@@ -174,7 +174,7 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
             .thenReturn(Optional.of(mountPointDataBroker));
         ifaceManager = new InterfaceManager(mountedDataProviderMock, dataBroker, MoreExecutors.newDirectExecutorService());
         bdManager = new BridgeDomainManagerImpl(mountPointDataBroker);
-        fwManager = new ForwardingManager(ifaceManager, bdManager);
+        fwManager = new ForwardingManager(ifaceManager, bdManager, dataBroker);
         vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, dataBroker);
     }
 

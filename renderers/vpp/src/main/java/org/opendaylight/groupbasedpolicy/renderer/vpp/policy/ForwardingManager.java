@@ -14,9 +14,14 @@ import java.util.concurrent.ExecutionException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
+import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.manager.BridgeDomainManagerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
+import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.NetworkContainment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.Containment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.containment.ForwardingContextContainment;
@@ -26,7 +31,14 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L2FloodDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.VlanNetwork;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.BridgeDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.BridgeDomainKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.VlanId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VxlanVni;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,26 +53,56 @@ public class ForwardingManager {
 
     private final InterfaceManager ifaceManager;
     private final BridgeDomainManager bdManager;
-
-    public ForwardingManager(@Nonnull InterfaceManager ifaceManager, @Nonnull BridgeDomainManager bdManager) {
+    private final DataBroker dataBroker;
+    public ForwardingManager(@Nonnull InterfaceManager ifaceManager, @Nonnull BridgeDomainManager bdManager, @Nonnull DataBroker dataBroker) {
         this.ifaceManager = Preconditions.checkNotNull(ifaceManager);
         this.bdManager = Preconditions.checkNotNull(bdManager);
+        this.dataBroker = Preconditions.checkNotNull(dataBroker);
     }
 
-    public void createVxlanBridgeDomainsOnNodes(SetMultimap<String, NodeId> vppNodesByBridgeDomain) {
+    public Optional<BridgeDomain> readBridgeDomainConfig(String name) {
+        InstanceIdentifier<BridgeDomain> bdIid = InstanceIdentifier.builder(Config.class)
+            .child(BridgeDomain.class, new BridgeDomainKey(name))
+            .build();
+        ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
+        return DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, bdIid, rTx);
+    }
+
+    public void createBridgeDomainOnNodes(SetMultimap<String, NodeId> vppNodesByBridgeDomain) {
         for (String bd : vppNodesByBridgeDomain.keySet()) {
+            Optional<BridgeDomain> bdConfig = readBridgeDomainConfig(bd);
             Set<NodeId> vppNodes = vppNodesByBridgeDomain.get(bd);
-            for (NodeId vppNode : vppNodes) {
-                try {
-                    bdManager.createVxlanBridgeDomainOnVppNode(bd, null, vppNode).get();
-                } catch (InterruptedException | ExecutionException e) {
-                    LOG.warn("Bridge domain {} was not created on node {}", bd, vppNode.getValue(), e);
+            if (bdConfig.isPresent()) {
+                if (bdConfig.get().getType().equals(VlanNetwork.class)) {
+                    createVlanBridgeDomains(bd, bdConfig.get().getVlan(), vppNodes);
                 }
+            } else {
+                createVxlanBridgeDomains(bd, null, vppNodes);
             }
         }
     }
 
-    public void removeVxlanBridgeDomainsOnNodes(SetMultimap<String, NodeId> vppNodesByBridgeDomain) {
+    private void createVxlanBridgeDomains(String bd, VxlanVni vni, Set<NodeId> vppNodes) {
+        for (NodeId vppNode : vppNodes) {
+            try {
+                bdManager.createVxlanBridgeDomainOnVppNode(bd, vni, vppNode).get();
+            } catch (InterruptedException | ExecutionException e) {
+                LOG.warn("Bridge domain {} was not created on node {}", bd, vppNode.getValue(), e);
+            }
+        }
+    }
+
+    private void createVlanBridgeDomains(String bd, VlanId vlanId, Set<NodeId> vppNodes) {
+        for (NodeId vppNode : vppNodes) {
+            try {
+                bdManager.createVlanBridgeDomainOnVppNode(bd, vlanId, vppNode).get();
+            } catch (InterruptedException | ExecutionException e) {
+                LOG.warn("Bridge domain {} was not created on node {}", bd, vppNode.getValue(), e);
+            }
+        }
+    }
+
+    public void removeBridgeDomainOnNodes(SetMultimap<String, NodeId> vppNodesByBridgeDomain) {
         for (String bd : vppNodesByBridgeDomain.keySet()) {
             Set<NodeId> vppNodes = vppNodesByBridgeDomain.get(bd);
             for (NodeId vppNode : vppNodes) {
