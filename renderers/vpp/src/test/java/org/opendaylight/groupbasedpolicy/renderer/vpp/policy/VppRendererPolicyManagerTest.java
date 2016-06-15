@@ -22,11 +22,13 @@ import org.opendaylight.controller.config.yang.config.vpp_provider.impl.VppRende
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.RendererPolicyConfEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.VppEndpointConfEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.VppEndpointLocationProvider;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.VppPathMapper;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.manager.BridgeDomainManagerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.groupbasedpolicy.test.CustomDataBrokerTest;
@@ -77,9 +79,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_render
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.VhostUserCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VppInterfaceAugmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VxlanVni;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.l2.base.attributes.Interconnection;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.l2.base.attributes.interconnection.BridgeBased;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.vpp.BridgeDomains;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyVbridgeAugment;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev160429.TunnelTypeVxlan;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
@@ -90,6 +95,7 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.base.Optional;
+import com.google.common.util.concurrent.MoreExecutors;
 
 @RunWith(MockitoJUnitRunner.class)
 public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
@@ -146,13 +152,16 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
     private DataBroker mountPointDataBroker;
     private DataBroker dataBroker;
 
+    private BridgeDomainManager bdManager;
     private InterfaceManager ifaceManager;
+    private ForwardingManager fwManager;
     private VppRendererPolicyManager vppRendererPolicyManager;
 
     @Override
     public Collection<Class<?>> getClassesFromModules() {
         return Arrays.asList(Node.class, VppEndpoint.class, Interfaces.class, BridgeDomains.class,
-                LocationProviders.class, L2FloodDomain.class);
+                LocationProviders.class, L2FloodDomain.class, VxlanVni.class, TopologyVbridgeAugment.class,
+                TunnelTypeVxlan.class);
     }
 
     @Before
@@ -163,8 +172,10 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         dataBroker = getDataBroker();
         Mockito.when(mountedDataProviderMock.getDataBrokerForMountPoint(Mockito.any(InstanceIdentifier.class)))
             .thenReturn(Optional.of(mountPointDataBroker));
-        ifaceManager = new InterfaceManager(mountedDataProviderMock, dataBroker);
-        vppRendererPolicyManager = new VppRendererPolicyManager(ifaceManager, dataBroker);
+        ifaceManager = new InterfaceManager(mountedDataProviderMock, dataBroker, MoreExecutors.newDirectExecutorService());
+        bdManager = new BridgeDomainManagerImpl(mountPointDataBroker);
+        fwManager = new ForwardingManager(ifaceManager, bdManager);
+        vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, dataBroker);
     }
 
     @Test

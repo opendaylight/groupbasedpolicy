@@ -56,7 +56,7 @@ public class VppEndpointLocationProvider implements AutoCloseable {
 
             @Override
             public void onSuccess(Void result) {
-                LOG.trace("{} was created", VPP_ENDPOINT_LOCATION_PROVIDER.getValue());
+                LOG.debug("{} was created", VPP_ENDPOINT_LOCATION_PROVIDER.getValue());
             }
 
             @Override
@@ -79,7 +79,7 @@ public class VppEndpointLocationProvider implements AutoCloseable {
 
             @Override
             public void onSuccess(Void result) {
-                LOG.trace("{} provides location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(),
+                LOG.debug("{} provides location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(),
                         providerAddressEndpointLocation);
             }
 
@@ -113,7 +113,7 @@ public class VppEndpointLocationProvider implements AutoCloseable {
 
             @Override
             public void onSuccess(Void result) {
-                LOG.trace("{} removes location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(), provAddrEpLocKey);
+                LOG.debug("{} removes location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(), provAddrEpLocKey);
             }
 
             @Override
@@ -149,7 +149,7 @@ public class VppEndpointLocationProvider implements AutoCloseable {
 
             @Override
             public void onSuccess(Void result) {
-                LOG.trace("{} merges location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(),
+                LOG.debug("{} merges location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(),
                         providerAddressEndpointLocation);
             }
 

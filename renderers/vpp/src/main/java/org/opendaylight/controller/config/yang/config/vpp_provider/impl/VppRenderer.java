@@ -9,6 +9,8 @@
 package org.opendaylight.controller.config.yang.config.vpp_provider.impl;
 
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
@@ -21,7 +23,9 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.RendererPolicyListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppEndpointListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppNodeListener;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.manager.BridgeDomainManagerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.manager.VppNodeManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.ForwardingManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.VppRendererPolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.sf.AllowAction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.sf.EtherTypeClassifier;
@@ -46,12 +50,18 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 public class VppRenderer implements AutoCloseable, BindingAwareProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(VppRenderer.class);
 
     public static final RendererName NAME = new RendererName("vpp-renderer");
+    /**
+     * Should be used for processing netconf responses so we do not consume netty thread.
+     */
+    private static final ExecutorService NETCONF_WORKER = Executors.newSingleThreadExecutor(
+            new ThreadFactoryBuilder().setNameFormat("netconf-processing-worker-%d").setDaemon(true).build());
 
     private final List<SupportedActionDefinition> actionDefinitions =
             ImmutableList.of(new SupportedActionDefinitionBuilder().setActionDefinitionId(new AllowAction().getId())
@@ -99,14 +109,16 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
     public void onSessionInitiated(BindingAwareBroker.ProviderContext providerContext) {
         LOG.info("starting vpp renderer");
 
-        MountPointService mountService = Preconditions.checkNotNull(providerContext.getSALService(MountPointService.class));
+        MountPointService mountService =
+                Preconditions.checkNotNull(providerContext.getSALService(MountPointService.class));
         MountedDataBrokerProvider mountDataProvider = new MountedDataBrokerProvider(mountService);
         vppNodeManager = new VppNodeManager(dataBroker, providerContext);
 
         EventBus dtoEventBus = new EventBus("DTO events");
-        interfaceManager = new InterfaceManager(mountDataProvider, dataBroker);
+        interfaceManager = new InterfaceManager(mountDataProvider, dataBroker, NETCONF_WORKER);
         dtoEventBus.register(interfaceManager);
-        vppRendererPolicyManager = new VppRendererPolicyManager(interfaceManager, dataBroker);
+        ForwardingManager fwManager = new ForwardingManager(interfaceManager, new BridgeDomainManagerImpl(dataBroker));
+        vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, dataBroker);
         dtoEventBus.register(vppRendererPolicyManager);
 
         vppNodeListener = new VppNodeListener(dataBroker, vppNodeManager, dtoEventBus);
@@ -143,10 +155,10 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         });
     }
 
-
     private void unregisterFromRendererManager() {
         WriteTransaction writeTransaction = dataBroker.newWriteOnlyTransaction();
-        writeTransaction.delete(LogicalDatastoreType.OPERATIONAL, VppIidFactory.getRendererIID(new RendererKey(VppRenderer.NAME)));
+        writeTransaction.delete(LogicalDatastoreType.OPERATIONAL,
+                VppIidFactory.getRendererIID(new RendererKey(VppRenderer.NAME)));
 
         CheckedFuture<Void, TransactionCommitFailedException> future = writeTransaction.submit();
         Futures.addCallback(future, new FutureCallback<Void>() {

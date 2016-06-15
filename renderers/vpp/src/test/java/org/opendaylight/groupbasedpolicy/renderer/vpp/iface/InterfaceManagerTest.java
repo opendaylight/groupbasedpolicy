@@ -55,6 +55,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
+import com.google.common.util.concurrent.MoreExecutors;
 
 public class InterfaceManagerTest extends CustomDataBrokerTest {
 
@@ -92,7 +93,7 @@ public class InterfaceManagerTest extends CustomDataBrokerTest {
         dataBroker = getDataBroker();
         Mockito.when(mountedDataProviderMock.getDataBrokerForMountPoint(Mockito.any(InstanceIdentifier.class)))
             .thenReturn(Optional.of(mountPointDataBroker));
-        manager = new InterfaceManager(mountedDataProviderMock, dataBroker);
+        manager = new InterfaceManager(mountedDataProviderMock, dataBroker, MoreExecutors.newDirectExecutorService());
     }
 
     @Test
