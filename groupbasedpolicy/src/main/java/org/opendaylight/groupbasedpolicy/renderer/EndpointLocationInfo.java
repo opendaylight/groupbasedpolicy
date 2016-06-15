@@ -34,41 +34,42 @@ import com.google.common.collect.ImmutableSet;
 public class EndpointLocationInfo {
 
     private final ImmutableMultimap<InstanceIdentifier<?>, AddressEndpointLocation> endpointsByAbsNodeLocation;
-    private final ImmutableMap<AddressEndpointKey, AddressEndpointLocation> adrEpLocByAdrEpKey;
-    private final ImmutableMap<ContainmentEndpointKey, ContainmentEndpointLocation> contEpLocBycontEpKey;
+    private final ImmutableMap<AddressEndpointKey, AddressEndpointLocation> addrEpLocByAddrEpKey;
+    private final ImmutableMap<ContainmentEndpointKey, ContainmentEndpointLocation> contEpLocByContEpKey;
 
     public EndpointLocationInfo(EndpointLocations epLocations) {
         List<AddressEndpointLocation> addressEndpointLocations = epLocations.getAddressEndpointLocation();
-        endpointsByAbsNodeLocation = EndpointLocationUtils.resolveEndpointsByAbsoluteNodeLocation(addressEndpointLocations);
+        endpointsByAbsNodeLocation =
+                EndpointLocationUtils.resolveEndpointsByAbsoluteNodeLocation(addressEndpointLocations);
         if (addressEndpointLocations == null) {
-            adrEpLocByAdrEpKey = ImmutableMap.of();
+            addrEpLocByAddrEpKey = ImmutableMap.of();
         } else {
             com.google.common.collect.ImmutableMap.Builder<AddressEndpointKey, AddressEndpointLocation> adrEpLocByAdrEpKeyBuilder =
                     ImmutableMap.builder();
             for (AddressEndpointLocation adrEpLoc : addressEndpointLocations) {
                 adrEpLocByAdrEpKeyBuilder.put(toAdrEpKey(adrEpLoc.getKey()), adrEpLoc);
             }
-            adrEpLocByAdrEpKey = adrEpLocByAdrEpKeyBuilder.build();
+            addrEpLocByAddrEpKey = adrEpLocByAdrEpKeyBuilder.build();
         }
         List<ContainmentEndpointLocation> containmentEndpointLocations = epLocations.getContainmentEndpointLocation();
         if (containmentEndpointLocations == null) {
-            contEpLocBycontEpKey = ImmutableMap.of();
+            contEpLocByContEpKey = ImmutableMap.of();
         } else {
             com.google.common.collect.ImmutableMap.Builder<ContainmentEndpointKey, ContainmentEndpointLocation> contEpLocBycontEpKeyBuilder =
                     ImmutableMap.builder();
             for (ContainmentEndpointLocation contEpLoc : containmentEndpointLocations) {
                 contEpLocBycontEpKeyBuilder.put(toContEpKey(contEpLoc.getKey()), contEpLoc);
             }
-            contEpLocBycontEpKey = contEpLocBycontEpKeyBuilder.build();
+            contEpLocByContEpKey = contEpLocBycontEpKeyBuilder.build();
         }
     }
 
     public Optional<AddressEndpointLocation> getAdressEndpointLocation(AddressEndpointKey epKey) {
-        return Optional.fromNullable(adrEpLocByAdrEpKey.get(epKey));
+        return Optional.fromNullable(addrEpLocByAddrEpKey.get(epKey));
     }
 
     public Optional<ContainmentEndpointLocation> getContainmentEndpointLocation(ContainmentEndpointKey contEpKey) {
-        return Optional.fromNullable(contEpLocBycontEpKey.get(contEpKey));
+        return Optional.fromNullable(contEpLocByContEpKey.get(contEpKey));
     }
 
     private AddressEndpointKey toAdrEpKey(AddressEndpointLocationKey adrEpLocKey) {
@@ -84,21 +85,22 @@ public class EndpointLocationInfo {
         return endpointsByAbsNodeLocation.keySet();
     }
 
-    public ImmutableSet<AddressEndpointKey> getAddressEpsWithAbsoluteNodeLocation(InstanceIdentifier<?> realNodeLocation) {
+    public ImmutableSet<AddressEndpointKey> getAddressEpsWithAbsoluteNodeLocation(
+            InstanceIdentifier<?> realNodeLocation) {
         return FluentIterable.from(endpointsByAbsNodeLocation.get(realNodeLocation))
-                .transform(new Function<AddressEndpointLocation, AddressEndpointKey>() {
+            .transform(new Function<AddressEndpointLocation, AddressEndpointKey>() {
 
-                    @Override
-                    public AddressEndpointKey apply(AddressEndpointLocation epLoc) {
-                        return new AddressEndpointKey(epLoc.getAddress(),
-                                epLoc.getAddressType(), epLoc.getContextId(), epLoc.getContextType());
-                    }
-                })
-                .toSet();
+                @Override
+                public AddressEndpointKey apply(AddressEndpointLocation epLoc) {
+                    return new AddressEndpointKey(epLoc.getAddress(), epLoc.getAddressType(), epLoc.getContextId(),
+                            epLoc.getContextType());
+                }
+            })
+            .toSet();
     }
 
-    public boolean hasRealLocation(AddressEndpointKey adrEpKey) {
-        AddressEndpointLocation adrEpLoc = adrEpLocByAdrEpKey.get(adrEpKey);
+    public boolean hasAbsoluteLocation(AddressEndpointKey adrEpKey) {
+        AddressEndpointLocation adrEpLoc = addrEpLocByAddrEpKey.get(adrEpKey);
         if (adrEpLoc == null) {
             return false;
         }
@@ -114,7 +116,7 @@ public class EndpointLocationInfo {
     }
 
     public boolean hasRelativeLocation(AddressEndpointKey adrEpKey) {
-        AddressEndpointLocation adrEpLoc = adrEpLocByAdrEpKey.get(adrEpKey);
+        AddressEndpointLocation adrEpLoc = addrEpLocByAddrEpKey.get(adrEpKey);
         if (adrEpLoc == null) {
             return false;
         }
@@ -130,7 +132,7 @@ public class EndpointLocationInfo {
     }
 
     public boolean hasRelativeLocation(ContainmentEndpointKey contEpKey) {
-        ContainmentEndpointLocation contEpLoc = contEpLocBycontEpKey.get(contEpKey);
+        ContainmentEndpointLocation contEpLoc = contEpLocByContEpKey.get(contEpKey);
         if (contEpLoc == null) {
             return false;
         }
@@ -143,6 +145,43 @@ public class EndpointLocationInfo {
             return false;
         }
         return true;
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((addrEpLocByAddrEpKey == null) ? 0 : addrEpLocByAddrEpKey.hashCode());
+        result = prime * result + ((contEpLocByContEpKey == null) ? 0 : contEpLocByContEpKey.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        EndpointLocationInfo other = (EndpointLocationInfo) obj;
+        if (addrEpLocByAddrEpKey == null) {
+            if (other.addrEpLocByAddrEpKey != null)
+                return false;
+        } else if (!DtoEquivalenceUtils.equalsAddrEpLocByAddrEpKey(addrEpLocByAddrEpKey, other.addrEpLocByAddrEpKey))
+            return false;
+        if (contEpLocByContEpKey == null) {
+            if (other.contEpLocByContEpKey != null)
+                return false;
+        } else if (!DtoEquivalenceUtils.equalsContEpLocByContEpKey(contEpLocByContEpKey, other.contEpLocByContEpKey))
+            return false;
+        return true;
+    }
+
+    @Override
+    public String toString() {
+        return "EndpointLocationInfo [adrEpLocByAdrEpKey=" + addrEpLocByAddrEpKey + ", contEpLocBycontEpKey="
+                + contEpLocByContEpKey + "]";
     }
 
 }

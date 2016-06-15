@@ -88,12 +88,8 @@ public class RendererManager implements AutoCloseable {
     private final NetworkDomainAugmentorRegistryImpl netDomainAugmentorRegistry;
     private final EndpointAugmentorRegistryImpl epAugmentorRegistry;
     private final Set<RendererName> processingRenderers = new HashSet<>();
-    private Map<InstanceIdentifier<?>, RendererName> rendererByNode = new HashMap<>();
-    private ResolvedPolicyInfo policyInfo;
-    private EndpointInfo epInfo;
-    private EndpointLocationInfo epLocInfo;
-    private Forwarding forwarding;
-    private boolean changesWaitingToProcess = false;
+    private InputState currentState = new InputState();
+    private InputState configuredState;
     private boolean currentVersionHasConfig = false;
 
     private final EndpointsListener endpointsListener;
@@ -101,6 +97,90 @@ public class RendererManager implements AutoCloseable {
     private final ResolvedPoliciesListener resolvedPoliciesListener;
     private final ForwardingListener forwardingListener;
     private final RenderersListener renderersListener;
+
+    private static final class InputState {
+
+        private ResolvedPolicyInfo policyInfo;
+        private EndpointInfo epInfo;
+        private EndpointLocationInfo epLocInfo;
+        private Forwarding forwarding;
+        private Map<InstanceIdentifier<?>, RendererName> rendererByNode = new HashMap<>();
+
+        private boolean isValid() {
+            if (rendererByNode.isEmpty() || policyInfo == null || epInfo == null || epLocInfo == null
+                    || forwarding == null) {
+                return false;
+            }
+            return true;
+        }
+
+        private InputState createCopy() {
+            InputState copy = new InputState();
+            copy.policyInfo = this.policyInfo;
+            copy.epInfo = this.epInfo;
+            copy.epLocInfo = this.epLocInfo;
+            copy.forwarding = this.forwarding;
+            copy.rendererByNode = ImmutableMap.copyOf(rendererByNode);
+            return copy;
+        }
+
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + ((epInfo == null) ? 0 : epInfo.hashCode());
+            result = prime * result + ((epLocInfo == null) ? 0 : epLocInfo.hashCode());
+            result = prime * result + ((forwarding == null) ? 0 : forwarding.hashCode());
+            result = prime * result + ((policyInfo == null) ? 0 : policyInfo.hashCode());
+            result = prime * result + ((rendererByNode == null) ? 0 : rendererByNode.hashCode());
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            InputState other = (InputState) obj;
+            if (epInfo == null) {
+                if (other.epInfo != null)
+                    return false;
+            } else if (!epInfo.equals(other.epInfo))
+                return false;
+            if (epLocInfo == null) {
+                if (other.epLocInfo != null)
+                    return false;
+            } else if (!epLocInfo.equals(other.epLocInfo))
+                return false;
+            if (forwarding == null) {
+                if (other.forwarding != null)
+                    return false;
+            } else if (!DtoEquivalenceUtils.equalsForwarding(forwarding, other.forwarding))
+                return false;
+            if (policyInfo == null) {
+                if (other.policyInfo != null)
+                    return false;
+            } else if (!policyInfo.equals(other.policyInfo))
+                return false;
+            if (rendererByNode == null) {
+                if (other.rendererByNode != null)
+                    return false;
+            } else if (!rendererByNode.equals(other.rendererByNode))
+                return false;
+            return true;
+        }
+
+        @Override
+        public String toString() {
+            return "InputState [policyInfo=" + policyInfo + ", epInfo=" + epInfo + ", epLocInfo=" + epLocInfo
+                    + ", forwarding=" + forwarding + ", rendererByNode=" + rendererByNode + ", isValid()=" + isValid()
+                    + "]";
+        }
+
+    }
 
     public RendererManager(DataBroker dataProvider, NetworkDomainAugmentorRegistryImpl netDomainAugmentorRegistry,
             EndpointAugmentorRegistryImpl epAugmentorRegistry) {
@@ -115,41 +195,33 @@ public class RendererManager implements AutoCloseable {
     }
 
     public synchronized void endpointsUpdated(final Endpoints endpoints) {
-        epInfo = new EndpointInfo(endpoints);
-        changesWaitingToProcess = true;
+        currentState.epInfo = new EndpointInfo(endpoints);
         processState();
     }
 
     public synchronized void endpointLocationsUpdated(final EndpointLocations epLocations) {
-        epLocInfo = new EndpointLocationInfo(epLocations);
-        changesWaitingToProcess = true;
+        currentState.epLocInfo = new EndpointLocationInfo(epLocations);
         processState();
     }
 
     public synchronized void resolvedPoliciesUpdated(final ResolvedPolicies resolvedPolicies) {
-        policyInfo = new ResolvedPolicyInfo(resolvedPolicies);
-        changesWaitingToProcess = true;
+        currentState.policyInfo = new ResolvedPolicyInfo(resolvedPolicies);
         processState();
     }
 
     public synchronized void forwardingUpdated(final Forwarding forwarding) {
-        this.forwarding = forwarding;
-        changesWaitingToProcess = true;
+        currentState.forwarding = forwarding;
         processState();
     }
 
     public synchronized void renderersUpdated(final Renderers renderersCont) {
         ImmutableMultimap<InstanceIdentifier<?>, RendererName> renderersByNode =
                 RendererUtils.resolveRenderersByNodes(renderersCont.getRenderer());
-        Map<InstanceIdentifier<?>, RendererName> oldRendererByNode = rendererByNode;
-        rendererByNode = new HashMap<>();
+        currentState.rendererByNode = new HashMap<>();
         for (InstanceIdentifier<?> nodePath : renderersByNode.keySet()) {
             ImmutableCollection<RendererName> renderers = renderersByNode.get(nodePath);
             // only first renderer is used
-            rendererByNode.put(nodePath, renderers.asList().get(0));
-        }
-        if (!rendererByNode.equals(oldRendererByNode)) {
-            changesWaitingToProcess = true;
+            currentState.rendererByNode.put(nodePath, renderers.asList().get(0));
         }
         if (!processingRenderers.isEmpty()) {
             LOG.debug("Waiting for renderers. Version {} needs to be processed by renderers: {}", version,
@@ -182,14 +254,13 @@ public class RendererManager implements AutoCloseable {
                     processingRenderers);
             return;
         }
-        if (rendererByNode.values().isEmpty()) {
+        if (currentState.equals(configuredState)) {
+            LOG.trace("Nothing was changed in config for renderers {}", currentState);
             return;
         }
-        if (!changesWaitingToProcess) {
-            return;
-        }
-        Map<RendererName, RendererConfigurationBuilder> rendererConfigBuilderByRendererName = createRendererConfigBuilders();
-        Set<RendererName> rendererNames = new HashSet<>(rendererByNode.values());
+        Map<RendererName, RendererConfigurationBuilder> rendererConfigBuilderByRendererName =
+                createRendererConfigBuilders();
+        Set<RendererName> rendererNames = new HashSet<>(currentState.rendererByNode.values());
         boolean newVersionHasConfig = false;
         Map<RendererName, Optional<Configuration>> configsByRendererName = new HashMap<>();
         for (RendererName rendererName : rendererNames) {
@@ -209,13 +280,12 @@ public class RendererManager implements AutoCloseable {
                     processingRenderers.remove(rendererName);
                 }
                 version--;
-                changesWaitingToProcess = true;
                 return;
             } else {
                 currentVersionHasConfig = newVersionHasConfig;
+                configuredState = currentState.createCopy();
             }
         }
-        changesWaitingToProcess = false;
     }
 
     private boolean writeRenderersConfigs(Map<RendererName, Optional<Configuration>> configsByRendererName) {
@@ -248,12 +318,12 @@ public class RendererManager implements AutoCloseable {
      * @return
      */
     private Map<RendererName, RendererConfigurationBuilder> createRendererConfigBuilders() {
-        if (!isStateValid()) {
+        if (!currentState.isValid()) {
             return Collections.emptyMap();
         }
         Map<RendererName, RendererConfigurationBuilder> rendererConfigBuilderByRendererName = new HashMap<>();
-        for (InstanceIdentifier<?> absEpLocation : epLocInfo.getAllAbsoluteNodeLocations()) {
-            RendererName rendererName = rendererByNode.get(absEpLocation);
+        for (InstanceIdentifier<?> absEpLocation : currentState.epLocInfo.getAllAbsoluteNodeLocations()) {
+            RendererName rendererName = currentState.rendererByNode.get(absEpLocation);
             if (rendererName == null) {
                 LOG.trace("Renderer does not exist for EP with location: {}", absEpLocation);
                 continue;
@@ -263,8 +333,9 @@ public class RendererManager implements AutoCloseable {
                 rendererConfigBuilder = new RendererConfigurationBuilder();
                 rendererConfigBuilderByRendererName.put(rendererName, rendererConfigBuilder);
             }
-            for (AddressEndpointKey rendererAdrEpKey : epLocInfo.getAddressEpsWithAbsoluteNodeLocation(absEpLocation)) {
-                Optional<AddressEndpoint> potentialAddressEp = epInfo.getEndpoint(rendererAdrEpKey);
+            for (AddressEndpointKey rendererAdrEpKey : currentState.epLocInfo
+                .getAddressEpsWithAbsoluteNodeLocation(absEpLocation)) {
+                Optional<AddressEndpoint> potentialAddressEp = currentState.epInfo.getEndpoint(rendererAdrEpKey);
                 if (!potentialAddressEp.isPresent()) {
                     LOG.trace("Endpoint does not exist but has location: {}", rendererAdrEpKey);
                     continue;
@@ -274,14 +345,6 @@ public class RendererManager implements AutoCloseable {
             }
         }
         return rendererConfigBuilderByRendererName;
-    }
-
-    private boolean isStateValid() {
-        if (rendererByNode.isEmpty() || policyInfo == null || epInfo == null || epLocInfo == null
-                || forwarding == null) {
-            return false;
-        }
-        return true;
     }
 
     private Optional<Configuration> createConfiguration(@Nullable RendererConfigurationBuilder rendererPolicyBuilder) {
@@ -296,13 +359,14 @@ public class RendererManager implements AutoCloseable {
         configBuilder.setRendererEndpoints(rendererEndpoints);
 
         org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.Endpoints endpoints =
-                rendererPolicyBuilder.buildEndoints(epInfo, epLocInfo, rendererByNode, epAugmentorRegistry.getEndpointAugmentors());
+                rendererPolicyBuilder.buildEndoints(currentState.epInfo, currentState.epLocInfo,
+                        currentState.rendererByNode, epAugmentorRegistry.getEndpointAugmentors());
         configBuilder.setEndpoints(endpoints);
 
-        RuleGroups ruleGroups = rendererPolicyBuilder.buildRuluGroups(policyInfo);
+        RuleGroups ruleGroups = rendererPolicyBuilder.buildRuluGroups(currentState.policyInfo);
         configBuilder.setRuleGroups(ruleGroups);
 
-        RendererForwarding rendererForwarding = rendererPolicyBuilder.buildRendererForwarding(forwarding,
+        RendererForwarding rendererForwarding = rendererPolicyBuilder.buildRendererForwarding(currentState.forwarding,
                 netDomainAugmentorRegistry.getNetworkDomainAugmentors());
         configBuilder.setRendererForwarding(rendererForwarding);
 
@@ -323,25 +387,29 @@ public class RendererManager implements AutoCloseable {
         Set<EpgKeyDto> rendererEpgs = toEpgKeys(rendererAdrEp.getEndpointGroup(), rendererAdrEp.getTenant());
         RendererEndpointKey rendererEpKey = AddressEndpointUtils.toRendererEpKey(rendererAdrEp.getKey());
         for (EpgKeyDto rendererEpg : rendererEpgs) {
-            ImmutableSet<ConsEpgKey> consPeerEpgs = policyInfo.findConsumerPeers(rendererEpg);
+            ImmutableSet<ConsEpgKey> consPeerEpgs = currentState.policyInfo.findConsumerPeers(rendererEpg);
             for (ConsEpgKey consPeerEpg : consPeerEpgs) {
-                Optional<ResolvedPolicy> potentialPolicy = policyInfo.findPolicy(consPeerEpg, rendererEpg);
+                Optional<ResolvedPolicy> potentialPolicy = currentState.policyInfo.findPolicy(consPeerEpg, rendererEpg);
                 ResolvedPolicy policy = potentialPolicy.get();
-                ImmutableSet<AddressEndpointKey> consPeerAdrEps = epInfo.findAddressEpsWithEpg(consPeerEpg);
+                ImmutableSet<AddressEndpointKey> consPeerAdrEps =
+                        currentState.epInfo.findAddressEpsWithEpg(consPeerEpg);
                 resolveRendererPolicyBetweenEpAndPeers(rendererEpKey, consPeerAdrEps, policy,
                         EndpointPolicyParticipation.PROVIDER, rendererPolicyBuilder);
-                ImmutableSet<ContainmentEndpointKey> consPeerContEps = epInfo.findContainmentEpsWithEpg(consPeerEpg);
+                ImmutableSet<ContainmentEndpointKey> consPeerContEps =
+                        currentState.epInfo.findContainmentEpsWithEpg(consPeerEpg);
                 resolveRendererPolicyBetweenEpAndContPeers(rendererEpKey, consPeerContEps, policy,
                         EndpointPolicyParticipation.PROVIDER, rendererPolicyBuilder);
             }
-            ImmutableSet<ProvEpgKey> provPeerEpgs = policyInfo.findProviderPeers(rendererEpg);
+            ImmutableSet<ProvEpgKey> provPeerEpgs = currentState.policyInfo.findProviderPeers(rendererEpg);
             for (ProvEpgKey provPeerEpg : provPeerEpgs) {
-                Optional<ResolvedPolicy> potentialPolicy = policyInfo.findPolicy(rendererEpg, provPeerEpg);
+                Optional<ResolvedPolicy> potentialPolicy = currentState.policyInfo.findPolicy(rendererEpg, provPeerEpg);
                 ResolvedPolicy policy = potentialPolicy.get();
-                ImmutableSet<AddressEndpointKey> provPeerAdrEps = epInfo.findAddressEpsWithEpg(provPeerEpg);
+                ImmutableSet<AddressEndpointKey> provPeerAdrEps =
+                        currentState.epInfo.findAddressEpsWithEpg(provPeerEpg);
                 resolveRendererPolicyBetweenEpAndPeers(rendererEpKey, provPeerAdrEps, policy,
                         EndpointPolicyParticipation.CONSUMER, rendererPolicyBuilder);
-                ImmutableSet<ContainmentEndpointKey> provPeerContEps = epInfo.findContainmentEpsWithEpg(provPeerEpg);
+                ImmutableSet<ContainmentEndpointKey> provPeerContEps =
+                        currentState.epInfo.findContainmentEpsWithEpg(provPeerEpg);
                 resolveRendererPolicyBetweenEpAndContPeers(rendererEpKey, provPeerContEps, policy,
                         EndpointPolicyParticipation.CONSUMER, rendererPolicyBuilder);
             }
@@ -359,7 +427,7 @@ public class RendererManager implements AutoCloseable {
         for (ContainmentEndpointKey peerContEpKey : peerContEps) {
             ExternalImplicitGroup eig = policy.getExternalImplicitGroup();
             if (eig != null) { // peers are in EIG
-                if (!epLocInfo.hasRelativeLocation(peerContEpKey)) {
+                if (!currentState.epLocInfo.hasRelativeLocation(peerContEpKey)) {
                     LOG.debug("EIG Containment Peer does not have relative location therefore it is ignored: {}",
                             peerContEpKey);
                     continue;
@@ -395,7 +463,7 @@ public class RendererManager implements AutoCloseable {
             }
             ExternalImplicitGroup eig = policy.getExternalImplicitGroup();
             if (eig != null) {
-                if (!epLocInfo.hasRelativeLocation(peerAdrEpKey)) {
+                if (!currentState.epLocInfo.hasRelativeLocation(peerAdrEpKey)) {
                     LOG.debug("EIG Peer does not have relative location therefore it is ignored: {}", peerAdrEpKey);
                     continue;
                 }
@@ -409,8 +477,8 @@ public class RendererManager implements AutoCloseable {
                     }
                 }
             } else {
-                if (!epLocInfo.hasRealLocation(peerAdrEpKey)) {
-                    LOG.debug("Peer does not have real location therefore it is ignored: {}", peerAdrEpKey);
+                if (!currentState.epLocInfo.hasAbsoluteLocation(peerAdrEpKey)) {
+                    LOG.debug("Peer does not have absolute location therefore it is ignored: {}", peerAdrEpKey);
                     continue;
                 }
                 PeerEndpointKey peerEpKey = AddressEndpointUtils.toPeerEpKey(peerAdrEpKey);
