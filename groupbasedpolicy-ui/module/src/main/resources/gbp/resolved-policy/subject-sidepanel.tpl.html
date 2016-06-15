@@ -1,23 +1,29 @@
-<md-content>
-	breadcrumb
-	<md-divider></md-divider>
-	<md-subheader class="md-primary">Subject info</md-subheader>
+<md-content flex>
 	<div layout="row" class="layout-padding-lr15 layout-row">
-	    <span flex="50" class="flex-50"><strong>Subject name</strong></span>
-	    <span flex="" class="ng-binding flex">{{sidePanelObject.name}}</span>
+		<ul class="breadcrumbs">
+			<li class="breadcrumb" ng-click="deselectContract()" role="button">Contracts</li>
+			<li class="breadcrumb"><i class="material-icons">keyboard_arrow_right</i></li>
+			<li class="breadcrumb" ng-click="openSidePanelTpl('contract')" role="button">{{selectedNode['contract-id']}}</li>
+			<li class="breadcrumb"><i class="material-icons">keyboard_arrow_right</i></li>
+			<li class="breadcrumb">{{subjectIndex}}</li>
+		</ul>
 	</div>
 	<md-divider></md-divider>
-	<md-subheader class="md-primary">Rule list ({{sidePanelObject.rule.length}})</md-subheader>
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Subject info</md-subheader>
+	<div layout="row" class="layout-padding-lr15 layout-row layout-padding-b15">
+	    <span flex="50" class="flex-50"><strong>Subject name</strong></span>
+	    <span flex="" class="ng-binding flex">{{subjectIndex}}</span>
+	</div>
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Resolved rule list ({{selectedNode.subjects[subjectIndex]['resolved-rule'].length}})</md-subheader>
     <md-list>
-    	<ng-repeat ng-repeat="rule in sidePanelObject.rule">
-	    	<md-list-item ng-click="openSidePanelChild(rule, 'rule')">
-	    		{{rule.name}}
-	    		<md-content ng-show="rule.expanded" class="md-whiteframe-2dp ng-scope flex layout-margin">
-	    			<div layout="row" class="layout-row">
-	    		        <span flex="50" class="flex-50"><strong>Rule list</strong></span>
-	    				<span flex class="ng-binding flex">{{rule.name}}</span>
-    				</div>
-	    		</md-content>
+    	<ng-repeat ng-repeat="rule in selectedNode.subjects[subjectIndex]['resolved-rule'][0] | orderBy: 'order'">
+	    	<md-list-item ng-click="openSidePanelChild($index, 'rule')">
+	    		<span class="layout-padding-r10">
+	    		    <h4 class="order">{{rule.order}}</h4>
+	    		</span>
+	    		<span>{{rule.name}}</span>
 	    	</md-list-item>
     	</ng-repeat>
     </md-list>

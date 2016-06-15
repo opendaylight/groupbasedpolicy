@@ -51,7 +51,7 @@ define([], function() {
              * @param id
              * @returns {*}
              */
-            function get(idEpg, idTenant, apiType) {
+            function get(idEpg, idTenant, apiType, successCallback) {
                 var self = this;
 
                 var restObj = Restangular.one('restconf').one(apiType).one('policy:tenants').one('tenant')
@@ -59,6 +59,7 @@ define([], function() {
 
                 return restObj.get().then(function(data) {
                     self.setData(data['endpoint-group'][0]);
+                    successCallback();
                 });
             }
 

@@ -3,9 +3,9 @@ define([], function () {
 
     angular.module('app.gbp').service('EndpointsListService', EndpointsListService);
 
-    EndpointsListService.$inject = ['Restangular', 'EndpointService'];
+    EndpointsListService.$inject = ['$filter', 'Restangular', 'EndpointService'];
 
-    function EndpointsListService(Restangular, EndpointService) {
+    function EndpointsListService($filter, Restangular, EndpointService) {
         /* methods */
         this.createList = createList;
 
@@ -16,6 +16,7 @@ define([], function () {
             /* methods */
             this.setData = setData;
             this.get = get;
+            this.getByEpg = getByEpg;
             this.clearData = clearData;
 
             /* Implementation */
@@ -42,6 +43,24 @@ define([], function () {
 
                 return restObj.get().then(function (data) {
                     self.setData(data.endpoints['address-endpoints']['address-endpoint']);
+                });
+            }
+
+            function getByEpg(epg) {
+                /* jshint validthis:true */
+                var self = this;
+                var restObj = Restangular.one('restconf').one('operational').one('base-endpoint:endpoints');
+
+                return restObj.get().then(function (data) {
+                    var endpoints = $filter('filter')(data.endpoints['address-endpoints']['address-endpoint'].map(function(endpoint) {
+                        return endpoint;
+                    }),
+                        function(ep) {
+                            if(ep['endpoint-group'].indexOf(epg) != -1)
+                                return true;
+                        }
+                    );
+                    self.setData(endpoints);
                 });
             }
         }

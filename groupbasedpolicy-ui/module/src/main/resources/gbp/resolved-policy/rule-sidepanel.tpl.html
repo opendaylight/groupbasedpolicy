@@ -1,53 +1,114 @@
-<md-content>
-	breadcrumb
+<md-content flex>
+	<div layout="row" class="layout-padding-lr15 layout-row">
+		<ul class="breadcrumbs">
+			<li class="breadcrumb" ng-click="deselectContract()" role="button">Contracts</li>
+			<li class="breadcrumb"><i class="material-icons">keyboard_arrow_right</i></li>
+			<li class="breadcrumb" ng-click="openSidePanelTpl('contract')" role="button">{{selectedNode['contract-id']}}</li>
+			<li class="breadcrumb"><i class="material-icons">keyboard_arrow_right</i></li>
+			<li class="breadcrumb" ng-click="openSidePanelTpl('subject')" role="button">{{subjectIndex}}</li>
+			<li class="breadcrumb"><i class="material-icons">keyboard_arrow_right</i></li>
+			<li class="breadcrumb">{{selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].name}}</li>
+		</ul>
+	</div>
+	<md-divider></md-divider>
 	<md-divider></md-divider>
 	<md-subheader class="md-primary">Rule info</md-subheader>
-	<div layout="row" class="layout-padding-lr15 layout-row">
-	    <span flex="50" class="flex-50"><strong>Rule name</strong></span>
-	    <span flex="" class="ng-binding flex">{{sidePanelObject.name}}</span>
-	</div>
-	<div layout="row" class="layout-padding-lr15 layout-row">
-	    <span flex="50" class="flex-50"><strong>Order</strong></span>
-	    <span flex="" class="ng-binding flex">{{sidePanelObject.order}}</span>
+	<div layout="row" class="layout-padding-lr15 layout-row layout-padding-b15">
+	    <span flex="50" class="flex-50"><strong>Resolved rule name</strong></span>
+	    <span flex="" class="ng-binding flex">{{selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].name}}</span>
 	</div>
 	<md-divider></md-divider>
-	<md-subheader class="md-primary">Action refs ({{sidePanelObject['action-ref'].length}})</md-subheader>
-    <md-list>
-    	<ng-repeat ng-repeat="ref in sidePanelObject['action-ref']">
-	    	<md-list-item ng-click="toggleExpanded(ref)">
-	    		{{ref.name}}
-	    		<md-content ng-show="ref.expanded" class="md-whiteframe-2dp ng-scope flex layout-margin">
-	    			<div layout="row" class="layout-row">
-	    		        <span flex="50" class="flex-50"><strong>Name</strong></span>
-	    				<span flex class="ng-binding flex">{{ref.name}}</span>
-    				</div>
-	    			<div layout="row" class="layout-row">
-	    		        <span flex="50" class="flex-50"><strong>Order</strong></span>
-	    				<span flex class="ng-binding flex">{{ref.order}}</span>
-    				</div>
+	<md-subheader class="md-primary">
+		<div layout="row" class="layout-row">
+			<span>Actions ({{selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].action.length}})</span>
+			<span class="flex" flex></span>
+			<md-button class="md-button md-primary md-button md-ink-ripple expand-button" type="button" ng-click="expandAll(selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].action)" aria-label="Expand all">            
+	            <i class="fa fa-expand ng-scope"></i>
+	        	<div class="md-ripple-container"></div>
+	        	<md-tooltip md-direction="bottom">
+	        		Expand all
+	        	</md-tooltip>
+	    	</md-button>
+	    	<md-button class="md-button md-primary md-button md-ink-ripple expand-button" type="button" ng-click="collapseAll(selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].action)" aria-label="Collapse all">
+				<i class="fa fa-compress ng-scope"></i>
+	    	    <div class="md-ripple-container"></div>
+	        	<md-tooltip md-direction="bottom">
+	        		Collapse all
+	        	</md-tooltip>
+	    	</md-button>
+    	</div>
+	</md-subheader>
+    <md-list class="expander">
+    	<ng-repeat ng-repeat="action in selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].action">
+	    	<md-list-item ng-click="toggleExpanded(action)">
+	    		<span class="layout-padding-r10">
+	    		    <h4 class="order">{{action.order}}</h4>
+	    		</span>
+	    		<span>{{action.name}}</span>
+	    		<md-content ng-show="action.expanded" class="md-whiteframe-2dp ng-scope layout-margin">
+		    		<div flex>
+		    			<div layout="row" class="layout-row">
+		    		        <span flex="50" class="flex-50"><strong>Action definition ID</strong></span>
+		    				<span flex class="ng-binding flex">{{action['action-definition-id']}}</span>
+	    				</div>
+		    			<div layout="row" class="layout-row">
+		    		        <span flex="50" class="flex-50"><strong>Name</strong></span>
+		    				<span flex class="ng-binding flex">{{action.name}}</span>
+	    				</div>
+					</div>
 	    		</md-content>
 	    	</md-list-item>
     	</ng-repeat>
     </md-list>
 	<md-divider></md-divider>
-	<md-subheader class="md-primary">Classifier refs ({{sidePanelObject['classifier-ref'].length}})</md-subheader>
-    <md-list>
-    	<ng-repeat ng-repeat="ref in sidePanelObject['classifier-ref']">
-	    	<md-list-item ng-click="toggleExpanded(ref)">
-	    		{{ref.name}}
-	    		<md-content ng-show="ref.expanded" class="md-whiteframe-2dp ng-scope flex layout-margin">
-	    			<div layout="row" class="layout-row">
-	    		        <span flex="50" class="flex-50"><strong>Instance name</strong></span>
-	    				<span flex class="ng-binding flex">{{ref['instance-name']}}</span>
-    				</div>
-	    			<div layout="row" class="layout-row">
-	    		        <span flex="50" class="flex-50"><strong>Connection tracking</strong></span>
-	    				<span flex class="ng-binding flex">{{ref['connection-tracking']}}</span>
-    				</div>
-	    			<div layout="row" class="layout-row">
-	    		        <span flex="50" class="flex-50"><strong>Direction</strong></span>
-	    				<span flex class="ng-binding flex">{{ref.direction}}</span>
-    				</div>
+	<md-subheader class="md-primary">
+		<div layout="row" class="layout-row">
+			<span>Classifiers ({{selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].classifier.length}})</span>
+			<span class="flex" flex></span>
+			<md-button class="md-button md-primary md-button md-ink-ripple expand-button" type="button" ng-click="expandAll(selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].classifier)" aria-label="Expand all">
+	            <i class="fa fa-expand ng-scope"></i>
+	        	<div class="md-ripple-container"></div>
+	        	<md-tooltip md-direction="bottom">
+	        		Expand all
+	        	</md-tooltip>
+	    	</md-button>
+	    	<md-button class="md-button md-primary md-button md-ink-ripple expand-button" type="button" ng-click="collapseAll(selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].classifier)" aria-label="Collapse all">
+				<i class="fa fa-compress ng-scope"></i>
+	    	    <div class="md-ripple-container"></div>
+	        	<md-tooltip md-direction="bottom">
+	        		Collapse all
+	        	</md-tooltip>
+	    	</md-button>
+    	</div>
+	</md-subheader>
+    <md-list class="expander">
+    	<ng-repeat ng-repeat="classifier in selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].classifier">
+	    	<md-list-item ng-click="toggleExpanded(classifier)">
+	    		{{classifier.name}}
+	    		<md-content ng-show="classifier.expanded" class="md-whiteframe-2dp ng-scope layout-margin">
+		    		<div flex>
+		    			<div layout="row" class="layout-row">
+		    		        <span flex="50" class="flex-50"><strong>Classifier definition ID</strong></span>
+		    				<span flex class="ng-binding flex">{{classifier['classifier-definition-id']}}</span>
+						</div>
+		    			<div layout="row" class="layout-row">
+		    		        <span flex="50" class="flex-50"><strong>Name</strong></span>
+		    				<span flex class="ng-binding flex">{{classifier.name}}</span>
+						</div>
+		    			<div layout="row" class="layout-row">
+		    		        <span flex="50" class="flex-50"><strong>Connection tracking</strong></span>
+		    				<span flex class="ng-binding flex">{{classifier['connection-tracking']}}</span>
+						</div>
+		    			<div layout="row" class="layout-row">
+		    		        <span flex="50" class="flex-50"><strong>Direction</strong></span>
+		    				<span flex class="ng-binding flex">{{classifier.direction}}</span>
+						</div>
+		    			<md-subheader class="md-primary">Parameters ({{classifier['parameter-value'].length}})</md-subheader>
+		    			<div layout="row" class="layout-row" ng-repeat="param in classifier['parameter-value']">
+		    		        <span flex="50" class="flex-50"><strong>{{param.name}}</strong></span>
+		    				<span flex class="ng-binding flex">{{param['int-value']}}</span>
+						</div>
+					</div>
 	    		</md-content>
 	    	</md-list-item>
     	</ng-repeat>

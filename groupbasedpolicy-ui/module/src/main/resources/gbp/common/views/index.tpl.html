@@ -10,10 +10,11 @@
                         <md-button ng-click="" ng-disabled="policyDisabled" ng-href="#/gbp/index/policy/contract" style="background-color:rgb(33,150,243);color:black;">Contracts</md-button>
                     </md-menu-content>
                 </md-menu>-->
-                <md-button ng-click="" ng-href="#/gbp/index/resolved-policy" style="background-color:rgb(33,150,243);color:black;">Resolved Policy</md-button>
-                <md-button ng-click="" ng-href="#/gbp/index/endpoints" style="background-color:rgb(33,150,243);color:black;">Endpoints</md-button>
-
+                <md-button ng-click="closeSidePanel()" ng-href="#/gbp/index/resolved-policy">Resolved Policy</md-button>
+                <md-button ng-click="closeSidePanel()" ng-href="#/gbp/index/endpoints">Endpoints</md-button>
                 <span flex></span>
+                <md-button ng-if="'main.gbp.index.resolvedPolicy' | isState" ng-click="deselectEpg()" ng-href="">Endpoint-groups</md-button>
+                <md-button ng-if="'main.gbp.index.resolvedPolicy' | isState" ng-click="deselectContract()" ng-href="">Contracts</md-button>
             </div>
         </md-toolbar>
         <!-- <md-content md-scroll-y flex ui-view></md-content> -->

@@ -75,8 +75,21 @@ svg g.node text {
     pointer-events: auto !important;
 }
 
+.expander md-content {
+    line-height: 15px;
+    width: 100%;
+}
+
 .expander .md-list-item-inner {
-    display: block;
+    flex-flow: row wrap;
+}
+
+.expand-button {
+    min-width: 0px !important;
+    min-height: 0px !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    line-height: normal !important;
 }
 
 #graph-container {
@@ -100,6 +113,10 @@ div.md-primary.md-subheader.ng-scope > div > span > span {
   color: rgb(33,150,243);
 }
 
+.md-subheader {
+    font-weight: bold !important;
+}
+
 md-sidenav > md-toolbar > div > h2 > span {
     margin: 20px 0;
     color: #666;
@@ -111,4 +128,53 @@ span.flex-35 > strong {
 
 span.ng-binding.flex {
     color: rgba(0,0,0,0.87);
+}
+
+.gbpUiGlobalWrapper .md-locked-open {
+    width: 500px;
+    min-width: 500px;
+}
+
+.breadcrumbs {
+    display: inline-block;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1em;
+    padding-left: 0;
+    margin: 10px 0;
+}
+
+.breadcrumbs .breadcrumb {
+    display: inline-block;
+    color: rgba(0,0,0,.54);
+    background-color: transparent;
+    padding: 0;
+    font-size: 13px;
+    margin-bottom: 0 !important;
+    vertical-align: middle;
+}
+
+.breadcrumbs .breadcrumb[role="button"] {
+    color: rgb(33, 150, 243);
+}
+
+.layout-padding-r10 {
+    padding-right: 10px;
+}
+
+.layout-padding-b15 {
+    padding-bottom: 15px;
+}
+
+.order {
+    color: #000 !important;
+    margin: 0;
+}
+
+.status-circle.allow {
+    color: green;
+}
+
+.status-circle.require-contract {
+    color: orange;
 }
