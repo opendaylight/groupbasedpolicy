@@ -1,0 +1,93 @@
+<md-dialog ng-cloak class="gbpDialogWrapper" ng-cloak>
+    <form name="endpointForm">
+        <md-toolbar>
+            <div class="md-toolbar-tools">
+                <h2>Add Endpoint</h2>
+                <span flex></span>
+                <md-button ng-click="closeDialog()" class="md-button">Close dialog</md-button>
+            </div>
+        </md-toolbar>
+        <md-dialog-content style="width:800px;min-height:550px;">
+            <div layout="column" class="layout-padding-lr15">
+                <div layout="row">
+                    <md-input-container flex>
+                        <label>Tenant Id</label>
+                        <!-- <input name="tenant" ng-model="endpoint.data.tenant"> -->
+
+                        <md-select ng-model="endpoint.data.tenant">
+                            <md-option ng-repeat="tenant in rootTenants.data" value="tenant.data.id">{{ tenant.data.id }}</md-option>
+                        </md-select>
+
+
+                    </md-input-container>
+                    <md-input-container flex>
+                        <label>Context Type</label>
+                        <input name="context-type" ng-model="endpoint.data['context-type']" ng-required="true">
+                        <div ng-messages="endpointForm['context-type'].$error">
+                            <div ng-message="required">Required field</div>
+                        </div>
+                    </md-input-container>
+                    <md-input-container flex>
+                        <label>Context Id</label>
+                        <input name="context-id" ng-model="endpoint.data['context-id']" ng-required="true">
+                        <div ng-messages="endpointForm['context-id'].$error">
+                            <div ng-message="required">Required field.</div>
+                        </div>
+                    </md-input-container>
+                </div>
+                <div layout="row">
+                    <md-input-container flex>
+                        <label>Address Type</label>
+                        <input name="address-type" ng-model="endpoint.data['address-type']">
+                    </md-input-container>
+                    <md-input-container flex>
+                        <label>Address</label>
+                        <input name="address" ng-model="endpoint.data.address" ng-required="true">
+                        <div ng-messages="endpointForm.address.$error">
+                            <div ng-message="required">Required field</div>
+                        </div>
+                    </md-input-container>
+                </div>
+                <div layout="row">
+                    <md-input-container flex>
+                        <label>Network Containment - Network Domain Type</label>
+                        <input name="network-domain-type" ng-model="endpoint.data['network-containment']['network-domain-type']">
+                    </md-input-container>
+                    <md-input-container flex>
+                        <label>Network Containment - Network Domain Id</label>
+                        <input name="network-domain-id" ng-model="endpoint.data['network-containment']['network-domain-id']">
+                    </md-input-container>
+                </div>
+                <div layout="row">
+                    <md-input-container flex>
+                        <label>Endpoint Group</label>
+                        <md-chips ng-model="endpoint.data['endpoint-group']"
+                                  placeholder="Add an item"
+                                  md-on-add="checkEndpointGroup()"
+                                  md-on-remove="checkEndpointGroup()">
+                        </md-chips>
+                    </md-input-container>
+                </div>
+        <div layout="row">
+            <md-input-container flex>
+                <label>Condition</label>
+                <md-chips ng-model="endpoint.data.condition"
+                          placeholder="Add an item"
+                          md-on-add="checkEndpointCondition()"
+                          md-on-remove="checkEndpointCondition()">
+                </md-chips>
+            </md-input-container>
+        </div>
+    </div>
+</md-dialog-content>
+<md-dialog-actions layout="row">
+    <span flex></span>
+    <md-button ng-click="closeDialog()" class="md-primary">
+        Close
+    </md-button>
+    <md-button ng-click="save()" style="margin-right:20px;" ng-disabled="endpointForm.$invalid" class="md-primary">
+        Save
+    </md-button>
+</md-dialog-actions>
+</form>
+</md-dialog>

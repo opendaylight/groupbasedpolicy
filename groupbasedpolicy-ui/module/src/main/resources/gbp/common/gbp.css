@@ -91,3 +91,24 @@ md-dialog button span {
 md-sidenav span {
     color: inherit !important;
 }
+
+span.md-subheader {
+    color: red;
+}
+
+div.md-primary.md-subheader.ng-scope > div > span > span {
+  color: rgb(33,150,243);
+}
+
+md-sidenav > md-toolbar > div > h2 > span {
+    margin: 20px 0;
+    color: #666;
+}
+
+span.flex-35 > strong {
+    color: rgba(0,0,0,0.87);
+}
+
+span.ng-binding.flex {
+    color: rgba(0,0,0,0.87);
+}
