@@ -37,10 +37,16 @@ define(['next-ui'], function() {
 					// register "font" icon
 					nx.graphic.Icons.registerFontIcon('devicedown', 'FontAwesome', "\uf057", 20);
 
+                    var circle = "<defs xmlns='http://www.w3.org/2000/svg'><marker id='circle' viewBox='-3 -3 6 6' markerWidth='6' markerHeight='6' orient='auto'> <circle r='3' fill='#68BD6B'></circle></marker></defs>";
+
 					var app = new nx.ui.Application();
 					// set app containter
 					document.getElementById('graph-container').innerHTML = '';
 					app.container(document.getElementById('graph-container'));
+
+                    scope.topo = NextTopologyService.getNxTopClass(scope.topoColors);
+                    scope.setTopoEvents();
+                    scope.topo.stage().addDefString(circle);
 
 					extendLinkClass();
 					extendNodeClass();
@@ -49,8 +55,7 @@ define(['next-ui'], function() {
 					//createNodeStatusLayer();
 					defineCustomEvents();
 
-					scope.topo = NextTopologyService.getNxTopClass(scope.topoColors);
-					scope.setTopoEvents();
+
 
 					// App events - if app is resized
 					app.on('resize', function(){
@@ -270,13 +275,16 @@ define(['next-ui'], function() {
 							},
 							// when topology's updated
 							update: function(){
+								/*
 								this.inherited();
+
 								// ECMP badge settings
 								var badge = this.view('badge');
 								var badgeText = this.view('badgeText');
 								var badgeBg = this.view('badgeBg');
 								var statusIcon = this.view('statusIcon');
 								var status = this.model()._data.status;
+								ECMP, not needed here
 								if( this.model()._data.gLinks.length > 2 ) {
 									badgeText.sets({
 										text: status.operational + '/' + status.configured,
@@ -300,7 +308,9 @@ define(['next-ui'], function() {
 
                                 //set correct link color
                                 this.set('color',this.getColor());
+                                */
 
+                                this.setProviderStyleLine();
 							},
 							// generate the color for a link
 							getColor: function(){
@@ -309,7 +319,23 @@ define(['next-ui'], function() {
 								// make it available outside next
 								this.model()._data.linkColor = color;
 								return color;
-							}
+                            },
+
+                            setProviderStyleLine: function() {
+                                var _offset = this.getOffset();
+                                var offset = new nx.geometry.Vector(0, _offset);
+                                var stageScale = this.stageScale();
+                                var line = this.reverse() ? this.line().negate() : this.line();
+                                var lineEl = this.view('line');
+                                var newLine = line.translate(offset).pad(25 * stageScale, stageScale);
+                                lineEl.sets({
+                                    x1: newLine.start.x,
+                                    y1: newLine.start.y,
+                                    x2: newLine.end.x,
+                                    y2: newLine.end.y
+                                });
+                                lineEl.setStyle('marker-start', 'url(#circle)');
+                            }
 						}
 					});
 				}
@@ -348,7 +374,6 @@ define(['next-ui'], function() {
 
 					});
 				}
-
 
 				// TODO: remove when come to decision about depiction of node status
 				///**

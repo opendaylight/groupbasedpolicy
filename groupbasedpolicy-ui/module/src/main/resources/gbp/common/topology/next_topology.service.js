@@ -24,7 +24,7 @@ define(['next-ui'], function () {
                         linkConfig: {
                             // connected to hosts links have different colors
                             width: function (model, link) {
-                                return model._data.gLinks.length > 2 ? 5 : 3;
+                                return (model._data.gLinks && model._data.gLinks.length > 2) ? 5 : 3;
                             },
                             linkType: 'curve'
                         },
