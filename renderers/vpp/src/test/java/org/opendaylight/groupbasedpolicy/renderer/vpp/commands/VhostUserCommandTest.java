@@ -43,7 +43,6 @@ public class VhostUserCommandTest extends VppRendererDataBrokerTest {
     private final static String UPD_BRIDGE_DOMAIN = "testBD2";
     private final static String UPD_DESCRIPTION = "updated description";
     private final static String UPD_SOCKET_NAME = "soc2";
-    private final static short SPLIT_HORIZON_GROUP_DEFAULT = 0;
     private final static boolean IS_BRIDGED_DEFAULT = false;
 
     private static Interface BASIC_INTERFACE;
@@ -58,7 +57,6 @@ public class VhostUserCommandTest extends VppRendererDataBrokerTest {
 
         VppInterfaceAugmentation vppAugmentation = new VppInterfaceAugmentationBuilder().setVhostUser(vhostUser)
             .setL2(new L2Builder().setInterconnection(new BridgeBasedBuilder().setBridgeDomain(BRIDGE_DOMAIN)
-                .setSplitHorizonGroup(SPLIT_HORIZON_GROUP_DEFAULT)
                 .setBridgedVirtualInterface(IS_BRIDGED_DEFAULT)
                 .build()).build())
             .build();
