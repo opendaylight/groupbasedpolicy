@@ -14,9 +14,6 @@
                 <md-button ng-click="" ng-href="#/gbp/index/endpoints" style="background-color:rgb(33,150,243);color:black;">Endpoints</md-button>
 
                 <span flex></span>
-                <md-select ng-model="rootTenant" ng-change="setRootTenant()">
-                    <md-option ng-repeat="item in rootTenants.data" ng-value="{{item}}">{{item.data.id}}</md-option>
-                </md-select>
             </div>
         </md-toolbar>
         <!-- <md-content md-scroll-y flex ui-view></md-content> -->
@@ -25,18 +22,21 @@
             <md-content md-scroll-y flex ui-view="main_bottom" class="col-md-6"></md-content>
         </md-content>
     </div>
-    <!-- <md-sidenav class="md-sidenav-right md-whiteframe-z1 detail-view" md-is-locked-open="sidePanelPage">
+    <!-- Node's side pannel -->
+    <md-sidenav class="md-sidenav-right md-whiteframe-z1 detail-view" md-is-locked-open="sidePanelPage">
         <md-toolbar>
             <div class="md-toolbar-tools">
                 <h2>
                     <span>Sidepanel</span>
                 </h2>
                 <span flex></span>
-                <md-button ng-href="#/gbp/index/policy" ng-click="closeSidePanel()" class="md-button">Close panel</md-button>
+                <md-button ng-click="closeSidePanel()" class="md-button">Close panel</md-button>
             </div>
         </md-toolbar>
         <md-content flex>
-            <div flex layout="column" ui-view="sidePanel"></div>
+            <div flex layout="column" ui-view="sidePanel">
+                <ng-include ng-if="sidePanelPage" src="viewPath + sidePanelPage + '.tpl.html'"></ng-include>
+            </div>
         </md-content>
-    </md-sidenav> -->
+    </md-sidenav>
 </div>

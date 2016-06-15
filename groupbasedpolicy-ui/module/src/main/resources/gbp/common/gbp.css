@@ -71,11 +71,23 @@
     color: rgba(0,0,0,0.26);
 }
 
-text.node-label {
-    pointer-events: all;
+svg g.node text {
+    pointer-events: auto !important;
+}
+
+.expander .md-list-item-inner {
+    display: block;
+}
+
+#graph-container {
+    padding-left: 0;
 }
 
 /* $mdDialog.confirm */
 md-dialog button span {
     color: #000;
+}
+
+md-sidenav span {
+    color: inherit !important;
 }

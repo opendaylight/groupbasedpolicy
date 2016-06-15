@@ -1,0 +1,24 @@
+<md-content>
+	breadcrumb
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Subject info</md-subheader>
+	<div layout="row" class="layout-padding-lr15 layout-row">
+	    <span flex="50" class="flex-50"><strong>Subject name</strong></span>
+	    <span flex="" class="ng-binding flex">{{sidePanelObject.name}}</span>
+	</div>
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Rule list ({{sidePanelObject.rule.length}})</md-subheader>
+    <md-list>
+    	<ng-repeat ng-repeat="rule in sidePanelObject.rule">
+	    	<md-list-item ng-click="openSidePanelChild(rule, 'rule')">
+	    		{{rule.name}}
+	    		<md-content ng-show="rule.expanded" class="md-whiteframe-2dp ng-scope flex layout-margin">
+	    			<div layout="row" class="layout-row">
+	    		        <span flex="50" class="flex-50"><strong>Rule list</strong></span>
+	    				<span flex class="ng-binding flex">{{rule.name}}</span>
+    				</div>
+	    		</md-content>
+	    	</md-list-item>
+    	</ng-repeat>
+    </md-list>
+</md-content>

@@ -1,0 +1,24 @@
+<md-content>
+	breadcrumb
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Clause info</md-subheader>
+	<div layout="row" class="layout-padding-lr15 layout-row">
+	    <span flex="50" class="flex-50"><strong>Clause name</strong></span>
+	    <span flex="" class="ng-binding flex">{{sidePanelObject.name}}</span>
+	</div>
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Subject refs ({{sidePanelObject['subject-refs'].length}})</md-subheader>
+    <md-list>
+    	<ng-repeat ng-repeat="ref in sidePanelObject['subject-refs']">
+	    	<md-list-item ng-click="toggleExpanded(ref)">
+	    		{{ref}}
+	    		<md-content ng-show="ref.expanded" class="md-whiteframe-2dp ng-scope flex layout-margin">
+	    			<div layout="row" class="layout-row">
+	    		        <span flex="50" class="flex-50"><strong>Subject refs</strong></span>
+	    				<span flex class="ng-binding flex">{{ref}}</span>
+    				</div>
+	    		</md-content>
+	    	</md-list-item>
+    	</ng-repeat>
+    </md-list>
+</md-content>

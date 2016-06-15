@@ -1,0 +1,55 @@
+<md-content>
+	breadcrumb
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Rule info</md-subheader>
+	<div layout="row" class="layout-padding-lr15 layout-row">
+	    <span flex="50" class="flex-50"><strong>Rule name</strong></span>
+	    <span flex="" class="ng-binding flex">{{sidePanelObject.name}}</span>
+	</div>
+	<div layout="row" class="layout-padding-lr15 layout-row">
+	    <span flex="50" class="flex-50"><strong>Order</strong></span>
+	    <span flex="" class="ng-binding flex">{{sidePanelObject.order}}</span>
+	</div>
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Action refs ({{sidePanelObject['action-ref'].length}})</md-subheader>
+    <md-list>
+    	<ng-repeat ng-repeat="ref in sidePanelObject['action-ref']">
+	    	<md-list-item ng-click="toggleExpanded(ref)">
+	    		{{ref.name}}
+	    		<md-content ng-show="ref.expanded" class="md-whiteframe-2dp ng-scope flex layout-margin">
+	    			<div layout="row" class="layout-row">
+	    		        <span flex="50" class="flex-50"><strong>Name</strong></span>
+	    				<span flex class="ng-binding flex">{{ref.name}}</span>
+    				</div>
+	    			<div layout="row" class="layout-row">
+	    		        <span flex="50" class="flex-50"><strong>Order</strong></span>
+	    				<span flex class="ng-binding flex">{{ref.order}}</span>
+    				</div>
+	    		</md-content>
+	    	</md-list-item>
+    	</ng-repeat>
+    </md-list>
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Classifier refs ({{sidePanelObject['classifier-ref'].length}})</md-subheader>
+    <md-list>
+    	<ng-repeat ng-repeat="ref in sidePanelObject['classifier-ref']">
+	    	<md-list-item ng-click="toggleExpanded(ref)">
+	    		{{ref.name}}
+	    		<md-content ng-show="ref.expanded" class="md-whiteframe-2dp ng-scope flex layout-margin">
+	    			<div layout="row" class="layout-row">
+	    		        <span flex="50" class="flex-50"><strong>Instance name</strong></span>
+	    				<span flex class="ng-binding flex">{{ref['instance-name']}}</span>
+    				</div>
+	    			<div layout="row" class="layout-row">
+	    		        <span flex="50" class="flex-50"><strong>Connection tracking</strong></span>
+	    				<span flex class="ng-binding flex">{{ref['connection-tracking']}}</span>
+    				</div>
+	    			<div layout="row" class="layout-row">
+	    		        <span flex="50" class="flex-50"><strong>Direction</strong></span>
+	    				<span flex class="ng-binding flex">{{ref.direction}}</span>
+    				</div>
+	    		</md-content>
+	    	</md-list-item>
+    	</ng-repeat>
+    </md-list>
+</md-content>
