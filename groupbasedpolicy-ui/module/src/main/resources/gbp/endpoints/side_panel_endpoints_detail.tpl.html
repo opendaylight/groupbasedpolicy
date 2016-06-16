@@ -7,20 +7,21 @@
         <span flex="35"><strong>Endpoint group</strong></span><span ng-repeat="epg in sidePanelObject['endpoint-group']">{{epg}}<span ng-if="!$last">, </span>
         </span>
     </div>
-    <hr style="border: 1px dashed rgba(0,0,0,.54);" width="50%" />
+    <md-divider style="margin-bottom: 10px; margin-top: 10px;"></md-divider>
     <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row">
         <span flex="35"><strong>Context type</strong></span><span flex>{{ sidePanelObject['context-type'] }}</span>
     </div>
     <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row">
         <span flex="35"><strong>Context Id</strong></span><span flex>{{ sidePanelObject['context-id'] }}</span>
     </div>
-    <hr style="border: 1px dashed rgba(0,0,0,.54);" width="50%" />
+    <md-divider style="margin-bottom: 10px; margin-top: 10px;"></md-divider>
     <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row">
         <span flex="35"><strong>Address type</strong></span><span flex>{{ sidePanelObject['address-type'] }}</span>
     </div>
     <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row">
         <span flex="35"><strong>Address</strong></span><span flex>{{ sidePanelObject.address }}</span>
     </div>
+    <md-divider style="margin-bottom: 10px; margin-top: 10px;"></md-divider>
     <md-subheader class="md-secondary" ng-if="sidePanelObject['network-containment']['network-domain-type'].length">Network domain</md-subheader>
     <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row" ng-if="sidePanelObject['network-containment']['network-domain-id'].length">
         <span flex="35"><strong>Id</strong></span><span flex>{{ sidePanelObject['network-containment']['network-domain-id'] }}</span>

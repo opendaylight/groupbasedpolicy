@@ -24,11 +24,11 @@ define([
         $scope.getEndpointsList = getEndpointsList;
         $scope.deleteEndpointDialog = deleteEndpointDialog;
 
-        getEndpointsList();
+        $scope.getEndpointsList();
 
         function getEndpointsList() {
             $scope.endpoints.clearData();
-            $scope.endpoints.get();
+            $scope.rootTenant ? $scope.endpoints.getByTenantId($scope.rootTenant) : $scope.endpoints.get($scope.rootTenant);
         }
 
         function openEndpointDialog(operation, endpointData) {
@@ -61,5 +61,9 @@ define([
 
             });
         }
+
+        $scope.$on('ROOT_TENANT_CHANGED', function () {
+            $scope.getEndpointsList();
+        });
     }
 });

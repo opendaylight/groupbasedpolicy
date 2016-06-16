@@ -17,6 +17,7 @@ define([], function () {
             this.setData = setData;
             this.get = get;
             this.getByEpg = getByEpg;
+            this.getByTenantId = getByTenantId;
             this.clearData = clearData;
 
             /* Implementation */
@@ -64,6 +65,18 @@ define([], function () {
                     self.setData(endpoints);
                 });
             }
+
+            function getByTenantId(rootTenant) {
+                var self = this;
+                var restObj = Restangular.one('restconf').one('operational').one('base-endpoint:endpoints');
+                return restObj.get().then(function (data) {
+                    var endpoints = $filter('filter')(data.endpoints['address-endpoints']['address-endpoint'].map(function(endpoint) {
+                        return endpoint;
+                    }), { 'tenant': rootTenant });
+                    self.setData(endpoints);
+                });
+            }
+
         }
 
         function createList() {
