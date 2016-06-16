@@ -1,17 +1,25 @@
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager;
 
-import com.google.common.util.concurrent.ListenableFuture;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction.Out;
+import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation.PROVIDER;
+import static org.powermock.api.support.membermodification.MemberMatcher.method;
+import static org.powermock.api.support.membermodification.MemberModifier.stub;
+
+import java.util.Collections;
+import java.util.List;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.RendererPolicyUtil;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.ServiceChainingUtil;
-import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriter;
 import org.opendaylight.sfc.provider.api.SfcProviderServiceForwarderAPI;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.RspName;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.SfName;
@@ -79,17 +87,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import java.util.Collections;
-import java.util.List;
-
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction.Out;
-import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation.PROVIDER;
-import static org.powermock.api.support.membermodification.MemberMatcher.method;
-import static org.powermock.api.support.membermodification.MemberModifier.stub;
+import com.google.common.util.concurrent.ListenableFuture;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({RendererPolicyUtil.class, PolicyManagerUtil.class, SfcProviderServiceForwarderAPI.class})
@@ -130,7 +128,7 @@ public class PolicyManagerImplTest {
     @Test
     public void testSyncPolicy_emptyConfiguration() throws Exception {
         Configuration policyConfiguration = createTestConfiguration(null, null, null, null);
-        ListenableFuture result = policyManager.syncPolicy(policyConfiguration, null);
+        ListenableFuture result = policyManager.syncPolicy(policyConfiguration, null, 0);
         assertTrue((boolean) result.get());
     }
 
@@ -139,7 +137,7 @@ public class PolicyManagerImplTest {
         RendererEndpoint rendererEndpoint = createRendererEndpoint(contextId_1, contextId_2, null);
         Configuration policyConfiguration = createTestConfiguration(null, Collections.singletonList(rendererEndpoint),
                 null, null);
-        ListenableFuture result = policyManager.syncPolicy(policyConfiguration, null);
+        ListenableFuture result = policyManager.syncPolicy(policyConfiguration, null, 0);
         assertTrue((boolean) result.get());
     }
 
@@ -155,7 +153,7 @@ public class PolicyManagerImplTest {
         stub(method(RendererPolicyUtil.class, "lookupEndpoint")).toReturn(lookupEndpoint);
         when(nodeManager.getNodeMountPoint(eq(createMountpointIid()))).thenReturn(null);
 
-        ListenableFuture result = policyManager.syncPolicy(policyConfiguration, null);
+        ListenableFuture result = policyManager.syncPolicy(policyConfiguration, null, 0);
         assertTrue((boolean) result.get());
     }
 
@@ -173,7 +171,7 @@ public class PolicyManagerImplTest {
         when(nodeManager.getNodeIdByMountpointIid(eq(createMountpointIid()))).thenReturn(nodeId);
         when(nodeManager.getNodeManagementIpByMountPointIid(eq(createMountpointIid()))).thenReturn(ipAddress);
 
-        ListenableFuture result = policyManager.syncPolicy(policyConfiguration, null);
+        ListenableFuture result = policyManager.syncPolicy(policyConfiguration, null, 0);
         assertTrue((boolean) result.get());
     }
 
@@ -195,7 +193,7 @@ public class PolicyManagerImplTest {
         when(nodeManager.getNodeIdByMountpointIid(eq(createMountpointIid()))).thenReturn(nodeId);
         when(nodeManager.getNodeManagementIpByMountPointIid(eq(createMountpointIid()))).thenReturn(ipAddress);
 
-        ListenableFuture result = policyManager.syncPolicy(policyConfiguration, null);
+        ListenableFuture result = policyManager.syncPolicy(policyConfiguration, null, 0);
         assertTrue((boolean) result.get());
     }
 
@@ -218,7 +216,7 @@ public class PolicyManagerImplTest {
         when(nodeManager.getNodeIdByMountpointIid(eq(createMountpointIid()))).thenReturn(nodeId);
         when(nodeManager.getNodeManagementIpByMountPointIid(eq(createMountpointIid()))).thenReturn(ipAddress);
 
-        ListenableFuture result = policyManager.syncPolicy(policyConfiguration, null);
+        ListenableFuture result = policyManager.syncPolicy(policyConfiguration, null, 0);
         assertTrue((boolean) result.get());
     }
 
@@ -241,7 +239,7 @@ public class PolicyManagerImplTest {
         when(nodeManager.getNodeIdByMountpointIid(eq(createMountpointIid()))).thenReturn(nodeId);
         when(nodeManager.getNodeManagementIpByMountPointIid(eq(createMountpointIid()))).thenReturn(ipAddress);
 
-        ListenableFuture result = policyManager.syncPolicy(policyConfiguration, null);
+        ListenableFuture result = policyManager.syncPolicy(policyConfiguration, null, 0);
         assertTrue((boolean) result.get());
     }
 
@@ -271,7 +269,7 @@ public class PolicyManagerImplTest {
         stub(method(SfcProviderServiceForwarderAPI.class, "readServiceFunctionForwarder"))
                 .toReturn(serviceFunctionForwarder);
 
-        ListenableFuture result = policyManager.syncPolicy(policyConfiguration, null);
+        ListenableFuture result = policyManager.syncPolicy(policyConfiguration, null, 0);
         assertTrue((boolean) result.get());
     }
 

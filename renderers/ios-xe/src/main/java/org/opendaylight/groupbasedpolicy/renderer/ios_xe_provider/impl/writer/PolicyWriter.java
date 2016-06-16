@@ -42,6 +42,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class PolicyWriter {
 
@@ -140,12 +142,15 @@ public class PolicyWriter {
             }
         }
 
+        CheckedFuture<Void, TransactionCommitFailedException> submitFuture = null;
         try {
-            CheckedFuture<Void, TransactionCommitFailedException> submitFuture = wtx.submit();
-            submitFuture.checkedGet();
-            // Clear cache
+            submitFuture = wtx.submit();
+            submitFuture.checkedGet(2, TimeUnit.SECONDS);
+            LOG.trace("configuration pushed to device: {}", submitFuture);
         } catch (TransactionCommitFailedException e) {
             LOG.error("Write transaction failed to {}", e.getMessage());
+        } catch (TimeoutException e) {
+            LOG.warn("Write transaction timed out: {}", submitFuture, e);
         } catch (Exception e) {
             LOG.error("Failed to .. {}", e.getMessage());
         }
@@ -197,11 +202,14 @@ public class PolicyWriter {
             LOG.info("Local forwarder removed from node {}", nodeId.getValue());
         }
 
+        CheckedFuture<Void, TransactionCommitFailedException> submitFuture = null;
         try {
-            CheckedFuture<Void, TransactionCommitFailedException> submitFuture = wtx.submit();
-            submitFuture.checkedGet();
+            submitFuture = wtx.submit();
+            submitFuture.checkedGet(2, TimeUnit.SECONDS);
         } catch (TransactionCommitFailedException e) {
             LOG.error("Write transaction failed to {}", e.getMessage());
+        } catch (TimeoutException e) {
+            LOG.warn("Write transaction timed out: {}", submitFuture, e);
         } catch (Exception e) {
             LOG.error("Failed to .. {}", e.getMessage());
         }

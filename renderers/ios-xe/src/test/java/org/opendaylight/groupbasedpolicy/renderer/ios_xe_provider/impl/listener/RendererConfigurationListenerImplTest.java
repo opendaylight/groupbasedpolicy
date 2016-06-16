@@ -9,6 +9,7 @@
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.listener;
 
 import java.util.Collections;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -66,6 +67,13 @@ public class RendererConfigurationListenerImplTest {
                                         .build()))
                                 .build())
                         .build())
+                .setVersion((long) order)
+                .build();
+    }
+
+    private RendererPolicy createVersion(final int order) {
+        return new RendererPolicyBuilder()
+                .setVersion((long) order)
                 .build();
     }
 
@@ -93,7 +101,7 @@ public class RendererConfigurationListenerImplTest {
         Mockito.when(dataTreeModification.getRootNode()).thenReturn(rootNode);
 
         listener.onDataTreeChanged(Collections.singleton(dataTreeModification));
-        Mockito.verify(policyManager).syncPolicy(policy1.getConfiguration(), null);
+        Mockito.verify(policyManager).syncPolicy(policy1.getConfiguration(), null, 0);
     }
 
     @Test
@@ -104,18 +112,18 @@ public class RendererConfigurationListenerImplTest {
         Mockito.when(dataTreeModification.getRootNode()).thenReturn(rootNode);
 
         listener.onDataTreeChanged(Collections.singleton(dataTreeModification));
-        Mockito.verify(policyManager).syncPolicy(policy2.getConfiguration(), policy1.getConfiguration());
+        Mockito.verify(policyManager).syncPolicy(policy2.getConfiguration(), policy1.getConfiguration(), 1);
     }
 
     @Test
     public void testOnDataTreeChanged_remove() throws Exception {
         Mockito.when(rootNode.getDataBefore()).thenReturn(policy2);
-        Mockito.when(rootNode.getDataAfter()).thenReturn(null);
+        Mockito.when(rootNode.getDataAfter()).thenReturn(createVersion(1));
         Mockito.when(rootNode.getModificationType()).thenReturn(DataObjectModification.ModificationType.WRITE);
         Mockito.when(dataTreeModification.getRootNode()).thenReturn(rootNode);
 
         listener.onDataTreeChanged(Collections.singleton(dataTreeModification));
-        Mockito.verify(policyManager).syncPolicy(null, policy2.getConfiguration());
+        Mockito.verify(policyManager).syncPolicy(null, policy2.getConfiguration(), 1);
     }
 
     @Test

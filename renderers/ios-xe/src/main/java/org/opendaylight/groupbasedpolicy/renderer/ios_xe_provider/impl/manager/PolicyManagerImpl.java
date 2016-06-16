@@ -8,13 +8,24 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager;
 
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
+import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Create;
+import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Delete;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
+import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.manager.PolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriter;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.Renderers;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.RendererKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicy;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicyBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Configuration;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpoint;
@@ -25,12 +36,9 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Create;
-import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Delete;
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 
 public class PolicyManagerImpl implements PolicyManager {
 
@@ -46,17 +54,19 @@ public class PolicyManagerImpl implements PolicyManager {
     }
 
     @Override
-    public ListenableFuture<Boolean> syncPolicy(final Configuration dataAfter, final Configuration dataBefore) {
+    public ListenableFuture<Boolean> syncPolicy(final Configuration dataAfter, final Configuration dataBefore,
+            long version) {
+        ListenableFuture<Boolean> result = Futures.immediateFuture(false);
         if (dataBefore == null && dataAfter != null) {
-            return createPolicy(dataAfter);
+            result = syncPolicy(dataAfter, Create);
+        } else if (dataBefore != null && dataAfter != null) {
+            // TODO implement
+            return Futures.immediateFuture(false);
+        } else if (dataBefore != null) {
+            result = syncPolicy(dataBefore, Delete);
         }
-        if (dataBefore != null && dataAfter != null) {
-            return updatePolicy(dataAfter, dataBefore);
-        }
-        if (dataBefore != null) {
-            return deletePolicy(dataBefore);
-        }
-        return Futures.immediateFuture(false);
+        reportVersion(version);
+        return result;
     }
 
     private ListenableFuture<Boolean> syncPolicy(final Configuration dataAfter, DsAction action) {
@@ -119,17 +129,13 @@ public class PolicyManagerImpl implements PolicyManager {
         return Futures.immediateFuture(false);
     }
 
-    private ListenableFuture<Boolean> createPolicy(Configuration data) {
-        return syncPolicy(data, Create);
-    }
-
-    private ListenableFuture<Boolean> deletePolicy(Configuration data) {
-        return syncPolicy(data, Delete);
-    }
-
-    private ListenableFuture<Boolean> updatePolicy(Configuration dataAfter, Configuration dataBefore) {
-        // TODO implement
-        return null;
+    private void reportVersion(long version) {
+        WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
+        InstanceIdentifier<RendererPolicy> iid = InstanceIdentifier.create(Renderers.class)
+                .child(Renderer.class, new RendererKey(NodeManager.iosXeRenderer))
+                .child(RendererPolicy.class);
+        wtx.merge(LogicalDatastoreType.OPERATIONAL, iid, new RendererPolicyBuilder().setVersion(version).build());
+        wtx.submit();
     }
 
     @Override

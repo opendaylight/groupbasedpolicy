@@ -8,23 +8,25 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager;
 
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.concurrent.Callable;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BinaryOperator;
+
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.manager.PolicyManager;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Purpose: wrap {@link PolicyManager} with state compression mechanism
@@ -72,7 +74,7 @@ public class PolicyManagerZipImpl implements PolicyManager {
     }
 
     @Override
-    public ListenableFuture<Boolean> syncPolicy(final Configuration dataBefore, final Configuration dataAfter) {
+    public ListenableFuture<Boolean> syncPolicy(final Configuration dataBefore, final Configuration dataAfter, final long version) {
         LOG.trace("firing configuration zip");
         // add config to zipping storage
         final ConfigPairBox configPair = new ConfigPairBox(dataBefore, dataAfter);
@@ -86,7 +88,7 @@ public class PolicyManagerZipImpl implements PolicyManager {
                 public ListenableFuture<Boolean> call() throws Exception {
                     final ConfigPairBox configPairBox = configPairKeeper.getAndSet(null);
                     LOG.debug("delegating policy configuration");
-                    return delegate.syncPolicy(configPairBox.getLeft(), configPair.getRight());
+                    return delegate.syncPolicy(configPairBox.getLeft(), configPair.getRight(), version);
                 }
             }));
         } else {

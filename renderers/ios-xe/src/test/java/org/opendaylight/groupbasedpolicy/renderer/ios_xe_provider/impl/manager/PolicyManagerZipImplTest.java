@@ -8,12 +8,11 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager;
 
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -26,10 +25,14 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.mockito.stubbing.Answer;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.manager.PolicyManager;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.Matcher;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Configuration;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.ConfigurationBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * Test for {@link PolicyManagerZipImpl}.
@@ -60,23 +63,23 @@ public class PolicyManagerZipImplTest {
 
     @Test
     public void testSyncPolicy_add() throws Exception {
-        policyManager.syncPolicy(null, configAfter);
+        policyManager.syncPolicy(null, configAfter, 0);
         policyManager.close();
-        Mockito.verify(delegate).syncPolicy(null, configAfter);
+        Mockito.verify(delegate).syncPolicy(null, configAfter, 0);
     }
 
     @Test
     public void testSyncPolicy_update() throws Exception {
-        policyManager.syncPolicy(configBefore, configAfter);
+        policyManager.syncPolicy(configBefore, configAfter, 0);
         policyManager.close();
-        Mockito.verify(delegate).syncPolicy(configBefore, configAfter);
+        Mockito.verify(delegate).syncPolicy(configBefore, configAfter, 0);
     }
 
     @Test
     public void testSyncPolicy_remove() throws Exception {
-        policyManager.syncPolicy(configBefore, null);
+        policyManager.syncPolicy(configBefore, null, 0);
         policyManager.close();
-        Mockito.verify(delegate).syncPolicy(configBefore, null);
+        Mockito.verify(delegate).syncPolicy(configBefore, null, 0);
     }
 
     @Test
@@ -91,7 +94,7 @@ public class PolicyManagerZipImplTest {
         final CountDownLatch latchForFirst = new CountDownLatch(1);
         final CountDownLatch latchForOthers = new CountDownLatch(1);
 
-        Mockito.when(delegate.syncPolicy(Matchers.<Configuration>any(), Matchers.<Configuration>any()))
+        Mockito.when(delegate.syncPolicy(Matchers.<Configuration>any(), Matchers.<Configuration>any(), Matchers.anyLong()))
                 .thenAnswer(new Answer<ListenableFuture<Boolean>>() {
                     @Override
                     public ListenableFuture<Boolean> answer(final InvocationOnMock invocationOnMock) throws Throwable {
@@ -105,19 +108,19 @@ public class PolicyManagerZipImplTest {
                 .thenReturn(Futures.immediateFuture(true));
 
         final List<ListenableFuture<Boolean>> allResults = new ArrayList<>();
-        allResults.add(policyManager.syncPolicy(null, configBefore));
+        allResults.add(policyManager.syncPolicy(null, configBefore, 0));
 
         latchForOthers.await(1, TimeUnit.SECONDS);
-        allResults.add(policyManager.syncPolicy(configBefore, configAfter));
-        allResults.add(policyManager.syncPolicy(configAfter, null));
-        allResults.add(policyManager.syncPolicy(null, configAfter2));
+        allResults.add(policyManager.syncPolicy(configBefore, configAfter, 0));
+        allResults.add(policyManager.syncPolicy(configAfter, null, 0));
+        allResults.add(policyManager.syncPolicy(null, configAfter2, 0));
         latchForFirst.countDown();
 
         Futures.allAsList(allResults).get(1, TimeUnit.SECONDS);
         LOG.info("all configs finished");
         policyManager.close();
         final InOrder inOrder = Mockito.inOrder(delegate);
-        inOrder.verify(delegate).syncPolicy(null, configBefore);
-        inOrder.verify(delegate).syncPolicy(configBefore, configAfter2);
+        inOrder.verify(delegate).syncPolicy(null, configBefore, 0);
+        inOrder.verify(delegate).syncPolicy(configBefore, configAfter2, 0);
     }
 }

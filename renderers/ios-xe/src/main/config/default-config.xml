@@ -34,7 +34,7 @@
                         <name>policy-validator-registry</name>
                     </policy-validator-registry>
 
-                    <renderer-name>ios-xe</renderer-name>
+                    <renderer-name>ios-xe-renderer</renderer-name>
                 </module>
             </modules>
         </data>
