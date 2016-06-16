@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.renderer.vpp.manager;
+package org.opendaylight.groupbasedpolicy.renderer.vpp.policy;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -41,7 +41,6 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.node.attributes.SupportingNodeBuilder;
 
 import com.google.common.base.Optional;
-import com.google.common.util.concurrent.ListenableFuture;
 
 public class BridgeDomainManagerImplTest extends CustomDataBrokerTest {
 
@@ -89,13 +88,16 @@ public class BridgeDomainManagerImplTest extends CustomDataBrokerTest {
     public void init() {
         dataBroker = getDataBroker();
         bridgeDomainManager = new BridgeDomainManagerImpl(dataBroker);
+        BridgeDomainManagerImpl.WAIT_FOR_TOPOLOGY_CREATION = 2;
     }
 
     @Test
-    public void testCreateVxlanBridgeDomainOnVppNode() {
-        ListenableFuture<Void> registered =
-                bridgeDomainManager.createVxlanBridgeDomainOnVppNode(BRIDGE_DOMAIN_ID, BRIDGE_DOMAIN_VNI, VPP_NODE_ID);
-        Assert.assertTrue(registered.isDone());
+    public void testCreateVxlanBridgeDomainOnVppNode() throws Exception {
+        WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
+        wTx.put(LogicalDatastoreType.OPERATIONAL, VppIidFactory.getTopologyIid(BASE_TOPOLOGY.getKey()),
+                new TopologyBuilder().setKey(BASE_TOPOLOGY.getKey()).build());
+        wTx.submit().get();
+        bridgeDomainManager.createVxlanBridgeDomainOnVppNode(BRIDGE_DOMAIN_ID, BRIDGE_DOMAIN_VNI, VPP_NODE_ID);
 
         Optional<Topology> topologyOptional = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
                 VppIidFactory.getTopologyIid(BASE_TOPOLOGY.getKey()), dataBroker.newReadOnlyTransaction());
@@ -119,9 +121,7 @@ public class BridgeDomainManagerImplTest extends CustomDataBrokerTest {
                 dataBroker.newReadOnlyTransaction());
         Assert.assertTrue(topologyOptional.isPresent());
 
-        ListenableFuture<Void> deleted =
-                bridgeDomainManager.removeBridgeDomainFromVppNode(BRIDGE_DOMAIN_ID, VPP_NODE_ID);
-        Assert.assertTrue(deleted.isDone());
+        bridgeDomainManager.removeBridgeDomainFromVppNode(BRIDGE_DOMAIN_ID, VPP_NODE_ID);
 
         topologyOptional = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
                 VppIidFactory.getNodeIid(new TopologyKey(BASE_TOPOLOGY_ID), new NodeKey(VPP_NODE_ID)),
