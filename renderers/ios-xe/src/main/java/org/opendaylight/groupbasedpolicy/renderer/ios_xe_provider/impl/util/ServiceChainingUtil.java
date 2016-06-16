@@ -9,7 +9,14 @@
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.CheckedFuture;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -30,6 +37,7 @@ import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev1407
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.rev140701.service.function.forwarders.ServiceFunctionForwarder;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.ServiceFunctionPaths;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.service.function.paths.ServiceFunctionPath;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308.Native;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ServiceChain;
@@ -58,11 +66,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class ServiceChainingUtil {
 
@@ -245,21 +248,29 @@ public class ServiceChainingUtil {
         return null;
     }
 
+    private static <T> Supplier<Boolean> createNegativePathWithLogSupplier(final T value, final Consumer<T> logCommand) {
+        return () -> {
+            // fireLog
+            logCommand.accept(value);
+            return false;
+        };
+    }
+
     static boolean setSfcPart(final RenderedServicePath renderedServicePath, PolicyWriter policyWriter) {
-        // TODO: break into smaller methods with partial result
-        if (renderedServicePath != null && renderedServicePath.getRenderedServicePathHop() != null &&
-                !renderedServicePath.getRenderedServicePathHop().isEmpty()) {
-            final RenderedServicePathHop firstHop = renderedServicePath.getRenderedServicePathHop().get(0);
-            if (firstHop == null) {
-                LOG.error("Rendered service path {} does not contain any hop", renderedServicePath.getName().getValue());
-                return false;
-            }
+        final java.util.Optional<RenderedServicePath> renderedServicePathSafe = java.util.Optional.ofNullable(renderedServicePath);
+        final java.util.Optional<RenderedServicePathHop> renderedServicePathHop = renderedServicePathSafe
+                .map(RenderedServicePath::getRenderedServicePathHop)
+                .map(rspHop -> Iterables.getFirst(rspHop, null));
+
+        final boolean outcome;
+        if (!renderedServicePathHop.isPresent()) {
+            LOG.warn("Rendered service path {} does not contain any hop",
+                    renderedServicePathSafe.map(RenderedServicePath::getName).map(RspName::getValue).orElse("n/a"));
+            outcome = false;
+        } else {
+            final RenderedServicePathHop firstHop = renderedServicePathHop.get();
             final SffName sffName = firstHop.getServiceFunctionForwarder();
-            final ServiceFunctionForwarder serviceFunctionForwarder = SfcProviderServiceForwarderAPI.readServiceFunctionForwarder(sffName);
-            if (serviceFunctionForwarder == null) {
-                LOG.error("Sff with name {} does not exist", sffName.getValue());
-                return false;
-            }
+
             // Forwarders
             //
             // If classifier node is also forwarder, first entry in service path has to point to first service function
@@ -271,54 +282,69 @@ public class ServiceChainingUtil {
             // Local case (only when does not exist)
 
             if (!checkLocalForwarderPresence(policyWriter.getCurrentMountpoint())) {
-                final LocalBuilder localSffBuilder = new LocalBuilder();
-                localSffBuilder.setIp(new IpBuilder().setAddress(new Ipv4Address(policyWriter.getManagementIpAddress()))
-                        .build());
-                policyWriter.cache(localSffBuilder.build());
+                appendLocalSff(policyWriter);
             } else {
                 LOG.info("Local forwarder for node {} is already created", policyWriter.getCurrentNodeId());
             }
-            // Set up choice. If remote, this choice is overwritten
-            ServiceTypeChoice serviceTypeChoice = functionTypeChoice(firstHop.getServiceFunctionName().getValue());
-            // Remote case
-            if (serviceFunctionForwarder.getIpMgmtAddress() == null
-                    || serviceFunctionForwarder.getIpMgmtAddress().getIpv4Address() == null) {
-                LOG.error("Cannot create remote forwarder, SFF {} does not contain management ip address",
-                        sffName.getValue());
-                return false;
-            }
-            final String sffMgmtIpAddress = serviceFunctionForwarder.getIpMgmtAddress().getIpv4Address().getValue();
-            // If local SFF has the same ip as first hop sff, it's the same SFF; no need to create a remote one
-            if (!sffMgmtIpAddress.equals(policyWriter.getManagementIpAddress())) {
-                final ServiceFfNameBuilder remoteSffBuilder = new ServiceFfNameBuilder();
-                remoteSffBuilder.setName(sffName.getValue())
-                        .setKey(new ServiceFfNameKey(sffName.getValue()))
-                        .setIp(new IpBuilder().setAddress(new Ipv4Address(sffMgmtIpAddress)).build());
-                policyWriter.cache(remoteSffBuilder.build());
-                serviceTypeChoice = forwarderTypeChoice(sffName.getValue());
-            }
 
-            // Service chain
-            final List<Services> services = new ArrayList<>();
-            final ServicesBuilder servicesBuilder = new ServicesBuilder();
-            servicesBuilder.setServiceIndexId(renderedServicePath.getStartingIndex())
-                    .setServiceTypeChoice(serviceTypeChoice);
-            final List<ServicePath> servicePaths = new ArrayList<>();
-            final ServicePathBuilder servicePathBuilder = new ServicePathBuilder();
-            servicePathBuilder.setKey(new ServicePathKey(renderedServicePath.getPathId()))
-                    .setServicePathId(renderedServicePath.getPathId())
-                    .setConfigServiceChainPathMode(new ConfigServiceChainPathModeBuilder()
-                            .setServiceIndex(new ServiceIndexBuilder()
-                                    .setServices(services).build()).build());
-            servicePaths.add(servicePathBuilder.build());
-            final ServiceChainBuilder chainBuilder = new ServiceChainBuilder();
-            chainBuilder.setServicePath(servicePaths);
-            final ServiceChain serviceChain = chainBuilder.build();
-            policyWriter.cache(serviceChain);
-            return true;
-        } else {
-            return false;
+            // Remote case
+            final java.util.Optional<ServiceFunctionForwarder> serviceFunctionForwarder = java.util.Optional.ofNullable(
+                    SfcProviderServiceForwarderAPI.readServiceFunctionForwarder(sffName));
+
+            outcome = serviceFunctionForwarder.map(sff -> java.util.Optional.ofNullable(sff.getIpMgmtAddress())
+                    .map(IpAddress::getIpv4Address)
+                    .map((ipv4Address) -> ipv4Address.getValue())
+                    .map(addressValue -> {
+                        // Set up choice. If remote, this choice is overwritten
+                        final ServiceTypeChoice serviceTypeChoice;
+                        if (!addressValue.equals(policyWriter.getManagementIpAddress())) {
+                            final ServiceFfNameBuilder remoteSffBuilder = new ServiceFfNameBuilder();
+                            remoteSffBuilder.setName(sffName.getValue())
+                                    .setKey(new ServiceFfNameKey(sffName.getValue()))
+                                    .setIp(new IpBuilder().setAddress(new Ipv4Address(addressValue)).build());
+                            policyWriter.cache(remoteSffBuilder.build());
+                            serviceTypeChoice = forwarderTypeChoice(sffName.getValue());
+                        } else {
+                            serviceTypeChoice = functionTypeChoice(firstHop.getServiceFunctionName().getValue());
+                        }
+
+                        // Service chain
+                        final List<Services> services = new ArrayList<>();
+                        //TODO: servicesBuilder is never used
+                        final ServicesBuilder servicesBuilder = new ServicesBuilder();
+                        servicesBuilder.setServiceIndexId(renderedServicePath.getStartingIndex())
+                                .setServiceTypeChoice(serviceTypeChoice);
+                        final List<ServicePath> servicePaths = new ArrayList<>();
+                        final ServicePathBuilder servicePathBuilder = new ServicePathBuilder();
+                        servicePathBuilder.setKey(new ServicePathKey(renderedServicePath.getPathId()))
+                                .setServicePathId(renderedServicePath.getPathId())
+                                .setConfigServiceChainPathMode(new ConfigServiceChainPathModeBuilder()
+                                        .setServiceIndex(new ServiceIndexBuilder()
+                                                .setServices(services).build()).build());
+                        servicePaths.add(servicePathBuilder.build());
+                        final ServiceChainBuilder chainBuilder = new ServiceChainBuilder();
+                        chainBuilder.setServicePath(servicePaths);
+                        final ServiceChain serviceChain = chainBuilder.build();
+                        policyWriter.cache(serviceChain);
+
+                        return true;
+                    }).orElseGet(createNegativePathWithLogSupplier(sffName.getValue(),
+                            (value) -> LOG.error("Cannot create remote forwarder, SFF {} does not contain management ip address",
+                                    value))
+                    )
+            ).orElseGet(createNegativePathWithLogSupplier(sffName.getValue(),
+                    (value) -> LOG.error("Sff with name {} does not exist", value))
+            );
         }
+
+        return outcome;
+    }
+
+    private static void appendLocalSff(final PolicyWriter policyWriter) {
+        final LocalBuilder localSffBuilder = new LocalBuilder();
+        localSffBuilder.setIp(new IpBuilder().setAddress(new Ipv4Address(policyWriter.getManagementIpAddress()))
+                .build());
+        policyWriter.cache(localSffBuilder.build());
     }
 
     static ServiceTypeChoice forwarderTypeChoice(final String forwarderName) {

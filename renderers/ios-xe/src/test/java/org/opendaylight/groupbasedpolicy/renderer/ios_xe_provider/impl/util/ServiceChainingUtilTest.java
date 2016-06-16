@@ -119,6 +119,7 @@ public class ServiceChainingUtilTest {
         final String managementIpAddress = "1.2.3.5";
         Mockito.when(policyWriter.getManagementIpAddress()).thenReturn(managementIpAddress);
 
+        Mockito.when(policyWriter.getCurrentMountpoint()).thenReturn(dataBroker);
         Mockito.when(dataBroker.newReadWriteTransaction()).thenReturn(rwTx);
     }
 
@@ -551,6 +552,9 @@ public class ServiceChainingUtilTest {
     public void testSetSfcPart_fail02() throws Exception {
         final RenderedServicePath rsp = createRsp("unit-rsp-03");
 
+        Mockito.doReturn(Futures.immediateCheckedFuture(Optional.absent()))
+                .when(rwTx).read(Mockito.eq(LogicalDatastoreType.CONFIGURATION), Mockito.<InstanceIdentifier<Local>>any());
+
         PowerMockito.mockStatic(SfcProviderServiceForwarderAPI.class);
         final SfcProviderServiceForwarderAPI api = PowerMockito.mock(SfcProviderServiceForwarderAPI.class);
         PowerMockito.when(api.readServiceFunctionForwarder(sffNameCaptor.capture())).thenReturn(null);
@@ -560,6 +564,9 @@ public class ServiceChainingUtilTest {
         Assert.assertEquals("rsp-hop-01-sf+sff", sffNameCaptor.getValue().getValue());
         Assert.assertFalse(outcome);
 
+        Mockito.verify(policyWriter).getCurrentMountpoint();
+        Mockito.verify(policyWriter).getManagementIpAddress();
+        Mockito.verify(policyWriter).cache(Matchers.<Local>any());
         Mockito.verifyNoMoreInteractions(policyWriter);
     }
 
