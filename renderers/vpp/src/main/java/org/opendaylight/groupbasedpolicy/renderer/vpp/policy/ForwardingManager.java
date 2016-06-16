@@ -10,6 +10,8 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.policy;
 
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -19,7 +21,6 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.manager.BridgeDomainManagerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.NetworkContainment;
@@ -42,15 +43,17 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.SetMultimap;
 
-public class ForwardingManager {
+public final class ForwardingManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(ForwardingManager.class);
-
+    @VisibleForTesting
+    static long WAIT_FOR_BD_CREATION = 10; // seconds
     private final InterfaceManager ifaceManager;
     private final BridgeDomainManager bdManager;
     private final DataBroker dataBroker;
@@ -85,9 +88,16 @@ public class ForwardingManager {
     private void createVxlanBridgeDomains(String bd, VxlanVni vni, Set<NodeId> vppNodes) {
         for (NodeId vppNode : vppNodes) {
             try {
-                bdManager.createVxlanBridgeDomainOnVppNode(bd, vni, vppNode).get();
+                LOG.trace("Creating VXLAN bridge-domain {} on node {} with VNI {}", bd, vppNode.getValue(),
+                        vni);
+                // TODO think about propagating ListenableFuture - timeout set as workaround
+                bdManager.createVxlanBridgeDomainOnVppNode(bd, vni, vppNode).get(WAIT_FOR_BD_CREATION,
+                        TimeUnit.SECONDS);
             } catch (InterruptedException | ExecutionException e) {
-                LOG.warn("Bridge domain {} was not created on node {}", bd, vppNode.getValue(), e);
+                LOG.warn("VXLAN Bridge domain {} was not created on node {}", bd, vppNode.getValue(), e);
+            } catch (TimeoutException e) {
+                LOG.warn("Probably, VXLAN Bridge domain {} was not created on node {} because BridgeDomainManager "
+                        + "did not respond by {} seconds.", bd, vppNode.getValue(), WAIT_FOR_BD_CREATION, e);
             }
         }
     }
@@ -95,9 +105,16 @@ public class ForwardingManager {
     private void createVlanBridgeDomains(String bd, VlanId vlanId, Set<NodeId> vppNodes) {
         for (NodeId vppNode : vppNodes) {
             try {
-                bdManager.createVlanBridgeDomainOnVppNode(bd, vlanId, vppNode).get();
+                LOG.trace("Creating VLAN bridge-domain {} on node {} with VLAN ID {}", bd, vppNode.getValue(),
+                        vlanId.getValue());
+                // TODO think about propagating ListenableFuture - timeout set as workaround
+                bdManager.createVlanBridgeDomainOnVppNode(bd, vlanId, vppNode).get(WAIT_FOR_BD_CREATION,
+                        TimeUnit.SECONDS);
             } catch (InterruptedException | ExecutionException e) {
-                LOG.warn("Bridge domain {} was not created on node {}", bd, vppNode.getValue(), e);
+                LOG.warn("VLAN Bridge domain {} was not created on node {}", bd, vppNode.getValue(), e);
+            } catch (TimeoutException e) {
+                LOG.warn("Probably, VLAN Bridge domain {} was not created on node {} because BridgeDomainManager "
+                        + "did not respond by {} seconds.", bd, vppNode.getValue(), WAIT_FOR_BD_CREATION, e);
             }
         }
     }
@@ -107,9 +124,13 @@ public class ForwardingManager {
             Set<NodeId> vppNodes = vppNodesByBridgeDomain.get(bd);
             for (NodeId vppNode : vppNodes) {
                 try {
-                    bdManager.removeBridgeDomainFromVppNode(bd, vppNode).get();
+                    bdManager.removeBridgeDomainFromVppNode(bd, vppNode).get(WAIT_FOR_BD_CREATION,
+                            TimeUnit.SECONDS);
                 } catch (InterruptedException | ExecutionException e) {
                     LOG.warn("Bridge domain {} was not removed from node {}", bd, vppNode.getValue(), e);
+                } catch (TimeoutException e) {
+                    LOG.warn("Probably, bridge domain {} was not removed from node {} because BridgeDomainManager "
+                            + "did not respond by {} seconds.", bd, vppNode.getValue(), WAIT_FOR_BD_CREATION, e);
                 }
             }
         }
