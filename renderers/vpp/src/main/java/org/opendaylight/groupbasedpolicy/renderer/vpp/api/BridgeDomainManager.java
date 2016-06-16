@@ -30,7 +30,7 @@ public interface BridgeDomainManager {
      * @param vppNodeId VPP node where the bridge domain should be created
      * @return {@link ListenableFuture}
      */
-    ListenableFuture<Void> createVxlanBridgeDomainOnVppNode(@Nonnull String bridgeDomainName, VxlanVni vni, @Nonnull NodeId vppNodeId);
+    ListenableFuture<Void> createVxlanBridgeDomainOnVppNode(@Nonnull String bridgeDomainName, @Nonnull VxlanVni vni, @Nonnull NodeId vppNodeId);
 
     /**
      * Creates a bridge domain on VPP node and it also adds tunnels of the bridge domain to VLAN

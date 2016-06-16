@@ -130,8 +130,8 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
     }
 
     @Override
-    public ListenableFuture<Void> createVxlanBridgeDomainOnVppNode(@Nonnull String bridgeDomainName, VxlanVni vni,
-            @Nonnull NodeId vppNodeId) {
+    public ListenableFuture<Void> createVxlanBridgeDomainOnVppNode(@Nonnull String bridgeDomainName,
+            @Nonnull VxlanVni vni, @Nonnull NodeId vppNodeId) {
         TopologyVbridgeAugment topoAug = new TopologyVbridgeAugmentBuilder().setTunnelType(TunnelTypeVxlan.class)
             .setArpTermination(false)
             .setFlood(true)
