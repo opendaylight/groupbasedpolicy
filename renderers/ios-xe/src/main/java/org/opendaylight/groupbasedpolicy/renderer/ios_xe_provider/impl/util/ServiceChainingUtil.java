@@ -188,7 +188,7 @@ public class ServiceChainingUtil {
      * @param mountpoint used to access specific device
      * @return true if Local Forwarder is present, false otherwise
      */
-    private static boolean checkLocalForwarderPresence(DataBroker mountpoint) {
+    static boolean checkLocalForwarderPresence(DataBroker mountpoint) {
         InstanceIdentifier<Local> localSffIid = InstanceIdentifier.builder(Native.class)
                 .child(ServiceChain.class)
                 .child(org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.ServiceFunctionForwarder.class)
@@ -235,7 +235,7 @@ public class ServiceChainingUtil {
         return false;
     }
 
-    private static ServiceFunctionPath findServiceFunctionPath(final SfcName chainName) {
+    static ServiceFunctionPath findServiceFunctionPath(final SfcName chainName) {
         final ServiceFunctionPaths allPaths = SfcProviderServicePathAPI.readAllServiceFunctionPaths();
         for (ServiceFunctionPath serviceFunctionPath : allPaths.getServiceFunctionPath()) {
             if (serviceFunctionPath.getServiceChainName().equals(chainName)) {
@@ -245,7 +245,7 @@ public class ServiceChainingUtil {
         return null;
     }
 
-    private static boolean setSfcPart(final RenderedServicePath renderedServicePath, PolicyWriter policyWriter) {
+    static boolean setSfcPart(final RenderedServicePath renderedServicePath, PolicyWriter policyWriter) {
         // TODO: break into smaller methods with partial result
         if (renderedServicePath != null && renderedServicePath.getRenderedServicePathHop() != null &&
                 !renderedServicePath.getRenderedServicePathHop().isEmpty()) {
@@ -321,13 +321,13 @@ public class ServiceChainingUtil {
         }
     }
 
-    private static ServiceTypeChoice forwarderTypeChoice(final String forwarderName) {
+    static ServiceTypeChoice forwarderTypeChoice(final String forwarderName) {
         final ServiceFunctionForwarderBuilder sffBuilder = new ServiceFunctionForwarderBuilder();
         sffBuilder.setServiceFunctionForwarder(forwarderName);
         return sffBuilder.build();
     }
 
-    private static ServiceTypeChoice functionTypeChoice(final String functionName) {
+    static ServiceTypeChoice functionTypeChoice(final String functionName) {
         final ServiceFunctionBuilder sfBuilder = new ServiceFunctionBuilder();
         sfBuilder.setServiceFunction(functionName);
         return sfBuilder.build();
