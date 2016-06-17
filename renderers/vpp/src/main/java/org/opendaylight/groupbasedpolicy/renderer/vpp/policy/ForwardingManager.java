@@ -8,6 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.policy;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -54,6 +56,8 @@ public final class ForwardingManager {
     private static final Logger LOG = LoggerFactory.getLogger(ForwardingManager.class);
     @VisibleForTesting
     static long WAIT_FOR_BD_CREATION = 10; // seconds
+    private long lastVxlanVni = 1L;
+    private final Map<String, VxlanVni> vxlanVniByBridgeDomain = new HashMap<>();
     private final InterfaceManager ifaceManager;
     private final BridgeDomainManager bdManager;
     private final DataBroker dataBroker;
@@ -80,7 +84,12 @@ public final class ForwardingManager {
                     createVlanBridgeDomains(bd, bdConfig.get().getVlan(), vppNodes);
                 }
             } else {
-                createVxlanBridgeDomains(bd, null, vppNodes);
+                VxlanVni vxlanVni = vxlanVniByBridgeDomain.get(bd);
+                if (vxlanVni == null) {
+                    vxlanVni = new VxlanVni(lastVxlanVni++);
+                    vxlanVniByBridgeDomain.put(bd, vxlanVni);
+                }
+                createVxlanBridgeDomains(bd, vxlanVni, vppNodes);
             }
         }
     }

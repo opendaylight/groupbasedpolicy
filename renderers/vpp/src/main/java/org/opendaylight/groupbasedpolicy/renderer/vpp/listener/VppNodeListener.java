@@ -21,7 +21,9 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.NodeOperEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.manager.VppNodeManager;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -34,6 +36,7 @@ import com.google.common.eventbus.EventBus;
 public class VppNodeListener implements DataTreeChangeListener<Node>, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(VppNodeListener.class);
+    private static final TopologyId TOPOLOGY_NETCONF = new TopologyId("topology-netconf");
 
     private final ListenerRegistration<VppNodeListener> listenerRegistration;
     private final VppNodeManager nodeManager;
@@ -44,7 +47,10 @@ public class VppNodeListener implements DataTreeChangeListener<Node>, AutoClosea
         this.eventBus = Preconditions.checkNotNull(eventBus);
         // Register listener
         final DataTreeIdentifier<Node> networkTopologyPath = new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
-                InstanceIdentifier.builder(NetworkTopology.class).child(Topology.class).child(Node.class).build());
+                InstanceIdentifier.builder(NetworkTopology.class)
+                    .child(Topology.class, new TopologyKey(TOPOLOGY_NETCONF))
+                    .child(Node.class)
+                    .build());
         listenerRegistration =
                 Preconditions.checkNotNull(dataBroker.registerDataTreeChangeListener(networkTopologyPath, this));
         LOG.info("Network-Topology VppNodelistener registered");
