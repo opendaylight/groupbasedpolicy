@@ -88,15 +88,10 @@ public class BridgeDomainManagerImplTest extends CustomDataBrokerTest {
     public void init() {
         dataBroker = getDataBroker();
         bridgeDomainManager = new BridgeDomainManagerImpl(dataBroker);
-        BridgeDomainManagerImpl.WAIT_FOR_TOPOLOGY_CREATION = 2;
     }
 
     @Test
     public void testCreateVxlanBridgeDomainOnVppNode() throws Exception {
-        WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
-        wTx.put(LogicalDatastoreType.OPERATIONAL, VppIidFactory.getTopologyIid(BASE_TOPOLOGY.getKey()),
-                new TopologyBuilder().setKey(BASE_TOPOLOGY.getKey()).build());
-        wTx.submit().get();
         bridgeDomainManager.createVxlanBridgeDomainOnVppNode(BRIDGE_DOMAIN_ID, BRIDGE_DOMAIN_VNI, VPP_NODE_ID);
 
         Optional<Topology> topologyOptional = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,

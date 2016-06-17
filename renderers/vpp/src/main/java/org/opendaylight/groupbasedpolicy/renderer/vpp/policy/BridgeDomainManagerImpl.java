@@ -80,8 +80,6 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
             TopologyTypesVbridgeAugment.class,
             new TopologyTypesVbridgeAugmentBuilder().setVbridgeTopology(new VbridgeTopologyBuilder().build()).build())
         .build();
-    @VisibleForTesting
-    static long WAIT_FOR_TOPOLOGY_CREATION = 10; // seconds
     private final DataBroker dataProvder;
 
     private static final class ListenableFutureSetter<T extends DataObject>
@@ -199,35 +197,15 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
 
             @Override
             public ListenableFuture<Void> apply(Optional<Topology> optTopology) throws Exception {
-                SettableFuture<Void> topoFuture = SettableFuture.create();
+                WriteTransaction wTx = dataProvder.newWriteOnlyTransaction();
                 if (!optTopology.isPresent()) {
-                    WriteTransaction wTx = dataProvder.newWriteOnlyTransaction();
                     Topology topology = new TopologyBuilder().setKey(topologyKey)
                         .setTopologyTypes(VBRIDGE_TOPOLOGY_TYPE)
                         .addAugmentation(TopologyVbridgeAugment.class, vBridgeAug)
                         .build();
                     wTx.put(LogicalDatastoreType.CONFIGURATION, topologyIid,
                             topology, true);
-                    Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
-
-                        @Override
-                        public void onSuccess(Void result) {
-                            DataTreeIdentifier<Topology> topoIdentifier =
-                                    new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL, topologyIid);
-                            new ListenableFutureSetter<>(dataProvder, topoFuture, topoIdentifier,
-                                    ModificationType.WRITE);
-                        }
-
-                        @Override
-                        public void onFailure(Throwable t) {
-                            LOG.warn("Request create topology for VBD was not stored to CONF DS. {}", topologyIid, t);
-                            topoFuture.setException(new Exception("Cannot send request to VBD."));
-                        }});
-                } else {
-                    topoFuture.set(null);
                 }
-                topoFuture.get(WAIT_FOR_TOPOLOGY_CREATION, TimeUnit.SECONDS);
-                WriteTransaction wTx = dataProvder.newWriteOnlyTransaction();
                 InstanceIdentifier<Node> nodeIid = VppIidFactory.getNodeIid(topologyKey, vppNode.getKey());
                 wTx.put(LogicalDatastoreType.CONFIGURATION, nodeIid, vppNode);
                 SettableFuture<Void> future = SettableFuture.create();

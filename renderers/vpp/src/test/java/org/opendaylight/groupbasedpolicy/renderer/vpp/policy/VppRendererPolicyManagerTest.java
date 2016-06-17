@@ -167,7 +167,6 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
     @Before
     public void init() throws Exception {
         ForwardingManager.WAIT_FOR_BD_CREATION = 2;
-        BridgeDomainManagerImpl.WAIT_FOR_TOPOLOGY_CREATION = 2;
         mountedDataProviderMock = Mockito.mock(MountedDataBrokerProvider.class);
         mountPointDataBroker = getDataBroker();
         setup(); // initialize new data broker for ODL data store

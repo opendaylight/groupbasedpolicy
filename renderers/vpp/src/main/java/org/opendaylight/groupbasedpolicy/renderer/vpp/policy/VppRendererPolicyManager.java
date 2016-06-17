@@ -177,7 +177,7 @@ public class VppRendererPolicyManager {
         ImmutableSet<RendererEndpointKey> rendEpsBefore = policyCtxBefore.getPolicyTable().rowKeySet();
         ImmutableSet<RendererEndpointKey> rendEpsAfter = policyCtxAfter.getPolicyTable().rowKeySet();
         SetMultimap<String, NodeId> vppNodesByL2FdBefore = resolveVppNodesByL2Fd(rendEpsBefore, policyCtxBefore);
-        SetMultimap<String, NodeId> vppNodesByL2FdAfter = resolveVppNodesByL2Fd(rendEpsAfter, policyCtxBefore);
+        SetMultimap<String, NodeId> vppNodesByL2FdAfter = resolveVppNodesByL2Fd(rendEpsAfter, policyCtxAfter);
         return Maps.difference(vppNodesByL2FdBefore.asMap(), vppNodesByL2FdAfter.asMap());
     }
 
