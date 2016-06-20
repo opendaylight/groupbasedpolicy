@@ -10,6 +10,7 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.policy;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.ExecutionException;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -21,10 +22,13 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.groupbasedpolicy.test.CustomDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VxlanVni;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.NodeVbridgeAugment;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.NodeVbridgeAugmentBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyTypesVbridgeAugment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyTypesVbridgeAugmentBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyVbridgeAugment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyVbridgeAugmentBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.node.BridgeMemberBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.topology.types.VbridgeTopologyBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev160429.TunnelTypeVxlan;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev160429.network.topology.topology.tunnel.parameters.VxlanTunnelParametersBuilder;
@@ -93,6 +97,24 @@ public class BridgeDomainManagerImplTest extends CustomDataBrokerTest {
     @Test
     public void testCreateVxlanBridgeDomainOnVppNode() throws Exception {
         bridgeDomainManager.createVxlanBridgeDomainOnVppNode(BRIDGE_DOMAIN_ID, BRIDGE_DOMAIN_VNI, VPP_NODE_ID);
+
+        // simulates VBD - when BD is created a node is stored to OPER DS
+        Thread vbdThread = new Thread(() -> {
+            WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
+            wTx.put(LogicalDatastoreType.OPERATIONAL, VppIidFactory
+                .getNodeIid(BASE_TOPOLOGY.getKey(), new NodeKey(VPP_NODE_ID)),
+                    new NodeBuilder().setNodeId(VPP_NODE_ID)
+                        .addAugmentation(NodeVbridgeAugment.class, new NodeVbridgeAugmentBuilder()
+                            .setBridgeMember(new BridgeMemberBuilder().build()).build())
+                        .build(),
+                    true);
+            try {
+                wTx.submit().get();
+            } catch (InterruptedException | ExecutionException e) {
+                Assert.fail();
+            }
+        });
+        vbdThread.join();
 
         Optional<Topology> topologyOptional = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
                 VppIidFactory.getTopologyIid(BASE_TOPOLOGY.getKey()), dataBroker.newReadOnlyTransaction());
