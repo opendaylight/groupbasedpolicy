@@ -169,6 +169,10 @@ public final class ForwardingManager {
                 // TODO add it to the status for renderer manager
                 LOG.warn("Interface was not added to bridge-domain {} for endpoint {}", l2FloodDomain, rEp, e);
             }
+        } else {
+            LOG.debug("Forwarding is not created - Location of renderer endpoint contains "
+                    + "external-node therefore VPP renderer assumes that interface for endpoint is "
+                    + "already assigned in bridge-domain representing external-node. {}", rEp);
         }
     }
 
@@ -188,6 +192,10 @@ public final class ForwardingManager {
                 // TODO add it to the status for renderer manager
                 LOG.warn("bridge-domain was not deleted from interface for endpoint {}", rEp, e);
             }
+        } else {
+            LOG.debug("Forwarding is not removed - Location of renderer endpoint does not contain "
+                    + "external-node therefore VPP renderer assumes that interface for endpoint is not "
+                    + "assigned to bridge-domain representing external-node. {}", rEp);
         }
     }
 

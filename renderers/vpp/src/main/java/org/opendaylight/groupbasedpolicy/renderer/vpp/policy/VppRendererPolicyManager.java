@@ -28,6 +28,7 @@ import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicyBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
@@ -65,16 +66,16 @@ public class VppRendererPolicyManager {
         RendererPolicyBuilder responseBuilder = new RendererPolicyBuilder();
         switch (event.getDtoModificationType()) {
             case CREATED:
-                LOG.trace("CREATED : {}", event);
+                LOG.trace("CREATED : {}", event.getIid());
                 responseBuilder.setVersion(event.getAfter().get().getVersion());
                 rendererPolicyCreated(event.getAfter().get());
                 break;
             case UPDATED:
-                LOG.trace("UPDATED: {}", event);
+                LOG.trace("UPDATED: {}", event.getIid());
                 RendererPolicy rPolicyBefore = event.getBefore().get();
                 RendererPolicy rPolicyAfter = event.getAfter().get();
                 responseBuilder.setVersion(rPolicyAfter.getVersion());
-                if (!isConfigurationChanged(rPolicyBefore, rPolicyAfter)) {
+                if (rPolicyBefore.getConfiguration() == null && rPolicyAfter.getConfiguration() == null) {
                     LOG.debug("Configuration is not changed only updating config version from {} to {}",
                             rPolicyBefore.getVersion(), rPolicyAfter.getVersion());
                 } else {
@@ -83,7 +84,7 @@ public class VppRendererPolicyManager {
                 }
                 break;
             case DELETED:
-                LOG.trace("DELETED: {}", event);
+                LOG.trace("DELETED: {}", event.getIid());
                 responseBuilder.setVersion(event.getBefore().get().getVersion());
                 rendererPolicyDeleted(event.getBefore().get());
                 break;
@@ -104,13 +105,6 @@ public class VppRendererPolicyManager {
                 LOG.warn("Renderer DIDN'T update renderer-policy {}", response);
             }
         });
-    }
-
-    private boolean isConfigurationChanged(RendererPolicy before, RendererPolicy after) {
-        if (before.getConfiguration() == null && after.getConfiguration() == null) {
-            return false;
-        }
-        return true;
     }
 
     private void rendererPolicyUpdated(RendererPolicy rPolicyBefore, RendererPolicy rPolicyAfter) {
@@ -158,18 +152,40 @@ public class VppRendererPolicyManager {
         ImmutableSet<RendererEndpointKey> rendEpsAfter = policyCtxAfter.getPolicyTable().rowKeySet();
 
         SetView<RendererEndpointKey> removedRendEps = Sets.difference(rendEpsBefore, rendEpsAfter);
+        LOG.trace("Removed renderer endpoints {}", removedRendEps);
         removedRendEps.forEach(rEpKey -> fwManager.removeForwardingForEndpoint(rEpKey, policyCtxBefore));
 
+        LOG.trace("Removed bridge domains on nodes {}", removedVppNodesByL2Fd);
+        LOG.trace("Created bridge domains on nodes {}", createdVppNodesByL2Fd);
         fwManager.removeBridgeDomainOnNodes(removedVppNodesByL2Fd);
         fwManager.createBridgeDomainOnNodes(createdVppNodesByL2Fd);
 
         SetView<RendererEndpointKey> createdRendEps = Sets.difference(rendEpsAfter, rendEpsBefore);
+        LOG.trace("Created renderer endpoints {}", createdRendEps);
         createdRendEps.forEach(rEpKey -> fwManager.createForwardingForEndpoint(rEpKey, policyCtxAfter));
 
         SetView<RendererEndpointKey> updatedRendEps = Sets.intersection(rendEpsBefore, rendEpsAfter);
-        // TODO think about all cases, but keep it simple for now
-        updatedRendEps.forEach(rEpKey -> fwManager.removeForwardingForEndpoint(rEpKey, policyCtxBefore));
-        updatedRendEps.forEach(rEpKey -> fwManager.createForwardingForEndpoint(rEpKey, policyCtxAfter));
+        LOG.trace("Updated renderer endpoints {}", updatedRendEps);
+        // update forwarding for endpoint
+        updatedRendEps.forEach(rEpKey -> {
+            AddressEndpointWithLocation addrEpWithLocBefore =
+                    policyCtxBefore.getAddrEpByKey().get(KeyFactory.addressEndpointKey(rEpKey));
+            AddressEndpointWithLocation addrEpWithLocAfter =
+                    policyCtxAfter.getAddrEpByKey().get(KeyFactory.addressEndpointKey(rEpKey));
+            if (isLocationChanged(addrEpWithLocBefore, addrEpWithLocAfter)) {
+                LOG.debug("Location is changed in endpoint {}", rEpKey);
+                LOG.trace("\nLocation before: {}\nLocation after: {}", addrEpWithLocBefore.getAbsoluteLocation(),
+                        addrEpWithLocAfter.getAbsoluteLocation());
+                fwManager.removeForwardingForEndpoint(rEpKey, policyCtxBefore);
+                fwManager.createForwardingForEndpoint(rEpKey, policyCtxAfter);
+            }
+        });
+    }
+
+    private static boolean isLocationChanged(AddressEndpointWithLocation before, AddressEndpointWithLocation after) {
+        ExternalLocationCase locationBefore = ForwardingManager.resolveAndValidateLocation(before);
+        ExternalLocationCase locationAfter = ForwardingManager.resolveAndValidateLocation(after);
+        return !locationBefore.equals(locationAfter);
     }
 
     private static MapDifference<String, Collection<NodeId>> createDiffForVppNodesByL2Fd(PolicyContext policyCtxBefore,
