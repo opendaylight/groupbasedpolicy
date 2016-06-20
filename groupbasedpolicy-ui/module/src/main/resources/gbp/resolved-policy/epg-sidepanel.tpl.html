@@ -83,24 +83,32 @@
     		<div layout="row" class="layout-row">
     			<span>Endpoints ({{endpoints.data.length}})</span>
     			<span class="flex" flex></span>
-    			<md-button class="md-button md-primary md-button md-ink-ripple expand-button" type="button" ng-click="expandAll(endpoints.data)" aria-label="Expand all">            
-    	            <i class="fa fa-expand ng-scope"></i>
-    	        	<div class="md-ripple-container"></div>
-    	        	<md-tooltip md-direction="bottom">
-    	        		Expand all
-    	        	</md-tooltip>
-    	    	</md-button>
-    	    	<md-button class="md-button md-primary md-button md-ink-ripple expand-button" type="button" ng-click="collapseAll(endpoints.data)" aria-label="Collapse all">
-    				<i class="fa fa-compress ng-scope"></i>
-    	    	    <div class="md-ripple-container"></div>
-    	        	<md-tooltip md-direction="bottom">
-    	        		Collapse all
-    	        	</md-tooltip>
-    	    	</md-button>
+    			<span ng-if="endpoints.data.length">
+	    			<md-button class="md-button md-primary md-button md-ink-ripple expand-button" type="button" ng-click="expandAll(endpoints.data)" aria-label="Expand all">            
+	    	            <i class="fa fa-expand ng-scope"></i>
+	    	        	<div class="md-ripple-container"></div>
+	    	        	<md-tooltip md-direction="bottom">
+	    	        		Expand all
+	    	        	</md-tooltip>
+	    	    	</md-button>
+	    	    	<md-button class="md-button md-primary md-button md-ink-ripple expand-button" type="button" ng-click="collapseAll(endpoints.data)" aria-label="Collapse all">
+	    				<i class="fa fa-compress ng-scope"></i>
+	    	    	    <div class="md-ripple-container"></div>
+	    	        	<md-tooltip md-direction="bottom">
+	    	        		Collapse all
+	    	        	</md-tooltip>
+	    	    	</md-button>
+    	    	</span>
         	</div>
 	    </md-subheader>
 	    <md-list class="expander">
 	    	<ng-repeat ng-repeat="endpoint in endpoints.data">
+	    	<md-button class="md-icon-button" ng-click="rootOpenEndpointDialog('edit', endpoint)">
+	    	    <md-icon>edit</md-icon>
+	    	</md-button>
+	    	<md-button class="md-icon-button" ng-click="rootDeleteEndpointDialog(endpoint)">
+	    	    <md-icon>delete</md-icon>
+	    	</md-button>
 	    		<md-list-item ng-click="toggleExpanded(endpoint)">
 	    			<span>{{endpoint.data['context-id']}}</span>
 		    		<md-content ng-show="endpoint.expanded" class="md-whiteframe-2dp ng-scope layout-margin">

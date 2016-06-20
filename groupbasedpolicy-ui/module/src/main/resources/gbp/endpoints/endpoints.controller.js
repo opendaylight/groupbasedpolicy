@@ -65,5 +65,13 @@ define([
         $scope.$on('ROOT_TENANT_CHANGED', function () {
             $scope.getEndpointsList();
         });
+
+        $scope.$on('openEndpointDialog', function(event, obj) {
+            openEndpointDialog('edit', obj);
+        });
+
+        $scope.$on('deleteEndpointDialog', function(event, obj) {
+            deleteEndpointDialog(obj);
+        });
     }
 });

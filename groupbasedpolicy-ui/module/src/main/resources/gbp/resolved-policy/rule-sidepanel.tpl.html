@@ -22,20 +22,22 @@
 		<div layout="row" class="layout-row">
 			<span>Actions ({{selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].action.length}})</span>
 			<span class="flex" flex></span>
-			<md-button class="md-button md-primary md-button md-ink-ripple expand-button" type="button" ng-click="expandAll(selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].action)" aria-label="Expand all">
-	            <i class="fa fa-expand ng-scope"></i>
-	        	<div class="md-ripple-container"></div>
-	        	<md-tooltip md-direction="bottom">
-	        		Expand all
-	        	</md-tooltip>
-	    	</md-button>
-	    	<md-button class="md-button md-primary md-button md-ink-ripple expand-button" type="button" ng-click="collapseAll(selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].action)" aria-label="Collapse all">
-				<i class="fa fa-compress ng-scope"></i>
-	    	    <div class="md-ripple-container"></div>
-	        	<md-tooltip md-direction="bottom">
-	        		Collapse all
-	        	</md-tooltip>
-	    	</md-button>
+			<span ng-if="selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].action.length">
+				<md-button class="md-button md-primary md-button md-ink-ripple expand-button" type="button" ng-click="expandAll(selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].action)" aria-label="Expand all">
+		            <i class="fa fa-expand ng-scope"></i>
+		        	<div class="md-ripple-container"></div>
+		        	<md-tooltip md-direction="bottom">
+		        		Expand all
+		        	</md-tooltip>
+		    	</md-button>
+		    	<md-button class="md-button md-primary md-button md-ink-ripple expand-button" type="button" ng-click="collapseAll(selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].action)" aria-label="Collapse all">
+					<i class="fa fa-compress ng-scope"></i>
+		    	    <div class="md-ripple-container"></div>
+		        	<md-tooltip md-direction="bottom">
+		        		Collapse all
+		        	</md-tooltip>
+		    	</md-button>
+	    	</span>
     	</div>
 	</md-subheader>
     <md-list class="expander">
@@ -64,20 +66,22 @@
 		<div layout="row" class="layout-row">
 			<span>Classifiers ({{selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].classifier.length}})</span>
 			<span class="flex" flex></span>
-			<md-button class="md-button md-primary md-button md-ink-ripple expand-button" type="button" ng-click="expandAll(selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].classifier)" aria-label="Expand all">
-	            <i class="fa fa-expand ng-scope"></i>
-	        	<div class="md-ripple-container"></div>
-	        	<md-tooltip md-direction="bottom">
-	        		Expand all
-	        	</md-tooltip>
-	    	</md-button>
-	    	<md-button class="md-button md-primary md-button md-ink-ripple expand-button" type="button" ng-click="collapseAll(selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].classifier)" aria-label="Collapse all">
-				<i class="fa fa-compress ng-scope"></i>
-	    	    <div class="md-ripple-container"></div>
-	        	<md-tooltip md-direction="bottom">
-	        		Collapse all
-	        	</md-tooltip>
-	    	</md-button>
+			<span ng-if="selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].classifier.length">
+				<md-button class="md-button md-primary md-button md-ink-ripple expand-button" type="button" ng-click="expandAll(selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].classifier)" aria-label="Expand all">
+		            <i class="fa fa-expand ng-scope"></i>
+		        	<div class="md-ripple-container"></div>
+		        	<md-tooltip md-direction="bottom">
+		        		Expand all
+		        	</md-tooltip>
+		    	</md-button>
+		    	<md-button class="md-button md-primary md-button md-ink-ripple expand-button" type="button" ng-click="collapseAll(selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].classifier)" aria-label="Collapse all">
+					<i class="fa fa-compress ng-scope"></i>
+		    	    <div class="md-ripple-container"></div>
+		        	<md-tooltip md-direction="bottom">
+		        		Collapse all
+		        	</md-tooltip>
+		    	</md-button>
+	    	</span>
     	</div>
 	</md-subheader>
     <md-list class="expander">
