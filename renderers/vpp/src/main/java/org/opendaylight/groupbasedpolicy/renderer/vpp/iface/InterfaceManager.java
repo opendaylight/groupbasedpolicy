@@ -251,6 +251,7 @@ public class InterfaceManager implements AutoCloseable {
 
                 String existingBridgeDomain = resolveBridgeDomain(optIface.get());
                 if (bridgeDomainName.equals(existingBridgeDomain)) {
+                    LOG.debug("Bridge domain {} already exists on interface {}", bridgeDomainName, interfacePath);
                     String nodePath = VppPathMapper.bridgeDomainToRestPath(bridgeDomainName);
                     if (!nodePath.equals(epLoc.getExternalNode())) {
                         vppEndpointLocationProvider.updateExternalNodeLocationForEndpoint(nodePath,
@@ -264,6 +265,7 @@ public class InterfaceManager implements AutoCloseable {
                 L2 l2 = new L2Builder()
                     .setInterconnection(new BridgeBasedBuilder().setBridgeDomain(bridgeDomainName).build()).build();
                 rwTx.merge(LogicalDatastoreType.CONFIGURATION, l2Iid, l2);
+                LOG.debug("Adding bridge domain {} to interface {}", bridgeDomainName, interfacePath);
                 return Futures.transform(rwTx.submit(), new Function<Void, Void>() {
 
                     @Override
@@ -327,6 +329,8 @@ public class InterfaceManager implements AutoCloseable {
 
                 String existingBridgeDomain = resolveBridgeDomain(optIface.get());
                 if (Strings.isNullOrEmpty(existingBridgeDomain)) {
+                    LOG.debug("Bridge domain does not exist therefore it is cosidered as"
+                            + "deleted for interface {}", interfacePath);
                     // bridge domain does not exist on interface so we consider job done
                     vppEndpointLocationProvider.updateExternalNodeLocationForEndpoint(null,
                             epLoc.getExternalNodeMountPoint(), addrEpWithLoc.getKey());
@@ -336,6 +340,7 @@ public class InterfaceManager implements AutoCloseable {
                 InstanceIdentifier<L2> l2Iid =
                         interfaceIid.builder().augmentation(VppInterfaceAugmentation.class).child(L2.class).build();
                 rwTx.delete(LogicalDatastoreType.CONFIGURATION, l2Iid);
+                LOG.debug("Deleting bridge domain from interface {}", interfacePath);
                 return Futures.transform(rwTx.submit(), new Function<Void, Void>() {
 
                     @Override

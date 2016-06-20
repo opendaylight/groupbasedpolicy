@@ -11,6 +11,8 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.policy;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -68,6 +70,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocationKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointWithPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointWithPolicyBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.rule.groups.RuleGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.rule.groups.RuleGroupBuilder;
@@ -80,6 +83,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_render
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.VhostUserCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VppInterfaceAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VxlanVni;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.interfaces._interface.L2;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.l2.base.attributes.Interconnection;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.l2.base.attributes.interconnection.BridgeBased;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.vpp.BridgeDomains;
@@ -95,6 +99,7 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import com.google.common.util.concurrent.MoreExecutors;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -103,48 +108,36 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
     private static final InstanceIdentifier<RendererPolicy> RENDERER_POLICY_IID =
             IidFactory.rendererIid(VppRenderer.NAME).child(RendererPolicy.class);
     private static final ContextId CTX_ID = new ContextId("ctx");
-    private static final AddressEndpointWithLocationKey CLIENT_EP_KEY =
-            new AddressEndpointWithLocationKey("1.1.1.1", AddressType.class, CTX_ID, ContextType.class);
-    private static final AddressEndpointWithLocationKey WEB_EP_KEY =
-            new AddressEndpointWithLocationKey("2.2.2.2", AddressType.class, CTX_ID, ContextType.class);
     private static final ContextId L2FD_CTX = new ContextId("l2fd");
-    private static final NetworkContainment L2FD_NET_CONT =
-            new NetworkContainmentBuilder().setContainment(new ForwardingContextContainmentBuilder()
-                .setContextType(L2FloodDomain.class).setContextId(L2FD_CTX).build()).build();
-    private final static TopologyKey TOPO_KEY = new TopologyKey(new TopologyId("topo1"));
-    private final static NodeKey NODE_KEY = new NodeKey(new NodeId("node1"));
-    private final static InstanceIdentifier<Node> VPP_NODE_IID = InstanceIdentifier.builder(NetworkTopology.class)
+    private final static TopologyKey TOPO_KEY = new TopologyKey(new TopologyId("topology-netconf"));
+    private final static InstanceIdentifier<Node> VPP_NODE_1_IID = InstanceIdentifier.builder(NetworkTopology.class)
         .child(Topology.class, TOPO_KEY)
-        .child(Node.class, NODE_KEY)
+        .child(Node.class, new NodeKey(new NodeId("node1")))
         .build();
-    private static final String IFACE_NAME_CLIENT_EP = "interfaceClient";
-    private static final String NODE_CONNECTOR_CLIENT_EP = VppPathMapper.interfaceToRestPath(IFACE_NAME_CLIENT_EP);
-    private static final String IFACE_NAME_WEB_EP = "interfaceWeb";
-    private static final String NODE_CONNECTOR_WEB_EP = VppPathMapper.interfaceToRestPath(IFACE_NAME_WEB_EP);
+    private final static InstanceIdentifier<Node> VPP_NODE_2_IID = InstanceIdentifier.builder(NetworkTopology.class)
+        .child(Topology.class, TOPO_KEY)
+        .child(Node.class, new NodeKey(new NodeId("node2")))
+        .build();
     private static final ContractId CONTRACT_ID = new ContractId("contract");
     private static final TenantId TENANT_ID = new TenantId("tenant");
     private static final SubjectName SUBJECT_NAME = new SubjectName("subject");
     private static final RuleName RULE_NAME = new RuleName("rule");
-    private static final RuleGroupWithRendererEndpointParticipation RULE_GROUP_WITH_REND_EP_PART =
+    private static final RuleGroupWithRendererEndpointParticipation RULE_GROUP_WITH_CONSUMER =
             new RuleGroupWithRendererEndpointParticipationBuilder().setContractId(CONTRACT_ID)
                 .setTenantId(TENANT_ID)
                 .setSubjectName(SUBJECT_NAME)
                 .setRendererEndpointParticipation(EndpointPolicyParticipation.CONSUMER)
                 .build();
+    private static final RuleGroupWithRendererEndpointParticipation RULE_GROUP_WITH_PROVIDER =
+            new RuleGroupWithRendererEndpointParticipationBuilder().setContractId(CONTRACT_ID)
+                .setTenantId(TENANT_ID)
+                .setSubjectName(SUBJECT_NAME)
+                .setRendererEndpointParticipation(EndpointPolicyParticipation.PROVIDER)
+                .build();
     private static final RuleGroup RULE_GROUP = new RuleGroupBuilder().setContractId(CONTRACT_ID)
         .setTenantId(TENANT_ID)
         .setSubjectName(SUBJECT_NAME)
         .setResolvedRule(Arrays.asList(new ResolvedRuleBuilder().setName(RULE_NAME).build()))
-        .build();
-    // data for InterfaceManager
-    private final static InstanceIdentifier<VppEndpoint> BASIC_VPP_CLIENT_EP_IID =
-            InstanceIdentifier.builder(Config.class)
-                .child(VppEndpoint.class, new VppEndpointKey(CLIENT_EP_KEY.getAddress(), CLIENT_EP_KEY.getAddressType(),
-                        CLIENT_EP_KEY.getContextId(), CLIENT_EP_KEY.getContextType()))
-                .build();
-    private final static InstanceIdentifier<VppEndpoint> BASIC_VPP_WEB_EP_IID = InstanceIdentifier.builder(Config.class)
-        .child(VppEndpoint.class, new VppEndpointKey(WEB_EP_KEY.getAddress(), WEB_EP_KEY.getAddressType(),
-                WEB_EP_KEY.getContextId(), WEB_EP_KEY.getContextType()))
         .build();
     private final static String SOCKET = "socket";
 
@@ -173,38 +166,28 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         dataBroker = getDataBroker();
         Mockito.when(mountedDataProviderMock.getDataBrokerForMountPoint(Mockito.any(InstanceIdentifier.class)))
             .thenReturn(Optional.of(mountPointDataBroker));
-        ifaceManager = new InterfaceManager(mountedDataProviderMock, dataBroker, MoreExecutors.newDirectExecutorService());
+        ifaceManager =
+                new InterfaceManager(mountedDataProviderMock, dataBroker, MoreExecutors.newDirectExecutorService());
         bdManager = new BridgeDomainManagerImpl(mountPointDataBroker);
         fwManager = new ForwardingManager(ifaceManager, bdManager, dataBroker);
         vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, dataBroker);
     }
 
     @Test
-    public void testRendererPolicyChanged_createdClient() throws Exception {
-        storeInterfaceFor(CLIENT_EP_KEY, IFACE_NAME_CLIENT_EP, BASIC_VPP_CLIENT_EP_IID);
+    public void testRendererPolicyChanged_created_oneEpPerEpg() throws Exception {
+        String clientIp = "1.1.1.1";
+        String clientIfaceName = "client1";
+        AbsoluteLocation clientLocation = absoluteLocation(VPP_NODE_1_IID, null, clientIfaceName);
+        AddressEndpointWithLocation clientEp = createEndpoint(clientIp, L2FD_CTX.getValue(), clientLocation);
+        String webIp = "2.2.2.2";
+        String webIfaceName = "web1";
+        AbsoluteLocation webLocation = absoluteLocation(VPP_NODE_1_IID, null, webIfaceName);
+        AddressEndpointWithLocation webEp = createEndpoint(webIp, L2FD_CTX.getValue(), webLocation);
 
-        AddressEndpointWithLocation clientEp = new AddressEndpointWithLocationBuilder().setKey(CLIENT_EP_KEY)
-            .setNetworkContainment(L2FD_NET_CONT)
-            .setAbsoluteLocation(absoluteLocation(VPP_NODE_IID, null, NODE_CONNECTOR_CLIENT_EP))
-            .build();
-        AddressEndpointWithLocation webEp = new AddressEndpointWithLocationBuilder().setKey(WEB_EP_KEY)
-            .setNetworkContainment(L2FD_NET_CONT)
-            .setAbsoluteLocation(absoluteLocation(VPP_NODE_IID, null, NODE_CONNECTOR_WEB_EP))
-            .build();
-        Endpoints endpoints =
-                new EndpointsBuilder().setAddressEndpointWithLocation(Arrays.asList(clientEp, webEp)).build();
-        RendererEndpoint rendererEndpoint = new RendererEndpointBuilder()
-            .setKey(KeyFactory.rendererEndpointKey(CLIENT_EP_KEY))
-            .setPeerEndpointWithPolicy(Arrays.asList(new PeerEndpointWithPolicyBuilder()
-                .setKey(KeyFactory.peerEndpointWithPolicyKey(WEB_EP_KEY))
-                .setRuleGroupWithRendererEndpointParticipation(Arrays.asList(RULE_GROUP_WITH_REND_EP_PART))
-                .build()))
-            .build();
-        Configuration configuration = new ConfigurationBuilder().setEndpoints(endpoints)
-            .setRendererEndpoints(
-                    new RendererEndpointsBuilder().setRendererEndpoint(Arrays.asList(rendererEndpoint)).build())
-            .setRuleGroups(new RuleGroupsBuilder().setRuleGroup(Arrays.asList(RULE_GROUP)).build())
-            .build();
+        storeVppEndpoint(clientEp.getKey(), clientIfaceName, createVppEndpointIid(clientEp.getKey()));
+        storeVppEndpoint(webEp.getKey(), webIfaceName, createVppEndpointIid(webEp.getKey()));
+
+        Configuration configuration = createConfiguration(Arrays.asList(clientEp), Arrays.asList(webEp));
         RendererPolicy rendererPolicy =
                 new RendererPolicyBuilder().setVersion(1L).setConfiguration(configuration).build();
         RendererPolicyConfEvent event = new RendererPolicyConfEvent(RENDERER_POLICY_IID, null, rendererPolicy);
@@ -212,76 +195,10 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         vppRendererPolicyManager.rendererPolicyChanged(event);
 
         // assert state on data store behind mount point
-        ReadOnlyTransaction rTxMount = mountPointDataBroker.newReadOnlyTransaction();
-        Optional<Interface> potentialIface = rTxMount.read(LogicalDatastoreType.CONFIGURATION, InstanceIdentifier
-            .builder(Interfaces.class).child(Interface.class, new InterfaceKey(IFACE_NAME_CLIENT_EP)).build()).get();
-        Assert.assertTrue(potentialIface.isPresent());
-        Interface iface = potentialIface.get();
-        VppInterfaceAugmentation vppIfaceAug = iface.getAugmentation(VppInterfaceAugmentation.class);
-        Assert.assertNotNull(vppIfaceAug);
-        Interconnection interconnection = vppIfaceAug.getL2().getInterconnection();
-        Assert.assertNotNull(interconnection);
-        Assert.assertTrue(interconnection instanceof BridgeBased);
-        Assert.assertEquals(L2FD_CTX.getValue(), ((BridgeBased) interconnection).getBridgeDomain());
-        // assert state on ODL data store
-        ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
-        Optional<LocationProvider> optLocationProvider = rTx.read(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.locationProviderIid(VppEndpointLocationProvider.VPP_ENDPOINT_LOCATION_PROVIDER))
-            .get();
-        Assert.assertTrue(optLocationProvider.isPresent());
-        List<ProviderAddressEndpointLocation> epLocs = optLocationProvider.get().getProviderAddressEndpointLocation();
-        Assert.assertNotNull(epLocs);
-        Assert.assertEquals(1, epLocs.size());
-        Assert.assertEquals(absoluteLocation(VPP_NODE_IID, VppPathMapper.bridgeDomainToRestPath(L2FD_CTX.getValue()),
-                NODE_CONNECTOR_CLIENT_EP), epLocs.get(0).getAbsoluteLocation());
-    }
-
-    @Test
-    public void testRendererPolicyChanged_createdClientAndThenWeb() throws Exception {
-        testRendererPolicyChanged_createdClient();
-
-        storeInterfaceFor(WEB_EP_KEY, IFACE_NAME_WEB_EP, BASIC_VPP_WEB_EP_IID);
-
-        AddressEndpointWithLocation webEp = new AddressEndpointWithLocationBuilder().setKey(WEB_EP_KEY)
-            .setNetworkContainment(L2FD_NET_CONT)
-            .setAbsoluteLocation(absoluteLocation(VPP_NODE_IID, null, NODE_CONNECTOR_WEB_EP))
-            .build();
-        AddressEndpointWithLocation clientEp = new AddressEndpointWithLocationBuilder().setKey(CLIENT_EP_KEY)
-            .setNetworkContainment(L2FD_NET_CONT)
-            .setAbsoluteLocation(absoluteLocation(VPP_NODE_IID, null, NODE_CONNECTOR_CLIENT_EP))
-            .build();
-        Endpoints endpoints =
-                new EndpointsBuilder().setAddressEndpointWithLocation(Arrays.asList(webEp, clientEp)).build();
-        RendererEndpoint rendererEndpoint = new RendererEndpointBuilder()
-            .setKey(KeyFactory.rendererEndpointKey(WEB_EP_KEY))
-            .setPeerEndpointWithPolicy(Arrays.asList(new PeerEndpointWithPolicyBuilder()
-                .setKey(KeyFactory.peerEndpointWithPolicyKey(CLIENT_EP_KEY))
-                .setRuleGroupWithRendererEndpointParticipation(Arrays.asList(RULE_GROUP_WITH_REND_EP_PART))
-                .build()))
-            .build();
-        Configuration configuration = new ConfigurationBuilder().setEndpoints(endpoints)
-            .setRendererEndpoints(
-                    new RendererEndpointsBuilder().setRendererEndpoint(Arrays.asList(rendererEndpoint)).build())
-            .setRuleGroups(new RuleGroupsBuilder().setRuleGroup(Arrays.asList(RULE_GROUP)).build())
-            .build();
-        RendererPolicy rendererPolicy =
-                new RendererPolicyBuilder().setVersion(1L).setConfiguration(configuration).build();
-        RendererPolicyConfEvent event = new RendererPolicyConfEvent(RENDERER_POLICY_IID, null, rendererPolicy);
-
-        vppRendererPolicyManager.rendererPolicyChanged(event);
-
-        // assert state on data store behind mount point
-        ReadOnlyTransaction rTxMount = mountPointDataBroker.newReadOnlyTransaction();
-        Optional<Interface> potentialIface = rTxMount.read(LogicalDatastoreType.CONFIGURATION, InstanceIdentifier
-            .builder(Interfaces.class).child(Interface.class, new InterfaceKey(IFACE_NAME_WEB_EP)).build()).get();
-        Assert.assertTrue(potentialIface.isPresent());
-        Interface iface = potentialIface.get();
-        VppInterfaceAugmentation vppIfaceAug = iface.getAugmentation(VppInterfaceAugmentation.class);
-        Assert.assertNotNull(vppIfaceAug);
-        Interconnection interconnection = vppIfaceAug.getL2().getInterconnection();
-        Assert.assertNotNull(interconnection);
-        Assert.assertTrue(interconnection instanceof BridgeBased);
-        Assert.assertEquals(L2FD_CTX.getValue(), ((BridgeBased) interconnection).getBridgeDomain());
+        Interface clientIface = readAndAssertInterface(clientIfaceName);
+        assertBridgeDomainOnInterface(L2FD_CTX.getValue(), clientIface);
+        Interface webIface = readAndAssertInterface(webIfaceName);
+        assertBridgeDomainOnInterface(L2FD_CTX.getValue(), webIface);
         // assert state on ODL data store
         ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
         Optional<LocationProvider> optLocationProvider = rTx.read(LogicalDatastoreType.CONFIGURATION,
@@ -291,45 +208,280 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         List<ProviderAddressEndpointLocation> epLocs = optLocationProvider.get().getProviderAddressEndpointLocation();
         Assert.assertNotNull(epLocs);
         Assert.assertEquals(2, epLocs.size());
-        if (epLocs.get(0).getAddress().equals(CLIENT_EP_KEY.getAddress())) {
-            Assert.assertEquals(absoluteLocation(VPP_NODE_IID,
-                    VppPathMapper.bridgeDomainToRestPath(L2FD_CTX.getValue()), NODE_CONNECTOR_CLIENT_EP),
-                    epLocs.get(0).getAbsoluteLocation());
-            Assert.assertEquals(absoluteLocation(VPP_NODE_IID,
-                    VppPathMapper.bridgeDomainToRestPath(L2FD_CTX.getValue()), NODE_CONNECTOR_WEB_EP),
-                    epLocs.get(1).getAbsoluteLocation());
+        assertProviderAddressEndpointLocation(clientEp.getKey(),
+                absoluteLocation(VPP_NODE_1_IID, L2FD_CTX.getValue(), clientIfaceName), epLocs);
+        assertProviderAddressEndpointLocation(webEp.getKey(),
+                absoluteLocation(VPP_NODE_1_IID, L2FD_CTX.getValue(), webIfaceName), epLocs);
+    }
+
+    @Test
+    public void testRendererPolicyChanged_update() throws Exception {
+        String client1IfaceName = "client1";
+        AbsoluteLocation client1LocationNodeNull = absoluteLocation(VPP_NODE_1_IID, null, client1IfaceName);
+        AddressEndpointWithLocation client1Ep =
+                createEndpoint("10.0.0.1", L2FD_CTX.getValue(), client1LocationNodeNull);
+        String web1IfaceName = "web1";
+        AbsoluteLocation web1LocationNodeNull = absoluteLocation(VPP_NODE_2_IID, null, web1IfaceName);
+        AddressEndpointWithLocation web1Ep = createEndpoint("20.0.0.1", L2FD_CTX.getValue(), web1LocationNodeNull);
+        String client2IfaceName = "client2";
+        AbsoluteLocation client2LocationNodeNull = absoluteLocation(VPP_NODE_1_IID, null, client2IfaceName);
+        AddressEndpointWithLocation client2Ep =
+                createEndpoint("10.0.0.2", L2FD_CTX.getValue(), client2LocationNodeNull);
+        String web2IfaceName = "web2";
+        AbsoluteLocation web2LocationNodeNull = absoluteLocation(VPP_NODE_2_IID, null, web2IfaceName);
+        AddressEndpointWithLocation web2Ep = createEndpoint("20.0.0.2", L2FD_CTX.getValue(), web2LocationNodeNull);
+
+        storeVppEndpoint(client1Ep.getKey(), client1IfaceName, createVppEndpointIid(client1Ep.getKey()));
+        storeVppEndpoint(web1Ep.getKey(), web1IfaceName, createVppEndpointIid(web1Ep.getKey()));
+        storeVppEndpoint(client2Ep.getKey(), client2IfaceName, createVppEndpointIid(client2Ep.getKey()));
+        storeVppEndpoint(web2Ep.getKey(), web2IfaceName, createVppEndpointIid(web2Ep.getKey()));
+
+        Configuration configuration =
+                createConfiguration(Arrays.asList(client1Ep, client2Ep), Arrays.asList(web1Ep, web2Ep));
+        RendererPolicy rendererPolicy =
+                new RendererPolicyBuilder().setVersion(1L).setConfiguration(configuration).build();
+        RendererPolicyConfEvent event = new RendererPolicyConfEvent(RENDERER_POLICY_IID, null, rendererPolicy);
+
+        vppRendererPolicyManager.rendererPolicyChanged(event);
+
+        // assert state on data store behind mount point ######################################
+        Interface client1Iface = readAndAssertInterface(client1IfaceName);
+        assertBridgeDomainOnInterface(L2FD_CTX.getValue(), client1Iface);
+        Interface web1Iface = readAndAssertInterface(web1IfaceName);
+        assertBridgeDomainOnInterface(L2FD_CTX.getValue(), web1Iface);
+        Interface client2Iface = readAndAssertInterface(client2IfaceName);
+        assertBridgeDomainOnInterface(L2FD_CTX.getValue(), client2Iface);
+        Interface web2Iface = readAndAssertInterface(web2IfaceName);
+        assertBridgeDomainOnInterface(L2FD_CTX.getValue(), web2Iface);
+        // assert state on ODL data store
+        ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
+        Optional<LocationProvider> optLocationProvider = rTx.read(LogicalDatastoreType.CONFIGURATION,
+                IidFactory.locationProviderIid(VppEndpointLocationProvider.VPP_ENDPOINT_LOCATION_PROVIDER))
+            .get();
+        Assert.assertTrue(optLocationProvider.isPresent());
+        List<ProviderAddressEndpointLocation> epLocs = optLocationProvider.get().getProviderAddressEndpointLocation();
+        Assert.assertNotNull(epLocs);
+        Assert.assertEquals(4, epLocs.size());
+        assertProviderAddressEndpointLocation(client1Ep.getKey(),
+                absoluteLocation(VPP_NODE_1_IID, L2FD_CTX.getValue(), client1IfaceName), epLocs);
+        assertProviderAddressEndpointLocation(web1Ep.getKey(),
+                absoluteLocation(VPP_NODE_2_IID, L2FD_CTX.getValue(), web1IfaceName), epLocs);
+        assertProviderAddressEndpointLocation(client2Ep.getKey(),
+                absoluteLocation(VPP_NODE_1_IID, L2FD_CTX.getValue(), client2IfaceName), epLocs);
+        assertProviderAddressEndpointLocation(web2Ep.getKey(),
+                absoluteLocation(VPP_NODE_2_IID, L2FD_CTX.getValue(), web2IfaceName), epLocs);
+        // #####################################################################################
+
+        AbsoluteLocation client1Location =
+                absoluteLocation(VPP_NODE_1_IID, L2FD_CTX.getValue(), client1IfaceName);
+        AbsoluteLocation web1Location =
+                absoluteLocation(VPP_NODE_2_IID, L2FD_CTX.getValue(), web1IfaceName);
+        AbsoluteLocation web2Location =
+                absoluteLocation(VPP_NODE_2_IID, L2FD_CTX.getValue(), web2IfaceName);
+        configuration = createConfiguration(
+                Arrays.asList(
+                        new AddressEndpointWithLocationBuilder(client1Ep).setAbsoluteLocation(client1Location).build(),
+                        new AddressEndpointWithLocationBuilder(client2Ep).setAbsoluteLocation(client2LocationNodeNull)
+                            .build()),
+                Arrays.asList(new AddressEndpointWithLocationBuilder(web1Ep).setAbsoluteLocation(web1Location).build(),
+                        new AddressEndpointWithLocationBuilder(web2Ep).setAbsoluteLocation(web2Location).build()));
+        RendererPolicy rendererPolicy2 =
+                new RendererPolicyBuilder().setVersion(2L).setConfiguration(configuration).build();
+        RendererPolicyConfEvent event2 =
+                new RendererPolicyConfEvent(RENDERER_POLICY_IID, rendererPolicy, rendererPolicy2);
+
+        vppRendererPolicyManager.rendererPolicyChanged(event2);
+
+        // assert state on data store behind mount point ######################################
+        client1Iface = readAndAssertInterface(client1IfaceName);
+        assertBridgeDomainOnInterface(L2FD_CTX.getValue(), client1Iface);
+        web1Iface = readAndAssertInterface(web1IfaceName);
+        assertBridgeDomainOnInterface(L2FD_CTX.getValue(), web1Iface);
+        client2Iface = readAndAssertInterface(client2IfaceName);
+        assertBridgeDomainOnInterface(L2FD_CTX.getValue(), client2Iface);
+        web2Iface = readAndAssertInterface(web2IfaceName);
+        assertBridgeDomainOnInterface(L2FD_CTX.getValue(), web2Iface);
+        // assert state on ODL data store
+        rTx = dataBroker.newReadOnlyTransaction();
+        optLocationProvider = rTx.read(LogicalDatastoreType.CONFIGURATION,
+                IidFactory.locationProviderIid(VppEndpointLocationProvider.VPP_ENDPOINT_LOCATION_PROVIDER))
+            .get();
+        Assert.assertTrue(optLocationProvider.isPresent());
+        epLocs = optLocationProvider.get().getProviderAddressEndpointLocation();
+        Assert.assertNotNull(epLocs);
+        Assert.assertEquals(4, epLocs.size());
+        assertProviderAddressEndpointLocation(client1Ep.getKey(),
+                absoluteLocation(VPP_NODE_1_IID, L2FD_CTX.getValue(), client1IfaceName), epLocs);
+        assertProviderAddressEndpointLocation(web1Ep.getKey(),
+                absoluteLocation(VPP_NODE_2_IID, L2FD_CTX.getValue(), web1IfaceName), epLocs);
+        assertProviderAddressEndpointLocation(client2Ep.getKey(),
+                absoluteLocation(VPP_NODE_1_IID, L2FD_CTX.getValue(), client2IfaceName), epLocs);
+        assertProviderAddressEndpointLocation(web2Ep.getKey(),
+                absoluteLocation(VPP_NODE_2_IID, L2FD_CTX.getValue(), web2IfaceName), epLocs);
+        // #####################################################################################
+
+        AbsoluteLocation client2Location =
+                absoluteLocation(VPP_NODE_1_IID, L2FD_CTX.getValue(), client2IfaceName);
+        configuration = createConfiguration(
+                Arrays.asList(new AddressEndpointWithLocationBuilder(client1Ep).setAbsoluteLocation(client1Location)
+                    .build(),
+                        new AddressEndpointWithLocationBuilder(client2Ep).setAbsoluteLocation(client2Location).build()),
+                Arrays.asList(new AddressEndpointWithLocationBuilder(web1Ep).setAbsoluteLocation(web1Location).build(),
+                        new AddressEndpointWithLocationBuilder(web2Ep).setAbsoluteLocation(web2Location).build()));
+        RendererPolicy rendererPolicy3 =
+                new RendererPolicyBuilder().setVersion(3L).setConfiguration(configuration).build();
+        RendererPolicyConfEvent event3 =
+                new RendererPolicyConfEvent(RENDERER_POLICY_IID, rendererPolicy2, rendererPolicy3);
+
+        vppRendererPolicyManager.rendererPolicyChanged(event3);
+
+        // assert state on data store behind mount point ######################################
+        client1Iface = readAndAssertInterface(client1IfaceName);
+        assertBridgeDomainOnInterface(L2FD_CTX.getValue(), client1Iface);
+        web1Iface = readAndAssertInterface(web1IfaceName);
+        assertBridgeDomainOnInterface(L2FD_CTX.getValue(), web1Iface);
+        client2Iface = readAndAssertInterface(client2IfaceName);
+        assertBridgeDomainOnInterface(L2FD_CTX.getValue(), client2Iface);
+        web2Iface = readAndAssertInterface(web2IfaceName);
+        assertBridgeDomainOnInterface(L2FD_CTX.getValue(), web2Iface);
+        // assert state on ODL data store
+        rTx = dataBroker.newReadOnlyTransaction();
+        optLocationProvider = rTx.read(LogicalDatastoreType.CONFIGURATION,
+                IidFactory.locationProviderIid(VppEndpointLocationProvider.VPP_ENDPOINT_LOCATION_PROVIDER))
+            .get();
+        Assert.assertTrue(optLocationProvider.isPresent());
+        epLocs = optLocationProvider.get().getProviderAddressEndpointLocation();
+        Assert.assertNotNull(epLocs);
+        Assert.assertEquals(4, epLocs.size());
+        assertProviderAddressEndpointLocation(client1Ep.getKey(),
+                absoluteLocation(VPP_NODE_1_IID, L2FD_CTX.getValue(), client1IfaceName), epLocs);
+        assertProviderAddressEndpointLocation(web1Ep.getKey(),
+                absoluteLocation(VPP_NODE_2_IID, L2FD_CTX.getValue(), web1IfaceName), epLocs);
+        assertProviderAddressEndpointLocation(client2Ep.getKey(),
+                absoluteLocation(VPP_NODE_1_IID, L2FD_CTX.getValue(), client2IfaceName), epLocs);
+        assertProviderAddressEndpointLocation(web2Ep.getKey(),
+                absoluteLocation(VPP_NODE_2_IID, L2FD_CTX.getValue(), web2IfaceName), epLocs);
+        // #####################################################################################
+    }
+
+    private static AbsoluteLocation absoluteLocation(InstanceIdentifier<?> mountPoint, String nodeName,
+            String nodeConnectorName) {
+        ExternalLocationCaseBuilder extLocBuilder =
+                new ExternalLocationCaseBuilder().setExternalNodeMountPoint(mountPoint);
+        if (!Strings.isNullOrEmpty(nodeName)) {
+            extLocBuilder.setExternalNode(VppPathMapper.bridgeDomainToRestPath(nodeName));
+        }
+        if (!Strings.isNullOrEmpty(nodeConnectorName)) {
+            extLocBuilder.setExternalNodeConnector(VppPathMapper.interfaceToRestPath(nodeConnectorName));
+        }
+        return new AbsoluteLocationBuilder().setLocationType(extLocBuilder.build()).build();
+    }
+
+    private AddressEndpointWithLocation createEndpoint(String ip, String l2FdIdAsNetCont,
+            AbsoluteLocation absoluteLocation) {
+        AddressEndpointWithLocationKey key =
+                new AddressEndpointWithLocationKey(ip, AddressType.class, CTX_ID, ContextType.class);
+        NetworkContainment networkContainment =
+                new NetworkContainmentBuilder().setContainment(new ForwardingContextContainmentBuilder()
+                    .setContextType(L2FloodDomain.class).setContextId(new ContextId(l2FdIdAsNetCont)).build()).build();
+        return new AddressEndpointWithLocationBuilder().setKey(key)
+            .setNetworkContainment(networkContainment)
+            .setAbsoluteLocation(absoluteLocation)
+            .build();
+    }
+
+    private InstanceIdentifier<VppEndpoint> createVppEndpointIid(AddressEndpointWithLocationKey key) {
+        return InstanceIdentifier.builder(Config.class)
+            .child(VppEndpoint.class, new VppEndpointKey(key.getAddress(), key.getAddressType(), key.getContextId(),
+                    key.getContextType()))
+            .build();
+    }
+
+    private Configuration createConfiguration(List<AddressEndpointWithLocation> consumers,
+            List<AddressEndpointWithLocation> providers) {
+        List<AddressEndpointWithLocation> eps =
+                Stream.concat(consumers.stream(), providers.stream()).collect(Collectors.toList());
+        Endpoints endpoints = new EndpointsBuilder().setAddressEndpointWithLocation(eps).build();
+        List<RendererEndpoint> consumersAsRendererEps = consumers.stream().map(cons -> {
+            List<PeerEndpointWithPolicy> peers = providers.stream()
+                .map(web -> new PeerEndpointWithPolicyBuilder()
+                    .setKey(KeyFactory.peerEndpointWithPolicyKey(web.getKey()))
+                    .setRuleGroupWithRendererEndpointParticipation(Arrays.asList(RULE_GROUP_WITH_CONSUMER))
+                    .build())
+                .collect(Collectors.toList());
+            return new RendererEndpointBuilder().setKey(KeyFactory.rendererEndpointKey(cons.getKey()))
+                .setPeerEndpointWithPolicy(peers)
+                .build();
+        }).collect(Collectors.toList());
+        List<RendererEndpoint> providersAsRendererEps = providers.stream().map(prov -> {
+            List<PeerEndpointWithPolicy> peers = consumers.stream()
+                .map(client -> new PeerEndpointWithPolicyBuilder()
+                    .setKey(KeyFactory.peerEndpointWithPolicyKey(client.getKey()))
+                    .setRuleGroupWithRendererEndpointParticipation(Arrays.asList(RULE_GROUP_WITH_PROVIDER))
+                    .build())
+                .collect(Collectors.toList());
+            return new RendererEndpointBuilder().setKey(KeyFactory.rendererEndpointKey(prov.getKey()))
+                .setPeerEndpointWithPolicy(peers)
+                .build();
+        }).collect(Collectors.toList());
+        List<RendererEndpoint> rendererEps = Stream
+            .concat(consumersAsRendererEps.stream(), providersAsRendererEps.stream()).collect(Collectors.toList());
+        return new ConfigurationBuilder().setEndpoints(endpoints)
+            .setRendererEndpoints(new RendererEndpointsBuilder().setRendererEndpoint(rendererEps).build())
+            .setRuleGroups(new RuleGroupsBuilder().setRuleGroup(Arrays.asList(RULE_GROUP)).build())
+            .build();
+    }
+
+    private void assertProviderAddressEndpointLocation(AddressEndpointWithLocationKey expectedEpKey,
+            AbsoluteLocation expectedEpLoc, List<ProviderAddressEndpointLocation> providerEpLocs) {
+        List<ProviderAddressEndpointLocation> expectedProvEpLoc =
+                providerEpLocs.stream()
+                    .filter(provEpLoc -> provEpLoc.getKey()
+                        .equals(KeyFactory.providerAddressEndpointLocationKey(expectedEpKey)))
+                    .collect(Collectors.toList());
+        Assert.assertFalse(expectedProvEpLoc.isEmpty());
+        Assert.assertEquals(1, expectedProvEpLoc.size());
+        Assert.assertEquals(expectedEpLoc, expectedProvEpLoc.get(0).getAbsoluteLocation());
+    }
+
+    private Interface readAndAssertInterface(String expectedInterface) throws Exception {
+        ReadOnlyTransaction rTxMount = mountPointDataBroker.newReadOnlyTransaction();
+        Optional<Interface> potentialIface = rTxMount.read(LogicalDatastoreType.CONFIGURATION, InstanceIdentifier
+            .builder(Interfaces.class).child(Interface.class, new InterfaceKey(expectedInterface)).build()).get();
+        Assert.assertTrue(potentialIface.isPresent());
+        return potentialIface.get();
+    }
+
+    private static void assertBridgeDomainOnInterface(String expectedBridgeDomain, Interface actualIface) {
+        VppInterfaceAugmentation vppIfaceAug = actualIface.getAugmentation(VppInterfaceAugmentation.class);
+        Assert.assertNotNull(vppIfaceAug);
+        if (!Strings.isNullOrEmpty(expectedBridgeDomain)) {
+            Interconnection interconnection = vppIfaceAug.getL2().getInterconnection();
+            Assert.assertNotNull(interconnection);
+            Assert.assertTrue(interconnection instanceof BridgeBased);
+            Assert.assertEquals(expectedBridgeDomain, ((BridgeBased) interconnection).getBridgeDomain());
         } else {
-            Assert.assertEquals(absoluteLocation(VPP_NODE_IID,
-                    VppPathMapper.bridgeDomainToRestPath(L2FD_CTX.getValue()), NODE_CONNECTOR_CLIENT_EP),
-                    epLocs.get(1).getAbsoluteLocation());
-            Assert.assertEquals(absoluteLocation(VPP_NODE_IID,
-                    VppPathMapper.bridgeDomainToRestPath(L2FD_CTX.getValue()), NODE_CONNECTOR_WEB_EP),
-                    epLocs.get(0).getAbsoluteLocation());
+            if (vppIfaceAug != null) {
+                L2 l2 = vppIfaceAug.getL2();
+                if (l2 != null) {
+                    Assert.assertNull(l2.getInterconnection());
+                }
+            }
         }
     }
 
-    private void storeInterfaceFor(AddressEndpointWithLocationKey epKey, String ifaceName,
+    private void storeVppEndpoint(AddressEndpointWithLocationKey epKey, String ifaceName,
             InstanceIdentifier<VppEndpoint> vppEpIid) {
         VppEndpoint vhostEp = new VppEndpointBuilder().setAddress(epKey.getAddress())
             .setAddressType(epKey.getAddressType())
             .setContextId(epKey.getContextId())
             .setContextType(epKey.getContextType())
             .setVppInterfaceName(ifaceName)
-            .setVppNodePath(VPP_NODE_IID)
+            .setVppNodePath(VPP_NODE_1_IID)
             .setInterfaceTypeChoice(new VhostUserCaseBuilder().setSocket(SOCKET).build())
             .build();
         VppEndpointConfEvent vppEpEvent = new VppEndpointConfEvent(vppEpIid, null, vhostEp);
         ifaceManager.vppEndpointChanged(vppEpEvent);
-    }
-
-    private static AbsoluteLocation absoluteLocation(InstanceIdentifier<?> mountPoint, String node,
-            String nodeConnector) {
-        return new AbsoluteLocationBuilder()
-            .setLocationType(new ExternalLocationCaseBuilder().setExternalNodeMountPoint(mountPoint)
-                .setExternalNode(node)
-                .setExternalNodeConnector(nodeConnector)
-                .build())
-            .build();
     }
 
 }

@@ -74,12 +74,12 @@ public class VppEndpointLocationProvider implements AutoCloseable {
                 IidFactory.providerAddressEndpointLocationIid(VPP_ENDPOINT_LOCATION_PROVIDER,
                         providerAddressEndpointLocation.getKey()),
                 providerAddressEndpointLocation);
-
+        LOG.debug("Creating location for {}", providerAddressEndpointLocation.getKey());
         Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
 
             @Override
             public void onSuccess(Void result) {
-                LOG.debug("{} provides location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(),
+                LOG.debug("{} provided location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(),
                         providerAddressEndpointLocation);
             }
 
@@ -109,11 +109,12 @@ public class VppEndpointLocationProvider implements AutoCloseable {
         WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
         wTx.delete(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.providerAddressEndpointLocationIid(VPP_ENDPOINT_LOCATION_PROVIDER, provAddrEpLocKey));
+        LOG.debug("Deleting location for {}", provAddrEpLocKey);
         Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
 
             @Override
             public void onSuccess(Void result) {
-                LOG.debug("{} removes location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(), provAddrEpLocKey);
+                LOG.debug("{} removed location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(), provAddrEpLocKey);
             }
 
             @Override
@@ -144,12 +145,12 @@ public class VppEndpointLocationProvider implements AutoCloseable {
                 IidFactory.providerAddressEndpointLocationIid(VPP_ENDPOINT_LOCATION_PROVIDER,
                         providerAddressEndpointLocation.getKey()),
                 providerAddressEndpointLocation);
-
+        LOG.debug("Updating location for {}", provAddrEpLocKey);
         Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
 
             @Override
             public void onSuccess(Void result) {
-                LOG.debug("{} merges location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(),
+                LOG.debug("{} merged location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(),
                         providerAddressEndpointLocation);
             }
 
