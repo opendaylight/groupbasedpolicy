@@ -8,6 +8,7 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl;
 
+import com.google.common.base.Preconditions;
 import java.util.List;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -41,12 +42,10 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
-
 /**
  * Purpose: bootstrap provider implementation of Ios-xe renderer
  */
@@ -58,8 +57,6 @@ public class IosXeRendererProviderImpl implements IosXeRendererProvider, Binding
     private final RendererName rendererName;
     private RendererConfigurationListenerImpl rendererConfigurationListener;
     private IosXeCapableNodeListenerImpl iosXeCapableNodeListener;
-    private PolicyManager policyManager;
-    private NodeManager nodeManager;
 
     public IosXeRendererProviderImpl(final DataBroker dataBroker, final BindingAwareBroker broker,
                                      final RendererName rendererName) {
@@ -86,12 +83,12 @@ public class IosXeRendererProviderImpl implements IosXeRendererProvider, Binding
         LOG.info("starting ios-xe renderer");
         //TODO register listeners:
         // node-manager
-        nodeManager = new NodeManager(dataBroker, providerContext);
+        NodeManager nodeManager = new NodeManager(dataBroker, providerContext);
         // network-topology
         iosXeCapableNodeListener = new IosXeCapableNodeListenerImpl(dataBroker, nodeManager);
 
         // policy-manager and delegates
-        policyManager = new PolicyManagerImpl(dataBroker);
+        PolicyManager policyManager = new PolicyManagerImpl(dataBroker, nodeManager);
         final PolicyManager policyManagerZip = new PolicyManagerZipImpl(policyManager);
 
         // renderer-configuration endpoints

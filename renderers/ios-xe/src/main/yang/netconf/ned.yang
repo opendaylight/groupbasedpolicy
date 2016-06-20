@@ -1735,29 +1735,6 @@ module ned {
         }
     }
 
-    grouping config-service-chain-grouping {
-        leaf description {
-            tailf:info "Service function forwarder description";
-            description "Service function forwarder description";
-            tailf:cli-multi-value;
-            type string {
-                tailf:info "LINE;;Up to 256 characters describing this " + "service function forwarder";
-                length "1..256";
-            }
-        }
-        container ip {
-            tailf:info "IP address for Service Function Forwarder";
-            description "IP address for Service Function Forwarder";
-            leaf address {
-                tailf:info "Set IPv4 address";
-                description "Set IPv4 address";
-                type inet:ipv4-address {
-                    tailf:info "A.B.C.D;;IP address of Service Function Forwarder";
-                }
-            }
-        }
-    }
-
     grouping interface-atm-grouping {
         // Removed body
     }
@@ -6618,6 +6595,29 @@ module ned {
 /// ========================================================================
 /// service-chain
 /// ========================================================================
+
+        grouping config-service-chain-grouping {
+            leaf description {
+                tailf:info "Service function forwarder description";
+                description "Service function forwarder description";
+                tailf:cli-multi-value;
+                type string {
+                    tailf:info "LINE;;Up to 256 characters describing this " + "service function forwarder";
+                    length "1..256";
+                }
+            }
+            container ip {
+                tailf:info "IP address for Service Function Forwarder";
+                description "IP address for Service Function Forwarder";
+                leaf address {
+                    tailf:info "Set IPv4 address";
+                    description "Set IPv4 address";
+                    type inet:ipv4-address {
+                        tailf:info "A.B.C.D;;IP address of Service Function Forwarder";
+                    }
+                }
+            }
+        }
 
         container service-chain {
             tailf:info "Service Chain mode";
