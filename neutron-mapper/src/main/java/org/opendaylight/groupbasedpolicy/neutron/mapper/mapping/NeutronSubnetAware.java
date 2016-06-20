@@ -126,7 +126,7 @@ public class NeutronSubnetAware implements
 
     @Deprecated
     private void processTenantSubnet(org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet neutronSubnet, Network networkOfSubnet, TenantId tenantId, ReadWriteTransaction rwTx) {
-        Subnet subnet = null;
+        Subnet subnet;
         if (NetworkUtils.isProviderPhysicalNetwork(networkOfSubnet)) {
             // add virtual router IP only in case it is provider physical network
             subnet = createTenantSubnet(neutronSubnet, neutronSubnet.getGatewayIp());
