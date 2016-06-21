@@ -44,6 +44,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vlan.rev160429.network.topology.topology.tunnel.parameters.VlanNetworkParametersBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev160429.TunnelTypeVxlan;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev160429.network.topology.topology.tunnel.parameters.VxlanTunnelParametersBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev150527._802dot1q;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
@@ -136,7 +137,8 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
             .setUnknownUnicastFlood(true)
             .setTunnelParameters(new VxlanTunnelParametersBuilder().setVni(vni).build())
             .build();
-        return createBridgeDomainOnVppNode(bridgeDomainName, topoAug, createBasicVppNodeBuilder(vppNodeId).build());
+        return createBridgeDomainOnVppNode(bridgeDomainName, topoAug,
+                createBasicVppNodeBuilder(vppNodeId).build());
     }
 
     @Override
@@ -148,7 +150,8 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
             .setForward(true)
             .setLearn(true)
             .setUnknownUnicastFlood(true)
-            .setTunnelParameters(new VlanNetworkParametersBuilder().setVlanId(vlanId).build())
+            .setTunnelParameters(
+                    new VlanNetworkParametersBuilder().setVlanId(vlanId).setVlanType(_802dot1q.class).build())
             .build();
         InstanceIdentifier<BridgeDomain> bridgeDomainConfigIid = InstanceIdentifier.builder(Config.class)
             .child(BridgeDomain.class, new BridgeDomainKey(bridgeDomainName))
@@ -167,7 +170,7 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
                             NodeVbridgeVlanAugment vppNodeVlanAug = new NodeVbridgeVlanAugmentBuilder()
                                 .setSuperInterface(ref.getInterface().get(0)).build();
                             Node vppNode = createBasicVppNodeBuilder(vppNodeId)
-                                .addAugmentation(vppNodeVlanAug.getClass(), vppNodeVlanAug).build();
+                                .addAugmentation(NodeVbridgeVlanAugment.class, vppNodeVlanAug).build();
                             return createBridgeDomainOnVppNode(bridgeDomainName, topoAug, vppNode);
                         }
                     }
