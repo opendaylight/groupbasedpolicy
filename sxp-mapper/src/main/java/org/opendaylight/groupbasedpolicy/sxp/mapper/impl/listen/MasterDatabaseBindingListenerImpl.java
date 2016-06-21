@@ -33,6 +33,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controll
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBinding;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.SxpNodeIdentity;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.network.topology.topology.node.SxpDomains;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.network.topology.topology.node.sxp.domains.SxpDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.sxp.databases.fields.MasterDatabase;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
@@ -76,6 +78,8 @@ public class MasterDatabaseBindingListenerImpl implements MasterDatabaseBindingL
         sxpDbPath = MasterDatabaseBindingListener.SXP_TOPOLOGY_PATH
                 .child(Node.class)
                 .augmentation(SxpNodeIdentity.class)
+                .child(SxpDomains.class)
+                .child(SxpDomain.class)
                 .child(MasterDatabase.class)
                 .child(MasterDatabaseBinding.class);
 

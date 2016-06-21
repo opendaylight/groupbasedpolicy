@@ -35,6 +35,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.mast
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBindingBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.SxpNodeIdentity;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.SxpNodeIdentityBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.network.topology.topology.node.SxpDomainsBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.network.topology.topology.node.sxp.domains.SxpDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.sxp.databases.fields.MasterDatabaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
@@ -74,8 +76,13 @@ public class MasterDatabaseBindingDaoImplTest {
                 .setNode(Lists.newArrayList(new NodeBuilder()
                         .setNodeId(new NodeId("utNodeId"))
                         .addAugmentation(SxpNodeIdentity.class, new SxpNodeIdentityBuilder()
-                                .setMasterDatabase(new MasterDatabaseBuilder()
-                                        .setMasterDatabaseBinding(Lists.newArrayList(MASTER_DB_BINDING_VALUE))
+                                .setSxpDomains(new SxpDomainsBuilder()
+                                        .setSxpDomain(Collections.singletonList(new SxpDomainBuilder()
+                                                .setDomainName("global")
+                                                .setMasterDatabase(new MasterDatabaseBuilder()
+                                                        .setMasterDatabaseBinding(Lists.newArrayList(MASTER_DB_BINDING_VALUE))
+                                                        .build())
+                                                .build()))
                                         .build())
                                 .build())
                         .build()))

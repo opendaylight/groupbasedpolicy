@@ -15,6 +15,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -27,9 +28,12 @@ import org.opendaylight.groupbasedpolicy.sxp.mapper.api.ReadableAsyncByKey;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.SimpleCachedDao;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util.SxpListenerUtil;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.MasterDatabaseFields;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBinding;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.SxpDatabasesFields;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.SxpNodeIdentity;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.network.topology.topology.node.SxpDomains;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -90,22 +94,29 @@ public class MasterDatabaseBindingDaoImpl implements DSAsyncDao<IpPrefix, Master
                     cachedDao.invalidateCache();
 
                     for (Node node : input.get().getNode()) {
-                        final SxpNodeIdentity sxpNodeIdentity = node.getAugmentation(SxpNodeIdentity.class);
-                        if (sxpNodeIdentity != null) {
-                            final List<MasterDatabaseBinding> masterDBBindings = sxpNodeIdentity.getMasterDatabase().getMasterDatabaseBinding();
-                            if (masterDBBindings != null) {
-                                for (MasterDatabaseBinding masterDBItem : masterDBBindings) {
-                                    // update all
-                                    final MasterDatabaseBinding previousValue = cachedDao.update(
-                                            masterDBItem.getIpPrefix(), masterDBItem);
-                                    if (previousValue != null) {
-                                        LOG.warn("updated key already obtained: [node:{}, sgt:{}]",
-                                                node.getNodeId().getValue(),
-                                                masterDBItem.getSecurityGroupTag());
+                        java.util.Optional.ofNullable(node.getAugmentation(SxpNodeIdentity.class))
+                                .map(SxpNodeIdentity::getSxpDomains)
+                                .map(SxpDomains::getSxpDomain)
+                                .ifPresent((sxpDomain) -> {
+                                    final List<MasterDatabaseBinding> masterDBBindings = sxpDomain.stream()
+                                            .map(SxpDatabasesFields::getMasterDatabase)
+                                            .filter(masterDb -> masterDb != null)
+                                            .map(MasterDatabaseFields::getMasterDatabaseBinding)
+                                            .filter(binding -> binding != null)
+                                            .flatMap(Collection::stream)
+                                            .collect(Collectors.toList());
+
+                                    for (MasterDatabaseBinding masterDBItem : masterDBBindings) {
+                                        // update all
+                                        final MasterDatabaseBinding
+                                                previousValue =
+                                                cachedDao.update(masterDBItem.getIpPrefix(), masterDBItem);
+                                        if (previousValue != null) {
+                                            LOG.warn("updated key already obtained: [node:{}, sgt:{}]",
+                                                    node.getNodeId().getValue(), masterDBItem.getSecurityGroupTag());
+                                        }
                                     }
-                                }
-                            }
-                        }
+                                });
                     }
                 } else {
                     LOG.warn("failed to update cache of SxpMasterDB - no data");
