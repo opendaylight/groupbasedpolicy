@@ -55,6 +55,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolIcmpV6;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolTcp;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolUdp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.SecurityRuleAttributes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
 
 import com.google.common.collect.ImmutableList;
@@ -66,7 +67,7 @@ public class SecRuleEntityDecoder {
     }
 
     public static ContractId getContractId(SecurityRule secRule) {
-        return new ContractId(secRule.getId().getValue());
+        return new ContractId(secRule.getUuid().getValue());
     }
 
     public static ClassifierInstance getClassifierInstance(SecurityRule secRule) {
@@ -243,21 +244,26 @@ public class SecRuleEntityDecoder {
      *         {@link ProtocolUdp}, {@link ProtocolIcmp}, {@link ProtocolIcmpV6}
      */
     public static Long getProtocol(SecurityRule secRule) {
-        Class<? extends ProtocolBase> protocol = secRule.getProtocol();
+        SecurityRuleAttributes.Protocol protocol = secRule.getProtocol();
         if (protocol == null) {
             return null;
         }
-        if (protocol.isAssignableFrom(ProtocolTcp.class)) {
-            return IpProtoClassifierDefinition.TCP_VALUE;
+        if (protocol.getUint8() != null) {
+            return protocol.getUint8().longValue();
         }
-        if (protocol.isAssignableFrom(ProtocolUdp.class)) {
-            return IpProtoClassifierDefinition.UDP_VALUE;
-        }
-        if (protocol.isAssignableFrom(ProtocolIcmp.class)) {
-            return IpProtoClassifierDefinition.ICMP_VALUE;
-        }
-        if (protocol.isAssignableFrom(ProtocolIcmpV6.class)) {
-            return IpProtoClassifierDefinition.ICMPv6_VALUE;
+        if (protocol.getIdentityref() != null) {
+            if (protocol.getIdentityref().equals(ProtocolTcp.class)) {
+                return IpProtoClassifierDefinition.TCP_VALUE;
+            }
+            if (protocol.getIdentityref().equals(ProtocolUdp.class)) {
+                return IpProtoClassifierDefinition.UDP_VALUE;
+            }
+            if (protocol.getIdentityref().equals(ProtocolIcmp.class)) {
+                return IpProtoClassifierDefinition.ICMP_VALUE;
+            }
+            if (protocol.getIdentityref().equals(ProtocolIcmpV6.class)) {
+                return IpProtoClassifierDefinition.ICMPv6_VALUE;
+            }
         }
         throw new IllegalArgumentException("Neutron Security Rule Protocol value " + protocol + " is not supported.");
     }

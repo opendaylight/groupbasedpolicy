@@ -16,7 +16,6 @@ import org.opendaylight.groupbasedpolicy.domain_extension.l2_l3.util.L2L3IidFact
 import org.opendaylight.groupbasedpolicy.neutron.mapper.EndpointRegistrator;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NetworkUtils;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
@@ -106,7 +105,7 @@ public class NeutronSubnetAware implements
             org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet subnet,
             IpAddress virtualRouterIp) {
         SubnetBuilder sb = new SubnetBuilder();
-        sb.setIpPrefix(Utils.createIpPrefix(subnet.getCidr()));
+        sb.setIpPrefix(subnet.getCidr());
         sb.setVirtualRouterIp(virtualRouterIp);
         NetworkDomainBuilder ndb = new NetworkDomainBuilder();
         if (!Strings.isNullOrEmpty(subnet.getName())) {
@@ -164,7 +163,7 @@ public class NeutronSubnetAware implements
                 LOG.debug("Name exception", e);
             }
         }
-        subnetBuilder.setIpPrefix(Utils.createIpPrefix(subnet.getCidr()));
+        subnetBuilder.setIpPrefix(subnet.getCidr());
         subnetBuilder.setVirtualRouterIp(virtualRouterIp);
         return subnetBuilder.build();
     }

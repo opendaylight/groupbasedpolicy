@@ -42,6 +42,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolIcmp;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolTcp;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolUdp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.SecurityRuleAttributes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRuleBuilder;
 
@@ -54,7 +55,7 @@ public class SecRuleEntityDecoderTest {
 
     @Before
     public void setUp() throws Exception {
-        secRuleBuilder = new SecurityRuleBuilder().setId(new Uuid("01234567-abcd-ef01-0123-0123456789ab"));
+        secRuleBuilder = new SecurityRuleBuilder().setUuid(new Uuid("01234567-abcd-ef01-0123-0123456789ab"));
     }
 
     @Test
@@ -86,7 +87,8 @@ public class SecRuleEntityDecoderTest {
     @Test
     public final void testGetClassifierInstance_EthertypeAndProtocol() {
         secRuleBuilder.setEthertype(EthertypeV4.class);
-        secRuleBuilder.setProtocol(ProtocolTcp.class);
+        SecurityRuleAttributes.Protocol protocolTcp = new SecurityRuleAttributes.Protocol(ProtocolTcp.class);
+        secRuleBuilder.setProtocol(protocolTcp);
         ClassifierInstance ci = SecRuleEntityDecoder.getClassifierInstance(secRuleBuilder.build());
         Assert.assertEquals(IpProtoClassifierDefinition.DEFINITION.getId(), ci.getClassifierDefinitionId());
         // name is ip_proto_tcp__ether_type_IPv4
@@ -124,7 +126,8 @@ public class SecRuleEntityDecoderTest {
     @Test
     public final void testGetClassifierInstance_EthertypeAndProtocolAndPort() {
         secRuleBuilder.setEthertype(EthertypeV4.class);
-        secRuleBuilder.setProtocol(ProtocolTcp.class);
+        SecurityRuleAttributes.Protocol protocolTcp = new SecurityRuleAttributes.Protocol(ProtocolTcp.class);
+        secRuleBuilder.setProtocol(protocolTcp);
         secRuleBuilder.setPortRangeMin(5);
         secRuleBuilder.setPortRangeMax(5);
         ClassifierInstance ci = SecRuleEntityDecoder.getClassifierInstance(secRuleBuilder.build());
@@ -184,7 +187,8 @@ public class SecRuleEntityDecoderTest {
     @Test
     public final void testGetClassifierInstance_EthertypeAndProtocolAndPorts() {
         secRuleBuilder.setEthertype(EthertypeV4.class);
-        secRuleBuilder.setProtocol(ProtocolTcp.class);
+        SecurityRuleAttributes.Protocol protocolTcp = new SecurityRuleAttributes.Protocol(ProtocolTcp.class);
+        secRuleBuilder.setProtocol(protocolTcp);
         secRuleBuilder.setPortRangeMin(5);
         secRuleBuilder.setPortRangeMax(10);
         ClassifierInstance ci = SecRuleEntityDecoder.getClassifierInstance(secRuleBuilder.build());
@@ -335,14 +339,16 @@ public class SecRuleEntityDecoderTest {
 
     @Test
     public void testIsProtocolOfOneWithinTwo_oneProtocolTcpTwoProtocolTcp() {
-        SecurityRule one = secRuleBuilder.setProtocol(ProtocolTcp.class).build();
-        SecurityRule two = secRuleBuilder.setProtocol(ProtocolTcp.class).build();
+        SecurityRuleAttributes.Protocol protocolTcp = new SecurityRuleAttributes.Protocol(ProtocolTcp.class);
+        SecurityRule one = secRuleBuilder.setProtocol(protocolTcp).build();
+        SecurityRule two = secRuleBuilder.setProtocol(protocolTcp).build();
         assertTrue(SecRuleEntityDecoder.isProtocolOfOneWithinTwo(one, two));
     }
 
     @Test
     public void testIsProtocolOfOneWithinTwo_oneProtocolTcpTwoProtocolNull() {
-        SecurityRule one = secRuleBuilder.setProtocol(ProtocolTcp.class).build();
+        SecurityRuleAttributes.Protocol protocolTcp = new SecurityRuleAttributes.Protocol(ProtocolTcp.class);
+        SecurityRule one = secRuleBuilder.setProtocol(protocolTcp).build();
         SecurityRule two = secRuleBuilder.setProtocol(null).build();
         assertTrue(SecRuleEntityDecoder.isProtocolOfOneWithinTwo(one, two));
     }
@@ -356,15 +362,18 @@ public class SecRuleEntityDecoderTest {
 
     @Test
     public void testIsProtocolOfOneWithinTwo_oneProtocolTcpTwoProtocolUdp() {
-        SecurityRule one = secRuleBuilder.setProtocol(ProtocolTcp.class).build();
-        SecurityRule two = secRuleBuilder.setProtocol(ProtocolUdp.class).build();
+        SecurityRuleAttributes.Protocol protocolTcp = new SecurityRuleAttributes.Protocol(ProtocolTcp.class);
+        SecurityRule one = secRuleBuilder.setProtocol(protocolTcp).build();
+        SecurityRuleAttributes.Protocol protocolUdp = new SecurityRuleAttributes.Protocol(ProtocolUdp.class);
+        SecurityRule two = secRuleBuilder.setProtocol(protocolUdp).build();
         assertFalse(SecRuleEntityDecoder.isProtocolOfOneWithinTwo(one, two));
     }
 
     @Test
     public void testIsProtocolOfOneWithinTwo_oneProtocolNullTwoProtocolTcp() {
         SecurityRule one = secRuleBuilder.setProtocol(null).build();
-        SecurityRule two = secRuleBuilder.setProtocol(ProtocolTcp.class).build();
+        SecurityRuleAttributes.Protocol protocolTcp = new SecurityRuleAttributes.Protocol(ProtocolTcp.class);
+        SecurityRule two = secRuleBuilder.setProtocol(protocolTcp).build();
         assertFalse(SecRuleEntityDecoder.isProtocolOfOneWithinTwo(one, two));
     }
 
@@ -458,19 +467,22 @@ public class SecRuleEntityDecoderTest {
 
     @Test
     public final void testGetProtocol_protoTcp() {
-        secRuleBuilder.setProtocol(ProtocolTcp.class);
+        SecurityRuleAttributes.Protocol protocolTcp = new SecurityRuleAttributes.Protocol(ProtocolTcp.class);
+        secRuleBuilder.setProtocol(protocolTcp);
         Assert.assertEquals(IpProtoClassifierDefinition.TCP_VALUE, SecRuleEntityDecoder.getProtocol(secRuleBuilder.build()));
     }
 
     @Test
     public final void testGetProtocol_protoUdp() {
-        secRuleBuilder.setProtocol(ProtocolUdp.class);
+        SecurityRuleAttributes.Protocol protocolUdp = new SecurityRuleAttributes.Protocol(ProtocolUdp.class);
+        secRuleBuilder.setProtocol(protocolUdp);
         Assert.assertEquals(IpProtoClassifierDefinition.UDP_VALUE, SecRuleEntityDecoder.getProtocol(secRuleBuilder.build()));
     }
 
     @Test
     public final void testGetProtocol_protoIcmp() {
-        secRuleBuilder.setProtocol(ProtocolIcmp.class);
+        SecurityRuleAttributes.Protocol protocolIcmp = new SecurityRuleAttributes.Protocol(ProtocolIcmp.class);
+        secRuleBuilder.setProtocol(protocolIcmp);
         Assert.assertEquals(IpProtoClassifierDefinition.ICMP_VALUE, SecRuleEntityDecoder.getProtocol(secRuleBuilder.build()));
     }
 
@@ -482,7 +494,8 @@ public class SecRuleEntityDecoderTest {
 
     @Test
     public final void testGetProtocol_protoUnknown() {
-        secRuleBuilder.setProtocol(UnknownProtocol.class);
+        SecurityRuleAttributes.Protocol protocolUnknown = new SecurityRuleAttributes.Protocol(UnknownProtocol.class);
+        secRuleBuilder.setProtocol(protocolUnknown);
         thrown.expect(IllegalArgumentException.class);
         SecRuleEntityDecoder.getProtocol(secRuleBuilder.build());
     }

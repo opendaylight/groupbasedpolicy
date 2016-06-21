@@ -24,6 +24,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolTcp;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.NeutronBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.SecurityRuleAttributes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.SecurityGroupsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.security.groups.SecurityGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
@@ -84,13 +85,14 @@ public class NeutronSecurityRuleAwareTest extends NeutronMapperDataBrokerTest {
 
     // create neutron security rule
     private SecurityRule buildNeutronSecurityRule() {
-        return new SecurityRuleBuilder().setId(new Uuid(RULE_ID))
+        SecurityRuleAttributes.Protocol protocolTcp = new SecurityRuleAttributes.Protocol(ProtocolTcp.class);
+        return new SecurityRuleBuilder().setUuid(new Uuid(RULE_ID))
             .setTenantId(new Uuid(RULE_TENANT_ID))
             .setSecurityGroupId(new Uuid(RULE_GROUP_ID))
             .setRemoteIpPrefix(new IpPrefix(new Ipv4Prefix("192.0.0.1/24")))
             .setPortRangeMin(1000)
             .setPortRangeMax(5000)
-            .setProtocol(ProtocolTcp.class)
+            .setProtocol(protocolTcp)
             .setEthertype(EthertypeV4.class)
             .setDirection(DirectionIngress.class)
             .build();

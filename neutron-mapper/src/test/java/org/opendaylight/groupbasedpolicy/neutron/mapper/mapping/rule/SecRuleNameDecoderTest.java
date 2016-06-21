@@ -17,6 +17,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.DirectionIngress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeV4;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolTcp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.SecurityRuleAttributes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRuleBuilder;
 
 public class SecRuleNameDecoderTest {
@@ -25,7 +26,7 @@ public class SecRuleNameDecoderTest {
 
     @Before
     public void setUp() throws Exception {
-        secRule = new SecurityRuleBuilder().setId(new Uuid("01234567-abcd-ef01-0123-0123456789ab"));
+        secRule = new SecurityRuleBuilder().setUuid(new Uuid("01234567-abcd-ef01-0123-0123456789ab"));
     }
 
     @Test
@@ -45,7 +46,8 @@ public class SecRuleNameDecoderTest {
     public final void testGetClassifierInstanceName() {
         secRule.setDirection(DirectionIngress.class);
         secRule.setEthertype(EthertypeV4.class);
-        secRule.setProtocol(ProtocolTcp.class);
+        SecurityRuleAttributes.Protocol protocolTcp = new SecurityRuleAttributes.Protocol(ProtocolTcp.class);
+        secRule.setProtocol(protocolTcp);
         secRule.setPortRangeMin(8010);
         secRule.setPortRangeMax(8020);
         StringBuilder frmtBuilder = new StringBuilder();
@@ -66,7 +68,7 @@ public class SecRuleNameDecoderTest {
             .append(EtherTypeClassifierDefinition.DEFINITION.getName().getValue())
             .append(MappingUtils.NAME_VALUE_DELIMETER)
             .append("%s");
-        String frmtClsfName = String.format(frmtBuilder.toString(), 8010, 8020, secRule.getProtocol().getSimpleName(),
+        String frmtClsfName = String.format(frmtBuilder.toString(), 8010, 8020, secRule.getProtocol().getIdentityref().getSimpleName(),
                 secRule.getEthertype().getSimpleName());
         ClassifierName expectedClsfInstanceName = new ClassifierName(frmtClsfName);
         assertEquals(expectedClsfInstanceName, SecRuleNameDecoder.getClassifierInstanceName(secRule.build()));

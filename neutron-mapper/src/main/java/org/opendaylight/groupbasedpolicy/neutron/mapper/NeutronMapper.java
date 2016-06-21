@@ -69,27 +69,27 @@ import com.google.common.collect.PeekingIterator;
 public class NeutronMapper implements DataTreeChangeListener<Neutron>, AutoCloseable {
 
     private final static SecurityRuleBuilder EIG_INGRESS_IPV4_SEC_RULE_BUILDER = new SecurityRuleBuilder()
-        .setId(new Uuid("0a629f80-2408-11e6-b67b-9e71128cae77"))
+        .setUuid(new Uuid("0a629f80-2408-11e6-b67b-9e71128cae77"))
         .setDirection(DirectionIngress.class)
         .setEthertype(EthertypeV4.class)
         .setSecurityGroupId(MappingUtils.EIG_UUID);
     private final static SecurityRuleBuilder EIG_EGRESS_IPV4_SEC_RULE_BUILDER = new SecurityRuleBuilder()
-        .setId(new Uuid("0f1789be-2408-11e6-b67b-9e71128cae77"))
+        .setUuid(new Uuid("0f1789be-2408-11e6-b67b-9e71128cae77"))
         .setDirection(DirectionEgress.class)
         .setEthertype(EthertypeV4.class)
         .setSecurityGroupId(MappingUtils.EIG_UUID);
     private final static SecurityRuleBuilder EIG_INGRESS_IPV6_SEC_RULE_BUILDER = new SecurityRuleBuilder()
-        .setId(new Uuid("139b7f90-2408-11e6-b67b-9e71128cae77"))
+        .setUuid(new Uuid("139b7f90-2408-11e6-b67b-9e71128cae77"))
         .setDirection(DirectionIngress.class)
         .setEthertype(EthertypeV6.class)
         .setSecurityGroupId(MappingUtils.EIG_UUID);
     private final static SecurityRuleBuilder EIG_EGRESS_IPV6_SEC_RULE_BUILDER = new SecurityRuleBuilder()
-        .setId(new Uuid("17517202-2408-11e6-b67b-9e71128cae77"))
+        .setUuid(new Uuid("17517202-2408-11e6-b67b-9e71128cae77"))
         .setDirection(DirectionEgress.class)
         .setEthertype(EthertypeV6.class)
         .setSecurityGroupId(MappingUtils.EIG_UUID);
     private final static SecurityGroupBuilder EIG_SEC_GROUP_BUILDER =
-            new SecurityGroupBuilder().setUuid(MappingUtils.EIG_UUID).setDescription("EXTERNAL_group");
+            new SecurityGroupBuilder().setUuid(MappingUtils.EIG_UUID);
 
     private final NeutronNetworkAware networkAware;
     private final NeutronSecurityGroupAware securityGroupAware;

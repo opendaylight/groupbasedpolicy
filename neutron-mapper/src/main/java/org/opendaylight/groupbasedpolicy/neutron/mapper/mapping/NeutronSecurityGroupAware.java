@@ -74,15 +74,6 @@ public class NeutronSecurityGroupAware implements NeutronAware<SecurityGroup> {
                 LOG.debug("Name exception", e);
             }
         }
-        if (!Strings.isNullOrEmpty(secGroup.getDescription())) {
-            try {
-                epgBuilder.setDescription(new Description(secGroup.getDescription()));
-            } catch (Exception e) {
-                LOG.info("Description '{}' of Neutron Security-group '{}' is ignored.",
-                        secGroup.getDescription(), secGroup.getUuid().getValue());
-                LOG.debug("Description exception", e);
-            }
-        }
         epgBuilder.setIntraGroupPolicy(IntraGroupPolicy.RequireContract);
         rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.endpointGroupIid(tId, epgId),
                 epgBuilder.build(), true);

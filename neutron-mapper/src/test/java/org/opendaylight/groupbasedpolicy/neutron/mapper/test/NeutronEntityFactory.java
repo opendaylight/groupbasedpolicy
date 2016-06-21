@@ -4,6 +4,7 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.DirectionBase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.EthertypeBase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolBase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.SecurityRuleAttributes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.security.groups.SecurityGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.security.groups.SecurityGroupBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
@@ -27,12 +28,13 @@ public final class NeutronEntityFactory {
 
     public static SecurityRule securityRuleWithoutGroupIds(String id, String tenant, Class<? extends EthertypeBase> etherType,
             Class<? extends DirectionBase> direction, Class<? extends ProtocolBase> protocol, int portMin, int portMax) {
+        SecurityRuleAttributes.Protocol proto = new SecurityRuleAttributes.Protocol(protocol);
         SecurityRuleBuilder secRule = new SecurityRuleBuilder();
-        secRule.setId(new Uuid(id));
+        secRule.setUuid(new Uuid(id));
         secRule.setTenantId(new Uuid(tenant));
         secRule.setEthertype(etherType);
         secRule.setDirection(direction);
-        secRule.setProtocol(protocol);
+        secRule.setProtocol(proto);
         secRule.setPortRangeMin(portMin);
         secRule.setPortRangeMax(portMax);
         return secRule.build();
@@ -41,7 +43,7 @@ public final class NeutronEntityFactory {
     public static SecurityRule securityRuleWithEtherType(String id, String tenant,
             Class<? extends EthertypeBase> etherType, Class<? extends DirectionBase> direction, String ownerGroupId,
             String remoteGroupId) {
-        SecurityRuleBuilder securityRuleBuilder = new SecurityRuleBuilder().setId(new Uuid(id))
+        SecurityRuleBuilder securityRuleBuilder = new SecurityRuleBuilder().setUuid(new Uuid(id))
             .setTenantId(new Uuid(tenant))
             .setEthertype(etherType)
             .setDirection(direction)

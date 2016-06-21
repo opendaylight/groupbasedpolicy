@@ -322,7 +322,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
     private AddressEndpointRegBuilder createBasicMacAddrEpInputBuilder(Port port,
             NetworkDomainId networkContainment, @Nullable List<EndpointGroupId> endpointGroupsToAdd) {
         AddressEndpointRegBuilder addrEpbuilder = new AddressEndpointRegBuilder().setAddressType(MacAddressType.class)
-            .setAddress(port.getMacAddress())
+            .setAddress(port.getMacAddress().getValue())
             .setAddressType(MacAddressType.class)
             .setContextType(MappingUtils.L2_BRDIGE_DOMAIN)
             .setContextId(new ContextId(port.getNetworkId().getValue()))
@@ -385,7 +385,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
             Port port) {
         return new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInputBuilder().setL2Context(
                 new L2BridgeDomainId(port.getNetworkId().getValue()))
-            .setMacAddress(new MacAddress(port.getMacAddress()))
+            .setMacAddress(new MacAddress(port.getMacAddress().getValue()))
             .setTenant(new TenantId(port.getTenantId().getValue()))
             .setTimestamp(System.currentTimeMillis());
     }
@@ -412,7 +412,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
         }
         UniqueId portId = new UniqueId(port.getUuid().getValue());
         EndpointKey epKey = new EndpointKey(new L2BridgeDomainId(port.getNetworkId().getValue()), new MacAddress(
-                port.getMacAddress()));
+                port.getMacAddress().getValue()));
         LOG.trace("Adding Port-Endpoint mapping for port {} (device owner {}) and endpoint {}", port.getUuid()
             .getValue(), port.getDeviceOwner(), epKey);
         EndpointByPort endpointByPort = MappingFactory.createEndpointByPort(epKey, portId);
@@ -431,7 +431,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
         if (isUnregisteredEndpoint) {
             UniqueId portId = new UniqueId(port.getUuid().getValue());
             EndpointKey epKey = new EndpointKey(new L2BridgeDomainId(port.getNetworkId().getValue()), new MacAddress(
-                    port.getMacAddress()));
+                    port.getMacAddress().getValue()));
             LOG.trace("Removing Port-Endpoint mapping for port {} (device owner {}) and endpoint {}", port.getUuid()
                 .getValue(), port.getDeviceOwner(), epKey);
             DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
@@ -475,10 +475,10 @@ public class NeutronPortAware implements NeutronAware<Port> {
         if (isUnregisteredBaseEndpoint) {
             UniqueId portId = new UniqueId(port.getUuid().getValue());
             EndpointKey epKey = new EndpointKey(new L2BridgeDomainId(port.getNetworkId().getValue()), new MacAddress(
-                    port.getMacAddress()));
+                    port.getMacAddress().getValue()));
             LOG.trace("Removing Port-BaseEndpoint mapping for port {} (device owner {}) and endpoint {}",
                     port.getUuid().getValue(), port.getDeviceOwner(), epKey);
-            PortByBaseEndpointKey portByBaseEndpointKey = new PortByBaseEndpointKey(port.getMacAddress(),
+            PortByBaseEndpointKey portByBaseEndpointKey = new PortByBaseEndpointKey(port.getMacAddress().getValue(),
                     MacAddressType.class, new ContextId(port.getNetworkId().getValue()), MappingUtils.L2_BRDIGE_DOMAIN);
             DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
                     NeutronGbpIidFactory.baseEndpointByPortIid(portId), rwTx);
@@ -570,7 +570,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
         UnregisterEndpointInputBuilder inputBuilder = new UnregisterEndpointInputBuilder();
         List<AddressEndpointUnreg> list = new ArrayList<>();
         AddressEndpointUnregBuilder addrL2EpUnregBuilder = new AddressEndpointUnregBuilder();
-        addrL2EpUnregBuilder.setAddress(port.getMacAddress())
+        addrL2EpUnregBuilder.setAddress(port.getMacAddress().getValue())
             .setAddressType(MacAddressType.class)
             .setContextId(new ContextId(port.getNetworkId().getValue()))
             .setContextType(MappingUtils.L2_BRDIGE_DOMAIN);
@@ -595,7 +595,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
         org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnregisterEndpointInputBuilder inputBuilder =
                 new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnregisterEndpointInputBuilder();
         L2 l2Ep = new L2Builder().setL2Context(new L2BridgeDomainId(port.getNetworkId().getValue()))
-            .setMacAddress(new MacAddress(port.getMacAddress()))
+            .setMacAddress(new MacAddress(port.getMacAddress().getValue()))
             .build();
         inputBuilder.setL2(ImmutableList.of(l2Ep));
         // we've registered EP with only first IP so remove only EP with first IP

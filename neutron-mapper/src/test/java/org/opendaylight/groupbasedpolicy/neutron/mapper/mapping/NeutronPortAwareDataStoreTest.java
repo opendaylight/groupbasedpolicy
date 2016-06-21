@@ -24,8 +24,10 @@ import org.opendaylight.groupbasedpolicy.neutron.mapper.EndpointRegistrator;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronMapperAssert;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronMapperDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.PortUtils;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.RegisterEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.UnregisterEndpointInput;
@@ -166,7 +168,7 @@ public class NeutronPortAwareDataStoreTest extends NeutronMapperDataBrokerTest {
             .setDeviceId("deviceId")
             .setFixedIps(ImmutableList.of(portIpWithSubnet))
             .setNetworkId(networkUuid)
-            .setMacAddress("00:00:00:00:35:02")
+            .setMacAddress(new MacAddress("00:00:00:00:35:02"))
             .build();
         Port neutronPort2 = new PortBuilder().setTenantId(new Uuid(tenantUuid))
             .setFixedIps(ImmutableList.of(portIpWithSubnet))
@@ -176,7 +178,7 @@ public class NeutronPortAwareDataStoreTest extends NeutronMapperDataBrokerTest {
             .setDeviceOwner(PortUtils.DEVICE_OWNER_DHCP)
             .setFixedIps(ImmutableList.of(portIpWithSubnet))
             .setNetworkId(networkUuid)
-            .setMacAddress("00:00:00:00:35:02")
+            .setMacAddress(new MacAddress("00:00:00:00:35:02"))
             .build();
         Ports neutronPorts = new PortsBuilder().setPort(ImmutableList.of(neutronPort1, neutronPort2)).build();
         when(neutron.getPorts()).thenReturn(neutronPorts);
@@ -229,7 +231,7 @@ public class NeutronPortAwareDataStoreTest extends NeutronMapperDataBrokerTest {
             .setUuid(portUuid)
             .setDeviceId("deviceId")
             .setNetworkId(networkUuid)
-            .setMacAddress("00:00:00:00:35:02");
+            .setMacAddress(new MacAddress("00:00:00:00:35:02"));
     }
 
     private Subnets createSubnets() {
@@ -237,7 +239,7 @@ public class NeutronPortAwareDataStoreTest extends NeutronMapperDataBrokerTest {
             .setUuid(subnetUuid)
             .setName("subnetName")
             .setNetworkId(networkUuid)
-            .setCidr("10.0.0.0/24")
+            .setCidr(Utils.createIpPrefix("10.0.0.0/24"))
             .build();
         return new SubnetsBuilder().setSubnet(ImmutableList.of(subnet)).build();
     }

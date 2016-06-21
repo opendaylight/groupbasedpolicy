@@ -31,6 +31,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.constants.rev150712.ProtocolTcp;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.NeutronBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.SecurityRuleAttributes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.SecurityGroupsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.security.groups.SecurityGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.SecurityRulesBuilder;
@@ -59,17 +60,18 @@ public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrok
                 "dabfd4da-af89-45dd-85f8-181768c1b4c9", tenant, EthertypeV4.class, DirectionEgress.class, goldSecGrp,
                 null);
         String serverSecGrp = "71cf4fe5-b146-409e-8151-cd921298ce32";
-        SecurityRule serverIn80Tcp10_1_1_0 = new SecurityRuleBuilder().setId(new Uuid("9dbb533d-d9b2-4dc9-bae7-ee60c8df184d"))
+        SecurityRuleAttributes.Protocol protocolTcp = new SecurityRuleAttributes.Protocol(ProtocolTcp.class);
+        SecurityRule serverIn80Tcp10_1_1_0 = new SecurityRuleBuilder().setUuid(new Uuid("9dbb533d-d9b2-4dc9-bae7-ee60c8df184d"))
                 .setTenantId(new Uuid(tenant))
                 .setEthertype(EthertypeV4.class)
-                .setProtocol(ProtocolTcp.class)
+                .setProtocol(protocolTcp)
                 .setPortRangeMin(80)
                 .setPortRangeMax(80)
                 .setDirection(DirectionIngress.class)
                 .setSecurityGroupId(new Uuid(serverSecGrp))
                 .setRemoteIpPrefix(new IpPrefix(new Ipv4Prefix("10.1.1.0/24")))
                 .build();
-        SecurityRule serverInIp20_1_1_0 = new SecurityRuleBuilder().setId(new Uuid("adf7e558-de47-4f9e-a9b8-96e19db5d1ac"))
+        SecurityRule serverInIp20_1_1_0 = new SecurityRuleBuilder().setUuid(new Uuid("adf7e558-de47-4f9e-a9b8-96e19db5d1ac"))
                 .setTenantId(new Uuid(tenant))
                 .setEthertype(EthertypeV4.class)
                 .setDirection(DirectionIngress.class)
@@ -101,27 +103,27 @@ public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrok
             .get();
         assertTrue(potentialTenant.isPresent());
         Optional<Contract> potentialContract = rwTx.read(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.contractIid(tenantId, new ContractId(goldInIpv4.getId().getValue()))).get();
+                IidFactory.contractIid(tenantId, new ContractId(goldInIpv4.getUuid().getValue()))).get();
         assertTrue(potentialContract.isPresent());
         Contract contract = potentialContract.get();
         PolicyAssert.assertContract(contract, goldInIpv4);
         potentialContract = rwTx.read(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.contractIid(tenantId, new ContractId(goldOutIpv4.getId().getValue()))).get();
+                IidFactory.contractIid(tenantId, new ContractId(goldOutIpv4.getUuid().getValue()))).get();
         assertTrue(potentialContract.isPresent());
         contract = potentialContract.get();
         PolicyAssert.assertContract(contract, goldOutIpv4);
         potentialContract = rwTx.read(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.contractIid(tenantId, new ContractId(serverOutIpv4.getId().getValue()))).get();
+                IidFactory.contractIid(tenantId, new ContractId(serverOutIpv4.getUuid().getValue()))).get();
         assertTrue(potentialContract.isPresent());
         contract = potentialContract.get();
         PolicyAssert.assertContract(contract, serverOutIpv4);
         potentialContract = rwTx.read(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.contractIid(tenantId, new ContractId(serverIn80Tcp10_1_1_0.getId().getValue()))).get();
+                IidFactory.contractIid(tenantId, new ContractId(serverIn80Tcp10_1_1_0.getUuid().getValue()))).get();
         assertTrue(potentialContract.isPresent());
         contract = potentialContract.get();
         PolicyAssert.assertContractWithEic(contract, serverIn80Tcp10_1_1_0);
         potentialContract = rwTx.read(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.contractIid(tenantId, new ContractId(serverInIp20_1_1_0.getId().getValue()))).get();
+                IidFactory.contractIid(tenantId, new ContractId(serverInIp20_1_1_0.getUuid().getValue()))).get();
         assertTrue(potentialContract.isPresent());
         contract = potentialContract.get();
         PolicyAssert.assertContractWithEic(contract, serverInIp20_1_1_0);
@@ -131,19 +133,19 @@ public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrok
         EndpointGroup epg = potentialEpg.get();
         PolicyAssert.assertConsumerNamedSelectors(
                 epg,
-                ImmutableSet.of(new ContractId(goldInIpv4.getId().getValue()),
-                        new ContractId(goldOutIpv4.getId().getValue()),
-                        new ContractId(serverIn80Tcp10_1_1_0.getId().getValue()),
-                        new ContractId(serverInIp20_1_1_0.getId().getValue()),
-                        new ContractId(serverOutIpv4.getId().getValue())));
+                ImmutableSet.of(new ContractId(goldInIpv4.getUuid().getValue()),
+                        new ContractId(goldOutIpv4.getUuid().getValue()),
+                        new ContractId(serverIn80Tcp10_1_1_0.getUuid().getValue()),
+                        new ContractId(serverInIp20_1_1_0.getUuid().getValue()),
+                        new ContractId(serverOutIpv4.getUuid().getValue())));
         potentialEpg = rwTx.read(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.endpointGroupIid(tenantId, new EndpointGroupId(serverSecGrp))).get();
         assertTrue(potentialEpg.isPresent());
         epg = potentialEpg.get();
         PolicyAssert.assertConsumerNamedSelectors(epg, ImmutableSet.of(
-                new ContractId(serverIn80Tcp10_1_1_0.getId().getValue()),
-                new ContractId(serverInIp20_1_1_0.getId().getValue()),
-                new ContractId(goldInIpv4.getId().getValue())));
+                new ContractId(serverIn80Tcp10_1_1_0.getUuid().getValue()),
+                new ContractId(serverInIp20_1_1_0.getUuid().getValue()),
+                new ContractId(goldInIpv4.getUuid().getValue())));
     }
 
     @Test
@@ -281,22 +283,22 @@ public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrok
         ruleAware.addNeutronSecurityRule(serverInIpv4, neutron, rwTx);
         TenantId tenantId = new TenantId(tenant);
         Optional<Contract> potentialContract = rwTx.read(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.contractIid(tenantId, new ContractId(goldInIpv4.getId().getValue()))).get();
+                IidFactory.contractIid(tenantId, new ContractId(goldInIpv4.getUuid().getValue()))).get();
         assertTrue(potentialContract.isPresent());
         Contract contract = potentialContract.get();
         PolicyAssert.assertContract(contract, goldInIpv4);
         potentialContract = rwTx.read(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.contractIid(tenantId, new ContractId(goldOutIpv4.getId().getValue()))).get();
+                IidFactory.contractIid(tenantId, new ContractId(goldOutIpv4.getUuid().getValue()))).get();
         assertTrue(potentialContract.isPresent());
         contract = potentialContract.get();
         PolicyAssert.assertContract(contract, goldOutIpv4);
         potentialContract = rwTx.read(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.contractIid(tenantId, new ContractId(serverOutIpv4.getId().getValue()))).get();
+                IidFactory.contractIid(tenantId, new ContractId(serverOutIpv4.getUuid().getValue()))).get();
         assertTrue(potentialContract.isPresent());
         contract = potentialContract.get();
         PolicyAssert.assertContract(contract, serverOutIpv4);
         potentialContract = rwTx.read(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.contractIid(tenantId, new ContractId(serverInIpv4.getId().getValue()))).get();
+                IidFactory.contractIid(tenantId, new ContractId(serverInIpv4.getUuid().getValue()))).get();
         assertTrue(potentialContract.isPresent());
         contract = potentialContract.get();
         PolicyAssert.assertContract(contract, serverInIpv4);
@@ -306,19 +308,19 @@ public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrok
         EndpointGroup epg = potentialEpg.get();
         PolicyAssert.assertConsumerNamedSelectors(
                 epg,
-                ImmutableSet.of(new ContractId(goldInIpv4.getId().getValue()),
-                        new ContractId(goldOutIpv4.getId().getValue()),
-                        new ContractId(serverOutIpv4.getId().getValue()),
-                        new ContractId(serverInIpv4.getId().getValue())));
+                ImmutableSet.of(new ContractId(goldInIpv4.getUuid().getValue()),
+                        new ContractId(goldOutIpv4.getUuid().getValue()),
+                        new ContractId(serverOutIpv4.getUuid().getValue()),
+                        new ContractId(serverInIpv4.getUuid().getValue())));
         potentialEpg = rwTx.read(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.endpointGroupIid(tenantId, new EndpointGroupId(serverSecGrp))).get();
         assertTrue(potentialEpg.isPresent());
         PolicyAssert.assertConsumerNamedSelectors(
                 epg,
-                ImmutableSet.of(new ContractId(goldInIpv4.getId().getValue()),
-                        new ContractId(goldOutIpv4.getId().getValue()),
-                        new ContractId(serverOutIpv4.getId().getValue()),
-                        new ContractId(serverInIpv4.getId().getValue())));
+                ImmutableSet.of(new ContractId(goldInIpv4.getUuid().getValue()),
+                        new ContractId(goldOutIpv4.getUuid().getValue()),
+                        new ContractId(serverOutIpv4.getUuid().getValue()),
+                        new ContractId(serverInIpv4.getUuid().getValue())));
     }
 
     @Test
@@ -335,10 +337,11 @@ public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrok
         SecurityRule serverOutIpv4 = NeutronEntityFactory.securityRuleWithEtherType(
                 "8b9c48d3-44a8-46be-be35-6f3237d98071", tenant, EthertypeV4.class, DirectionEgress.class, serverSecGrp,
                 null);
-        SecurityRule serverIn80TcpIpv4 = new SecurityRuleBuilder().setId(new Uuid("adf7e558-de47-4f9e-a9b8-96e19db5d1ac"))
+        SecurityRuleAttributes.Protocol protocolTcp = new SecurityRuleAttributes.Protocol(ProtocolTcp.class);
+        SecurityRule serverIn80TcpIpv4 = new SecurityRuleBuilder().setUuid(new Uuid("adf7e558-de47-4f9e-a9b8-96e19db5d1ac"))
                 .setTenantId(new Uuid(tenant))
                 .setEthertype(EthertypeV4.class)
-                .setProtocol(ProtocolTcp.class)
+                .setProtocol(protocolTcp)
                 .setPortRangeMin(80)
                 .setPortRangeMax(80)
                 .setDirection(DirectionIngress.class)
@@ -361,22 +364,22 @@ public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrok
         ruleAware.addNeutronSecurityRule(serverIn80TcpIpv4, neutron, rwTx);
         TenantId tenantId = new TenantId(tenant);
         Optional<Contract> potentialContract = rwTx.read(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.contractIid(tenantId, new ContractId(goldInIpv4.getId().getValue()))).get();
+                IidFactory.contractIid(tenantId, new ContractId(goldInIpv4.getUuid().getValue()))).get();
         assertTrue(potentialContract.isPresent());
         Contract contract = potentialContract.get();
         PolicyAssert.assertContract(contract, goldInIpv4);
         potentialContract = rwTx.read(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.contractIid(tenantId, new ContractId(goldOutIpv4.getId().getValue()))).get();
+                IidFactory.contractIid(tenantId, new ContractId(goldOutIpv4.getUuid().getValue()))).get();
         assertTrue(potentialContract.isPresent());
         contract = potentialContract.get();
         PolicyAssert.assertContract(contract, goldOutIpv4);
         potentialContract = rwTx.read(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.contractIid(tenantId, new ContractId(serverOutIpv4.getId().getValue()))).get();
+                IidFactory.contractIid(tenantId, new ContractId(serverOutIpv4.getUuid().getValue()))).get();
         assertTrue(potentialContract.isPresent());
         contract = potentialContract.get();
         PolicyAssert.assertContract(contract, serverOutIpv4);
         potentialContract = rwTx.read(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.contractIid(tenantId, new ContractId(serverIn80TcpIpv4.getId().getValue()))).get();
+                IidFactory.contractIid(tenantId, new ContractId(serverIn80TcpIpv4.getUuid().getValue()))).get();
         assertTrue(potentialContract.isPresent());
         contract = potentialContract.get();
         PolicyAssert.assertContract(contract, serverIn80TcpIpv4);
@@ -386,18 +389,18 @@ public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrok
         EndpointGroup epg = potentialEpg.get();
         PolicyAssert.assertConsumerNamedSelectors(
                 epg,
-                ImmutableSet.of(new ContractId(goldInIpv4.getId().getValue()),
-                        new ContractId(goldOutIpv4.getId().getValue()),
-                        new ContractId(serverOutIpv4.getId().getValue()),
-                        new ContractId(serverIn80TcpIpv4.getId().getValue())));
+                ImmutableSet.of(new ContractId(goldInIpv4.getUuid().getValue()),
+                        new ContractId(goldOutIpv4.getUuid().getValue()),
+                        new ContractId(serverOutIpv4.getUuid().getValue()),
+                        new ContractId(serverIn80TcpIpv4.getUuid().getValue())));
         potentialEpg = rwTx.read(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.endpointGroupIid(tenantId, new EndpointGroupId(serverSecGrp))).get();
         assertTrue(potentialEpg.isPresent());
         epg = potentialEpg.get();
         PolicyAssert.assertConsumerNamedSelectors(
                 epg,
-                ImmutableSet.of(new ContractId(goldInIpv4.getId().getValue()),
-                        new ContractId(serverIn80TcpIpv4.getId().getValue())));
+                ImmutableSet.of(new ContractId(goldInIpv4.getUuid().getValue()),
+                        new ContractId(serverIn80TcpIpv4.getUuid().getValue())));
     }
 
     @Test
@@ -429,22 +432,22 @@ public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrok
         ruleAware.addNeutronSecurityRule(defaultOutIpv6, neutron, rwTx);
         TenantId tenantId = new TenantId(tenant);
         Optional<Contract> potentialContract = rwTx.read(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.contractIid(tenantId, new ContractId(defaultInIpv4Default.getId().getValue()))).get();
+                IidFactory.contractIid(tenantId, new ContractId(defaultInIpv4Default.getUuid().getValue()))).get();
         assertTrue(potentialContract.isPresent());
         Contract contract = potentialContract.get();
         PolicyAssert.assertContract(contract, defaultInIpv4Default);
         potentialContract = rwTx.read(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.contractIid(tenantId, new ContractId(defaultInIpv6Default.getId().getValue()))).get();
+                IidFactory.contractIid(tenantId, new ContractId(defaultInIpv6Default.getUuid().getValue()))).get();
         assertTrue(potentialContract.isPresent());
         contract = potentialContract.get();
         PolicyAssert.assertContract(contract, defaultInIpv6Default);
         potentialContract = rwTx.read(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.contractIid(tenantId, new ContractId(defaultOutIpv4.getId().getValue()))).get();
+                IidFactory.contractIid(tenantId, new ContractId(defaultOutIpv4.getUuid().getValue()))).get();
         assertTrue(potentialContract.isPresent());
         contract = potentialContract.get();
         PolicyAssert.assertContract(contract, defaultOutIpv4);
         potentialContract = rwTx.read(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.contractIid(tenantId, new ContractId(defaultOutIpv6.getId().getValue()))).get();
+                IidFactory.contractIid(tenantId, new ContractId(defaultOutIpv6.getUuid().getValue()))).get();
         assertTrue(potentialContract.isPresent());
         contract = potentialContract.get();
         PolicyAssert.assertContract(contract, defaultOutIpv6);
