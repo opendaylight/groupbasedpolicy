@@ -16,10 +16,17 @@ define([
             selectedItem: null,
             searchText: null,
         };
-        $scope.epgsListOfChoosenTenant = null;
+        $scope.epgsListOfChoosenTenant = [];
         $scope.forwarding = ForwardingService.createObject();
         $scope.forwardingContexts = [];
         $scope.forwardingNetworkDomainIds = [];
+        $scope.regexps = {
+            'ipv4cidr': '(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))',
+            'ipv6cidr': 's*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:)))(%.+)?s*(\/([1-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8]))',
+            'mac-address': '([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})',
+        };
+
+        $scope.regexps['ip-prefix'] = '(('+$scope.regexps.ipv4cidr + ')|(' + $scope.regexps.ipv6cidr + '))';
 
         /* methods */
         $scope.closeDialog = closeDialog;
@@ -27,26 +34,10 @@ define([
         $scope.filterContextIds = filterContextIds;
         $scope.filterNetworkDomainIds = filterNetworkDomainIds;
         $scope.searchEpgs = searchEpgs;
-
-
-        $scope.forwarding.get(function () {
-            var tenantForwarding = $filter('filter')($scope.forwarding.data, { 'tenant-id': $scope.parentTenant });
-
-            if (tenantForwarding && tenantForwarding.length) {
-                $scope.forwarding.data = tenantForwarding[0];
-                $scope.filterNetworkDomainIds('l2-l3-forwarding:subnet');
-            }
-
-            if ($scope.endpoint && $scope.endpoint.data['context-type']) {
-                $scope.filterContextIds($scope.endpoint.data['context-type']);
-            }
-        });
-
-
-
-        populateEpgsListOfChoosenTenant();
+        $scope.populateScopeAfterTenantSelected = populateScopeAfterTenantSelected;
 
         /* Implementations */
+        $scope.forwarding.get(postForwardingGet);
 
         function closeDialog(){
             $mdDialog.cancel();
@@ -72,14 +63,14 @@ define([
 
         function filterNetworkDomainIds(networkDomainType) {
             $scope.forwardingNetworkDomainIds =  $filter('filter')($scope.forwarding.data['network-domain'], {'network-domain-type': networkDomainType});
-            $scope.forwardingNetworkDomainIds.unshift('');
         }
 
         function populateEpgsListOfChoosenTenant() {
-            var tenantsIdsList = $scope.rootTenants.data.map(function (e) { return e.data.id; }),
-                indexOfChoosenTenant = tenantsIdsList.indexOf($scope.parentTenant),
-                epgsObjectsOfChoosenTenant = $scope.rootTenants.data[indexOfChoosenTenant].data.policy['endpoint-group'];
-            $scope.epgsListOfChoosenTenant = epgsObjectsOfChoosenTenant.map(function (a) { return a.id; });
+            $scope.rootTenants.data.some(function (tenant) {
+                if (tenant.data.id === $scope.endpoint.data.tenant) {
+                    $scope.epgsListOfChoosenTenant = tenant.data.policy['endpoint-group'].map(function (ele) { return ele.id; } );
+                }
+            });
         }
 
         function searchEpgs(query) {
@@ -94,6 +85,22 @@ define([
             };
         }
 
+        function postForwardingGet() {
+            var tenantForwarding = $filter('filter')($scope.forwarding.data, { 'tenant-id': $scope.endpoint.data.tenant });
+
+            if (tenantForwarding && tenantForwarding.length) {
+                $scope.forwarding.data = tenantForwarding[0];
+                $scope.filterNetworkDomainIds('l2-l3-forwarding:subnet');
+            }
+
+            if ($scope.endpoint && $scope.endpoint.data['context-type']) {
+                $scope.filterContextIds($scope.endpoint.data['context-type']);
+            }
+        }
+
+        function populateScopeAfterTenantSelected() {
+            populateEpgsListOfChoosenTenant();
+        }
 
     }
 });

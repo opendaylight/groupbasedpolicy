@@ -101,6 +101,10 @@ md-dialog button span {
     color: #000;
 }
 
+div.layout-padding h3 {
+    color: black;
+}
+
 md-sidenav span {
     color: inherit !important;
 }
@@ -223,10 +227,15 @@ div.md-primary.md-subheader > div > span > span {
     color: rgb(33,150,243);
 }
 
+div.md-secondary.md-subheader.ng-scope > div > span > span {
+    color: rgb(33,150,243) !important;
+}
+
 li > md-autocomplete-parent-scope > span {
     color: rgba(0,0,0,.54);
 }
 
-md-content > div.md-secondary.md-subheader > div > span > span {
-    color: rgb(33,150,243) !important;
+#tenantSelector div, #tenantSelector .md-select-placeholder span {
+    color: white;
+    font-weight: normal;
 }

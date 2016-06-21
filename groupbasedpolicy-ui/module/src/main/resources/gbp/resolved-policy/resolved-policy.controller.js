@@ -7,25 +7,20 @@ define(['app/gbp/resolved-policy/resolved-policy.service'], function () {
 
     /* @ngInject */
     function ResolvedPolicyController($rootScope, $scope, ResolvedPolicyService, EpgService, EpgListService, ContractService, NextTopologyService) {
+        $scope.reloadTopology = reloadTopology;
+
         $scope.cbkFunctions = {
             clickNode: function(node){
                 var epg = EpgService.createObject();
+
                 epg.get(node['_data-id'], node['_model']['_data']['tenantId'], 'operational', function() {
                     $scope.openSidePanel('resolved-policy/epg-sidepanel', epg, null);
                 });
+
                 $scope.$apply();
                 $scope.parentTenant = node['_model']['_data']['tenantId'];
 
                 NextTopologyService.highlightNode($rootScope.nxTopology, node['_data-id']);
-                // //Example of highlighting
-                // NextTopologyService.highlightNode($scope.nxTopology, 1);
-                // NextTopologyService.highlightNode($scope.nxTopology, 1, true); //without links around
-                // NextTopologyService.highlightLink($scope.nxTopology, '1-7');
-                // NextTopologyService.highlightPath($scope.nxTopology, [array of links obj]);
-
-                // //Fade out or in whole topology
-                // NextTopologyService.fadeOutAllLayers();
-                // NextTopologyService.fadeInAllLayers();
             },
             clickLink: function(link){
                 var resolvedContract = $scope.resolvedPolicy[link['_model']['_data'].id];
@@ -38,6 +33,11 @@ define(['app/gbp/resolved-policy/resolved-policy.service'], function () {
             topologyGenerated: function(){
             }
         };
+
+
+        function reloadTopology() {
+            $scope.fillTopologyData();
+        }
 
         $scope.$watch('nxTopology', function() {
             $rootScope.nxTopology = $scope.nxTopology;

@@ -14,8 +14,8 @@
                         <div layout="row">
                             <md-input-container flex >
                                 <label>Tenant Id</label>
-                                <md-select ng-model="endpoint.data.tenant" aria-label="Tenant select">
-                                    <md-option ng-repeat="tenant in rootTenants.data" value="{{tenant.data.id}}">{{ tenant.data.id }}</md-option>
+                                <md-select ng-model="endpoint.data.tenant" md-on-close="populateScopeAfterTenantSelected();" aria-label="Tenant select">
+                                    <md-option ng-repeat="tenant in rootTenants.data" ng-value="tenant.data.id">{{ tenant.data.id }}</md-option>
                                 </md-select>
                             </md-input-container>
                         </div>
@@ -64,9 +64,11 @@
                             </md-input-container>
                             <md-input-container flex>
                                 <label>Address</label>
-                                <input name="address" ng-model="endpoint.data.address" ng-required="true">
+                                <input name="address" ng-model="endpoint.data.address" ng-required="true"
+                                       ng-pattern="(endpoint.data['address-type'] === 'l2-l3-forwarding:mac-address-type' ? regexps['mac-address'] : regexps['ip-prefix'])">
                                 <div ng-messages="endpointForm.address.$error" ng-show="endpointForm.address.$touched">
                                     <div ng-message="required">Required field</div>
+                                    <div ng-message="pattern">Expected correct address type format</div>
                                </div>
                             </md-input-container>
                         </div>
@@ -76,6 +78,7 @@
                                 <md-select name="networkDomainIdSelect"
                                            ng-model="endpoint.data['network-containment']['network-domain-id']"
                                            aria-label="Network Domain Id select">
+                                    <md-option value="{{undefined}}"></md-option>
                                     <md-option ng-repeat="NetworkDomainId in forwardingNetworkDomainIds"
                                                ng-value="NetworkDomainId['network-domain-id']"
                                                ng-required="true" >
@@ -108,10 +111,11 @@
                         				md-search-text="epgsChips.searchText"
                         				md-items="epg in searchEpgs(epgsChips.searchText)"
                         				md-item-text="epg"
-                                        placeholder="Add an item"
+                                        placeholder="{{!endpoint.data.tenant ? 'Select Tenant first' : 'Add an item'}}"
                         				md-autocomplete-wrap-override
                         				md-input-name="epAutocomplete"
-                        				flex>
+                        				flex
+                                        ng-disabled="!endpoint.data.tenant">
                         				<md-item-template>
                         					<span md-highlight-text="epgsChips.searchText">{{epg}}</span>
                         				</md-item-template>

@@ -111,9 +111,9 @@ define(['next-ui'], function() {
 				scope.$watch('topologyData', function(){
 					//console.log('scope.topologyData', scope.topologyData);
 
-					if( scope.topologyData.nodes.length ) { //&& initialized === false
+					//if( scope.topologyData.nodes.length ) { //&& initialized === false
 						scope.init(scope.cbkFunctions.topologyGenerated);
-					}
+					//}
 				});
 
 				/**

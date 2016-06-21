@@ -15,6 +15,14 @@
                 <span flex></span>
                 <md-button ng-if="'main.gbp.index.resolvedPolicy' | isState" ng-click="deselectEpg()" ng-href="">Endpoint-groups</md-button>
                 <md-button ng-if="'main.gbp.index.resolvedPolicy' | isState" ng-click="deselectContract()" ng-href="">Contracts</md-button>
+                <md-input-container style="margin-right: 10px;">
+                    <md-select ng-model="rootTenant"
+                               placeholder="select tenant"
+                               md-on-close="setRootTenant();"
+                               id="tenantSelector">
+                        <md-option ng-repeat="tenant in rootTenants.data" ng-value="tenant.data.id">{{ tenant.data.id }}</md-option>
+                    </md-select>
+                </md-input-container>
             </div>
         </md-toolbar>
         <!-- <md-content md-scroll-y flex ui-view></md-content> -->
