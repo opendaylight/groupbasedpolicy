@@ -21,12 +21,17 @@ import javax.annotation.Nonnull;
 
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.peer.endpoints.PeerEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Configuration;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererForwardingContext;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererForwardingContextKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererNetworkDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererNetworkDomainKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.rule.groups.RuleGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.rule.groups.RuleGroupKey;
 
@@ -43,6 +48,8 @@ public class PolicyContext {
     private final ImmutableTable<RendererEndpointKey, PeerEndpointKey, ImmutableSortedSet<RendererResolvedPolicy>> policyTable;
     private final ImmutableMap<RuleGroupKey, ResolvedRuleGroup> ruleGroupByKey;
     private final ImmutableMap<AddressEndpointKey, AddressEndpointWithLocation> addrEpByKey;
+    private final ImmutableTable<TenantId, RendererForwardingContextKey, RendererForwardingContext> forwardingCtxTable;
+    private final ImmutableTable<TenantId, RendererNetworkDomainKey, RendererNetworkDomain> networkDomainTable;
 
     public PolicyContext(@Nonnull RendererPolicy policy) {
         this.policy = Preconditions.checkNotNull(policy);
@@ -53,10 +60,14 @@ public class PolicyContext {
             List<RendererEndpoint> rendererEps = resolveRendererEndpoints(config);
             this.policyTable = resolvePolicy(rendererEps, ruleGroupByKey);
             addrEpByKey = resolveAddrEpWithLoc(config);
+            this.forwardingCtxTable = resolveForwardingCtxTable(config);
+            this.networkDomainTable = resolveNetworkDomainTable(config);
         } else {
             this.ruleGroupByKey = ImmutableMap.of();
             this.policyTable = ImmutableTable.of();
             this.addrEpByKey = ImmutableMap.of();
+            this.forwardingCtxTable = ImmutableTable.of();
+            this.networkDomainTable = ImmutableTable.of();
         }
     }
 
@@ -95,6 +106,36 @@ public class PolicyContext {
     private static ImmutableMap<RuleGroupKey, ResolvedRuleGroup> resolveRuleGroups(Configuration config) {
         return config.getRuleGroups().getRuleGroup().stream().collect(Collectors
             .collectingAndThen(Collectors.toMap(RuleGroup::getKey, ResolvedRuleGroup::new), ImmutableMap::copyOf));
+    }
+
+    private static ImmutableTable<TenantId, RendererForwardingContextKey, RendererForwardingContext> resolveForwardingCtxTable(
+            Configuration config) {
+        Builder<TenantId, RendererForwardingContextKey, RendererForwardingContext> resultBuilder = new Builder<>();
+        Optional.ofNullable(config.getRendererForwarding()).map(x -> x.getRendererForwardingByTenant()).ifPresent(x -> {
+            x.forEach(fwdByTenant -> {
+                Optional.ofNullable(fwdByTenant.getRendererForwardingContext()).ifPresent(fwdCtxs -> {
+                    fwdCtxs.forEach(fwdCtx -> {
+                        resultBuilder.put(fwdByTenant.getTenantId(), fwdCtx.getKey(), fwdCtx);
+                    });
+                });
+            });
+        });
+        return resultBuilder.build();
+    }
+
+    private static ImmutableTable<TenantId, RendererNetworkDomainKey, RendererNetworkDomain> resolveNetworkDomainTable(
+            Configuration config) {
+        Builder<TenantId, RendererNetworkDomainKey, RendererNetworkDomain> resultBuilder = new Builder<>();
+        Optional.ofNullable(config.getRendererForwarding()).map(x -> x.getRendererForwardingByTenant()).ifPresent(x -> {
+            x.forEach(fwdByTenant -> {
+                Optional.ofNullable(fwdByTenant.getRendererNetworkDomain()).ifPresent(netDomains -> {
+                    netDomains.forEach(netDomain -> {
+                        resultBuilder.put(fwdByTenant.getTenantId(), netDomain.getKey(), netDomain);
+                    });
+                });
+            });
+        });
+        return resultBuilder.build();
     }
 
     private static ImmutableMap<AddressEndpointKey, AddressEndpointWithLocation> resolveAddrEpWithLoc(
@@ -137,10 +178,19 @@ public class PolicyContext {
         return addrEpByKey;
     }
 
+    public @Nonnull ImmutableTable<TenantId, RendererForwardingContextKey, RendererForwardingContext> getForwardingCtxTable() {
+        return forwardingCtxTable;
+    }
+
+    public @Nonnull ImmutableTable<TenantId, RendererNetworkDomainKey, RendererNetworkDomain> getNetworkDomainTable() {
+        return networkDomainTable;
+    }
+
     @Override
     public String toString() {
-        return "PolicyContext [policy=" + policy + ", policyTable=" + policyTable + ", ruleGroupByKey=" + ruleGroupByKey
-                + ", addrEpByKey=" + addrEpByKey + "]";
+        return "PolicyContext [policyTable=" + policyTable + ", ruleGroupByKey=" + ruleGroupByKey + ", addrEpByKey="
+                + addrEpByKey + ", forwardingCtxTable=" + forwardingCtxTable + ", networkDomainTable="
+                + networkDomainTable + "]";
     }
 
 }

@@ -36,7 +36,6 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -225,8 +224,7 @@ public class VppRendererPolicyManager {
             .map(addrEpKey -> policyCtx.getAddrEpByKey().get(addrEpKey))
             .collect(Collectors.toSet())
             .forEach(addrEpWithLoc -> {
-                Optional<String> optL2Fd =
-                        ForwardingManager.resolveL2FloodDomain(addrEpWithLoc.getNetworkContainment());
+                java.util.Optional<String> optL2Fd = ForwardingManager.resolveL2FloodDomain(addrEpWithLoc, policyCtx);
                 if (optL2Fd.isPresent()) {
                     ExternalLocationCase rEpLoc = ForwardingManager.resolveAndValidateLocation(addrEpWithLoc);
                     InstanceIdentifier<?> externalNodeMountPoint = rEpLoc.getExternalNodeMountPoint();
