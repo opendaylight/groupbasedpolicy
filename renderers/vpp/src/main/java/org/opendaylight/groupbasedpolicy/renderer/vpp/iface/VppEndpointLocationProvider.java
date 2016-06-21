@@ -8,11 +8,15 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.iface;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import javax.annotation.Nonnull;
 
+import org.opendaylight.controller.md.sal.binding.api.BindingTransactionChain;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.util.CloseOnFailTransactionChain;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocation;
@@ -30,7 +34,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_render
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 
@@ -40,14 +43,15 @@ public class VppEndpointLocationProvider implements AutoCloseable {
     public static final ProviderName VPP_ENDPOINT_LOCATION_PROVIDER =
             new ProviderName("VPP endpoint location provider");
     public static final long PROVIDER_PRIORITY = 10L;
-    private final DataBroker dataProvider;
+    private final BindingTransactionChain txChain;
 
     public VppEndpointLocationProvider(DataBroker dataProvider) {
-        this.dataProvider = Preconditions.checkNotNull(dataProvider);
         LocationProvider locationProvider = new LocationProviderBuilder().setProvider(VPP_ENDPOINT_LOCATION_PROVIDER)
             .setPriority(PROVIDER_PRIORITY)
             .build();
-        WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
+        txChain = checkNotNull(dataProvider)
+            .createTransactionChain(new CloseOnFailTransactionChain(VppEndpointLocationProvider.class.getSimpleName()));
+        WriteTransaction wTx = txChain.newWriteOnlyTransaction();
         wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.locationProviderIid(VPP_ENDPOINT_LOCATION_PROVIDER),
                 locationProvider, true);
 
@@ -68,7 +72,7 @@ public class VppEndpointLocationProvider implements AutoCloseable {
     public void createLocationForVppEndpoint(VppEndpoint vppEndpoint) {
         ProviderAddressEndpointLocation providerAddressEndpointLocation =
                 createProviderAddressEndpointLocation(vppEndpoint);
-        WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
+        WriteTransaction wTx = txChain.newWriteOnlyTransaction();
         wTx.put(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.providerAddressEndpointLocationIid(VPP_ENDPOINT_LOCATION_PROVIDER,
                         providerAddressEndpointLocation.getKey()),
@@ -105,7 +109,7 @@ public class VppEndpointLocationProvider implements AutoCloseable {
 
     public void deleteLocationForVppEndpoint(VppEndpoint vppEndpoint) {
         ProviderAddressEndpointLocationKey provAddrEpLocKey = createProviderAddressEndpointLocationKey(vppEndpoint);
-        WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
+        WriteTransaction wTx = txChain.newWriteOnlyTransaction();
         wTx.delete(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.providerAddressEndpointLocationIid(VPP_ENDPOINT_LOCATION_PROVIDER, provAddrEpLocKey));
         LOG.debug("Deleting location for {}", provAddrEpLocKey);
@@ -137,7 +141,7 @@ public class VppEndpointLocationProvider implements AutoCloseable {
                 new AbsoluteLocationBuilder().setLocationType(location).build();
         ProviderAddressEndpointLocation providerAddressEndpointLocation = new ProviderAddressEndpointLocationBuilder()
             .setKey(provAddrEpLocKey).setAbsoluteLocation(absoluteLocation).build();
-        WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
+        WriteTransaction wTx = txChain.newWriteOnlyTransaction();
         wTx.put(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.providerAddressEndpointLocationIid(VPP_ENDPOINT_LOCATION_PROVIDER,
                         providerAddressEndpointLocation.getKey()),
@@ -161,7 +165,7 @@ public class VppEndpointLocationProvider implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
-        WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
+        WriteTransaction wTx = txChain.newWriteOnlyTransaction();
         wTx.delete(LogicalDatastoreType.CONFIGURATION, IidFactory.locationProviderIid(VPP_ENDPOINT_LOCATION_PROVIDER));
         wTx.submit();
     }

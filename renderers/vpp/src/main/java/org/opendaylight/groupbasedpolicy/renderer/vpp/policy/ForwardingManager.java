@@ -31,9 +31,16 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.containment.NetworkDomainContainment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L2FloodDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.fields.Parent;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererForwardingContext;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererForwardingContextKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererNetworkDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererNetworkDomainKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.VlanNetwork;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.BridgeDomain;
@@ -50,6 +57,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Table;
 
 public final class ForwardingManager {
 
@@ -155,7 +163,7 @@ public final class ForwardingManager {
         }
 
         if (Strings.isNullOrEmpty(rEpLoc.getExternalNode())) {
-            Optional<String> optL2FloodDomain = resolveL2FloodDomain(rEp.getNetworkContainment());
+            java.util.Optional<String> optL2FloodDomain = resolveL2FloodDomain(rEp, policyCtx);
             if (!optL2FloodDomain.isPresent()) {
                 // TODO add it to the status for renderer manager
                 LOG.info("Rednerer endpoint does not have l2FloodDomain as network containment {}", rEp);
@@ -211,23 +219,50 @@ public final class ForwardingManager {
         return result;
     }
 
-    public static Optional<String> resolveL2FloodDomain(@Nullable NetworkContainment netCont) {
+    public static java.util.Optional<String> resolveL2FloodDomain(@Nonnull AddressEndpointWithLocation ep,
+            @Nonnull PolicyContext policyCtx) {
+        NetworkContainment netCont = ep.getNetworkContainment();
         if (netCont == null) {
-            return Optional.absent();
+            return java.util.Optional.empty();
         }
         Containment containment = netCont.getContainment();
         if (containment instanceof ForwardingContextContainment) {
             ForwardingContextContainment fwCtxCont = (ForwardingContextContainment) containment;
-            if (fwCtxCont.getContextType().isAssignableFrom(L2FloodDomain.class)) {
-                return fwCtxCont.getContextId() == null ? null : Optional.of(fwCtxCont.getContextId().getValue());
+            if (L2FloodDomain.class.equals(fwCtxCont.getContextType())) {
+                return fwCtxCont.getContextId() == null ? java.util.Optional.empty() : java.util.Optional
+                    .of(fwCtxCont.getContextId().getValue());
             }
         }
         if (containment instanceof NetworkDomainContainment) {
-            // TODO address missing impl
-            LOG.info("Network domain containment in endpoint is not supported yet. {}", netCont);
-            return Optional.absent();
+            NetworkDomainContainment netDomainCont = (NetworkDomainContainment) containment;
+            RendererNetworkDomain rendererNetworkDomain =
+                    policyCtx.getNetworkDomainTable().get(ep.getTenant(), new RendererNetworkDomainKey(
+                            netDomainCont.getNetworkDomainId(), netDomainCont.getNetworkDomainType()));
+            java.util.Optional<String> optL2Fd = getForwardingCtxForParent(ep.getTenant(),
+                    rendererNetworkDomain.getParent(), policyCtx.getForwardingCtxTable())
+                        .filter(fwdCtx -> L2FloodDomain.class.equals(fwdCtx.getContextType()))
+                        .map(RendererForwardingContext::getContextId)
+                        .map(ContextId::getValue);
+            if (!optL2Fd.isPresent()) {
+                LOG.info("network-domain-containment in endpoint does not have L2-flood-domain as parent. "
+                        + "This case is not supported in VPP renderer. {}", ep);
+            }
+            return optL2Fd;
         }
-        return Optional.absent();
+        return java.util.Optional.empty();
+    }
+
+    public static @Nonnull java.util.Optional<RendererForwardingContext> getForwardingCtxForParent(
+            @Nullable TenantId tenant, @Nullable Parent parent,
+            Table<TenantId, RendererForwardingContextKey, RendererForwardingContext> forwardingCtxTable) {
+        if (tenant == null || parent == null) {
+            return java.util.Optional.empty();
+        }
+        if (parent.getContextId() != null && parent.getContextType() != null) {
+            return java.util.Optional.ofNullable(forwardingCtxTable.get(tenant,
+                    new RendererForwardingContextKey(parent.getContextId(), parent.getContextType())));
+        }
+        return java.util.Optional.empty();
     }
 
 }
