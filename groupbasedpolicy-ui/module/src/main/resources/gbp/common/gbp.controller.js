@@ -3,9 +3,11 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
 
     angular.module('app.gbp').controller('RootGbpCtrl', RootGbpCtrl);
 
-    RootGbpCtrl.$inject = ['$state', '$rootScope', '$scope', '$filter', '$mdDialog', 'RootGbpService', 'TenantListService', 'TenantService', 'EpgListService', 'ResolvedPolicyService', 'NextTopologyService', 'EndpointsListService'];
+    RootGbpCtrl.$inject = ['$state', '$rootScope', '$scope', '$filter', '$mdDialog', 'RootGbpService',
+        'TenantListService', 'EpgListService', 'ResolvedPolicyService', 'NextTopologyService', 'EndpointsListService'];
 
-    function RootGbpCtrl($state, $rootScope, $scope, $filter, $mdDialog, RootGbpService, TenantListService, TenantService, EpgListService, ResolvedPolicyService, NextTopologyService, EndpointsListService) {
+    function RootGbpCtrl($state, $rootScope, $scope, $filter, $mdDialog, RootGbpService,
+        TenantListService, EpgListService, ResolvedPolicyService, NextTopologyService, EndpointsListService) {
         /* properties */
         $scope.apiType = 'operational';
         $scope.activeObject = null;
@@ -28,6 +30,7 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
         $scope.fillTopologyData = fillTopologyData;
         $scope.broadcastFromRoot = broadcastFromRoot;
         $scope.closeSidePanel = closeSidePanel;
+        $scope.openSfcDialog = openSfcDialog;
         $scope.openSidePanel = openSidePanel;
         $scope.setRootTenant = setRootTenant;
         $scope.toggleExpanded = toggleExpanded;
@@ -66,7 +69,7 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
         function closeSidePanel() {
             if($scope.sidePanelPage) {
                 $scope.sidePanelPage = false;
-                NextTopologyService.fadeInAllLayers($rootScope.nxTopology);
+                $scope.fadeAll();
             }
         }
 
@@ -116,7 +119,7 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
          *
          */
         function deselectContract() {
-            NextTopologyService.fadeInAllLayers($rootScope.nxTopology);
+            $scope.fadeAll();
             $scope.sidePanelPage = 'resolved-policy/contract-sidepanel';
 
             var obj = Object.keys($scope.resolvedPolicy).map(function(k) {
@@ -135,7 +138,7 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
          *
          */
         function deselectEpg() {
-            NextTopologyService.fadeInAllLayers($rootScope.nxTopology);
+            $scope.fadeAll();
             var elements;
 
             $scope.sidePanelPage = 'resolved-policy/epg-sidepanel';
@@ -160,7 +163,7 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
          *
          */
         function fadeAll() {
-            NextTopologyService.fadeInAllLayers($rootScope.nxTopology);
+            $rootScope.nxTopology && NextTopologyService.fadeInAllLayers($rootScope.nxTopology);
         }
 
         /**
@@ -183,7 +186,10 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
         function fillTopologyData() {
             if($scope.rootTenant) {
                 var topoData = {nodes: [], links: [],},
-                    filteredResolvedPolicies = $filter('filter')(resolvedPolicies.data, {'consumer-tenant-id': $scope.rootTenant, 'provider-tenant-id': $scope.rootTenant});
+                    filteredResolvedPolicies = $filter('filter')(resolvedPolicies.data, {
+                        'consumer-tenant-id': $scope.rootTenant,
+                        'provider-tenant-id': $scope.rootTenant
+                    });
 
 
                 filteredResolvedPolicies && filteredResolvedPolicies.forEach(function(rp) {
@@ -272,6 +278,25 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
             $scope.rootTenants.clearData();
             $scope.rootTenants.get('config');
         }
+
+        /**
+         *
+         * @param chainName
+         */
+        function openSfcDialog(chainName) {
+            $mdDialog.show({
+                clickOutsideToClose: true,
+                controller: 'SfcTopologyController',
+                preserveScope: true,
+                templateUrl: $scope.viewPath + 'sfc/dialog-sfc-topology.tpl.html',
+                parent: angular.element(document.body),
+                scope: $scope,
+                locals: {
+                    chainName: chainName,
+                },
+            });
+        }
+
 
         /**
          * Sets '$scope.sidePanelPage' to true. This variable is watched in index.tpl.html template
