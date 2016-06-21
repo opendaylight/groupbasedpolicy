@@ -9,10 +9,9 @@ define([
     EndpointsController.$inject = ['$scope', '$mdDialog', 'EndpointsListService', 'EndpointService'];
 
     function EndpointsController($scope, $mdDialog, EndpointsListService, EndpointService) {
+        /* properties */
         $scope.endpoints = EndpointsListService.createList();
-        $scope.openEndpointDialog = openEndpointDialog;
-        $scope.getEndpointsList = getEndpointsList;
-        $scope.deleteEndpointDialog = deleteEndpointDialog;
+        $scope.disableKeyFieldsEditing = false;
         $scope.endpointsTableQuery = {
             order: "data['context-id']",
             limit: 25,
@@ -20,6 +19,10 @@ define([
             options: [25, 50, 100],
             filter: '',
         };
+        /* methods */
+        $scope.openEndpointDialog = openEndpointDialog;
+        $scope.getEndpointsList = getEndpointsList;
+        $scope.deleteEndpointDialog = deleteEndpointDialog;
 
         getEndpointsList();
 
@@ -28,7 +31,8 @@ define([
             $scope.endpoints.get();
         }
 
-        function openEndpointDialog(endpointData) {
+        function openEndpointDialog(operation, endpointData) {
+            $scope.disableKeyFieldsEditing = operation === 'edit';
             $mdDialog.show({
                 clickOutsideToClose: true,
                 controller: 'AddEndpointController',
@@ -50,11 +54,9 @@ define([
                 .cancel('Cancel');
 
             $mdDialog.show(confirm).then(function () {
-                contractData.deleteEndpoint($scope.rootTenant.data.id,
-                    function () {
-                        $scope.getEndpointsList();
-                    }
-                );
+                endpointData.deleteEndpoint(function () {
+                    $scope.getEndpointsList();
+                });
             }, function () {
 
             });

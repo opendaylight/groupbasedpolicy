@@ -26,7 +26,8 @@ define([], function () {
              */
             function setData(data) {
                 var self = this;
-                data.forEach(function (dataElement) {
+
+                data && data.forEach(function (dataElement) {
                     self.data.push(EndpointService.createObject(dataElement));
                 });
             }
