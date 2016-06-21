@@ -27,6 +27,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
@@ -47,6 +48,7 @@ public class VppNodeManager {
     private static final String V3PO_CAPABILITY = "(urn:opendaylight:params:xml:ns:yang:v3po?revision=2015-01-05)v3po";
     private static final String INTERFACES_CAPABILITY =
             "(urn:ietf:params:xml:ns:yang:ietf-interfaces?revision=2014-05-08)ietf-interfaces";
+    private static final NodeId CONTROLLER_CONFIG_NODE = new NodeId("controller-config");
     private final DataBroker dataBroker;
     private final MountPointService mountService;
     private final List<String> requiredCapabilities;
@@ -66,6 +68,10 @@ public class VppNodeManager {
      * create/update/remove of Node.
      */
     public void syncNodes(Node dataAfter, Node dataBefore) {
+        if (isControllerConfigNode(dataAfter, dataBefore)) {
+            LOG.trace("{} is ignored by VPP-renderer", CONTROLLER_CONFIG_NODE);
+            return;
+        }
         // New node
         if (dataBefore == null && dataAfter != null) {
             createNode(dataAfter);
@@ -78,6 +84,13 @@ public class VppNodeManager {
         if (dataBefore != null && dataAfter == null) {
             removeNode(dataBefore);
         }
+    }
+
+    private boolean isControllerConfigNode(Node dataAfter, Node dataBefore) {
+        if (dataAfter != null) {
+            return CONTROLLER_CONFIG_NODE.equals(dataAfter.getNodeId());
+        }
+        return CONTROLLER_CONFIG_NODE.equals(dataBefore.getNodeId());
     }
 
     private void createNode(Node node) {
