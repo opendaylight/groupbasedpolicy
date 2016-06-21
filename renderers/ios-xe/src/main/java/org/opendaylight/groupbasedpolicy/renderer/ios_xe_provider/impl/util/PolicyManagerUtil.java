@@ -8,16 +8,7 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util;
 
-import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.ActionCase.CHAIN;
-import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction.In;
-import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction.Out;
-import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation.CONSUMER;
-import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation.PROVIDER;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriter;
@@ -49,7 +40,6 @@ import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map.ClassKe
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map._class.ActionList;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map._class.ActionListBuilder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map._class.ActionListKey;
-import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map._class.AppnavPolicyBuilder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map._class.action.list.action.param.ForwardCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map._class.action.list.action.param.forward._case.ForwardBuilder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map._class.action.list.action.param.forward._case.forward.ServicePath;
@@ -63,8 +53,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.rule.group.with.renderer.endpoint.participation.RuleGroupWithRendererEndpointParticipation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Configuration;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
@@ -72,7 +60,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointWithPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.rule.groups.RuleGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.actions.Action;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.classifiers.Classifier;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.resolved.rules.ResolvedRule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.AddressEndpointWithLocationAug;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
@@ -80,27 +67,42 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.ActionCase.CHAIN;
+import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Create;
+import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Delete;
+
 public class PolicyManagerUtil {
 
     private static final Logger LOG = LoggerFactory.getLogger(PolicyManagerUtil.class);
+    private static final String DEFAULT = "class-default";
 
     public static void syncPolicyEntities(final Sgt sourceSgt, final Sgt destinationSgt, PolicyWriter policyWriter,
-                                          final Configuration dataAfter, final PeerEndpointWithPolicy peerEndpoint) {
-        // Class map
-        final String classMapName = PolicyManagerUtil.generateClassMapName(sourceSgt.getValue(), destinationSgt.getValue());
-        final Match match = PolicyManagerUtil.createSecurityGroupMatch(sourceSgt.getValue(), destinationSgt.getValue());
-        final ClassMap classMap = PolicyManagerUtil.createClassMap(classMapName, match);
+                                          final Configuration dataAfter, final PeerEndpointWithPolicy peerEndpoint,
+                                          final DataBroker dataBroker, final PolicyManagerImpl.DsAction action) {
+        // Action
         final Map<PolicyManagerImpl.ActionCase, Action> actionMap = PolicyManagerUtil.getActionInDirection(dataAfter, peerEndpoint);
         if (actionMap == null || actionMap.isEmpty()) {
             LOG.debug("no usable action found for EP-sgt[{}] | peerEP-sgt[{}]",
                     sourceSgt, destinationSgt);
             return;
         }
-        policyWriter.cache(classMap);
 
-        // Policy map entry
-        if (actionMap.containsKey(PolicyManagerImpl.ActionCase.CHAIN)) {
-            ServiceChainingUtil.resolveChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, classMapName, policyWriter);
+        // TODO allow action not supported
+
+        // Resolve chain action - create
+        if (actionMap.containsKey(PolicyManagerImpl.ActionCase.CHAIN) && action.equals(Create)) {
+            ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyWriter,
+                    dataBroker);
+        }
+        if (actionMap.containsKey(PolicyManagerImpl.ActionCase.CHAIN) && action.equals(Delete)) {
+            ServiceChainingUtil.removeChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyWriter);
         }
     }
 
@@ -119,7 +121,7 @@ public class PolicyManagerUtil {
         return augmentation.getSgt();
     }
 
-    private static Match createSecurityGroupMatch(final int sourceTag, final int destinationTag) {
+    static Match createSecurityGroupMatch(final int sourceTag, final int destinationTag) {
         final SecurityGroupBuilder sgBuilder = new SecurityGroupBuilder();
         final Source source = new SourceBuilder().setTag(sourceTag).build();
         final Destination destination = new DestinationBuilder().setTag(destinationTag).build();
@@ -187,12 +189,10 @@ public class PolicyManagerUtil {
 
     public static PolicyMap createPolicyMap(final String policyMapName, final List<Class> policyMapEntries) {
         // Create default class entry
-        final AppnavPolicyBuilder appnavPolicyBuilder = new AppnavPolicyBuilder();
-        appnavPolicyBuilder.setPassThrough(true);
         final ClassBuilder defaultBuilder = new ClassBuilder();
-        defaultBuilder.setName(new ClassNameType("class-default"))
-                .setKey(new ClassKey(new ClassNameType("class-default")))
-                .setAppnavPolicy(appnavPolicyBuilder.build());
+        defaultBuilder.setName(new ClassNameType(DEFAULT))
+                .setKey(new ClassKey(new ClassNameType(DEFAULT)));
+        // TODO add pass-through value
         policyMapEntries.add(defaultBuilder.build());
         // Construct policy map
         final PolicyMapBuilder policyMapBuilder = new PolicyMapBuilder();
@@ -256,11 +256,10 @@ public class PolicyManagerUtil {
 
 
     private static Map<PolicyManagerImpl.ActionCase, Action> getActionInDirection(final Configuration data, final PeerEndpointWithPolicy peer) {
-        final List<ResolvedRule> rulesInDirection = new ArrayList<>();
+        final Set<ResolvedRule> rulesInDirection = new HashSet<>();
         // Find all rules in desired direction
         for (RuleGroupWithRendererEndpointParticipation ruleGroupKey :
                 peer.getRuleGroupWithRendererEndpointParticipation()) {
-            final EndpointPolicyParticipation participation = ruleGroupKey.getRendererEndpointParticipation();
             final RuleGroup ruleGroup = findRuleGroup(data, ruleGroupKey);
             if (ruleGroup == null || ruleGroup.getResolvedRule() == null) {
                 continue;
@@ -273,13 +272,7 @@ public class PolicyManagerUtil {
                 if (resolvedRule.getClassifier() == null || resolvedRule.getAction() == null) {
                     continue;
                 }
-                // TODO only first Classifier used
-                final Classifier classifier = resolvedRule.getClassifier().get(0);
-                final HasDirection.Direction direction = classifier.getDirection();
-                if ((participation.equals(PROVIDER) && direction.equals(Out)) ||
-                        (participation.equals(CONSUMER) && direction.equals(In))) {
-                    rulesInDirection.add(resolvedRule);
-                }
+                rulesInDirection.add(resolvedRule);
             }
         }
         if (rulesInDirection.isEmpty()) {
@@ -320,5 +313,4 @@ public class PolicyManagerUtil {
         }
         return null;
     }
-
 }

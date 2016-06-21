@@ -35,6 +35,7 @@ import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev1407
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.service.function.paths.ServiceFunctionPath;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.service.function.paths.ServiceFunctionPathBuilder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ClassMap;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native._class.map.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
@@ -102,7 +103,8 @@ public class PolicyManagerUtilTest {
         Mockito.when(roTx.read(Matchers.eq(LogicalDatastoreType.OPERATIONAL), rendererServicePathIICaptor.capture()))
                 .thenReturn(Futures.immediateCheckedFuture(Optional.of(renderedSP)));
 
-        final RenderedServicePath renderedPath = ServiceChainingUtil.createRenderedPath(serviceFunctionPath, tenantId);
+        final RenderedServicePath renderedPath = ServiceChainingUtil.createRenderedPath(serviceFunctionPath, tenantId,
+                dataBroker);
         Assert.assertEquals(renderedSP, renderedPath);
         final InstanceIdentifier<RenderedServicePath> ii = rendererServicePathIICaptor.getValue();
         Assert.assertEquals("sfp-name-01tenant-id-01-gbp-rsp", ii.firstKeyOf(RenderedServicePath.class).getName().getValue());
@@ -119,9 +121,15 @@ public class PolicyManagerUtilTest {
 
 
         final RenderedServicePath symmetricRenderedPath = ServiceChainingUtil.createSymmetricRenderedPath(
-                serviceFunctionPath, renderedServicePath, tenantId);
+                serviceFunctionPath, renderedServicePath, tenantId, dataBroker);
         Assert.assertEquals(renderedServicePath, symmetricRenderedPath);
         final InstanceIdentifier<RenderedServicePath> ii = rendererServicePathIICaptor.getValue();
         Assert.assertEquals("sfp-name-01tenant-id-02-gbp-rsp-Reverse", ii.firstKeyOf(RenderedServicePath.class).getName().getValue());
+    }
+
+    @Test
+    public void testMatch() {
+        Match result = PolicyManagerUtil.createSecurityGroupMatch(10, 20);
+        assertNotNull(result);
     }
 }

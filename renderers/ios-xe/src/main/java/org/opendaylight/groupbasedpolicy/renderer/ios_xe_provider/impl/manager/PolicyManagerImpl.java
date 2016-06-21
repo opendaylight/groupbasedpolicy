@@ -8,26 +8,20 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager;
 
-import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Create;
-import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Delete;
-
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import javax.annotation.Nullable;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.manager.PolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.NetconfTransactionCreator;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriter;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.Renderers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
@@ -43,6 +37,16 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Create;
+import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Delete;
 
 public class PolicyManagerImpl implements PolicyManager {
 
@@ -66,7 +70,8 @@ public class PolicyManagerImpl implements PolicyManager {
         } else if (dataBefore != null && dataAfter == null) {
             result = syncPolicy(dataBefore, Delete);
         } else {
-            // TODO implement
+            syncPolicy(dataBefore, Delete);
+            syncPolicy(dataAfter, Create);
             result = Futures.immediateFuture(false);
         }
 
@@ -104,7 +109,6 @@ public class PolicyManagerImpl implements PolicyManager {
                 //TODO: dump all resolvedRule-rule-peerEP-EP combinantions to status
                 continue;
             }
-
             final List<AddressEndpointWithLocation> endpointsWithLocation = dataAfter.getEndpoints()
                     .getAddressEndpointWithLocation();
             final InstanceIdentifier mountpointIid = PolicyManagerUtil.getAbsoluteLocationMountpoint(rendererEndpoint, endpointsWithLocation);
@@ -144,27 +148,26 @@ public class PolicyManagerImpl implements PolicyManager {
                     //TODO: dump particular resolvedRule-rule-peerEP-EP combinantions to status
                     continue;
                 }
-                PolicyManagerUtil.syncPolicyEntities(sourceSgt, destinationSgt, policyWriter, dataAfter, peerEndpoint);
+                PolicyManagerUtil.syncPolicyEntities(sourceSgt, destinationSgt, policyWriter, dataAfter, peerEndpoint,
+                        dataBroker, action);
             }
         }
 
         //TODO: return real (cumulated) future
-        final List<CheckedFuture<Void, TransactionCommitFailedException>> allFutureResults = new ArrayList<>();
+        final List<CheckedFuture<Boolean, TransactionCommitFailedException>> allFutureResults = new ArrayList<>();
         if (action.equals(Create)) {
             policyWriterPerDeviceCache.values().forEach(pw -> allFutureResults.add(pw.commitToDatastore()));
         } else if (action.equals(Delete)) {
             policyWriterPerDeviceCache.values().forEach(pw -> allFutureResults.add(pw.removeFromDatastore()));
         } else {
             LOG.info("unsupported policy manage action: {}", action);
-
         }
+        final ListenableFuture<List<Boolean>> cumulativeResult = Futures.allAsList(allFutureResults);
 
-        final ListenableFuture<List<Void>> cumulativeResult = Futures.allAsList(allFutureResults);
-
-        return Futures.transform(cumulativeResult, new Function<List<Void>, Boolean>() {
+        return Futures.transform(cumulativeResult, new Function<List<Boolean>, Boolean>() {
             @Nullable
             @Override
-            public Boolean apply(@Nullable final List<Void> input) {
+            public Boolean apply(@Nullable final List<Boolean> input) {
                 LOG.trace("considering all submits as successful - otherwise there will be exception");
                 return Boolean.TRUE;
             }
@@ -172,12 +175,19 @@ public class PolicyManagerImpl implements PolicyManager {
     }
 
     private CheckedFuture<Void, TransactionCommitFailedException> reportVersion(long version) {
-        WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
-        InstanceIdentifier<RendererPolicy> iid = InstanceIdentifier.create(Renderers.class)
+        final Optional<ReadWriteTransaction> optionalReadWriteTransaction =
+                NetconfTransactionCreator.netconfReadWriteTransaction(dataBroker);
+        if (!optionalReadWriteTransaction.isPresent()) {
+            LOG.warn("Failed to create transaction, mountpoint: {}", dataBroker);
+            return Futures.immediateCheckedFuture(null);
+        }
+        final ReadWriteTransaction readWriteTransaction = optionalReadWriteTransaction.get();
+        final InstanceIdentifier<RendererPolicy> iid = InstanceIdentifier.create(Renderers.class)
                 .child(Renderer.class, new RendererKey(NodeManager.iosXeRenderer))
                 .child(RendererPolicy.class);
-        wtx.merge(LogicalDatastoreType.OPERATIONAL, iid, new RendererPolicyBuilder().setVersion(version).build());
-        return wtx.submit();
+        readWriteTransaction.merge(LogicalDatastoreType.OPERATIONAL, iid,
+                new RendererPolicyBuilder().setVersion(version).build());
+        return readWriteTransaction.submit();
     }
 
     @Override
@@ -185,7 +195,7 @@ public class PolicyManagerImpl implements PolicyManager {
         //NOOP
     }
 
-    enum DsAction {Create, Delete}
+    public enum DsAction {Create, Delete}
 
     public enum ActionCase {ALLOW, CHAIN}
 }

@@ -28,11 +28,12 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class NodeWriter {
 
     private static final Logger LOG = LoggerFactory.getLogger(NodeWriter.class);
-    private List<RendererNode> rendererNodesCache;
+    private final List<RendererNode> rendererNodesCache;
 
     public NodeWriter() {
         rendererNodesCache = new ArrayList<>();
@@ -49,11 +50,17 @@ public class NodeWriter {
      */
     public void commitToDatastore(DataBroker dataBroker) {
         RendererNodes rendererNodes = buildRendererNodes();
-        WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
-        InstanceIdentifier<RendererNodes> iid = buildRendererNodesIid();
+        final Optional<WriteTransaction> optionalWriteTransaction =
+                NetconfTransactionCreator.netconfWriteOnlyTransaction(dataBroker);
+        if (!optionalWriteTransaction.isPresent()) {
+            LOG.warn("Failed to create transaction, mountpoint: {}", dataBroker);
+            return;
+        }
+        final WriteTransaction writeTransaction = optionalWriteTransaction.get();
+        final InstanceIdentifier<RendererNodes> iid = buildRendererNodesIid();
         try {
-            wtx.merge(LogicalDatastoreType.OPERATIONAL, iid, rendererNodes, true);
-            CheckedFuture<Void, TransactionCommitFailedException> submitFuture = wtx.submit();
+            writeTransaction.merge(LogicalDatastoreType.OPERATIONAL, iid, rendererNodes, true);
+            CheckedFuture<Void, TransactionCommitFailedException> submitFuture = writeTransaction.submit();
             submitFuture.checkedGet();
             // Clear cache
             rendererNodesCache.clear();
@@ -70,12 +77,18 @@ public class NodeWriter {
      * @param dataBroker appropriate data provider
      */
     public void removeFromDatastore(DataBroker dataBroker) {
-        WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
+        final Optional<WriteTransaction> optionalWriteTransaction =
+                NetconfTransactionCreator.netconfWriteOnlyTransaction(dataBroker);
+        if (!optionalWriteTransaction.isPresent()) {
+            LOG.warn("Failed to create transaction, mountpoint: {}", dataBroker);
+            return;
+        }
+        final WriteTransaction writeTransaction = optionalWriteTransaction.get();
         for (RendererNode nodeToRemove : rendererNodesCache) {
             InstanceIdentifier<RendererNode> iid = buildRendererNodeIid(nodeToRemove);
             try {
-                wtx.delete(LogicalDatastoreType.OPERATIONAL, iid);
-                CheckedFuture<Void, TransactionCommitFailedException> submitFuture = wtx.submit();
+                writeTransaction.delete(LogicalDatastoreType.OPERATIONAL, iid);
+                CheckedFuture<Void, TransactionCommitFailedException> submitFuture = writeTransaction.submit();
                 submitFuture.checkedGet();
                 // Clear cache
             } catch (TransactionCommitFailedException e) {

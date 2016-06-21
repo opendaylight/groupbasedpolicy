@@ -9,24 +9,26 @@
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.CheckedFuture;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.NetconfTransactionCreator;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriter;
 import org.opendaylight.sfc.provider.api.SfcProviderRenderedPathAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServiceForwarderAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServicePathAPI;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.rsp.manager.rev160421.RendererPathStates;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.rsp.manager.rev160421.renderer.path.states.RendererPathState;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.rsp.manager.rev160421.renderer.path.states.RendererPathStateKey;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.rsp.manager.rev160421.renderer.path.states.renderer.path.state.ConfiguredRenderedPaths;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.rsp.manager.rev160421.renderer.path.states.renderer.path.state.configured.rendered.paths.ConfiguredRenderedPath;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.rsp.manager.rev160421.renderer.path.states.renderer.path.state.configured.rendered.paths.ConfiguredRenderedPathKey;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.RendererName;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.RspName;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.SfcName;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.SffName;
@@ -40,8 +42,10 @@ import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev1407
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308.Native;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ClassMap;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ServiceChain;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ServiceChainBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native._class.map.Match;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.config.service.chain.grouping.IpBuilder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map.Class;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.ServicePath;
@@ -67,9 +71,20 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.security.cert.PKIXRevocationChecker;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
 public class ServiceChainingUtil {
 
     private static final Logger LOG = LoggerFactory.getLogger(ServiceChainingUtil.class);
+    private static final String RSP_SUFFIX = "-gbp-rsp";
+    private static final String RSP_REVERSED_SUFFIX = "-gbp-rsp-Reverse";
 
     static ServiceFunctionPath getServicePath(final List<ParameterValue> params) {
         if (params == null || params.isEmpty()) {
@@ -104,13 +119,13 @@ public class ServiceChainingUtil {
         return serviceFunctionPath;
     }
 
-    static void resolveChainAction(final PeerEndpointWithPolicy peerEndpoint, final Sgt sourceSgt,
-                                   final Sgt destinationSgt, final Map<PolicyManagerImpl.ActionCase, Action> actionMap,
-                                   final String classMapName, PolicyWriter policyWriter) {
-        final List<Class> entries = new ArrayList<>();
+    static void resolveNewChainAction(final PeerEndpointWithPolicy peerEndpoint, final Sgt sourceSgt,
+                                      final Sgt destinationSgt, final Map<PolicyManagerImpl.ActionCase, Action> actionMap,
+                                      PolicyWriter policyWriter, final DataBroker dataBroker) {
+        final List<Class> policyMapEntries = new ArrayList<>();
         final Action action = actionMap.get(PolicyManagerImpl.ActionCase.CHAIN);
         final ServiceFunctionPath servicePath = ServiceChainingUtil.getServicePath(action.getParameterValue());
-        if (servicePath == null) {
+        if (servicePath == null || servicePath.getName() == null) {
             //TODO: dump particular resolvedRule-rule-peerEP-EP combinantions to status
             return;
         }
@@ -119,42 +134,89 @@ public class ServiceChainingUtil {
             //TODO: dump particular resolvedRule-rule-peerEP-EP combinantions to status
             return;
         }
-        final RenderedServicePath renderedPath = ServiceChainingUtil.createRenderedPath(servicePath, tenantId);
+        final RenderedServicePath directPath = ServiceChainingUtil.createRenderedPath(servicePath, tenantId, dataBroker);
+        // Rsp found, create class-map and policy-map entry
+        final String classMapName = PolicyManagerUtil.generateClassMapName(sourceSgt.getValue(), destinationSgt.getValue());
+        final Match match = PolicyManagerUtil.createSecurityGroupMatch(sourceSgt.getValue(), destinationSgt.getValue());
+        final ClassMap classMap = PolicyManagerUtil.createClassMap(classMapName, match);
+        policyMapEntries.add(PolicyManagerUtil.createPolicyEntry(classMapName, directPath, PolicyManagerImpl.ActionCase.CHAIN));
+        RenderedServicePath reversedPath = null;
+        if (servicePath.isSymmetric()) {
+            // symmetric path is in opposite direction. Roles of renderer and peer endpoint will invert
+            reversedPath = ServiceChainingUtil.createSymmetricRenderedPath(servicePath, directPath, tenantId, dataBroker);
+            // Reversed Rsp found, create class-map and policy-map entry in opposite direction
+            final String oppositeClassMapName = PolicyManagerUtil.generateClassMapName(destinationSgt.getValue(), sourceSgt.getValue());
+            final Match oppositeMatch = PolicyManagerUtil.createSecurityGroupMatch(destinationSgt.getValue(), sourceSgt.getValue());
+            final ClassMap oppositeClassMap = PolicyManagerUtil.createClassMap(oppositeClassMapName, oppositeMatch);
+            policyMapEntries.add(PolicyManagerUtil.createPolicyEntry(oppositeClassMapName, reversedPath, PolicyManagerImpl.ActionCase.CHAIN));
+            policyWriter.cache(oppositeClassMap);
+        }
         // Create appropriate service path && remote forwarder
-        final boolean sfcPartSucessful = setSfcPart(renderedPath, policyWriter);
-        if (!sfcPartSucessful) {
+        final boolean sfcPartSuccessful = setSfcPart(servicePath, directPath, reversedPath, policyWriter);
+        if (!sfcPartSuccessful) {
             //TODO: dump particular resolvedRule-rule-peerEP-EP combinantions to status
             return;
         }
-
-        // atomic creation of symmetric policy-entries
-        final Class policyEntry = PolicyManagerUtil.createPolicyEntry(classMapName, renderedPath, PolicyManagerImpl.ActionCase.CHAIN);
-        if (!servicePath.isSymmetric()) {
-            entries.add(policyEntry);
-        } else {
-            // symmetric path is in opposite direction. Roles of renderer and peer endpoint will invert
-            final RenderedServicePath symmetricPath = ServiceChainingUtil
-                    .createSymmetricRenderedPath(servicePath, renderedPath, tenantId);
-            if (symmetricPath == null) {
-                //TODO: dump particular resolvedRule-rule-peerEP-EP combinantions to status
-                return;
-            } else {
-                final String oppositeClassMapName = PolicyManagerUtil.generateClassMapName(destinationSgt.getValue(),
-                        sourceSgt.getValue());
-                final Class policyEntrySymmetric = PolicyManagerUtil.createPolicyEntry(oppositeClassMapName,
-                        symmetricPath, PolicyManagerImpl.ActionCase.CHAIN);
-
-                entries.add(policyEntry);
-                entries.add(policyEntrySymmetric);
-            }
-        }
-        policyWriter.cache(entries);
+        policyWriter.cache(classMap);
+        policyWriter.cache(policyMapEntries);
     }
 
-    static RenderedServicePath createRenderedPath(final ServiceFunctionPath sfp, final TenantId tenantId) {
+    static void removeChainAction(final PeerEndpointWithPolicy peerEndpoint, final Sgt sourceSgt, final Sgt destinationSgt,
+                                  final Map<PolicyManagerImpl.ActionCase, Action> actionMap, PolicyWriter policyWriter) {
+        final Action action = actionMap.get(PolicyManagerImpl.ActionCase.CHAIN);
+        final ServiceFunctionPath servicePath = ServiceChainingUtil.getServicePath(action.getParameterValue());
+        if (servicePath == null || servicePath.getName() == null) {
+            return;
+        }
+        final TenantId tenantId = PolicyManagerUtil.getTenantId(peerEndpoint);
+        if (tenantId == null) {
+            return;
+        }
+        // Cache class-maps, appropriate policy-map entries and service-chains
+        final List<Class> policyMapEntries = new ArrayList<>();
+        final String classMapName = PolicyManagerUtil.generateClassMapName(sourceSgt.getValue(), destinationSgt.getValue());
+        final ClassMap classMap = PolicyManagerUtil.createClassMap(classMapName, null);
+        final RspName rspName = generateRspName(servicePath, tenantId);
+        final ServiceChain serviceChain = findServiceChainToRsp(rspName);
+        policyMapEntries.add(PolicyManagerUtil.createPolicyEntry(classMapName, null, PolicyManagerImpl.ActionCase.CHAIN));
+        policyWriter.cache(classMap);
+        policyWriter.cache(serviceChain);
+        if (servicePath.isSymmetric()) {
+            final String oppositeClassMapName = PolicyManagerUtil.generateClassMapName(destinationSgt.getValue(), sourceSgt.getValue());
+            final ClassMap oppositeClassMap = PolicyManagerUtil.createClassMap(oppositeClassMapName, null);
+            final RspName reversedRspName = generateReversedRspName(servicePath, tenantId);
+            final ServiceChain reversedServiceChain = findServiceChainToRsp(reversedRspName);
+            policyMapEntries.add(PolicyManagerUtil.createPolicyEntry(oppositeClassMapName, null, PolicyManagerImpl.ActionCase.CHAIN));
+            policyWriter.cache(oppositeClassMap);
+            policyWriter.cache(reversedServiceChain);
+        }
+        policyWriter.cache(policyMapEntries);
+        // TODO remove other sfc stuff - forwarders, etc.
+    }
+
+    private static ServiceChain findServiceChainToRsp(final RspName rspName) {
+        // Do not actually remove rsp from DS, could be used by someone else
+        final RenderedServicePath renderedServicePath = SfcProviderRenderedPathAPI.readRenderedServicePath(rspName);
+        if (renderedServicePath == null) {
+            LOG.debug("Rendered service path not found, if there is service-path created according to that rsp, " +
+                    "it cannot be removed. Rendered path name: {} ", rspName.getValue());
+            return null;
+        }
+        // Construct service chain with key
+        final Long pathId = renderedServicePath.getPathId();
+        final ServicePathBuilder servicePathBuilder = new ServicePathBuilder();
+        final ServiceChainBuilder serviceChainBuilder = new ServiceChainBuilder();
+        servicePathBuilder.setServicePathId(pathId)
+                .setKey(new ServicePathKey(pathId));
+        serviceChainBuilder.setServicePath(Collections.singletonList(servicePathBuilder.build()));
+        return serviceChainBuilder.build();
+    }
+
+    static RenderedServicePath createRenderedPath(final ServiceFunctionPath sfp, final TenantId tenantId,
+                                                  final DataBroker dataBroker) {
         RenderedServicePath renderedServicePath;
         // Try to read existing RSP
-        final RspName rspName = new RspName(sfp.getName().getValue() + tenantId.getValue() + "-gbp-rsp");
+        final RspName rspName = generateRspName(sfp, tenantId);
         renderedServicePath = SfcProviderRenderedPathAPI.readRenderedServicePath(rspName);
         if (renderedServicePath != null) {
             return renderedServicePath;
@@ -167,21 +229,23 @@ public class ServiceChainingUtil {
                 .build();
         renderedServicePath = SfcProviderRenderedPathAPI.createRenderedServicePathAndState(sfp, input);
         LOG.info("Rendered service path {} created", rspName.getValue());
+        checkSfcRspStatus(rspName, dataBroker);
         return renderedServicePath;
     }
 
     static RenderedServicePath createSymmetricRenderedPath(final ServiceFunctionPath sfp, final RenderedServicePath rsp,
-                                                           final TenantId tenantId) {
+                                                           final TenantId tenantId, final DataBroker dataBroker) {
         RenderedServicePath reversedRenderedPath;
         // Try to read existing RSP
-        final RspName rspName = new RspName(sfp.getName().getValue() + tenantId.getValue() + "-gbp-rsp-Reverse");
+        final RspName rspName = generateReversedRspName(sfp, tenantId);
         reversedRenderedPath = SfcProviderRenderedPathAPI.readRenderedServicePath(rspName);
         if (reversedRenderedPath != null) {
             return reversedRenderedPath;
         }
         LOG.info("Reversed rendered service path with name {} not found, creating a new one ..", rspName.getValue());
-        reversedRenderedPath = SfcProviderRenderedPathAPI.createSymmetricRenderedServicePathAndState(rsp);
+        reversedRenderedPath = SfcProviderRenderedPathAPI.createReverseRenderedServicePathEntry(rsp);
         LOG.info("Rendered service path {} created", rspName.getValue());
+        checkSfcRspStatus(rspName, dataBroker);
         return reversedRenderedPath;
     }
 
@@ -191,16 +255,24 @@ public class ServiceChainingUtil {
      * @param mountpoint used to access specific device
      * @return true if Local Forwarder is present, false otherwise
      */
-    static boolean checkLocalForwarderPresence(DataBroker mountpoint) {
+    private static boolean checkLocalForwarderPresence(DataBroker mountpoint) {
         InstanceIdentifier<Local> localSffIid = InstanceIdentifier.builder(Native.class)
                 .child(ServiceChain.class)
                 .child(org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.ServiceFunctionForwarder.class)
                 .child(Local.class).build();
-        ReadWriteTransaction rwt = mountpoint.newReadWriteTransaction();
-        CheckedFuture<Optional<Local>, ReadFailedException> submitFuture = rwt.read(LogicalDatastoreType.CONFIGURATION,
-                localSffIid);
         try {
+            java.util.Optional<ReadOnlyTransaction> optionalTransaction =
+                    NetconfTransactionCreator.netconfReadOnlyTransaction(mountpoint);
+            if (!optionalTransaction.isPresent()) {
+                LOG.warn("Failed to create transaction, mountpoint: {}", mountpoint);
+                return false;
+            }
+            ReadOnlyTransaction transaction = optionalTransaction.get();
+            CheckedFuture<Optional<Local>, ReadFailedException> submitFuture =
+                    transaction.read(LogicalDatastoreType.CONFIGURATION,
+                    localSffIid);
             Optional<Local> optionalLocalSff = submitFuture.checkedGet();
+            transaction.close(); // Release lock
             return optionalLocalSff.isPresent();
         } catch (ReadFailedException e) {
             LOG.warn("Read transaction failed to {} ", e);
@@ -219,8 +291,14 @@ public class ServiceChainingUtil {
     public static boolean checkServicePathPresence(DataBroker mountpoint) {
         InstanceIdentifier<ServiceChain> serviceChainIid = InstanceIdentifier.builder(Native.class)
                 .child(ServiceChain.class).build();
-        ReadWriteTransaction rwt = mountpoint.newReadWriteTransaction();
-        CheckedFuture<Optional<ServiceChain>, ReadFailedException> submitFuture = rwt.read(LogicalDatastoreType.CONFIGURATION,
+        java.util.Optional<ReadOnlyTransaction> optionalTransaction =
+                NetconfTransactionCreator.netconfReadOnlyTransaction(mountpoint);
+        if (!optionalTransaction.isPresent()) {
+            LOG.warn("Failed to create transaction, mountpoint: {}", mountpoint);
+            return false;
+        }
+        ReadOnlyTransaction transaction = optionalTransaction.get();
+        CheckedFuture<Optional<ServiceChain>, ReadFailedException> submitFuture = transaction.read(LogicalDatastoreType.CONFIGURATION,
                 serviceChainIid);
         try {
             Optional<ServiceChain> optionalServiceChain = submitFuture.checkedGet();
@@ -248,6 +326,14 @@ public class ServiceChainingUtil {
         return null;
     }
 
+    private static RspName generateRspName(final ServiceFunctionPath serviceFunctionPath, final TenantId tenantId) {
+        return new RspName(serviceFunctionPath.getName().getValue() + tenantId.getValue() + RSP_SUFFIX);
+    }
+
+    private static RspName generateReversedRspName(final ServiceFunctionPath serviceFunctionPath, final TenantId tenantId) {
+        return new RspName(serviceFunctionPath.getName().getValue() + tenantId.getValue() + RSP_REVERSED_SUFFIX);
+    }
+
     private static <T> Supplier<Boolean> createNegativePathWithLogSupplier(final T value, final Consumer<T> logCommand) {
         return () -> {
             // fireLog
@@ -256,42 +342,73 @@ public class ServiceChainingUtil {
         };
     }
 
-    static boolean setSfcPart(final RenderedServicePath renderedServicePath, PolicyWriter policyWriter) {
-        final java.util.Optional<RenderedServicePath> renderedServicePathSafe = java.util.Optional.ofNullable(renderedServicePath);
-        final java.util.Optional<RenderedServicePathHop> renderedServicePathHop = renderedServicePathSafe
-                .map(RenderedServicePath::getRenderedServicePathHop)
-                .map(rspHop -> Iterables.getFirst(rspHop, null));
-
-        final boolean outcome;
-        if (!renderedServicePathHop.isPresent()) {
-            LOG.warn("Rendered service path {} does not contain any hop",
-                    renderedServicePathSafe.map(RenderedServicePath::getName).map(RspName::getValue).orElse("n/a"));
-            outcome = false;
+    static boolean setSfcPart(final ServiceFunctionPath serviceFunctionPath, final RenderedServicePath renderedServicePath,
+                              final RenderedServicePath reversedRenderedServicePath, PolicyWriter policyWriter) {
+        if (!checkLocalForwarderPresence(policyWriter.getCurrentMountpoint())) {
+            appendLocalSff(policyWriter);
         } else {
-            final RenderedServicePathHop firstHop = renderedServicePathHop.get();
-            final SffName sffName = firstHop.getServiceFunctionForwarder();
-
-            // Forwarders
-            //
-            // If classifier node is also forwarder, first entry in service path has to point to first service function
-            // (Local case)
-            //
-            // If first hop Sff is on different node, first service path entry has to point to that specific service
-            // forwarder (Remote case)
-
-            // Local case (only when does not exist)
-
-            if (!checkLocalForwarderPresence(policyWriter.getCurrentMountpoint())) {
-                appendLocalSff(policyWriter);
-            } else {
-                LOG.info("Local forwarder for node {} is already created", policyWriter.getCurrentNodeId());
+            LOG.info("Local forwarder for node {} is already created", policyWriter.getCurrentNodeId());
+        }
+        boolean outcome = true;
+        // Direct path
+        final java.util.Optional<RenderedServicePath> renderedServicePathSafe = java.util.Optional.ofNullable(renderedServicePath);
+        if (renderedServicePathSafe.isPresent()) {
+            if (renderedServicePath.getRenderedServicePathHop() != null
+                    && !renderedServicePath.getRenderedServicePathHop().isEmpty()) {
+                if (!resolveRenderedServicePath(renderedServicePath, policyWriter)) {
+                    outcome = false;
+                }
             }
+            else {
+                LOG.warn("Rendered service path {} does not contain any hop",
+                        renderedServicePathSafe.map(RenderedServicePath::getName).map(RspName::getValue).orElse("n/a"));
+                outcome = false;
+            }
+        }
+        else {
+            LOG.warn("Rendered service path is null");
+            outcome = false;
+        }
+        if (serviceFunctionPath.isSymmetric()) {
+            // Reversed path
+            final java.util.Optional<RenderedServicePath> reversedRenderedServicePathSafe = java.util.Optional.ofNullable(reversedRenderedServicePath);
+            if (reversedRenderedServicePathSafe.isPresent()) {
+                if (reversedRenderedServicePath.getRenderedServicePathHop() != null
+                        && !reversedRenderedServicePath.getRenderedServicePathHop().isEmpty()) {
+                    if (!resolveRenderedServicePath(reversedRenderedServicePath, policyWriter)) {
+                        outcome = false;
+                    }
+                } else {
+                    LOG.warn("Rendered service path {} does not contain any hop",
+                            reversedRenderedServicePathSafe.map(RenderedServicePath::getName).map(RspName::getValue).orElse("n/a"));
+                    outcome = false;
+                }
+            } else {
+                LOG.warn("Reversed rendered service path is null");
+                outcome = false;
+            }
+        }
+        return outcome;
+    }
 
-            // Remote case
-            final java.util.Optional<ServiceFunctionForwarder> serviceFunctionForwarder = java.util.Optional.ofNullable(
+    private static boolean resolveRenderedServicePath(final RenderedServicePath renderedServicePath, PolicyWriter policyWriter) {
+        final RenderedServicePathHop firstHop = renderedServicePath.getRenderedServicePathHop().get(0);
+        if (firstHop == null) {
+            return false;
+        }
+        final SffName sffName = firstHop.getServiceFunctionForwarder();
+
+        // Forwarders
+        //
+        // If classifier node is also forwarder, first entry in service path has to point to first service function
+        // (Local case)
+        //
+        // If first hop Sff is on different node, first service path entry has to point to that specific service
+        // forwarder (Remote case)
+
+        final java.util.Optional<ServiceFunctionForwarder> serviceFunctionForwarder = java.util.Optional.ofNullable(
                     SfcProviderServiceForwarderAPI.readServiceFunctionForwarder(sffName));
-
-            outcome = serviceFunctionForwarder.map(sff -> java.util.Optional.ofNullable(sff.getIpMgmtAddress())
+        return serviceFunctionForwarder.map(sff -> java.util.Optional.ofNullable(sff.getIpMgmtAddress())
                     .map(IpAddress::getIpv4Address)
                     .map((ipv4Address) -> ipv4Address.getValue())
                     .map(addressValue -> {
@@ -310,10 +427,10 @@ public class ServiceChainingUtil {
 
                         // Service chain
                         final List<Services> services = new ArrayList<>();
-                        //TODO: servicesBuilder is never used
                         final ServicesBuilder servicesBuilder = new ServicesBuilder();
                         servicesBuilder.setServiceIndexId(renderedServicePath.getStartingIndex())
                                 .setServiceTypeChoice(serviceTypeChoice);
+                        services.add(servicesBuilder.build());
                         final List<ServicePath> servicePaths = new ArrayList<>();
                         final ServicePathBuilder servicePathBuilder = new ServicePathBuilder();
                         servicePathBuilder.setKey(new ServicePathKey(renderedServicePath.getPathId()))
@@ -335,9 +452,6 @@ public class ServiceChainingUtil {
             ).orElseGet(createNegativePathWithLogSupplier(sffName.getValue(),
                     (value) -> LOG.error("Sff with name {} does not exist", value))
             );
-        }
-
-        return outcome;
     }
 
     private static void appendLocalSff(final PolicyWriter policyWriter) {
@@ -359,4 +473,60 @@ public class ServiceChainingUtil {
         return sfBuilder.build();
     }
 
+    private static void checkSfcRspStatus(final RspName rspName, final DataBroker dataBroker) {
+        /** TODO A better way to do this is to register listener and wait for notification than using hardcoded timeout
+         *  with Thread.sleep(). Example in class BridgeDomainManagerImpl
+        */
+        ConfiguredRenderedPath renderedPath = null;
+        LOG.info("Waiting for SFC to configure path {} ...", rspName.getValue());
+
+        byte attempt = 0;
+        do {
+            attempt++;
+            // Wait
+            try {
+                Thread.sleep(5000L);
+            } catch (InterruptedException e) {
+                LOG.error("Thread interrupted while waiting ... {} ", e);
+            }
+            // Read actual status
+            final InstanceIdentifier<ConfiguredRenderedPath> statusIid = InstanceIdentifier.builder(RendererPathStates.class)
+                    .child(RendererPathState.class, new RendererPathStateKey(new RendererName("ios-xe-renderer")))
+                    .child(ConfiguredRenderedPaths.class)
+                    .child(ConfiguredRenderedPath.class, new ConfiguredRenderedPathKey(rspName)).build();
+            final java.util.Optional<ReadWriteTransaction> optionalTransaction =
+                    NetconfTransactionCreator.netconfReadWriteTransaction(dataBroker);
+            if (!optionalTransaction.isPresent()) {
+                LOG.warn("Failed to create transaction, mountpoint: {}", dataBroker);
+                return;
+            }
+            ReadWriteTransaction transaction = optionalTransaction.get();
+            try {
+                final CheckedFuture<Optional<ConfiguredRenderedPath>, ReadFailedException> submitFuture =
+                        transaction.read(LogicalDatastoreType.OPERATIONAL, statusIid);
+                final Optional<ConfiguredRenderedPath> optionalPath = submitFuture.checkedGet();
+                if (optionalPath.isPresent()) {
+                    renderedPath = optionalPath.get();
+                }
+            } catch (ReadFailedException e) {
+                LOG.warn("Failed while read rendered path status ... {} ", e.getMessage());
+            }
+            if (renderedPath == null || renderedPath.getPathStatus() == null ||
+                    renderedPath.getPathStatus().equals(ConfiguredRenderedPath.PathStatus.InProgress)) {
+                LOG.info("Still waiting for SFC ... ");
+            } else if (renderedPath.getPathStatus().equals(ConfiguredRenderedPath.PathStatus.Failure)) {
+                LOG.warn("SFC failed to configure rsp");
+            } else if (renderedPath.getPathStatus().equals(ConfiguredRenderedPath.PathStatus.Success)) {
+                LOG.info("RSP {} configured by SFC", rspName.getValue());
+                try {
+                    Thread.sleep(5000); // Just for sure, maybe will be safe to remove this
+                } catch (InterruptedException e) {
+                    LOG.error("Thread interrupted while waiting ... {} ", e);
+                }
+                return;
+            }
+        }
+        while (attempt <= 6);
+        LOG.warn("Maximum number of attempts reached");
+    }
 }

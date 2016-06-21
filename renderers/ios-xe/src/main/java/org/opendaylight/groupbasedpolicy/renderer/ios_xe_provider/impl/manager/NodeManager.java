@@ -14,10 +14,11 @@ import com.google.common.util.concurrent.CheckedFuture;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPoint;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
-import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
+import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.NetconfTransactionCreator;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.NodeWriter;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
@@ -218,10 +219,16 @@ public class NodeManager {
         InstanceIdentifier<Node> nodeIid = InstanceIdentifier.builder(NetworkTopology.class)
                 .child(Topology.class, new TopologyKey(new TopologyId(NodeManager.TOPOLOGY_ID)))
                 .child(Node.class, new NodeKey(nodeId)).build();
-        ReadWriteTransaction rwt = dataBroker.newReadWriteTransaction();
+        java.util.Optional<ReadOnlyTransaction> optionalTransaction =
+                NetconfTransactionCreator.netconfReadOnlyTransaction(dataBroker);
+        if (!optionalTransaction.isPresent()) {
+            LOG.warn("Failed to create transaction, mountpoint: {}", dataBroker);
+            return null;
+        }
+        ReadOnlyTransaction transaction = optionalTransaction.get();
         try {
             CheckedFuture<Optional<Node>, ReadFailedException> submitFuture =
-                    rwt.read(LogicalDatastoreType.CONFIGURATION, nodeIid);
+                    transaction.read(LogicalDatastoreType.CONFIGURATION, nodeIid);
             Optional<Node> optional = submitFuture.checkedGet();
             if (optional != null && optional.isPresent()) {
                 Node node = optional.get();

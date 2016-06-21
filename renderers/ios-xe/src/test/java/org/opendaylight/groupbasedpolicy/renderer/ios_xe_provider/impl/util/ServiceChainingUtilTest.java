@@ -27,12 +27,15 @@ import org.mockito.Captor;
 import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.internal.verification.Times;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.NetconfTransactionCreator;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriter;
 import org.opendaylight.sfc.provider.api.SfcProviderRenderedPathAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServiceForwarderAPI;
@@ -54,6 +57,7 @@ import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev1407
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.service.function.paths.ServiceFunctionPathBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ClassMap;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ServiceChain;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ServiceChainBuilder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map.Class;
@@ -88,7 +92,8 @@ import org.powermock.modules.junit4.PowerMockRunner;
         ServiceChainingUtil.class,
         SfcProviderServicePathAPI.class,
         SfcProviderRenderedPathAPI.class,
-        SfcProviderServiceForwarderAPI.class
+        SfcProviderServiceForwarderAPI.class,
+        NetconfTransactionCreator.class
 })
 public class ServiceChainingUtilTest {
 
@@ -104,6 +109,8 @@ public class ServiceChainingUtilTest {
     private ArgumentCaptor<RenderedServicePath> rspCaptor;
     @Captor
     private ArgumentCaptor<List<Class>> listClassCaptor;
+    @Captor
+    private ArgumentCaptor<ClassMap> classMapCaptor;
     @Mock
     private PolicyWriter policyWriter;
     @Mock
@@ -163,8 +170,9 @@ public class ServiceChainingUtilTest {
         stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(rsp);
         stub(method(ServiceChainingUtil.class, "setSfcPart")).toReturn(true);
 
-        ServiceChainingUtil.resolveChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, classMapName, policyWriter);
+        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyWriter, dataBroker);
 
+        Mockito.verify(policyWriter).cache(classMapCaptor.capture());
         Mockito.verify(policyWriter).cache(listClassCaptor.capture());
         Mockito.verifyNoMoreInteractions(policyWriter);
         Assert.assertEquals(1, listClassCaptor.getValue().size());
@@ -190,8 +198,9 @@ public class ServiceChainingUtilTest {
         stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(rsp);
         stub(method(ServiceChainingUtil.class, "setSfcPart")).toReturn(true);
 
-        ServiceChainingUtil.resolveChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, classMapName, policyWriter);
+        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyWriter, dataBroker);
 
+        Mockito.verify(policyWriter, Mockito.times(2)).cache(classMapCaptor.capture());
         Mockito.verify(policyWriter).cache(listClassCaptor.capture());
         Mockito.verifyNoMoreInteractions(policyWriter);
         Assert.assertEquals(2, listClassCaptor.getValue().size());
@@ -218,8 +227,9 @@ public class ServiceChainingUtilTest {
         stub(method(ServiceChainingUtil.class, "setSfcPart")).toReturn(true);
         stub(method(ServiceChainingUtil.class, "createSymmetricRenderedPath")).toReturn(null);
 
-        ServiceChainingUtil.resolveChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, classMapName, policyWriter);
-
+        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyWriter, dataBroker);
+        Mockito.verify(policyWriter, Mockito.times(2)).cache(classMapCaptor.capture());
+        Mockito.verify(policyWriter).cache(listClassCaptor.capture());
         Mockito.verifyNoMoreInteractions(policyWriter);
     }
 
@@ -243,7 +253,7 @@ public class ServiceChainingUtilTest {
         stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(rsp);
         stub(method(ServiceChainingUtil.class, "setSfcPart")).toReturn(false);
 
-        ServiceChainingUtil.resolveChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, classMapName, policyWriter);
+        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyWriter, dataBroker);
 
         Mockito.verifyNoMoreInteractions(policyWriter);
     }
@@ -267,7 +277,7 @@ public class ServiceChainingUtilTest {
         final RenderedServicePath rsp = createRsp("unit-rsp-02");
         stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(rsp);
 
-        ServiceChainingUtil.resolveChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, classMapName, policyWriter);
+        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyWriter, dataBroker);
 
         Mockito.verifyNoMoreInteractions(policyWriter);
     }
@@ -280,7 +290,7 @@ public class ServiceChainingUtilTest {
         final Map<PolicyManagerImpl.ActionCase, Action> actionMap = createActionMap(false);
         final String classMapName = "unit-class-map-name-01";
 
-        ServiceChainingUtil.resolveChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, classMapName, policyWriter);
+        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyWriter, dataBroker);
 
         Mockito.verifyNoMoreInteractions(policyWriter);
     }
@@ -328,7 +338,7 @@ public class ServiceChainingUtilTest {
         final SfcProviderRenderedPathAPI api = PowerMockito.mock(SfcProviderRenderedPathAPI.class);
         PowerMockito.when(api.readRenderedServicePath(rspNameCaptor.capture())).thenReturn(rsp);
 
-        final RenderedServicePath renderedPath = ServiceChainingUtil.createRenderedPath(sfp, tenantId);
+        final RenderedServicePath renderedPath = ServiceChainingUtil.createRenderedPath(sfp, tenantId, dataBroker);
 
         Assert.assertEquals("123_plainunit-tennant-01-gbp-rsp", rspNameCaptor.getValue().getValue());
         Assert.assertEquals(rsp, renderedPath);
@@ -348,8 +358,11 @@ public class ServiceChainingUtilTest {
         PowerMockito.when(api.createRenderedServicePathAndState(
                 sfpCaptor.capture(), createRspCaptor.capture()
         )).thenReturn(rsp);
+        PowerMockito.mockStatic(NetconfTransactionCreator.class);
+        final NetconfTransactionCreator creator = PowerMockito.mock(NetconfTransactionCreator.class);
+        PowerMockito.when(creator.netconfReadWriteTransaction(dataBroker)).thenReturn(java.util.Optional.empty());
 
-        final RenderedServicePath renderedPath = ServiceChainingUtil.createRenderedPath(sfp, tenantId);
+        final RenderedServicePath renderedPath = ServiceChainingUtil.createRenderedPath(sfp, tenantId, dataBroker);
 
         Assert.assertEquals("123_plainunit-tennant-01-gbp-rsp", rspNameCaptor.getValue().getValue());
 
@@ -397,7 +410,7 @@ public class ServiceChainingUtilTest {
         final SfcProviderRenderedPathAPI api = PowerMockito.mock(SfcProviderRenderedPathAPI.class);
         PowerMockito.when(api.readRenderedServicePath(rspNameCaptor.capture())).thenReturn(rsp);
 
-        final RenderedServicePath symmetricRenderedPath = ServiceChainingUtil.createSymmetricRenderedPath(sfp, rsp, tennantId);
+        final RenderedServicePath symmetricRenderedPath = ServiceChainingUtil.createSymmetricRenderedPath(sfp, rsp, tennantId, dataBroker);
 
         Assert.assertEquals("unit-sfp-02_plaintenant-02-gbp-rsp-Reverse", rspNameCaptor.getValue().getValue());
         Assert.assertEquals(rsp, symmetricRenderedPath);
@@ -412,52 +425,16 @@ public class ServiceChainingUtilTest {
         PowerMockito.mockStatic(SfcProviderRenderedPathAPI.class);
         final SfcProviderRenderedPathAPI api = PowerMockito.mock(SfcProviderRenderedPathAPI.class);
         PowerMockito.when(api.readRenderedServicePath(rspNameCaptor.capture())).thenReturn(null);
-        PowerMockito.when(api.createSymmetricRenderedServicePathAndState(rspCaptor.capture())).thenReturn(rsp);
+        PowerMockito.when(api.createReverseRenderedServicePathEntry(rspCaptor.capture())).thenReturn(rsp);
+        PowerMockito.mockStatic(NetconfTransactionCreator.class);
+        final NetconfTransactionCreator creator = PowerMockito.mock(NetconfTransactionCreator.class);
+        PowerMockito.when(creator.netconfReadWriteTransaction(dataBroker)).thenReturn(java.util.Optional.empty());
 
-        final RenderedServicePath symmetricRenderedPath = ServiceChainingUtil.createSymmetricRenderedPath(sfp, rsp, tennantId);
+        final RenderedServicePath symmetricRenderedPath = ServiceChainingUtil.createSymmetricRenderedPath(sfp, rsp, tennantId, dataBroker);
 
         Assert.assertEquals("unit-sfp-02_plaintenant-02-gbp-rsp-Reverse", rspNameCaptor.getValue().getValue());
         Assert.assertEquals(rsp, rspCaptor.getValue());
         Assert.assertEquals(rsp, symmetricRenderedPath);
-    }
-
-    @Test
-    public void testCheckLocalForwarderPresence() throws Exception {
-        final Local local = new LocalBuilder().build();
-
-        Mockito.when(rwTx.read(Matchers.eq(LogicalDatastoreType.CONFIGURATION), Matchers.<InstanceIdentifier<Local>>any()))
-                .thenReturn(Futures.<Optional<Local>, ReadFailedException>immediateCheckedFuture(Optional.of(local)))
-                .thenReturn(Futures.<Optional<Local>, ReadFailedException>immediateCheckedFuture(Optional.absent()))
-                .thenReturn(Futures.<Optional<Local>, ReadFailedException>immediateFailedCheckedFuture(new ReadFailedException("n/a")));
-
-        Assert.assertTrue(ServiceChainingUtil.checkLocalForwarderPresence(dataBroker));
-        Assert.assertFalse(ServiceChainingUtil.checkLocalForwarderPresence(dataBroker));
-        Assert.assertFalse(ServiceChainingUtil.checkLocalForwarderPresence(dataBroker));
-        Assert.assertFalse(ServiceChainingUtil.checkLocalForwarderPresence(dataBroker));
-    }
-
-    @Test
-    public void testCheckServicePathPresence() throws Exception {
-        final ServiceChain serviceChainOk = new ServiceChainBuilder()
-                .setServicePath(Collections.singletonList(new ServicePathBuilder().build()))
-                .build();
-        final ServiceChain serviceChainBad1 = new ServiceChainBuilder()
-                .setServicePath(Collections.emptyList())
-                .build();
-        final ServiceChain serviceChainBad2 = new ServiceChainBuilder().build();
-
-        Mockito.when(rwTx.read(Matchers.eq(LogicalDatastoreType.CONFIGURATION), Matchers.<InstanceIdentifier<ServiceChain>>any()))
-                .thenReturn(Futures.<Optional<ServiceChain>, ReadFailedException>immediateCheckedFuture(Optional.of(serviceChainOk)))
-                .thenReturn(Futures.<Optional<ServiceChain>, ReadFailedException>immediateCheckedFuture(Optional.of(serviceChainBad1)))
-                .thenReturn(Futures.<Optional<ServiceChain>, ReadFailedException>immediateCheckedFuture(Optional.of(serviceChainBad2)))
-                .thenReturn(Futures.<Optional<ServiceChain>, ReadFailedException>immediateCheckedFuture(Optional.absent()))
-                .thenReturn(Futures.<Optional<ServiceChain>, ReadFailedException>immediateFailedCheckedFuture(new ReadFailedException("n/a")));
-
-        Assert.assertFalse(ServiceChainingUtil.checkServicePathPresence(dataBroker));
-        Assert.assertTrue(ServiceChainingUtil.checkServicePathPresence(dataBroker));
-        Assert.assertTrue(ServiceChainingUtil.checkServicePathPresence(dataBroker));
-        Assert.assertTrue(ServiceChainingUtil.checkServicePathPresence(dataBroker));
-        Assert.assertFalse(ServiceChainingUtil.checkServicePathPresence(dataBroker));
     }
 
     @Test
@@ -482,6 +459,9 @@ public class ServiceChainingUtilTest {
                 .setName(new SffName("unit-sff-03"))
                 .setIpMgmtAddress(new IpAddress(new Ipv4Address("1.2.3.4")))
                 .build();
+        final ServiceFunctionPathBuilder sfpBuilder = new ServiceFunctionPathBuilder();
+        sfpBuilder.setSymmetric(false);
+        final ServiceFunctionPath sfp = sfpBuilder.build();
 
         stub(method(ServiceChainingUtil.class, "checkLocalForwarderPresence")).toReturn(true);
 
@@ -489,8 +469,7 @@ public class ServiceChainingUtilTest {
         final SfcProviderServiceForwarderAPI api = PowerMockito.mock(SfcProviderServiceForwarderAPI.class);
         PowerMockito.when(api.readServiceFunctionForwarder(sffNameCaptor.capture())).thenReturn(sff);
 
-
-        final boolean outcome = ServiceChainingUtil.setSfcPart(rsp, policyWriter);
+        final boolean outcome = ServiceChainingUtil.setSfcPart(sfp, rsp, null, policyWriter);
 
         Assert.assertEquals("rsp-hop-01-sf+sff", sffNameCaptor.getValue().getValue());
         Assert.assertTrue(outcome);
@@ -511,6 +490,9 @@ public class ServiceChainingUtilTest {
                 .setName(new SffName("unit-sff-03"))
                 .setIpMgmtAddress(new IpAddress(new Ipv4Address("1.2.3.4")))
                 .build();
+        final ServiceFunctionPathBuilder sfpBuilder = new ServiceFunctionPathBuilder();
+        sfpBuilder.setSymmetric(false);
+        final ServiceFunctionPath sfp = sfpBuilder.build();
 
         stub(method(ServiceChainingUtil.class, "checkLocalForwarderPresence")).toReturn(false);
 
@@ -518,8 +500,7 @@ public class ServiceChainingUtilTest {
         final SfcProviderServiceForwarderAPI api = PowerMockito.mock(SfcProviderServiceForwarderAPI.class);
         PowerMockito.when(api.readServiceFunctionForwarder(sffNameCaptor.capture())).thenReturn(sff);
 
-
-        final boolean outcome = ServiceChainingUtil.setSfcPart(rsp, policyWriter);
+        final boolean outcome = ServiceChainingUtil.setSfcPart(sfp, rsp, null, policyWriter);
 
         Assert.assertEquals("rsp-hop-01-sf+sff", sffNameCaptor.getValue().getValue());
         Assert.assertTrue(outcome);
@@ -534,23 +515,28 @@ public class ServiceChainingUtilTest {
 
     @Test
     public void testSetSfcPart_fail01() throws Exception {
-        Assert.assertFalse(ServiceChainingUtil.setSfcPart(null, policyWriter));
+        final ServiceFunctionPathBuilder sfpBuilder = new ServiceFunctionPathBuilder();
+        sfpBuilder.setSymmetric(false);
+        final ServiceFunctionPath sfp = sfpBuilder.build();
+
+        Assert.assertFalse(ServiceChainingUtil.setSfcPart(sfp, null, null, policyWriter));
 
         final RenderedServicePathBuilder rspBuilder = new RenderedServicePathBuilder().setName(new RspName("unit-rsp-05"));
-        Assert.assertFalse(ServiceChainingUtil.setSfcPart(rspBuilder.build(), policyWriter));
+        Assert.assertFalse(ServiceChainingUtil.setSfcPart(sfp, rspBuilder.build(), null, policyWriter));
 
         rspBuilder.setRenderedServicePathHop(Collections.emptyList());
-        Assert.assertFalse(ServiceChainingUtil.setSfcPart(rspBuilder.build(), policyWriter));
+        Assert.assertFalse(ServiceChainingUtil.setSfcPart(sfp, rspBuilder.build(), null, policyWriter));
 
         rspBuilder.setRenderedServicePathHop(Collections.singletonList(null));
-        Assert.assertFalse(ServiceChainingUtil.setSfcPart(rspBuilder.build(), policyWriter));
-
-        Mockito.verifyNoMoreInteractions(policyWriter);
+        Assert.assertFalse(ServiceChainingUtil.setSfcPart(sfp, rspBuilder.build(), null, policyWriter));
     }
 
     @Test
     public void testSetSfcPart_fail02() throws Exception {
         final RenderedServicePath rsp = createRsp("unit-rsp-03");
+        final ServiceFunctionPathBuilder sfpBuilder = new ServiceFunctionPathBuilder();
+        sfpBuilder.setSymmetric(false);
+        final ServiceFunctionPath sfp = sfpBuilder.build();
 
         Mockito.doReturn(Futures.immediateCheckedFuture(Optional.absent()))
                 .when(rwTx).read(Mockito.eq(LogicalDatastoreType.CONFIGURATION), Mockito.<InstanceIdentifier<Local>>any());
@@ -559,7 +545,7 @@ public class ServiceChainingUtilTest {
         final SfcProviderServiceForwarderAPI api = PowerMockito.mock(SfcProviderServiceForwarderAPI.class);
         PowerMockito.when(api.readServiceFunctionForwarder(sffNameCaptor.capture())).thenReturn(null);
 
-        final boolean outcome = ServiceChainingUtil.setSfcPart(rsp, policyWriter);
+        final boolean outcome = ServiceChainingUtil.setSfcPart(sfp, rsp, null, policyWriter);
 
         Assert.assertEquals("rsp-hop-01-sf+sff", sffNameCaptor.getValue().getValue());
         Assert.assertFalse(outcome);
@@ -576,6 +562,9 @@ public class ServiceChainingUtilTest {
         final ServiceFunctionForwarderBuilder sffBuilder = new ServiceFunctionForwarderBuilder()
                 .setName(new SffName("unit-sff-03"))
                 .setIpMgmtAddress(null);
+        final ServiceFunctionPathBuilder sfpBuilder = new ServiceFunctionPathBuilder();
+        sfpBuilder.setSymmetric(false);
+        final ServiceFunctionPath sfp = sfpBuilder.build();
 
         stub(method(ServiceChainingUtil.class, "checkLocalForwarderPresence")).toReturn(true);
 
@@ -584,7 +573,7 @@ public class ServiceChainingUtilTest {
         PowerMockito.when(api.readServiceFunctionForwarder(sffNameCaptor.capture())).thenReturn(
                 sffBuilder.build());
 
-        Assert.assertFalse(ServiceChainingUtil.setSfcPart(rsp, policyWriter));
+        Assert.assertFalse(ServiceChainingUtil.setSfcPart(sfp, rsp, null, policyWriter));
 
         Assert.assertEquals("rsp-hop-01-sf+sff", sffNameCaptor.getValue().getValue());
 
@@ -599,6 +588,9 @@ public class ServiceChainingUtilTest {
         final ServiceFunctionForwarderBuilder sffBuilder = new ServiceFunctionForwarderBuilder()
                 .setName(new SffName("unit-sff-03"))
                 .setIpMgmtAddress(new IpAddress((Ipv4Address) null));
+        final ServiceFunctionPathBuilder sfpBuilder = new ServiceFunctionPathBuilder();
+        sfpBuilder.setSymmetric(false);
+        final ServiceFunctionPath sfp = sfpBuilder.build();
 
         stub(method(ServiceChainingUtil.class, "checkLocalForwarderPresence")).toReturn(true);
 
@@ -607,7 +599,7 @@ public class ServiceChainingUtilTest {
         PowerMockito.when(api.readServiceFunctionForwarder(sffNameCaptor.capture())).thenReturn(
                 sffBuilder.build());
 
-        Assert.assertFalse(ServiceChainingUtil.setSfcPart(rsp, policyWriter));
+        Assert.assertFalse(ServiceChainingUtil.setSfcPart(sfp, rsp, null, policyWriter));
 
         Assert.assertEquals("rsp-hop-01-sf+sff", sffNameCaptor.getValue().getValue());
 
@@ -615,7 +607,6 @@ public class ServiceChainingUtilTest {
         Mockito.verify(policyWriter).getCurrentNodeId();
         Mockito.verifyNoMoreInteractions(policyWriter);
     }
-
 
     @Test
     public void testForwarderTypeChoice() throws Exception {
