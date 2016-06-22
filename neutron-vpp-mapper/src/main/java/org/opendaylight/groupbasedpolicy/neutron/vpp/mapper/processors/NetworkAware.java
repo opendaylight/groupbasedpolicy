@@ -14,6 +14,7 @@ import java.util.List;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
+import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
@@ -83,8 +84,12 @@ public class NetworkAware implements MappingProvider<Network> {
             LOG.error("Cannot create VPP bridge domain. Network type not specified in neutron network: {}", network);
             return null;
         }
+        Class<? extends NetworkTypeBase> netType = convertNetworkType(providerAug.getNetworkType());
+        if (netType == null) {
+            return null;
+        }
         bridgeDomainBuilder.setPhysicalLocationRef(resolveDomainLocations(providerAug));
-        bridgeDomainBuilder.setType(convertNetworkType(providerAug.getNetworkType()));
+        bridgeDomainBuilder.setType(netType);
         if (providerAug.getNetworkType().isAssignableFrom(NetworkTypeVlan.class)
                 && providerAug.getSegmentationId() != null) {
             try {
@@ -134,7 +139,7 @@ public class NetworkAware implements MappingProvider<Network> {
         if (base.isAssignableFrom(NetworkTypeVlan.class)) {
             return VlanNetwork.class;
         }
-        throw new IllegalStateException("Unsupported network type: " + base);
+        return null;
     }
 
     InstanceIdentifier<Topology> getTopologyIid(TopologyId topologyId) {
@@ -150,10 +155,13 @@ public class NetworkAware implements MappingProvider<Network> {
     @Override
     public void processUpdatedNeutronDto(Network originalNetwork, Network updatedNetwork) {
         InstanceIdentifier<BridgeDomain> bdId = getBridgeDomainIid(originalNetwork.getUuid().getValue());
-        ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
-        rwTx.delete(LogicalDatastoreType.CONFIGURATION, bdId);
-        rwTx.put(LogicalDatastoreType.CONFIGURATION, bdId, createBridgeDomain(updatedNetwork));
-        DataStoreHelper.submitToDs(rwTx);
+        WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
+        wTx.delete(LogicalDatastoreType.CONFIGURATION, bdId);
+        BridgeDomain updatedBridgeDomain = createBridgeDomain(updatedNetwork);
+        if (updatedBridgeDomain != null) {
+            wTx.put(LogicalDatastoreType.CONFIGURATION, bdId, updatedBridgeDomain);
+        }
+        DataStoreHelper.submitToDs(wTx);
     }
 
     @Override
