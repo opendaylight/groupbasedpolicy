@@ -118,7 +118,7 @@ public class NeutronSubnetAware implements
         }
         ndb.setNetworkDomainId(new NetworkDomainId(subnet.getUuid().getValue()));
         ndb.setNetworkDomainType(MappingUtils.SUBNET);
-        ndb.setParent(MappingUtils.createParent(new NetworkDomainId(subnet.getUuid().getValue()), L2FloodDomain.class));
+        ndb.setParent(MappingUtils.createParent(new NetworkDomainId(subnet.getNetworkId().getValue()), L2FloodDomain.class));
         ndb.addAugmentation(SubnetAugmentForwarding.class, new SubnetAugmentForwardingBuilder().setSubnet(sb.build())
             .build());
         return ndb.build();
