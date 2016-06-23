@@ -67,7 +67,7 @@ public class NeutronNetworkAware implements NeutronAware<Network> {
         LOG.trace("created network - {}", network);
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         TenantId tenantId = new TenantId(network.getTenantId().getValue());
-        Name name = null;
+        Name name;
         ContextId ctxId = new ContextId(network.getUuid().getValue());
         ForwardingContextBuilder fwdCtxBuilder = new ForwardingContextBuilder()
         .setContextId(ctxId)
@@ -77,7 +77,6 @@ public class NeutronNetworkAware implements NeutronAware<Network> {
                 name = new Name(network.getName());
                 fwdCtxBuilder.setName(name);
             } catch (Exception e) {
-                name = null;
                 LOG.info("Name of Neutron Network '{}' is ignored.", network.getName());
                 LOG.debug("Name exception", e);
             }

@@ -68,6 +68,8 @@ import com.google.common.collect.PeekingIterator;
 
 public class NeutronMapper implements DataTreeChangeListener<Neutron>, AutoCloseable {
 
+    public static final String EXC_MSG_UNKNOWN_MODIFICATION_TYPE_WITHIN_DATA = "Unknown modification type within data ";
+
     private final static SecurityRuleBuilder EIG_INGRESS_IPV4_SEC_RULE_BUILDER = new SecurityRuleBuilder()
         .setUuid(new Uuid("0a629f80-2408-11e6-b67b-9e71128cae77"))
         .setDirection(DirectionIngress.class)
@@ -181,7 +183,7 @@ public class NeutronMapper implements DataTreeChangeListener<Neutron>, AutoClose
                     }
                     break;
                 default:
-                    throw new IllegalStateException("Unknown modification type within data " + dataModif);
+                    throw new IllegalStateException(EXC_MSG_UNKNOWN_MODIFICATION_TYPE_WITHIN_DATA + dataModif);
             }
         }
     }
