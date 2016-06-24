@@ -281,13 +281,13 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
         EndpointNetwork en = createEndpointNetwork(L3_CONTEXT_ID, IPv4_NETWORK_ADDRESS_2);
         InstanceIdentifier<EndpointNetwork> iid = InstanceIdentifier.builder(NetworkElements.class)
             .child(NetworkElement.class, new NetworkElementKey(createNetworkElementIid(NODE_ID_1)))
-            .child(Interface.class, new InterfaceKey(createInterfaceIid(NODE_ID_1, CONNECTOR_ID_1)))
+            .child(Interface.class, new InterfaceKey(CONNECTOR_ID_1))
             .child(EndpointNetwork.class, new EndpointNetworkKey(en.getKey()))
             .build();
         InstanceIdentifier<EndpointNetwork> removeIid =
                 InstanceIdentifier.builder(NetworkElements.class)
                     .child(NetworkElement.class, new NetworkElementKey(createNetworkElementIid(NODE_ID_1)))
-                    .child(Interface.class, new InterfaceKey(createInterfaceIid(NODE_ID_1, CONNECTOR_ID_1)))
+                    .child(Interface.class, new InterfaceKey(CONNECTOR_ID_1))
                     .child(EndpointNetwork.class, new EndpointNetworkKey(
                             new IpPrefix(new Ipv4Prefix(IPv4_NETWORK_ADDRESS_1)),new ContextId(L3_CONTEXT_ID)))
                     .build();
@@ -338,7 +338,7 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
         writeBaseNetworkElements();
         InstanceIdentifier<Interface> iid = InstanceIdentifier.builder(NetworkElements.class)
             .child(NetworkElement.class, new NetworkElementKey(createNetworkElementIid(NODE_ID_1)))
-            .child(Interface.class, new InterfaceKey(createInterfaceIid(NODE_ID_1, CONNECTOR_ID_1)))
+            .child(Interface.class, new InterfaceKey(CONNECTOR_ID_1))
             .build();
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
         wtx.delete(LogicalDatastoreType.CONFIGURATION, iid);
@@ -386,8 +386,7 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
                                     .setAbsoluteLocation(new AbsoluteLocationBuilder()
                                             .setLocationType(new ExternalLocationCaseBuilder()
                                                     .setExternalNodeMountPoint(createNetworkElementIid(NODE_ID_1))
-                                                    .setExternalNodeConnector(createInterfaceIid(
-                                                            NODE_ID_1, CONNECTOR_ID_1).toString())
+                                                    .setExternalNodeConnector(CONNECTOR_ID_1)
                                                     .build())
                                             .build())
                                     .build()))
@@ -429,8 +428,7 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
                                     .setAbsoluteLocation(new AbsoluteLocationBuilder()
                                             .setLocationType(new ExternalLocationCaseBuilder()
                                                     .setExternalNodeMountPoint(createNetworkElementIid(NODE_ID_1))
-                                                    .setExternalNodeConnector(createInterfaceIid(
-                                                            NODE_ID_1, CONNECTOR_ID_1).toString())
+                                                    .setExternalNodeConnector(CONNECTOR_ID_1)
                                                     .build())
                                             .build())
                                     .build()))
@@ -474,8 +472,7 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
                                     .setAbsoluteLocation(new AbsoluteLocationBuilder()
                                             .setLocationType(new ExternalLocationCaseBuilder()
                                                     .setExternalNodeMountPoint(createNetworkElementIid(NODE_ID_1))
-                                                    .setExternalNodeConnector(createInterfaceIid(
-                                                            NODE_ID_1, CONNECTOR_ID_1).toString())
+                                                    .setExternalNodeConnector(CONNECTOR_ID_1)
                                                     .build())
                                             .build())
                                     .build()))
@@ -521,7 +518,7 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
     }
 
     private Interface createInterface(String node, String iface, String l3c, String prefix) {
-        return new InterfaceBuilder().setIid(createInterfaceIid(node, iface))
+        return new InterfaceBuilder().setIid(iface)
             .setEndpointNetwork(Collections.singletonList(createEndpointNetwork(l3c, prefix)))
             .build();
     }

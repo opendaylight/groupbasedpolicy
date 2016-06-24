@@ -371,7 +371,7 @@ public class NeLocationProvider implements DataTreeChangeListener<NetworkElement
     }
 
     private void processCreatedEN(EndpointNetwork en, InstanceIdentifier<?> nodeIID,
-            InstanceIdentifier<?> connectorIID, WriteTransaction wtx) {
+            String connectorIID, WriteTransaction wtx) {
         for (AddressEndpoint endpoint : endpoints) {
             if (endpoint.getContextType().isAssignableFrom(L3Context.class)
                     && endpoint.getContextId().equals(en.getL3ContextId())
@@ -405,10 +405,10 @@ public class NeLocationProvider implements DataTreeChangeListener<NetworkElement
         }
     }
 
-    private AbsoluteLocation createRealLocation(InstanceIdentifier<?> node, InstanceIdentifier<?> iface) {
+    private AbsoluteLocation createRealLocation(InstanceIdentifier<?> node, String iface) {
         return new AbsoluteLocationBuilder()
             .setLocationType(new ExternalLocationCaseBuilder().setExternalNodeMountPoint(node)
-                    .setExternalNodeConnector(iface.toString()).build()).build();
+                    .setExternalNodeConnector(iface).build()).build();
     }
 
     private <T> List<T> nullToEmpty(@Nullable List<T> list) {

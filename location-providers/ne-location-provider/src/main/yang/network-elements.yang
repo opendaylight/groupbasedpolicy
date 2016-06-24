@@ -45,7 +45,7 @@
                          represented in topology of southbound plugin.
                          This should be more like RelativeSchemaPath
                          from network-element's IID to interface.";
-                     type instance-identifier;
+                     type string;
                  }
                  list endpoint-network {
                      description "Set of networks somewhere behind the interface.
