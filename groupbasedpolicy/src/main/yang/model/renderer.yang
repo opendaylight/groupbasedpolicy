@@ -100,27 +100,6 @@ module renderer {
         }
     }
 
-    grouping has-peer-endpoints {
-        list peer-endpoint {
-            key "context-type context-id address-type address";
-            uses base-endpoint:address-endpoint-key;
-        }
-    }
-
-    grouping has-peer-external-endpoints {
-        list peer-external-endpoint {
-            key "context-type context-id address-type address";
-            uses base-endpoint:address-endpoint-key;
-        }
-    }
-
-    grouping has-peer-external-containment-endpoints {
-        list peer-external-containment-endpoint {
-            key "context-type context-id";
-            uses forwarding:context-key;
-        }
-    }
-
     grouping has-renderer-name {
         leaf renderer-name {
             type renderer-name;
@@ -136,6 +115,22 @@ module renderer {
             uses resolved-policy:has-subject-key;
             leaf renderer-endpoint-participation {
                 type endpoint-policy-participation;
+            }
+        }
+    }
+
+    grouping has-unconfigured-rule-groups {
+        list unconfigured-rule-group {
+            key "tenant-id contract-id subject-name renderer-endpoint-participation";
+            uses resolved-policy:has-subject-key;
+            leaf renderer-endpoint-participation {
+                type endpoint-policy-participation;
+            }
+            list unconfigured-resolved-rule {
+                key "rule-name";
+                leaf rule-name {
+                    type gbp-common:rule-name;
+                }
             }
         }
     }
@@ -191,19 +186,22 @@ module renderer {
                             key "context-type context-id address-type address";
                             uses base-endpoint:address-endpoint-key;
 
-                            list peer-endpoint-with-policy {
+                            list peer-endpoint {
+                                description "peer endpoint with-policy - keys";
                                 key "context-type context-id address-type address";
                                 uses base-endpoint:address-endpoint-key;
                                 uses has-rule-group-with-renderer-endpoint-participation;
                             }
 
-                            list peer-external-endpoint-with-policy {
+                            list peer-external-endpoint {
+                                description "peer external endpoint with-policy - keys";
                                 key "context-type context-id address-type address";
                                 uses base-endpoint:address-endpoint-key;
                                 uses has-rule-group-with-renderer-endpoint-participation;
                             }
 
-                            list peer-external-containment-endpoint-with-policy {
+                            list peer-external-containment-endpoint {
+                                description "peer external endpoint with containment and policy - keys";
                                 key "context-type context-id";
                                 uses forwarding:context-key;
                                 uses has-rule-group-with-renderer-endpoint-participation;
@@ -272,24 +270,33 @@ module renderer {
                     description "The renderer exposes status of policy here.";
                     config false;
 
-                    list unconfigured-rule {
-                        key "tenant-id contract-id subject-name renderer-endpoint-participation rule-name";
-                        uses resolved-policy:has-subject-key;
-                        leaf renderer-endpoint-participation {
-                            type endpoint-policy-participation;
-                        }
-                        leaf rule-name {
-                            type gbp-common:rule-name;
-                        }
+                    container unconfigured-endpoints {
+                        list unconfigured-renderer-endpoint {
+                            description "Renderer-endpoint with unconfigured rules.";
+                            key "context-type context-id address-type address";
+                            uses base-endpoint:address-endpoint-key;
 
-                        container renderer-endpoints-with-peers {
-                            list renderer-endpoint-with-peers {
+                            list unconfigured-peer-endpoint {
                                 key "context-type context-id address-type address";
                                 uses base-endpoint:address-endpoint-key;
+                                uses has-unconfigured-rule-groups;
+                            }
 
-                                uses has-peer-endpoints;
-                                uses has-peer-external-endpoints;
-                                uses has-peer-external-containment-endpoints;
+                            list unconfigured-peer-external-endpoint {
+                                key "context-type context-id address-type address";
+                                uses base-endpoint:address-endpoint-key;
+                                uses has-unconfigured-rule-groups;
+                            }
+
+                            list unconfigured-peer-external-containment-endpoint {
+                                key "context-type context-id";
+                                uses forwarding:context-key;
+                                uses has-unconfigured-rule-groups;
+                            }
+
+                            leaf info {
+                                description "More details on reason for configuration failure.";
+                                type string;
                             }
                         }
                     }

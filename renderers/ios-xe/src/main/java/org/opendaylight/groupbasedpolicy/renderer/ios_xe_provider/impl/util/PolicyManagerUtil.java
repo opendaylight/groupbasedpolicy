@@ -8,10 +8,20 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util;
 
+import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.ActionCase.CHAIN;
+import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Create;
+import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Delete;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyConfigurationContext;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl;
-import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriter;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.paths.RenderedServicePath;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308.ClassNameType;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308.PolicyActionType;
@@ -57,7 +67,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Configuration;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpoint;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointWithPolicy;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.rule.groups.RuleGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.actions.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.resolved.rules.ResolvedRule;
@@ -67,24 +77,13 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.ActionCase.CHAIN;
-import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Create;
-import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Delete;
-
 public class PolicyManagerUtil {
 
     private static final Logger LOG = LoggerFactory.getLogger(PolicyManagerUtil.class);
     private static final String DEFAULT = "class-default";
 
-    public static void syncPolicyEntities(final Sgt sourceSgt, final Sgt destinationSgt, PolicyWriter policyWriter,
-                                          final Configuration dataAfter, final PeerEndpointWithPolicy peerEndpoint,
+    public static void syncPolicyEntities(final Sgt sourceSgt, final Sgt destinationSgt, final PolicyConfigurationContext context,
+                                          final Configuration dataAfter, final PeerEndpoint peerEndpoint,
                                           final DataBroker dataBroker, final PolicyManagerImpl.DsAction action) {
         // Action
         final Map<PolicyManagerImpl.ActionCase, Action> actionMap = PolicyManagerUtil.getActionInDirection(dataAfter, peerEndpoint);
@@ -98,11 +97,12 @@ public class PolicyManagerUtil {
 
         // Resolve chain action - create
         if (actionMap.containsKey(PolicyManagerImpl.ActionCase.CHAIN) && action.equals(Create)) {
-            ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyWriter,
+            ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, context,
                     dataBroker);
         }
         if (actionMap.containsKey(PolicyManagerImpl.ActionCase.CHAIN) && action.equals(Delete)) {
-            ServiceChainingUtil.removeChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyWriter);
+            ServiceChainingUtil.removeChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap,
+                    context.getPolicyWriter());
         }
     }
 
@@ -142,7 +142,7 @@ public class PolicyManagerUtil {
         return cmBuilder.build();
     }
 
-    static TenantId getTenantId(final PeerEndpointWithPolicy peer) {
+    static TenantId getTenantId(final PeerEndpoint peer) {
         for (RuleGroupWithRendererEndpointParticipation ruleGroup :
                 peer.getRuleGroupWithRendererEndpointParticipation()) {
             if (ruleGroup.getTenantId() != null) {
@@ -255,7 +255,7 @@ public class PolicyManagerUtil {
     }
 
 
-    private static Map<PolicyManagerImpl.ActionCase, Action> getActionInDirection(final Configuration data, final PeerEndpointWithPolicy peer) {
+    private static Map<PolicyManagerImpl.ActionCase, Action> getActionInDirection(final Configuration data, final PeerEndpoint peer) {
         final Set<ResolvedRule> rulesInDirection = new HashSet<>();
         // Find all rules in desired direction
         for (RuleGroupWithRendererEndpointParticipation ruleGroupKey :

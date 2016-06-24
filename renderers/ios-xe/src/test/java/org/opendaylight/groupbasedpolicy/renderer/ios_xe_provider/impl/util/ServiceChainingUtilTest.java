@@ -27,13 +27,11 @@ import org.mockito.Captor;
 import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.internal.verification.Times;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyConfigurationContext;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.NetconfTransactionCreator;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriter;
@@ -59,22 +57,24 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ClassMap;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ServiceChain;
-import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ServiceChainBuilder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map.Class;
-import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.ServicePathBuilder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.Local;
-import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.LocalBuilder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.ServiceFfName;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.path.config.service.chain.path.mode.service.index.services.ServiceTypeChoice;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.path.config.service.chain.path.mode.service.index.services.service.type.choice.ServiceFunction;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.path.config.service.chain.path.mode.service.index.services.service.type.choice.ServiceFunctionForwarder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.IpPrefixType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValueBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.rule.group.with.renderer.endpoint.participation.RuleGroupWithRendererEndpointParticipationBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointWithPolicy;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointWithPolicyBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.actions.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.actions.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
@@ -118,6 +118,8 @@ public class ServiceChainingUtilTest {
     @Mock
     private ReadWriteTransaction rwTx;
 
+    private PolicyConfigurationContext policyConfigurationContext;
+
     @Before
     public void setUp() throws Exception {
         final NodeId currentNodeId = new NodeId("unit-node-01");
@@ -128,6 +130,9 @@ public class ServiceChainingUtilTest {
 
         Mockito.when(policyWriter.getCurrentMountpoint()).thenReturn(dataBroker);
         Mockito.when(dataBroker.newReadWriteTransaction()).thenReturn(rwTx);
+
+        policyConfigurationContext = new PolicyConfigurationContext();
+        policyConfigurationContext.setPolicyWriter(policyWriter);
     }
 
     @Test
@@ -152,7 +157,7 @@ public class ServiceChainingUtilTest {
 
     @Test
     public void testResolveChainAction_full() throws Exception {
-        final PeerEndpointWithPolicy peerEndpoint = createPeerEndpointWithPolicy();
+        final PeerEndpoint peerEndpoint = createPeerEndpoint();
         final Sgt sourceSgt = new Sgt(1);
         final Sgt destinationSgt = new Sgt(2);
         final Map<PolicyManagerImpl.ActionCase, Action> actionMap = createActionMap();
@@ -170,7 +175,7 @@ public class ServiceChainingUtilTest {
         stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(rsp);
         stub(method(ServiceChainingUtil.class, "setSfcPart")).toReturn(true);
 
-        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyWriter, dataBroker);
+        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyConfigurationContext, dataBroker);
 
         Mockito.verify(policyWriter).cache(classMapCaptor.capture());
         Mockito.verify(policyWriter).cache(listClassCaptor.capture());
@@ -180,7 +185,7 @@ public class ServiceChainingUtilTest {
 
     @Test
     public void testResolveChainAction_fullSymmetric() throws Exception {
-        final PeerEndpointWithPolicy peerEndpoint = createPeerEndpointWithPolicy();
+        final PeerEndpoint peerEndpoint = createPeerEndpoint();
         final Sgt sourceSgt = new Sgt(1);
         final Sgt destinationSgt = new Sgt(2);
         final Map<PolicyManagerImpl.ActionCase, Action> actionMap = createActionMap();
@@ -198,7 +203,7 @@ public class ServiceChainingUtilTest {
         stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(rsp);
         stub(method(ServiceChainingUtil.class, "setSfcPart")).toReturn(true);
 
-        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyWriter, dataBroker);
+        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyConfigurationContext, dataBroker);
 
         Mockito.verify(policyWriter, Mockito.times(2)).cache(classMapCaptor.capture());
         Mockito.verify(policyWriter).cache(listClassCaptor.capture());
@@ -208,7 +213,7 @@ public class ServiceChainingUtilTest {
 
     @Test
     public void testResolveChainAction_partial01() throws Exception {
-        final PeerEndpointWithPolicy peerEndpoint = createPeerEndpointWithPolicy();
+        final PeerEndpoint peerEndpoint = createPeerEndpoint();
         final Sgt sourceSgt = new Sgt(1);
         final Sgt destinationSgt = new Sgt(2);
         final Map<PolicyManagerImpl.ActionCase, Action> actionMap = createActionMap();
@@ -227,7 +232,12 @@ public class ServiceChainingUtilTest {
         stub(method(ServiceChainingUtil.class, "setSfcPart")).toReturn(true);
         stub(method(ServiceChainingUtil.class, "createSymmetricRenderedPath")).toReturn(null);
 
-        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyWriter, dataBroker);
+        policyConfigurationContext.setCurrentRendererEP(createRendererEP(
+                "unit-address", new ContextId("unit-conext-1"), Collections.emptyList())
+        );
+
+        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap,
+                policyConfigurationContext, dataBroker);
         Mockito.verify(policyWriter, Mockito.times(2)).cache(classMapCaptor.capture());
         Mockito.verify(policyWriter).cache(listClassCaptor.capture());
         Mockito.verifyNoMoreInteractions(policyWriter);
@@ -235,7 +245,7 @@ public class ServiceChainingUtilTest {
 
     @Test
     public void testResolveChainAction_partial02() throws Exception {
-        final PeerEndpointWithPolicy peerEndpoint = createPeerEndpointWithPolicy();
+        final PeerEndpoint peerEndpoint = createPeerEndpoint();
         final Sgt sourceSgt = new Sgt(1);
         final Sgt destinationSgt = new Sgt(2);
         final Map<PolicyManagerImpl.ActionCase, Action> actionMap = createActionMap();
@@ -253,14 +263,14 @@ public class ServiceChainingUtilTest {
         stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(rsp);
         stub(method(ServiceChainingUtil.class, "setSfcPart")).toReturn(false);
 
-        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyWriter, dataBroker);
+        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyConfigurationContext, dataBroker);
 
         Mockito.verifyNoMoreInteractions(policyWriter);
     }
 
     @Test
     public void testResolveChainAction_partial03() throws Exception {
-        final PeerEndpointWithPolicy peerEndpoint = createPeerEndpointWithPolicy(null);
+        final PeerEndpoint peerEndpoint = createPeerEndpoint(null);
         final Sgt sourceSgt = new Sgt(1);
         final Sgt destinationSgt = new Sgt(2);
         final Map<PolicyManagerImpl.ActionCase, Action> actionMap = createActionMap();
@@ -277,20 +287,28 @@ public class ServiceChainingUtilTest {
         final RenderedServicePath rsp = createRsp("unit-rsp-02");
         stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(rsp);
 
-        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyWriter, dataBroker);
+        policyConfigurationContext.setCurrentRendererEP(createRendererEP(
+                "unit-address", new ContextId("unit-conext-1"), Collections.emptyList())
+        );
+
+        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyConfigurationContext, dataBroker);
 
         Mockito.verifyNoMoreInteractions(policyWriter);
     }
 
     @Test
     public void testResolveChainAction_partial04() throws Exception {
-        final PeerEndpointWithPolicy peerEndpoint = createPeerEndpointWithPolicy(null);
+        final PeerEndpoint peerEndpoint = createPeerEndpoint(null);
         final Sgt sourceSgt = new Sgt(1);
         final Sgt destinationSgt = new Sgt(2);
         final Map<PolicyManagerImpl.ActionCase, Action> actionMap = createActionMap(false);
         final String classMapName = "unit-class-map-name-01";
 
-        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyWriter, dataBroker);
+        policyConfigurationContext.setCurrentRendererEP(createRendererEP(
+                "unit-address", new ContextId("unit-conext-1"), Collections.emptyList())
+        );
+
+        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyConfigurationContext, dataBroker);
 
         Mockito.verifyNoMoreInteractions(policyWriter);
     }
@@ -312,12 +330,22 @@ public class ServiceChainingUtilTest {
         return actionMap;
     }
 
-    private PeerEndpointWithPolicy createPeerEndpointWithPolicy() {
-        return createPeerEndpointWithPolicy(new TenantId("unit-tenant-06"));
+    private RendererEndpoint createRendererEP(final String address, final ContextId contextId, final List<PeerEndpoint> peerEndpoints) {
+        return new RendererEndpointBuilder()
+                .setAddress(address)
+                .setAddressType(IpPrefixType.class)
+                .setContextId(contextId)
+                .setContextType(L3Context.class)
+                .setPeerEndpoint(peerEndpoints)
+                .build();
     }
 
-    private PeerEndpointWithPolicy createPeerEndpointWithPolicy(final TenantId tenantId) {
-        return new PeerEndpointWithPolicyBuilder()
+    private PeerEndpoint createPeerEndpoint() {
+        return createPeerEndpoint(new TenantId("unit-tenant-06"));
+    }
+
+    private PeerEndpoint createPeerEndpoint(final TenantId tenantId) {
+        return new PeerEndpointBuilder()
                 .setRuleGroupWithRendererEndpointParticipation(Collections.singletonList(
                         new RuleGroupWithRendererEndpointParticipationBuilder()
                                 .setTenantId(tenantId)

@@ -8,6 +8,14 @@
 
 package org.opendaylight.groupbasedpolicy.renderer;
 
+import com.google.common.base.Function;
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableTable;
+import com.google.common.collect.Table;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -16,10 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import org.opendaylight.groupbasedpolicy.api.EndpointAugmentor;
 import org.opendaylight.groupbasedpolicy.api.NetworkDomainAugmentor;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoint.locations.AddressEndpointLocation;
@@ -34,9 +40,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.NetworkDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.peer.endpoints.PeerEndpointKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.peer.external.containment.endpoints.PeerExternalContainmentEndpointKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.peer.external.endpoints.PeerExternalEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.rule.group.with.renderer.endpoint.participation.RuleGroupWithRendererEndpointParticipation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.rule.group.with.renderer.endpoint.participation.RuleGroupWithRendererEndpointParticipationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.Endpoints;
@@ -54,15 +57,15 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointWithPolicy;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointWithPolicyBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointWithPolicyKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerExternalContainmentEndpointWithPolicy;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerExternalContainmentEndpointWithPolicyBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerExternalContainmentEndpointWithPolicyKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerExternalEndpointWithPolicy;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerExternalEndpointWithPolicyBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerExternalEndpointWithPolicyKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerExternalContainmentEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerExternalContainmentEndpointBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerExternalContainmentEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerExternalEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerExternalEndpointBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerExternalEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.RendererForwardingByTenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.RendererForwardingByTenantBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererForwardingContext;
@@ -75,15 +78,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.p
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.policy.rule.group.with.endpoint.constraints.PolicyRuleGroupKey;
 import org.opendaylight.yangtools.yang.binding.Augmentation;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-
-import com.google.common.base.Function;
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.FluentIterable;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableTable;
-import com.google.common.collect.Table;
 
 public class RendererConfigurationBuilder {
 
@@ -180,25 +174,25 @@ public class RendererConfigurationBuilder {
         for (RendererEndpointKey rendererEpKey : policiesByEpAndPeerEp.rowKeySet()) {
             RendererEndpointBuilder rendererEpBuilder =
                     resolveRendererEndpointBuilder(rendererEpKey, rendererEpBuilderByKey);
-            List<PeerEndpointWithPolicy> peerEpsWithPolicy =
-                    toListPeerEndpointWithPolicy(policiesByEpAndPeerEp.row(rendererEpKey));
-            rendererEpBuilder.setPeerEndpointWithPolicy(peerEpsWithPolicy);
+            List<PeerEndpoint> peerEps =
+                    toListPeerEndpoint(policiesByEpAndPeerEp.row(rendererEpKey));
+            rendererEpBuilder.setPeerEndpoint(peerEps);
             rendererEpBuilderByKey.put(rendererEpKey, rendererEpBuilder);
         }
         for (RendererEndpointKey rendererEpKey : policiesByEpAndPeerExtEp.rowKeySet()) {
             RendererEndpointBuilder rendererEpBuilder =
                     resolveRendererEndpointBuilder(rendererEpKey, rendererEpBuilderByKey);
-            List<PeerExternalEndpointWithPolicy> peerExtEpsWithPolicy =
-                    toListPeerExternalEndpointWithPolicy(policiesByEpAndPeerExtEp.row(rendererEpKey));
-            rendererEpBuilder.setPeerExternalEndpointWithPolicy(peerExtEpsWithPolicy);
+            List<PeerExternalEndpoint> peerExtEps =
+                    toListPeerExternalEndpoint(policiesByEpAndPeerExtEp.row(rendererEpKey));
+            rendererEpBuilder.setPeerExternalEndpoint(peerExtEps);
             rendererEpBuilderByKey.put(rendererEpKey, rendererEpBuilder);
         }
         for (RendererEndpointKey rendererEpKey : policiesByEpAndPeerExtCtxEp.rowKeySet()) {
             RendererEndpointBuilder rendererEpBuilder =
                     resolveRendererEndpointBuilder(rendererEpKey, rendererEpBuilderByKey);
-            List<PeerExternalContainmentEndpointWithPolicy> peerExtContEpsWithPolicy =
-                    toListPeerExternalContainmentEndpointWithPolicy(policiesByEpAndPeerExtCtxEp.row(rendererEpKey));
-            rendererEpBuilder.setPeerExternalContainmentEndpointWithPolicy(peerExtContEpsWithPolicy);
+            List<PeerExternalContainmentEndpoint> peerExtContEps =
+                    toListPeerExternalContainmentEndpoint(policiesByEpAndPeerExtCtxEp.row(rendererEpKey));
+            rendererEpBuilder.setPeerExternalContainmentEndpoint(peerExtContEps);
             rendererEpBuilderByKey.put(rendererEpKey, rendererEpBuilder);
         }
         List<RendererEndpoint> rendererEps = new ArrayList<>();
@@ -218,57 +212,57 @@ public class RendererConfigurationBuilder {
         return rendererEpBuilder;
     }
 
-    private static List<PeerEndpointWithPolicy> toListPeerEndpointWithPolicy(
+    private static List<PeerEndpoint> toListPeerEndpoint(
             Map<PeerEndpointKey, Set<RuleGroupWithRendererEndpointParticipation>> policiesByPeerEp) {
-        List<PeerEndpointWithPolicy> peerEpsWithPolicy = new ArrayList<>();
+        List<PeerEndpoint> peerEps = new ArrayList<>();
         for (Entry<PeerEndpointKey, Set<RuleGroupWithRendererEndpointParticipation>> entry : policiesByPeerEp
             .entrySet()) {
             PeerEndpointKey peerEpKey = entry.getKey();
-            PeerEndpointWithPolicyKey peerEndpointWithPolicyKey = new PeerEndpointWithPolicyKey(peerEpKey.getAddress(),
+            PeerEndpointKey peerEndpointKey = new PeerEndpointKey(peerEpKey.getAddress(),
                     peerEpKey.getAddressType(), peerEpKey.getContextId(), peerEpKey.getContextType());
-            PeerEndpointWithPolicy peerEndpointWithPolicy =
-                    new PeerEndpointWithPolicyBuilder().setKey(peerEndpointWithPolicyKey)
+            PeerEndpoint peerEndpoint =
+                    new PeerEndpointBuilder().setKey(peerEndpointKey)
                         .setRuleGroupWithRendererEndpointParticipation(new ArrayList<>(entry.getValue()))
                         .build();
-            peerEpsWithPolicy.add(peerEndpointWithPolicy);
+            peerEps.add(peerEndpoint);
         }
-        return peerEpsWithPolicy;
+        return peerEps;
     }
 
-    private static List<PeerExternalEndpointWithPolicy> toListPeerExternalEndpointWithPolicy(
+    private static List<PeerExternalEndpoint> toListPeerExternalEndpoint(
             Map<PeerExternalEndpointKey, Set<RuleGroupWithRendererEndpointParticipation>> policiesByPeerExtEp) {
-        List<PeerExternalEndpointWithPolicy> peerExtEpsWithPolicy = new ArrayList<>();
+        List<PeerExternalEndpoint> peerExtEps = new ArrayList<>();
         for (Entry<PeerExternalEndpointKey, Set<RuleGroupWithRendererEndpointParticipation>> entry : policiesByPeerExtEp
             .entrySet()) {
             PeerExternalEndpointKey peerEpKey = entry.getKey();
-            PeerExternalEndpointWithPolicyKey peerExternalEpWithPolicyKey =
-                    new PeerExternalEndpointWithPolicyKey(peerEpKey.getAddress(), peerEpKey.getAddressType(),
+            PeerExternalEndpointKey peerExternalEpKey =
+                    new PeerExternalEndpointKey(peerEpKey.getAddress(), peerEpKey.getAddressType(),
                             peerEpKey.getContextId(), peerEpKey.getContextType());
-            PeerExternalEndpointWithPolicy peerExternalEpWithPolicy =
-                    new PeerExternalEndpointWithPolicyBuilder().setKey(peerExternalEpWithPolicyKey)
+            PeerExternalEndpoint peerExternalEp =
+                    new PeerExternalEndpointBuilder().setKey(peerExternalEpKey)
                         .setRuleGroupWithRendererEndpointParticipation(new ArrayList<>(entry.getValue()))
                         .build();
-            peerExtEpsWithPolicy.add(peerExternalEpWithPolicy);
+            peerExtEps.add(peerExternalEp);
         }
-        return peerExtEpsWithPolicy;
+        return peerExtEps;
     }
 
-    private static List<PeerExternalContainmentEndpointWithPolicy> toListPeerExternalContainmentEndpointWithPolicy(
+    private static List<PeerExternalContainmentEndpoint> toListPeerExternalContainmentEndpoint(
             Map<PeerExternalContainmentEndpointKey, Set<RuleGroupWithRendererEndpointParticipation>> policiesByPeerExtContEp) {
-        List<PeerExternalContainmentEndpointWithPolicy> peerExtContEpsWithPolicy = new ArrayList<>();
+        List<PeerExternalContainmentEndpoint> peerExtContEps = new ArrayList<>();
         for (Entry<PeerExternalContainmentEndpointKey, Set<RuleGroupWithRendererEndpointParticipation>> entry : policiesByPeerExtContEp
             .entrySet()) {
             PeerExternalContainmentEndpointKey peerEpKey = entry.getKey();
-            PeerExternalContainmentEndpointWithPolicyKey peerExternalContEpWithPolicyKey =
-                    new PeerExternalContainmentEndpointWithPolicyKey(peerEpKey.getContextId(),
+            PeerExternalContainmentEndpointKey peerExternalContEpKey =
+                    new PeerExternalContainmentEndpointKey(peerEpKey.getContextId(),
                             peerEpKey.getContextType());
-            PeerExternalContainmentEndpointWithPolicy peerExternalContEpWithPolicy =
-                    new PeerExternalContainmentEndpointWithPolicyBuilder().setKey(peerExternalContEpWithPolicyKey)
+            PeerExternalContainmentEndpoint peerExternalContEp =
+                    new PeerExternalContainmentEndpointBuilder().setKey(peerExternalContEpKey)
                         .setRuleGroupWithRendererEndpointParticipation(new ArrayList<>(entry.getValue()))
                         .build();
-            peerExtContEpsWithPolicy.add(peerExternalContEpWithPolicy);
+            peerExtContEps.add(peerExternalContEp);
         }
-        return peerExtContEpsWithPolicy;
+        return peerExtContEps;
     }
 
     public Endpoints buildEndoints(EndpointInfo epInfo, EndpointLocationInfo epLocInfo,

@@ -10,9 +10,9 @@ import static org.powermock.api.support.membermodification.MemberMatcher.method;
 import static org.powermock.api.support.membermodification.MemberModifier.stub;
 
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import java.util.Collections;
 import java.util.List;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -65,8 +65,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointWithPolicyBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointWithPolicyKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.rule.groups.RuleGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.rule.groups.RuleGroupBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.rule.groups.RuleGroupKey;
@@ -87,8 +87,6 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-
-import com.google.common.util.concurrent.ListenableFuture;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({RendererPolicyUtil.class, PolicyManagerUtil.class, SfcProviderServiceForwarderAPI.class})
@@ -355,14 +353,14 @@ public class PolicyManagerImplTest {
 
     private RendererEndpoint createRendererEndpoint(ContextId contextId_1, ContextId contextId_2,
                                                     RuleGroupWithRendererEndpointParticipation ruleGroup) {
-        PeerEndpointWithPolicyBuilder peerEndpointWithPolicyBuilder = new PeerEndpointWithPolicyBuilder();
-        peerEndpointWithPolicyBuilder.setKey(new PeerEndpointWithPolicyKey(address, IpPrefixType.class, contextId_1,
+        PeerEndpointBuilder PeerEndpointBuilder = new PeerEndpointBuilder();
+        PeerEndpointBuilder.setKey(new PeerEndpointKey(address, IpPrefixType.class, contextId_1,
                 L2BridgeDomain.class))
                 .setRuleGroupWithRendererEndpointParticipation(Collections.singletonList(ruleGroup));
         RendererEndpointBuilder rendererEndpointBuilder = new RendererEndpointBuilder();
         rendererEndpointBuilder.setKey(new RendererEndpointKey(address, IpPrefixType.class, contextId_2,
                 L2BridgeDomain.class))
-                .setPeerEndpointWithPolicy(Collections.singletonList(peerEndpointWithPolicyBuilder.build()));
+                .setPeerEndpoint(Collections.singletonList(PeerEndpointBuilder.build()));
         return rendererEndpointBuilder.build();
     }
 

@@ -10,11 +10,10 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.util;
 
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.location.provider.ProviderAddressEndpointLocationKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.peer.endpoints.PeerEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.rule.group.with.renderer.endpoint.participation.RuleGroupWithRendererEndpointParticipationKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocationKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointWithPolicyKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.rule.groups.RuleGroupKey;
 
 public class KeyFactory {
@@ -26,7 +25,7 @@ public class KeyFactory {
                 fromKey.getContextId(), fromKey.getContextType());
     }
 
-    public static PeerEndpointKey peerEndpointKey(PeerEndpointWithPolicyKey fromKey) {
+    public static PeerEndpointKey peerEndpointKey(PeerEndpointKey fromKey) {
         return new PeerEndpointKey(fromKey.getAddress(), fromKey.getAddressType(), fromKey.getContextId(),
                 fromKey.getContextType());
     }
@@ -51,8 +50,8 @@ public class KeyFactory {
                 fromKey.getContextType());
     }
 
-    public static PeerEndpointWithPolicyKey peerEndpointWithPolicyKey(AddressEndpointWithLocationKey fromKey) {
-        return new PeerEndpointWithPolicyKey(fromKey.getAddress(), fromKey.getAddressType(), fromKey.getContextId(),
+    public static PeerEndpointKey peerEndpointKey(AddressEndpointWithLocationKey fromKey) {
+        return new PeerEndpointKey(fromKey.getAddress(), fromKey.getAddressType(), fromKey.getContextId(),
                 fromKey.getContextType());
     }
 

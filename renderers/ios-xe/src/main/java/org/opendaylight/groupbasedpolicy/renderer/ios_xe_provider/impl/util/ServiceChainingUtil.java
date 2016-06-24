@@ -16,6 +16,7 @@ import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyConfigurationContext;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.NetconfTransactionCreator;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriter;
@@ -64,7 +65,7 @@ import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.serv
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.path.config.service.chain.path.mode.service.index.services.service.type.choice.ServiceFunctionForwarderBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointWithPolicy;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.actions.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -119,19 +120,23 @@ public class ServiceChainingUtil {
         return serviceFunctionPath;
     }
 
-    static void resolveNewChainAction(final PeerEndpointWithPolicy peerEndpoint, final Sgt sourceSgt,
+    static void resolveNewChainAction(final PeerEndpoint peerEndpoint, final Sgt sourceSgt,
                                       final Sgt destinationSgt, final Map<PolicyManagerImpl.ActionCase, Action> actionMap,
-                                      PolicyWriter policyWriter, final DataBroker dataBroker) {
+                                      final PolicyConfigurationContext context, final DataBroker dataBroker) {
         final List<Class> policyMapEntries = new ArrayList<>();
         final Action action = actionMap.get(PolicyManagerImpl.ActionCase.CHAIN);
         final ServiceFunctionPath servicePath = ServiceChainingUtil.getServicePath(action.getParameterValue());
         if (servicePath == null || servicePath.getName() == null) {
-            //TODO: dump particular resolvedRule-rule-peerEP-EP combinantions to status
+            final String info = String.format("service-path not found (sourceSgt=%s, destinationSgt=%s)",
+                    sourceSgt, destinationSgt);
+            context.appendUnconfiguredRendererEP(StatusUtil.assembleNotConfigurableRendererEPForPeer(context, peerEndpoint, info));
             return;
         }
         final TenantId tenantId = PolicyManagerUtil.getTenantId(peerEndpoint);
         if (tenantId == null) {
-            //TODO: dump particular resolvedRule-rule-peerEP-EP combinantions to status
+            final String info = String.format("tenant-id not found (sourceSgt=%s, destinationSgt=%s)",
+                    sourceSgt, destinationSgt);
+            context.appendUnconfiguredRendererEP(StatusUtil.assembleNotConfigurableRendererEPForPeer(context, peerEndpoint, info));
             return;
         }
         final RenderedServicePath directPath = ServiceChainingUtil.createRenderedPath(servicePath, tenantId, dataBroker);
@@ -149,19 +154,22 @@ public class ServiceChainingUtil {
             final Match oppositeMatch = PolicyManagerUtil.createSecurityGroupMatch(destinationSgt.getValue(), sourceSgt.getValue());
             final ClassMap oppositeClassMap = PolicyManagerUtil.createClassMap(oppositeClassMapName, oppositeMatch);
             policyMapEntries.add(PolicyManagerUtil.createPolicyEntry(oppositeClassMapName, reversedPath, PolicyManagerImpl.ActionCase.CHAIN));
-            policyWriter.cache(oppositeClassMap);
+            context.getPolicyWriter().cache(oppositeClassMap);
         }
         // Create appropriate service path && remote forwarder
-        final boolean sfcPartSuccessful = setSfcPart(servicePath, directPath, reversedPath, policyWriter);
+        final boolean sfcPartSuccessful = setSfcPart(servicePath, directPath, reversedPath, context.getPolicyWriter());
         if (!sfcPartSuccessful) {
-            //TODO: dump particular resolvedRule-rule-peerEP-EP combinantions to status
+            //TODO: extract resolved-rule name
+            final String info = String.format("failed during sfc-part execution (sourceSgt=%s, destinationSgt=%s)",
+                    sourceSgt, destinationSgt);
+            //context.appendUnconfiguredRendererEP(StatusUtil.assembleNotConfigurableRendererEPForPeerAndAction(context, peerEndpoint, info));
             return;
         }
-        policyWriter.cache(classMap);
-        policyWriter.cache(policyMapEntries);
+        context.getPolicyWriter().cache(classMap);
+        context.getPolicyWriter().cache(policyMapEntries);
     }
 
-    static void removeChainAction(final PeerEndpointWithPolicy peerEndpoint, final Sgt sourceSgt, final Sgt destinationSgt,
+    static void removeChainAction(final PeerEndpoint peerEndpoint, final Sgt sourceSgt, final Sgt destinationSgt,
                                   final Map<PolicyManagerImpl.ActionCase, Action> actionMap, PolicyWriter policyWriter) {
         final Action action = actionMap.get(PolicyManagerImpl.ActionCase.CHAIN);
         final ServiceFunctionPath servicePath = ServiceChainingUtil.getServicePath(action.getParameterValue());

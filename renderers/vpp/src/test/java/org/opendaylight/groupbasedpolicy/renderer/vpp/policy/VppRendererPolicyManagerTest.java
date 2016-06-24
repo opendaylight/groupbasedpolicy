@@ -8,12 +8,14 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.policy;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Strings;
+import com.google.common.util.concurrent.MoreExecutors;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -70,8 +72,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocationKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointWithPolicy;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointWithPolicyBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.rule.groups.RuleGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.rule.groups.RuleGroupBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.resolved.rules.ResolvedRuleBuilder;
@@ -97,10 +99,6 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-
-import com.google.common.base.Optional;
-import com.google.common.base.Strings;
-import com.google.common.util.concurrent.MoreExecutors;
 
 @RunWith(MockitoJUnitRunner.class)
 public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
@@ -403,25 +401,25 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
                 Stream.concat(consumers.stream(), providers.stream()).collect(Collectors.toList());
         Endpoints endpoints = new EndpointsBuilder().setAddressEndpointWithLocation(eps).build();
         List<RendererEndpoint> consumersAsRendererEps = consumers.stream().map(cons -> {
-            List<PeerEndpointWithPolicy> peers = providers.stream()
-                .map(web -> new PeerEndpointWithPolicyBuilder()
-                    .setKey(KeyFactory.peerEndpointWithPolicyKey(web.getKey()))
+            List<PeerEndpoint> peers = providers.stream()
+                .map(web -> new PeerEndpointBuilder()
+                    .setKey(KeyFactory.peerEndpointKey(web.getKey()))
                     .setRuleGroupWithRendererEndpointParticipation(Arrays.asList(RULE_GROUP_WITH_CONSUMER))
                     .build())
                 .collect(Collectors.toList());
             return new RendererEndpointBuilder().setKey(KeyFactory.rendererEndpointKey(cons.getKey()))
-                .setPeerEndpointWithPolicy(peers)
+                .setPeerEndpoint(peers)
                 .build();
         }).collect(Collectors.toList());
         List<RendererEndpoint> providersAsRendererEps = providers.stream().map(prov -> {
-            List<PeerEndpointWithPolicy> peers = consumers.stream()
-                .map(client -> new PeerEndpointWithPolicyBuilder()
-                    .setKey(KeyFactory.peerEndpointWithPolicyKey(client.getKey()))
+            List<PeerEndpoint> peers = consumers.stream()
+                .map(client -> new PeerEndpointBuilder()
+                    .setKey(KeyFactory.peerEndpointKey(client.getKey()))
                     .setRuleGroupWithRendererEndpointParticipation(Arrays.asList(RULE_GROUP_WITH_PROVIDER))
                     .build())
                 .collect(Collectors.toList());
             return new RendererEndpointBuilder().setKey(KeyFactory.rendererEndpointKey(prov.getKey()))
-                .setPeerEndpointWithPolicy(peers)
+                .setPeerEndpoint(peers)
                 .build();
         }).collect(Collectors.toList());
         List<RendererEndpoint> rendererEps = Stream
