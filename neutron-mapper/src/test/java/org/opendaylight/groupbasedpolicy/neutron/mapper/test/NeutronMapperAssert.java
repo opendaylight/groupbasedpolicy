@@ -56,16 +56,28 @@ public class NeutronMapperAssert {
     }
 
     public static void assertNetworkDomainExists(DataBroker dataBroker, Port port, Subnet subnet, IpAddress ipAddress) {
-        Optional<NetworkDomain> portOptional =
+        Optional<NetworkDomain> opt =
                 getNetworkDomainOptional(dataBroker, port.getTenantId(), ipAddress, subnet);
-        assertTrue(portOptional.isPresent());
+        assertTrue(opt.isPresent());
     }
 
     public static void assertNetworkDomainNotExists(DataBroker dataBroker, Port port, Subnet subnet,
             IpAddress ipAddress) {
-        Optional<NetworkDomain> portOptional =
+        Optional<NetworkDomain> opt =
                 getNetworkDomainOptional(dataBroker, port.getTenantId(), ipAddress, subnet);
-        assertFalse(portOptional.isPresent());
+        assertFalse(opt.isPresent());
+    }
+
+    public static void assertNetworkDomainExists(DataBroker dataBroker, Uuid tenantUuid, Subnet subnet,
+            IpAddress ipAddress) {
+        Optional<NetworkDomain> opt = getNetworkDomainOptional(dataBroker, tenantUuid, ipAddress, subnet);
+        assertTrue(opt.isPresent());
+    }
+
+    public static void assertNetworkDomainNotExists(DataBroker dataBroker, Uuid tenantUuid, Subnet subnet,
+            IpAddress ipAddress) {
+        Optional<NetworkDomain> opt = getNetworkDomainOptional(dataBroker, tenantUuid, ipAddress, subnet);
+        assertFalse(opt.isPresent());
     }
 
     private static Optional<NetworkDomain> getNetworkDomainOptional(DataBroker dataBroker, Uuid tenantUuid,
