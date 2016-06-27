@@ -8,6 +8,7 @@ define([], function () {
     function SfcService(Restangular) {
         /* methods */
         this.createObject = createObject;
+        this.getSfTypeShort = getSfTypeShort;
 
         /**
          * Sfc constructor
@@ -28,7 +29,9 @@ define([], function () {
              */
 
             function setData(data) {
-                this.data = data;
+                this.data.name = data.name;
+                this.data.symmetric = data.symmetric;
+                this.data['sfc-service-function'] = data['sfc-service-function'];
             }
             /**
              * gets one Sfc object from Restconf
@@ -66,6 +69,10 @@ define([], function () {
             }
 
             return obj;
+        }
+
+        function getSfTypeShort(sfType) {
+            return sfType.replace('service-function-type:', '').trim();
         }
     }
 

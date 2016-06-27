@@ -12,42 +12,39 @@ define(['app/gbp/resolved-policy/resolved-policy.service'], function () {
 
         $scope.cbkFunctions = {
             clickNode: function(node){
-                var epg = EpgService.createObject();
+                var epg = $scope.resolvedPolicy.epgs[node['_model']['_id']];
 
-                epg.get(node['_data-id'], node['_model']['_data']['tenantId'], 'operational', function() {
-                    $scope.openSidePanel('resolved-policy/epg-sidepanel', epg, null);
-                });
-
+                epg.id = node['_model']['_id'];
+                $scope.openSidePanel('resolved-policy/epg-sidepanel', epg, null);
                 $scope.$apply();
-                $scope.parentTenant = node['_model']['_data']['tenantId'];
 
-                NextTopologyService.highlightNode($rootScope.nxTopology, node['_data-id']);
+                NextTopologyService.highlightNode($rootScope.nxTopology, node['_model']['_id']);
             },
             clickLink: function(link){
-                var resolvedContract = $scope.resolvedPolicy[link['_model']['_data'].id];
-                resolvedContract.linkId = link['_model']['_data'].id;
+                var resolvedContract = $scope.resolvedPolicy.contracts[link['_model']['_id']];
+                resolvedContract.linkId = link['_model']['_id'];
                 $scope.openSidePanel('resolved-policy/contract-sidepanel', resolvedContract, null);
                 $scope.$apply();
 
-                NextTopologyService.highlightLink($rootScope.nxTopology, link['_model']['_data'].id);
+                NextTopologyService.highlightLink($rootScope.nxTopology, link['_model']['_id']);
             },
             topologyGenerated: function(){
             }
         };
 
-        function openSfcDialog(chainName) {
-            $mdDialog.show({
-                clickOutsideToClose: true,
-                controller: 'SfcTopologyController',
-                preserveScope: true,
-                templateUrl: $scope.viewPath + 'sfc/dialog-sfc-topology.tpl.html',
-                parent: angular.element(document.body),
-                scope: $scope,
-                locals: {
-                    chainName: chainName,
-                },
-            });
-        }
+        //function openSfcDialog(chainName) {
+        //    $mdDialog.show({
+        //        clickOutsideToClose: true,
+        //        controller: 'SfcTopologyController',
+        //        preserveScope: true,
+        //        templateUrl: $scope.viewPath + 'sfc/dialog-sfc-topology.tpl.html',
+        //        parent: angular.element(document.body),
+        //        scope: $scope,
+        //        locals: {
+        //            chainName: chainName,
+        //        },
+        //    });
+        //}
 
         function reloadTopology() {
             $scope.fillTopologyData();

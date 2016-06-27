@@ -23,8 +23,20 @@ define([], function () {
             this.setData = setData;
             this.post = post;
             this.deleteEndpoint = deleteEndpoint;
+            this.getEndpointContextTypeAcronym = getEndpointContextTypeAcronym;
 
             /* Implementation */
+
+            function getEndpointContextTypeAcronym() {
+                switch(this.data['context-type']) {
+                    case 'l2-l3-forwarding:l2-bridge-domain':
+                        return 'L2B';
+                    case 'l2-l3-forwarding:l2-flood-domain':
+                        return 'L2F';
+                    default:
+                        return 'L3';
+                }
+            }
             /**
              * fills Endpoint object with data
              * @param data

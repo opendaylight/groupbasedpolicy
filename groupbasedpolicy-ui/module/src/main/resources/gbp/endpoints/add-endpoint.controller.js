@@ -12,6 +12,9 @@ define([
         /* properties */
 
         $scope.endpoint = endpoint ? endpoint : EndpointService.createObject();
+        if (!$scope.endpoint.data.tenant) {
+            $scope.endpoint.data.tenant = $scope.rootTenant ? $scope.rootTenant : null;
+        }
         $scope.epgsChips = {
             selectedItem: null,
             searchText: null,
@@ -35,6 +38,8 @@ define([
         $scope.filterNetworkDomainIds = filterNetworkDomainIds;
         $scope.searchEpgs = searchEpgs;
         $scope.populateScopeAfterTenantSelected = populateScopeAfterTenantSelected;
+
+        populateScopeAfterTenantSelected();
 
         /* Implementations */
         $scope.forwarding.get(postForwardingGet);

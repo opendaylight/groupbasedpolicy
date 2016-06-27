@@ -14,24 +14,29 @@ define([], function() {
             /* properties */
             this.data = {};
             /* methods */
-            this.get = get;
+            this.setData = setData;
 
             /* Implementation */
 
-            function get(successCallback) {
-                var self = this;
-
-                var restObj = Restangular.one('restconf').one('operational').one('resolved-policy:resolved-policies');
-
-                return restObj.get().then(function(data) {
-                    self.data = data['resolved-policies']['resolved-policy'];
-                    successCallback();
-                });
+            function setData(data) {
+                this.data['consumer-tenant-id'] = data['consumer-tenant-id'];
+                this.data['consumer-epg-id'] = data['consumer-epg-id'];
+                this.data['provider-tenant-id'] = data['provider-tenant-id'];
+                this.data['provider-epg-id'] = data['provider-epg-id'];
+                this.data['policy-rule-group-with-endpoint-constraints'] = data['policy-rule-group-with-endpoint-constraints'];
             }
+
+
         }
 
-        function createObject() {
-            return new ResolvedPolicy();
+        function createObject(data) {
+            var obj = new ResolvedPolicy();
+
+            if (data) {
+                obj.setData(data);
+            }
+
+            return obj;
         }
     }
 

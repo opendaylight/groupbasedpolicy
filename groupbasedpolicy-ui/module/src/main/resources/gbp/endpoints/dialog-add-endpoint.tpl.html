@@ -24,24 +24,30 @@
                                 <label>Context Type</label>
                                 <md-select name="contextTypeSelect" ng-model="endpoint.data['context-type']"
                                            ng-change="filterContextIds(endpoint.data['context-type'])"
-                                           aria-label="Context type select">
+                                           aria-label="Context type select"
+                                           ng-required="true">
                                     <md-option ng-repeat="contextType in ['l2-l3-forwarding:l2-bridge-domain', 'l2-l3-forwarding:l2-flood-domain', 'l2-l3-forwarding:l3-context']"
-                                               ng-value="contextType"
-                                               ng-required="true">
+                                               ng-value="contextType">
                                         {{ contextType }}
                                     </md-option>
                                 </md-select>
+                                <div ng-messages="endpointForm.contextTypeSelect.$error" ng-show="endpointForm.contextTypeSelect.$touched">
+                                    <div ng-message="required">Required field</div>
+                                </div>
                             </md-input-container>
                             <md-input-container flex ng-if="forwardingContexts.length">
                                 <label>Context Id</label>
                                 <md-select name="contextIdSelect" ng-model="endpoint.data['context-id']"
-                                           aria-label="Context Id select">
+                                           aria-label="Context Id select"
+                                           ng-required="true">
                                     <md-option ng-repeat="contextId in forwardingContexts"
-                                               ng-value="contextId['context-id']"
-                                               ng-required="true">
+                                               ng-value="contextId['context-id']">
                                         {{ contextId['context-id'] }}
                                     </md-option>
                                 </md-select>
+                                <div ng-messages="endpointForm.contextIdSelect.$error" ng-show="endpointForm.contextIdSelect.$touched">
+                                    <div ng-message="required">Required field</div>
+                                </div>
                             </md-input-container>
                             <md-input-container flex ng-if="!forwardingContexts.length">
                                 <label>Context Id</label>
@@ -51,14 +57,13 @@
                         <div layout="row">
                             <md-input-container flex>
                                 <label>Address Type</label>
-                                <md-select ng-model="endpoint.data['address-type']" aria-label="Address Type select">
+                                <md-select name="AddressType" ng-model="endpoint.data['address-type']" aria-label="Address Type select" ng-required="true">
                                     <md-option ng-repeat="addressType in ['l2-l3-forwarding:mac-address-type', 'l2-l3-forwarding:ip-prefix-type']"
-                                               ng-value="addressType"
-                                               ng-required="true">
+                                               ng-value="addressType">
                                         {{ addressType }}
                                     </md-option>
                                 </md-select>
-                                <div ng-messages="endpointForm['address-type'].$error">
+                                <div ng-messages="endpointForm.AddressType.$error" ng-show="endpointForm.AddressType.$touched">
                                     <div ng-message="required">Required field</div>
                                 </div>
                             </md-input-container>
@@ -85,16 +90,10 @@
                                         {{ NetworkDomainId['network-domain-id'] }}
                                     </md-option>
                                 </md-select>
-                                <div ng-messages="endpointForm.networkDomainIdSelect.$error">
-                                    <div ng-message="required">Required field.</div>
-                                </div>
                             </md-input-container>
                             <md-input-container flex ng-if="!forwardingNetworkDomainIds.length">
                                 <label>Network Containment - Network Domain Id</label>
                                 <input name="networkDomainIdInput" ng-model="endpoint.data['network-containment']['network-domain-id']"/>
-                                <div ng-messages="endpointForm.networkDomainIdInput.$error">
-                                    <div ng-message="required">Required field.</div>
-                                </div>
                             </md-input-container>
                         </div>
                         <div layout="row">
@@ -103,7 +102,6 @@
                                 <md-chips
                         			name="epgs"
                         			ng-model="endpoint.data['endpoint-group']"
-                                    md-require-match = "true"
                         			md-autocomplete-snap
                         			flex>
                         			<md-autocomplete

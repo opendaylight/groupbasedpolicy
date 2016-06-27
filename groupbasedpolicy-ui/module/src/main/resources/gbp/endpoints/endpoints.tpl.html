@@ -16,9 +16,9 @@
             </thead>
             <tbody md-body>
             <tr md-row ng-repeat="endpoint in endpoints.data | filter: endpointsTableQuery.filter  | orderBy : endpointsTableQuery.order | limitTo: endpointsTableQuery.limit : (endpointsTableQuery.page -1) * endpointsTableQuery.limit">
-                <td md-cell class="pointer" ng-click="openSidePanel('endpoints/side_panel_endpoints_detail', endpoint.data, null);">{{ endpoint.data['context-id'] }}</td>
-                <td md-cell class="pointer" ng-click="openSidePanel('endpoints/side_panel_endpoints_detail', endpoint.data, null);">{{ endpoint.data.address }}</td>
-                <td md-cell class="pointer" ng-click="openSidePanel('endpoints/side_panel_endpoints_detail', endpoint.data, null);">{{ endpoint.data.tenant }}</td>
+                <td md-cell class="pointer" ng-click="openSidePanel('endpoints/side_panel_endpoints_detail', endpoint, null);">{{ endpoint.data['context-id'] }}</td>
+                <td md-cell class="pointer" ng-click="openSidePanel('endpoints/side_panel_endpoints_detail', endpoint, null);">{{ endpoint.data.address }}</td>
+                <td md-cell class="pointer" ng-click="openSidePanel('endpoints/side_panel_endpoints_detail', endpoint, null);">{{ endpoint.data.tenant }}</td>
                 <td md-cell>
                     <span ng-repeat="epg in endpoint.data['endpoint-group']">{{epg}}<span ng-if="!$last">, </span>
                     </span>
