@@ -34,8 +34,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_render
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Function;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 
 public class VppEndpointLocationProvider implements AutoCloseable {
 
@@ -69,27 +71,20 @@ public class VppEndpointLocationProvider implements AutoCloseable {
         });
     }
 
-    public void createLocationForVppEndpoint(VppEndpoint vppEndpoint) {
-        ProviderAddressEndpointLocation providerAddressEndpointLocation =
-                createProviderAddressEndpointLocation(vppEndpoint);
+    public ListenableFuture<Void> createLocationForVppEndpoint(VppEndpoint vppEndpoint) {
+        ProviderAddressEndpointLocation providerAddressEndpointLocation = createProviderAddressEndpointLocation(vppEndpoint);
         WriteTransaction wTx = txChain.newWriteOnlyTransaction();
-        wTx.put(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.providerAddressEndpointLocationIid(VPP_ENDPOINT_LOCATION_PROVIDER,
-                        providerAddressEndpointLocation.getKey()),
+        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.providerAddressEndpointLocationIid(
+                VPP_ENDPOINT_LOCATION_PROVIDER, providerAddressEndpointLocation.getKey()),
                 providerAddressEndpointLocation);
         LOG.debug("Creating location for {}", providerAddressEndpointLocation.getKey());
-        Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
+        return Futures.transform(wTx.submit(), new Function<Void, Void>() {
 
             @Override
-            public void onSuccess(Void result) {
+            public Void apply(Void input) {
                 LOG.debug("{} provided location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(),
                         providerAddressEndpointLocation);
-            }
-
-            @Override
-            public void onFailure(Throwable t) {
-                LOG.error("{} failed to provide location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(),
-                        providerAddressEndpointLocation, t);
+                return null;
             }
         });
     }
@@ -107,23 +102,18 @@ public class VppEndpointLocationProvider implements AutoCloseable {
             .build();
     }
 
-    public void deleteLocationForVppEndpoint(VppEndpoint vppEndpoint) {
+    public ListenableFuture<Void> deleteLocationForVppEndpoint(VppEndpoint vppEndpoint) {
         ProviderAddressEndpointLocationKey provAddrEpLocKey = createProviderAddressEndpointLocationKey(vppEndpoint);
         WriteTransaction wTx = txChain.newWriteOnlyTransaction();
         wTx.delete(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.providerAddressEndpointLocationIid(VPP_ENDPOINT_LOCATION_PROVIDER, provAddrEpLocKey));
         LOG.debug("Deleting location for {}", provAddrEpLocKey);
-        Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
+        return Futures.transform(wTx.submit(), new Function<Void, Void>() {
 
             @Override
-            public void onSuccess(Void result) {
+            public Void apply(Void input) {
                 LOG.debug("{} removed location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(), provAddrEpLocKey);
-            }
-
-            @Override
-            public void onFailure(Throwable t) {
-                LOG.error("{} failed to remove location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(),
-                        provAddrEpLocKey, t);
+                return null;
             }
         });
     }
@@ -134,7 +124,7 @@ public class VppEndpointLocationProvider implements AutoCloseable {
                 vppEndpoint.getContextId(), vppEndpoint.getContextType());
     }
 
-    public void replaceLocationForEndpoint(@Nonnull ExternalLocationCase location, @Nonnull AddressEndpointWithLocationKey addrEpWithLocKey) {
+    public ListenableFuture<Void> replaceLocationForEndpoint(@Nonnull ExternalLocationCase location, @Nonnull AddressEndpointWithLocationKey addrEpWithLocKey) {
         ProviderAddressEndpointLocationKey provAddrEpLocKey =
                 KeyFactory.providerAddressEndpointLocationKey(addrEpWithLocKey);
         AbsoluteLocation absoluteLocation =
@@ -147,18 +137,13 @@ public class VppEndpointLocationProvider implements AutoCloseable {
                         providerAddressEndpointLocation.getKey()),
                 providerAddressEndpointLocation);
         LOG.debug("Updating location for {}", provAddrEpLocKey);
-        Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
+        return Futures.transform(wTx.submit(), new Function<Void, Void>() {
 
             @Override
-            public void onSuccess(Void result) {
+            public Void apply(Void input) {
                 LOG.debug("{} replaced location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(),
                         providerAddressEndpointLocation);
-            }
-
-            @Override
-            public void onFailure(Throwable t) {
-                LOG.error("{} failed to replace location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(),
-                        providerAddressEndpointLocation, t);
+                return null;
             }
         });
     }
