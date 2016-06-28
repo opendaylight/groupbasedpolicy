@@ -10,12 +10,10 @@ package org.opendaylight.groupbasedpolicy.neutron.vpp.mapper.processors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
-import static org.mockito.Mockito.any;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.junit.Before;
@@ -142,8 +140,6 @@ public class PortHandlerTest extends AbstractDataBrokerTest {
         ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
         Optional<VppEndpoint> optVppEp = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
                 TestUtils.createVppEpIid(TestUtils.createVppEndpointKey(bebp)), rTx);
-        verify(transactionChain).newReadOnlyTransaction();
-        verify(transactionChain, times(2)).newWriteOnlyTransaction();
         assertTrue(optVppEp.isPresent());
     }
 
@@ -158,10 +154,6 @@ public class PortHandlerTest extends AbstractDataBrokerTest {
         ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
         Optional<VppEndpoint> optVppEp = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
                 TestUtils.createVppEpIid(TestUtils.createVppEndpointKey(bebp)), rTx);
-        // looks for existing Vpp endpoint
-        verify(transactionChain).newReadOnlyTransaction();
-        // only removes former valid vpp endpoint
-        verify(transactionChain).newWriteOnlyTransaction();
         assertFalse(optVppEp.isPresent());
     }
 
@@ -175,8 +167,6 @@ public class PortHandlerTest extends AbstractDataBrokerTest {
         Optional<VppEndpoint> optVppEp = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
                 TestUtils.createVppEpIid(TestUtils.createVppEndpointKey(bebp)), rTx);
         assertFalse(optVppEp.isPresent());
-        verify(transactionChain).newReadOnlyTransaction();
-        verify(transactionChain).newWriteOnlyTransaction();
     }
 
     private void putVppEp(Port port, BaseEndpointByPort bebp, WriteTransaction rwTx) {

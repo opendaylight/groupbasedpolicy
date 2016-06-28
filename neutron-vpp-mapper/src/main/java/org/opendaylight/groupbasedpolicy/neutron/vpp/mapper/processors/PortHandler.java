@@ -11,13 +11,11 @@ package org.opendaylight.groupbasedpolicy.neutron.vpp.mapper.processors;
 import org.opendaylight.controller.md.sal.binding.api.BindingTransactionChain;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
-import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionChain;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionChainListener;
-import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.groupbasedpolicy.neutron.vpp.mapper.SocketInfo;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
@@ -37,11 +35,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.por
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.PortKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -72,9 +70,10 @@ public class PortHandler implements TransactionChainListener {
     }
 
     void processCreated(Port port) {
-        ReadTransaction rTx = dataBroker.newReadOnlyTransaction();
+        ReadOnlyTransaction rTx = transactionChain.newReadOnlyTransaction();
         Optional<BaseEndpointByPort> optBaseEpByPort = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
                 createBaseEpByPortIid(port.getUuid()), rTx);
+        rTx.close();
         if (!optBaseEpByPort.isPresent()) {
             return;
         }
@@ -82,9 +81,10 @@ public class PortHandler implements TransactionChainListener {
     }
 
     void processCreated(BaseEndpointByPort bebp) {
-        ReadTransaction rTx = dataBroker.newReadOnlyTransaction();
+        ReadOnlyTransaction rTx = transactionChain.newReadOnlyTransaction();
         Optional<Port> optPort = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
                 createPortIid(bebp.getPortId()), rTx);
+        rTx.close();
         if (!optPort.isPresent()) {
             return;
         }
@@ -120,7 +120,7 @@ public class PortHandler implements TransactionChainListener {
 
     void processUpdated(Port original, Port delta) {
         if (isValidVhostUser(original)) {
-            ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
+            ReadOnlyTransaction rTx = transactionChain.newReadOnlyTransaction();
             Optional<BaseEndpointByPort> optBebp = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
                     createBaseEpByPortIid(original.getUuid()), rTx);
             rTx.close();
@@ -145,20 +145,14 @@ public class PortHandler implements TransactionChainListener {
         }
     }
 
-    private void writeVppEndpoint(InstanceIdentifier<VppEndpoint> vppEpIid, VppEndpoint vppEp) {
+    private synchronized void writeVppEndpoint(InstanceIdentifier<VppEndpoint> vppEpIid, VppEndpoint vppEp) {
         WriteTransaction wTx = transactionChain.newWriteOnlyTransaction();
         if (vppEp != null) {
             wTx.put(LogicalDatastoreType.CONFIGURATION, vppEpIid, vppEp, true);
         } else {
             wTx.delete(LogicalDatastoreType.CONFIGURATION, vppEpIid);
         }
-        try {
-            wTx.submit().checkedGet();
-        } catch (TransactionCommitFailedException e) {
-            LOG.error("Transaction chain commit failed. {}", e);
-            transactionChain.close();
-            transactionChain = dataBroker.createTransactionChain(this);
-        }
+        wTx.submit();
     }
 
     @VisibleForTesting
@@ -214,7 +208,8 @@ public class PortHandler implements TransactionChainListener {
     @Override
     public void onTransactionChainFailed(TransactionChain<?, ?> chain, AsyncTransaction<?, ?> transaction,
             Throwable cause) {
-        LOG.error("Transaction chain failed. {}", cause.getMessage());
+        LOG.error("Transaction chain failed. {} \nTransaction which caused the chain to fail {}", cause.getMessage(),
+                transaction, cause);
         transactionChain.close();
         transactionChain = dataBroker.createTransactionChain(this);
     }
