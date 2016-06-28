@@ -11,7 +11,7 @@
     "url": "https://git.opendaylight.org/gerrit/groupbasedpolicy.git"
   },
   "dependencies": {
-    "bower": "1.7.7"
+    "bower": "1.7.9"
   },
   "devDependencies": {}
 }
