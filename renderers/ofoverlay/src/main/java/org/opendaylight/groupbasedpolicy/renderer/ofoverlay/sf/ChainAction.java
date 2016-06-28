@@ -286,9 +286,11 @@ public class ChainAction extends Action {
 
     public static ServiceFunctionPath getSfcPath(SfcName chainName) {
         ServiceFunctionPaths paths = SfcProviderServicePathAPI.readAllServiceFunctionPaths();
-        for (ServiceFunctionPath path : paths.getServiceFunctionPath()) {
-            if (path.getServiceChainName().equals(chainName)) {
-                return path;
+        if (paths != null) {
+            for (ServiceFunctionPath path : paths.getServiceFunctionPath()) {
+                if (path.getServiceChainName().equals(chainName)) {
+                    return path;
+                }
             }
         }
         return null;
