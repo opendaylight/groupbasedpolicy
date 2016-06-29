@@ -97,7 +97,7 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
             this.modificationForFutureSet = Preconditions.checkNotNull(modificationForFutureSet);
             this.iid = Preconditions.checkNotNull(iid);
             registeredListener = dataProvider.registerDataTreeChangeListener(iid, this);
-            LOG.trace("Registered listener for path {}", iid.getRootIdentifier());
+            LOG.debug("Registered listener for path {}", iid.getRootIdentifier());
         }
 
         @Override
@@ -114,7 +114,7 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
 
         private void unregisterOnTrue(boolean _true) {
             if (_true) {
-                LOG.trace("Unregistering listener for path {}", iid.getRootIdentifier());
+                LOG.debug("Unregistering listener for path {}", iid.getRootIdentifier());
                 if (registeredListener != null) {
                     registeredListener.close();
                 }

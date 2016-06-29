@@ -105,7 +105,7 @@ public final class ForwardingManager {
     private void createVxlanBridgeDomains(String bd, VxlanVni vni, Set<NodeId> vppNodes) {
         for (NodeId vppNode : vppNodes) {
             try {
-                LOG.trace("Creating VXLAN bridge-domain {} on node {} with VNI {}", bd, vppNode.getValue(),
+                LOG.debug("Creating VXLAN bridge-domain {} on node {} with VNI {}", bd, vppNode.getValue(),
                         vni);
                 // TODO think about propagating ListenableFuture - timeout set as workaround
                 bdManager.createVxlanBridgeDomainOnVppNode(bd, vni, vppNode).get(WAIT_FOR_BD_CREATION,
@@ -122,7 +122,7 @@ public final class ForwardingManager {
     private void createVlanBridgeDomains(String bd, VlanId vlanId, Set<NodeId> vppNodes) {
         for (NodeId vppNode : vppNodes) {
             try {
-                LOG.trace("Creating VLAN bridge-domain {} on node {} with VLAN ID {}", bd, vppNode.getValue(),
+                LOG.debug("Creating VLAN bridge-domain {} on node {} with VLAN ID {}", bd, vppNode.getValue(),
                         vlanId.getValue());
                 // TODO think about propagating ListenableFuture - timeout set as workaround
                 bdManager.createVlanBridgeDomainOnVppNode(bd, vlanId, vppNode).get(WAIT_FOR_BD_CREATION,

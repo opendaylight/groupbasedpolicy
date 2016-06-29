@@ -386,11 +386,11 @@ public class InterfaceManager implements AutoCloseable {
 
     private static boolean hasNodeAndInterface(VppEndpoint vppEp) {
         if (vppEp.getVppNodePath() == null) {
-            LOG.trace("vpp-node is missing. {}", vppEp);
+            LOG.debug("vpp-node is missing. {}", vppEp);
             return false;
         }
         if (Strings.isNullOrEmpty(vppEp.getVppInterfaceName())) {
-            LOG.trace("vpp-interface-name is missing. {}", vppEp);
+            LOG.debug("vpp-interface-name is missing. {}", vppEp);
             return false;
         }
         return true;
