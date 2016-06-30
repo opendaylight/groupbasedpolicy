@@ -101,6 +101,11 @@
         <artifactId>sxp-mapper</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>groupbasedpolicy-ise-adapter</artifactId>
+        <version>${project.version}</version>
+      </dependency>
 
       <!-- GBP configuration -->
       <dependency>
@@ -204,6 +209,13 @@
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>ios-xe-renderer</artifactId>
+        <version>${project.version}</version>
+        <type>xml</type>
+        <classifier>config</classifier>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>groupbasedpolicy-ise-adapter</artifactId>
         <version>${project.version}</version>
         <type>xml</type>
         <classifier>config</classifier>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<!--
+  ~ Copyright (c) 2016 Cisco Systems, Inc. and others.  All rights reserved.
+  ~
+  ~ This program and the accompanying materials are made available under the
+  ~ terms of the Eclipse Public License v1.0 which accompanies this distribution,
+  ~ and is available at http://www.eclipse.org/legal/epl-v10.html
+  -->
+
+<ns3:searchResult xmlns:ns5="ers.ise.cisco.com"
+                  xmlns:ns3="v2.ers.ise.cisco.com"
+                  total="1">
+    <ns3:nextPage rel="next" href="" type="application/xml"/>
+    <ns3:resources>
+        <ns5:resource description="" id="abc123" name="boss_group">
+            <link rel="self" href="https://example.org:9060/ers/config/sgt/abc123" type="application/xml"/>
+        </ns5:resource>
+    </ns3:resources>
+</ns3:searchResult>

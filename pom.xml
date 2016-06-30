@@ -35,6 +35,7 @@
     <module>distribution-karaf</module>
     <module>features</module>
     <module>sxp-mapper</module>
+    <module>groupbasedpolicy-ise-adapter</module>
   </modules>
 
   <build>

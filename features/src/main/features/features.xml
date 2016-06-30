@@ -219,4 +219,17 @@
         <configfile finalname="${config.configfile.directory}/15-l2-l3-domain-extension.xml">mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}/xml/config</configfile>
         <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-ios-xe-renderer.xml">mvn:org.opendaylight.groupbasedpolicy/ios-xe-renderer/{{VERSION}}/xml/config</configfile>
     </feature>
+
+    <!--
+       GBP-ISE ADAPTER
+   -->
+    <feature name='odl-groupbasedpolicy-ise-adapter' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: gbp-ise adapter'>
+        <feature version="${project.version}">odl-groupbasedpolicy-sxp-mapper</feature>
+        <feature version="${sxp.version}">odl-sxp-core</feature>
+        <bundle>mvn:commons-net/commons-net/{{VERSION}}</bundle>
+        <bundle>mvn:com.sun.jersey/jersey-client/{{VERSION}}</bundle>
+        <bundle>mvn:com.sun.jersey/jersey-core/{{VERSION}}</bundle>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-ise-adapter/{{VERSION}}</bundle>
+        <configfile finalname="${config.configfile.directory}/16-groupbasedpolicy-ise-adapter.xml">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-ise-adapter/{{VERSION}}/xml/config</configfile>
+    </feature>
 </features>
