@@ -8,11 +8,14 @@
 
 package org.opendaylight.groupbasedpolicy.neutron.ovsdb.util;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import org.junit.Assert;
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.CheckedFuture;
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -25,9 +28,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.endpoints.by.ports.EndpointByPort;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.CheckedFuture;
-
 public class NeutronHelperTest {
 
     private UniqueId externalId;
@@ -36,7 +36,7 @@ public class NeutronHelperTest {
 
     @SuppressWarnings("unchecked")
     @Before
-    public void initialise() throws Exception {
+    public void init() throws Exception {
         externalId = mock(UniqueId.class);
         dataBroker = mock(DataBroker.class);
 
@@ -49,20 +49,20 @@ public class NeutronHelperTest {
     }
 
     @Test
-    public void getEpKeyFromNeutronMapperTest() throws Exception {
+    public void testGetEpKeyFromNeutronMapper() throws Exception {
         when(optionalEp.isPresent()).thenReturn(true);
         EndpointByPort epByPort = mock(EndpointByPort.class);
         when(optionalEp.get()).thenReturn(epByPort);
         when(epByPort.getL2Context()).thenReturn(mock(L2BridgeDomainId.class));
         when(epByPort.getMacAddress()).thenReturn(mock(MacAddress.class));
 
-        Assert.assertNotNull(NeutronHelper.getEpKeyFromNeutronMapper(externalId, dataBroker));
+        assertNotNull(NeutronHelper.getEpKeyFromNeutronMapper(externalId, dataBroker));
     }
 
     @Test
-    public void getEpKeyFromNeutronMapperTestPresentFalse() throws Exception {
+    public void testGetEpKeyFromNeutronMapper_PresentFalse() throws Exception {
         when(optionalEp.isPresent()).thenReturn(false);
 
-        Assert.assertNull(NeutronHelper.getEpKeyFromNeutronMapper(externalId, dataBroker));
+        assertNull(NeutronHelper.getEpKeyFromNeutronMapper(externalId, dataBroker));
     }
 }
