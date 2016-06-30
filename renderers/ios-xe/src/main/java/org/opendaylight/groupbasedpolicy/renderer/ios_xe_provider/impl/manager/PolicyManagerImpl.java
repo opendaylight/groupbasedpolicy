@@ -28,6 +28,7 @@ import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFaile
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.manager.PolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.StatusUtil;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.Renderers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.RendererKey;
@@ -49,6 +50,7 @@ import org.slf4j.LoggerFactory;
 public class PolicyManagerImpl implements PolicyManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(PolicyManagerImpl.class);
+    public static final RendererName IOS_XE_RENDERER = new RendererName("ios-xe-renderer");
     private static final String BASE_POLICY_MAP_NAME = "service-chains-";
     private final DataBroker dataBroker;
     private final NodeManager nodeManager;
@@ -120,13 +122,14 @@ public class PolicyManagerImpl implements PolicyManager {
                 context.appendUnconfiguredRendererEP(StatusUtil.assembleFullyNotConfigurableRendererEP(context, info));
                 continue;
             }
-            final String managementIpAddress = nodeManager.getNodeManagementIpByMountPointIid(mountpointIid);
-            if (managementIpAddress == null) {
+            final Optional<String> optionalManagementIpAddress = nodeManager.getNodeManagementIpByMountPointIid(mountpointIid);
+            if (!optionalManagementIpAddress.isPresent()) {
                 final String info = String.format("Can not create policyWriter, managementIpAddress for mountpoint %s is null",
                         mountpointIid);
                 context.appendUnconfiguredRendererEP(StatusUtil.assembleFullyNotConfigurableRendererEP(context, info));
                 continue;
             }
+            final String managementIpAddress = optionalManagementIpAddress.get();
             final String interfaceName = PolicyManagerUtil.getInterfaceNameFromAbsoluteLocation(rendererEndpoint, endpointsWithLocation);
             final NodeId nodeId = nodeManager.getNodeIdByMountpointIid(mountpointIid);
             if (interfaceName == null || nodeId == null) {
@@ -190,7 +193,7 @@ public class PolicyManagerImpl implements PolicyManager {
                                                                                @Nonnull final Optional<Status> statusValue) {
         final ReadWriteTransaction readWriteTransaction = dataBroker.newReadWriteTransaction();
         final InstanceIdentifier<RendererPolicy> iid = InstanceIdentifier.create(Renderers.class)
-                .child(Renderer.class, new RendererKey(NodeManager.iosXeRenderer))
+                .child(Renderer.class, new RendererKey(IOS_XE_RENDERER))
                 .child(RendererPolicy.class);
         final RendererPolicy rendererPolicy = new RendererPolicyBuilder()
                 .setVersion(version)

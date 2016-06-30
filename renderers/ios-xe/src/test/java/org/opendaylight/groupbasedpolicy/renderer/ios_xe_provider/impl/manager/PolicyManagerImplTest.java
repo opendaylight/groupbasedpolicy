@@ -9,16 +9,16 @@ import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ren
 import static org.powermock.api.support.membermodification.MemberMatcher.method;
 import static org.powermock.api.support.membermodification.MemberModifier.stub;
 
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
-import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.RendererPolicyUtil;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.ServiceChainingUtil;
@@ -115,16 +115,15 @@ public class PolicyManagerImplTest {
     private PolicyManagerImpl policyManager;
     private DataBroker mountpoint;
     private NodeManager nodeManager;
-    private ReadWriteTransaction readWriteTransaction;
 
     @Before
     public void init() {
         mountpoint = mock(DataBroker.class);
-        readWriteTransaction = mock(ReadWriteTransaction.class);
+        ReadWriteTransaction readWriteTransaction = mock(ReadWriteTransaction.class);
         nodeManager = mock(NodeManager.class);
         policyManager = new PolicyManagerImpl(mountpoint, nodeManager);
         when(mountpoint.newReadWriteTransaction()).thenReturn(readWriteTransaction);
-        when(readWriteTransaction.submit()).thenReturn(Futures.immediateCheckedFuture((Void) null));
+        when(readWriteTransaction.submit()).thenReturn(Futures.immediateCheckedFuture(null));
     }
 
     @Test
@@ -171,7 +170,7 @@ public class PolicyManagerImplTest {
         stub(method(RendererPolicyUtil.class, "lookupEndpoint")).toReturn(lookupEndpoint);
         when(nodeManager.getNodeMountPoint(eq(createMountpointIid()))).thenReturn(mountpoint);
         when(nodeManager.getNodeIdByMountpointIid(eq(createMountpointIid()))).thenReturn(nodeId);
-        when(nodeManager.getNodeManagementIpByMountPointIid(eq(createMountpointIid()))).thenReturn(ipAddress);
+        when(nodeManager.getNodeManagementIpByMountPointIid(eq(createMountpointIid()))).thenReturn(Optional.of(ipAddress));
 
         ListenableFuture result = policyManager.syncPolicy(policyConfiguration, null, 0);
         assertTrue((boolean) result.get());
@@ -193,7 +192,7 @@ public class PolicyManagerImplTest {
         stub(method(RendererPolicyUtil.class, "lookupEndpoint")).toReturn(lookupEndpoint);
         when(nodeManager.getNodeMountPoint(eq(createMountpointIid()))).thenReturn(mountpoint);
         when(nodeManager.getNodeIdByMountpointIid(eq(createMountpointIid()))).thenReturn(nodeId);
-        when(nodeManager.getNodeManagementIpByMountPointIid(eq(createMountpointIid()))).thenReturn(ipAddress);
+        when(nodeManager.getNodeManagementIpByMountPointIid(eq(createMountpointIid()))).thenReturn(Optional.of(ipAddress));
 
         ListenableFuture result = policyManager.syncPolicy(policyConfiguration, null, 0);
         assertTrue((boolean) result.get());
@@ -216,7 +215,7 @@ public class PolicyManagerImplTest {
         stub(method(RendererPolicyUtil.class, "lookupEndpoint")).toReturn(lookupEndpoint);
         when(nodeManager.getNodeMountPoint(eq(createMountpointIid()))).thenReturn(mountpoint);
         when(nodeManager.getNodeIdByMountpointIid(eq(createMountpointIid()))).thenReturn(nodeId);
-        when(nodeManager.getNodeManagementIpByMountPointIid(eq(createMountpointIid()))).thenReturn(ipAddress);
+        when(nodeManager.getNodeManagementIpByMountPointIid(eq(createMountpointIid()))).thenReturn(Optional.of(ipAddress));
 
         ListenableFuture result = policyManager.syncPolicy(policyConfiguration, null, 0);
         assertTrue((boolean) result.get());
@@ -239,7 +238,7 @@ public class PolicyManagerImplTest {
         stub(method(RendererPolicyUtil.class, "lookupEndpoint")).toReturn(lookupEndpoint);
         when(nodeManager.getNodeMountPoint(eq(createMountpointIid()))).thenReturn(mountpoint);
         when(nodeManager.getNodeIdByMountpointIid(eq(createMountpointIid()))).thenReturn(nodeId);
-        when(nodeManager.getNodeManagementIpByMountPointIid(eq(createMountpointIid()))).thenReturn(ipAddress);
+        when(nodeManager.getNodeManagementIpByMountPointIid(eq(createMountpointIid()))).thenReturn(Optional.of(ipAddress));
 
         ListenableFuture result = policyManager.syncPolicy(policyConfiguration, null, 0);
         assertTrue((boolean) result.get());
@@ -262,7 +261,7 @@ public class PolicyManagerImplTest {
         stub(method(RendererPolicyUtil.class, "lookupEndpoint")).toReturn(lookupEndpoint);
         when(nodeManager.getNodeMountPoint(eq(createMountpointIid()))).thenReturn(mountpoint);
         when(nodeManager.getNodeIdByMountpointIid(eq(createMountpointIid()))).thenReturn(nodeId);
-        when(nodeManager.getNodeManagementIpByMountPointIid(eq(createMountpointIid()))).thenReturn(ipAddress);
+        when(nodeManager.getNodeManagementIpByMountPointIid(eq(createMountpointIid()))).thenReturn(Optional.of(ipAddress));
         ServiceFunctionPath sfp = createServiceFunctionPath();
         stub(method(ServiceChainingUtil.class, "findServicePathFromParameterValues")).toReturn(sfp);
         RenderedServicePath rsp = createRenderedServicePath();

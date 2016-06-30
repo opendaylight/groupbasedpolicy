@@ -128,14 +128,14 @@ public class IosXeRendererProviderImpl implements IosXeRendererProvider, Binding
                                 .setSupportedParameterValues(ipProtoClassifier.getSupportedParameterValues())
                                 .build());
 
-        final Renderer renderer = new RendererBuilder().setName(NodeManager.iosXeRenderer)
+        final Renderer renderer = new RendererBuilder().setName(PolicyManagerImpl.IOS_XE_RENDERER)
                 .setCapabilities(new CapabilitiesBuilder().setSupportedActionDefinition(actionDefinitions)
                         .setSupportedClassifierDefinition(classifierDefinitions)
                         .build())
                 .build();
 
         final InstanceIdentifier<Renderer> iid = InstanceIdentifier.builder(Renderers.class)
-                .child(Renderer.class, new RendererKey(new RendererName(NodeManager.iosXeRenderer)))
+                .child(Renderer.class, new RendererKey(new RendererName(PolicyManagerImpl.IOS_XE_RENDERER)))
                 .build();
         writeTransaction.merge(LogicalDatastoreType.OPERATIONAL, iid, renderer, true);
         final CheckedFuture<Void, TransactionCommitFailedException> future = writeTransaction.submit();

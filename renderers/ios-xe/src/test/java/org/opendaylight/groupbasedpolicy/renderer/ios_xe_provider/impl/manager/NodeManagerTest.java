@@ -1,5 +1,21 @@
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus.ConnectionStatus.Connected;
+import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus.ConnectionStatus.Connecting;
+import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus.ConnectionStatus.UnableToConnect;
+
+import javax.annotation.Nonnull;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
 import org.junit.Before;
@@ -32,23 +48,6 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeBuilder;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-
-import javax.annotation.Nonnull;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus.ConnectionStatus.Connected;
-import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus.ConnectionStatus.Connecting;
-import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus.ConnectionStatus.UnableToConnect;
 
 
 public class NodeManagerTest extends CustomDataBrokerTest {
@@ -252,8 +251,8 @@ public class NodeManagerTest extends CustomDataBrokerTest {
         InstanceIdentifier mountpointIid = InstanceIdentifier.builder(NetworkTopology.class)
                 .child(Topology.class, new TopologyKey(new TopologyId(TOPOLOGY_ID)))
                 .child(Node.class, new NodeKey(testNodeId)).build();
-        String ipAddress = nodeManager.getNodeManagementIpByMountPointIid(mountpointIid);
-        assertNull(ipAddress);
+        java.util.Optional<String> optionalIpAddress = nodeManager.getNodeManagementIpByMountPointIid(mountpointIid);
+        assertFalse(optionalIpAddress.isPresent());
     }
 
     @Test
@@ -267,8 +266,9 @@ public class NodeManagerTest extends CustomDataBrokerTest {
         wTx.put(LogicalDatastoreType.CONFIGURATION, testNodeIid, testNode, true);
         wTx.submit().checkedGet();
 
-        String result = nodeManager.getNodeManagementIpByMountPointIid(testNodeIid);
-        assertEquals(IPv4_ADDRESS.getValue(), result);
+        java.util.Optional<String> optionalResult = nodeManager.getNodeManagementIpByMountPointIid(testNodeIid);
+        assertTrue(optionalResult.isPresent());
+        assertEquals(IPv4_ADDRESS.getValue(), optionalResult.get());
     }
 
     private Node createNode(final NetconfNodeConnectionStatus.ConnectionStatus connectionStatus,
