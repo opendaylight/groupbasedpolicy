@@ -11,6 +11,7 @@ package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.junit.Assert;
 import org.junit.Before;
@@ -23,11 +24,19 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.ServiceChainingUtil;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308.ClassNameType;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ClassMap;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ClassMapBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ServiceChain;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ServiceChainBuilder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map.Class;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map.ClassBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.ServicePathBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.Local;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.LocalBuilder;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.ServiceFfName;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.ServiceFfNameBuilder;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.powermock.api.mockito.PowerMockito;
@@ -40,7 +49,7 @@ import org.slf4j.LoggerFactory;
  * Test for {@link PolicyWriterUtil}.
  */
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({PolicyWriterUtil.class, NetconfTransactionCreator.class})
+@PrepareForTest({PolicyWriterUtil.class, NetconfTransactionCreator.class, ServiceChainingUtil.class})
 public class PolicyWriterUtilTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(PolicyWriterUtilTest.class);
@@ -183,31 +192,120 @@ public class PolicyWriterUtilTest {
 
     @Test
     public void testWriteInterface() throws Exception {
+        LOG.debug("scenario: fail with no writeOnlyTransaction");
+        final String interfaceName = "unit-interface-1";
+        Assert.assertFalse(PolicyWriterUtil.writeInterface(POLICY_MAP_NAME, interfaceName, NODE_ID, dataBroker));
 
+        LOG.debug("scenario: succeed - available writeOnlyTransaction, no submit future");
+        PowerMockito.stub(PowerMockito.method(NetconfTransactionCreator.class, "netconfWriteOnlyTransaction")).toReturn(wTxOptional);
+        Assert.assertTrue(PolicyWriterUtil.writeInterface(POLICY_MAP_NAME, interfaceName, NODE_ID, dataBroker));
+
+        LOG.debug("scenario: succeed - available writeOnlyTransaction, available future");
+        Mockito.when(wTx.submit()).thenReturn(Futures.immediateCheckedFuture(null));
+        Assert.assertTrue(PolicyWriterUtil.writeInterface(POLICY_MAP_NAME, interfaceName, NODE_ID, dataBroker));
     }
 
     @Test
     public void testWriteLocal() throws Exception {
+        LOG.debug("scenario: succeed with null localForwarder");
+        Assert.assertTrue(PolicyWriterUtil.writeLocal(null, NODE_ID, dataBroker));
 
+        LOG.debug("scenario: fail with no writeOnlyTransaction");
+        final Local localForwarder = new LocalBuilder().build();
+        Assert.assertFalse(PolicyWriterUtil.writeLocal(localForwarder, NODE_ID, dataBroker));
+
+        LOG.debug("scenario: succeed - available writeOnlyTransaction, no submit future");
+        PowerMockito.stub(PowerMockito.method(NetconfTransactionCreator.class, "netconfWriteOnlyTransaction")).toReturn(wTxOptional);
+        Assert.assertTrue(PolicyWriterUtil.writeLocal(localForwarder, NODE_ID, dataBroker));
+
+        LOG.debug("scenario: succeed - available writeOnlyTransaction, available future");
+        Mockito.when(wTx.submit()).thenReturn(Futures.immediateCheckedFuture(null));
+        Assert.assertTrue(PolicyWriterUtil.writeLocal(localForwarder, NODE_ID, dataBroker));
     }
 
     @Test
     public void testRemoveLocal() throws Exception {
+        LOG.debug("scenario: succeed with no service path present");
+        Assert.assertTrue(PolicyWriterUtil.removeLocal(NODE_ID, dataBroker));
 
+        LOG.debug("scenario: fail with service path present, no writeOnlyTransaction");
+        PowerMockito.stub(PowerMockito.method(ServiceChainingUtil.class, "checkServicePathPresence")).toReturn(true);
+        Assert.assertFalse(PolicyWriterUtil.removeLocal(NODE_ID, dataBroker));
+
+        LOG.debug("scenario: fail with service path present, available writeOnlyTransaction, no submit future");
+        PowerMockito.stub(PowerMockito.method(NetconfTransactionCreator.class, "netconfWriteOnlyTransaction")).toReturn(wTxOptional);
+        Assert.assertTrue(PolicyWriterUtil.removeLocal(NODE_ID, dataBroker));
+
+        LOG.debug("scenario: fail with service path present, available writeOnlyTransaction, available future");
+        Mockito.when(wTx.submit()).thenReturn(Futures.immediateCheckedFuture(null));
+        Assert.assertTrue(PolicyWriterUtil.removeLocal(NODE_ID, dataBroker));
     }
 
     @Test
     public void testWriteRemote() throws Exception {
+        LOG.debug("scenario: succeed with null List<ServiceFfName>");
+        Assert.assertTrue(PolicyWriterUtil.writeRemote(null, NODE_ID, dataBroker));
 
+        LOG.debug("scenario: succeed with empty List<ServiceFfName>");
+        Assert.assertTrue(PolicyWriterUtil.writeRemote(Collections.emptyList(), NODE_ID, dataBroker));
+
+        LOG.debug("scenario: fail with no writeOnlyTransaction");
+        final List<ServiceFfName> remotes = Collections.singletonList(new ServiceFfNameBuilder().build());
+        Assert.assertFalse(PolicyWriterUtil.writeRemote(remotes, NODE_ID, dataBroker));
+
+        LOG.debug("scenario: succeed - available writeOnlyTransaction, no submit future");
+        PowerMockito.stub(PowerMockito.method(NetconfTransactionCreator.class, "netconfWriteOnlyTransaction")).toReturn(wTxOptional);
+        Assert.assertTrue(PolicyWriterUtil.writeRemote(remotes, NODE_ID, dataBroker));
+
+        LOG.debug("scenario: succeed - available writeOnlyTransaction, available future");
+        Mockito.when(wTx.submit()).thenReturn(Futures.immediateCheckedFuture(null));
+        Assert.assertTrue(PolicyWriterUtil.writeRemote(remotes, NODE_ID, dataBroker));
     }
 
     @Test
     public void testWriteServicePaths() throws Exception {
+        LOG.debug("scenario: succeed with empty List<remote>");
+        Assert.assertTrue(PolicyWriterUtil.writeServicePaths(Collections.emptyList(), NODE_ID, dataBroker));
 
+        LOG.debug("scenario: fail with no writeOnlyTransaction");
+        final List<ServiceChain> serviceChains = Collections.singletonList(new ServiceChainBuilder()
+                .setServicePath(Collections.singletonList(new ServicePathBuilder()
+                        .setServicePathId(42L)
+                        .build()))
+                .build());
+        Assert.assertFalse(PolicyWriterUtil.writeServicePaths(serviceChains, NODE_ID, dataBroker));
+
+        LOG.debug("scenario: succeed - available writeOnlyTransaction, no submit future");
+        PowerMockito.stub(PowerMockito.method(NetconfTransactionCreator.class, "netconfWriteOnlyTransaction")).toReturn(wTxOptional);
+        Assert.assertTrue(PolicyWriterUtil.writeServicePaths(serviceChains, NODE_ID, dataBroker));
+
+        LOG.debug("scenario: succeed - available writeOnlyTransaction, available future");
+        Mockito.when(wTx.submit()).thenReturn(Futures.immediateCheckedFuture(null));
+        Assert.assertTrue(PolicyWriterUtil.writeServicePaths(serviceChains, NODE_ID, dataBroker));
     }
 
     @Test
     public void testRemoveServicePaths() throws Exception {
+        LOG.debug("scenario: succeed with service path present null");
+        Assert.assertTrue(PolicyWriterUtil.removeServicePaths(null, NODE_ID, dataBroker));
 
+        LOG.debug("scenario: succeed with no service path present");
+        Assert.assertTrue(PolicyWriterUtil.removeServicePaths(Collections.emptyList(), NODE_ID, dataBroker));
+
+        LOG.debug("scenario: fail with service path present, no writeOnlyTransaction");
+        final List<ServiceChain> serviceChains = Collections.singletonList(new ServiceChainBuilder()
+                .setServicePath(Collections.singletonList(new ServicePathBuilder()
+                        .setServicePathId(42L)
+                        .build()))
+                .build());
+        Assert.assertFalse(PolicyWriterUtil.removeServicePaths(serviceChains, NODE_ID, dataBroker));
+
+        LOG.debug("scenario: fail with service path present, available writeOnlyTransaction, no submit future");
+        PowerMockito.stub(PowerMockito.method(NetconfTransactionCreator.class, "netconfWriteOnlyTransaction")).toReturn(wTxOptional);
+        Assert.assertTrue(PolicyWriterUtil.removeServicePaths(serviceChains, NODE_ID, dataBroker));
+
+        LOG.debug("scenario: fail with service path present, available writeOnlyTransaction, available future");
+        Mockito.when(wTx.submit()).thenReturn(Futures.immediateCheckedFuture(null));
+        Assert.assertTrue(PolicyWriterUtil.removeServicePaths(serviceChains, NODE_ID, dataBroker));
     }
 }
