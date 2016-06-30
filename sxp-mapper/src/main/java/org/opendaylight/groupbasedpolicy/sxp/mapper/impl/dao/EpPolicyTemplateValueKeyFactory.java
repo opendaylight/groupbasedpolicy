@@ -46,7 +46,9 @@ public class EpPolicyTemplateValueKeyFactory {
 
     public EpPolicyTemplateValueKey sortValueKeyLists(final EpPolicyTemplateValueKey existingKey) {
         Collections.sort(existingKey.getEpgId(), epgIdOrdering);
-        Collections.sort(existingKey.getConditionName(), conditionOrdering);
+        if (existingKey.getConditionName() != null) {
+            Collections.sort(existingKey.getConditionName(), conditionOrdering);
+        }
         return existingKey;
     }
 
