@@ -8,15 +8,20 @@
 
 package org.opendaylight.groupbasedpolicy.neutron.ovsdb.util;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.Arrays;
+import java.util.Collections;
 
-import org.junit.Assert;
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.CheckedFuture;
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -45,30 +50,26 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.node.TerminationPoint;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.CheckedFuture;
-
 public class InventoryHelperTest {
 
     private DataBroker dataBroker;
     private ReadOnlyTransaction readTransaction;
     private ReadWriteTransaction writeTransaction;
 
-    CheckedFuture<Optional<OvsdbTerminationPointAugmentation>, ReadFailedException> terminationPointFuture;
-    CheckedFuture<Optional<OvsdbBridgeAugmentation>, ReadFailedException> bridgeFuture;
-    CheckedFuture<Optional<OfOverlayNodeConfig>, ReadFailedException> nodeConfigFuture;
+    private CheckedFuture<Optional<OvsdbTerminationPointAugmentation>, ReadFailedException> terminationPointFuture;
+    private CheckedFuture<Optional<OvsdbBridgeAugmentation>, ReadFailedException> bridgeFuture;
+    private CheckedFuture<Optional<OfOverlayNodeConfig>, ReadFailedException> nodeConfigFuture;
 
-    Optional<OvsdbTerminationPointAugmentation> terminationPointOptional;
-    Optional<OvsdbBridgeAugmentation> bridgeOptional;
-    Optional<OfOverlayNodeConfig> nodeConfigOptional;
+    private Optional<OvsdbTerminationPointAugmentation> terminationPointOptional;
+    private Optional<OvsdbBridgeAugmentation> bridgeOptional;
+    private Optional<OfOverlayNodeConfig> nodeConfigOptional;
 
     private InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid;
-    private String dpid = "FF:FF:FF:FF:FF:FF:FF:FF";
     private String nodeIdString = "nodeIdString";
 
     @SuppressWarnings("unchecked")
     @Before
-    public void initialise() throws Exception {
+    public void init() throws Exception {
         dataBroker = mock(DataBroker.class);
 
         terminationPointFuture = mock(CheckedFuture.class);
@@ -93,13 +94,14 @@ public class InventoryHelperTest {
     }
 
     @Test
-    public void getLongFromDpidTest() {
+    public void testGetLongFromDpid() {
+        String dpid = "FF:FF:FF:FF:FF:FF:FF:FF";
         Long result = InventoryHelper.getLongFromDpid(dpid);
-        Assert.assertEquals(Long.valueOf(281474976710655L), result);
+        assertEquals(Long.valueOf(281474976710655L), result);
     }
 
     @Test
-    public void getInventoryNodeIdStringTest() throws Exception {
+    public void testGetInventoryNodeIdString() throws Exception {
         OvsdbBridgeAugmentation ovsdbBridge = mock(OvsdbBridgeAugmentation.class);
 
         DatapathId datapathId = mock(DatapathId.class);
@@ -107,196 +109,196 @@ public class InventoryHelperTest {
         when(datapathId.getValue()).thenReturn("FF:FF:FF:FF:FF:FF:FF:FF");
 
         String result = InventoryHelper.getInventoryNodeIdString(ovsdbBridge, ovsdbTpIid, dataBroker);
-        Assert.assertEquals("openflow:281474976710655", result);
+        assertEquals("openflow:281474976710655", result);
     }
 
     @SuppressWarnings("unchecked")
     @Test
-    public void getInventoryNodeIdStringTestDpidNull() throws Exception {
+    public void testGetInventoryNodeIdString_DpidNull() throws Exception {
         OvsdbBridgeAugmentation ovsdbBridge = mock(OvsdbBridgeAugmentation.class);
 
-        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
-                bridgeFuture);
+        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(bridgeFuture);
         when(bridgeOptional.isPresent()).thenReturn(true);
         OvsdbBridgeAugmentation bridge = mock(OvsdbBridgeAugmentation.class);
         when(bridgeOptional.get()).thenReturn(bridge);
         when(bridge.getDatapathId()).thenReturn(null);
 
         String result = InventoryHelper.getInventoryNodeIdString(ovsdbBridge, ovsdbTpIid, dataBroker);
-        Assert.assertNull(result);
+        assertNull(result);
     }
 
     @Test
-    public void getInventoryNodeConnectorIdStringTest() {
+    public void testGetInventoryNodeConnectorIdString() {
         String inventoryNodeId = "openflow:inventoryNodeId";
         OvsdbTerminationPointAugmentation ovsdbTp = mock(OvsdbTerminationPointAugmentation.class);
         when(ovsdbTp.getOfport()).thenReturn(65534L);
 
-        String result = InventoryHelper.getInventoryNodeConnectorIdString(inventoryNodeId, ovsdbTp, ovsdbTpIid,
-                dataBroker);
-        Assert.assertEquals("openflow:inventoryNodeId:65534", result);
+        String result =
+                InventoryHelper.getInventoryNodeConnectorIdString(inventoryNodeId, ovsdbTp, ovsdbTpIid, dataBroker);
+        assertEquals("openflow:inventoryNodeId:65534", result);
     }
 
     @Test
-    public void getInventoryNodeConnectorIdStringTestIncorrectFormat() {
+    public void testGetInventoryNodeConnectorIdString_IncorrectFormat() {
         String inventoryNodeId = "inventoryNodeId";
         OvsdbTerminationPointAugmentation ovsdbTp = mock(OvsdbTerminationPointAugmentation.class);
         when(ovsdbTp.getOfport()).thenReturn(65534L);
 
-        String result = InventoryHelper.getInventoryNodeConnectorIdString(inventoryNodeId, ovsdbTp, ovsdbTpIid,
-                dataBroker);
-        Assert.assertNull(result);
+        String result =
+                InventoryHelper.getInventoryNodeConnectorIdString(inventoryNodeId, ovsdbTp, ovsdbTpIid, dataBroker);
+        assertNull(result);
     }
 
     @Test
-    public void getInventoryNodeConnectorIdStringTestOfportNull() throws Exception {
+    public void testGetInventoryNodeConnectorIdString_OfportNull() throws Exception {
         String inventoryNodeId = "openflow:inventoryNodeId";
         OvsdbTerminationPointAugmentation ovsdbTp = mock(OvsdbTerminationPointAugmentation.class);
         when(ovsdbTp.getOfport()).thenReturn(65535L);
 
-        String result = InventoryHelper.getInventoryNodeConnectorIdString(inventoryNodeId, ovsdbTp, ovsdbTpIid,
-                dataBroker);
-        Assert.assertNull(result);
+        String result =
+                InventoryHelper.getInventoryNodeConnectorIdString(inventoryNodeId, ovsdbTp, ovsdbTpIid, dataBroker);
+        assertNull(result);
     }
 
     @SuppressWarnings("unchecked")
     @Test
-    public void getInventoryNodeConnectorIdStringTestOfportOver() throws Exception {
+    public void testGetInventoryNodeConnectorIdString_OfportOver() throws Exception {
         String inventoryNodeId = "openflow:inventoryNodeId";
         OvsdbTerminationPointAugmentation ovsdbTp = mock(OvsdbTerminationPointAugmentation.class);
         when(ovsdbTp.getOfport()).thenReturn(null);
 
-        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
-                terminationPointFuture);
+        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(terminationPointFuture);
         when(terminationPointOptional.isPresent()).thenReturn(true);
         OvsdbTerminationPointAugmentation readOvsdbTp = mock(OvsdbTerminationPointAugmentation.class);
         when(terminationPointOptional.get()).thenReturn(readOvsdbTp);
 
         when(readOvsdbTp.getOfport()).thenReturn(65534L);
 
-        String result = InventoryHelper.getInventoryNodeConnectorIdString(inventoryNodeId, ovsdbTp, ovsdbTpIid,
-                dataBroker);
-        Assert.assertEquals("openflow:inventoryNodeId:65534", result);
+        String result =
+                InventoryHelper.getInventoryNodeConnectorIdString(inventoryNodeId, ovsdbTp, ovsdbTpIid, dataBroker);
+        assertEquals("openflow:inventoryNodeId:65534", result);
     }
 
     @SuppressWarnings("unchecked")
     @Test
-    public void getInventoryNodeConnectorIdStringTestOfportNullAugmentationOfportNull() throws Exception {
+    public void testGetInventoryNodeConnectorIdString_OfportNull_AugmentationOfportNull() throws Exception {
         String inventoryNodeId = "openflow:inventoryNodeId";
         OvsdbTerminationPointAugmentation ovsdbTp = mock(OvsdbTerminationPointAugmentation.class);
         when(ovsdbTp.getOfport()).thenReturn(null);
 
-        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
-                terminationPointFuture);
+        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(terminationPointFuture);
         when(terminationPointOptional.isPresent()).thenReturn(true);
         OvsdbTerminationPointAugmentation readOvsdbTp = mock(OvsdbTerminationPointAugmentation.class);
         when(terminationPointOptional.get()).thenReturn(readOvsdbTp);
         when(readOvsdbTp.getOfport()).thenReturn(null);
 
-        String result = InventoryHelper.getInventoryNodeConnectorIdString(inventoryNodeId, ovsdbTp, ovsdbTpIid,
-                dataBroker);
-        Assert.assertNull(result);
+        String result =
+                InventoryHelper.getInventoryNodeConnectorIdString(inventoryNodeId, ovsdbTp, ovsdbTpIid, dataBroker);
+        assertNull(result);
     }
 
     @SuppressWarnings("unchecked")
     @Test
-    public void getInventoryNodeConnectorIdStringTestOfportNullAugmentationOfportOver() throws Exception {
+    public void testGetInventoryNodeConnectorIdString_OfportNull_AugmentationOfportOver() throws Exception {
         String inventoryNodeId = "openflow:inventoryNodeId";
         OvsdbTerminationPointAugmentation ovsdbTp = mock(OvsdbTerminationPointAugmentation.class);
         when(ovsdbTp.getOfport()).thenReturn(null);
 
-        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
-                terminationPointFuture);
+        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(terminationPointFuture);
         OvsdbTerminationPointAugmentation readOvsdbTp = mock(OvsdbTerminationPointAugmentation.class);
         when(terminationPointOptional.get()).thenReturn(readOvsdbTp);
         when(readOvsdbTp.getOfport()).thenReturn(65535L);
 
-        String result = InventoryHelper.getInventoryNodeConnectorIdString(inventoryNodeId, ovsdbTp, ovsdbTpIid,
-                dataBroker);
-        Assert.assertNull(result);
+        String result =
+                InventoryHelper.getInventoryNodeConnectorIdString(inventoryNodeId, ovsdbTp, ovsdbTpIid, dataBroker);
+        assertNull(result);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Test
-    public void checkOfOverlayConfigTest() throws Exception {
+    public void testCheckOfOverlayConfig() throws Exception {
         AbstractTunnelType abstractTunnelType = mock(AbstractTunnelType.class);
 
-        when(writeTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
-                nodeConfigFuture);
+        when(writeTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(nodeConfigFuture);
         when(nodeConfigOptional.isPresent()).thenReturn(true);
         OfOverlayNodeConfig overlayConfig = mock(OfOverlayNodeConfig.class);
         when(nodeConfigOptional.get()).thenReturn(overlayConfig);
 
         Tunnel tunnel = mock(Tunnel.class);
-        when(overlayConfig.getTunnel()).thenReturn(Arrays.asList(tunnel));
+        when(overlayConfig.getTunnel()).thenReturn(Collections.singletonList(tunnel));
 
         when(abstractTunnelType.getTunnelType()).thenReturn((Class) TunnelTypeVxlan.class);
         when(tunnel.getTunnelType()).thenReturn((Class) TunnelTypeVxlan.class);
 
-        boolean result = InventoryHelper.checkOfOverlayConfig(nodeIdString, Arrays.asList(abstractTunnelType),
-                dataBroker);
-        Assert.assertTrue(result);
+        boolean result = InventoryHelper.checkOfOverlayConfig(nodeIdString,
+                Collections.singletonList(abstractTunnelType), dataBroker);
+        assertTrue(result);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Test
-    public void checkOfOverlayConfigTestTunnelTypeEqualsFalse() throws Exception {
+    public void testCheckOfOverlayConfig_TunnelTypeEqualsFalse() throws Exception {
         AbstractTunnelType abstractTunnelType = mock(AbstractTunnelType.class);
 
-        when(writeTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
-                nodeConfigFuture);
+        when(writeTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(nodeConfigFuture);
         when(nodeConfigOptional.isPresent()).thenReturn(true);
         OfOverlayNodeConfig overlayConfig = mock(OfOverlayNodeConfig.class);
         when(nodeConfigOptional.get()).thenReturn(overlayConfig);
 
         Tunnel tunnel = mock(Tunnel.class);
-        when(overlayConfig.getTunnel()).thenReturn(Arrays.asList(tunnel));
+        when(overlayConfig.getTunnel()).thenReturn(Collections.singletonList(tunnel));
 
         when(abstractTunnelType.getTunnelType()).thenReturn((Class) TunnelTypeVxlan.class);
         when(tunnel.getTunnelType()).thenReturn((Class) TunnelTypeBase.class);
 
-        boolean result = InventoryHelper.checkOfOverlayConfig(nodeIdString, Arrays.asList(abstractTunnelType),
-                dataBroker);
-        Assert.assertFalse(result);
+        boolean result = InventoryHelper.checkOfOverlayConfig(nodeIdString,
+                Collections.singletonList(abstractTunnelType), dataBroker);
+        assertFalse(result);
     }
 
     @SuppressWarnings({"unchecked", "unused"})
     @Test
-    public void checkOfOverlayConfigTestConfigNull() throws Exception {
+    public void testCheckOfOverlayConfig_ConfigNull() throws Exception {
         AbstractTunnelType abstractTunnelType = mock(AbstractTunnelType.class);
 
-        when(writeTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
-                nodeConfigFuture);
+        when(writeTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(nodeConfigFuture);
         when(nodeConfigOptional.isPresent()).thenReturn(true);
         OfOverlayNodeConfig overlayConfig = mock(OfOverlayNodeConfig.class);
         when(nodeConfigOptional.get()).thenReturn(null);
 
-        boolean result = InventoryHelper.checkOfOverlayConfig(nodeIdString, Arrays.asList(abstractTunnelType),
-                dataBroker);
-        Assert.assertFalse(result);
+        boolean result = InventoryHelper.checkOfOverlayConfig(nodeIdString,
+                Collections.singletonList(abstractTunnelType), dataBroker);
+        assertFalse(result);
     }
 
     @SuppressWarnings("unchecked")
     @Test
-    public void checkOfOverlayConfigTestTunnelNull() throws Exception {
+    public void testCheckOfOverlayConfig_TunnelNull() throws Exception {
         AbstractTunnelType abstractTunnelType = mock(AbstractTunnelType.class);
 
-        when(writeTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
-                nodeConfigFuture);
+        when(writeTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(nodeConfigFuture);
         when(nodeConfigOptional.isPresent()).thenReturn(true);
         OfOverlayNodeConfig overlayConfig = mock(OfOverlayNodeConfig.class);
         when(nodeConfigOptional.get()).thenReturn(overlayConfig);
 
         when(overlayConfig.getTunnel()).thenReturn(null);
 
-        boolean result = InventoryHelper.checkOfOverlayConfig(nodeIdString, Arrays.asList(abstractTunnelType),
-                dataBroker);
-        Assert.assertFalse(result);
+        boolean result = InventoryHelper.checkOfOverlayConfig(nodeIdString,
+                Collections.singletonList(abstractTunnelType), dataBroker);
+        assertFalse(result);
     }
 
     @SuppressWarnings("unchecked")
     @Test
-    public void addOfOverlayExternalPortTest() throws Exception {
+    public void testAddOfOverlayExternalPort() throws Exception {
         NodeId nodeId = mock(NodeId.class);
         NodeConnectorId ncId = mock(NodeConnectorId.class);
         ReadWriteTransaction transaction = mock(ReadWriteTransaction.class);
@@ -310,31 +312,31 @@ public class InventoryHelperTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void getOfOverlayConfigTest() throws Exception {
-        when(writeTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
-                nodeConfigFuture);
+    public void testGetOfOverlayConfig() throws Exception {
+        when(writeTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(nodeConfigFuture);
         when(nodeConfigOptional.isPresent()).thenReturn(true);
         OfOverlayNodeConfig overlayConfig = mock(OfOverlayNodeConfig.class);
         when(nodeConfigOptional.get()).thenReturn(overlayConfig);
 
-        Assert.assertEquals(overlayConfig, InventoryHelper.getOfOverlayConfig(nodeIdString, dataBroker));
+        assertEquals(overlayConfig, InventoryHelper.getOfOverlayConfig(nodeIdString, dataBroker));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Test
-    public void updateOfOverlayConfigTest() throws Exception {
+    public void testUpdateOfOverlayConfig() throws Exception {
         IpAddress ip = mock(IpAddress.class);
         String nodeConnectorIdString = "nodeConnectorIdString";
         AbstractTunnelType tunnelType = mock(AbstractTunnelType.class);
 
-        when(writeTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
-                nodeConfigFuture);
+        when(writeTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(nodeConfigFuture);
         when(nodeConfigOptional.isPresent()).thenReturn(true);
         OfOverlayNodeConfig overlayConfig = mock(OfOverlayNodeConfig.class);
         when(nodeConfigOptional.get()).thenReturn(overlayConfig);
 
         Tunnel tunnel = mock(Tunnel.class);
-        when(overlayConfig.getTunnel()).thenReturn(Arrays.asList(tunnel));
+        when(overlayConfig.getTunnel()).thenReturn(Collections.singletonList(tunnel));
         when(tunnelType.getTunnelType()).thenReturn((Class) TunnelTypeVxlan.class);
         when(tunnel.getTunnelType()).thenReturn((Class) TunnelTypeVxlan.class);
         when(tunnel.getKey()).thenReturn(mock(TunnelKey.class));
@@ -347,7 +349,7 @@ public class InventoryHelperTest {
     }
 
     @Test
-    public void updateOfOverlayConfigTestNullParameters() throws Exception {
+    public void testUpdateOfOverlayConfig_NullParameters() throws Exception {
         IpAddress ip = mock(IpAddress.class);
         String nodeConnectorIdString = "nodeConnectorIdString";
         AbstractTunnelType tunnelType = mock(AbstractTunnelType.class);
@@ -360,13 +362,13 @@ public class InventoryHelperTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void updateOfOverlayConfigTestOfConfigNull() throws Exception {
+    public void testUpdateOfOverlayConfig_OfConfigNull() throws Exception {
         IpAddress ip = mock(IpAddress.class);
         String nodeConnectorIdString = "nodeConnectorIdString";
         AbstractTunnelType tunnelType = mock(AbstractTunnelType.class);
 
-        when(writeTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
-                nodeConfigFuture);
+        when(writeTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(nodeConfigFuture);
         when(nodeConfigOptional.isPresent()).thenReturn(false);
 
         CheckedFuture<Void, TransactionCommitFailedException> submitFuture = mock(CheckedFuture.class);
@@ -378,13 +380,14 @@ public class InventoryHelperTest {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Test
-    public void removeTunnelsOfOverlayConfigTestTunnelTypeEqualsFalse() throws Exception {
+    public void testRemoveTunnelsOfOverlayConfig_TunnelTypeEqualsFalse() throws Exception {
         AbstractTunnelType tunnelType = mock(AbstractTunnelType.class);
 
         ReadWriteTransaction transaction = mock(ReadWriteTransaction.class);
         when(dataBroker.newReadWriteTransaction()).thenReturn(transaction);
         CheckedFuture<Optional<OfOverlayNodeConfig>, ReadFailedException> checkedFuture = mock(CheckedFuture.class);
-        when(transaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(checkedFuture);
+        when(transaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(checkedFuture);
         Optional<OfOverlayNodeConfig> optionalOverlayConfig = mock(Optional.class);
         when(checkedFuture.checkedGet()).thenReturn(optionalOverlayConfig);
         when(optionalOverlayConfig.isPresent()).thenReturn(true);
@@ -392,11 +395,11 @@ public class InventoryHelperTest {
         when(optionalOverlayConfig.get()).thenReturn(overlayConfig);
 
         Tunnel overlayTunnel = mock(Tunnel.class);
-        when(overlayConfig.getTunnel()).thenReturn(Arrays.<Tunnel>asList(overlayTunnel));
+        when(overlayConfig.getTunnel()).thenReturn(Collections.singletonList(overlayTunnel));
         when(tunnelType.getTunnelType()).thenReturn((Class) TunnelTypeVxlan.class);
         when(overlayTunnel.getTunnelType()).thenReturn(null);
 
-        InventoryHelper.removeTunnelsOfOverlayConfig(nodeIdString, Arrays.asList(tunnelType), dataBroker);
-        verify(writeTransaction,never()).submit();
+        InventoryHelper.removeTunnelsOfOverlayConfig(nodeIdString, Collections.singletonList(tunnelType), dataBroker);
+        verify(writeTransaction, never()).submit();
     }
 }

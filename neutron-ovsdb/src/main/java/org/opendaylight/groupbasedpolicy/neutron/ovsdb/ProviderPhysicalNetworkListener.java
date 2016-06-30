@@ -47,27 +47,36 @@ public class ProviderPhysicalNetworkListener extends DataTreeChangeHandler<Provi
     @Override
     protected void onWrite(DataObjectModification<ProviderPhysicalNetworkAsL2FloodDomain> rootNode,
             InstanceIdentifier<ProviderPhysicalNetworkAsL2FloodDomain> rootIdentifier) {
-        L2FloodDomainId l2FdId = rootNode.getDataAfter().getL2FloodDomainId();
-        TenantId tenantId = rootNode.getDataAfter().getTenantId();
-        String segmentationId = rootNode.getDataAfter().getSegmentationId();
-        augmentSegmentationToFloodDomain(tenantId, l2FdId, segmentationId);
+        ProviderPhysicalNetworkAsL2FloodDomain dataAfter = rootNode.getDataAfter();
+        if (dataAfter != null) {
+            L2FloodDomainId l2FdId = dataAfter.getL2FloodDomainId();
+            TenantId tenantId = dataAfter.getTenantId();
+            String segmentationId = dataAfter.getSegmentationId();
+            augmentSegmentationToFloodDomain(tenantId, l2FdId, segmentationId);
+        }
     }
 
     @Override
     protected void onDelete(DataObjectModification<ProviderPhysicalNetworkAsL2FloodDomain> rootNode,
             InstanceIdentifier<ProviderPhysicalNetworkAsL2FloodDomain> rootIdentifier) {
-        L2FloodDomainId l2FdId = rootNode.getDataBefore().getL2FloodDomainId();
-        TenantId tenantId = rootNode.getDataBefore().getTenantId();
-        augmentSegmentationToFloodDomain(tenantId, l2FdId, null);
+        ProviderPhysicalNetworkAsL2FloodDomain dataBefore = rootNode.getDataBefore();
+        if (dataBefore != null) {
+            L2FloodDomainId l2FdId = dataBefore.getL2FloodDomainId();
+            TenantId tenantId = dataBefore.getTenantId();
+            augmentSegmentationToFloodDomain(tenantId, l2FdId, null);
+        }
     }
 
     @Override
     protected void onSubtreeModified(DataObjectModification<ProviderPhysicalNetworkAsL2FloodDomain> rootNode,
             InstanceIdentifier<ProviderPhysicalNetworkAsL2FloodDomain> rootIdentifier) {
-        L2FloodDomainId l2FdId = rootNode.getDataAfter().getL2FloodDomainId();
-        TenantId tenantId = rootNode.getDataAfter().getTenantId();
-        String segmentationId = rootNode.getDataAfter().getSegmentationId();
-        augmentSegmentationToFloodDomain(tenantId, l2FdId, segmentationId);
+        ProviderPhysicalNetworkAsL2FloodDomain dataAfter = rootNode.getDataAfter();
+        if (dataAfter != null) {
+            L2FloodDomainId l2FdId = dataAfter.getL2FloodDomainId();
+            TenantId tenantId = dataAfter.getTenantId();
+            String segmentationId = dataAfter.getSegmentationId();
+            augmentSegmentationToFloodDomain(tenantId, l2FdId, segmentationId);
+        }
     }
 
     private void augmentSegmentationToFloodDomain(TenantId tenantId, L2FloodDomainId l2FdId, String segmentationId) {

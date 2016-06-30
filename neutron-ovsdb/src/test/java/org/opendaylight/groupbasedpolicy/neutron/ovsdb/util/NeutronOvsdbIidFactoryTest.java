@@ -24,8 +24,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gb
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.endpoints.by.ports.EndpointByPort;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.ExternalGatewaysAsL3Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.external.gateways.as.l3.endpoints.ExternalGatewayAsL3Endpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbNodeAugmentation;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
@@ -34,50 +36,82 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier.PathArgument;
 
 public class NeutronOvsdbIidFactoryTest {
 
+    private static final String OVSDB_TOPOLOGY_ID = "topologyId";
+    private static final String UUID = "e0bb2cf8-8855-434e-839b-d2e59e045218";
+
     @Test
-    public void ovsdbNodeAugmentationIidTest() {
-        final String ovsdbTopologyId = "topologyId";
-        InstanceIdentifier<OvsdbNodeAugmentation> id = NeutronOvsdbIidFactory.ovsdbNodeAugmentationIid(new TopologyId(ovsdbTopologyId));
-        assertNotNull(id);
+    public void test_OvsdbNodeAugmentationIid() {
+        InstanceIdentifier<OvsdbNodeAugmentation> iid =
+                NeutronOvsdbIidFactory.ovsdbNodeAugmentationIid(new TopologyId(OVSDB_TOPOLOGY_ID));
+        assertNotNull(iid);
+
         Class<?>[] expectedTypes = {NetworkTopology.class, Topology.class, Node.class, OvsdbNodeAugmentation.class};
-        assertPathArgumentTypes(id.getPathArguments(), expectedTypes);
-        assertEquals(OvsdbNodeAugmentation.class, id.getTargetType());
-        assertTrue(id.isWildcarded());
-        assertEquals(ovsdbTopologyId, id.firstKeyOf(Topology.class).getTopologyId().getValue());
+        assertPathArgumentTypes(iid.getPathArguments(), expectedTypes);
+        assertEquals(OvsdbNodeAugmentation.class, iid.getTargetType());
+        assertTrue(iid.isWildcarded());
+        assertEquals(OVSDB_TOPOLOGY_ID, iid.firstKeyOf(Topology.class).getTopologyId().getValue());
     }
 
     @Test
-    public void neutronGbpExternalGatewayIidWildcardTest() {
-        InstanceIdentifier<ExternalGatewayAsL3Endpoint> id = NeutronOvsdbIidFactory.neutronGbpExternalGatewayIidWildcard();
-        assertNotNull(id);
-        Class<?>[] expectedTypes = {Mappings.class, NeutronByGbpMappings.class,
-                ExternalGatewaysAsL3Endpoints.class, ExternalGatewayAsL3Endpoint.class};
-        assertPathArgumentTypes(id.getPathArguments(), expectedTypes);
-        assertEquals(ExternalGatewayAsL3Endpoint.class, id.getTargetType());
-        assertTrue(id.isWildcarded());
+    public void test_NeutronGbpExternalGatewayIidWildcard() {
+        InstanceIdentifier<ExternalGatewayAsL3Endpoint> iid =
+                NeutronOvsdbIidFactory.neutronGbpExternalGatewayIidWildcard();
+        assertNotNull(iid);
+        Class<?>[] expectedTypes = {Mappings.class, NeutronByGbpMappings.class, ExternalGatewaysAsL3Endpoints.class,
+                ExternalGatewayAsL3Endpoint.class};
+        assertPathArgumentTypes(iid.getPathArguments(), expectedTypes);
+        assertEquals(ExternalGatewayAsL3Endpoint.class, iid.getTargetType());
+        assertTrue(iid.isWildcarded());
     }
 
     @Test
-    public void endpointByPortIidTest() {
-        final String portId = "e0bb2cf8-8855-434e-839b-d2e59e045218";
-        InstanceIdentifier<EndpointByPort> id = NeutronOvsdbIidFactory.endpointByPortIid(new UniqueId(portId));
-        assertNotNull(id);
-        Class<?>[] expectedTypes = {Mappings.class, GbpByNeutronMappings.class,
-                EndpointsByPorts.class, EndpointByPort.class};
-        assertPathArgumentTypes(id.getPathArguments(), expectedTypes);
-        assertEquals(EndpointByPort.class, id.getTargetType());
-        assertFalse(id.isWildcarded());
-        assertEquals(portId, id.firstKeyOf(EndpointByPort.class).getPortId().getValue());
+    public void test_EndpointByPortIid() {
+        String portId = UUID;
+        InstanceIdentifier<EndpointByPort> iid = NeutronOvsdbIidFactory.endpointByPortIid(new UniqueId(portId));
+        assertNotNull(iid);
+        Class<?>[] expectedTypes =
+                {Mappings.class, GbpByNeutronMappings.class, EndpointsByPorts.class, EndpointByPort.class};
+        assertPathArgumentTypes(iid.getPathArguments(), expectedTypes);
+        assertEquals(EndpointByPort.class, iid.getTargetType());
+        assertFalse(iid.isWildcarded());
+        assertEquals(portId, iid.firstKeyOf(EndpointByPort.class).getPortId().getValue());
     }
 
     @Test
-    public void neutronGbpMappingsIidWildcardTest() {
-        InstanceIdentifier<NeutronByGbpMappings> id = NeutronOvsdbIidFactory.neutronGbpMappingsIidWildcard();
-        assertNotNull(id);
+    public void test_NeutronGbpMappingsIidWildcard() {
+        InstanceIdentifier<NeutronByGbpMappings> iid = NeutronOvsdbIidFactory.neutronGbpMappingsIidWildcard();
+        assertNotNull(iid);
+        
         Class<?>[] expectedTypes = {Mappings.class, NeutronByGbpMappings.class};
-        assertPathArgumentTypes(id.getPathArguments(), expectedTypes);
-        assertEquals(NeutronByGbpMappings.class, id.getTargetType());
-        assertFalse(id.isWildcarded());
+        assertPathArgumentTypes(iid.getPathArguments(), expectedTypes);
+        assertEquals(NeutronByGbpMappings.class, iid.getTargetType());
+        assertFalse(iid.isWildcarded());
+    }
+
+    @Test
+    public void test_NodeIid_topology() {
+        InstanceIdentifier<Node> iid =
+                NeutronOvsdbIidFactory.nodeIid(new TopologyId(OVSDB_TOPOLOGY_ID), new NodeId(UUID));
+        assertNotNull(iid);
+        Class<?>[] expectedTypes = {NetworkTopology.class, Topology.class, Node.class};
+        assertPathArgumentTypes(iid.getPathArguments(), expectedTypes);
+        assertEquals(Node.class, iid.getTargetType());
+        assertFalse(iid.isWildcarded());
+    }
+
+    @Test
+    public void test_NodeIid_inventory() {
+        org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId nodeId =
+                new org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId(UUID);
+        InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node> iid =
+                NeutronOvsdbIidFactory.nodeIid(nodeId);
+        assertNotNull(iid);
+        Class<?>[] expectedTypes =
+                {Nodes.class, org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node.class};
+        assertPathArgumentTypes(iid.getPathArguments(), expectedTypes);
+        assertEquals(org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node.class,
+                iid.getTargetType());
+        assertFalse(iid.isWildcarded());
     }
 
     private static void assertPathArgumentTypes(Iterable<PathArgument> pathArguments, Class<?>[] expectedTypes) {
@@ -85,7 +119,7 @@ public class NeutronOvsdbIidFactoryTest {
         Iterator<PathArgument> it = pathArguments.iterator();
         for (int i = 0; i < expectedTypes.length; ++i) {
             assertTrue("Next path argument expected.", it.hasNext());
-            assertEquals("Unexpected path argument type.", expectedTypes[i] , it.next().getType());
+            assertEquals("Unexpected path argument type.", expectedTypes[i], it.next().getType());
         }
     }
 }

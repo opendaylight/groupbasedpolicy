@@ -14,13 +14,15 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.CheckedFuture;
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -57,9 +59,6 @@ import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.CheckedFuture;
-
 public class TerminationPointDataChangeListenerTest {
 
     private TerminationPointDataChangeListener listener;
@@ -85,7 +84,7 @@ public class TerminationPointDataChangeListenerTest {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Before
-    public void initialise() throws Exception {
+    public void init() throws Exception {
         dataBroker = mock(DataBroker.class);
         epService = mock(EndpointService.class);
         registration = mock(ListenerRegistration.class);
@@ -103,13 +102,13 @@ public class TerminationPointDataChangeListenerTest {
         ovsdbTp = mock(OvsdbTerminationPointAugmentation.class);
         when(ovsdbTp.getInterfaceType()).thenReturn((Class) Object.class);
         InterfaceExternalIds externalId = mock(InterfaceExternalIds.class);
-        when(ovsdbTp.getInterfaceExternalIds()).thenReturn(Arrays.asList(externalId));
+        when(ovsdbTp.getInterfaceExternalIds()).thenReturn(Collections.singletonList(externalId));
         when(externalId.getExternalIdKey()).thenReturn("iface-id");
         when(externalId.getExternalIdValue()).thenReturn(UUID.randomUUID().toString());
 
-        dataMap = new HashMap<InstanceIdentifier<?>, DataObject>();
+        dataMap = new HashMap<>();
         dataMap.put(ovsdbTpIid, ovsdbTp);
-        dataSet = new HashSet<InstanceIdentifier<?>>(Arrays.asList(ovsdbTpIid));
+        dataSet = new HashSet<InstanceIdentifier<?>>(Collections.singletonList(ovsdbTpIid));
 
         readTransaction = mock(ReadOnlyTransaction.class);
         when(dataBroker.newReadOnlyTransaction()).thenReturn(readTransaction);
@@ -181,14 +180,14 @@ public class TerminationPointDataChangeListenerTest {
     }
 
     @Test
-    public void constructorTest() throws Exception {
+    public void testConstructor() throws Exception {
         listener.close();
         verify(registration).close();
     }
 
     @SuppressWarnings("unchecked")
     @Test
-    public void onDataChangedTestCreation() {
+    public void testOnDataChanged_Creation() {
         when(change.getCreatedData()).thenReturn(dataMap);
         when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
                 ovsdbBridgeFuture)
@@ -204,7 +203,7 @@ public class TerminationPointDataChangeListenerTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void onDataChangedTestCreationExternalIdNull() {
+    public void testOnDataChanged_CreationExternalIdNull() {
         when(change.getCreatedData()).thenReturn(dataMap);
         when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
                 ovsdbBridgeFuture).thenReturn(nodeFuture);
@@ -216,7 +215,7 @@ public class TerminationPointDataChangeListenerTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void onDataChangedTestUpdate() {
+    public void testOnDataChanged_Update() {
         when(change.getUpdatedData()).thenReturn(dataMap);
         when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
                 ovsdbBridgeFuture)
@@ -231,7 +230,7 @@ public class TerminationPointDataChangeListenerTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void onDataChangedTestRemoval() {
+    public void testOnDataChanged_Removal() {
         when(change.getRemovedPaths()).thenReturn(dataSet);
         when(change.getOriginalData()).thenReturn(dataMap);
         when(readWriteTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
