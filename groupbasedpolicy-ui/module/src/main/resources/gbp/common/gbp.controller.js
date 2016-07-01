@@ -19,11 +19,11 @@ define([
         $scope.activeObject = null;
         $scope.endpoints = EndpointsListService.createList();
         $scope.endpointSgtList = SxpMappingListService.createList();
+        $scope.innerObj = {};
         $scope.rootTenant = null;
         $scope.rootTenants = TenantListService.createList();
         $scope.resolvedPolicy = {};
-        $scope.selectedNode = {};
-        $scope.sidePanelObject = {};
+        $scope.sidePanelObject = null;
         $scope.sidePanelPage = false;
         $scope.sidePanelPageEndpoint = false;
         $scope.stateUrl = null;
@@ -39,21 +39,12 @@ define([
         $scope.openSfcDialog = openSfcDialog;
         $scope.openSidePanel = openSidePanel;
         $scope.setRootTenant = setRootTenant;
-        $scope.toggleExpanded = toggleExpanded;
-        $scope.openSidePanelContract = openSidePanelContract;
-        $scope.openSidePanelChild = openSidePanelChild;
-        $scope.deselectEpg = deselectEpg;
-        $scope.deselectContract = deselectContract;
-        $scope.openSidePanelTpl = openSidePanelTpl;
-        $scope.getObjectsCount = getObjectsCount;
-        $scope.expandAll = expandAll;
-        $scope.collapseAll = collapseAll;
+        $scope.fillTopologyData = fillTopologyData;
         $scope.highlightNode = highlightNode;
         $scope.highlightLink = highlightLink;
         $scope.fadeAll = fadeAll;
         $scope.rootOpenEndpointDialog = rootOpenEndpointDialog;
         $scope.rootDeleteEndpointDialog = rootDeleteEndpointDialog;
-        $scope.getEndpointsList = getEndpointsList;
 
         RootGbpService.setMainClass();
         init();
@@ -75,18 +66,9 @@ define([
         function closeSidePanel() {
             if($scope.sidePanelPage) {
                 $scope.sidePanelPage = false;
+                $scope.sidePanelObject = null;
                 $scope.fadeAll();
             }
-        }
-
-        /**
-         *
-         * @param arr
-         */
-        function collapseAll(arr) {
-            arr.forEach(function (element) {
-                element.expanded = false;
-            });
         }
 
         /**
@@ -97,13 +79,14 @@ define([
          * @param tenant
          * @returns {{id: string, source: *, target: *, tenant: *}}
          */
-        function createLink( linkId) {
+        function createLink( linkId, type) {
             var linkIdParts = linkId.split('_');
             return {
                 'id': linkId,
                 'source': linkIdParts[1],
                 'target': linkIdParts[2],
-                'tenant': $scope.rootTenant
+                'tenant': $scope.rootTenant,
+                'type': type,
             };
         }
 
@@ -118,53 +101,8 @@ define([
                 'id': nodeName,
                 'tenantId': $scope.rootTenant,
                 'node-id': nodeName,
-                'label': nodeName
+                'label': nodeName,
             };
-        }
-
-        /**
-         *
-         */
-        function deselectContract() {
-            $scope.fadeAll();
-            $scope.sidePanelPage = 'resolved-policy/contract-sidepanel';
-
-            $scope.sidePanelObject = Object.keys($scope.resolvedPolicy.contracts).map(function (k) {
-                var ob = $scope.resolvedPolicy.contracts[k];
-                ob.linkId = k;
-
-                return ob;
-            });
-
-            $scope.selectedNode = null;
-            $scope.activeObject = 'contract';
-        }
-
-        /**
-         *
-         */
-        function deselectEpg() {
-            $scope.fadeAll();
-            $scope.sidePanelPage = 'resolved-policy/epg-sidepanel';
-
-            $scope.sidePanelObject = Object.keys($scope.resolvedPolicy.epgs).map(function (k) {
-                var ob = $scope.resolvedPolicy.epgs[k];
-                ob.id = k;
-
-                return ob;
-            });
-            $scope.selectedNode = null;
-            $scope.activeObject = 'epg';
-        }
-
-        /**
-         *
-         * @param arr
-         */
-        function expandAll(arr) {
-            arr.forEach(function (element) {
-                element.expanded = true;
-            });
         }
 
         /**
@@ -179,32 +117,18 @@ define([
          */
         function fillTopologyData() {
             var tempTopoData = {nodes: [], links: []};
-
             $scope.resolvedPolicy = resolvedPolicies.aggregateResolvedPolicies();
-            console.log('resolved and aggregated', $scope.resolvedPolicy);
 
             tempTopoData.nodes = Object.keys($scope.resolvedPolicy.epgs).map(function (key) {
                 return createNode(key);
             });
 
             tempTopoData.links = Object.keys($scope.resolvedPolicy.contracts).map(function (key) {
-                return createLink(key);
+                return createLink(key, $scope.resolvedPolicy.contracts[key].type);
             });
 
             $scope.topologyData = tempTopoData;
             $scope.topologyLoaded = true;
-        }
-
-        /**
-         *
-         * @param obj
-         * @returns {*}
-         */
-        function getObjectsCount(obj) {
-            if(obj)
-                return Object.keys(obj).length;
-            else
-                return 0;
         }
 
         function getResolvedPolicies() {
@@ -237,6 +161,8 @@ define([
             $scope.rootTenants.get('config');
             $state.go('main.gbp.index.resolvedPolicy');
             $scope.endpointSgtList.get();
+
+
         }
 
         /**
@@ -262,80 +188,21 @@ define([
          * Sets '$scope.sidePanelPage' to true. This variable is watched in index.tpl.html template
          * and opens/closes side panel
          */
-        function openSidePanel(page, object, cbk) {
-            var samePage = page === $scope.sidePanelPage;
-
-            $scope.selectedNode = object;
-
-            $scope.sidePanelCbk = cbk;
+        function openSidePanel(page, object, type, element) {
             $scope.sidePanelPage = page;
             $scope.sidePanelObject = object;
 
-            if ( samePage &&  $scope.sidePanelCbk) {
-                $scope.sidePanelCbk();
-            }
-        }
-
-        /**
-         *
-         * @param idElement
-         */
-        function openSidePanelContract(idElement) {
-            var obj = $filter('filter')(Object.keys($scope.resolvedPolicy.contracts).map(function (k) {
-                var obj = $scope.resolvedPolicy.contracts[k];
-                obj.linkId = k;
-
-                return obj;
-            }), { 'contract-id': idElement });
-
-            $scope.sidePanelPage = 'resolved-policy/contract-sidepanel';
-            $scope.sidePanelObject = obj[0];
-            $scope.selectedNode = obj[0];
-            $scope.activeObject = 'contract';
-
-            NextTopologyService.highlightLink($rootScope.nxTopology, obj[0].linkId);
-        }
-
-        /**
-         * .
-         * @param index
-         * @param type
-         */
-        function openSidePanelChild(index, type) {
-            switch (type) {
-            case 'subject':
-                $scope.sidePanelPage = 'resolved-policy/subject-sidepanel';
-                $scope.subjectIndex = index;
-                break;
-            case 'clause':
-                $scope.sidePanelPage = 'resolved-policy/clause-sidepanel';
-                $scope.clauseIndex = index;
-                break;
-            case 'rule':
-                $scope.sidePanelPage = 'resolved-policy/rule-sidepanel';
-                $scope.ruleIndex = index;
-                break;
-            }
-        }
-
-        /**
-         *
-         * @param tpl
-         */
-        function openSidePanelTpl(tpl) {
-            switch (tpl) {
-            case 'contract':
-                $scope.sidePanelPage = 'resolved-policy/contract-sidepanel';
-                break;
-            case 'subject':
-                $scope.sidePanelPage = 'resolved-policy/subject-sidepanel';
-                break;
-            case 'clause':
-                $scope.sidePanelPage = 'resolved-policy/clause-sidepanel';
-                break;
-            case 'rule':
-                $scope.sidePanelPage = 'resolved-policy/rule-sidepanel';
-                break;
+            switch(type) {
+                case 'subject':
+                    $scope.innerObj.subject = element;
+                    break;
+                case 'clause':
+                    $scope.innerObj.clause = element;
+                    break;
+                case 'rule':
+                    $scope.innerObj.rule = element;
+                    break;
+                default:
             }
         }
 
@@ -346,12 +213,12 @@ define([
             $scope.broadcastFromRoot('ROOT_TENANT_CHANGED');
 
             if ($scope.stateUrl.startsWith('/resolved-policy')) {
-                getResolvedPolicies()
-                if($scope.sidePanelPage) {
-                    if($scope.activeObject == 'epg')
-                        deselectEpg();
-                    else if($scope.activeObject == 'contract')
-                        deselectContract();
+                getResolvedPolicies();
+                if($scope.sidePanelObject) {
+                    if($scope.sidePanelObject['contract-id'])
+                        openSidePanel('resolved-policy/sidepanel/views/contract-list-sidepanel');
+                    else
+                        openSidePanel('resolved-policy/sidepanel/views/epg-list-sidepanel');
                 }
             }
         }
@@ -365,17 +232,7 @@ define([
             closeSidePanel();
 
             if ($scope.stateUrl.startsWith('/resolved-policy')) {
-                getResolvedPolicies()
-            }
-        }
-
-        /**
-         *
-         * @param element
-         */
-        function toggleExpanded(element) {
-            if (typeof element !== 'string') {
-                element.expanded = !element.expanded;
+                getResolvedPolicies();
             }
         }
 
@@ -403,17 +260,13 @@ define([
 
             $mdDialog.show(confirm).then(function () {
                 endpointData.deleteEndpoint(function () {
-                    getEndpointsList();
+                    $scope.$broadcast('endpointChanged');
                 });
             }, function () {
 
             });
         }
 
-        function getEndpointsList() {
-            $scope.endpoints.clearData();
-            $scope.endpoints.getByEpg($scope.selectedNode.data.id);
-        }
         /* event listeners */
         /**
          * Event fired after content loaded, setStateUrl function is called to fill stateUrl method

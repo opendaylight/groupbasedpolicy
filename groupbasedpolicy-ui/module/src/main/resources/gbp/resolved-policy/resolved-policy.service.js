@@ -3,9 +3,9 @@ define([], function() {
 
     angular.module('app.gbp').service('ResolvedPolicyService', ResolvedPolicyService);
 
-    ResolvedPolicyService.$inject = ['Restangular'];
+    ResolvedPolicyService.$inject = [];
 
-    function ResolvedPolicyService(Restangular) {
+    function ResolvedPolicyService() {
         /* methods */
         this.createObject = createObject;
 
@@ -23,7 +23,8 @@ define([], function() {
                 this.data['consumer-epg-id'] = data['consumer-epg-id'];
                 this.data['provider-tenant-id'] = data['provider-tenant-id'];
                 this.data['provider-epg-id'] = data['provider-epg-id'];
-                this.data['policy-rule-group-with-endpoint-constraints'] = data['policy-rule-group-with-endpoint-constraints'];
+                this.data['policy-rule-group-with-endpoint-constraints'] =
+                    data['policy-rule-group-with-endpoint-constraints'];
             }
 
 

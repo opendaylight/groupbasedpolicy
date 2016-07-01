@@ -10,17 +10,6 @@ define([
     function SfcTopologyController($filter, $mdDialog, $scope, chainName, SfcService) {
         /* properties */
         $scope.chain = SfcService.createObject({name: chainName});
-        $scope.topologyDataSfc = {nodes:[], links:[]};
-        $scope.cbkFunctionsSfc = {
-            clickNode: function(node){
-
-            },
-            clickLink: function(link){
-
-            },
-            topologyGenerated: function(){
-            }
-        };
 
         /* methods */
         $scope.closeDialog = closeDialog;
@@ -38,27 +27,40 @@ define([
             $mdDialog.cancel();
         }
 
-        function fillTopologyDataSfc() {
-            var topoData = {nodes:[], links:[]};
-            $scope.chain.data['sfc-service-function'].forEach(function(sf) {
-                topoData.nodes.push({id: sf.name, 'node-id': sf.name, label: sf.name, type: sf.name});
-            })
-
-            $scope.topologyDataSfc = topoData;
+        function nodeTooltip() {
+            nx.define('MyNodeTooltip', nx.ui.Component, {
+                properties: {
+                    node: {},
+                    topology: {},
+                },
+                view: {
+                    content: [{
+                        tag: 'p',
+                        content: [{
+                            tag: 'label',
+                            content: '{#node.model.data.type}',
+                        }],
+                    }],
+                },
+            });
         }
 
         $scope.viewTopology = function() {
+            nodeTooltip();
             $scope.topologySfc = new nx.graphic.Topology({
                 height: 400,
                 width: 600,
                 scalable: true,
-                theme:'blue',
-                enableGradualScaling:true,
+                theme: 'blue',
+                enableGradualScaling: true,
                 nodeConfig: {
                     color: '#0386d2',
-                    label: 'model.label',
+                    //label: 'model.label',
+                    label: function (vertex) {
+                        return vertex.get().label + ' (' + vertex.get().type + ')';
+                    },
                     scale: 'model.scale',
-                    iconType: function(vertex) {
+                    iconType: function (vertex) {
                         var type = vertex.get().type;
                         switch (type) {
                             case 'firewall':
@@ -70,20 +72,21 @@ define([
                             default:
                                 return 'unknown';
                         }
-                    }
+                    },
                 },
                 linkConfig: {
                     label: 'model.label',
                     linkType: 'parallel',
                     color: '#0386d2',
-                    width: 5
+                    width: 5,
                 },
                 showIcon: true,
                 enableSmartNode: false,
                 tooltipManagerConfig: {
+                    showLinkTooltip: false,
                     showNodeTooltip: false,
-                    showLinkTooltip: false
-                }
+                    //nodeTooltipContentClass: 'MyNodeTooltip',
+                },
             });
             $scope.app =  new nx.ui.Application;
 
@@ -95,19 +98,19 @@ define([
                     id: sf.name,
                     label: sf.name,
                     type: SfcService.getSfTypeShort(sf.type),
-                    x: 100*(index+1),
-                    y: 400
+                    x: 100 * (index + 1),
+                    y: 400,
                 });
 
                 index>0 && links.push({
-                    source: index-1,
-                    target: index
+                    source: index - 1,
+                    target: index,
                 });
             })
 
             $scope.topologySfc.data({
                 nodes: nodes,
-                links: links
+                links: links,
             });
 
             $scope.app.container(document.getElementById('next-vpp-topo'));

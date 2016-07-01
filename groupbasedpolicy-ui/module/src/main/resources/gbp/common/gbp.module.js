@@ -37,6 +37,10 @@ define([
         NavHelperProvider.addControllerUrl('app/gbp/policy/policy.controller');
         NavHelperProvider.addControllerUrl('app/gbp/resolved-policy/resolved-policy.controller');
         NavHelperProvider.addControllerUrl('app/gbp/sfc/dialog-sfc-topology.controller');
+        NavHelperProvider.addControllerUrl('app/gbp/resolved-policy/sidepanel/epg-sidepanel.controller');
+        NavHelperProvider.addControllerUrl('app/gbp/resolved-policy/sidepanel/epg-list-sidepanel.controller');
+        NavHelperProvider.addControllerUrl('app/gbp/resolved-policy/sidepanel/contract-sidepanel.controller');
+        NavHelperProvider.addControllerUrl('app/gbp/resolved-policy/sidepanel/contract-list-sidepanel.controller');
         NavHelperProvider.addControllerUrl('app/gbp/tenant/add-tenant.controller');
         NavHelperProvider.addControllerUrl('app/gbp/tenant/tenant.controller');
 

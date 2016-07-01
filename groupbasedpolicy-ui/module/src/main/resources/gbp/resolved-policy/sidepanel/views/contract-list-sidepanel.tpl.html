@@ -1,0 +1,18 @@
+<md-content ng-controller="ContractListSidePanelController">
+	<div layout="row" class="layout-padding-lr15 layout-row">
+		<ul class="breadcrumbs">
+			<li class="breadcrumb">Contracts</li>
+		</ul>
+	</div>
+	<md-divider></md-divider>
+	<md-divider></md-divider>
+    <md-subheader class="md-primary">Contracts list ({{sidePanelContracts.length}})</md-subheader>
+    <md-list>
+		<md-list-item ng-click="openSidePanel('resolved-policy/sidepanel/views/contract-sidepanel', contract)"
+					  ng-mouseenter="highlightLink(contract.linkId)"
+					  ng-mouseleave="fadeAll()"
+					  ng-repeat="contract in sidePanelContracts">
+			{{contract['contract-id']}}
+		</md-list-item>
+    </md-list>
+</md-content>
