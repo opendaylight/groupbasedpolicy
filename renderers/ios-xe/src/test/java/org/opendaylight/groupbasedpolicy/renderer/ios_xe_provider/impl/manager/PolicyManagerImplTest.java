@@ -21,6 +21,7 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.RendererPolicyUtil;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.ServiceChainingUtil;
+import org.opendaylight.groupbasedpolicy.util.IetfModelCodec;
 import org.opendaylight.sfc.provider.api.SfcProviderServiceForwarderAPI;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.RspName;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.SfName;
@@ -277,7 +278,7 @@ public class PolicyManagerImplTest {
         ServiceFunctionForwarderBuilder serviceFunctionForwarderBuilder = new ServiceFunctionForwarderBuilder();
         serviceFunctionForwarderBuilder.setName(new SffName(forwarderName))
                 .setKey(new ServiceFunctionForwarderKey(new SffName(forwarderName)))
-                .setIpMgmtAddress(new IpAddress(new Ipv4Address(ipAddress)));
+                .setIpMgmtAddress(IetfModelCodec.ipAddress2013(new IpAddress(new Ipv4Address(ipAddress))));
         return serviceFunctionForwarderBuilder.build();
     }
 

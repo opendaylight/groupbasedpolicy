@@ -20,6 +20,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.P
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.NetconfTransactionCreator;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriter;
+import org.opendaylight.groupbasedpolicy.util.IetfModelCodec;
 import org.opendaylight.sfc.provider.api.SfcProviderRenderedPathAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServiceForwarderAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServicePathAPI;
@@ -416,7 +417,7 @@ public class ServiceChainingUtil {
 
         final java.util.Optional<ServiceFunctionForwarder> serviceFunctionForwarder = java.util.Optional.ofNullable(
                     SfcProviderServiceForwarderAPI.readServiceFunctionForwarder(sffName));
-        return serviceFunctionForwarder.map(sff -> java.util.Optional.ofNullable(sff.getIpMgmtAddress())
+        return serviceFunctionForwarder.map(sff -> java.util.Optional.ofNullable(IetfModelCodec.ipAddress2010(sff.getIpMgmtAddress()))
                     .map(IpAddress::getIpv4Address)
                     .map((ipv4Address) -> ipv4Address.getValue())
                     .map(addressValue -> {

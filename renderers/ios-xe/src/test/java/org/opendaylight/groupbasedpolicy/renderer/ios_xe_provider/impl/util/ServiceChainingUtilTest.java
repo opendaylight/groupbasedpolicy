@@ -35,6 +35,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.P
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.NetconfTransactionCreator;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriter;
+import org.opendaylight.groupbasedpolicy.util.IetfModelCodec;
 import org.opendaylight.sfc.provider.api.SfcProviderRenderedPathAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServiceForwarderAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServicePathAPI;
@@ -485,7 +486,7 @@ public class ServiceChainingUtilTest {
         final org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.rev140701.service.function.forwarders.ServiceFunctionForwarder
                 sff = new ServiceFunctionForwarderBuilder()
                 .setName(new SffName("unit-sff-03"))
-                .setIpMgmtAddress(new IpAddress(new Ipv4Address("1.2.3.4")))
+                .setIpMgmtAddress(IetfModelCodec.ipAddress2013(new IpAddress(new Ipv4Address("1.2.3.4"))))
                 .build();
         final ServiceFunctionPathBuilder sfpBuilder = new ServiceFunctionPathBuilder();
         sfpBuilder.setSymmetric(false);
@@ -516,7 +517,7 @@ public class ServiceChainingUtilTest {
         final org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.rev140701.service.function.forwarders.ServiceFunctionForwarder
                 sff = new ServiceFunctionForwarderBuilder()
                 .setName(new SffName("unit-sff-03"))
-                .setIpMgmtAddress(new IpAddress(new Ipv4Address("1.2.3.4")))
+                .setIpMgmtAddress(IetfModelCodec.ipAddress2013(new IpAddress(new Ipv4Address("1.2.3.4"))))
                 .build();
         final ServiceFunctionPathBuilder sfpBuilder = new ServiceFunctionPathBuilder();
         sfpBuilder.setSymmetric(false);
@@ -615,7 +616,7 @@ public class ServiceChainingUtilTest {
         final RenderedServicePath rsp = createRsp("unit-rsp-03");
         final ServiceFunctionForwarderBuilder sffBuilder = new ServiceFunctionForwarderBuilder()
                 .setName(new SffName("unit-sff-03"))
-                .setIpMgmtAddress(new IpAddress((Ipv4Address) null));
+                .setIpMgmtAddress(null);
         final ServiceFunctionPathBuilder sfpBuilder = new ServiceFunctionPathBuilder();
         sfpBuilder.setSymmetric(false);
         final ServiceFunctionPath sfp = sfpBuilder.build();

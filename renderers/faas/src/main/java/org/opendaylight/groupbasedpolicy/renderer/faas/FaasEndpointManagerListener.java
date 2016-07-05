@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
@@ -26,6 +25,7 @@ import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.faas.uln.datastore.api.UlnDatastoreApi;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.groupbasedpolicy.util.IetfModelCodec;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.faas.endpoint.rev151009.FaasEndpointContext;
@@ -51,6 +51,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 
 public class FaasEndpointManagerListener implements DataChangeListener, AutoCloseable {
@@ -163,11 +164,11 @@ public class FaasEndpointManagerListener implements DataChangeListener, AutoClos
         List<PrivateIps> privateIpAddresses = new ArrayList<>();
         for (L3Address ip : endpoint.getL3Address()) {
             PrivateIpsBuilder ipBuilder = new PrivateIpsBuilder();
-            ipBuilder.setIpAddress(ip.getIpAddress());
+            ipBuilder.setIpAddress(IetfModelCodec.ipAddress2013(ip.getIpAddress()));
             ipBuilder.setSubnetId(faasSubnetId);
             privateIpAddresses.add(ipBuilder.build());
         }
-        if (!UlnDatastoreApi.attachEndpointToSubnet(epLocBuilder, faasSubnetId, endpoint.getMacAddress(),
+        if (!UlnDatastoreApi.attachEndpointToSubnet(epLocBuilder, faasSubnetId, IetfModelCodec.macAddress2013(endpoint.getMacAddress()),
                 privateIpAddresses, null)) {
             LOG.error("Failed Endpoint Registration. Failed to Attach Endpoint to Faas Logical Network. Endpoint {}",
                     endpoint);

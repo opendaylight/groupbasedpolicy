@@ -28,6 +28,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcIidFacto
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcNshHeader;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sfcutils.SfcNshHeader.SfcNshHeaderBuilder;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.groupbasedpolicy.util.IetfModelCodec;
 import org.opendaylight.sfc.provider.api.SfcProviderRenderedPathAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServiceChainAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServicePathAPI;
@@ -189,8 +190,8 @@ public class ChainAction extends Action {
 
         RenderedServicePathHop firstRspHop = renderedServicePath.getRenderedServicePathHop().get(0);
         RenderedServicePathHop lastRspHop = Iterables.getLast(renderedServicePath.getRenderedServicePathHop());
-        SfcNshHeader sfcNshHeader = new SfcNshHeaderBuilder().setNshTunIpDst(rspFirstHop.getIp().getIpv4Address())
-            .setNshTunUdpPort(rspFirstHop.getPort())
+        SfcNshHeader sfcNshHeader = new SfcNshHeaderBuilder().setNshTunIpDst(IetfModelCodec.ipv4Address2010(rspFirstHop.getIp().getIpv4Address()))
+            .setNshTunUdpPort(IetfModelCodec.portNumber2010(rspFirstHop.getPort()))
             .setNshNsiToChain(firstRspHop.getServiceIndex())
             .setNshNspToChain(renderedServicePath.getPathId())
             .setNshNsiFromChain((short) (lastRspHop.getServiceIndex().intValue() - 1))

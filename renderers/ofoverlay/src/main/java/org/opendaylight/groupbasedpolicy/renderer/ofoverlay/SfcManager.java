@@ -25,6 +25,7 @@ import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
+import org.opendaylight.groupbasedpolicy.util.IetfModelCodec;
 import org.opendaylight.sfc.provider.SfcProviderRpc;
 import org.opendaylight.sfc.provider.api.SfcProviderServiceChainAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServicePathAPI;
@@ -139,7 +140,7 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
         Set<IpAddress> ipAddresses = new HashSet<IpAddress>();
         for (RenderedServicePathFirstHop rsp: rspMap.values()) {
             if (rsp.getIp() != null) {
-                ipAddresses.add(rsp.getIp());
+                ipAddresses.add(IetfModelCodec.ipAddress2010(rsp.getIp()));
             }
         }
         if (ipAddresses.isEmpty()) return null;

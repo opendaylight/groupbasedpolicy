@@ -14,7 +14,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
@@ -23,7 +22,7 @@ import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.faas.uln.datastore.api.UlnDatastoreApi;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
+import org.opendaylight.groupbasedpolicy.util.IetfModelCodec;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.common.rev151013.Text;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.common.rev151013.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.subnets.rev151013.subnets.container.subnets.SubnetBuilder;
@@ -41,6 +40,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 
 public class FaasSubnetManagerListener implements DataChangeListener {
@@ -131,11 +131,11 @@ public class FaasSubnetManagerListener implements DataChangeListener {
             List<ExternalGateways> gateways = new ArrayList<>();
             for (Gateways gw : gbpSubnet.getGateways()) {
                 ExternalGatewaysBuilder eb = new ExternalGatewaysBuilder();
-                eb.setExternalGateway(gw.getGateway());
+                eb.setExternalGateway(IetfModelCodec.ipAddress2013(gw.getGateway()));
                 if (gw.getPrefixes() != null) {
-                    List<IpPrefix> ipPrefixes = new ArrayList<>();
+                    List<org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix> ipPrefixes = new ArrayList<>();
                     for (Prefixes px : gw.getPrefixes()) {
-                        ipPrefixes.add(px.getPrefix());
+                        ipPrefixes.add(IetfModelCodec.ipPrefix2013(px.getPrefix()));
                     }
                     eb.setPrefixes(ipPrefixes);
                 }
@@ -144,7 +144,7 @@ public class FaasSubnetManagerListener implements DataChangeListener {
             builder.setExternalGateways(gateways);
         }
 
-        builder.setIpPrefix(gbpSubnet.getIpPrefix());
+        builder.setIpPrefix(IetfModelCodec.ipPrefix2013(gbpSubnet.getIpPrefix()));
         builder.setUuid(getFaasSubnetId(gbpSubnet.getId()));
         builder.setName(new Text(gbpSubnet.getId().getValue()));
         if (gbpSubnet.getDescription() != null)
@@ -152,7 +152,7 @@ public class FaasSubnetManagerListener implements DataChangeListener {
         else
             builder.setDescription(new Text("gbp-subnet"));
         builder.setTenantId(faasTenantId);
-        builder.setVirtualRouterIp(gbpSubnet.getVirtualRouterIp());
+        builder.setVirtualRouterIp(IetfModelCodec.ipAddress2013(gbpSubnet.getVirtualRouterIp()));
         // TODO DNS servers
         builder.setDnsNameservers(null);
         // TODO DHCP server
