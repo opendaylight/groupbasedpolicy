@@ -16,7 +16,6 @@ import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFaile
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ClassMap;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ServiceChain;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map.Class;
-import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.Local;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.ServiceFfName;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.slf4j.Logger;
@@ -39,7 +38,6 @@ public class PolicyWriter {
     private final String interfaceName;
     private final String policyMapName;
     private final String managementIpAddress;
-    private Local localForwarder;
 
     public PolicyWriter(final DataBroker dataBroker, final String interfaceName, final String ipAddress,
                         final String policyMapName, final NodeId nodeId) {
@@ -63,10 +61,6 @@ public class PolicyWriter {
         this.policyMapEntries.addAll(policyMapEntries);
     }
 
-    public void cache(Local localForwarder) {
-        this.localForwarder = localForwarder;
-    }
-
     public void cache(ServiceFfName remoteForwarder) {
         remoteForwarders.add(remoteForwarder);
     }
@@ -78,7 +72,6 @@ public class PolicyWriter {
     public CheckedFuture<Boolean, TransactionCommitFailedException> commitToDatastore() {
         LOG.info("Configuring policy on node {} ... ", nodeId.getValue());
         // SFC
-        boolean localResult = PolicyWriterUtil.writeLocal(localForwarder, nodeId, mountpoint);
         boolean remoteResult = PolicyWriterUtil.writeRemote(remoteForwarders, nodeId, mountpoint);
         boolean servicePathsResult = PolicyWriterUtil.writeServicePaths(serviceChains, nodeId, mountpoint);
         // GBP - maintain order!
@@ -87,8 +80,8 @@ public class PolicyWriter {
         boolean interfaceResult = PolicyWriterUtil.writeInterface(policyMapName, interfaceName, nodeId, mountpoint);
         // Result
         LOG.info("Policy configuration on node {} completed", nodeId.getValue());
-        return Futures.immediateCheckedFuture(classMapResult && policyMapResult && interfaceResult && localResult
-                && remoteResult && servicePathsResult);
+        return Futures.immediateCheckedFuture(classMapResult && policyMapResult && interfaceResult && remoteResult
+                && servicePathsResult);
     }
 
     public CheckedFuture<Boolean, TransactionCommitFailedException> removeFromDatastore() {
@@ -100,12 +93,10 @@ public class PolicyWriter {
         // TODO remove class map?
         // SFC
         boolean servicePathsResult = PolicyWriterUtil.removeServicePaths(serviceChains, nodeId, mountpoint);
-        boolean localResult = PolicyWriterUtil.removeLocal(nodeId, mountpoint);
         // TODO remove remote forwarders
         // Result
         LOG.info("Policy removed from node {}", nodeId.getValue());
-        return Futures.immediateCheckedFuture(classMapResult && policyMapEntriesResult && servicePathsResult
-                && localResult);
+        return Futures.immediateCheckedFuture(classMapResult && policyMapEntriesResult && servicePathsResult);
     }
 
     public String getManagementIpAddress() {

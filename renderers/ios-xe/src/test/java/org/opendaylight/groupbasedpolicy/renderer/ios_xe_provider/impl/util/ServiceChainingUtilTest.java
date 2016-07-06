@@ -14,10 +14,6 @@ import static org.powermock.api.support.membermodification.MemberModifier.stub;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -49,11 +45,14 @@ import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev1407
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.paths.RenderedServicePathBuilder;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.paths.rendered.service.path.RenderedServicePathHop;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.paths.rendered.service.path.RenderedServicePathHopBuilder;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.rev140701.service.function.forwarder.base.SffDataPlaneLocatorBuilder;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.rev140701.service.function.forwarder.base.sff.data.plane.locator.DataPlaneLocatorBuilder;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.rev140701.service.function.forwarders.ServiceFunctionForwarderBuilder;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.ServiceFunctionPaths;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.ServiceFunctionPathsBuilder;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.service.function.paths.ServiceFunctionPath;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.service.function.paths.ServiceFunctionPathBuilder;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sl.rev140701.data.plane.locator.locator.type.IpBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ClassMap;
@@ -84,6 +83,11 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Test for {@link ServiceChainingUtil}.
@@ -483,16 +487,21 @@ public class ServiceChainingUtilTest {
     @Test
     public void testSetSfcPart_success() throws Exception {
         final RenderedServicePath rsp = createRsp("unit-rsp-03");
+        final DataPlaneLocatorBuilder dataPlaneLocatorBuilder = new DataPlaneLocatorBuilder();
+        final IpBuilder ipBuilderLocatorType = new IpBuilder();
+        ipBuilderLocatorType.setIp(IetfModelCodec.ipAddress2013(new IpAddress(new Ipv4Address("1.2.3.4"))));
+        dataPlaneLocatorBuilder.setLocatorType(ipBuilderLocatorType.build());
+        final SffDataPlaneLocatorBuilder sffDataPlaneLocatorBuilder = new SffDataPlaneLocatorBuilder();
+        sffDataPlaneLocatorBuilder.setDataPlaneLocator(dataPlaneLocatorBuilder.build());
         final org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.rev140701.service.function.forwarders.ServiceFunctionForwarder
                 sff = new ServiceFunctionForwarderBuilder()
                 .setName(new SffName("unit-sff-03"))
                 .setIpMgmtAddress(IetfModelCodec.ipAddress2013(new IpAddress(new Ipv4Address("1.2.3.4"))))
+                .setSffDataPlaneLocator(Collections.singletonList(sffDataPlaneLocatorBuilder.build()))
                 .build();
         final ServiceFunctionPathBuilder sfpBuilder = new ServiceFunctionPathBuilder();
         sfpBuilder.setSymmetric(false);
         final ServiceFunctionPath sfp = sfpBuilder.build();
-
-        stub(method(ServiceChainingUtil.class, "checkLocalForwarderPresence")).toReturn(true);
 
         PowerMockito.mockStatic(SfcProviderServiceForwarderAPI.class);
         final SfcProviderServiceForwarderAPI api = PowerMockito.mock(SfcProviderServiceForwarderAPI.class);
@@ -505,8 +514,6 @@ public class ServiceChainingUtilTest {
 
         Mockito.verify(policyWriter).cache(Matchers.<ServiceFfName>any());
         Mockito.verify(policyWriter).cache(Matchers.<ServiceChain>any());
-        Mockito.verify(policyWriter).getCurrentNodeId();
-        Mockito.verify(policyWriter).getCurrentMountpoint();
         Mockito.verify(policyWriter).getManagementIpAddress();
         Mockito.verifyNoMoreInteractions(policyWriter);
     }
@@ -514,16 +521,21 @@ public class ServiceChainingUtilTest {
     @Test
     public void testSetSfcPart_success_newRsp() throws Exception {
         final RenderedServicePath rsp = createRsp("unit-rsp-03");
+        final DataPlaneLocatorBuilder dataPlaneLocatorBuilder = new DataPlaneLocatorBuilder();
+        final IpBuilder ipBuilderLocatorType = new IpBuilder();
+        ipBuilderLocatorType.setIp(IetfModelCodec.ipAddress2013(new IpAddress(new Ipv4Address("1.2.3.4"))));
+        dataPlaneLocatorBuilder.setLocatorType(ipBuilderLocatorType.build());
+        final SffDataPlaneLocatorBuilder sffDataPlaneLocatorBuilder = new SffDataPlaneLocatorBuilder();
+        sffDataPlaneLocatorBuilder.setDataPlaneLocator(dataPlaneLocatorBuilder.build());
         final org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.rev140701.service.function.forwarders.ServiceFunctionForwarder
                 sff = new ServiceFunctionForwarderBuilder()
                 .setName(new SffName("unit-sff-03"))
                 .setIpMgmtAddress(IetfModelCodec.ipAddress2013(new IpAddress(new Ipv4Address("1.2.3.4"))))
+                .setSffDataPlaneLocator(Collections.singletonList(sffDataPlaneLocatorBuilder.build()))
                 .build();
         final ServiceFunctionPathBuilder sfpBuilder = new ServiceFunctionPathBuilder();
         sfpBuilder.setSymmetric(false);
         final ServiceFunctionPath sfp = sfpBuilder.build();
-
-        stub(method(ServiceChainingUtil.class, "checkLocalForwarderPresence")).toReturn(false);
 
         PowerMockito.mockStatic(SfcProviderServiceForwarderAPI.class);
         final SfcProviderServiceForwarderAPI api = PowerMockito.mock(SfcProviderServiceForwarderAPI.class);
@@ -534,11 +546,9 @@ public class ServiceChainingUtilTest {
         Assert.assertEquals("rsp-hop-01-sf+sff", sffNameCaptor.getValue().getValue());
         Assert.assertTrue(outcome);
 
-        Mockito.verify(policyWriter).cache(Matchers.<Local>any());
         Mockito.verify(policyWriter).cache(Matchers.<ServiceFfName>any());
         Mockito.verify(policyWriter).cache(Matchers.<ServiceChain>any());
-        Mockito.verify(policyWriter).getCurrentMountpoint();
-        Mockito.verify(policyWriter, Mockito.times(2)).getManagementIpAddress();
+        Mockito.verify(policyWriter).getManagementIpAddress();
         Mockito.verifyNoMoreInteractions(policyWriter);
     }
 
@@ -579,9 +589,6 @@ public class ServiceChainingUtilTest {
         Assert.assertEquals("rsp-hop-01-sf+sff", sffNameCaptor.getValue().getValue());
         Assert.assertFalse(outcome);
 
-        Mockito.verify(policyWriter).getCurrentMountpoint();
-        Mockito.verify(policyWriter).getManagementIpAddress();
-        Mockito.verify(policyWriter).cache(Matchers.<Local>any());
         Mockito.verifyNoMoreInteractions(policyWriter);
     }
 
@@ -595,8 +602,6 @@ public class ServiceChainingUtilTest {
         sfpBuilder.setSymmetric(false);
         final ServiceFunctionPath sfp = sfpBuilder.build();
 
-        stub(method(ServiceChainingUtil.class, "checkLocalForwarderPresence")).toReturn(true);
-
         PowerMockito.mockStatic(SfcProviderServiceForwarderAPI.class);
         final SfcProviderServiceForwarderAPI api = PowerMockito.mock(SfcProviderServiceForwarderAPI.class);
         PowerMockito.when(api.readServiceFunctionForwarder(sffNameCaptor.capture())).thenReturn(
@@ -606,8 +611,6 @@ public class ServiceChainingUtilTest {
 
         Assert.assertEquals("rsp-hop-01-sf+sff", sffNameCaptor.getValue().getValue());
 
-        Mockito.verify(policyWriter).getCurrentMountpoint();
-        Mockito.verify(policyWriter).getCurrentNodeId();
         Mockito.verifyNoMoreInteractions(policyWriter);
     }
 
@@ -621,8 +624,6 @@ public class ServiceChainingUtilTest {
         sfpBuilder.setSymmetric(false);
         final ServiceFunctionPath sfp = sfpBuilder.build();
 
-        stub(method(ServiceChainingUtil.class, "checkLocalForwarderPresence")).toReturn(true);
-
         PowerMockito.mockStatic(SfcProviderServiceForwarderAPI.class);
         final SfcProviderServiceForwarderAPI api = PowerMockito.mock(SfcProviderServiceForwarderAPI.class);
         PowerMockito.when(api.readServiceFunctionForwarder(sffNameCaptor.capture())).thenReturn(
@@ -632,8 +633,6 @@ public class ServiceChainingUtilTest {
 
         Assert.assertEquals("rsp-hop-01-sf+sff", sffNameCaptor.getValue().getValue());
 
-        Mockito.verify(policyWriter).getCurrentMountpoint();
-        Mockito.verify(policyWriter).getCurrentNodeId();
         Mockito.verifyNoMoreInteractions(policyWriter);
     }
 

@@ -38,9 +38,13 @@ import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev1407
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.CreateRenderedPathInputBuilder;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.paths.RenderedServicePath;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.paths.rendered.service.path.RenderedServicePathHop;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.rev140701.service.function.forwarder.base.SffDataPlaneLocator;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.rev140701.service.function.forwarder.base.sff.data.plane.locator.DataPlaneLocator;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.rev140701.service.function.forwarders.ServiceFunctionForwarder;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.ServiceFunctionPaths;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.service.function.paths.ServiceFunctionPath;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sl.rev140701.data.plane.locator.LocatorType;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sl.rev140701.data.plane.locator.locator.type.Ip;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308.Native;
@@ -53,8 +57,6 @@ import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map.Class;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.ServicePath;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.ServicePathBuilder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.ServicePathKey;
-import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.Local;
-import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.LocalBuilder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.ServiceFfNameBuilder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.ServiceFfNameKey;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.path.ConfigServiceChainPathModeBuilder;
@@ -73,7 +75,6 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.security.cert.PKIXRevocationChecker;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -259,39 +260,6 @@ public class ServiceChainingUtil {
     }
 
     /**
-     * Method checks up, whether a {@link Local} Service Function Forwarder is present on device or not.
-     *
-     * @param mountpoint used to access specific device
-     * @return true if Local Forwarder is present, false otherwise
-     */
-    private static boolean checkLocalForwarderPresence(DataBroker mountpoint) {
-        InstanceIdentifier<Local> localSffIid = InstanceIdentifier.builder(Native.class)
-                .child(ServiceChain.class)
-                .child(org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.ServiceFunctionForwarder.class)
-                .child(Local.class).build();
-        try {
-            java.util.Optional<ReadOnlyTransaction> optionalTransaction =
-                    NetconfTransactionCreator.netconfReadOnlyTransaction(mountpoint);
-            if (!optionalTransaction.isPresent()) {
-                LOG.warn("Failed to create transaction, mountpoint: {}", mountpoint);
-                return false;
-            }
-            ReadOnlyTransaction transaction = optionalTransaction.get();
-            CheckedFuture<Optional<Local>, ReadFailedException> submitFuture =
-                    transaction.read(LogicalDatastoreType.CONFIGURATION,
-                    localSffIid);
-            Optional<Local> optionalLocalSff = submitFuture.checkedGet();
-            transaction.close(); // Release lock
-            return optionalLocalSff.isPresent();
-        } catch (ReadFailedException e) {
-            LOG.warn("Read transaction failed to {} ", e);
-        } catch (Exception e) {
-            LOG.error("Failed to .. {}", e.getMessage());
-        }
-        return false;
-    }
-
-    /**
      * Method checks up, if some {@link ServicePath} is present on device.
      *
      * @param mountpoint used to access specific device
@@ -353,11 +321,6 @@ public class ServiceChainingUtil {
 
     static boolean setSfcPart(final ServiceFunctionPath serviceFunctionPath, final RenderedServicePath renderedServicePath,
                               final RenderedServicePath reversedRenderedServicePath, PolicyWriter policyWriter) {
-        if (!checkLocalForwarderPresence(policyWriter.getCurrentMountpoint())) {
-            appendLocalSff(policyWriter);
-        } else {
-            LOG.info("Local forwarder for node {} is already created", policyWriter.getCurrentNodeId());
-        }
         boolean outcome = true;
         // Direct path
         final java.util.Optional<RenderedServicePath> renderedServicePathSafe = java.util.Optional.ofNullable(renderedServicePath);
@@ -367,14 +330,12 @@ public class ServiceChainingUtil {
                 if (!resolveRenderedServicePath(renderedServicePath, policyWriter)) {
                     outcome = false;
                 }
-            }
-            else {
+            } else {
                 LOG.warn("Rendered service path {} does not contain any hop",
                         renderedServicePathSafe.map(RenderedServicePath::getName).map(RspName::getValue).orElse("n/a"));
                 outcome = false;
             }
-        }
-        else {
+        } else {
             LOG.warn("Rendered service path is null");
             outcome = false;
         }
@@ -416,10 +377,30 @@ public class ServiceChainingUtil {
         // forwarder (Remote case)
 
         final java.util.Optional<ServiceFunctionForwarder> serviceFunctionForwarder = java.util.Optional.ofNullable(
-                    SfcProviderServiceForwarderAPI.readServiceFunctionForwarder(sffName));
-        return serviceFunctionForwarder.map(sff -> java.util.Optional.ofNullable(IetfModelCodec.ipAddress2010(sff.getIpMgmtAddress()))
-                    .map(IpAddress::getIpv4Address)
-                    .map((ipv4Address) -> ipv4Address.getValue())
+                SfcProviderServiceForwarderAPI.readServiceFunctionForwarder(sffName));
+        if (!serviceFunctionForwarder.isPresent()) {
+            LOG.warn("Service function forwarder {} does not exist", sffName.getValue());
+            return false;
+        }
+        final ServiceFunctionForwarder forwarder = serviceFunctionForwarder.get();
+        if (forwarder.getSffDataPlaneLocator() == null || forwarder.getSffDataPlaneLocator().isEmpty()) {
+            LOG.warn("Service function forwarder {} does not contain data plane locator", sffName.getValue());
+            return false;
+        }
+        // TODO only first dpl resolved
+        final SffDataPlaneLocator sffDataPlaneLocator = forwarder.getSffDataPlaneLocator().get(0);
+        final DataPlaneLocator dataPlaneLocator = sffDataPlaneLocator.getDataPlaneLocator();
+        final LocatorType locatorType = dataPlaneLocator.getLocatorType();
+        if (locatorType != null && locatorType instanceof Ip) {
+            final IpAddress remoteForwarderIpAddress = IetfModelCodec.ipAddress2010(((Ip) locatorType).getIp());
+            if (remoteForwarderIpAddress == null || remoteForwarderIpAddress.getIpv4Address() == null) {
+                LOG.warn("Service function forwarder {} data plane locator does not contain ip address", sffName.getValue());
+                return false;
+            }
+            final String remoteForwarderStringIp = remoteForwarderIpAddress.getIpv4Address().getValue();
+            return serviceFunctionForwarder.map(sff -> java.util.Optional.ofNullable(sff.getIpMgmtAddress())
+                    .map(org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress::getIpv4Address)
+                    .map(Ipv4Address::getValue)
                     .map(addressValue -> {
                         // Set up choice. If remote, this choice is overwritten
                         final ServiceTypeChoice serviceTypeChoice;
@@ -427,7 +408,7 @@ public class ServiceChainingUtil {
                             final ServiceFfNameBuilder remoteSffBuilder = new ServiceFfNameBuilder();
                             remoteSffBuilder.setName(sffName.getValue())
                                     .setKey(new ServiceFfNameKey(sffName.getValue()))
-                                    .setIp(new IpBuilder().setAddress(new Ipv4Address(addressValue)).build());
+                                    .setIp(new IpBuilder().setAddress(new Ipv4Address(remoteForwarderStringIp)).build());
                             policyWriter.cache(remoteSffBuilder.build());
                             serviceTypeChoice = forwarderTypeChoice(sffName.getValue());
                         } else {
@@ -461,13 +442,8 @@ public class ServiceChainingUtil {
             ).orElseGet(createNegativePathWithLogSupplier(sffName.getValue(),
                     (value) -> LOG.error("Sff with name {} does not exist", value))
             );
-    }
-
-    private static void appendLocalSff(final PolicyWriter policyWriter) {
-        final LocalBuilder localSffBuilder = new LocalBuilder();
-        localSffBuilder.setIp(new IpBuilder().setAddress(new Ipv4Address(policyWriter.getManagementIpAddress()))
-                .build());
-        policyWriter.cache(localSffBuilder.build());
+        }
+        return false;
     }
 
     static ServiceTypeChoice forwarderTypeChoice(final String forwarderName) {
@@ -485,7 +461,7 @@ public class ServiceChainingUtil {
     private static void checkSfcRspStatus(final RspName rspName, final DataBroker dataBroker) {
         /** TODO A better way to do this is to register listener and wait for notification than using hardcoded timeout
          *  with Thread.sleep(). Example in class BridgeDomainManagerImpl
-        */
+         */
         ConfiguredRenderedPath renderedPath = null;
         LOG.info("Waiting for SFC to configure path {} ...", rspName.getValue());
 
