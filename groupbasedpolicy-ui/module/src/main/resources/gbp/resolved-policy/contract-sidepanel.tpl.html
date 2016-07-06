@@ -10,7 +10,9 @@
 	    <md-subheader class="md-primary">Contracts list ({{sidePanelObject.length}})</md-subheader>
 	    <md-list>
 	    	<ng-repeat ng-repeat="contract in sidePanelObject">
-		    	<md-list-item ng-click="openSidePanel('resolved-policy/contract-sidepanel', contract, null)" ng-mouseenter="highlightLink(contract.linkId)" ng-mouseleave="fadeAll()">
+		    	<md-list-item ng-click="openSidePanel('resolved-policy/contract-sidepanel', contract, null)"
+							  ng-mouseenter="highlightLink(contract.linkId)"
+							  ng-mouseleave="fadeAll()">
 		    		{{contract['contract-id']}}
 		    	</md-list-item>
 	    	</ng-repeat>

@@ -1,0 +1,16 @@
+<md-dialog ng-cloak aria-label="vpp topo">
+    <md-toolbar>
+        <div class="md-toolbar-tools">
+            <h2 style="color: white">
+                Detail for chain {{chain.data.name}}
+            </h2>
+            <span flex></span>
+            <md-button class="md-icon-button" ng-click="closeDialog()" aria-label="close button">
+                <div>X</div>
+            </md-button>
+        </div>
+    </md-toolbar>
+    <md-dialog-content style="max-width:600px;max-height:400px;overflow:hidden">
+        <div id="next-vpp-topo"></div>
+    </md-dialog-content>
+</md-dialog>

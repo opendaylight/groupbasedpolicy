@@ -21,27 +21,12 @@
 	<md-subheader class="md-primary">
 		<div layout="row" class="layout-row">
 			<span>Actions ({{selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].action.length}})</span>
-			<span class="flex" flex></span>
 			<span ng-if="selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].action.length">
-				<md-button class="md-button md-primary md-button md-ink-ripple expand-button" type="button" ng-click="expandAll(selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].action)" aria-label="Expand all">
-		            <i class="fa fa-expand ng-scope"></i>
-		        	<div class="md-ripple-container"></div>
-		        	<md-tooltip md-direction="bottom">
-		        		Expand all
-		        	</md-tooltip>
-		    	</md-button>
-		    	<md-button class="md-button md-primary md-button md-ink-ripple expand-button" type="button" ng-click="collapseAll(selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].action)" aria-label="Collapse all">
-					<i class="fa fa-compress ng-scope"></i>
-		    	    <div class="md-ripple-container"></div>
-		        	<md-tooltip md-direction="bottom">
-		        		Collapse all
-		        	</md-tooltip>
-		    	</md-button>
 	    	</span>
     	</div>
 	</md-subheader>
     <md-list class="expander">
-		<md-list-item ng-click="toggleExpanded(action)" class="md-3-line" layout="row"
+		<md-list-item class="md-3-line" layout="row"
 					  ng-repeat="action in selectedNode.subjects[subjectIndex]['resolved-rule'][0][ruleIndex].action">
 			<div layout-padding flex="10">
 				<h3>{{action.order}}</h3>
@@ -55,7 +40,7 @@
 				<p>Name: {{action.name}} </p>
 			</div>
 			<div ng-if="action['action-definition-id'] === 'Action-Chain'" flex="10">
-				<md-button class="md-icon-button" ng-click="openSfcDialog({{action.name}})">
+				<md-button class="md-icon-button" ng-click="openSfcDialog(action.name)">
 					<md-icon>visibility</md-icon>
 				</md-button>
 			</div>

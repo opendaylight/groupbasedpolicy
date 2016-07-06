@@ -36,6 +36,7 @@ define([
         NavHelperProvider.addControllerUrl('app/gbp/epg/epg.controller');
         NavHelperProvider.addControllerUrl('app/gbp/policy/policy.controller');
         NavHelperProvider.addControllerUrl('app/gbp/resolved-policy/resolved-policy.controller');
+        NavHelperProvider.addControllerUrl('app/gbp/sfc/dialog-sfc-topology.controller');
         NavHelperProvider.addControllerUrl('app/gbp/tenant/add-tenant.controller');
         NavHelperProvider.addControllerUrl('app/gbp/tenant/tenant.controller');
 

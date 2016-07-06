@@ -3,10 +3,11 @@ define(['app/gbp/resolved-policy/resolved-policy.service'], function () {
 
     angular.module('app.gbp').controller('ResolvedPolicyController', ResolvedPolicyController);
 
-    ResolvedPolicyController.$inject = ['$rootScope', '$scope', 'ResolvedPolicyService', 'EpgService', 'EpgListService', 'ContractService', 'NextTopologyService'];
+    ResolvedPolicyController.$inject = ['$rootScope', '$scope', '$mdDialog', 'EpgService', 'NextTopologyService'];
 
     /* @ngInject */
-    function ResolvedPolicyController($rootScope, $scope, ResolvedPolicyService, EpgService, EpgListService, ContractService, NextTopologyService) {
+    function ResolvedPolicyController($rootScope, $scope, $mdDialog, EpgService,  NextTopologyService) {
+
         $scope.reloadTopology = reloadTopology;
 
         $scope.cbkFunctions = {
@@ -34,6 +35,19 @@ define(['app/gbp/resolved-policy/resolved-policy.service'], function () {
             }
         };
 
+        function openSfcDialog(chainName) {
+            $mdDialog.show({
+                clickOutsideToClose: true,
+                controller: 'SfcTopologyController',
+                preserveScope: true,
+                templateUrl: $scope.viewPath + 'sfc/dialog-sfc-topology.tpl.html',
+                parent: angular.element(document.body),
+                scope: $scope,
+                locals: {
+                    chainName: chainName,
+                },
+            });
+        }
 
         function reloadTopology() {
             $scope.fillTopologyData();
