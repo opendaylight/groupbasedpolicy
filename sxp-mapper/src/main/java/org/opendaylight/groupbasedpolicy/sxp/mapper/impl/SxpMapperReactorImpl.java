@@ -15,7 +15,6 @@ import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.JdkFutureAdapters;
 import com.google.common.util.concurrent.ListenableFuture;
-import java.util.Collections;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -36,6 +35,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.register.endpoint.input.AddressEndpointReg;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.register.endpoint.input.AddressEndpointRegBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.IpPrefixType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.sxp.mapper.EndpointForwardingTemplateBySubnet;
@@ -46,6 +46,8 @@ import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Collections;
 
 /**
  * Purpose: exclusively processes sxp master database changes and EGP templates changes
@@ -114,7 +116,7 @@ public class SxpMapperReactorImpl implements SxpMapperReactor {
             @Override
             public ListenableFuture<RpcResult<Void>> apply(final Optional<AddressEndpoint> input) throws Exception {
                 final ListenableFuture<RpcResult<Void>> nextResult;
-                if (input == null || !input.isPresent()) {
+                if (input == null || !input.isPresent() || !isSameEpg(epInput, input.get())) {
                     // invoke service
                     return JdkFutureAdapters.listenInPoolThread(l3EndpointService.registerEndpoint(epInput));
                 } else {
@@ -125,6 +127,22 @@ public class SxpMapperReactorImpl implements SxpMapperReactor {
                 return nextResult;
             }
         });
+    }
+
+    private boolean isSameEpg(RegisterEndpointInput epInput, AddressEndpoint input) {
+        if (epInput == null || epInput.getAddressEndpointReg() == null || epInput.getAddressEndpointReg().isEmpty()) {
+            return true;
+        }
+        final AddressEndpointReg epInputAddressEndpoint = epInput.getAddressEndpointReg().get(0);
+        if (epInputAddressEndpoint.getEndpointGroup() == null || epInputAddressEndpoint.getEndpointGroup().isEmpty()) {
+            return true;
+        }
+        if (input == null || input.getEndpointGroup() == null || input.getEndpointGroup().isEmpty()) {
+            return true;
+        }
+        final EndpointGroupId addressEndpointGroupId = epInputAddressEndpoint.getEndpointGroup().get(0);
+        final EndpointGroupId existingEndpointGroupId = input.getEndpointGroup().get(0);
+        return addressEndpointGroupId.equals(existingEndpointGroupId);
     }
 
 }
