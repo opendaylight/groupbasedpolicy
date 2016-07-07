@@ -7,13 +7,14 @@ define([
 
     angular.module('app.gbp').controller('RootGbpCtrl', RootGbpCtrl);
 
-    RootGbpCtrl.$inject = ['$filter', '$mdDialog', '$rootScope', '$scope', '$state',
+    RootGbpCtrl.$inject = ['$mdDialog', '$rootScope', '$scope', '$state',
         'EndpointsListService', 'NextTopologyService', 'ResolvedPolicyListService', 'RootGbpService',
         'TenantListService', 'SxpMappingListService'];
 
-    function RootGbpCtrl($filter, $mdDialog, $rootScope, $scope, $state,
+    function RootGbpCtrl($mdDialog, $rootScope, $scope, $state,
         EndpointsListService, NextTopologyService, ResolvedPolicyListService, RootGbpService,
         TenantListService, SxpMappingListService) {
+
         /* properties */
         $scope.apiType = 'operational';
         $scope.activeObject = null;
