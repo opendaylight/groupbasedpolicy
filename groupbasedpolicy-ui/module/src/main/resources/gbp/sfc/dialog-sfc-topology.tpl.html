@@ -2,7 +2,7 @@
     <md-toolbar>
         <div class="md-toolbar-tools">
             <h2 style="color: white">
-                Detail for chain {{chain.data.name}}
+                Detail for chain {{chain.data.name}} ({{chain.data.symmetric ? 'Symmetric' : 'Asymmetric'}})
             </h2>
             <span flex></span>
             <md-button class="md-icon-button" ng-click="closeDialog()" aria-label="close button">
