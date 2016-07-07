@@ -8,6 +8,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.Forwarding;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.Mappings;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.Tenants;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
 
 /**
  * Loads only modules of GBP and it's dependencies for data broker.
@@ -18,7 +19,7 @@ public class NeutronMapperDataBrokerTest extends CustomDataBrokerTest {
 
     @Override
     public Collection<Class<?>> getClassesFromModules() {
-        return ImmutableList.<Class<?>>of(Tenants.class, Forwarding.class, SubnetAugmentForwarding.class,
+        return ImmutableList.<Class<?>>of(Neutron.class, Tenants.class, Forwarding.class, SubnetAugmentForwarding.class,
                 Mappings.class);
     }
 
