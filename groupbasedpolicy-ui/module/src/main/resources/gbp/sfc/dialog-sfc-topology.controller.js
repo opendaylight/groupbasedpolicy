@@ -9,7 +9,7 @@ define([
     /* @ngInject */
     function SfcTopologyController($filter, $mdDialog, $scope, chainName, SfcService) {
         /* properties */
-        $scope.chain = SfcService.createObject({name: 'SFCGBP'});
+        $scope.chain = SfcService.createObject({name: chainName});
         $scope.topologyDataSfc = {nodes:[], links:[]};
         $scope.cbkFunctionsSfc = {
             clickNode: function(node){
@@ -57,14 +57,16 @@ define([
                 nodeConfig: {
                     color: '#0386d2',
                     label: 'model.label',
-                    //scale: 'model.scale',
+                    scale: 'model.scale',
                     iconType: function(vertex) {
                         var type = vertex.get().type;
                         switch (type) {
-                            case 'service-function-type:firewall':
+                            case 'firewall':
                                 return 'firewall';
-                            case 'service-function-type:dpi':
+                            case 'dpi':
                                 return 'accesspoint';
+                            case 'qos':
+                                return 'wlc';
                             default:
                                 return 'unknown';
                         }
@@ -77,8 +79,6 @@ define([
                     width: 5
                 },
                 showIcon: true,
-                //dataProcessor: 'force',
-                //autoLayout: true,
                 enableSmartNode: false,
                 tooltipManagerConfig: {
                     showNodeTooltip: false,
@@ -94,7 +94,7 @@ define([
                 nodes.push({
                     id: sf.name,
                     label: sf.name,
-                    type: sf.type,
+                    type: SfcService.getSfTypeShort(sf.type),
                     x: 100*(index+1),
                     y: 400
                 });

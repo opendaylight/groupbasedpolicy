@@ -1,49 +1,52 @@
 <md-content>
     <md-subheader class="md-primary">Endpoint properties</md-subheader>
-    <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row" ng-if="sidePanelObject.tenant.length">
-        <span flex="35"><strong>Tenant</strong></span><span flex>{{ sidePanelObject.tenant }}</span>
+    <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row" ng-if="sidePanelObject.data.tenant.length">
+        <span flex="35"><strong>Tenant</strong></span><span flex>{{ sidePanelObject.data.tenant }}</span>
     </div>
-    <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row" ng-if="sidePanelObject['endpoint-group'].length">
-        <span flex="35"><strong>Endpoint group</strong></span><span ng-repeat="epg in sidePanelObject['endpoint-group']">{{epg}}<span ng-if="!$last">, </span>
+    <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row" ng-if="sidePanelObject.data['endpoint-group'].length">
+        <span flex="35"><strong>Endpoint group</strong></span><span ng-repeat="epg in sidePanelObject.data['endpoint-group']">{{epg}}<span ng-if="!$last">, </span>
         </span>
     </div>
     <md-divider style="margin-bottom: 10px; margin-top: 10px;"></md-divider>
     <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row">
-        <span flex="35"><strong>Context type</strong></span><span flex>{{ sidePanelObject['context-type'] }}</span>
+        <span flex="35"><strong>Context type</strong></span><span flex>{{ sidePanelObject.data['context-type'] }}</span>
     </div>
     <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row">
-        <span flex="35"><strong>Context Id</strong></span><span flex>{{ sidePanelObject['context-id'] }}</span>
+        <span flex="35"><strong>Context Id</strong></span><span flex>{{ sidePanelObject.data['context-id'] }}</span>
     </div>
     <md-divider style="margin-bottom: 10px; margin-top: 10px;"></md-divider>
     <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row">
-        <span flex="35"><strong>Address type</strong></span><span flex>{{ sidePanelObject['address-type'] }}</span>
+        <span flex="35"><strong>Address type</strong></span><span flex>{{ sidePanelObject.data['address-type'] }}</span>
     </div>
     <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row">
-        <span flex="35"><strong>Address</strong></span><span flex>{{ sidePanelObject.address }}</span>
+        <span flex="35"><strong>Address</strong></span><span flex>{{ sidePanelObject.data.address }}</span>
     </div>
     <md-divider style="margin-bottom: 10px; margin-top: 10px;"></md-divider>
-    <md-subheader class="md-secondary" ng-if="sidePanelObject['network-containment']['network-domain-type'].length">Network domain</md-subheader>
-    <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row" ng-if="sidePanelObject['network-containment']['network-domain-id'].length">
-        <span flex="35"><strong>Id</strong></span><span flex>{{ sidePanelObject['network-containment']['network-domain-id'] }}</span>
+    <md-subheader class="md-secondary" ng-if="sidePanelObject.data['network-containment']['network-domain-type'].length">Network domain</md-subheader>
+    <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row" ng-if="sidePanelObject.data['network-containment']['network-domain-id'].length">
+        <span flex="35"><strong>Id</strong></span><span flex>{{ sidePanelObject.data['network-containment']['network-domain-id'] }}</span>
     </div>
-    <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row" ng-if="sidePanelObject['network-containment']['network-domain-type'].length">
-        <span flex="35"><strong>type</strong></span><span flex>{{ sidePanelObject['network-containment']['network-domain-type'] }}</span>
+    <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row" ng-if="sidePanelObject.data['network-containment']['network-domain-type'].length">
+        <span flex="35"><strong>type</strong></span><span flex>{{ sidePanelObject.data['network-containment']['network-domain-type'] }}</span>
     </div>
-    <md-subheader class="md-secondary"></md-subheader>
-    <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row" ng-if="sidePanelObject.condition.length">
-        <span flex="35"><strong>Condition</strong></span><span ng-repeat="cndt in sidePanelObject.condition">{{cndt}}<span ng-if="!$last">, </span>
+    <!-- <md-subheader class="md-secondary"></md-subheader> -->
+    <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row" ng-if="sidePanelObject.data.condition.length">
+        <span flex="35"><strong>Condition</strong></span><span ng-repeat="cndt in sidePanelObject.data.condition">{{cndt}}<span ng-if="!$last">, </span>
         </span>
     </div>
-    <section ng-if="sidePanelObject['absolute-location']['internal-node'].length || sidePanelObject['absolute-location']['internal-node-connector'].length">
+    <section ng-if="sidePanelObject.data['absolute-location']['internal-node'].length || sidePanelObject.data['absolute-location']['internal-node-connector'].length">
         <label class=".md-subhead">Absolute Location</label>
-        <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row" ng-if="sidePanelObject['absolute-location']['internal-node']">
-            <span flex="35"><strong>Internal node</strong></span><span flex>{{ sidePanelObject['absolute-location']['internal-node'] }}</span>
+        <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row" ng-if="sidePanelObject.data['absolute-location']['internal-node']">
+            <span flex="35"><strong>Internal node</strong></span><span flex>{{ sidePanelObject.data['absolute-location']['internal-node'] }}</span>
         </div>
-        <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row" ng-if="sidePanelObject['absolute-location']['internal-node-connector']">
-            <span flex="35"><strong>Internal node connector</strong></span><span flex>{{ sidePanelObject['absolute-location']['internal-node-connector'] }}</span>
+        <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row" ng-if="sidePanelObject.data['absolute-location']['internal-node-connector']">
+            <span flex="35"><strong>Internal node connector</strong></span><span flex>{{ sidePanelObject.data['absolute-location']['internal-node-connector'] }}</span>
         </div>
     </section>
-    <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row" ng-if="sidePanelObject.timestamp">
-        <span flex="35"><strong>Timestamp</strong></span><span flex>{{ sidePanelObject.timestamp | date: 'short'}}</span>
+    <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row" ng-if="sidePanelObject.data.timestamp">
+        <span flex="35"><strong>Timestamp</strong></span><span flex>{{ sidePanelObject.data.timestamp | date: 'short'}}</span>
+    </div>
+    <div layout="row" class="layout-padding-lr15 .layout-padding-b15 layout-row" ng-if="endpointSgtList.findSgtsForEndpoint(sidePanelObject).length">
+        <span flex="35"><strong>SGT</strong></span><span>{{ endpointSgtList.findSgtsForEndpoint(sidePanelObject) }}</span>
     </div>
 <md-content>

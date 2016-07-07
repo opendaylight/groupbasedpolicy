@@ -29,6 +29,9 @@ define([
         function getEndpointsList() {
             $scope.endpoints.clearData();
             $scope.rootTenant ? $scope.endpoints.getByTenantId($scope.rootTenant) : $scope.endpoints.get($scope.rootTenant);
+
+            $scope.endpointSgtList.clearData();
+            $scope.endpointSgtList.get();
         }
 
         function openEndpointDialog(operation, endpointData) {

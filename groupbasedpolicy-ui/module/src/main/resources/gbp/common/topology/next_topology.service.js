@@ -16,7 +16,8 @@ define(['next-ui'], function () {
                         scalable: true,
                         nodeConfig: {
                             label: 'model.label',
-                            iconType: 'model.icon',
+                            //iconType: 'model.icon',
+                            iconType: 'unlinked',
                             color: function (node, model) {
                                 return topoColors.getItem('forwarding-box');
                             }

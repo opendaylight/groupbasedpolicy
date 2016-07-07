@@ -1,17 +1,24 @@
-define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.service'], function () {
+define([
+    'app/gbp/common/gbp.service',
+    'app/gbp/resolved-policy/resolved-policy-list.service',
+    'app/gbp/endpoints/sxp-mapping-list.service'
+], function () {
     'use strict';
 
     angular.module('app.gbp').controller('RootGbpCtrl', RootGbpCtrl);
 
-    RootGbpCtrl.$inject = ['$state', '$rootScope', '$scope', '$filter', '$mdDialog', 'RootGbpService',
-        'TenantListService', 'EpgListService', 'ResolvedPolicyService', 'NextTopologyService', 'EndpointsListService'];
+    RootGbpCtrl.$inject = ['$filter', '$mdDialog', '$rootScope', '$scope', '$state',
+        'EndpointsListService', 'NextTopologyService', 'ResolvedPolicyListService', 'RootGbpService',
+        'TenantListService', 'SxpMappingListService'];
 
-    function RootGbpCtrl($state, $rootScope, $scope, $filter, $mdDialog, RootGbpService,
-        TenantListService, EpgListService, ResolvedPolicyService, NextTopologyService, EndpointsListService) {
+    function RootGbpCtrl($filter, $mdDialog, $rootScope, $scope, $state,
+        EndpointsListService, NextTopologyService, ResolvedPolicyListService, RootGbpService,
+        TenantListService, SxpMappingListService) {
         /* properties */
         $scope.apiType = 'operational';
         $scope.activeObject = null;
         $scope.endpoints = EndpointsListService.createList();
+        $scope.endpointSgtList = SxpMappingListService.createList();
         $scope.rootTenant = null;
         $scope.rootTenants = TenantListService.createList();
         $scope.resolvedPolicy = {};
@@ -20,14 +27,13 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
         $scope.sidePanelPage = false;
         $scope.sidePanelPageEndpoint = false;
         $scope.stateUrl = null;
-        $scope.topologyData = {nodes: [], links: []};
+        $scope.topologyData = { nodes: [], links: [] };
         $scope.viewPath = 'src/app/gbp/';
 
-        var resolvedPolicies = ResolvedPolicyService.createObject();
-        resolvedPolicies.get(fillTopologyData);
+        var resolvedPolicies = ResolvedPolicyListService.createList();
+        getResolvedPolicies();
 
         /* methods */
-        $scope.fillTopologyData = fillTopologyData;
         $scope.broadcastFromRoot = broadcastFromRoot;
         $scope.closeSidePanel = closeSidePanel;
         $scope.openSfcDialog = openSfcDialog;
@@ -78,7 +84,7 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
          * @param arr
          */
         function collapseAll(arr) {
-            arr.forEach(function(element) {
+            arr.forEach(function (element) {
                 element.expanded = false;
             });
         }
@@ -91,12 +97,13 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
          * @param tenant
          * @returns {{id: string, source: *, target: *, tenant: *}}
          */
-        function createLink( source, target, contract, tenant) {
+        function createLink( linkId) {
+            var linkIdParts = linkId.split('_');
             return {
-                'id': generateLinkId(contract, source, target),
-                'source': source,
-                'target': target,
-                'tenant': tenant,
+                'id': linkId,
+                'source': linkIdParts[1],
+                'target': linkIdParts[2],
+                'tenant': $scope.rootTenant
             };
         }
 
@@ -104,14 +111,14 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
          *
          * @param nodeName
          * @param tenantId
-         * @returns {{id: *, tenantId: *, node-id: *, label: *}}
+         * @returns {Object}
          */
-        function createNode(nodeName, tenantId) {
+        function createNode(nodeName) {
             return {
                 'id': nodeName,
-                'tenantId' : tenantId,
+                'tenantId': $scope.rootTenant,
                 'node-id': nodeName,
-                'label': nodeName,
+                'label': nodeName
             };
         }
 
@@ -122,14 +129,13 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
             $scope.fadeAll();
             $scope.sidePanelPage = 'resolved-policy/contract-sidepanel';
 
-            var obj = Object.keys($scope.resolvedPolicy).map(function(k) {
-                var obj = $scope.resolvedPolicy[k];
-                obj.linkId = k;
+            $scope.sidePanelObject = Object.keys($scope.resolvedPolicy.contracts).map(function (k) {
+                var ob = $scope.resolvedPolicy.contracts[k];
+                ob.linkId = k;
 
-                return obj;
+                return ob;
             });
 
-            $scope.sidePanelObject = obj;
             $scope.selectedNode = null;
             $scope.activeObject = 'contract';
         }
@@ -139,12 +145,14 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
          */
         function deselectEpg() {
             $scope.fadeAll();
-            var elements;
-
             $scope.sidePanelPage = 'resolved-policy/epg-sidepanel';
-            elements = EpgListService.createList();
-            elements.get($scope.apiType, $scope.rootTenant);
-            $scope.sidePanelObject = elements;
+
+            $scope.sidePanelObject = Object.keys($scope.resolvedPolicy.epgs).map(function (k) {
+                var ob = $scope.resolvedPolicy.epgs[k];
+                ob.id = k;
+
+                return ob;
+            });
             $scope.selectedNode = null;
             $scope.activeObject = 'epg';
         }
@@ -154,7 +162,7 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
          * @param arr
          */
         function expandAll(arr) {
-            arr.forEach(function(element) {
+            arr.forEach(function (element) {
                 element.expanded = true;
             });
         }
@@ -167,80 +175,24 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
         }
 
         /**
-         *
-         * @param data
-         */
-        function fillResolvedPolicy(data) {
-            if(data['policy-rule-group-with-endpoint-constraints']) {
-                processPolicyRuleGroupWithEpConstraints(
-                    data['policy-rule-group-with-endpoint-constraints'],
-                    data['provider-epg-id'],
-                    data['consumer-epg-id']);
-            }
-
-        }
-
-        /**
-         *
+         * reads resolvedPolicies list, prepares nodes and links for topology and fills them
          */
         function fillTopologyData() {
-            if($scope.rootTenant) {
-                var topoData = {nodes: [], links: [],},
-                    filteredResolvedPolicies = $filter('filter')(resolvedPolicies.data, {
-                        'consumer-tenant-id': $scope.rootTenant,
-                        'provider-tenant-id': $scope.rootTenant
-                    });
+            var tempTopoData = {nodes: [], links: []};
 
+            $scope.resolvedPolicy = resolvedPolicies.aggregateResolvedPolicies();
+            console.log('resolved and aggregated', $scope.resolvedPolicy);
 
-                filteredResolvedPolicies && filteredResolvedPolicies.forEach(function(rp) {
-                    if(rp['consumer-tenant-id'] === $scope.rootTenant) {
-                        topoData.nodes.push(createNode(rp['consumer-epg-id'], rp['consumer-tenant-id']));
-                    }
-                    topoData.nodes.push(createNode(rp['provider-epg-id'], rp['provider-tenant-id']));
+            tempTopoData.nodes = Object.keys($scope.resolvedPolicy.epgs).map(function (key) {
+                return createNode(key);
+            });
 
-                    fillResolvedPolicy(rp);
-                    topoData.links = getContracts(rp);
-                });
+            tempTopoData.links = Object.keys($scope.resolvedPolicy.contracts).map(function (key) {
+                return createLink(key);
+            });
 
-                $scope.topologyData = topoData;
-                $scope.topologyLoaded = true;
-            }
-        }
-
-        /**
-         *
-         * @param contractId
-         * @param providerEpgId
-         * @param consumerEpgId
-         * @returns {string}
-         */
-        function generateLinkId(contractId, providerEpgId, consumerEpgId) {
-            return contractId + '_' + providerEpgId + '_' + consumerEpgId;
-        }
-
-        /**
-         *
-         * @param data
-         * @returns {Array}
-         */
-        function getContracts(data) {
-            var retVal = [];
-
-            if( data['policy-rule-group-with-endpoint-constraints'] &&
-                data['policy-rule-group-with-endpoint-constraints'][0]['policy-rule-group']) {
-                data['policy-rule-group-with-endpoint-constraints'][0]['policy-rule-group'].forEach(function(prg) {
-                    retVal.push(
-                        createLink(
-                            data['provider-epg-id'],
-                            data['consumer-epg-id'],
-                            prg['contract-id'],
-                            prg['tenant-id']
-                        )
-                    )
-                });
-            }
-
-            return retVal;
+            $scope.topologyData = tempTopoData;
+            $scope.topologyLoaded = true;
         }
 
         /**
@@ -253,6 +205,12 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
                 return Object.keys(obj).length;
             else
                 return 0;
+        }
+
+        function getResolvedPolicies() {
+            if($scope.rootTenant) {
+                resolvedPolicies.get($scope.rootTenant, fillTopologyData);
+            }
         }
 
         /**
@@ -277,6 +235,8 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
         function init() {
             $scope.rootTenants.clearData();
             $scope.rootTenants.get('config');
+            $state.go('main.gbp.index.resolvedPolicy');
+            $scope.endpointSgtList.get();
         }
 
         /**
@@ -292,8 +252,8 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
                 parent: angular.element(document.body),
                 scope: $scope,
                 locals: {
-                    chainName: chainName,
-                },
+                    chainName: chainName
+                }
             });
         }
 
@@ -303,14 +263,6 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
          * and opens/closes side panel
          */
         function openSidePanel(page, object, cbk) {
-            if(object.constructor.name == 'Epg') {
-                $scope.endpoints.clearData();
-                $scope.endpoints.getByEpg(object.data.id);
-                $scope.activeObject = 'epg';
-            }
-            else
-                $scope.activeObject = 'contract';
-
             var samePage = page === $scope.sidePanelPage;
 
             $scope.selectedNode = object;
@@ -329,12 +281,12 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
          * @param idElement
          */
         function openSidePanelContract(idElement) {
-            var obj = $filter('filter')(Object.keys($scope.resolvedPolicy).map(function(k) {
-                var obj = $scope.resolvedPolicy[k];
+            var obj = $filter('filter')(Object.keys($scope.resolvedPolicy.contracts).map(function (k) {
+                var obj = $scope.resolvedPolicy.contracts[k];
                 obj.linkId = k;
 
                 return obj;
-            }), {'contract-id': idElement});
+            }), { 'contract-id': idElement });
 
             $scope.sidePanelPage = 'resolved-policy/contract-sidepanel';
             $scope.sidePanelObject = obj[0];
@@ -350,7 +302,7 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
          * @param type
          */
         function openSidePanelChild(index, type) {
-            switch(type) {
+            switch (type) {
             case 'subject':
                 $scope.sidePanelPage = 'resolved-policy/subject-sidepanel';
                 $scope.subjectIndex = index;
@@ -371,7 +323,7 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
          * @param tpl
          */
         function openSidePanelTpl(tpl) {
-            switch(tpl) {
+            switch (tpl) {
             case 'contract':
                 $scope.sidePanelPage = 'resolved-policy/contract-sidepanel';
                 break;
@@ -389,41 +341,12 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
 
         /**
          *
-         * @param data
-         * @param providerEpgId
-         * @param consumerEpgId
-         */
-        function processPolicyRuleGroupWithEpConstraints(data, providerEpgId, consumerEpgId) {
-            data.forEach(function(element) {
-                element['policy-rule-group'].forEach(function(el) {
-                    var linkId = generateLinkId(el['contract-id'], providerEpgId, consumerEpgId);
-
-                    $scope.resolvedPolicy = {};
-
-                    if(!$scope.resolvedPolicy.hasOwnProperty(linkId)) {
-                        $scope.resolvedPolicy[linkId] = {
-                            'contract-id': el['contract-id'],
-                            'subjects': {},
-                        };
-                    }
-
-                    if(!$scope.resolvedPolicy[linkId].subjects.hasOwnProperty(el['subject-name'])) {
-                        $scope.resolvedPolicy[linkId].subjects[el['subject-name']] = {'resolved-rule': []};
-                    }
-
-                    $scope.resolvedPolicy[linkId].subjects[el['subject-name']]['resolved-rule'].push(el['resolved-rule']);
-                });
-            });
-        }
-
-        /**
-         *
          */
         function setRootTenant() {
             $scope.broadcastFromRoot('ROOT_TENANT_CHANGED');
 
-            if($scope.stateUrl.startsWith('/resolved-policy')) {
-                fillTopologyData();
+            if ($scope.stateUrl.startsWith('/resolved-policy')) {
+                getResolvedPolicies()
                 if($scope.sidePanelPage) {
                     if($scope.activeObject == 'epg')
                         deselectEpg();
@@ -441,8 +364,8 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
             $scope.stateUrl = $state.current.url;
             closeSidePanel();
 
-            if($scope.stateUrl.startsWith('/resolved-policy')) {
-                fillTopologyData();
+            if ($scope.stateUrl.startsWith('/resolved-policy')) {
+                getResolvedPolicies()
             }
         }
 
@@ -451,11 +374,8 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
          * @param element
          */
         function toggleExpanded(element) {
-            if(typeof element !== 'string') {
-                if(element.expanded)
-                    element.expanded = false;
-                else
-                    element.expanded = true;
+            if (typeof element !== 'string') {
+                element.expanded = !element.expanded;
             }
         }
 
@@ -469,8 +389,8 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
                 parent: angular.element(document.body),
                 scope: $scope,
                 locals: {
-                    endpoint: endpointData,
-                },
+                    endpoint: endpointData
+                }
             });
         }
 
@@ -494,7 +414,6 @@ define(['app/gbp/common/gbp.service', 'app/gbp/resolved-policy/resolved-policy.s
             $scope.endpoints.clearData();
             $scope.endpoints.getByEpg($scope.selectedNode.data.id);
         }
-
         /* event listeners */
         /**
          * Event fired after content loaded, setStateUrl function is called to fill stateUrl method

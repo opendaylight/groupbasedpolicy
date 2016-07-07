@@ -37,10 +37,11 @@
 			<div class="md-list-item-text" flex>
 				<h3>{{action.name}}</h3>
 				<p>Action definition ID: {{action['action-definition-id']}} </p>
-				<p>Name: {{action.name}} </p>
+				<p ng-if="action['action-definition-id'] === 'Action-Chain'">Parameter name: {{action['parameter-value'][0].name}} </p>
+                <p ng-if="action['action-definition-id'] === 'Action-Chain'">Parameter value: {{action['parameter-value'][0]['string-value']}} </p>
 			</div>
 			<div ng-if="action['action-definition-id'] === 'Action-Chain'" flex="10">
-				<md-button class="md-icon-button" ng-click="openSfcDialog(action.name)">
+				<md-button class="md-icon-button" ng-click="openSfcDialog(action['parameter-value'][0]['string-value'])">
 					<md-icon>visibility</md-icon>
 				</md-button>
 			</div>

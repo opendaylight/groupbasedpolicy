@@ -97,9 +97,9 @@ svg g.node text {
 }
 
 /* $mdDialog.confirm */
-md-dialog button span {
+/* md-dialog button span {
     color: #000;
-}
+} */
 
 div.layout-padding h3 {
     color: black;
@@ -238,4 +238,29 @@ li > md-autocomplete-parent-scope > span {
 #tenantSelector div, #tenantSelector .md-select-placeholder span {
     color: white;
     font-weight: normal;
+}
+
+md-input-container md-select md-select-value span {
+    font-size: 14px;
+    font-style: inherit;
+    font-variant: inherit;
+    font-family: inherit;
+    letter-spacing: 0.010em;
+}
+
+#select_container_1 {
+    z-index:1001;
+}
+
+#select_value_label_0 {
+    border-bottom-color: white !important;
+    border-bottom-width: 1px;
+}
+
+#select_value_label_0 span {
+    color: white !important;
+}
+
+.md-chip-content .ng-binding {
+    color: black;
 }
