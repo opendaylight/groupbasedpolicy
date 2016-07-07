@@ -100,8 +100,8 @@ define([], function () {
                             ],
                         },
                     };
-                return restObj.customPOST(reqData).then(function (data) {
-                    successCallback(data);
+                return restObj.customPOST(reqData).then(function () {
+                    (successCallback() || angular.noop)();
                 }, function () {
 
                 });

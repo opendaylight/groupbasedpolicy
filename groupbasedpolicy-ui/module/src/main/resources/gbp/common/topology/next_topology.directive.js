@@ -1,17 +1,17 @@
 define(['next-ui'], function() {
 
-	var NextTopology = function(NextTopologyService){
-		return {
-			restrict: 'E',
-			scope: {
-				topologyData: '=',
-				cbkFunctions: '=?',
-				dictionaries: '=?',
-				topo: '=?',
-                topoColors: '=?'
-			},
-			template: '<div id="graph-container" class="col-md-12"></div>',
-			link: function(scope) {
+	var NextTopology = function (NextTopologyService){
+        return {
+			    restrict: 'E',
+                scope: {
+                    topologyData: '=',
+                    cbkFunctions: '=?',
+                    dictionaries: '=?',
+                    topo: '=?',
+                    topoColors: '=?'
+                },
+			    template: '<div id="graph-container" class="col-md-12"></div>',
+			    link: function(scope) {
 				var saveTopoInterval = null;
 
 				scope.topo = null;
@@ -311,11 +311,12 @@ define(['next-ui'], function() {
                                 */
 
                                 this.setProviderStyleLine();
+								this.set('color', this.getColor());
 							},
 							// generate the color for a link
 							getColor: function(){
 								// get color depend on status
-								var color = NextTopologyService.getLinkColor(this.model()._data.status, scope.topoColors);
+								var color = this.model()._data.type === 'chain' ? '#3366ff' : '#009900';
 								// make it available outside next
 								this.model()._data.linkColor = color;
 								return color;

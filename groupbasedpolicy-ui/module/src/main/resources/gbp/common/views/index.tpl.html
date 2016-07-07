@@ -13,8 +13,8 @@
                 <md-button ng-click="closeSidePanel()" ng-href="#/gbp/index/resolved-policy">Resolved Policy</md-button>
                 <md-button ng-click="closeSidePanel()" ng-href="#/gbp/index/endpoints">Endpoints</md-button>
                 <span flex></span>
-                <md-button ng-if="('main.gbp.index.resolvedPolicy' | isState) && rootTenant" ng-click="deselectEpg()" ng-href="">Endpoint-groups</md-button>
-                <md-button ng-if="('main.gbp.index.resolvedPolicy' | isState) && rootTenant" ng-click="deselectContract()" ng-href="">Contracts</md-button>
+                <md-button ng-if="('main.gbp.index.resolvedPolicy' | isState) && rootTenant" ng-click="openSidePanel('resolved-policy/sidepanel/views/epg-list-sidepanel')" ng-href="">Endpoint-groups</md-button>
+                <md-button ng-if="('main.gbp.index.resolvedPolicy' | isState) && rootTenant" ng-click="openSidePanel('resolved-policy/sidepanel/views/contract-list-sidepanel')" ng-href="">Contracts</md-button>
                 <md-input-container style="margin-right: 10px;">
                     <md-select ng-model="rootTenant"
                                placeholder="select tenant"

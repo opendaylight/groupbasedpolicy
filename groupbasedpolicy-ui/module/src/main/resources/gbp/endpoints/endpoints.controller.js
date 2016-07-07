@@ -6,9 +6,9 @@ define([
 
     angular.module('app.gbp').controller('EndpointsController', EndpointsController);
 
-    EndpointsController.$inject = ['$scope', '$mdDialog', 'EndpointsListService', 'EndpointService'];
+    EndpointsController.$inject = ['$scope', '$mdDialog', 'EndpointsListService'];
 
-    function EndpointsController($scope, $mdDialog, EndpointsListService, EndpointService) {
+    function EndpointsController($scope, $mdDialog, EndpointsListService) {
         /* properties */
         $scope.endpoints = EndpointsListService.createList();
         $scope.disableKeyFieldsEditing = false;
@@ -67,14 +67,6 @@ define([
 
         $scope.$on('ROOT_TENANT_CHANGED', function () {
             $scope.getEndpointsList();
-        });
-
-        $scope.$on('openEndpointDialog', function(event, obj) {
-            openEndpointDialog('edit', obj);
-        });
-
-        $scope.$on('deleteEndpointDialog', function(event, obj) {
-            deleteEndpointDialog(obj);
         });
     }
 });

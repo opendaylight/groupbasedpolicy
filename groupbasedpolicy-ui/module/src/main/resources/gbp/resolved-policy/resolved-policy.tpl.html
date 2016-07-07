@@ -1,5 +1,15 @@
-<div id="topology-container">
-    <md-button md-no-ink class="md-primary reload-button" ng-click="fillTopologyData()"><i class="material-icons">sync</i> Reload topology</md-button>
+<div id="topology-container" flex>
+    <section class="legendBox">
+        <md-button md-no-ink class="md-primary reload-button" ng-click="reloadTopology()">
+            <i class="material-icons">sync</i> Reload topology
+        </md-button>
+        <ul>
+            <li class="item"><span class="line green"></span>Allow</li>
+            <li class="item"><span class="line blue"></span>Chain</li>
+        </ul>
+    </section>
+
     <next-topology topology-data="topologyData" cbk-functions="cbkFunctions" dictionaries="nxDict" topo="nxTopology"
-               topo-colors="nxTopoColors"></next-topology>
+               topo-colors="nxTopoColors">
+    </next-topology>
 </div>

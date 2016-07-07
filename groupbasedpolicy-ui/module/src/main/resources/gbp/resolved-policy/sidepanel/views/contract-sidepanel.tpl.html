@@ -1,0 +1,25 @@
+<md-content ng-controller="ContractSidePanelController">
+	<div layout="row" class="layout-padding-lr15 layout-row">
+		<ul class="breadcrumbs">
+			<li class="breadcrumb" ng-click="openSidePanel('resolved-policy/sidepanel/views/contract-list-sidepanel')" role="button">Contracts</li>
+			<li class="breadcrumb"><i class="material-icons">keyboard_arrow_right</i></li>
+			<li class="breadcrumb">{{sidePanelObject['contract-id']}}</li>
+		</ul>
+	</div>
+	<md-divider></md-divider>
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Contract info</md-subheader>
+	<div layout="row" class="layout-padding-lr15 layout-padding-b15 layout-row">
+	    <span flex="50" class="flex-50"><strong>Contract ID</strong></span>
+	    <span flex="" class="ng-binding flex">{{sidePanelObject['contract-id']}}</span>
+	</div>
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Subject list ({{getObjectsCount(sidePanelObject.subjects)}})</md-subheader>
+    <md-list>
+    	<ng-repeat ng-repeat="(key, value) in sidePanelObject.subjects">
+	    	<md-list-item ng-click="openSidePanel('resolved-policy/sidepanel/views/subject-sidepanel', sidePanelObject, 'subject', key)">
+	    		{{key}}
+	    	</md-list-item>
+    	</ng-repeat>
+    </md-list>
+</md-content>

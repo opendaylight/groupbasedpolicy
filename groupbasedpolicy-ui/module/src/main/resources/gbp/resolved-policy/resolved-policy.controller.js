@@ -15,7 +15,7 @@ define(['app/gbp/resolved-policy/resolved-policy.service'], function () {
                 var epg = $scope.resolvedPolicy.epgs[node['_model']['_id']];
 
                 epg.id = node['_model']['_id'];
-                $scope.openSidePanel('resolved-policy/epg-sidepanel', epg, null);
+                $scope.openSidePanel('resolved-policy/sidepanel/views/epg-sidepanel', epg);
                 $scope.$apply();
 
                 NextTopologyService.highlightNode($rootScope.nxTopology, node['_model']['_id']);
@@ -23,7 +23,7 @@ define(['app/gbp/resolved-policy/resolved-policy.service'], function () {
             clickLink: function(link){
                 var resolvedContract = $scope.resolvedPolicy.contracts[link['_model']['_id']];
                 resolvedContract.linkId = link['_model']['_id'];
-                $scope.openSidePanel('resolved-policy/contract-sidepanel', resolvedContract, null);
+                $scope.openSidePanel('resolved-policy/sidepanel/views/contract-sidepanel', resolvedContract);
                 $scope.$apply();
 
                 NextTopologyService.highlightLink($rootScope.nxTopology, link['_model']['_id']);

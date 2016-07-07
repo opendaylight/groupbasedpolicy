@@ -28,6 +28,7 @@ define([], function () {
             function setData(data) {
                 var self = this;
 
+                self.clearData();
                 data && data.forEach(function (dataElement) {
                     self.data.push(EndpointService.createObject(dataElement));
                 });
@@ -48,21 +49,24 @@ define([], function () {
                 });
             }
 
-            function getByEpg(epg) {
+            function getByEpg(epg, successCallback) {
                 /* jshint validthis:true */
                 var self = this;
                 var restObj = Restangular.one('restconf').one('operational').one('base-endpoint:endpoints');
 
                 return restObj.get().then(function (data) {
+                    //var endpoints = $filter('filter')(data.endpoints['address-endpoints']['address-endpoint'], {'endpoint-group': epg.id});
                     var endpoints = $filter('filter')(data.endpoints['address-endpoints']['address-endpoint'].map(function(endpoint) {
                         return endpoint;
                     }),
                         function(ep) {
-                            if(ep['endpoint-group'].indexOf(epg) != -1)
+                            if(ep['endpoint-group'].indexOf(epg.id) != -1)
                                 return true;
                         }
                     );
                     self.setData(endpoints);
+
+                    (successCallback || angular.noop)();
                 });
             }
 

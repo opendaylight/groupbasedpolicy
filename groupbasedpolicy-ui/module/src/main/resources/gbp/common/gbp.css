@@ -1,3 +1,11 @@
+.h100 {
+    height:100%
+}
+
+.w100 {
+    width:100%
+}
+
 .gbpUiGlobalWrapper {
     background: #ffffff;
     margin-bottom: 0!important;
@@ -7,6 +15,7 @@
 
 .gbpUiGlobalWrapper .main {
     top: 0px;
+    height: 100%;
 }
 
 .gbpUiWrapper {
@@ -94,12 +103,13 @@ svg g.node text {
 
 #graph-container {
     padding-left: 0;
+    background-color: #ffffff;
 }
 
 /* $mdDialog.confirm */
-/* md-dialog button span {
+md-dialog button span {
     color: #000;
-} */
+}
 
 div.layout-padding h3 {
     color: black;
@@ -180,10 +190,17 @@ md-dialog-content > div:first-child {
     font-size: 13px;
     margin-bottom: 0 !important;
     vertical-align: middle;
+    max-height: 20px;
+    line-height: 20px;
 }
 
 .breadcrumbs .breadcrumb[role="button"] {
     color: rgb(33, 150, 243);
+    cursor: pointer;
+}
+
+.breadcrumb i {
+    font-size: 20px !important;
 }
 
 .layout-padding-r10 {
@@ -241,6 +258,7 @@ li > md-autocomplete-parent-scope > span {
 }
 
 md-input-container md-select md-select-value span {
+    font-weight: 500;
     font-size: 14px;
     font-style: inherit;
     font-variant: inherit;
@@ -252,15 +270,83 @@ md-input-container md-select md-select-value span {
     z-index:1001;
 }
 
-#select_value_label_0 {
-    border-bottom-color: white !important;
-    border-bottom-width: 1px;
+md-list-item.md-4-line .md-list-item-text h3{
+    font-size: 16px;
+    font-weight: 400;
+    letter-spacing: 0.010em;
+    margin: 0 0 0px 0;
+    line-height: 1.2em;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: rgba(0,0,0,0.87);
 }
 
-#select_value_label_0 span {
-    color: white !important;
+md-list-item.md-4-line .md-list-item-text p {
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.010em;
+    margin: 0 0 0 0;
+    line-height: 1.6em;
+    color: rgba(0,0,0,0.54);
 }
 
-.md-chip-content .ng-binding {
+
+md-list-item.md-4-line {
+    height: auto;
+    min-height: 100px;
+}
+
+section.legendBox{
+    position: absolute !important;
+    right: 0;
+    top: 0;
+    z-index: 1;
+    width: 200px;
+}
+
+section.legendBox ul li {
+    list-style-type: none;
+}
+
+.reload-button i {
+    vertical-align: middle;
+}
+
+section.legendBox ul .line.green {
+    border-top: 2px solid #68bd6b;
+}
+
+section.legendBox ul .line.blue {
+    border-top: 2px solid #84a3ff;
+}
+
+section.legendBox ul .line {
+    display: -moz-inline-stack;
+    display: inline-block;
+    vertical-align: top;
+    zoom: 1;
+    margin: 9px 5px 0 0;
+    width: 50px;
+}
+
+.margin-lr0 {
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+}
+
+.popover-title {
     color: black;
+}
+
+.popover-content span {
+    color: black;
+}
+
+.popover-content h5 {
+    color: black;
+}
+
+.n-topology-nav-setting > span {
+    color: #999999;
 }

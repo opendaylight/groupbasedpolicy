@@ -1,0 +1,18 @@
+<md-content ng-controller="EpgListSidePanelController">
+	<div layout="row" class="layout-padding-lr15 layout-row">
+		<ul class="breadcrumbs">
+			<li class="breadcrumb">Endpoint-groups</li>
+		</ul>
+	</div>
+	<md-divider></md-divider>
+	<md-divider></md-divider>
+    <md-subheader class="md-primary">Endpoint-groups ({{sidePanelEpgs.length}})</md-subheader>
+    <md-list>
+	    	<md-list-item ng-click="openSidePanel('resolved-policy/sidepanel/views/epg-sidepanel', epg)"
+                          ng-mouseenter="highlightNode(epg.id)"
+                          ng-mouseleave="fadeAll()"
+						  ng-repeat="epg in sidePanelEpgs">
+                   {{epg.id}}
+	    	</md-list-item>
+    </md-list>
+</md-content>

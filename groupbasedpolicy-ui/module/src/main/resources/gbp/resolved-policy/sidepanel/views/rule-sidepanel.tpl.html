@@ -1,0 +1,74 @@
+<md-content flex>
+	<div layout="row" class="layout-padding-lr15 layout-row">
+		<ul class="breadcrumbs">
+			<li class="breadcrumb" ng-click="openSidePanel('resolved-policy/sidepanel/views/contract-list-sidepanel')" role="button">Contracts</li>
+			<li class="breadcrumb"><i class="material-icons">keyboard_arrow_right</i></li>
+			<li class="breadcrumb" ng-click="openSidePanel('resolved-policy/sidepanel/views/contract-sidepanel', sidePanelObject)" role="button">{{sidePanelObject['contract-id']}}</li>
+			<li class="breadcrumb"><i class="material-icons">keyboard_arrow_right</i></li>
+			<li class="breadcrumb" ng-click="openSidePanel('resolved-policy/sidepanel/views/subject-sidepanel', sidePanelObject)" role="button">{{innerObj.subject}}</li>
+			<li class="breadcrumb"><i class="material-icons">keyboard_arrow_right</i></li>
+			<li class="breadcrumb">{{sidePanelObject.subjects[innerObj.subject]['resolved-rule'][innerObj.rule].name}}</li>
+		</ul>
+	</div>
+	<md-divider></md-divider>
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Rule info</md-subheader>
+	<div layout="row" class="layout-padding-lr15 layout-row layout-padding-b15">
+	    <span flex="50" class="flex-50"><strong>Resolved rule name</strong></span>
+	    <span flex="" class="ng-binding flex">{{sidePanelObject.subjects[innerObj.subject]['resolved-rule'][innerObj.rule].name}}</span>
+	</div>
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">
+		<div layout="row" class="layout-row">
+			<span>Actions ({{sidePanelObject.subjects[innerObj.subject]['resolved-rule'][innerObj.rule].action.length}})</span>
+			<span ng-if="sidePanelObject.subjects[innerObj.subject]['resolved-rule'][innerObj.rule].action.length">
+	    	</span>
+    	</div>
+	</md-subheader>
+    <md-list>
+		<md-list-item class="md-4-line" layout="row"
+					  ng-repeat="action in sidePanelObject.subjects[innerObj.subject]['resolved-rule'][innerObj.rule].action">
+			<div layout-padding flex="10">
+				<h3>{{action.order}}</h3>
+				<md-tooltip md-direction="right">
+					Order
+				</md-tooltip>
+			</div>
+			<div class="md-list-item-text" flex>
+				<h3>{{action.name}}</h3>
+				<p>Action definition ID: {{action['action-definition-id']}} </p>
+				<p ng-if="action['action-definition-id'] === 'Action-Chain'">Parameter name: {{action['parameter-value'][0].name}} </p>
+                <p ng-if="action['action-definition-id'] === 'Action-Chain'">Parameter value: {{action['parameter-value'][0]['string-value']}} </p>
+			</div>
+			<div ng-if="action['action-definition-id'] === 'Action-Chain'" flex="10">
+				<md-button class="md-icon-button margin-lr0" ng-click="openSfcDialog(action['parameter-value'][0]['string-value'])">
+					<md-icon>visibility</md-icon>
+				</md-button>
+			</div>
+		</md-list-item>
+    </md-list>
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">
+		<div layout="row" class="layout-row">
+			<span>Classifiers ({{sidePanelObject.subjects[innerObj.subject]['resolved-rule'][innerObj.rule].classifier.length}})</span>
+			<span class="flex" flex></span>
+    	</div>
+	</md-subheader>
+    <md-list class="expander">
+		<md-list-item ng-repeat="classifier in sidePanelObject.subjects[innerObj.subject]['resolved-rule'][innerObj.rule].classifier"
+					  class="md-4-line">
+            <div layout-padding flex="15">
+                <h3>{{classifier.direction}}</h3>
+                <md-tooltip md-direction="right">
+                    Direction
+                </md-tooltip>
+            </div>
+			<div class="md-list-item-text" flex="80">
+				<h3>{{classifier.name}}</h3>
+				<p>Classifier definition ID: {{classifier['classifier-definition-id']}} </p>
+				<p>Connection tracking: {{classifier['connection-tracking']}} </p>
+				<p ng-repeat="param in classifier['parameter-value']">{{param.name}}: {{param['int-value']}} </p>
+			</div>
+		</md-list-item>
+    </md-list>
+</md-content>

@@ -6,9 +6,9 @@ define([
 
     angular.module('app.gbp').controller('AddEndpointController', AddEndpointController);
 
-    AddEndpointController.$inject = ['$filter', '$mdDialog', '$scope', 'EndpointService', 'endpoint', 'ForwardingService', 'TenantService'];
+    AddEndpointController.$inject = ['$state', '$filter', '$mdDialog', '$scope', 'EndpointService', 'endpoint', 'ForwardingService'];
     /* @ngInject */
-    function AddEndpointController($filter, $mdDialog, $scope, EndpointService, endpoint, ForwardingService, TenantService) {
+    function AddEndpointController($state, $filter, $mdDialog, $scope, EndpointService, endpoint, ForwardingService) {
         /* properties */
 
         $scope.endpoint = endpoint ? endpoint : EndpointService.createObject();
@@ -46,7 +46,8 @@ define([
 
         function closeDialog(){
             $mdDialog.cancel();
-            $scope.getEndpointsList();
+            if($state.current.name == 'main.gbp.index.endpoints')
+                $scope.getEndpointsList();
         }
 
         function save() {
@@ -58,6 +59,7 @@ define([
             }
             $scope.endpoint.post(function () {
                 $scope.closeDialog();
+                $scope.broadcastFromRoot('endpointChanged');
             }, function () {
             } );
         }
@@ -86,7 +88,7 @@ define([
 
         function createFilterFor(query) {
             return function filterFn(epg) {
-                return (epg.indexOf(query) === 0);
+                return (epg.toLowerCase().indexOf(query.toLowerCase()) === 0);
             };
         }
 

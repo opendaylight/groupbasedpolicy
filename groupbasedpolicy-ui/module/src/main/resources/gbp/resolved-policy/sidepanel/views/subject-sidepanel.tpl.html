@@ -1,0 +1,30 @@
+<md-content flex>
+	<div layout="row" class="layout-padding-lr15 layout-row">
+		<ul class="breadcrumbs">
+			<li class="breadcrumb" ng-click="openSidePanel('resolved-policy/sidepanel/views/contract-list-sidepanel')" role="button">Contracts</li>
+			<li class="breadcrumb"><i class="material-icons">keyboard_arrow_right</i></li>
+			<li class="breadcrumb" ng-click="openSidePanel('resolved-policy/sidepanel/views/contract-sidepanel', sidePanelObject)" role="button">{{sidePanelObject['contract-id']}}</li>
+			<li class="breadcrumb"><i class="material-icons">keyboard_arrow_right</i></li>
+			<li class="breadcrumb">{{innerObj.subject}}</li>
+		</ul>
+	</div>
+	<md-divider></md-divider>
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Subject info</md-subheader>
+	<div layout="row" class="layout-padding-lr15 layout-row layout-padding-b15">
+	    <span flex="50" class="flex-50"><strong>Subject name</strong></span>
+	    <span flex="" class="ng-binding flex">{{innerObj.subject}}</span>
+	</div>
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Resolved rule list ({{sidePanelObject.subjects[innerObj.subject]['resolved-rule'].length}})</md-subheader>
+    <md-list>
+    	<ng-repeat ng-repeat="(key, rule) in sidePanelObject.subjects[innerObj.subject]['resolved-rule'] | orderBy: 'order'">
+	    	<md-list-item ng-click="openSidePanel('resolved-policy/sidepanel/views/rule-sidepanel', sidePanelObject, 'rule', key)">
+	    		<span class="layout-padding-r10">
+	    		    <h4 class="order">{{rule.order}}</h4>
+	    		</span>
+	    		<span>{{rule.name}}</span>
+	    	</md-list-item>
+    	</ng-repeat>
+    </md-list>
+</md-content>

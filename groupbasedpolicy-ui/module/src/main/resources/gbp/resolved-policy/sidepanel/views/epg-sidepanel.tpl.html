@@ -1,0 +1,71 @@
+<md-content ng-controller="EpgSidePanelController">
+	<div layout="row" class="layout-padding-lr15 layout-row">
+		<ul class="breadcrumbs">
+			<li class="breadcrumb" ng-click="openSidePanel('resolved-policy/sidepanel/views/epg-list-sidepanel')" role="button">Endpoint-groups</li>
+			<li class="breadcrumb"><i class="material-icons">keyboard_arrow_right</i></li>
+			<li class="breadcrumb">{{sidePanelObject.id}}</li>
+		</ul>
+	</div>
+	<md-divider></md-divider>
+	<md-divider></md-divider>
+	<md-subheader class="md-primary">Endpoint-group info</md-subheader>
+	<div layout="row" class="layout-padding-lr15 layout-padding-b15 layout-row">
+	    <span flex="50" class="flex-50"><strong>Endpoint-group ID</strong></span>
+	    <span flex="" class="ng-binding flex">{{sidePanelObject.id}}</span>
+	</div>
+	<md-divider></md-divider>
+	<div ng-if="sidePanelObject['provided-contracts'].length">
+	    <md-subheader class="md-primary">Provided contracts ({{sidePanelObject['provided-contracts'].length}})</md-subheader>
+	    <md-list>
+            <md-list-item ng-click="openSidePanel('resolved-policy/sidepanel/views/contract-sidepanel', providedContract);"
+                          ng-repeat="providedContract in sidePanelObject['provided-contracts']"
+                          ng-mouseenter="highlightLink(providedContract.linkId)"
+                          ng-mouseleave="highlightNode(sidePanelObject.id)"
+                          >
+                {{providedContract['contract-id']}}
+            </md-list-item>
+	    </md-list>
+    </div>
+	<div ng-if="sidePanelObject['consumed-contracts'].length">
+	    <md-subheader class="md-primary">Consumed contracts ({{sidePanelObject['consumed-contracts'].length}})</md-subheader>
+	    <md-list>
+            <md-list-item ng-click="openSidePanel('resolved-policy/sidepanel/views/contract-sidepanel', consumedContract);"
+                          ng-repeat="consumedContract in sidePanelObject['consumed-contracts']"
+                          ng-mouseenter="highlightLink(consumedContract.linkId)"
+                          ng-mouseleave="highlightNode(sidePanelObject.id)"
+                          >
+                {{consumedContract['contract-id']}}
+            </md-list-item>
+	    </md-list>
+    </div>
+    <md-divider></md-divider>
+    <md-subheader class="md-primary">
+		<div layout="row" class="layout-row">
+			<span>Endpoints ({{endpoints.data.length}})</span>
+    	</div>
+    </md-subheader>
+    <md-list class="expander">
+		<md-list-item class="md-4-line" layout="row" ng-repeat="endpoint in endpoints.data">
+			<div layout-padding flex="15">
+				<h3>{{endpoint.getEndpointContextTypeAcronym()}}</h3>
+				<md-tooltip md-direction="right">{{endpoint.data['context-type']}}</md-tooltip>
+			</div>
+			<div class="md-list-item-text" flex="60">
+				<h3>{{endpoint.data['context-id']}}</h3>
+				<p>Address: {{endpoint.data.address}} </p>
+				<p>Network Domain: {{endpoint.data['network-containment']['network-domain-id']}} </p>
+                <p>SGT: {{endpointSgtList.findSgtsForEndpoint(endpoint)}} </p>
+			</div>
+			<div flex="10">
+				<md-button class="md-icon-button" ng-click="rootOpenEndpointDialog('edit', endpoint)">
+					<md-icon>edit</md-icon>
+				</md-button>
+			</div>
+			<div flex="10">
+				<md-button class="md-icon-button" ng-click="rootDeleteEndpointDialog(endpoint)">
+					<md-icon>delete</md-icon>
+				</md-button>
+			</div>
+		</md-list-item>
+    </md-list>
+</md-content>
