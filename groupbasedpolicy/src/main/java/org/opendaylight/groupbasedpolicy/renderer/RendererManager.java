@@ -232,7 +232,9 @@ public class RendererManager implements AutoCloseable {
                         && renderer.getRendererPolicy().getVersion().equals(version)) {
                     processingRenderers.remove(configuredRenderer);
                     Status status = rendererPolicy.getStatus();
-                    if (status != null && status.getUnconfiguredEndpoints() != null) {
+                    if (status != null && status.getUnconfiguredEndpoints() != null
+                            && status.getUnconfiguredEndpoints().getUnconfiguredRendererEndpoint() != null
+                            && !status.getUnconfiguredEndpoints().getUnconfiguredRendererEndpoint().isEmpty()) {
                         LOG.warn("Renderer {} did not configure policy with version {} successfully. \n{}",
                                 configuredRenderer.getValue(), version, status);
                     } else {
