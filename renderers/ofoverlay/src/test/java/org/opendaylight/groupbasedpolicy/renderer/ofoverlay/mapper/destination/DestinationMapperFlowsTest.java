@@ -1,9 +1,45 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.destination;
 
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyShort;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.when;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.ARP;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.IPv4;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.IPv6;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.RegMatch;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.addNxRegMatch;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.applyActionIns;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.bytesFromHexString;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.decNwTtlAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.ethernetMatch;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.gotoTableIns;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.groupAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadArpOpAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadArpShaAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadArpSpaAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadRegAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadTunIPv4Action;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxLoadTunIdAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxMoveArpShaToArpThaAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxMoveArpSpaToArpTpaAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.nxMoveEthSrcToEthDstAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.outputAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.setDlDstAction;
+import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.setDlSrcAction;
+
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mockito;
 import org.opendaylight.groupbasedpolicy.dto.IndexedTenant;
 import org.opendaylight.groupbasedpolicy.dto.PolicyInfo;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfContext;
@@ -16,7 +52,6 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.OrdinalFactory;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.mapper.MapperUtilsTest;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv6Prefix;
@@ -30,7 +65,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.M
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.Instruction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.list.InstructionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubnetId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3AddressBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
@@ -39,6 +73,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3PrefixBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContextBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.TenantBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.PolicyBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
@@ -58,25 +93,13 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev14
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg5;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg6;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowjava.nx.match.rev140421.NxmNxReg7;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
-import java.lang.reflect.Field;
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.mockito.Mockito.*;
-import static org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils.*;
-
-@RunWith(PowerMockRunner.class)
-@PrepareForTest({ OrdinalFactory.class })
 public class DestinationMapperFlowsTest extends MapperUtilsTest {
 
     private DestinationMapperFlows flows;
+    private DestinationMapperUtils utils;
+    private Tenant tenant;
+    private IndexedTenant indexedTenant;
 
     @Before
     public void init() throws Exception {
@@ -85,9 +108,19 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         policyInfo = mock(PolicyInfo.class);
         ctx = mock(OfContext.class);
         ofWriter = mock(OfWriter.class);
+
         tableId = 3;
-        flows = new DestinationMapperFlows(new DestinationMapperUtils(ctx), NODE_ID, tableId);
-        resetPolicyOrdinalCounterValue();
+
+        tenant = buildTenant().build();
+        indexedTenant = new IndexedTenant(tenant);
+
+        when(ctx.getTenant(TENANT_ID)).thenReturn(indexedTenant);
+        when(ctx.getEndpointManager()).thenReturn(endpointManager);
+        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
+
+        utils = new DestinationMapperUtils(ctx);
+        flows = new DestinationMapperFlows(utils, NODE_ID, tableId);
+        OrdinalFactory.resetPolicyOrdinalValue();
     }
 
     @Test
@@ -141,14 +174,8 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         externalConnectors.add(new NodeConnectorId(CONNECTOR_0));
         externalConnectors.add(new NodeConnectorId(CONNECTOR_1));
 
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
-
         flows.createExternalL2Flow(tableId, 100, endpointBuilder.build(), externalConnectors, ofWriter);
-        verify(ctx, times(3)).getTenant(any(TenantId.class));
-        verify(ctx, times(1)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
+
         verifyZeroInteractions(ofWriter);
     }
 
@@ -158,12 +185,12 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         Set<NodeConnectorId> externalConnectors = new HashSet<>();
         externalConnectors.add(new NodeConnectorId(OPENFLOW + CONNECTOR_0.getValue()));
         externalConnectors.add(new NodeConnectorId(OPENFLOW + CONNECTOR_1.getValue()));
-        Endpoint endpoint = endpointBuilder.build();
+        Endpoint endpoint = endpointBuilder.setTenant(tenant.getId()).build();
 
-
-        MatchBuilder matchBuilder = new MatchBuilder()
-                .setEthernetMatch(ethernetMatch(null, endpoint.getMacAddress(), null));
-        addNxRegMatch(matchBuilder, RegMatch.of(NxmNxReg4.class, (long) 3));
+        MatchBuilder matchBuilder =
+                new MatchBuilder().setEthernetMatch(ethernetMatch(null, endpoint.getMacAddress(), null));
+        OrdinalFactory.EndpointFwdCtxOrdinals ord = utils.getEndpointOrdinals(endpoint);
+        addNxRegMatch(matchBuilder, RegMatch.of(NxmNxReg4.class, (long) ord.getBdId()));
         Match match = matchBuilder.build();
 
         List<Action> applyActions = new ArrayList<>();
@@ -173,11 +200,9 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
 
         int order = 0;
         Instruction applyActionsIns = new InstructionBuilder().setOrder(order++)
-                .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
-                .build();
-        Instruction gotoTable = new InstructionBuilder().setOrder(order)
-                .setInstruction(gotoTableIns(tableId))
-                .build();
+            .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
+            .build();
+        Instruction gotoTable = new InstructionBuilder().setOrder(order).setInstruction(gotoTableIns(tableId)).build();
 
         ArrayList<Instruction> instructions = new ArrayList<>();
         instructions.add(applyActionsIns);
@@ -188,14 +213,8 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         FlowId flowId = FlowIdUtils.newFlowId(tableId, "externalL2", match);
         Flow flow = buildFlow(flowId, tableId, 100, match, instructionsBuilder.build()).build();
 
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
-
         flows.createExternalL2Flow(tableId, 100, endpointBuilder.build(), externalConnectors, ofWriter);
-        verify(ctx, times(3)).getTenant(any(TenantId.class));
-        verify(ctx, times(1)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
+
         verify(ofWriter, times(1)).writeFlow(eq(NODE_ID), eq(tableId), eq(flow));
     }
 
@@ -211,16 +230,9 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         externalConnectors.add(new NodeConnectorId(CONNECTOR_0));
         externalConnectors.add(new NodeConnectorId(CONNECTOR_1));
 
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
-
         flows.createExternalL3RoutedFlow(tableId, 90, endpoint, gateway, l3AddressBuilder.build(), externalConnectors,
                 ofWriter);
 
-        verify(ctx, times(3)).getTenant(any(TenantId.class));
-        verify(ctx, times(1)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
         verifyZeroInteractions(ofWriter);
     }
 
@@ -236,16 +248,9 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         externalConnectors.add(new NodeConnectorId(CONNECTOR_0));
         externalConnectors.add(new NodeConnectorId(CONNECTOR_1));
 
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
-
         flows.createExternalL3RoutedFlow(tableId, 90, endpoint, gateway, l3AddressBuilder.build(), externalConnectors,
                 ofWriter);
 
-        verify(ctx, times(3)).getTenant(any(TenantId.class));
-        verify(ctx, times(1)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
         verifyZeroInteractions(ofWriter);
     }
 
@@ -271,18 +276,16 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         applyActions.addAll(l3ApplyActions);
 
         MatchBuilder matchBuilder = new MatchBuilder().setEthernetMatch(ethernetMatch(null, MAC_1, IPv4))
-                .setLayer3Match(new Ipv4MatchBuilder()
-                .setIpv4Destination(new Ipv4Prefix(IPV4_0.getValue() + IP_PREFIX_32)).build());
+            .setLayer3Match(new Ipv4MatchBuilder().setIpv4Destination(new Ipv4Prefix(IPV4_0.getValue() + IP_PREFIX_32))
+                .build());
         addNxRegMatch(matchBuilder, RegMatch.of(NxmNxReg6.class, (long) 5));
         Match match = matchBuilder.build();
 
         int order = 0;
         Instruction applyActionsIns = new InstructionBuilder().setOrder(order++)
-                .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
-                .build();
-        Instruction gotoTable = new InstructionBuilder().setOrder(order)
-                .setInstruction(gotoTableIns(tableId))
-                .build();
+            .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
+            .build();
+        Instruction gotoTable = new InstructionBuilder().setOrder(order).setInstruction(gotoTableIns(tableId)).build();
         ArrayList<Instruction> l3instructions = new ArrayList<>();
         l3instructions.add(applyActionsIns);
         l3instructions.add(gotoTable);
@@ -292,16 +295,9 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         FlowId flowid = FlowIdUtils.newFlowId(tableId, "externalL3", match);
         Flow flow = buildFlow(flowid, tableId, 90, match, instructionsBuilder.build()).build();
 
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
-
         flows.createExternalL3RoutedFlow(tableId, 90, endpoint, gateway, l3AddressBuilder.build(), externalConnectors,
                 ofWriter);
 
-        verify(ctx, times(3)).getTenant(any(TenantId.class));
-        verify(ctx, times(1)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
         verify(ofWriter, times(1)).writeFlow(eq(NODE_ID), eq(tableId), eq(flow));
     }
 
@@ -327,18 +323,16 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         applyActions.addAll(l3ApplyActions);
 
         MatchBuilder matchBuilder = new MatchBuilder().setEthernetMatch(ethernetMatch(null, MAC_1, IPv6))
-                .setLayer3Match(new Ipv6MatchBuilder()
-                .setIpv6Destination(new Ipv6Prefix(IPV6_1.getValue() + IP_PREFIX_128)).build());
+            .setLayer3Match(new Ipv6MatchBuilder().setIpv6Destination(new Ipv6Prefix(IPV6_1.getValue() + IP_PREFIX_128))
+                .build());
         addNxRegMatch(matchBuilder, RegMatch.of(NxmNxReg6.class, (long) 0));
         Match match = matchBuilder.build();
 
         int order = 0;
         Instruction applyActionsIns = new InstructionBuilder().setOrder(order++)
-                .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
-                .build();
-        Instruction gotoTable = new InstructionBuilder().setOrder(order)
-                .setInstruction(gotoTableIns(tableId))
-                .build();
+            .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
+            .build();
+        Instruction gotoTable = new InstructionBuilder().setOrder(order).setInstruction(gotoTableIns(tableId)).build();
         ArrayList<Instruction> l3instructions = new ArrayList<>();
         l3instructions.add(applyActionsIns);
         l3instructions.add(gotoTable);
@@ -348,16 +342,9 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         FlowId flowid = FlowIdUtils.newFlowId(tableId, "externalL3", match);
         Flow flow = buildFlow(flowid, tableId, 90, match, instructionsBuilder.build()).build();
 
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
-
         flows.createExternalL3RoutedFlow(tableId, 90, endpoint, gateway, l3AddressBuilder.build(), externalConnectors,
                 ofWriter);
 
-        verify(ctx, times(3)).getTenant(any(TenantId.class));
-        verify(ctx, times(1)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
         verify(ofWriter, times(1)).writeFlow(eq(NODE_ID), eq(tableId), eq(flow));
     }
 
@@ -366,15 +353,8 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         EndpointBuilder endpointBuilder = buildEndpoint(IPV6_1, MAC_0, CONNECTOR_0);
         Endpoint endpoint = endpointBuilder.build();
 
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
-
         flows.createLocalL2Flow(tableId, 80, endpoint, ofWriter);
 
-        verify(ctx, times(3)).getTenant(any(TenantId.class));
-        verify(ctx, times(1)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
         verifyZeroInteractions(ofWriter);
     }
 
@@ -383,7 +363,7 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         NodeConnectorId connectorId = new NodeConnectorId(OPENFLOW + CONNECTOR_0.getValue());
         EndpointBuilder endpointBuilder = buildEndpoint(IPV6_1, MAC_0, connectorId);
         endpointBuilder.setNetworkContainment(SUBNET_0);
-        Endpoint endpoint = endpointBuilder.build();
+        Endpoint endpoint = endpointBuilder.setTenant(tenant.getId()).build();
 
         List<Action> applyActions = new ArrayList<>();
         applyActions.add(nxLoadRegAction(NxmNxReg2.class, BigInteger.valueOf(1)));
@@ -392,11 +372,9 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
 
         int order = 0;
         Instruction applyActionsIns = new InstructionBuilder().setOrder(order++)
-                .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
-                .build();
-        Instruction gotoTable = new InstructionBuilder().setOrder(order)
-                .setInstruction(gotoTableIns(tableId))
-                .build();
+            .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
+            .build();
+        Instruction gotoTable = new InstructionBuilder().setOrder(order).setInstruction(gotoTableIns(tableId)).build();
 
         ArrayList<Instruction> instructions = new ArrayList<>();
         instructions.add(applyActionsIns);
@@ -404,23 +382,17 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         InstructionsBuilder instructionsBuilder = new InstructionsBuilder();
         instructionsBuilder.setInstruction(instructions);
 
-        MatchBuilder matchBuilder = new MatchBuilder().setEthernetMatch(ethernetMatch(null, endpoint.getMacAddress(),
-                null));
-        addNxRegMatch(matchBuilder, RegMatch.of(NxmNxReg4.class, (long) 3));
+        MatchBuilder matchBuilder =
+                new MatchBuilder().setEthernetMatch(ethernetMatch(null, endpoint.getMacAddress(), null));
+        OrdinalFactory.EndpointFwdCtxOrdinals ord = utils.getEndpointOrdinals(endpoint);
+        addNxRegMatch(matchBuilder, RegMatch.of(NxmNxReg4.class, (long) ord.getBdId()));
         Match match = matchBuilder.build();
 
         Flow flow = buildFlow(FlowIdUtils.newFlowId(tableId, "localL2", match), tableId, 80, match,
                 instructionsBuilder.build()).build();
 
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
-
         flows.createLocalL2Flow(tableId, 80, endpoint, ofWriter);
 
-        verify(ctx, times(3)).getTenant(any(TenantId.class));
-        verify(ctx, times(1)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
         verify(ofWriter, times(1)).writeFlow(eq(NODE_ID), eq(tableId), eq(flow));
     }
 
@@ -457,12 +429,8 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         destSubnetBuilder.setId(SUBNET_1);
         Subnet destSubnet = destSubnetBuilder.build();
 
-        when(ctx.getTenant(any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-
         flows.createLocalL3RoutedFlow(tableId, 80, endpoint, null, localSubnet, destSubnet, ofWriter);
-        verify(ctx, times(1)).getTenant(any(TenantId.class));
-        verify(ctx, times(1)).getEndpointManager();
+
         verifyZeroInteractions(ofWriter);
     }
 
@@ -487,12 +455,8 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         destSubnetBuilder.setParent(L2FD_ID);
         Subnet destSubnet = destSubnetBuilder.build();
 
-        when(ctx.getTenant(any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-
         flows.createLocalL3RoutedFlow(tableId, 80, endpoint, null, localSubnet, destSubnet, ofWriter);
-        verify(ctx, times(3)).getTenant(any(TenantId.class));
-        verify(ctx, times(3)).getEndpointManager();
+
         verifyZeroInteractions(ofWriter);
     }
 
@@ -518,14 +482,8 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         l3AddressBuilder.setIpAddress(null);
         L3Address l3Address = l3AddressBuilder.build();
 
-        when(ctx.getTenant(any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
-
         flows.createLocalL3RoutedFlow(tableId, 80, endpoint, l3Address, localSubnet, destSubnet, ofWriter);
-        verify(ctx, times(4)).getTenant(any(TenantId.class));
-        verify(ctx, times(3)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
+
         verifyZeroInteractions(ofWriter);
     }
 
@@ -568,17 +526,16 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
 
         int order = 0;
         Instruction applyActionsIns = new InstructionBuilder().setOrder(order++)
-                .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
-                .build();
-        Instruction gotoTable = new InstructionBuilder().setOrder(order)
-                .setInstruction(gotoTableIns(tableId))
-                .build();
+            .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
+            .build();
+        Instruction gotoTable = new InstructionBuilder().setOrder(order).setInstruction(gotoTableIns(tableId)).build();
         ArrayList<Instruction> l3instructions = new ArrayList<>();
         l3instructions.add(applyActionsIns);
         l3instructions.add(gotoTable);
 
         MatchBuilder matchBuilder = new MatchBuilder().setEthernetMatch(ethernetMatch(null, destMac, IPv4))
-                .setLayer3Match(new Ipv4MatchBuilder().setIpv4Destination(new Ipv4Prefix(IPV4_0.getValue() + IP_PREFIX_32)).build());
+            .setLayer3Match(new Ipv4MatchBuilder().setIpv4Destination(new Ipv4Prefix(IPV4_0.getValue() + IP_PREFIX_32))
+                .build());
         addNxRegMatch(matchBuilder, RegMatch.of(NxmNxReg6.class, (long) 5));
         Match match = matchBuilder.build();
         InstructionsBuilder instructionsBuilder = new InstructionsBuilder();
@@ -587,14 +544,8 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         Flow flow = buildFlow(FlowIdUtils.newFlowId(tableId, "localL3", match), tableId, 80, match,
                 instructionsBuilder.build()).build();
 
-        when(ctx.getTenant(any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
-
         flows.createLocalL3RoutedFlow(tableId, 80, endpoint, l3Address, localSubnet, destSubnet, ofWriter);
-        verify(ctx, times(4)).getTenant(any(TenantId.class));
-        verify(ctx, times(3)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
+
         verify(ofWriter, times(1)).writeFlow(eq(NODE_ID), eq(tableId), eq(flow));
     }
 
@@ -604,7 +555,7 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         MacAddress destMac = DestinationMapper.ROUTER_MAC;
         OfOverlayContextBuilder ofOverlayContextBuilder = new OfOverlayContextBuilder();
         ofOverlayContextBuilder.setNodeConnectorId(connectorId);
-        EndpointBuilder endpointBuilder = buildEndpoint(IPV6_1,MAC_1, connectorId);
+        EndpointBuilder endpointBuilder = buildEndpoint(IPV6_1, MAC_1, connectorId);
         endpointBuilder.addAugmentation(OfOverlayContext.class, ofOverlayContextBuilder.build());
         endpointBuilder.setTenant(getTestIndexedTenant().getTenant().getId());
         endpointBuilder.setNetworkContainment(SUBNET_0);
@@ -637,17 +588,16 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
 
         int order = 0;
         Instruction applyActionsIns = new InstructionBuilder().setOrder(order++)
-                .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
-                .build();
-        Instruction gotoTable = new InstructionBuilder().setOrder(order)
-                .setInstruction(gotoTableIns(tableId))
-                .build();
+            .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
+            .build();
+        Instruction gotoTable = new InstructionBuilder().setOrder(order).setInstruction(gotoTableIns(tableId)).build();
         ArrayList<Instruction> l3instructions = new ArrayList<>();
         l3instructions.add(applyActionsIns);
         l3instructions.add(gotoTable);
 
         MatchBuilder matchBuilder = new MatchBuilder().setEthernetMatch(ethernetMatch(null, destMac, IPv6))
-                .setLayer3Match(new Ipv6MatchBuilder().setIpv6Destination(new Ipv6Prefix(IPV6_1.getValue() + IP_PREFIX_128)).build());
+            .setLayer3Match(new Ipv6MatchBuilder().setIpv6Destination(new Ipv6Prefix(IPV6_1.getValue() + IP_PREFIX_128))
+                .build());
         addNxRegMatch(matchBuilder, RegMatch.of(NxmNxReg6.class, (long) 5));
         Match match = matchBuilder.build();
         InstructionsBuilder instructionsBuilder = new InstructionsBuilder();
@@ -656,14 +606,8 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         Flow flow = buildFlow(FlowIdUtils.newFlowId(tableId, "localL3", match), tableId, 80, match,
                 instructionsBuilder.build()).build();
 
-        when(ctx.getTenant(any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
-
         flows.createLocalL3RoutedFlow(tableId, 80, endpoint, l3Address, localSubnet, destSubnet, ofWriter);
-        verify(ctx, times(4)).getTenant(any(TenantId.class));
-        verify(ctx, times(3)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
+
         verify(ofWriter, times(1)).writeFlow(eq(NODE_ID), eq(tableId), eq(flow));
     }
 
@@ -671,15 +615,9 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
     public void createRemoteL2Flow_exceptionCaught() {
         EndpointBuilder endpointBuilder = buildEndpoint(IPV6_1, MAC_1, CONNECTOR_0);
 
-        when(ctx.getTenant(any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
-
         flows.createRemoteL2Flow(tableId, 70, endpointBuilder.build(), null, null, new NodeConnectorId(CONNECTOR_1),
                 ofWriter);
-        verify(ctx, times(3)).getTenant(any(TenantId.class));
-        verify(ctx, times(1)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
+
         verifyZeroInteractions(ofWriter);
     }
 
@@ -687,8 +625,8 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
     public void createRemoteL2Flow_ipV4() {
         NodeConnectorId connectorId = new NodeConnectorId(OPENFLOW + CONNECTOR_1.getValue());
         IpAddress ipAddress = new IpAddress(IPV4_0);
-        EndpointBuilder endpointBuilder = buildEndpoint(IPV4_0, MAC_1, CONNECTOR_0);
-        EndpointBuilder peerEndpointBuilder = buildEndpoint(IPV4_1, MAC_0, CONNECTOR_1);
+        Endpoint endpoint = buildEndpoint(IPV4_0, MAC_1, CONNECTOR_0).setTenant(tenant.getId()).build();
+        Endpoint peerEndpoint = buildEndpoint(IPV4_1, MAC_0, CONNECTOR_1).build();
 
         List<Action> applyActions = new ArrayList<>();
         applyActions.add(nxLoadRegAction(NxmNxReg2.class, BigInteger.valueOf(1)));
@@ -698,11 +636,9 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
 
         int order = 0;
         Instruction applyActionsIns = new InstructionBuilder().setOrder(order++)
-                .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
-                .build();
-        Instruction gotoTable = new InstructionBuilder().setOrder(order)
-                .setInstruction(gotoTableIns(tableId))
-                .build();
+            .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
+            .build();
+        Instruction gotoTable = new InstructionBuilder().setOrder(order).setInstruction(gotoTableIns(tableId)).build();
 
         ArrayList<Instruction> instructions = new ArrayList<>();
         instructions.add(applyActionsIns);
@@ -710,23 +646,16 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         InstructionsBuilder instructionsBuilder = new InstructionsBuilder();
         instructionsBuilder.setInstruction(instructions);
 
-        MatchBuilder matchBuilder = new MatchBuilder()
-                .setEthernetMatch(ethernetMatch(null, MAC_0, null));
-        addNxRegMatch(matchBuilder, RegMatch.of(NxmNxReg4.class, (long) 3));
+        MatchBuilder matchBuilder = new MatchBuilder().setEthernetMatch(ethernetMatch(null, MAC_0, null));
+        OrdinalFactory.EndpointFwdCtxOrdinals ord = utils.getEndpointOrdinals(endpoint);
+        addNxRegMatch(matchBuilder, RegMatch.of(NxmNxReg4.class, (long) ord.getBdId()));
         Match match = matchBuilder.build();
 
         Flow flow = buildFlow(FlowIdUtils.newFlowId(tableId, "remoteL2", match), tableId, 70, match,
                 instructionsBuilder.build()).build();
 
-        when(ctx.getTenant(any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
+        flows.createRemoteL2Flow(tableId, 70, endpoint, peerEndpoint, ipAddress, connectorId, ofWriter);
 
-        flows.createRemoteL2Flow(tableId, 70, endpointBuilder.build(), peerEndpointBuilder.build(), ipAddress,
-                connectorId, ofWriter);
-        verify(ctx, times(3)).getTenant(any(TenantId.class));
-        verify(ctx, times(1)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
         verify(ofWriter, times(1)).writeFlow(eq(NODE_ID), eq(tableId), eq(flow));
     }
 
@@ -737,15 +666,9 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         EndpointBuilder endpointBuilder = buildEndpoint(IPV6_1, MAC_1, CONNECTOR_0);
         EndpointBuilder peerEndpointBuilder = buildEndpoint(IPV6_2, MAC_0, CONNECTOR_0);
 
-        when(ctx.getTenant(any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
-
         flows.createRemoteL2Flow(tableId, 70, endpointBuilder.build(), peerEndpointBuilder.build(), ipAddress,
                 connectorId, ofWriter);
-        verify(ctx, times(3)).getTenant(any(TenantId.class));
-        verify(ctx, times(1)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
+
         verifyZeroInteractions(ofWriter);
     }
 
@@ -774,14 +697,8 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         localSubnetBuilder.setParent(L2FD_ID);
         Subnet localSubnet = localSubnetBuilder.build();
 
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
-
         flows.createRemoteL3RoutedFlow(tableId, 60, endpoint, null, destSubnet, null, null, localSubnet, ofWriter);
-        verify(ctx, times(4)).getTenant(any(TenantId.class));
-        verify(ctx, times(2)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
+
         verifyZeroInteractions(ofWriter);
     }
 
@@ -802,14 +719,8 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         localSubnetBuilder.setParent(L2FD_ID);
         Subnet localSubnet = localSubnetBuilder.build();
 
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
-
         flows.createRemoteL3RoutedFlow(tableId, 60, endpoint, null, destSubnet, null, null, localSubnet, ofWriter);
-        verify(ctx, times(4)).getTenant(any(TenantId.class));
-        verify(ctx, times(3)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
+
         verifyZeroInteractions(ofWriter);
     }
 
@@ -817,10 +728,9 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
     public void createRemoteL3RoutedFlow_incorrectPortId() {
         IpAddress ipAddress = new IpAddress(IPV4_0);
         NodeConnectorId connectorId = new NodeConnectorId(CONNECTOR_0);
-        EndpointBuilder endpointBuilder = buildEndpoint(IPV6_1,MAC_1,CONNECTOR_0);
+        EndpointBuilder endpointBuilder = buildEndpoint(IPV6_1, MAC_1, CONNECTOR_0);
         endpointBuilder.setNetworkContainment(SUBNET_0);
         Endpoint endpoint = endpointBuilder.build();
-
 
         SubnetBuilder destSubnetBuilder = new SubnetBuilder();
         destSubnetBuilder.setId(SUBNET_1);
@@ -832,15 +742,9 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         localSubnetBuilder.setVirtualRouterIp(new IpAddress(IPV4_1));
         Subnet localSubnet = localSubnetBuilder.build();
 
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
-
         flows.createRemoteL3RoutedFlow(tableId, 60, endpoint, null, destSubnet, ipAddress, connectorId, localSubnet,
                 ofWriter);
-        verify(ctx, times(4)).getTenant(any(TenantId.class));
-        verify(ctx, times(3)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
+
         verifyZeroInteractions(ofWriter);
     }
 
@@ -877,11 +781,9 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         applyActions.add(nxLoadTunIPv4Action(IPV4_1.getValue(), false));
         applyActions.addAll(l3ApplyActions);
         Instruction applyActionsIns = new InstructionBuilder().setOrder(0)
-                .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
-                .build();
-        Instruction gotoTable = new InstructionBuilder().setOrder(1)
-                .setInstruction(gotoTableIns(tableId))
-                .build();
+            .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
+            .build();
+        Instruction gotoTable = new InstructionBuilder().setOrder(1).setInstruction(gotoTableIns(tableId)).build();
         ArrayList<Instruction> l3instructions = new ArrayList<>();
         l3instructions.add(applyActionsIns);
         l3instructions.add(gotoTable);
@@ -889,22 +791,17 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         instructionsBuilder.setInstruction(l3instructions);
 
         MatchBuilder matchBuilder = new MatchBuilder().setEthernetMatch(ethernetMatch(null, routerMac, IPv4))
-                .setLayer3Match(new Ipv4MatchBuilder().setIpv4Destination(new Ipv4Prefix(IPV4_1.getValue() + IP_PREFIX_32)).build());
+            .setLayer3Match(new Ipv4MatchBuilder().setIpv4Destination(new Ipv4Prefix(IPV4_1.getValue() + IP_PREFIX_32))
+                .build());
         addNxRegMatch(matchBuilder, RegMatch.of(NxmNxReg6.class, (long) 5));
         Match match = matchBuilder.build();
 
         Flow flow = buildFlow(FlowIdUtils.newFlowId(tableId, "remoteL3", match), tableId, 60, match,
                 instructionsBuilder.build()).build();
 
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
+        flows.createRemoteL3RoutedFlow(tableId, 60, endpoint, l3Address, destSubnet, ipAddress, connectorId,
+                localSubnet, ofWriter);
 
-        flows.createRemoteL3RoutedFlow(tableId, 60, endpoint, l3Address, destSubnet, ipAddress, connectorId, localSubnet,
-                ofWriter);
-        verify(ctx, times(4)).getTenant(any(TenantId.class));
-        verify(ctx, times(3)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
         verify(ofWriter, times(1)).writeFlow(eq(NODE_ID), eq(tableId), eq(flow));
     }
 
@@ -929,15 +826,9 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         localSubnetBuilder.setVirtualRouterIp(new IpAddress(IPV4_1));
         Subnet localSubnet = localSubnetBuilder.build();
 
-        when(ctx.getTenant(Mockito.any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
+        flows.createRemoteL3RoutedFlow(tableId, 60, endpoint, l3Address, destSubnet, ipAddress, connectorId,
+                localSubnet, ofWriter);
 
-        flows.createRemoteL3RoutedFlow(tableId, 60, endpoint, l3Address, destSubnet, ipAddress, connectorId, localSubnet,
-                ofWriter);
-        verify(ctx, times(4)).getTenant(any(TenantId.class));
-        verify(ctx, times(3)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
         verifyZeroInteractions(ofWriter);
     }
 
@@ -959,8 +850,9 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         subnetBuilder.setVirtualRouterIp(new IpAddress(IPV4_0));
 
         MatchBuilder matchBuilder = new MatchBuilder().setEthernetMatch(ethernetMatch(null, null, ARP))
-                .setLayer3Match(new ArpMatchBuilder().setArpOp(1)
-                        .setArpTargetTransportAddress(new Ipv4Prefix(IPV4_0.getValue() + IP_PREFIX_32)).build());
+            .setLayer3Match(new ArpMatchBuilder().setArpOp(1)
+                .setArpTargetTransportAddress(new Ipv4Prefix(IPV4_0.getValue() + IP_PREFIX_32))
+                .build());
         addNxRegMatch(matchBuilder, RegMatch.of(NxmNxReg6.class, (long) 5));
         Match match = matchBuilder.build();
 
@@ -983,10 +875,8 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         Flow flow = buildFlow(FlowIdUtils.newFlowId(tableId, "routerarp", match), tableId, 50, match,
                 instructionsBuilder.build()).build();
 
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
         flows.createRouterArpFlow(50, tenant, subnetBuilder.build(), ofWriter);
 
-        verify(ctx, times(1)).getEndpointManager();
         verify(ofWriter, times(1)).writeFlow(any(NodeId.class), anyShort(), eq(flow));
     }
 
@@ -998,11 +888,8 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         subnetBuilder.setParent(L2FD_ID);
         subnetBuilder.setVirtualRouterIp(new IpAddress(IPV6_1));
 
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-
         flows.createRouterArpFlow(50, tenant, subnetBuilder.build(), ofWriter);
 
-        verify(ctx, times(1)).getEndpointManager();
         verifyZeroInteractions(ofWriter);
     }
 
@@ -1012,21 +899,10 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         EndpointBuilder endpointBuilder = buildEndpoint(IPV4_0, MAC_1, CONNECTOR_1);
         endpointBuilder.setTenant(buildTenant().getId());
 
-        when(ctx.getTenant(any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
-
         OrdinalFactory.EndpointFwdCtxOrdinals ordinals = utils.getEndpointOrdinals(endpointBuilder.build());
 
-        verify(ctx, times(3)).getTenant(any(TenantId.class));
-        verify(ctx, times(1)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
-
-        MatchBuilder matchBuilder = new MatchBuilder()
-                .setEthernetMatch(new EthernetMatchBuilder()
-                        .setEthernetDestination(new EthernetDestinationBuilder().setAddress(MAC_0)
-                                .setMask(MAC_0).build())
-                        .build());
+        MatchBuilder matchBuilder = new MatchBuilder().setEthernetMatch(new EthernetMatchBuilder()
+            .setEthernetDestination(new EthernetDestinationBuilder().setAddress(MAC_0).setMask(MAC_0).build()).build());
         addNxRegMatch(matchBuilder, FlowUtils.RegMatch.of(NxmNxReg5.class, (long) ordinals.getFdId()));
         Match match = matchBuilder.build();
         List<Action> actions = new ArrayList<>();
@@ -1061,10 +937,8 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         localSubnetBuilder.setParent(L2FD_ID);
         Subnet localSubnet = localSubnetBuilder.build();
 
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-
         flows.createL3PrefixFlow(tableId, 30, gatewayEp.build(), null, tenant, localSubnet, null, ofWriter);
-        verify(ctx, times(1)).getEndpointManager();
+
         verifyZeroInteractions(ofWriter);
     }
 
@@ -1094,11 +968,9 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         externalPorts.add(new NodeConnectorId(CONNECTOR_0));
         externalPorts.add(new NodeConnectorId(CONNECTOR_1));
 
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-
         flows.createL3PrefixFlow(tableId, 30, gatewayEpBuilder.build(), null, tenant, localSubnet, externalPorts,
                 ofWriter);
-        verify(ctx, times(1)).getEndpointManager();
+
         verifyZeroInteractions(ofWriter);
     }
 
@@ -1130,19 +1002,17 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         applyActions.add(nxLoadRegAction(NxmNxReg7.class, BigInteger.valueOf(1)));
         applyActions.addAll(l3ApplyActions);
         Instruction applyActionsIns = new InstructionBuilder().setOrder(0)
-                .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
-                .build();
-        Instruction gotoTable = new InstructionBuilder().setOrder(1)
-                .setInstruction(gotoTableIns(tableId))
-                .build();
+            .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
+            .build();
+        Instruction gotoTable = new InstructionBuilder().setOrder(1).setInstruction(gotoTableIns(tableId)).build();
         ArrayList<Instruction> l3instructions = new ArrayList<>();
         l3instructions.add(applyActionsIns);
         l3instructions.add(gotoTable);
         InstructionsBuilder instructionsBuilder = new InstructionsBuilder();
         instructionsBuilder.setInstruction(l3instructions);
 
-        MatchBuilder matchBuilder = new MatchBuilder().setEthernetMatch(ethernetMatch(null,
-                DestinationMapper.ROUTER_MAC, IPv4));
+        MatchBuilder matchBuilder =
+                new MatchBuilder().setEthernetMatch(ethernetMatch(null, DestinationMapper.ROUTER_MAC, IPv4));
         addNxRegMatch(matchBuilder, RegMatch.of(NxmNxReg6.class, (long) 5));
         Match match = matchBuilder.build();
 
@@ -1150,15 +1020,8 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         Flow flow = buildFlow(FlowIdUtils.newFlowId(tableId, "L3prefix", match), tableId, 30 + prefixLength, match,
                 instructionsBuilder.build()).build();
 
-        when(ctx.getTenant(any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
+        flows.createL3PrefixFlow(tableId, 30, gatewayEp.build(), l3Prefix, tenant, localSubnet, null, ofWriter);
 
-        flows.createL3PrefixFlow(tableId, 30, gatewayEp.build(), l3Prefix, tenant, localSubnet, null,
-                ofWriter);
-        verify(ctx, times(3)).getTenant(any(TenantId.class));
-        verify(ctx, times(2)).getEndpointManager();
-        verify(ctx, times(1)).getCurrentPolicy();
         verify(ofWriter, times(1)).writeFlow(any(NodeId.class), anyShort(), eq(flow));
     }
 
@@ -1204,19 +1067,17 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         applyActions.add(nxLoadRegAction(NxmNxReg7.class, BigInteger.valueOf(0)));
         applyActions.addAll(l3ApplyActions);
         Instruction applyActionsIns = new InstructionBuilder().setOrder(0)
-                .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
-                .build();
-        Instruction gotoTable = new InstructionBuilder().setOrder(1)
-                .setInstruction(gotoTableIns(tableId))
-                .build();
+            .setInstruction(applyActionIns(applyActions.toArray(new Action[applyActions.size()])))
+            .build();
+        Instruction gotoTable = new InstructionBuilder().setOrder(1).setInstruction(gotoTableIns(tableId)).build();
         ArrayList<Instruction> l3instructions = new ArrayList<>();
         l3instructions.add(applyActionsIns);
         l3instructions.add(gotoTable);
         InstructionsBuilder instructionsBuilder = new InstructionsBuilder();
         instructionsBuilder.setInstruction(l3instructions);
 
-        MatchBuilder matchBuilder = new MatchBuilder().setEthernetMatch(ethernetMatch(null,
-                DestinationMapper.ROUTER_MAC, IPv6));
+        MatchBuilder matchBuilder =
+                new MatchBuilder().setEthernetMatch(ethernetMatch(null, DestinationMapper.ROUTER_MAC, IPv6));
         addNxRegMatch(matchBuilder, RegMatch.of(NxmNxReg6.class, (long) 5));
         Match match = matchBuilder.build();
 
@@ -1224,23 +1085,10 @@ public class DestinationMapperFlowsTest extends MapperUtilsTest {
         Flow flow = buildFlow(FlowIdUtils.newFlowId(tableId, "L3prefix", match), tableId, 30 + prefixLength, match,
                 instructionsBuilder.build()).build();
 
-        when(ctx.getTenant(any(TenantId.class))).thenReturn(getTestIndexedTenant());
-        when(ctx.getEndpointManager()).thenReturn(endpointManager);
-        when(ctx.getCurrentPolicy()).thenReturn(policyInfo);
-
         flows.createL3PrefixFlow(tableId, 30, gatewayEpBuilder.build(), l3Prefix, tenant, localSubnet, externalPorts,
                 ofWriter);
 
-        verify(ctx, times(6)).getTenant(any(TenantId.class));
-        verify(ctx, times(3)).getEndpointManager();
-        verify(ctx, times(2)).getCurrentPolicy();
         verify(ofWriter, times(1)).writeFlow(any(NodeId.class), anyShort(), eq(flow));
     }
 
-    private void resetPolicyOrdinalCounterValue() throws  Exception {
-        // TODO find better way, maybe fixed test method order?
-        Field field = OrdinalFactory.class.getDeclaredField("policyOrdinal");
-        field.setAccessible(true);
-        field.set(null, new AtomicInteger(1));
-    }
 }

@@ -62,7 +62,7 @@ class DestinationMapperUtils {
     }
 
     L3Context getL3ContextForSubnet(IndexedTenant indexedTenant, Subnet subnet) {
-        if (indexedTenant == null || subnet.getParent() == null) {
+        if (indexedTenant == null || subnet == null || subnet.getParent() == null) {
             return null;
         }
         return indexedTenant.resolveL3Context(new L2FloodDomainId(subnet.getParent().getValue()));
