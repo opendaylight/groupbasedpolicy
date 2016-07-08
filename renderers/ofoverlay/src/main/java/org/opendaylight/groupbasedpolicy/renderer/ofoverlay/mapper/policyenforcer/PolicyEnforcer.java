@@ -56,6 +56,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.ta
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.tables.table.FlowBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.flow.MatchBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.Instruction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.go.to.table._case.GoToTable;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
@@ -144,9 +145,9 @@ import com.google.common.collect.Table.Cell;
 public class PolicyEnforcer extends FlowTable {
 
     private static final Logger LOG = LoggerFactory.getLogger(PolicyEnforcer.class);
-    public static short TABLE_ID;
-    private static org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.Instruction gotoEgressNatInstruction;
-    private static org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.Instruction gotoExternalInstruction;
+    private static short TABLE_ID;
+    private static Instruction gotoEgressNatInstruction;
+    private static Instruction gotoExternalInstruction;
 
     public PolicyEnforcer(OfContext ctx, short tableId) {
         super(ctx);
@@ -598,8 +599,14 @@ public class PolicyEnforcer extends FlowTable {
                 if ((!(actionRefList.indexOf(actionRef) == (actionRefList.size() - 1)
                         && action.equals(SubjectFeatures.getAction(AllowActionDefinition.DEFINITION.getId()))))
                         && actionBuilderList != null) {
-                    actionBuilderList = action.updateAction(actionBuilderList, params, actionRef.getOrder(),
-                            netElements, ofWriter, ctx, direction);
+                    if (ctx.getDataBroker() != null) {
+                        actionBuilderList =
+                            action.updateAction(actionBuilderList, params, actionRef.getOrder(), netElements, ofWriter, ctx, direction);
+                    } else {
+                        LOG.error("DataBroket is null. Cannot update action {}",
+                            action.getActionDef().getName().getValue());
+                        return null;
+                    }
                 }
             }
         }
