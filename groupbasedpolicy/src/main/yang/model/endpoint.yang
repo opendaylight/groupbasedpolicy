@@ -15,11 +15,11 @@ module endpoint {
     import gbp-common {prefix gbp-common;}
     import ietf-inet-types {
         prefix inet;
-        revision-date 2010-09-24;
+        revision-date 2013-07-15;
     }
     import ietf-yang-types {
         prefix yang;
-        revision-date 2010-09-24;
+        revision-date 2013-07-15;
     }
 
     revision "2014-04-21" {

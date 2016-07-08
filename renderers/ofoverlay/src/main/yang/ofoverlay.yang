@@ -12,7 +12,7 @@ module ofoverlay {
     namespace "urn:opendaylight:groupbasedpolicy:ofoverlay";
     prefix "ofoverlay";
 
-    import ietf-inet-types { prefix "inet"; revision-date 2010-09-24; }
+    import ietf-inet-types { prefix "inet"; revision-date 2013-07-15; }
 
     import yang-ext {prefix ext; revision-date "2013-07-09";}
     import opendaylight-inventory {prefix inv; revision-date "2013-08-19";}

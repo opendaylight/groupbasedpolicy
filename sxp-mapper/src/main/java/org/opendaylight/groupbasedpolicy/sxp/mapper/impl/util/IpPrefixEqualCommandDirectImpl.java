@@ -9,7 +9,7 @@ package org.opendaylight.groupbasedpolicy.sxp.mapper.impl.util;
 
 import javax.annotation.Nonnull;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.IpPrefixEqualCommand;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpPrefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
 
 /**
  * Purpose: provide simple equal using direct invocation of {@link Object#equals(Object)} method

@@ -13,7 +13,7 @@ module policy {
     prefix "gbp-policy";
 
     import gbp-common { prefix gbp-common; revision-date 2014-04-21; }
-    import ietf-inet-types { prefix inet; revision-date 2010-09-24; }
+    import ietf-inet-types { prefix inet; revision-date 2013-07-15; }
 
     description
         "This module defines the group-based policy configuration

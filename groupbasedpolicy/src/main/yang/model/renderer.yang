@@ -17,7 +17,7 @@ module renderer {
     import resolved-policy { prefix resolved-policy; revision-date 2015-08-28; }
     import base-endpoint { prefix base-endpoint; revision-date 2016-04-27; }
     import forwarding { prefix forwarding; revision-date 2016-04-27; }
-    import ietf-inet-types { prefix inet; revision-date 2010-09-24; }
+    import ietf-inet-types { prefix inet; revision-date 2013-07-15; }
 
     description
         "This module defines renderer capabilities.";

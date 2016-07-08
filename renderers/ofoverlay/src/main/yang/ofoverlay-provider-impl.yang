@@ -13,7 +13,7 @@ module ofoverlay-provider-impl {
 
     import config { prefix config; revision-date 2013-04-05; }
     import opendaylight-md-sal-binding { prefix mdsal; revision-date 2013-10-28; }
-    import ietf-yang-types { prefix "yang"; revision-date 2010-09-24; }
+    import ietf-yang-types { prefix "yang"; revision-date 2013-07-15; }
     import opendaylight-sal-binding-broker-impl { prefix sal-broker; revision-date 2013-10-28;}
     import ofoverlay { prefix ofoverlay; revision-date 2014-05-28; }
     import groupbasedpolicy-cfg { prefix gbpcfg; revision-date 2015-11-06; }

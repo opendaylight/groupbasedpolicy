@@ -13,7 +13,7 @@ module sxp-mapper-model {
 
     import sxp-database { prefix sxp-database; revision-date 2016-03-08; }
     import gbp-common { prefix gbp-common; revision-date 2014-04-21; }
-    import ietf-inet-types { prefix inet; revision-date 2010-09-24; }
+    import ietf-inet-types { prefix inet; revision-date 2013-07-15; }
     import forwarding { prefix forwarding; revision-date 2016-04-27; }
     import base-endpoint { prefix base-edpoint; revision-date 2016-04-27; }
     import yang-ext { prefix ext; revision-date 2013-07-09; }

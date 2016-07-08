@@ -12,7 +12,7 @@ module resolved-policy {
     namespace "urn:opendaylight:groupbasedpolicy:resolved-policy";
     prefix "resolved-policy";
 
-    import ietf-inet-types { prefix "inet"; revision-date 2010-09-24; }
+    import ietf-inet-types { prefix "inet"; revision-date 2013-07-15; }
 
     import gbp-common { prefix gbp-common; }
     import endpoint { prefix endpoint; }

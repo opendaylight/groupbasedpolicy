@@ -7,7 +7,7 @@ module neutron-gbp-mapper {
     import gbp-common { prefix gbp-common; }
     import endpoint { prefix gbp-endpoint; }
     import ietf-yang-types { prefix yang; revision-date 2013-07-15; }
-    import ietf-inet-types { prefix inet; revision-date 2010-09-24; }
+    import ietf-inet-types { prefix inet; revision-date 2013-07-15; }
     import base-endpoint { prefix base-ep; revision-date 2016-04-27; }
     import forwarding { prefix fwd; revision-date 2016-04-27; }
     import l2-l3-forwarding { prefix l2-l3; revision-date 2016-04-27; }

@@ -22,7 +22,7 @@ module statistics-store {
         }
     import ietf-inet-types {
         prefix inet;
-        revision-date 2010-09-24;
+        revision-date 2013-07-15;
     }
     description
         "This module defines gbp statistics store.";

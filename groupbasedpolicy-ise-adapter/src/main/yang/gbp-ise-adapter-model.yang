@@ -12,8 +12,8 @@ module gbp-ise-adapter-model {
     prefix "gbp-ise-adapter-model";
 
     import gbp-common { prefix gbp-common; revision-date 2014-04-21; }
-    import ietf-inet-types { prefix inet; revision-date 2010-09-24; }
-    import ietf-yang-types {prefix yang; revision-date "2010-09-24";}
+    import ietf-inet-types { prefix inet; revision-date 2013-07-15; }
+    import ietf-yang-types {prefix yang; revision-date "2013-07-15";}
 
     description
         "This module contains the YANG definitions for

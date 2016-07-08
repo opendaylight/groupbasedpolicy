@@ -15,7 +15,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OfWriter;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.endpoint.EndpointManager;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowTable;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.flow.FlowUtils;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.types.rev131026.instruction.instruction.go.to.table._case.GoToTable;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
@@ -45,7 +45,7 @@ import java.util.Set;
  * Priority = 100<br>
  * Matches:<br>
  *      - in_port, {@link NodeConnectorId}
- *      - dl_src {@link org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress}<br>
+ *      - dl_src {@link org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.MacAddress}<br>
  * Actions:<br>
  *      - {@link GoToTable} SOURCE MAPPER table
  *<p>
@@ -54,7 +54,7 @@ import java.util.Set;
  * Matches:<br>
  *      - ip, (ethertype)<br>
  *      - in_port, {@link NodeConnectorId}<br>
- *      - dl_src {@link org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress}<br>
+ *      - dl_src {@link org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.MacAddress}<br>
  *      - nw_src (source ip address)<br>
  * Actions:<br>
  *      - {@link GoToTable} SOURCE MAPPER table
@@ -64,7 +64,7 @@ import java.util.Set;
  * Matches:<br>
  *      - arp, (ethertype)<br>
  *      - in_port, {@link NodeConnectorId}<br>
- *      - dl_src {@link org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress}<br>
+ *      - dl_src {@link org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.MacAddress}<br>
  *      - arp_spa (arp source transport address)<br>
  * Actions:<br>
  *      - {@link GoToTable} SOURCE MAPPER table
@@ -74,7 +74,7 @@ import java.util.Set;
  * Matches:<br>
  *      - ip, (ethertype)<br>
  *      - in_port, {@link NodeConnectorId}<br>
- *      - dl_src {@link org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev100924.MacAddress}<br>
+ *      - dl_src {@link org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.MacAddress}<br>
  *      - nw_dst (destination ip address)<br>
  * Actions:<br>
  *      - {@link GoToTable} SOURCE MAPPER table

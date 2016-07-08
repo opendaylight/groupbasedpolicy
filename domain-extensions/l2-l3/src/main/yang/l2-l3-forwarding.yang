@@ -14,7 +14,7 @@ module l2-l3-forwarding {
 
     import forwarding { prefix forwarding; revision-date 2016-04-27; }
     import renderer { prefix renderer; revision-date 2015-11-03; }
-    import ietf-inet-types { prefix inet; revision-date 2010-09-24; }
+    import ietf-inet-types { prefix inet; revision-date 2013-07-15; }
     import yang-ext {prefix ext; revision-date 2013-07-09;}
 
     revision "2016-04-27" {
