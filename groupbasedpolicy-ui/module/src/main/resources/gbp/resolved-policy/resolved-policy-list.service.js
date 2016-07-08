@@ -187,7 +187,7 @@ define(['app/gbp/resolved-policy/resolved-policy.service'], function () {
          * @returns {string}
          */
         function generateLinkId(contractId, providerEpgId, consumerEpgId) {
-            return contractId + '_' + providerEpgId + '_' + consumerEpgId;
+            return contractId + '++' + providerEpgId + '++' + consumerEpgId;
         }
 
         function getContractType(subject) {

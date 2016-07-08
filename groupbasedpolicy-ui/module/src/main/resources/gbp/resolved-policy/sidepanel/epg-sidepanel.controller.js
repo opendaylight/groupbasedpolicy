@@ -10,7 +10,7 @@ define([], function() {
 
         function getEndpoints() {
             if($scope.sidePanelObject)
-                $scope.endpoints.getByEpg($scope.sidePanelObject);
+                $scope.endpoints.getByEpg($scope.sidePanelObject, $scope.rootTenant);
         }
 
         $scope.$watch('sidePanelObject', getEndpoints);

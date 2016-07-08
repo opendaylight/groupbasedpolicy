@@ -8,5 +8,8 @@
     "roboto-fontface": "~0.4.3",
     "angular-material-data-table": "~0.9.11",
     "NeXt": "~0.9.1"
+  },
+  "resolutions": {
+    "angular": "1.5.7"
   }
 }

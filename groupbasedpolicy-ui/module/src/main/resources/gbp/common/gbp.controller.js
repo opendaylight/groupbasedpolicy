@@ -81,7 +81,7 @@ define([
          * @returns {{id: string, source: *, target: *, tenant: *}}
          */
         function createLink( linkId, type) {
-            var linkIdParts = linkId.split('_');
+            var linkIdParts = linkId.split('++');
             return {
                 'id': linkId,
                 'source': linkIdParts[1],
