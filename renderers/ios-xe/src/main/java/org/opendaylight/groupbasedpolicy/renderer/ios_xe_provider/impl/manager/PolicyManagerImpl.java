@@ -56,7 +56,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 public class PolicyManagerImpl implements PolicyManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(PolicyManagerImpl.class);
-    private static final String policyMapName = "service-chains";
+    private static final String BASE_POLICY_MAP_NAME = "service-chains-";
     private final DataBroker dataBroker;
     private final NodeManager nodeManager;
 
@@ -103,9 +103,9 @@ public class PolicyManagerImpl implements PolicyManager {
         }
 
         final PolicyConfigurationContext context = new PolicyConfigurationContext();
-        final Map<DataBroker, PolicyWriter> policyWriterPerDeviceCache = new HashMap<>();
+        final Map<String, PolicyWriter> policyWriterPerDeviceCache = new HashMap<>();
         for (RendererEndpoint rendererEndpoint : dataAfter.getRendererEndpoints().getRendererEndpoint()) {
-            // store the endpoint currently being configured
+            // Store the endpoint currently being configured
             context.setCurrentRendererEP(rendererEndpoint);
 
             if (dataAfter.getEndpoints() == null || dataAfter.getEndpoints().getAddressEndpointWithLocation() == null) {
@@ -122,25 +122,31 @@ public class PolicyManagerImpl implements PolicyManager {
                 context.appendUnconfiguredRendererEP(StatusUtil.assembleFullyNotConfigurableRendererEP(context, info));
                 continue;
             }
-
-            // Find policy writer
-            PolicyWriter policyWriter = policyWriterPerDeviceCache.get(mountpoint);
+            // Generate policy writer key - policy map name, composed from base value, interface name and node id
+            final String interfaceName = PolicyManagerUtil.getInterfaceNameForPolicyMap(rendererEndpoint, endpointsWithLocation);
+            final NodeId nodeId = nodeManager.getNodeIdByMountpointIid(mountpointIid);
+            if (interfaceName == null || nodeId == null) {
+                LOG.warn("Cannot compose policy-map, missing value. Interface: {}, NodeId: {}", interfaceName, nodeId);
+                continue;
+            }
+            final String policyMapName = BASE_POLICY_MAP_NAME.concat(interfaceName);
+            final String policyWriterKey = policyMapName.concat(nodeId.getValue());
+            // Find appropriate writer
+            PolicyWriter policyWriter = policyWriterPerDeviceCache.get(policyWriterKey);
             if (policyWriter == null) {
                 // Initialize new policy writer
-                final String interfaceName = PolicyManagerUtil.getInterfaceNameForPolicyMap(rendererEndpoint, endpointsWithLocation);
-                final NodeId nodeId = nodeManager.getNodeIdByMountpointIid(mountpointIid);
                 final String managementIpAddress = nodeManager.getNodeManagementIpByMountPointIid(mountpointIid);
-                if (interfaceName == null || managementIpAddress == null) {
-                    final String info = String.format("can not create policyWriter: interface=%s, managementIpAddress=%s",
-                            interfaceName, managementIpAddress);
+                if (managementIpAddress == null) {
+                    final String info = String.format("can not create policyWriter, managementIpAddress for mountpoint %s is null",
+                            mountpointIid);
                     context.appendUnconfiguredRendererEP(StatusUtil.assembleFullyNotConfigurableRendererEP(context, info));
                     continue;
                 }
                 policyWriter = new PolicyWriter(mountpoint, interfaceName, managementIpAddress, policyMapName, nodeId);
-                policyWriterPerDeviceCache.put(mountpoint, policyWriter);
+                policyWriterPerDeviceCache.put(policyWriterKey, policyWriter);
             }
 
-            // assign policyWriter for current mount-point
+            // Assign policyWriter for current policy-map
             context.setPolicyWriter(policyWriter);
 
             final Sgt sourceSgt = PolicyManagerUtil.findSgtTag(rendererEndpoint, dataAfter.getEndpoints()
@@ -163,6 +169,7 @@ public class PolicyManagerImpl implements PolicyManager {
 
         final List<CheckedFuture<Boolean, TransactionCommitFailedException>> allFutureResults = new ArrayList<>();
         if (action.equals(Create)) {
+            // TODO ensure that last transaction is done before the next one starts
             policyWriterPerDeviceCache.values().forEach((pw) -> allFutureResults.add(pw.commitToDatastore()));
         } else if (action.equals(Delete)) {
             policyWriterPerDeviceCache.values().forEach((pw) -> allFutureResults.add(pw.removeFromDatastore()));
