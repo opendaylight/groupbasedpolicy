@@ -33,10 +33,8 @@ import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native._interface.Gigabit
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native._interface.GigabitEthernetKey;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map.Class;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map.ClassKey;
-import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.ServiceFunctionForwarder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.ServicePath;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.ServicePathKey;
-import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.Local;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.ServiceFfName;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.ServiceFfNameKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
@@ -77,7 +75,7 @@ class PolicyWriterUtil {
             if (checkWritten(readTransaction, classMapIid) == null) {
                 return false;
             }
-            LOG.info("Created class-map {} on node {}", entry.getName(), nodeId.getValue());
+            LOG.trace("Created class-map {} on node {}", entry.getName(), nodeId.getValue());
         }
         return true;
     }
@@ -106,7 +104,7 @@ class PolicyWriterUtil {
             }
             final ReadOnlyTransaction readTransaction = optionalReadTransaction.get();
             result = checkRemoved(readTransaction, classMapIid);
-            LOG.info("Class-map {} removed from node {}", entry.getName(), nodeId.getValue());
+            LOG.trace("Class-map {} removed from node {}", entry.getName(), nodeId.getValue());
         }
         return result;
     }
@@ -134,7 +132,7 @@ class PolicyWriterUtil {
         if (checkWritten(readTransaction, policyMapIid) == null) {
             return false;
         }
-        LOG.info("Created policy-map {} on node {}", policyMap.getName(), nodeId.getValue());
+        LOG.trace("Created policy-map {} on node {}", policyMap.getName(), nodeId.getValue());
         return true;
     }
 
@@ -153,7 +151,7 @@ class PolicyWriterUtil {
             final WriteTransaction writeTransaction = optionalWriteTransaction.get();
             final InstanceIdentifier policyMapEntryIid = policyMapEntryInstanceIdentifier(policyMapName, entry.getName());
             if (deleteTransaction(writeTransaction, policyMapEntryIid)) {
-                LOG.info("Policy map entry {} removed from node {}", entry.getName(), nodeId.getValue());
+                LOG.trace("Policy map entry {} removed from node {}", entry.getName(), nodeId.getValue());
             }
         }
         return true;
@@ -171,7 +169,7 @@ class PolicyWriterUtil {
         final ServicePolicy servicePolicy = PolicyManagerUtil.createServicePolicy(policyMapName, Direction.Input);
         final InstanceIdentifier<ServicePolicy> servicePolicyIid = interfaceInstanceIdentifier(interfaceName);
         writeMergeTransaction(writeTransaction, servicePolicyIid, servicePolicy);
-        LOG.info("Service-policy interface {}, bound to policy-map {} created on  node {}",
+        LOG.trace("Service-policy interface {}, bound to policy-map {} created on  node {}",
                 interfaceName, policyMapName, nodeId.getValue());
         return true;
     }
@@ -191,7 +189,7 @@ class PolicyWriterUtil {
             final WriteTransaction writeTransaction = optionalWriteTransaction.get();
             final InstanceIdentifier<ServiceFfName> forwarderIid = remoteSffInstanceIdentifier(forwarder);
             writeMergeTransaction(writeTransaction, forwarderIid, forwarder);
-            LOG.info("Remote forwarder {} created on node {}", forwarder.getName(), nodeId.getValue());
+            LOG.trace("Remote forwarder {} created on node {}", forwarder.getName(), nodeId.getValue());
         }
         return true;
     }
@@ -211,7 +209,7 @@ class PolicyWriterUtil {
             final WriteTransaction writeTransaction = optionalWriteTransaction.get();
             final InstanceIdentifier<ServiceFfName> forwarderIid = remoteSffInstanceIdentifier(forwarder);
             deleteTransaction(writeTransaction, forwarderIid);
-            LOG.info("Remote forwarder {} removed from node {}", forwarder.getName(), nodeId.getValue());
+            LOG.trace("Remote forwarder {} removed from node {}", forwarder.getName(), nodeId.getValue());
         }
         return true;
     }
@@ -229,7 +227,7 @@ class PolicyWriterUtil {
                 final WriteTransaction writeTransaction = optionalWriteTransaction.get();
                 final InstanceIdentifier<ServicePath> servicePathIid = servicePathInstanceIdentifier(entry.getKey());
                 writeMergeTransaction(writeTransaction, servicePathIid, entry);
-                LOG.info("Service path with ID: {} created on node {}", entry.getServicePathId(), nodeId.getValue());
+                LOG.trace("Service path with ID: {} created on node {}", entry.getServicePathId(), nodeId.getValue());
             }
         }
         return true;
@@ -255,7 +253,7 @@ class PolicyWriterUtil {
                 final WriteTransaction writeTransaction = optionalWriteTransaction.get();
                 final InstanceIdentifier<ServicePath> servicePathIid = servicePathInstanceIdentifier(servicePath.getKey());
                 if (deleteTransaction(writeTransaction, servicePathIid)) {
-                    LOG.info("Service-path with ID: {} removed from node {}", servicePath.getServicePathId(),
+                    LOG.trace("Service-path with ID: {} removed from node {}", servicePath.getServicePathId(),
                             nodeId.getValue());
                 }
             }
@@ -286,13 +284,6 @@ class PolicyWriterUtil {
                 .child(GigabitEthernet.class, new GigabitEthernetKey(ethernetName))
                 .child(ServicePolicy.class)
                 .build();
-    }
-
-    private static InstanceIdentifier<Local> localSffInstanceIdentifier() {
-        return InstanceIdentifier.builder(Native.class)
-                .child(org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ServiceChain.class)
-                .child(ServiceFunctionForwarder.class)
-                .child(Local.class).build();
     }
 
     private static InstanceIdentifier<ServiceFfName> remoteSffInstanceIdentifier(final ServiceFfName sffName) {

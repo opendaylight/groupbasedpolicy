@@ -19,6 +19,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil.ActionInDirection;
 import org.mockito.Captor;
 import org.mockito.Matchers;
 import org.mockito.Mock;
@@ -48,13 +49,14 @@ import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev1407
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.rev140701.service.function.forwarder.base.SffDataPlaneLocatorBuilder;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.rev140701.service.function.forwarder.base.sff.data.plane.locator.DataPlaneLocatorBuilder;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.rev140701.service.function.forwarders.ServiceFunctionForwarderBuilder;
+import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.rev140701.service.function.forwarders.ServiceFunctionForwarderKey;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.ServiceFunctionPaths;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.ServiceFunctionPathsBuilder;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.service.function.paths.ServiceFunctionPath;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.service.function.paths.ServiceFunctionPathBuilder;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sl.rev140701.data.plane.locator.locator.type.IpBuilder;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ClassMap;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ServiceChain;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map.Class;
@@ -68,14 +70,15 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.IpPrefixType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValueBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.rule.group.with.renderer.endpoint.participation.RuleGroupWithRendererEndpointParticipationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.actions.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.actions.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
@@ -113,7 +116,7 @@ public class ServiceChainingUtilTest {
     @Captor
     private ArgumentCaptor<RenderedServicePath> rspCaptor;
     @Captor
-    private ArgumentCaptor<List<Class>> listClassCaptor;
+    private ArgumentCaptor<Class> listClassCaptor;
     @Captor
     private ArgumentCaptor<ClassMap> classMapCaptor;
     @Mock
@@ -128,12 +131,12 @@ public class ServiceChainingUtilTest {
     @Before
     public void setUp() throws Exception {
         final NodeId currentNodeId = new NodeId("unit-node-01");
-        Mockito.when(policyWriter.getCurrentNodeId()).thenReturn(currentNodeId);
+        Mockito.when(policyWriter.getNodeId()).thenReturn(currentNodeId);
 
         final String managementIpAddress = "1.2.3.5";
         Mockito.when(policyWriter.getManagementIpAddress()).thenReturn(managementIpAddress);
 
-        Mockito.when(policyWriter.getCurrentMountpoint()).thenReturn(dataBroker);
+        Mockito.when(policyWriter.getMountpoint()).thenReturn(dataBroker);
         Mockito.when(dataBroker.newReadWriteTransaction()).thenReturn(rwTx);
 
         policyConfigurationContext = new PolicyConfigurationContext();
@@ -150,7 +153,7 @@ public class ServiceChainingUtilTest {
 
         stub(method(SfcProviderServicePathAPI.class, "readAllServiceFunctionPaths")).toReturn(sfcPaths);
 
-        final ServiceFunctionPath servicePath = ServiceChainingUtil.getServicePath(Lists.newArrayList(
+        final ServiceFunctionPath servicePath = ServiceChainingUtil.findServicePathFromParameterValues(Lists.newArrayList(
                 createParameterValue("sfc-chain-name", sfcNameValue)
         ));
         Assert.assertEquals(sfcPath, servicePath);
@@ -165,7 +168,7 @@ public class ServiceChainingUtilTest {
         final PeerEndpoint peerEndpoint = createPeerEndpoint();
         final Sgt sourceSgt = new Sgt(1);
         final Sgt destinationSgt = new Sgt(2);
-        final Map<PolicyManagerImpl.ActionCase, Action> actionMap = createActionMap();
+        final Map<PolicyManagerImpl.ActionCase, PolicyManagerUtil.ActionInDirection> actionMap = createActionMap();
         final String classMapName = "unit-class-map-name-01";
 
         final String sfcNameValue = "123";
@@ -178,14 +181,10 @@ public class ServiceChainingUtilTest {
 
         final RenderedServicePath rsp = createRsp("unit-rsp-02");
         stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(rsp);
-        stub(method(ServiceChainingUtil.class, "setSfcPart")).toReturn(true);
 
         ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyConfigurationContext, dataBroker);
 
-        Mockito.verify(policyWriter).cache(classMapCaptor.capture());
-        Mockito.verify(policyWriter).cache(listClassCaptor.capture());
         Mockito.verifyNoMoreInteractions(policyWriter);
-        Assert.assertEquals(1, listClassCaptor.getValue().size());
     }
 
     @Test
@@ -193,7 +192,7 @@ public class ServiceChainingUtilTest {
         final PeerEndpoint peerEndpoint = createPeerEndpoint();
         final Sgt sourceSgt = new Sgt(1);
         final Sgt destinationSgt = new Sgt(2);
-        final Map<PolicyManagerImpl.ActionCase, Action> actionMap = createActionMap();
+        final Map<PolicyManagerImpl.ActionCase, ActionInDirection> actionMap = createActionMap();
         final String classMapName = "unit-class-map-name-01";
 
         final String sfcNameValue = "123";
@@ -201,19 +200,23 @@ public class ServiceChainingUtilTest {
         final ServiceFunctionPaths sfcPaths = new ServiceFunctionPathsBuilder()
                 .setServiceFunctionPath(Collections.singletonList(sfcPath))
                 .build();
+        final org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.rev140701.service.function.forwarders.ServiceFunctionForwarder serviceFunctionForwarder
+                = new ServiceFunctionForwarderBuilder()
+                .setName(new SffName("sff"))
+                .setKey(new ServiceFunctionForwarderKey(new SffName("sff"))).build();
 
         stub(method(SfcProviderServicePathAPI.class, "readAllServiceFunctionPaths")).toReturn(sfcPaths);
 
         final RenderedServicePath rsp = createRsp("unit-rsp-02");
         stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(rsp);
-        stub(method(ServiceChainingUtil.class, "setSfcPart")).toReturn(true);
+        stub(method(SfcProviderServiceForwarderAPI.class, "readServiceFunctionForwarder")).toReturn(serviceFunctionForwarder);
 
         ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyConfigurationContext, dataBroker);
 
-        Mockito.verify(policyWriter, Mockito.times(2)).cache(classMapCaptor.capture());
+        Mockito.verify(policyWriter).cache(classMapCaptor.capture());
         Mockito.verify(policyWriter).cache(listClassCaptor.capture());
         Mockito.verifyNoMoreInteractions(policyWriter);
-        Assert.assertEquals(2, listClassCaptor.getValue().size());
+        Assert.assertNotNull(listClassCaptor.getValue());
     }
 
     @Test
@@ -221,7 +224,7 @@ public class ServiceChainingUtilTest {
         final PeerEndpoint peerEndpoint = createPeerEndpoint();
         final Sgt sourceSgt = new Sgt(1);
         final Sgt destinationSgt = new Sgt(2);
-        final Map<PolicyManagerImpl.ActionCase, Action> actionMap = createActionMap();
+        final Map<PolicyManagerImpl.ActionCase, ActionInDirection> actionMap = createActionMap();
         final String classMapName = "unit-class-map-name-01";
 
         final String sfcNameValue = "123";
@@ -229,13 +232,17 @@ public class ServiceChainingUtilTest {
         final ServiceFunctionPaths sfcPaths = new ServiceFunctionPathsBuilder()
                 .setServiceFunctionPath(Collections.singletonList(sfcPath))
                 .build();
+        final org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.rev140701.service.function.forwarders.ServiceFunctionForwarder serviceFunctionForwarder
+                = new ServiceFunctionForwarderBuilder()
+                .setName(new SffName("sff"))
+                .setKey(new ServiceFunctionForwarderKey(new SffName("sff"))).build();
 
         stub(method(SfcProviderServicePathAPI.class, "readAllServiceFunctionPaths")).toReturn(sfcPaths);
 
         final RenderedServicePath rsp = createRsp("unit-rsp-02");
         stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(rsp);
-        stub(method(ServiceChainingUtil.class, "setSfcPart")).toReturn(true);
-        stub(method(ServiceChainingUtil.class, "createSymmetricRenderedPath")).toReturn(null);
+        stub(method(ServiceChainingUtil.class, "createReversedRenderedPath")).toReturn(null);
+        stub(method(SfcProviderServiceForwarderAPI.class, "readServiceFunctionForwarder")).toReturn(serviceFunctionForwarder);
 
         policyConfigurationContext.setCurrentRendererEP(createRendererEP(
                 "unit-address", new ContextId("unit-conext-1"), Collections.emptyList())
@@ -243,7 +250,7 @@ public class ServiceChainingUtilTest {
 
         ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap,
                 policyConfigurationContext, dataBroker);
-        Mockito.verify(policyWriter, Mockito.times(2)).cache(classMapCaptor.capture());
+        Mockito.verify(policyWriter).cache(classMapCaptor.capture());
         Mockito.verify(policyWriter).cache(listClassCaptor.capture());
         Mockito.verifyNoMoreInteractions(policyWriter);
     }
@@ -253,7 +260,7 @@ public class ServiceChainingUtilTest {
         final PeerEndpoint peerEndpoint = createPeerEndpoint();
         final Sgt sourceSgt = new Sgt(1);
         final Sgt destinationSgt = new Sgt(2);
-        final Map<PolicyManagerImpl.ActionCase, Action> actionMap = createActionMap();
+        final Map<PolicyManagerImpl.ActionCase, ActionInDirection> actionMap = createActionMap();
         final String classMapName = "unit-class-map-name-01";
 
         final String sfcNameValue = "123";
@@ -266,7 +273,6 @@ public class ServiceChainingUtilTest {
 
         final RenderedServicePath rsp = createRsp("unit-rsp-02");
         stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(rsp);
-        stub(method(ServiceChainingUtil.class, "setSfcPart")).toReturn(false);
 
         ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, policyConfigurationContext, dataBroker);
 
@@ -278,7 +284,7 @@ public class ServiceChainingUtilTest {
         final PeerEndpoint peerEndpoint = createPeerEndpoint(null);
         final Sgt sourceSgt = new Sgt(1);
         final Sgt destinationSgt = new Sgt(2);
-        final Map<PolicyManagerImpl.ActionCase, Action> actionMap = createActionMap();
+        final Map<PolicyManagerImpl.ActionCase, ActionInDirection> actionMap = createActionMap();
         final String classMapName = "unit-class-map-name-01";
 
         final String sfcNameValue = "123";
@@ -306,7 +312,7 @@ public class ServiceChainingUtilTest {
         final PeerEndpoint peerEndpoint = createPeerEndpoint(null);
         final Sgt sourceSgt = new Sgt(1);
         final Sgt destinationSgt = new Sgt(2);
-        final Map<PolicyManagerImpl.ActionCase, Action> actionMap = createActionMap(false);
+        final Map<PolicyManagerImpl.ActionCase, ActionInDirection> actionMap = createActionMap(false);
         final String classMapName = "unit-class-map-name-01";
 
         policyConfigurationContext.setCurrentRendererEP(createRendererEP(
@@ -318,12 +324,12 @@ public class ServiceChainingUtilTest {
         Mockito.verifyNoMoreInteractions(policyWriter);
     }
 
-    private Map<PolicyManagerImpl.ActionCase, Action> createActionMap() {
+    private Map<PolicyManagerImpl.ActionCase, ActionInDirection> createActionMap() {
         return createActionMap(true);
     }
 
-    private Map<PolicyManagerImpl.ActionCase, Action> createActionMap(final boolean fillParamValue) {
-        final Map<PolicyManagerImpl.ActionCase,Action> actionMap = new HashMap<>();
+    private Map<PolicyManagerImpl.ActionCase, ActionInDirection> createActionMap(final boolean fillParamValue) {
+        final Map<PolicyManagerImpl.ActionCase, ActionInDirection> actionMap = new HashMap<>();
         final ActionBuilder actionValue = new ActionBuilder();
         if (fillParamValue) {
             actionValue.setParameterValue(Collections.singletonList(new ParameterValueBuilder()
@@ -331,7 +337,9 @@ public class ServiceChainingUtilTest {
                     .setStringValue("123")
                     .build()));
         }
-        actionMap.put(PolicyManagerImpl.ActionCase.CHAIN, actionValue.build());
+        ActionInDirection actionInDirection = new ActionInDirection(actionValue.build(),
+                EndpointPolicyParticipation.CONSUMER, HasDirection.Direction.Out);
+        actionMap.put(PolicyManagerImpl.ActionCase.CHAIN, actionInDirection);
         return actionMap;
     }
 
@@ -373,7 +381,7 @@ public class ServiceChainingUtilTest {
 
         final RenderedServicePath renderedPath = ServiceChainingUtil.createRenderedPath(sfp, tenantId, dataBroker);
 
-        Assert.assertEquals("123_plainunit-tennant-01-gbp-rsp", rspNameCaptor.getValue().getValue());
+        Assert.assertEquals("123_plain-unit-tennant-01-gbp-rsp", rspNameCaptor.getValue().getValue());
         Assert.assertEquals(rsp, renderedPath);
     }
 
@@ -397,7 +405,7 @@ public class ServiceChainingUtilTest {
 
         final RenderedServicePath renderedPath = ServiceChainingUtil.createRenderedPath(sfp, tenantId, dataBroker);
 
-        Assert.assertEquals("123_plainunit-tennant-01-gbp-rsp", rspNameCaptor.getValue().getValue());
+        Assert.assertEquals("123_plain-unit-tennant-01-gbp-rsp", rspNameCaptor.getValue().getValue());
 
         final ServiceFunctionPath serviceFunctionPath = sfpCaptor.getValue();
         Assert.assertEquals("123_plain", serviceFunctionPath.getName().getValue());
@@ -406,7 +414,7 @@ public class ServiceChainingUtilTest {
         final CreateRenderedPathInput createRPInput = createRspCaptor.getValue();
         Assert.assertFalse(createRPInput.isSymmetric());
         Assert.assertEquals("123_plain", createRPInput.getParentServiceFunctionPath());
-        Assert.assertEquals("123_plainunit-tennant-01-gbp-rsp", createRPInput.getName());
+        Assert.assertEquals("123_plain-unit-tennant-01-gbp-rsp", createRPInput.getName());
 
         Assert.assertEquals(rsp, renderedPath);
     }
@@ -443,9 +451,9 @@ public class ServiceChainingUtilTest {
         final SfcProviderRenderedPathAPI api = PowerMockito.mock(SfcProviderRenderedPathAPI.class);
         PowerMockito.when(api.readRenderedServicePath(rspNameCaptor.capture())).thenReturn(rsp);
 
-        final RenderedServicePath symmetricRenderedPath = ServiceChainingUtil.createSymmetricRenderedPath(sfp, rsp, tennantId, dataBroker);
+        final RenderedServicePath symmetricRenderedPath = ServiceChainingUtil.createReversedRenderedPath(sfp, rsp, tennantId, dataBroker);
 
-        Assert.assertEquals("unit-sfp-02_plaintenant-02-gbp-rsp-Reverse", rspNameCaptor.getValue().getValue());
+        Assert.assertEquals("unit-sfp-02_plain-tenant-02-gbp-rsp-Reverse", rspNameCaptor.getValue().getValue());
         Assert.assertEquals(rsp, symmetricRenderedPath);
     }
 
@@ -463,9 +471,9 @@ public class ServiceChainingUtilTest {
         final NetconfTransactionCreator creator = PowerMockito.mock(NetconfTransactionCreator.class);
         PowerMockito.when(creator.netconfReadWriteTransaction(dataBroker)).thenReturn(java.util.Optional.empty());
 
-        final RenderedServicePath symmetricRenderedPath = ServiceChainingUtil.createSymmetricRenderedPath(sfp, rsp, tennantId, dataBroker);
+        final RenderedServicePath symmetricRenderedPath = ServiceChainingUtil.createReversedRenderedPath(sfp, rsp, tennantId, dataBroker);
 
-        Assert.assertEquals("unit-sfp-02_plaintenant-02-gbp-rsp-Reverse", rspNameCaptor.getValue().getValue());
+        Assert.assertEquals("unit-sfp-02_plain-tenant-02-gbp-rsp-Reverse", rspNameCaptor.getValue().getValue());
         Assert.assertEquals(rsp, rspCaptor.getValue());
         Assert.assertEquals(rsp, symmetricRenderedPath);
     }
@@ -480,179 +488,17 @@ public class ServiceChainingUtilTest {
 
         stub(method(SfcProviderServicePathAPI.class, "readAllServiceFunctionPaths")).toReturn(sfcPaths);
 
-        final ServiceFunctionPath servicePath = ServiceChainingUtil.findServiceFunctionPath(new SfcName(sfcNameValue));
+        final ServiceFunctionPath servicePath = ServiceChainingUtil.findServiceFunctionPathFromServiceChainName(new SfcName(sfcNameValue));
         Assert.assertEquals(sfcPath, servicePath);
-    }
-
-    @Test
-    public void testSetSfcPart_success() throws Exception {
-        final RenderedServicePath rsp = createRsp("unit-rsp-03");
-        final DataPlaneLocatorBuilder dataPlaneLocatorBuilder = new DataPlaneLocatorBuilder();
-        final IpBuilder ipBuilderLocatorType = new IpBuilder();
-        ipBuilderLocatorType.setIp(IetfModelCodec.ipAddress2013(new IpAddress(new Ipv4Address("1.2.3.4"))));
-        dataPlaneLocatorBuilder.setLocatorType(ipBuilderLocatorType.build());
-        final SffDataPlaneLocatorBuilder sffDataPlaneLocatorBuilder = new SffDataPlaneLocatorBuilder();
-        sffDataPlaneLocatorBuilder.setDataPlaneLocator(dataPlaneLocatorBuilder.build());
-        final org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.rev140701.service.function.forwarders.ServiceFunctionForwarder
-                sff = new ServiceFunctionForwarderBuilder()
-                .setName(new SffName("unit-sff-03"))
-                .setIpMgmtAddress(IetfModelCodec.ipAddress2013(new IpAddress(new Ipv4Address("1.2.3.4"))))
-                .setSffDataPlaneLocator(Collections.singletonList(sffDataPlaneLocatorBuilder.build()))
-                .build();
-        final ServiceFunctionPathBuilder sfpBuilder = new ServiceFunctionPathBuilder();
-        sfpBuilder.setSymmetric(false);
-        final ServiceFunctionPath sfp = sfpBuilder.build();
-
-        PowerMockito.mockStatic(SfcProviderServiceForwarderAPI.class);
-        final SfcProviderServiceForwarderAPI api = PowerMockito.mock(SfcProviderServiceForwarderAPI.class);
-        PowerMockito.when(api.readServiceFunctionForwarder(sffNameCaptor.capture())).thenReturn(sff);
-
-        final boolean outcome = ServiceChainingUtil.setSfcPart(sfp, rsp, null, policyWriter);
-
-        Assert.assertEquals("rsp-hop-01-sf+sff", sffNameCaptor.getValue().getValue());
-        Assert.assertTrue(outcome);
-
-        Mockito.verify(policyWriter).cache(Matchers.<ServiceFfName>any());
-        Mockito.verify(policyWriter).cache(Matchers.<ServiceChain>any());
-        Mockito.verify(policyWriter).getManagementIpAddress();
-        Mockito.verifyNoMoreInteractions(policyWriter);
-    }
-
-    @Test
-    public void testSetSfcPart_success_newRsp() throws Exception {
-        final RenderedServicePath rsp = createRsp("unit-rsp-03");
-        final DataPlaneLocatorBuilder dataPlaneLocatorBuilder = new DataPlaneLocatorBuilder();
-        final IpBuilder ipBuilderLocatorType = new IpBuilder();
-        ipBuilderLocatorType.setIp(IetfModelCodec.ipAddress2013(new IpAddress(new Ipv4Address("1.2.3.4"))));
-        dataPlaneLocatorBuilder.setLocatorType(ipBuilderLocatorType.build());
-        final SffDataPlaneLocatorBuilder sffDataPlaneLocatorBuilder = new SffDataPlaneLocatorBuilder();
-        sffDataPlaneLocatorBuilder.setDataPlaneLocator(dataPlaneLocatorBuilder.build());
-        final org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sff.rev140701.service.function.forwarders.ServiceFunctionForwarder
-                sff = new ServiceFunctionForwarderBuilder()
-                .setName(new SffName("unit-sff-03"))
-                .setIpMgmtAddress(IetfModelCodec.ipAddress2013(new IpAddress(new Ipv4Address("1.2.3.4"))))
-                .setSffDataPlaneLocator(Collections.singletonList(sffDataPlaneLocatorBuilder.build()))
-                .build();
-        final ServiceFunctionPathBuilder sfpBuilder = new ServiceFunctionPathBuilder();
-        sfpBuilder.setSymmetric(false);
-        final ServiceFunctionPath sfp = sfpBuilder.build();
-
-        PowerMockito.mockStatic(SfcProviderServiceForwarderAPI.class);
-        final SfcProviderServiceForwarderAPI api = PowerMockito.mock(SfcProviderServiceForwarderAPI.class);
-        PowerMockito.when(api.readServiceFunctionForwarder(sffNameCaptor.capture())).thenReturn(sff);
-
-        final boolean outcome = ServiceChainingUtil.setSfcPart(sfp, rsp, null, policyWriter);
-
-        Assert.assertEquals("rsp-hop-01-sf+sff", sffNameCaptor.getValue().getValue());
-        Assert.assertTrue(outcome);
-
-        Mockito.verify(policyWriter).cache(Matchers.<ServiceFfName>any());
-        Mockito.verify(policyWriter).cache(Matchers.<ServiceChain>any());
-        Mockito.verify(policyWriter).getManagementIpAddress();
-        Mockito.verifyNoMoreInteractions(policyWriter);
-    }
-
-    @Test
-    public void testSetSfcPart_fail01() throws Exception {
-        final ServiceFunctionPathBuilder sfpBuilder = new ServiceFunctionPathBuilder();
-        sfpBuilder.setSymmetric(false);
-        final ServiceFunctionPath sfp = sfpBuilder.build();
-
-        Assert.assertFalse(ServiceChainingUtil.setSfcPart(sfp, null, null, policyWriter));
-
-        final RenderedServicePathBuilder rspBuilder = new RenderedServicePathBuilder().setName(new RspName("unit-rsp-05"));
-        Assert.assertFalse(ServiceChainingUtil.setSfcPart(sfp, rspBuilder.build(), null, policyWriter));
-
-        rspBuilder.setRenderedServicePathHop(Collections.emptyList());
-        Assert.assertFalse(ServiceChainingUtil.setSfcPart(sfp, rspBuilder.build(), null, policyWriter));
-
-        rspBuilder.setRenderedServicePathHop(Collections.singletonList(null));
-        Assert.assertFalse(ServiceChainingUtil.setSfcPart(sfp, rspBuilder.build(), null, policyWriter));
-    }
-
-    @Test
-    public void testSetSfcPart_fail02() throws Exception {
-        final RenderedServicePath rsp = createRsp("unit-rsp-03");
-        final ServiceFunctionPathBuilder sfpBuilder = new ServiceFunctionPathBuilder();
-        sfpBuilder.setSymmetric(false);
-        final ServiceFunctionPath sfp = sfpBuilder.build();
-
-        Mockito.doReturn(Futures.immediateCheckedFuture(Optional.absent()))
-                .when(rwTx).read(Mockito.eq(LogicalDatastoreType.CONFIGURATION), Mockito.<InstanceIdentifier<Local>>any());
-
-        PowerMockito.mockStatic(SfcProviderServiceForwarderAPI.class);
-        final SfcProviderServiceForwarderAPI api = PowerMockito.mock(SfcProviderServiceForwarderAPI.class);
-        PowerMockito.when(api.readServiceFunctionForwarder(sffNameCaptor.capture())).thenReturn(null);
-
-        final boolean outcome = ServiceChainingUtil.setSfcPart(sfp, rsp, null, policyWriter);
-
-        Assert.assertEquals("rsp-hop-01-sf+sff", sffNameCaptor.getValue().getValue());
-        Assert.assertFalse(outcome);
-
-        Mockito.verifyNoMoreInteractions(policyWriter);
-    }
-
-    @Test
-    public void testSetSfcPart_fail03() throws Exception {
-        final RenderedServicePath rsp = createRsp("unit-rsp-03");
-        final ServiceFunctionForwarderBuilder sffBuilder = new ServiceFunctionForwarderBuilder()
-                .setName(new SffName("unit-sff-03"))
-                .setIpMgmtAddress(null);
-        final ServiceFunctionPathBuilder sfpBuilder = new ServiceFunctionPathBuilder();
-        sfpBuilder.setSymmetric(false);
-        final ServiceFunctionPath sfp = sfpBuilder.build();
-
-        PowerMockito.mockStatic(SfcProviderServiceForwarderAPI.class);
-        final SfcProviderServiceForwarderAPI api = PowerMockito.mock(SfcProviderServiceForwarderAPI.class);
-        PowerMockito.when(api.readServiceFunctionForwarder(sffNameCaptor.capture())).thenReturn(
-                sffBuilder.build());
-
-        Assert.assertFalse(ServiceChainingUtil.setSfcPart(sfp, rsp, null, policyWriter));
-
-        Assert.assertEquals("rsp-hop-01-sf+sff", sffNameCaptor.getValue().getValue());
-
-        Mockito.verifyNoMoreInteractions(policyWriter);
-    }
-
-    @Test
-    public void testSetSfcPart_fail04() throws Exception {
-        final RenderedServicePath rsp = createRsp("unit-rsp-03");
-        final ServiceFunctionForwarderBuilder sffBuilder = new ServiceFunctionForwarderBuilder()
-                .setName(new SffName("unit-sff-03"))
-                .setIpMgmtAddress(null);
-        final ServiceFunctionPathBuilder sfpBuilder = new ServiceFunctionPathBuilder();
-        sfpBuilder.setSymmetric(false);
-        final ServiceFunctionPath sfp = sfpBuilder.build();
-
-        PowerMockito.mockStatic(SfcProviderServiceForwarderAPI.class);
-        final SfcProviderServiceForwarderAPI api = PowerMockito.mock(SfcProviderServiceForwarderAPI.class);
-        PowerMockito.when(api.readServiceFunctionForwarder(sffNameCaptor.capture())).thenReturn(
-                sffBuilder.build());
-
-        Assert.assertFalse(ServiceChainingUtil.setSfcPart(sfp, rsp, null, policyWriter));
-
-        Assert.assertEquals("rsp-hop-01-sf+sff", sffNameCaptor.getValue().getValue());
-
-        Mockito.verifyNoMoreInteractions(policyWriter);
     }
 
     @Test
     public void testForwarderTypeChoice() throws Exception {
         final String sffValue = "unit-xx";
-        final ServiceTypeChoice fwChoice = ServiceChainingUtil.forwarderTypeChoice(sffValue);
+        final ServiceTypeChoice fwChoice = ServiceChainingUtil.createForwarderTypeChoice(sffValue);
 
         Assert.assertTrue(fwChoice instanceof ServiceFunctionForwarder);
         final ServiceFunctionForwarder sff = (ServiceFunctionForwarder) fwChoice;
         Assert.assertEquals(sffValue, sff.getServiceFunctionForwarder());
-    }
-
-    @Test
-    public void testFunctionTypeChoice() throws Exception {
-        final String stcValue = "unit-xx";
-        final ServiceTypeChoice srvTypeChoice = ServiceChainingUtil.functionTypeChoice(stcValue);
-
-        Assert.assertTrue(srvTypeChoice instanceof ServiceFunction);
-        final ServiceFunction stc = (ServiceFunction) srvTypeChoice;
-        Assert.assertEquals(stcValue, stc.getServiceFunction());
     }
 }

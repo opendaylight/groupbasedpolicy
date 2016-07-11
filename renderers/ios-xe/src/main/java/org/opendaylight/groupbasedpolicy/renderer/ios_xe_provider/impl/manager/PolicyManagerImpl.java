@@ -11,15 +11,19 @@ package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager;
 import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Create;
 import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Delete;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
+import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.AsyncFunction;
+import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -47,12 +51,6 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.AsyncFunction;
-import com.google.common.util.concurrent.CheckedFuture;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 public class PolicyManagerImpl implements PolicyManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(PolicyManagerImpl.class);
@@ -72,12 +70,12 @@ public class PolicyManagerImpl implements PolicyManager {
                                                 final long version) {
         final ListenableFuture<Optional<Status>> result;
         if (dataBefore == null && dataAfter != null) {
-            result = syncPolicy(dataAfter, Create);
+            result = syncEndpoints(dataAfter, Create);
         } else if (dataBefore != null && dataAfter == null) {
-            result = syncPolicy(dataBefore, Delete);
+            result = syncEndpoints(dataBefore, Delete);
         } else {
-            syncPolicy(dataBefore, Delete);
-            syncPolicy(dataAfter, Create);
+            syncEndpoints(dataBefore, Delete);
+            syncEndpoints(dataAfter, Create);
             result = Futures.immediateFuture(Optional.empty());
         }
 
@@ -95,7 +93,7 @@ public class PolicyManagerImpl implements PolicyManager {
         });
     }
 
-    private ListenableFuture<Optional<Status>> syncPolicy(final Configuration dataAfter, DsAction action) {
+    private ListenableFuture<Optional<Status>> syncEndpoints(final Configuration dataAfter, DsAction action) {
         if (dataAfter.getRendererEndpoints() == null
                 || dataAfter.getRendererEndpoints().getRendererEndpoint() == null) {
             LOG.debug("no configuration obtained - skipping");
@@ -115,7 +113,7 @@ public class PolicyManagerImpl implements PolicyManager {
             }
             final List<AddressEndpointWithLocation> endpointsWithLocation = dataAfter.getEndpoints()
                     .getAddressEndpointWithLocation();
-            final InstanceIdentifier mountpointIid = PolicyManagerUtil.getAbsoluteLocationMountpoint(rendererEndpoint, endpointsWithLocation);
+            final InstanceIdentifier mountpointIid = PolicyManagerUtil.getMountpointIidFromAbsoluteLocation(rendererEndpoint, endpointsWithLocation);
             final DataBroker mountpoint = nodeManager.getNodeMountPoint(mountpointIid);
             if (mountpoint == null) {
                 final String info = String.format("no data-broker for mount-point [%s] available", mountpointIid);
@@ -123,14 +121,14 @@ public class PolicyManagerImpl implements PolicyManager {
                 continue;
             }
             // Generate policy writer key - policy map name, composed from base value, interface name and node id
-            final String interfaceName = PolicyManagerUtil.getInterfaceNameForPolicyMap(rendererEndpoint, endpointsWithLocation);
+            final String interfaceName = PolicyManagerUtil.getInterfaceNameFromAbsoluteLocation(rendererEndpoint, endpointsWithLocation);
             final NodeId nodeId = nodeManager.getNodeIdByMountpointIid(mountpointIid);
             if (interfaceName == null || nodeId == null) {
                 LOG.warn("Cannot compose policy-map, missing value. Interface: {}, NodeId: {}", interfaceName, nodeId);
                 continue;
             }
             final String policyMapName = BASE_POLICY_MAP_NAME.concat(interfaceName);
-            final String policyWriterKey = policyMapName.concat(nodeId.getValue());
+            final String policyWriterKey = policyMapName.concat("-" + nodeId.getValue());
             // Find appropriate writer
             PolicyWriter policyWriter = policyWriterPerDeviceCache.get(policyWriterKey);
             if (policyWriter == null) {
@@ -162,7 +160,7 @@ public class PolicyManagerImpl implements PolicyManager {
                             StatusUtil.assembleNotConfigurableRendererEPForPeer(context, peerEndpoint, info));
                     continue;
                 }
-                PolicyManagerUtil.syncPolicyEntities(sourceSgt, destinationSgt, context, dataAfter, peerEndpoint,
+                PolicyManagerUtil.syncResolvedPolicy(sourceSgt, destinationSgt, context, dataAfter, peerEndpoint,
                         dataBroker, action);
             }
         }
