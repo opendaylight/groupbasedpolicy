@@ -25,6 +25,7 @@
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>groupbasedpolicy-ui-module</artifactId>
       <version>${project.version}</version>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
  <build>
