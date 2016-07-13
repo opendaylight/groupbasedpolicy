@@ -19,9 +19,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.CheckedFuture;
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -34,10 +36,6 @@ import org.opendaylight.groupbasedpolicy.neutron.ovsdb.AbstractTunnelType;
 import org.opendaylight.ovsdb.southbound.SouthboundConstants;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev100924.Ipv4Address;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.InterfaceTypeVxlan;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbBridgeAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbBridgeAugmentationBuilder;
@@ -50,21 +48,26 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.re
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.ovsdb.bridge.attributes.ControllerEntry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.ovsdb.node.attributes.ConnectionInfoBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.ovsdb.port._interface.attributes.Options;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.node.TerminationPointBuilder;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.node.TerminationPointKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TpId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeBuilder;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.node.TerminationPoint;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.node.TerminationPointBuilder;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.node.TerminationPointKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.CheckedFuture;
 
 public class OvsdbHelperTest {
 
     private static final String TUNNEL_PREFIX = "tunnelPrefix";
+    private static final String KEY_1 = "key1";
+    private static final String VALUE_1 = "value1";
+    private static final String KEY_2 = "key2";
+    private static final String VALUE_2 = "value2";
 
     private DataBroker dataBroker;
     private InstanceIdentifier<OvsdbTerminationPointAugmentation> tpIid;
@@ -83,7 +86,7 @@ public class OvsdbHelperTest {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Before
-    public void setUp() throws Exception {
+    public void init() throws Exception {
         dataBroker = mock(DataBroker.class);
         tpIid = InstanceIdentifier.create(NetworkTopology.class)
             .child(Topology.class, new TopologyKey(SouthboundConstants.OVSDB_TOPOLOGY_ID))
@@ -135,18 +138,18 @@ public class OvsdbHelperTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void getOvsdbBridgeFromTerminationPointTest() {
-        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
-                ovsdbBridgeFuture);
+    public void testGetOvsdbBridgeFromTerminationPoint() {
+        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(ovsdbBridgeFuture);
         assertNotNull(OvsdbHelper.getOvsdbBridgeFromTerminationPoint(tpIid, dataBroker));
         verify(readTransaction).read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class));
     }
 
     @SuppressWarnings("unchecked")
     @Test
-    public void getOvsdbBridgeFromTerminationPointTestPresentFalse() {
-        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
-                ovsdbBridgeFuture);
+    public void testGetOvsdbBridgeFromTerminationPoint_PresentFalse() {
+        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(ovsdbBridgeFuture);
         when(ovsdbBridgeOptional.isPresent()).thenReturn(false);
         assertNull(OvsdbHelper.getOvsdbBridgeFromTerminationPoint(tpIid, dataBroker));
         verify(readTransaction).read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class));
@@ -154,28 +157,31 @@ public class OvsdbHelperTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void getOvsdbBridgeFromTerminationPointTestInvalidIid() {
-        InstanceIdentifier<OvsdbTerminationPointAugmentation> invalidIid = InstanceIdentifier.create(OvsdbTerminationPointAugmentation.class);
+    public void testGetOvsdbBridgeFromTerminationPoint_InvalidIid() {
+        InstanceIdentifier<OvsdbTerminationPointAugmentation> invalidIid =
+                InstanceIdentifier.create(OvsdbTerminationPointAugmentation.class);
         assertNull(OvsdbHelper.getOvsdbBridgeFromTerminationPoint(invalidIid, dataBroker));
         verify(readTransaction, never()).read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Test
-    public void getNodeFromBridgeRefTest() {
+    public void testGetNodeFromBridgeRef() {
         OvsdbBridgeRef bridgeRef = mock(OvsdbBridgeRef.class);
         when(bridgeRef.getValue()).thenReturn((InstanceIdentifier) tpIid);
-        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(nodeFuture);
+        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(nodeFuture);
         assertNotNull(OvsdbHelper.getNodeFromBridgeRef(bridgeRef, dataBroker));
         verify(readTransaction).read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Test
-    public void getNodeFromBridgeRefTestPresentFalse() {
+    public void testGetNodeFromBridgeRef_PresentFalse() {
         OvsdbBridgeRef bridgeRef = mock(OvsdbBridgeRef.class);
         when(bridgeRef.getValue()).thenReturn((InstanceIdentifier) tpIid);
-        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(nodeFuture);
+        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(nodeFuture);
         when(nodeOptional.isPresent()).thenReturn(false);
         assertNull(OvsdbHelper.getNodeFromBridgeRef(bridgeRef, dataBroker));
         verify(readTransaction).read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class));
@@ -183,25 +189,25 @@ public class OvsdbHelperTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void getOvsdbTerminationPointTest() {
-        when(readTransaction.read(any(LogicalDatastoreType.class),
-                any(InstanceIdentifier.class))).thenReturn(ovsdbTerminationPointFuture);
+    public void testGetOvsdbTerminationPoint() {
+        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(ovsdbTerminationPointFuture);
         assertNotNull(OvsdbHelper.getOvsdbTerminationPoint(tpIid, dataBroker));
         verify(readTransaction).read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class));
     }
 
     @SuppressWarnings("unchecked")
     @Test
-    public void getOvsdbTerminationPointTestPresentFalse() {
-        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
-                ovsdbTerminationPointFuture);
+    public void testGetOvsdbTerminationPoint_PresentFalse() {
+        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(ovsdbTerminationPointFuture);
         when(ovsdbTerminationPointOptional.isPresent()).thenReturn(false);
         assertNull(OvsdbHelper.getOvsdbTerminationPoint(tpIid, dataBroker));
         verify(readTransaction).read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class));
     }
 
     @Test
-    public void getNodeTest() {
+    public void testGetNode() {
         NodeBuilder nodeBuilder = new NodeBuilder();
         nodeBuilder.setKey(new NodeKey(new NodeId("nodeId")));
 
@@ -211,7 +217,8 @@ public class OvsdbHelperTest {
         OvsdbBridgeAugmentationBuilder augmentationBuilder = new OvsdbBridgeAugmentationBuilder();
         augmentationBuilder.setBridgeName(new OvsdbBridgeName("bridgeName"));
 
-        Node node = OvsdbHelper.getNode(nodeBuilder.build(), Arrays.asList(tpBuilder.build()), augmentationBuilder.build());
+        Node node = OvsdbHelper.getNode(nodeBuilder.build(), Collections.singletonList(tpBuilder.build()),
+                augmentationBuilder.build());
         assertNotNull(node);
         assertEquals("nodeId", node.getKey().getNodeId().getValue());
         assertEquals(1, node.getTerminationPoint().size());
@@ -222,10 +229,11 @@ public class OvsdbHelperTest {
     }
 
     @Test
-    public void buildOvsdbBridgeAugmentationTest() {
+    public void testBuildOvsdbBridgeAugmentation() {
         final InstanceIdentifier<Node> nodeIid = InstanceIdentifier.builder(NetworkTopology.class)
-                .child(Topology.class, new TopologyKey(SouthboundConstants.OVSDB_TOPOLOGY_ID))
-                .child(Node.class).build();
+            .child(Topology.class, new TopologyKey(SouthboundConstants.OVSDB_TOPOLOGY_ID))
+            .child(Node.class)
+            .build();
 
         OvsdbBridgeAugmentationBuilder bridgeAugmentationBuilder = new OvsdbBridgeAugmentationBuilder();
         bridgeAugmentationBuilder.setBridgeName(new OvsdbBridgeName("bridgeName"));
@@ -237,8 +245,8 @@ public class OvsdbHelperTest {
         ciBuilder.setLocalIp(new IpAddress(new Ipv4Address("127.0.0.1")));
         nodeAugmentationBuilder.setConnectionInfo(ciBuilder.build());
 
-        OvsdbBridgeAugmentation augmentation = OvsdbHelper.buildOvsdbBridgeAugmentation(
-                bridgeAugmentationBuilder.build(), nodeAugmentationBuilder.build());
+        OvsdbBridgeAugmentation augmentation = OvsdbHelper
+            .buildOvsdbBridgeAugmentation(bridgeAugmentationBuilder.build(), nodeAugmentationBuilder.build());
         assertNotNull(augmentation);
         assertNotNull("bridgeName", augmentation.getBridgeName().getValue());
         assertEquals(nodeIid, augmentation.getManagedBy().getValue());
@@ -249,10 +257,11 @@ public class OvsdbHelperTest {
     }
 
     @Test
-    public void buildOvsdbBridgeAugmentationTestManagerIpNull() {
+    public void testBuildOvsdbBridgeAugmentation_ManagerIpNull() {
         final InstanceIdentifier<Node> nodeIid = InstanceIdentifier.builder(NetworkTopology.class)
-                .child(Topology.class, new TopologyKey(SouthboundConstants.OVSDB_TOPOLOGY_ID))
-                .child(Node.class).build();
+            .child(Topology.class, new TopologyKey(SouthboundConstants.OVSDB_TOPOLOGY_ID))
+            .child(Node.class)
+            .build();
 
         OvsdbBridgeAugmentationBuilder bridgeAugmentationBuilder = new OvsdbBridgeAugmentationBuilder();
         bridgeAugmentationBuilder.setBridgeName(new OvsdbBridgeName("bridgeName"));
@@ -260,8 +269,8 @@ public class OvsdbHelperTest {
 
         OvsdbNodeAugmentationBuilder nodeAugmentationBuilder = new OvsdbNodeAugmentationBuilder();
 
-        OvsdbBridgeAugmentation augmentation = OvsdbHelper.buildOvsdbBridgeAugmentation(
-                bridgeAugmentationBuilder.build(), nodeAugmentationBuilder.build());
+        OvsdbBridgeAugmentation augmentation = OvsdbHelper
+            .buildOvsdbBridgeAugmentation(bridgeAugmentationBuilder.build(), nodeAugmentationBuilder.build());
         assertNotNull(augmentation);
         assertNotNull("bridgeName", augmentation.getBridgeName().getValue());
         assertEquals(nodeIid, augmentation.getManagedBy().getValue());
@@ -269,26 +278,25 @@ public class OvsdbHelperTest {
     }
 
     @Test
-    public void buildTerminationPointsTest() {
+    public void testBuildTerminationPoints() {
         OvsdbBridgeAugmentationBuilder bridgeAugmentationBuilder = new OvsdbBridgeAugmentationBuilder();
         bridgeAugmentationBuilder.setBridgeName(new OvsdbBridgeName("bridgeName"));
 
-        List<Options> options = new ArrayList<Options>();
+        List<Options> options = new ArrayList<>();
         OvsdbHelper.setOption(options, "optionKey", "optionValue");
 
-        OvsdbTerminationPointAugmentation terminationPointAugmentation =
-                OvsdbHelper.buildOvsdbTerminationPointAugmentation(bridgeAugmentationBuilder.build(),
-                        options, abstractTunnelType);
+        OvsdbTerminationPointAugmentation terminationPointAugmentation = OvsdbHelper
+            .buildOvsdbTerminationPointAugmentation(bridgeAugmentationBuilder.build(), options, abstractTunnelType);
 
-        List<TerminationPoint> terminationPoints = OvsdbHelper.buildTerminationPoints(
-                bridgeAugmentationBuilder.build(), terminationPointAugmentation, abstractTunnelType);
+        List<TerminationPoint> terminationPoints = OvsdbHelper.buildTerminationPoints(bridgeAugmentationBuilder.build(),
+                terminationPointAugmentation, abstractTunnelType);
         assertNotNull(terminationPoints);
         assertEquals(1, terminationPoints.size());
         TerminationPoint terminationPoint = terminationPoints.get(0);
         assertNotNull(terminationPoint);
         assertEquals(TUNNEL_PREFIX + "bridgeName", terminationPoint.getTpId().getValue());
-        OvsdbTerminationPointAugmentation tpAugmentation = terminationPoint.getAugmentation(
-                OvsdbTerminationPointAugmentation.class);
+        OvsdbTerminationPointAugmentation tpAugmentation =
+                terminationPoint.getAugmentation(OvsdbTerminationPointAugmentation.class);
         assertNotNull(tpAugmentation);
         assertEquals(TUNNEL_PREFIX + "bridgeName", tpAugmentation.getName());
         assertEquals(1, tpAugmentation.getOptions().size());
@@ -300,10 +308,10 @@ public class OvsdbHelperTest {
     }
 
     @Test
-    public void buildOvsdbTerminationPointAugmentationTest() {
+    public void testBuildOvsdbTerminationPointAugmentation() {
         OvsdbBridgeAugmentationBuilder bridgeAugmentationBuilder = new OvsdbBridgeAugmentationBuilder();
         bridgeAugmentationBuilder.setBridgeName(new OvsdbBridgeName("bridgeName"));
-        List<Options> expectedOptions = new ArrayList<Options>();
+        List<Options> expectedOptions = new ArrayList<>();
         OvsdbHelper.setOption(expectedOptions, "optionKey", "optionValue");
         OvsdbTerminationPointAugmentation augmentation = OvsdbHelper.buildOvsdbTerminationPointAugmentation(
                 bridgeAugmentationBuilder.build(), expectedOptions, abstractTunnelType);
@@ -318,31 +326,35 @@ public class OvsdbHelperTest {
     }
 
     @Test
-    public void setOptionTest() {
-        List<Options> options = new ArrayList<Options>();
-        OvsdbHelper.setOption(options, "key1", "value1");
+    public void testSetOption() {
+        List<Options> options = new ArrayList<>();
+        OvsdbHelper.setOption(options, KEY_1, VALUE_1);
         assertEquals(1, options.size());
+
         Options option = options.get(0);
         assertNotNull(option);
-        assertEquals("key1", option.getOption());
-        assertEquals("key1", option.getKey().getOption());
-        assertEquals("value1", option.getValue());
-        OvsdbHelper.setOption(options, "key2", "value2");
+        assertEquals(KEY_1, option.getOption());
+        assertEquals(KEY_1, option.getKey().getOption());
+        assertEquals(VALUE_1, option.getValue());
+
+        OvsdbHelper.setOption(options, KEY_2, VALUE_2);
         assertEquals(2, options.size());
+
         option = options.get(0);
         assertNotNull(option);
-        assertEquals("key1", option.getOption());
-        assertEquals("key1", option.getKey().getOption());
-        assertEquals("value1", option.getValue());
+        assertEquals(KEY_1, option.getOption());
+        assertEquals(KEY_1, option.getKey().getOption());
+        assertEquals(VALUE_1, option.getValue());
+
         option = options.get(1);
         assertNotNull(option);
-        assertEquals("key2", option.getOption());
-        assertEquals("key2", option.getKey().getOption());
-        assertEquals("value2", option.getValue());
+        assertEquals(KEY_2, option.getOption());
+        assertEquals(KEY_2, option.getKey().getOption());
+        assertEquals(VALUE_2, option.getValue());
     }
 
     @Test
-    public void getNodeIpTest() {
+    public void testGetNodeIp() {
         OvsdbNodeAugmentationBuilder nodeAugmentationBuilder = new OvsdbNodeAugmentationBuilder();
         ConnectionInfoBuilder ciBuilder = new ConnectionInfoBuilder();
         ciBuilder.setRemoteIp(new IpAddress(new Ipv4Address("192.168.50.10")));
@@ -354,25 +366,25 @@ public class OvsdbHelperTest {
     }
 
     @Test
-    public void getNodeIpTestIpNotSet() {
+    public void testGetNodeIp_IpNotSet() {
         OvsdbNodeAugmentationBuilder nodeAugmentationBuilder = new OvsdbNodeAugmentationBuilder();
         nodeAugmentationBuilder.setConnectionInfo(new ConnectionInfoBuilder().build());
         assertNull(OvsdbHelper.getNodeIp(nodeAugmentationBuilder.build()));
     }
 
     @Test
-    public void getNodeIpTestConnectionInfoNull() {
+    public void testGetNodeIp_ConnectionInfoNull() {
         assertNull(OvsdbHelper.getNodeIp(new OvsdbNodeAugmentationBuilder().build()));
     }
 
     @Test
-    public void getManagedNodeTestManagedByNotSet() {
+    public void testGetManagedNode_ManagedByNotSet() {
         assertNull(OvsdbHelper.getManagerNode(new OvsdbBridgeAugmentationBuilder().build(), dataBroker));
     }
 
     @SuppressWarnings("unchecked")
     @Test
-    public void getManagedNodeTestInvalidTargetTypeForManagedBy() {
+    public void getManagedNode_InvalidTargetTypeForManagedBy() {
         final InstanceIdentifier<NetworkTopology> nodeIid = InstanceIdentifier.builder(NetworkTopology.class).build();
         OvsdbBridgeAugmentationBuilder bridgeAugmentationBuilder = new OvsdbBridgeAugmentationBuilder();
         bridgeAugmentationBuilder.setManagedBy(new OvsdbNodeRef(nodeIid));
@@ -382,20 +394,20 @@ public class OvsdbHelperTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void getTopologyNodeTest() {
+    public void testGetTopologyNode() {
         InstanceIdentifier<Node> nodeIid = InstanceIdentifier.create(Node.class);
-        when(readTransaction.read(any(LogicalDatastoreType.class),
-                any(InstanceIdentifier.class))).thenReturn(nodeFuture);
+        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(nodeFuture);
         assertEquals(node, OvsdbHelper.getTopologyNode(nodeIid, dataBroker));
         verify(readTransaction).read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class));
     }
 
     @SuppressWarnings("unchecked")
     @Test
-    public void getTopologyNodeTestPresentFalse() {
+    public void testGetTopologyNode_PresentFalse() {
         InstanceIdentifier<Node> nodeIid = InstanceIdentifier.create(Node.class);
-        when(readTransaction.read(any(LogicalDatastoreType.class),
-                any(InstanceIdentifier.class))).thenReturn(nodeFuture);
+        when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(nodeFuture);
         when(nodeOptional.isPresent()).thenReturn(false);
         assertNull(OvsdbHelper.getTopologyNode(nodeIid, dataBroker));
         verify(readTransaction).read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class));
@@ -403,17 +415,17 @@ public class OvsdbHelperTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void createTunnelPortTest() {
+    public void testCreateTunnelPort() {
         InstanceIdentifier<Node> nodeIid = InstanceIdentifier.create(Node.class);
-        when(readWriteTransaction.read(any(LogicalDatastoreType.class),
-                any(InstanceIdentifier.class))).thenReturn(nodeFuture);
+        when(readWriteTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(nodeFuture);
         OvsdbHelper.createTunnelPort(nodeIid, node, abstractTunnelType, dataBroker);
         verify(readWriteTransaction).read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class));
         verify(readWriteTransaction).submit();
     }
 
     @Test
-    public void createTunnelPortTestBridgeNull() {
+    public void testCreateTunnelPort_BridgeNull() {
         InstanceIdentifier<Node> nodeIid = InstanceIdentifier.create(Node.class);
         when(node.getAugmentation(OvsdbBridgeAugmentation.class)).thenReturn(null);
         OvsdbHelper.createTunnelPort(nodeIid, node, abstractTunnelType, dataBroker);
@@ -422,10 +434,10 @@ public class OvsdbHelperTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void createTunnelPortTestManagerNodeNull() {
+    public void testCreateTunnelPort_ManagerNodeNull() {
         InstanceIdentifier<Node> nodeIid = InstanceIdentifier.create(Node.class);
-        when(readWriteTransaction.read(any(LogicalDatastoreType.class),
-                any(InstanceIdentifier.class))).thenReturn(nodeFuture);
+        when(readWriteTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class)))
+            .thenReturn(nodeFuture);
         when(nodeOptional.isPresent()).thenReturn(false);
         OvsdbHelper.createTunnelPort(nodeIid, node, abstractTunnelType, dataBroker);
         verify(readWriteTransaction).read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class));

@@ -210,7 +210,7 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
              * OfOverlay augmentation. If it hasn't, go see if the
              * tunnel ports exist, and if not, go and create them.
              */
-            if (checkOfOverlayConfig(nodeIdString, requiredTunnelTypes, dataBroker) != true) {
+            if (!checkOfOverlayConfig(nodeIdString, requiredTunnelTypes, dataBroker)) {
                 checkNotNull(nodeIid);
                 /*
                  * Check to see if we need to create a
