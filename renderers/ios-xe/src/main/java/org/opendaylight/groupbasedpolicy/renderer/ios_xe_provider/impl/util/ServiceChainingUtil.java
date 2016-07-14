@@ -20,6 +20,7 @@ import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.pol
 import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation.CONSUMER;
 import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation.PROVIDER;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -98,6 +100,7 @@ public class ServiceChainingUtil {
     private static final Logger LOG = LoggerFactory.getLogger(ServiceChainingUtil.class);
     private static final String RSP_SUFFIX = "-gbp-rsp";
     private static final String RSP_REVERSED_SUFFIX = "-gbp-rsp-Reverse";
+    private static long timeout = 5000L;
 
     /**
      * According to input, creates class-maps ({@link ClassMap}) and entries into policy-map ({@link Class}). These
@@ -115,6 +118,9 @@ public class ServiceChainingUtil {
                                       final Sgt destinationSgt, final Map<PolicyManagerImpl.ActionCase, ActionInDirection> actionMap,
                                       final PolicyConfigurationContext context, final DataBroker dataBroker) {
         final ActionInDirection actionInDirection = actionMap.get(ActionCase.CHAIN);
+        if (actionInDirection == null) {
+            return;
+        }
         // Rule action + orientation
         final Action action = actionInDirection.getAction();
         final EndpointPolicyParticipation participation = actionInDirection.getParticipation();
@@ -231,7 +237,7 @@ public class ServiceChainingUtil {
                     if (!sffMgmtIpValue.equals(policyWriter.getManagementIpAddress())) {
                         // Remove service chain and remote forwarder
                         final ServiceChain serviceChain = createServiceChain(renderedServicePath);
-                        final ServiceFfName remoteForwarder = findRemoteForwarder(firstHopSff);
+                        final ServiceFfName remoteForwarder = createRemoteForwarder(firstHopSff);
                         policyWriter.cache(serviceChain);
                         policyWriter.cache(remoteForwarder);
                     }
@@ -252,7 +258,7 @@ public class ServiceChainingUtil {
                     if (!reversedSffMgmtIpValue.equals(policyWriter.getManagementIpAddress())) {
                         // Remove service chain and remote forwarder
                         final ServiceChain serviceChain = createServiceChain(reversedRenderedServicePath);
-                        final ServiceFfName remoteForwarder = findRemoteForwarder(reversedFirstHopSff);
+                        final ServiceFfName remoteForwarder = createRemoteForwarder(reversedFirstHopSff);
                         policyWriter.cache(serviceChain);
                         policyWriter.cache(remoteForwarder);
                     }
@@ -276,7 +282,7 @@ public class ServiceChainingUtil {
                 if (!sffMgmtIpValue.equals(policyWriter.getManagementIpAddress())) {
                     // Remove service chain and remote forwarder
                     final ServiceChain serviceChain = createServiceChain(renderedServicePath);
-                    final ServiceFfName remoteForwarder = findRemoteForwarder(firstHopSff);
+                    final ServiceFfName remoteForwarder = createRemoteForwarder(firstHopSff);
                     policyWriter.cache(serviceChain);
                     policyWriter.cache(remoteForwarder);
                 }
@@ -295,7 +301,7 @@ public class ServiceChainingUtil {
      * @param policyWriter        policy entries writer
      * @return true if everything went good, false otherwise
      */
-    private static boolean resolveRemoteSfcComponents(final RenderedServicePath renderedServicePath, PolicyWriter policyWriter) {
+    static boolean resolveRemoteSfcComponents(final RenderedServicePath renderedServicePath, PolicyWriter policyWriter) {
         final ServiceFunctionForwarder forwarder = getFirstHopSff(renderedServicePath);
         if (forwarder == null) {
             return false;
@@ -391,21 +397,17 @@ public class ServiceChainingUtil {
         return serviceFunctionPath;
     }
 
-    static ServiceFunctionPath findServiceFunctionPathFromServiceChainName(final SfcName chainName) {
+    static ServiceFunctionPath findServiceFunctionPathFromServiceChainName(@Nonnull final SfcName chainName) {
         final ServiceFunctionPaths allPaths = SfcProviderServicePathAPI.readAllServiceFunctionPaths();
+        if (allPaths == null || allPaths.getServiceFunctionPath() == null || allPaths.getServiceFunctionPath().isEmpty()) {
+            return null;
+        }
         for (ServiceFunctionPath serviceFunctionPath : allPaths.getServiceFunctionPath()) {
-            if (serviceFunctionPath.getServiceChainName().equals(chainName)) {
+            if (chainName.equals(serviceFunctionPath.getServiceChainName())) {
                 return serviceFunctionPath;
             }
         }
         return null;
-    }
-
-    private static ServiceFfName findRemoteForwarder(ServiceFunctionForwarder firstHopSff) {
-        ServiceFfNameBuilder serviceFfNameBuilder = new ServiceFfNameBuilder();
-        serviceFfNameBuilder.setName(firstHopSff.getName().getValue())
-                .setKey(new ServiceFfNameKey(firstHopSff.getName().getValue()));
-        return serviceFfNameBuilder.build();
     }
 
     /**
@@ -466,14 +468,26 @@ public class ServiceChainingUtil {
         return reversedRenderedPath;
     }
 
-    static ServiceTypeChoice createForwarderTypeChoice(final String forwarderName) {
+    static ServiceFfName createRemoteForwarder(ServiceFunctionForwarder firstHopSff) {
+        final ServiceFfNameBuilder serviceFfNameBuilder = new ServiceFfNameBuilder();
+        serviceFfNameBuilder.setName(firstHopSff.getName().getValue());
+        return serviceFfNameBuilder.build();
+    }
+
+    private static ServiceTypeChoice createForwarderTypeChoice(final String forwarderName) {
         final ServiceFunctionForwarderBuilder sffBuilder = new ServiceFunctionForwarderBuilder();
         sffBuilder.setServiceFunctionForwarder(forwarderName);
         return sffBuilder.build();
     }
 
+    /**
+     * Creates service-chain with name/key only, using rendered service path id. This object contains no data, it is used
+     * to create instance identifier when appropriate service-chain is removed from particular device
+     *
+     * @param renderedServicePath - it's path id is used as a identifier
+     * @return service-chain object with id
+     */
     private static ServiceChain createServiceChain(final RenderedServicePath renderedServicePath) {
-        // Construct service chain with key
         final Long pathId = renderedServicePath.getPathId();
         final ServicePathBuilder servicePathBuilder = new ServicePathBuilder();
         final ServiceChainBuilder serviceChainBuilder = new ServiceChainBuilder();
@@ -513,9 +527,8 @@ public class ServiceChainingUtil {
     }
 
     private static void checkRspManagerStatus(final RspName rspName, final DataBroker dataBroker) {
-        /** TODO A better way to do this is to register listener and wait for notification than using hardcoded timeout
-         *  with Thread.sleep(). Example in class BridgeDomainManagerImpl
-         */
+        // TODO A better way to do this is to register listener and wait for notification than using hardcoded timeout
+        // with Thread.sleep(). Example in class BridgeDomainManagerImpl
         ConfiguredRenderedPath renderedPath = null;
         LOG.debug("Waiting for SFC to configure path {} ...", rspName.getValue());
 
@@ -524,7 +537,7 @@ public class ServiceChainingUtil {
             attempt++;
             // Wait
             try {
-                Thread.sleep(5000L);
+                Thread.sleep(timeout);
             } catch (InterruptedException e) {
                 LOG.error("Thread interrupted while waiting ... {} ", e);
             }
@@ -558,7 +571,7 @@ public class ServiceChainingUtil {
             } else if (renderedPath.getPathStatus().equals(ConfiguredRenderedPath.PathStatus.Success)) {
                 LOG.debug("RSP {} configured by SFC", rspName.getValue());
                 try {
-                    Thread.sleep(5000); // Just for sure, maybe will be safe to remove this
+                    Thread.sleep(timeout); // Just for sure, maybe will be safe to remove this
                 } catch (InterruptedException e) {
                     LOG.error("Thread interrupted while waiting ... {} ", e);
                 }
@@ -567,5 +580,14 @@ public class ServiceChainingUtil {
         }
         while (attempt <= 6);
         LOG.warn("Maximum number of attempts reached");
+    }
+
+    /**
+     * Only for test purposes
+     * @param value - set actual timeout value
+     */
+    @VisibleForTesting
+    public static void setTimeout(long value) {
+        timeout = value;
     }
 }
