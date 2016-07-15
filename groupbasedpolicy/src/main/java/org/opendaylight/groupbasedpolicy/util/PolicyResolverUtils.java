@@ -37,7 +37,7 @@ public class PolicyResolverUtils {
      * endpoint groups and the conditions that can apply for for each endpoint in those groups.
      */
     public static Table<EgKey, EgKey, Policy> resolvePolicy(Set<IndexedTenant> tenants) {
-        return resolvePolicy(tenants, new HashMap<EgKey, Set<ConditionSet>>());
+        return resolvePolicy(tenants, new HashMap<>());
     }
 
     /**

@@ -104,77 +104,77 @@ public class InheritanceUtilsTest {
     // Labels
     // ******
 
-    Quality q1 = new QualityBuilder().setName(new QualityName("q1")).build();
-    Quality q1Include = new QualityBuilder(q1).setInclusionRule(InclusionRule.Include).build();
-    Quality q1Exclude = new QualityBuilder(q1).setInclusionRule(InclusionRule.Exclude).build();
-    Quality q2 = new QualityBuilder().setName(new QualityName("q2")).build();
-    Quality q2Exclude =
+    private Quality q1 = new QualityBuilder().setName(new QualityName("q1")).build();
+    private Quality q1Include = new QualityBuilder(q1).setInclusionRule(InclusionRule.Include).build();
+    private Quality q1Exclude = new QualityBuilder(q1).setInclusionRule(InclusionRule.Exclude).build();
+    private Quality q2 = new QualityBuilder().setName(new QualityName("q2")).build();
+    private Quality q2Exclude =
             new QualityBuilder().setName(new QualityName("q2")).setInclusionRule(InclusionRule.Exclude).build();
-    Quality q3 = new QualityBuilder().setName(new QualityName("q3")).build();
+    private Quality q3 = new QualityBuilder().setName(new QualityName("q3")).build();
 
-    Requirement r1 = new RequirementBuilder().setName(new RequirementName("r1")).build();
-    Requirement r2 = new RequirementBuilder().setName(new RequirementName("r2")).build();
-    Requirement r1exclude =
+    private Requirement r1 = new RequirementBuilder().setName(new RequirementName("r1")).build();
+    private Requirement r2 = new RequirementBuilder().setName(new RequirementName("r2")).build();
+    private Requirement r1exclude =
             new RequirementBuilder().setName(new RequirementName("r1")).setInclusionRule(InclusionRule.Exclude).build();
-    Requirement r3 = new RequirementBuilder().setName(new RequirementName("r3")).build();
+    private Requirement r3 = new RequirementBuilder().setName(new RequirementName("r3")).build();
 
-    Capability c1 = new CapabilityBuilder().setName(new CapabilityName("c1")).build();
-    Capability c2 = new CapabilityBuilder().setName(new CapabilityName("c2")).build();
-    Capability c1exclude =
+    private Capability c1 = new CapabilityBuilder().setName(new CapabilityName("c1")).build();
+    private Capability c2 = new CapabilityBuilder().setName(new CapabilityName("c2")).build();
+    private Capability c1exclude =
             new CapabilityBuilder().setName(new CapabilityName("c1")).setInclusionRule(InclusionRule.Exclude).build();
-    Capability c3 = new CapabilityBuilder().setName(new CapabilityName("c3")).build();
+    private Capability c3 = new CapabilityBuilder().setName(new CapabilityName("c3")).build();
 
-    Condition cond1 = new ConditionBuilder().setName(new ConditionName("cond1")).build();
-    Condition cond2 = new ConditionBuilder().setName(new ConditionName("cond2")).build();
-    Condition cond2exlude =
+    private Condition cond1 = new ConditionBuilder().setName(new ConditionName("cond1")).build();
+    private Condition cond2 = new ConditionBuilder().setName(new ConditionName("cond2")).build();
+    private Condition cond2exlude =
             new ConditionBuilder().setName(new ConditionName("cond2")).setInclusionRule(InclusionRule.Exclude).build();
 
     // *********
     // Contracts
     // *********
 
-    TargetName q2TargetName = new TargetName("q2");
-    Target q2Target = new TargetBuilder().setName(q2TargetName).setQuality(ImmutableList.of(q2)).build();
+    private TargetName q2TargetName = new TargetName("q2");
+    private Target q2Target = new TargetBuilder().setName(q2TargetName).setQuality(ImmutableList.of(q2)).build();
 
-    TargetName q1ExcludeTargetName = new TargetName("q1_exclude");
-    Target q1ExcludeTarget =
+    private TargetName q1ExcludeTargetName = new TargetName("q1_exclude");
+    private Target q1ExcludeTarget =
             new TargetBuilder().setName(q1ExcludeTargetName).setQuality(ImmutableList.of(q1Exclude, q2)).build();
 
-    TargetName q1IncludeTargetName = new TargetName("q1_include");
-    Target q1IncludeTarget =
+    private TargetName q1IncludeTargetName = new TargetName("q1_include");
+    private Target q1IncludeTarget =
             new TargetBuilder().setName(q1IncludeTargetName).setQuality(ImmutableList.of(q1Include)).build();
 
-    Target q2PlusTarget = new TargetBuilder().setName(q2TargetName).setQuality(ImmutableList.of(q3)).build();
+    private Target q2PlusTarget = new TargetBuilder().setName(q2TargetName).setQuality(ImmutableList.of(q3)).build();
 
-    SubjectName subject1 = new SubjectName("subject1");
-    SubjectName subject2 = new SubjectName("subject2");
-    SubjectName subject3 = new SubjectName("subject3");
+    private SubjectName subject1 = new SubjectName("subject1");
+    private SubjectName subject2 = new SubjectName("subject2");
+    private SubjectName subject3 = new SubjectName("subject3");
 
-    RequirementMatcher rm_r1 = new RequirementMatcherBuilder().setName(new RequirementMatcherName("rm_r1"))
+    private RequirementMatcher rm_r1 = new RequirementMatcherBuilder().setName(new RequirementMatcherName("rm_r1"))
         .setMatcherRequirement(ImmutableList.of(new MatcherRequirementBuilder(r1).build()))
         .build();
-    RequirementMatcher rm_r1_plus = new RequirementMatcherBuilder().setName(new RequirementMatcherName("rm_r1"))
+    private RequirementMatcher rm_r1_plus = new RequirementMatcherBuilder().setName(new RequirementMatcherName("rm_r1"))
         .setMatchType(MatchType.All)
         .setMatcherRequirement(ImmutableList.of(new MatcherRequirementBuilder(r2).build()))
         .build();
 
-    CapabilityMatcher capm_c1 = new CapabilityMatcherBuilder().setName(new CapabilityMatcherName("capm_c1"))
+    private CapabilityMatcher capm_c1 = new CapabilityMatcherBuilder().setName(new CapabilityMatcherName("capm_c1"))
         .setMatcherCapability(ImmutableList.of(new MatcherCapabilityBuilder(c1).build()))
         .build();
 
-    ConditionMatcher cm_c1 = new ConditionMatcherBuilder().setName(new ConditionMatcherName("cm_c1"))
+    private ConditionMatcher cm_c1 = new ConditionMatcherBuilder().setName(new ConditionMatcherName("cm_c1"))
         .setCondition(ImmutableList.of(cond1))
         .build();
-    ConditionMatcher cm_c2 = new ConditionMatcherBuilder().setName(new ConditionMatcherName("cm_c2"))
+    private ConditionMatcher cm_c2 = new ConditionMatcherBuilder().setName(new ConditionMatcherName("cm_c2"))
         .setMatchType(MatchType.All)
         .setCondition(ImmutableList.of(cond2))
         .build();
-    ConditionMatcher cm_c2_plus = new ConditionMatcherBuilder().setName(new ConditionMatcherName("cm_c2"))
+    private ConditionMatcher cm_c2_plus = new ConditionMatcherBuilder().setName(new ConditionMatcherName("cm_c2"))
         .setCondition(ImmutableList.of(cond2exlude))
         .build();
 
-    ClauseName clauseName1 = new ClauseName("clauseName1");
-    Clause clause1 =
+    private ClauseName clauseName1 = new ClauseName("clauseName1");
+    private Clause clause1 =
             new ClauseBuilder().setName(clauseName1)
                 .setSubjectRefs(ImmutableList.of(subject1))
                 .setProviderMatchers(new ProviderMatchersBuilder()
@@ -189,7 +189,7 @@ public class InheritanceUtilsTest {
                     .build())
                 .build();
 
-    Clause clause1withConsMatcher = new ClauseBuilder().setName(clauseName1)
+    private Clause clause1withConsMatcher = new ClauseBuilder().setName(clauseName1)
         .setSubjectRefs(ImmutableList.of(subject2))
         .setConsumerMatchers(new ConsumerMatchersBuilder()
             .setGroupIdentificationConstraints(new GroupRequirementConstraintCaseBuilder()
@@ -198,7 +198,7 @@ public class InheritanceUtilsTest {
             .build())
         .build();
 
-    Clause clause1withProvMatcher =
+    private Clause clause1withProvMatcher =
             new ClauseBuilder().setName(clauseName1)
                 .setSubjectRefs(ImmutableList.of(subject3))
                 .setProviderMatchers(new ProviderMatchersBuilder()
@@ -208,56 +208,56 @@ public class InheritanceUtilsTest {
                     .build())
                 .build();
 
-    ActionRef a1 = new ActionRefBuilder().setName(new ActionName("a1")).build();
-    ClassifierRef cr1 = new ClassifierRefBuilder().setName(new ClassifierName("cr1")).build();
-    Rule rule1 = new RuleBuilder().setName(new RuleName("r1"))
+    private ActionRef a1 = new ActionRefBuilder().setName(new ActionName("a1")).build();
+    private ClassifierRef cr1 = new ClassifierRefBuilder().setName(new ClassifierName("cr1")).build();
+    private Rule rule1 = new RuleBuilder().setName(new RuleName("r1"))
         .setActionRef(ImmutableList.of(a1))
         .setClassifierRef(ImmutableList.of(cr1))
         .build();
-    Rule rule2 = new RuleBuilder().setName(new RuleName("r2")).setOrder(5).build();
-    Rule rule3 = new RuleBuilder().setName(new RuleName("r3")).setOrder(7).build();
-    Rule rule4 = new RuleBuilder().setName(new RuleName("r4")).setOrder(1).build();
+    private Rule rule2 = new RuleBuilder().setName(new RuleName("r2")).setOrder(5).build();
+    private Rule rule3 = new RuleBuilder().setName(new RuleName("r3")).setOrder(7).build();
+    private Rule rule4 = new RuleBuilder().setName(new RuleName("r4")).setOrder(1).build();
 
-    Subject s1 = new SubjectBuilder().setName(new SubjectName("s1")).setRule(ImmutableList.of(rule1, rule2)).build();
-    Subject s1_plus =
+    private Subject s1 = new SubjectBuilder().setName(new SubjectName("s1")).setRule(ImmutableList.of(rule1, rule2)).build();
+    private Subject s1_plus =
             new SubjectBuilder().setName(s1.getName()).setRule(ImmutableList.of(rule3, rule4)).setOrder(4).build();
-    Subject s2 = new SubjectBuilder().setName(new SubjectName("s2")).setOrder(5).build();
-    Subject s2_plus = new SubjectBuilder().setName(new SubjectName(s2.getName())).setOrder(6).build();
+    private Subject s2 = new SubjectBuilder().setName(new SubjectName("s2")).setOrder(5).build();
+    private Subject s2_plus = new SubjectBuilder().setName(new SubjectName(s2.getName())).setOrder(6).build();
 
-    ContractId contractId1 = new ContractId("e7e6804f-7fcb-46cf-9bc6-abfec0896d95");
-    Contract contract1 = new ContractBuilder().setId(contractId1)
+    private ContractId contractId1 = new ContractId("e7e6804f-7fcb-46cf-9bc6-abfec0896d95");
+    private Contract contract1 = new ContractBuilder().setId(contractId1)
         .setQuality(ImmutableList.of(q1))
         .setTarget(ImmutableList.of(q2Target, q1IncludeTarget, q1ExcludeTarget))
         .setClause(ImmutableList.of(clause1))
         .setSubject(ImmutableList.of(s1))
         .build();
 
-    ContractId contractId2 = new ContractId("3f56ae44-d1e4-4617-95af-c809dfc50149");
-    Contract contract2 = new ContractBuilder().setId(contractId2)
+    private ContractId contractId2 = new ContractId("3f56ae44-d1e4-4617-95af-c809dfc50149");
+    private Contract contract2 = new ContractBuilder().setId(contractId2)
         .setParent(contractId1)
         .setTarget(ImmutableList.of(q2PlusTarget, q1IncludeTarget))
         .setClause(ImmutableList.of(clause1withConsMatcher))
         .setSubject(ImmutableList.of(s1_plus, s2))
         .build();
 
-    ContractId contractId3 = new ContractId("38d52ec1-301b-453a-88a6-3ffa777d7795");
-    Contract contract3 = new ContractBuilder().setId(contractId3)
+    private ContractId contractId3 = new ContractId("38d52ec1-301b-453a-88a6-3ffa777d7795");
+    private Contract contract3 = new ContractBuilder().setId(contractId3)
         .setParent(contractId1)
         .setTarget(ImmutableList.of(q2PlusTarget, q1IncludeTarget))
         .setClause(ImmutableList.of(clause1withProvMatcher))
         .setSubject(ImmutableList.of(s2_plus, s2))
         .build();
 
-    ContractId cloop2Id = new ContractId("89700928-7316-4216-a853-a7ea3934b8f4");
-    Contract cloop1 = new ContractBuilder().setId(new ContractId("56bbce36-e60b-473d-92de-bb63b5a6dbb5"))
+    private ContractId cloop2Id = new ContractId("89700928-7316-4216-a853-a7ea3934b8f4");
+    private Contract cloop1 = new ContractBuilder().setId(new ContractId("56bbce36-e60b-473d-92de-bb63b5a6dbb5"))
         .setParent(cloop2Id)
         .setClause(ImmutableList.of(clause1))
         .setSubject(ImmutableList.of(s1, s2))
         .build();
-    Contract cloop2 = new ContractBuilder().setId(cloop2Id).setParent(cloop1.getId()).build();
-    ContractId cselfloopid = new ContractId("63edead2-d6f1-4acf-9f78-831595d194ee");
-    Contract cselfloop = new ContractBuilder().setId(cselfloopid).setParent(cselfloopid).build();
-    Contract corphan = new ContractBuilder().setId(new ContractId("f72c15f3-76ab-4c7e-a817-eb5f6efcb654"))
+    private Contract cloop2 = new ContractBuilder().setId(cloop2Id).setParent(cloop1.getId()).build();
+    private ContractId cselfloopid = new ContractId("63edead2-d6f1-4acf-9f78-831595d194ee");
+    private Contract cselfloop = new ContractBuilder().setId(cselfloopid).setParent(cselfloopid).build();
+    private Contract corphan = new ContractBuilder().setId(new ContractId("f72c15f3-76ab-4c7e-a817-eb5f6efcb654"))
         .setParent(new ContractId("eca4d0d5-8c62-4f46-ad42-71c1f4d3da12"))
         .build();
 
@@ -265,96 +265,96 @@ public class InheritanceUtilsTest {
     // Endpoint Groups
     // ***************
 
-    SelectorName cnsName1 = new SelectorName("cns1");
-    ConsumerNamedSelector cns1 = new ConsumerNamedSelectorBuilder().setName(cnsName1)
+    private SelectorName cnsName1 = new SelectorName("cns1");
+    private ConsumerNamedSelector cns1 = new ConsumerNamedSelectorBuilder().setName(cnsName1)
         .setContract(ImmutableList.of(contractId1))
         .setRequirement(ImmutableList.of(r2))
         .build();
 
-    ConsumerNamedSelector cns1_plus = new ConsumerNamedSelectorBuilder().setName(cnsName1)
+    private ConsumerNamedSelector cns1_plus = new ConsumerNamedSelectorBuilder().setName(cnsName1)
         .setContract(ImmutableList.of(contractId2))
         .setRequirement(ImmutableList.of(r3))
         .build();
 
-    ProviderNamedSelector pns1 = new ProviderNamedSelectorBuilder().setName(cnsName1)
+    private ProviderNamedSelector pns1 = new ProviderNamedSelectorBuilder().setName(cnsName1)
         .setContract(ImmutableList.of(contractId1))
         .setCapability(ImmutableList.of(c2))
         .build();
 
-    ProviderNamedSelector pns1_plus = new ProviderNamedSelectorBuilder().setName(cnsName1)
+    private ProviderNamedSelector pns1_plus = new ProviderNamedSelectorBuilder().setName(cnsName1)
         .setContract(ImmutableList.of(contractId2))
         .setCapability(ImmutableList.of(c3))
         .build();
 
-    QualityMatcher qm_q1_all = new QualityMatcherBuilder().setName(new QualityMatcherName("qm_q1_all"))
+    private QualityMatcher qm_q1_all = new QualityMatcherBuilder().setName(new QualityMatcherName("qm_q1_all"))
         .setMatcherQuality(ImmutableList.of(new MatcherQualityBuilder(q1).build()))
         .setMatchType(MatchType.All)
         .build();
-    QualityMatcher qm_q1_any = new QualityMatcherBuilder().setName(new QualityMatcherName("qm_q1_any"))
+    private QualityMatcher qm_q1_any = new QualityMatcherBuilder().setName(new QualityMatcherName("qm_q1_any"))
         .setMatcherQuality(ImmutableList.of(new MatcherQualityBuilder(q1).build()))
         .setMatchType(MatchType.Any)
         .build();
-    QualityMatcher qm_q2q3_any = new QualityMatcherBuilder().setName(new QualityMatcherName("qm_q2q3_any"))
+    private QualityMatcher qm_q2q3_any = new QualityMatcherBuilder().setName(new QualityMatcherName("qm_q2q3_any"))
         .setMatcherQuality(
                 ImmutableList.of(new MatcherQualityBuilder(q2).build(), new MatcherQualityBuilder(q3).build()))
         .setMatchType(MatchType.Any)
         .build();
 
-    QualityMatcher qm_q2tq2 =
+    private QualityMatcher qm_q2tq2 =
             new QualityMatcherBuilder().setName(new QualityMatcherName("qm_q2tq2"))
                 .setMatcherQuality(
                         ImmutableList.of(new MatcherQualityBuilder(q2).setTargetNamespace(q2TargetName).build()))
                 .setMatchType(MatchType.Any)
                 .build();
-    QualityMatcher qm_q2q3_plus =
+    private QualityMatcher qm_q2q3_plus =
             new QualityMatcherBuilder().setName(new QualityMatcherName("qm_q2q3_any"))
                 .setMatcherQuality(
                         ImmutableList.of(new MatcherQualityBuilder(q3).setTargetNamespace(q2TargetName).build(),
                                 new MatcherQualityBuilder(q2Exclude).build()))
                 .setMatchType(MatchType.All)
                 .build();
-    QualityMatcher qm_q1_plus = new QualityMatcherBuilder().setName(new QualityMatcherName("qm_q1_any")).build();
+    private QualityMatcher qm_q1_plus = new QualityMatcherBuilder().setName(new QualityMatcherName("qm_q1_any")).build();
 
-    SelectorName ctsName1 = new SelectorName("cts1");
-    ConsumerTargetSelector cts1 = new ConsumerTargetSelectorBuilder().setName(ctsName1)
+    private SelectorName ctsName1 = new SelectorName("cts1");
+    private ConsumerTargetSelector cts1 = new ConsumerTargetSelectorBuilder().setName(ctsName1)
         .setQualityMatcher(ImmutableList.of(qm_q1_all, qm_q1_any))
         .setRequirement(ImmutableList.of(r2))
         .build();
-    SelectorName ctsName2 = new SelectorName("cts2");
-    ConsumerTargetSelector cts2 = new ConsumerTargetSelectorBuilder().setName(ctsName2)
+    private SelectorName ctsName2 = new SelectorName("cts2");
+    private ConsumerTargetSelector cts2 = new ConsumerTargetSelectorBuilder().setName(ctsName2)
         .setQualityMatcher(ImmutableList.of(qm_q2q3_any))
         .setRequirement(ImmutableList.of(r1exclude, r3))
         .build();
-    ConsumerTargetSelector cts1_plus = new ConsumerTargetSelectorBuilder().setName(ctsName1)
+    private ConsumerTargetSelector cts1_plus = new ConsumerTargetSelectorBuilder().setName(ctsName1)
         .setQualityMatcher(ImmutableList.of(qm_q1_plus, qm_q2q3_any, qm_q1_plus))
         .setRequirement(ImmutableList.of(r3))
         .build();
-    ConsumerTargetSelector cts2_plus = new ConsumerTargetSelectorBuilder().setName(ctsName2)
+    private ConsumerTargetSelector cts2_plus = new ConsumerTargetSelectorBuilder().setName(ctsName2)
         .setQualityMatcher(ImmutableList.of(qm_q2tq2, qm_q2q3_plus))
         .setRequirement(ImmutableList.of(r3))
         .build();
 
-    SelectorName ptsName1 = new SelectorName("pts1");
-    ProviderTargetSelector pts1 = new ProviderTargetSelectorBuilder().setName(ptsName1)
+    private SelectorName ptsName1 = new SelectorName("pts1");
+    private ProviderTargetSelector pts1 = new ProviderTargetSelectorBuilder().setName(ptsName1)
         .setQualityMatcher(ImmutableList.of(qm_q1_all, qm_q1_any))
         .setCapability(ImmutableList.of(c2))
         .build();
-    SelectorName ptsName2 = new SelectorName("pts2");
-    ProviderTargetSelector pts2 = new ProviderTargetSelectorBuilder().setName(ptsName2)
+    private SelectorName ptsName2 = new SelectorName("pts2");
+    private ProviderTargetSelector pts2 = new ProviderTargetSelectorBuilder().setName(ptsName2)
         .setQualityMatcher(ImmutableList.of(qm_q2q3_any))
         .setCapability(ImmutableList.of(c1exclude, c3))
         .build();
-    ProviderTargetSelector pts1_plus = new ProviderTargetSelectorBuilder().setName(ptsName1)
+    private ProviderTargetSelector pts1_plus = new ProviderTargetSelectorBuilder().setName(ptsName1)
         .setQualityMatcher(ImmutableList.of(qm_q1_plus, qm_q2q3_any, qm_q1_plus))
         .setCapability(ImmutableList.of(c3))
         .build();
-    ProviderTargetSelector pts2_plus = new ProviderTargetSelectorBuilder().setName(ptsName2)
+    private ProviderTargetSelector pts2_plus = new ProviderTargetSelectorBuilder().setName(ptsName2)
         .setQualityMatcher(ImmutableList.of(qm_q2tq2, qm_q2q3_plus))
         .setCapability(ImmutableList.of(c3))
         .build();
 
-    EndpointGroupId egId1 = new EndpointGroupId("c0e5edfb-02d2-412b-8757-a77b3daeb5d4");
-    EndpointGroup eg1 = new EndpointGroupBuilder().setId(egId1)
+    private EndpointGroupId egId1 = new EndpointGroupId("c0e5edfb-02d2-412b-8757-a77b3daeb5d4");
+    private EndpointGroup eg1 = new EndpointGroupBuilder().setId(egId1)
         .setRequirement(ImmutableList.of(r1))
         .setCapability(ImmutableList.of(c1))
         .setConsumerTargetSelector(ImmutableList.of(cts1, cts2))
@@ -362,8 +362,8 @@ public class InheritanceUtilsTest {
         .setProviderTargetSelector(ImmutableList.of(pts1, pts2))
         .setProviderNamedSelector(ImmutableList.of(pns1))
         .build();
-    EndpointGroupId egId2 = new EndpointGroupId("60483327-ad76-43dd-b3bf-54ffb73ef4b8");
-    EndpointGroup eg2 = new EndpointGroupBuilder().setId(egId2)
+    private EndpointGroupId egId2 = new EndpointGroupId("60483327-ad76-43dd-b3bf-54ffb73ef4b8");
+    private EndpointGroup eg2 = new EndpointGroupBuilder().setId(egId2)
         .setParent(egId1)
         .setConsumerTargetSelector(ImmutableList.of(cts1_plus, cts2_plus))
         .setConsumerNamedSelector(ImmutableList.of(cns1_plus))
@@ -371,8 +371,8 @@ public class InheritanceUtilsTest {
         .setProviderNamedSelector(ImmutableList.of(pns1_plus))
         .build();
 
-    EndpointGroupId egloop2Id = new EndpointGroupId("cb5be574-9836-4053-8ec4-4b4a43331d65");
-    EndpointGroup egloop1 = new EndpointGroupBuilder()
+    private EndpointGroupId egloop2Id = new EndpointGroupId("cb5be574-9836-4053-8ec4-4b4a43331d65");
+    private EndpointGroup egloop1 = new EndpointGroupBuilder()
         .setId(new EndpointGroupId("a33fdd4d-f58b-4741-a69f-08aecab9af2e"))
         .setParent(egloop2Id)
         .setConsumerNamedSelector(ImmutableList.of(cns1))
@@ -380,10 +380,10 @@ public class InheritanceUtilsTest {
         .setConsumerTargetSelector(ImmutableList.of(cts1))
         .setProviderTargetSelector(ImmutableList.of(pts1))
         .build();
-    EndpointGroup egloop2 = new EndpointGroupBuilder().setId(egloop2Id).setParent(egloop1.getId()).build();
-    EndpointGroupId egselfloopid = new EndpointGroupId("996ad104-f852-4d77-96cf-cddde5cebb84");
-    EndpointGroup egselfloop = new EndpointGroupBuilder().setId(egselfloopid).setParent(egselfloopid).build();
-    EndpointGroup egorphan =
+    private EndpointGroup egloop2 = new EndpointGroupBuilder().setId(egloop2Id).setParent(egloop1.getId()).build();
+    private EndpointGroupId egselfloopid = new EndpointGroupId("996ad104-f852-4d77-96cf-cddde5cebb84");
+    private EndpointGroup egselfloop = new EndpointGroupBuilder().setId(egselfloopid).setParent(egselfloopid).build();
+    private EndpointGroup egorphan =
             new EndpointGroupBuilder().setId(new EndpointGroupId("feafeac9-ce1a-4b19-8455-8fcc9a4ff013"))
                 .setParent(new EndpointGroupId("aa9dfcf1-610c-42f9-8c3a-f67b43196821"))
                 .build();
@@ -392,14 +392,14 @@ public class InheritanceUtilsTest {
     // Tenants
     // *******
 
-    TenantId tenantId1 = new TenantId("0ac5d219-979c-4cca-8f90-83b69bc414ad");
-    Tenant tenant1 = new TenantBuilder().setId(tenantId1)
+    private TenantId tenantId1 = new TenantId("0ac5d219-979c-4cca-8f90-83b69bc414ad");
+    private Tenant tenant1 = new TenantBuilder().setId(tenantId1)
         .setPolicy(new PolicyBuilder().setEndpointGroup(ImmutableList.of(eg1, eg2))
             .setContract(ImmutableList.of(contract1, contract2, contract3))
             .build())
         .build();
 
-    Tenant malformed = new TenantBuilder().setId(new TenantId("b26e6b18-8e74-4062-a7d2-e8437132030d"))
+    private Tenant malformed = new TenantBuilder().setId(new TenantId("b26e6b18-8e74-4062-a7d2-e8437132030d"))
         .setPolicy(new PolicyBuilder().setContract(ImmutableList.of(cloop1, cloop2, cselfloop, corphan))
             .setEndpointGroup(ImmutableList.of(egloop1, egloop2, egselfloop, egorphan))
             .build())
@@ -409,7 +409,7 @@ public class InheritanceUtilsTest {
     // Other test state
     // ****************
 
-    public boolean containsQuality(List<? extends QualityBase> qualities, QualityBase quality) {
+    private boolean containsQuality(List<? extends QualityBase> qualities, QualityBase quality) {
         for (QualityBase q : qualities) {
             if (q.getName().equals(quality.getName()))
                 return true;
