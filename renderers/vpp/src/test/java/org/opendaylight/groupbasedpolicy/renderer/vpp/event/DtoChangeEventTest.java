@@ -31,6 +31,9 @@ public class DtoChangeEventTest {
         .child(Node.class, NODE_KEY)
         .build();
 
+    private static DummyDtoEvent eventOriginal =
+            new DummyDtoEvent(NODE_IID, null, new NodeBuilder().setKey(NODE_KEY).build());
+
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
@@ -39,6 +42,21 @@ public class DtoChangeEventTest {
         public DummyDtoEvent(InstanceIdentifier<Node> iid, Node before, Node after) {
             super(iid, before, after);
         }
+    }
+
+    @Test
+    public void testDummyDtoEvent() {
+        Node node = new NodeBuilder().setKey(NODE_KEY).build();
+        DummyDtoEvent event = new DummyDtoEvent(NODE_IID, null, node);
+
+        Assert.assertTrue(eventOriginal.equals(event));
+        Assert.assertEquals(eventOriginal.hashCode(), event.hashCode());
+        Assert.assertEquals(eventOriginal.toString(), event.toString());
+
+        eventOriginal = new DummyDtoEvent(NODE_IID, new NodeBuilder().setKey(NODE_KEY).build(), null);
+        Assert.assertFalse(eventOriginal.equals(event));
+        Assert.assertNotEquals(eventOriginal.hashCode(), event.hashCode());
+        Assert.assertNotEquals(eventOriginal.toString(), event.toString());
     }
 
     @Test
