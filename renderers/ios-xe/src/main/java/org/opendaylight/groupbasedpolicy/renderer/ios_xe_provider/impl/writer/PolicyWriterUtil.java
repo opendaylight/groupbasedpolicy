@@ -51,33 +51,24 @@ class PolicyWriterUtil {
     private static final Logger LOG = LoggerFactory.getLogger(PolicyWriterUtil.class);
 
     static boolean writeClassMaps(final Set<ClassMap> classMapEntries, final NodeId nodeId, final DataBroker mountpoint) {
+        boolean result = true;
         if (classMapEntries == null || classMapEntries.isEmpty()) {
             return true;
         }
         for (ClassMap entry : classMapEntries) {
-            final java.util.Optional<WriteTransaction> optionalWriteTransaction =
-                    NetconfTransactionCreator.netconfWriteOnlyTransaction(mountpoint);
-            if (!optionalWriteTransaction.isPresent()) {
-                LOG.warn("Failed to create write-only transaction, mountpoint: {}", mountpoint);
-                return false;
-            }
-            final WriteTransaction writeTransaction = optionalWriteTransaction.get();
             final InstanceIdentifier<ClassMap> classMapIid = classMapInstanceIdentifier(entry);
-            writeMergeTransaction(writeTransaction, classMapIid, entry);
+            netconfWrite(mountpoint, classMapIid, entry);
             // Check
-            final java.util.Optional<ReadOnlyTransaction> optionalTransaction =
-                    NetconfTransactionCreator.netconfReadOnlyTransaction(mountpoint);
-            if (!optionalTransaction.isPresent()) {
-                LOG.warn("Failed to create read-only transaction, mountpoint: {}", mountpoint);
-                return false;
+            final java.util.Optional<ClassMap> checkCreated = java.util.Optional.ofNullable(netconfRead(mountpoint, classMapIid));
+            if (checkCreated.isPresent()) {
+                LOG.trace("Created class-map {} on node {}", entry.getName(), nodeId.getValue());
             }
-            final ReadOnlyTransaction readTransaction = optionalTransaction.get();
-            if (checkWritten(readTransaction, classMapIid) == null) {
-                return false;
+            else {
+                LOG.warn("Failed to create class-map {} on node {}", entry.getName(), nodeId.getValue());
+                result = false;
             }
-            LOG.trace("Created class-map {} on node {}", entry.getName(), nodeId.getValue());
         }
-        return true;
+        return result;
     }
 
     static boolean removeClassMaps(final Set<ClassMap> classMapEntries, final NodeId nodeId, final DataBroker mountpoint) {
@@ -86,50 +77,29 @@ class PolicyWriterUtil {
             return true;
         }
         for (ClassMap entry : classMapEntries) {
-            final java.util.Optional<WriteTransaction> optionalWriteTransaction =
-                    NetconfTransactionCreator.netconfWriteOnlyTransaction(mountpoint);
-            if (!optionalWriteTransaction.isPresent()) {
-                LOG.warn("Failed to create write-only transaction, mountpoint: {}", mountpoint);
-                return false;
-            }
-            final WriteTransaction writeTransaction = optionalWriteTransaction.get();
             final InstanceIdentifier<ClassMap> classMapIid = classMapInstanceIdentifier(entry);
-            deleteTransaction(writeTransaction, classMapIid);
+            netconfDeleteIfPresent(mountpoint, classMapIid);
             // Check
-            final java.util.Optional<ReadOnlyTransaction> optionalReadTransaction =
-                    NetconfTransactionCreator.netconfReadOnlyTransaction(mountpoint);
-            if (!optionalReadTransaction.isPresent()) {
-                LOG.warn("Failed to create read-only transaction, mountpoint: {}", mountpoint);
-                return false;
+            final java.util.Optional<ClassMap> checkCreated = java.util.Optional.ofNullable(netconfRead(mountpoint, classMapIid));
+            if (checkCreated.isPresent()) {
+                LOG.warn("Failed to remove class-map {} on node {}", entry.getName(), nodeId.getValue());
+                result = false;
             }
-            final ReadOnlyTransaction readTransaction = optionalReadTransaction.get();
-            result = checkRemoved(readTransaction, classMapIid);
-            LOG.trace("Class-map {} removed from node {}", entry.getName(), nodeId.getValue());
+            else {
+                LOG.trace("Class-map {} removed from node {}", entry.getName(), nodeId.getValue());
+            }
         }
         return result;
     }
 
     static boolean writePolicyMap(final String policyMapName, final Set<Class> policyMapEntries, NodeId nodeId,
                                   final DataBroker mountpoint) {
-        final java.util.Optional<WriteTransaction> optionalWriteTransaction =
-                NetconfTransactionCreator.netconfWriteOnlyTransaction(mountpoint);
-        if (!optionalWriteTransaction.isPresent()) {
-            LOG.warn("Failed to create write-only transaction, mountpoint: {}", mountpoint);
-            return false;
-        }
-        final WriteTransaction writeTransaction = optionalWriteTransaction.get();
         final PolicyMap policyMap = PolicyManagerUtil.createPolicyMap(policyMapName, policyMapEntries);
         final InstanceIdentifier<PolicyMap> policyMapIid = policyMapInstanceIdentifier(policyMapName);
-        writeMergeTransaction(writeTransaction, policyMapIid, policyMap);
+        netconfWrite(mountpoint, policyMapIid, policyMap);
         // Check
-        final java.util.Optional<ReadOnlyTransaction> optionalReadTransaction =
-                NetconfTransactionCreator.netconfReadOnlyTransaction(mountpoint);
-        if (!optionalReadTransaction.isPresent()) {
-            LOG.warn("Failed to create read-only transaction, mountpoint: {}", mountpoint);
-            return false;
-        }
-        final ReadOnlyTransaction readTransaction = optionalReadTransaction.get();
-        if (checkWritten(readTransaction, policyMapIid) == null) {
+        if (netconfRead(mountpoint, policyMapIid) == null) {
+            LOG.warn("Failed to create policy-map {} on node {}", policyMap.getName(), nodeId.getValue());
             return false;
         }
         LOG.trace("Created policy-map {} on node {}", policyMap.getName(), nodeId.getValue());
@@ -141,37 +111,34 @@ class PolicyWriterUtil {
         if (policyMapEntries == null || policyMapEntries.isEmpty()) {
             return true;
         }
+        boolean result = true;
         for (Class entry : policyMapEntries) {
-            final java.util.Optional<WriteTransaction> optionalWriteTransaction =
-                    NetconfTransactionCreator.netconfWriteOnlyTransaction(mountpoint);
-            if (!optionalWriteTransaction.isPresent()) {
-                LOG.warn("Failed to create write-only transaction, mountpoint: {}", mountpoint);
-                return false;
-            }
-            final WriteTransaction writeTransaction = optionalWriteTransaction.get();
             final InstanceIdentifier policyMapEntryIid = policyMapEntryInstanceIdentifier(policyMapName, entry.getName());
-            if (deleteTransaction(writeTransaction, policyMapEntryIid)) {
-                LOG.trace("Policy map entry {} removed from node {}", entry.getName(), nodeId.getValue());
+            if (netconfDeleteIfPresent(mountpoint, policyMapEntryIid)) {
+                LOG.trace("Policy-map entry {} removed from node {}", entry.getName(), nodeId.getValue());
+            }
+            else {
+                LOG.warn("Failed to remove policy-map entry {} from node {}", entry.getName(), nodeId.getValue());
+                result = false;
             }
         }
-        return true;
+        return result;
     }
 
     static boolean writeInterface(final String policyMapName, final String interfaceName, final NodeId nodeId,
                                   final DataBroker mountpoint) {
-        final java.util.Optional<WriteTransaction> optionalWriteTransaction =
-                NetconfTransactionCreator.netconfWriteOnlyTransaction(mountpoint);
-        if (!optionalWriteTransaction.isPresent()) {
-            LOG.warn("Failed to create write-only transaction, mountpoint: {}", mountpoint);
-            return false;
-        }
-        final WriteTransaction writeTransaction = optionalWriteTransaction.get();
         final ServicePolicy servicePolicy = PolicyManagerUtil.createServicePolicy(policyMapName, Direction.Input);
         final InstanceIdentifier<ServicePolicy> servicePolicyIid = interfaceInstanceIdentifier(interfaceName);
-        writeMergeTransaction(writeTransaction, servicePolicyIid, servicePolicy);
-        LOG.trace("Service-policy interface {}, bound to policy-map {} created on  node {}",
-                interfaceName, policyMapName, nodeId.getValue());
-        return true;
+        if (netconfWrite(mountpoint, servicePolicyIid, servicePolicy)) {
+            LOG.trace("Service-policy interface {}, bound to policy-map {} created on  node {}",
+                    interfaceName, policyMapName, nodeId.getValue());
+            return true;
+        }
+        else {
+            LOG.warn("Failed to write service-policy interface {} to policy-map {} on  node {}",
+                    interfaceName, policyMapName, nodeId.getValue());
+            return false;
+        }
     }
 
     static boolean writeRemote(final Set<ServiceFfName> remoteForwarders, final NodeId nodeId,
@@ -179,19 +146,18 @@ class PolicyWriterUtil {
         if (remoteForwarders == null || remoteForwarders.isEmpty()) {
             return true;
         }
+        boolean result = true;
         for (ServiceFfName forwarder : remoteForwarders) {
-            final java.util.Optional<WriteTransaction> optionalWriteTransaction =
-                    NetconfTransactionCreator.netconfWriteOnlyTransaction(mountpoint);
-            if (!optionalWriteTransaction.isPresent()) {
-                LOG.warn("Failed to create transaction, mountpoint: {}", mountpoint);
-                return false;
-            }
-            final WriteTransaction writeTransaction = optionalWriteTransaction.get();
             final InstanceIdentifier<ServiceFfName> forwarderIid = remoteSffInstanceIdentifier(forwarder);
-            writeMergeTransaction(writeTransaction, forwarderIid, forwarder);
-            LOG.trace("Remote forwarder {} created on node {}", forwarder.getName(), nodeId.getValue());
+            if (netconfWrite(mountpoint, forwarderIid, forwarder)) {
+                LOG.trace("Remote forwarder {} created on node {}", forwarder.getName(), nodeId.getValue());
+            }
+            else {
+                LOG.warn("Failed to create remote forwarder {} on node {}", forwarder.getName(), nodeId.getValue());
+                result = false;
+            }
         }
-        return true;
+        return result;
     }
 
     static boolean removeRemote(final Set<ServiceFfName> remoteForwarders, final NodeId nodeId,
@@ -199,38 +165,36 @@ class PolicyWriterUtil {
         if (remoteForwarders == null || remoteForwarders.isEmpty()) {
             return true;
         }
+        boolean result = true;
         for (ServiceFfName forwarder : remoteForwarders) {
-            final java.util.Optional<WriteTransaction> optionalWriteTransaction =
-                    NetconfTransactionCreator.netconfWriteOnlyTransaction(mountpoint);
-            if (!optionalWriteTransaction.isPresent()) {
-                LOG.warn("Failed to create transaction, mountpoint: {}", mountpoint);
-                return false;
-            }
-            final WriteTransaction writeTransaction = optionalWriteTransaction.get();
             final InstanceIdentifier<ServiceFfName> forwarderIid = remoteSffInstanceIdentifier(forwarder);
-            deleteTransaction(writeTransaction, forwarderIid);
-            LOG.trace("Remote forwarder {} removed from node {}", forwarder.getName(), nodeId.getValue());
+            if (netconfDeleteIfPresent(mountpoint, forwarderIid)) {
+                LOG.trace("Remote forwarder {} removed from node {}", forwarder.getName(), nodeId.getValue());
+            }
+            else {
+                LOG.warn("Failed to remove forwarder {} from node {}", forwarder.getName(), nodeId.getValue());
+                result = false;
+            }
         }
-        return true;
+        return result;
     }
 
     static boolean writeServicePaths(final Set<ServiceChain> serviceChains, final NodeId nodeId,
                                      final DataBroker mountpoint) {
+        boolean result = true;
         for (org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ServiceChain serviceChain : serviceChains) {
             for (ServicePath entry : serviceChain.getServicePath()) {
-                final java.util.Optional<WriteTransaction> optionalWriteTransaction =
-                        NetconfTransactionCreator.netconfWriteOnlyTransaction(mountpoint);
-                if (!optionalWriteTransaction.isPresent()) {
-                    LOG.warn("Failed to create write-only transaction, mountpoint: {}", mountpoint);
-                    return false;
-                }
-                final WriteTransaction writeTransaction = optionalWriteTransaction.get();
                 final InstanceIdentifier<ServicePath> servicePathIid = servicePathInstanceIdentifier(entry.getKey());
-                writeMergeTransaction(writeTransaction, servicePathIid, entry);
-                LOG.trace("Service path with ID: {} created on node {}", entry.getServicePathId(), nodeId.getValue());
+                if (netconfWrite(mountpoint, servicePathIid, entry)) {
+                    LOG.trace("Service-path with ID: {} created on node {}", entry.getServicePathId(), nodeId.getValue());
+                }
+                else {
+                    LOG.warn("Failed to create service-path with ID: {} on node {}", entry.getServicePathId(), nodeId.getValue());
+                    result = false;
+                }
             }
         }
-        return true;
+        return result;
     }
 
     static boolean removeServicePaths(final Set<ServiceChain> serviceChains, final NodeId nodeId,
@@ -238,27 +202,26 @@ class PolicyWriterUtil {
         if (serviceChains == null || serviceChains.isEmpty()) {
             return true;
         }
+        boolean result = true;
         for (ServiceChain chain : serviceChains) {
             List<ServicePath> servicePaths = chain.getServicePath();
             if (servicePaths == null || servicePaths.isEmpty()) {
                 continue;
             }
             for (ServicePath servicePath : servicePaths) {
-                final java.util.Optional<WriteTransaction> optionalWriteTransaction =
-                        NetconfTransactionCreator.netconfWriteOnlyTransaction(mountpoint);
-                if (!optionalWriteTransaction.isPresent()) {
-                    LOG.warn("Failed to create write-only transaction, mountpoint: {}", mountpoint);
-                    return false;
-                }
-                final WriteTransaction writeTransaction = optionalWriteTransaction.get();
                 final InstanceIdentifier<ServicePath> servicePathIid = servicePathInstanceIdentifier(servicePath.getKey());
-                if (deleteTransaction(writeTransaction, servicePathIid)) {
+                if (netconfDeleteIfPresent(mountpoint, servicePathIid)) {
                     LOG.trace("Service-path with ID: {} removed from node {}", servicePath.getServicePathId(),
                             nodeId.getValue());
                 }
+                else {
+                    LOG.warn("Failed to remove service-path with ID: {} from node {}", servicePath.getServicePathId(),
+                            nodeId.getValue());
+                    result = false;
+                }
             }
         }
-        return true;
+        return result;
     }
 
     private static InstanceIdentifier<ClassMap> classMapInstanceIdentifier(final ClassMap classMap) {
@@ -299,84 +262,79 @@ class PolicyWriterUtil {
                 .child(ServicePath.class, key).build();
     }
 
-    private static <U extends DataObject> void writeMergeTransaction(final WriteTransaction transaction,
-                                                                     final InstanceIdentifier<U> addIID,
-                                                                     final U data) {
+    private static <U extends DataObject> boolean netconfWrite(final DataBroker mountpoint,
+                                                            final InstanceIdentifier<U> addIID,
+                                                            final U data) {
+        final java.util.Optional<WriteTransaction> optionalWriteTransaction =
+                NetconfTransactionCreator.netconfWriteOnlyTransaction(mountpoint);
+        if (!optionalWriteTransaction.isPresent()) {
+            LOG.warn("Failed to create write-only transaction, mountpoint: {}", mountpoint);
+            return false;
+        }
+        final WriteTransaction transaction = optionalWriteTransaction.get();
         try {
             transaction.merge(LogicalDatastoreType.CONFIGURATION, addIID, data);
-            final CheckedFuture<Void, TransactionCommitFailedException> submitFuture = transaction.submit();
-            submitFuture.checkedGet();
-        } catch (TransactionCommitFailedException e) {
-            LOG.error("Write transaction failed to {}", e.getMessage());
-        } catch (Exception e) {
-            LOG.error("Failed to .. {}", e.getMessage());
-        }
-    }
-
-    private static <U extends DataObject> boolean deleteTransaction(final WriteTransaction transaction,
-                                                                    final InstanceIdentifier<U> addIID) {
-        try {
-            transaction.delete(LogicalDatastoreType.CONFIGURATION, addIID);
             final CheckedFuture<Void, TransactionCommitFailedException> submitFuture = transaction.submit();
             submitFuture.checkedGet();
             return true;
         } catch (TransactionCommitFailedException e) {
             LOG.error("Write transaction failed to {}", e.getMessage());
-            return false;
         } catch (Exception e) {
             LOG.error("Failed to .. {}", e.getMessage());
-            return false;
-        }
-    }
-
-    private static <U extends DataObject> U checkWritten(final ReadOnlyTransaction transaction,
-                                                         final InstanceIdentifier<U> readIID) {
-        for (int attempt = 1; attempt <= 5; attempt++) {
-            try {
-                final CheckedFuture<Optional<U>, ReadFailedException> submitFuture =
-                        transaction.read(LogicalDatastoreType.CONFIGURATION, readIID);
-                final Optional<U> optional = submitFuture.checkedGet();
-                if (optional != null && optional.isPresent()) {
-                    transaction.close(); // Release lock
-                    return optional.get();
-                } else {
-                    // Could take some time until specific configuration appears on device, try to read a few times
-                    Thread.sleep(2000L);
-                }
-            } catch (InterruptedException i) {
-                LOG.error("Thread interrupted while waiting ... {} ", i);
-            } catch (ReadFailedException e) {
-                LOG.warn("Read transaction failed to {} ", e);
-            } catch (Exception e) {
-                LOG.error("Failed to .. {}", e.getMessage());
-            }
-        }
-        return null;
-    }
-
-    private static <U extends DataObject> boolean checkRemoved(final ReadOnlyTransaction transaction,
-                                                               final InstanceIdentifier<U> readIID) {
-        for (int attempt = 1; attempt <= 5; attempt++) {
-            try {
-                final CheckedFuture<Optional<U>, ReadFailedException> submitFuture =
-                        transaction.read(LogicalDatastoreType.CONFIGURATION, readIID);
-                final Optional<U> optional = submitFuture.checkedGet();
-                if (optional != null && optional.isPresent()) {
-                    // Could take some time until specific configuration is removed from the device
-                    Thread.sleep(2000L);
-                } else {
-                    transaction.close(); // Release lock
-                    return true;
-                }
-            } catch (InterruptedException i) {
-                LOG.error("Thread interrupted while waiting ... {} ", i);
-            } catch (ReadFailedException e) {
-                LOG.warn("Read transaction failed to {} ", e);
-            } catch (Exception e) {
-                LOG.error("Failed to .. {}", e.getMessage());
-            }
         }
         return false;
     }
 
+    private static <U extends DataObject> boolean netconfDeleteIfPresent(final DataBroker mountpoint,
+                                                                         final InstanceIdentifier<U> deleteIID) {
+        if (netconfRead(mountpoint, deleteIID) == null) {
+            LOG.trace("Remove action called on non-existing element, skipping. Iid was: {}, data provider: {} ",
+                    deleteIID, mountpoint);
+            return true;
+        }
+        final java.util.Optional<WriteTransaction> optionalWriteTransaction =
+                NetconfTransactionCreator.netconfWriteOnlyTransaction(mountpoint);
+        if (!optionalWriteTransaction.isPresent()) {
+            LOG.warn("Failed to create write-only transaction, mountpoint: {}", mountpoint);
+            return false;
+        }
+        final WriteTransaction transaction = optionalWriteTransaction.get();
+        try {
+            transaction.delete(LogicalDatastoreType.CONFIGURATION, deleteIID);
+            final CheckedFuture<Void, TransactionCommitFailedException> submitFuture = transaction.submit();
+            submitFuture.checkedGet();
+            return true;
+        } catch (TransactionCommitFailedException e) {
+            LOG.error("Write transaction failed to {}", e.getMessage());
+        } catch (Exception e) {
+            LOG.error("Failed to .. {}", e.getMessage());
+        }
+        return false;
+    }
+
+    private static <U extends DataObject> U netconfRead(final DataBroker mountpoint,
+                                                        final InstanceIdentifier<U> readIID) {
+        final java.util.Optional<ReadOnlyTransaction> optionalReadTransaction =
+                NetconfTransactionCreator.netconfReadOnlyTransaction(mountpoint);
+        if (!optionalReadTransaction.isPresent()) {
+            LOG.warn("Failed to create write-only transaction, mountpoint: {}", mountpoint);
+            return null;
+        }
+        final ReadOnlyTransaction transaction = optionalReadTransaction.get();
+        try {
+            final CheckedFuture<Optional<U>, ReadFailedException> submitFuture =
+                    transaction.read(LogicalDatastoreType.CONFIGURATION, readIID);
+            final Optional<U> optional = submitFuture.checkedGet();
+            if (optional != null && optional.isPresent()) {
+                transaction.close(); // Release lock
+                return optional.get();
+            }
+        } catch (ReadFailedException e) {
+            LOG.warn("Read transaction failed to {} ", e);
+        } catch (Exception e) {
+            LOG.error("Failed to .. {}", e.getMessage());
+        }
+
+        return null;
+    }
 }

@@ -8,14 +8,11 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer;
 
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.Futures;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
-
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.Futures;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,8 +33,6 @@ import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ServiceChainBuilde
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map.Class;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map.ClassBuilder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.ServicePathBuilder;
-import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.Local;
-import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.LocalBuilder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.ServiceFfName;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.ServiceFfNameBuilder;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
@@ -100,7 +95,7 @@ public class PolicyWriterUtilTest {
         Assert.assertTrue(PolicyWriterUtil.writeClassMaps(classMapEntries, NODE_ID, dataBroker));
 
         LOG.debug("scenario: fail with one entry, available writeOnlyTransaction, available readOnlyTransaction, check->null");
-        PowerMockito.stub(PowerMockito.method(PolicyWriterUtil.class, "checkWritten")).toReturn(null);
+        PowerMockito.stub(PowerMockito.method(PolicyWriterUtil.class, "netconfRead")).toReturn(null);
         Assert.assertFalse(PolicyWriterUtil.writeClassMaps(classMapEntries, NODE_ID, dataBroker));
     }
 
@@ -115,6 +110,9 @@ public class PolicyWriterUtilTest {
 
         LOG.debug("scenario: fail with one entry, no writeOnlyTransaction");
         classMapEntries.add(new ClassMapBuilder().setName("unit-classMapEntry-name").build());
+        PowerMockito.stub(PowerMockito.method(PolicyWriterUtil.class, "netconfRead")).toReturn(new ClassBuilder().build());
+        PowerMockito.stub(PowerMockito.method(NetconfTransactionCreator.class, "netconfWriteOnlyTransaction"))
+                .toReturn(java.util.Optional.empty());
         Assert.assertFalse(PolicyWriterUtil.removeClassMaps(classMapEntries, NODE_ID, dataBroker));
 
         LOG.debug("scenario: fail with one entry, available writeOnlyTransaction, no readOnlyTransaction");
@@ -124,12 +122,13 @@ public class PolicyWriterUtilTest {
 
         LOG.debug("scenario: succeed with one entry, available writeOnlyTransaction, available readOnlyTransaction");
         PowerMockito.stub(PowerMockito.method(NetconfTransactionCreator.class, "netconfReadOnlyTransaction")).toReturn(rTxOptional);
+        PowerMockito.stub(PowerMockito.method(PolicyWriterUtil.class, "netconfRead")).toReturn(null);
         Mockito.when(rTx.read(Mockito.eq(LogicalDatastoreType.CONFIGURATION), Matchers.<InstanceIdentifier<ClassMap>>any()))
                 .thenReturn(Futures.immediateCheckedFuture(Optional.absent()));
         Assert.assertTrue(PolicyWriterUtil.removeClassMaps(classMapEntries, NODE_ID, dataBroker));
 
         LOG.debug("scenario: fail with one entry, available writeOnlyTransaction, available readOnlyTransaction, check->false");
-        PowerMockito.stub(PowerMockito.method(PolicyWriterUtil.class, "checkRemoved")).toReturn(false);
+        PowerMockito.stub(PowerMockito.method(PolicyWriterUtil.class, "netconfRead")).toReturn(new ClassBuilder().build());
         Assert.assertFalse(PolicyWriterUtil.removeClassMaps(classMapEntries, NODE_ID, dataBroker));
     }
 
@@ -165,7 +164,7 @@ public class PolicyWriterUtilTest {
         Assert.assertTrue(PolicyWriterUtil.writePolicyMap(POLICY_MAP_NAME, classEntries, NODE_ID, dataBroker));
 
         LOG.debug("scenario: fail with one entry, available writeOnlyTransaction, available readOnlyTransaction, check->null");
-        PowerMockito.stub(PowerMockito.method(PolicyWriterUtil.class, "checkWritten")).toReturn(null);
+        PowerMockito.stub(PowerMockito.method(PolicyWriterUtil.class, "netconfRead")).toReturn(null);
         Assert.assertFalse(PolicyWriterUtil.writePolicyMap(POLICY_MAP_NAME, classEntries, NODE_ID, dataBroker));
     }
 
@@ -180,16 +179,12 @@ public class PolicyWriterUtilTest {
 
         LOG.debug("scenario: fail with one entry, no writeOnlyTransaction");
         classEntries.add(new ClassBuilder().setName(new ClassNameType("unit-classMapEntry-name")).build());
+        PowerMockito.stub(PowerMockito.method(PolicyWriterUtil.class, "netconfRead")).toReturn(new ClassBuilder().build());
         Assert.assertFalse(PolicyWriterUtil.removePolicyMapEntries(POLICY_MAP_NAME, classEntries, NODE_ID, dataBroker));
 
         LOG.debug("scenario: fail with one entry, available writeOnlyTransaction, no readOnlyTransaction");
         PowerMockito.stub(PowerMockito.method(NetconfTransactionCreator.class, "netconfWriteOnlyTransaction")).toReturn(wTxOptional);
         Mockito.when(wTx.submit()).thenReturn(Futures.immediateCheckedFuture(null));
-        Assert.assertTrue(PolicyWriterUtil.removePolicyMapEntries(POLICY_MAP_NAME, classEntries, NODE_ID, dataBroker));
-
-        //TODO: fix - failed remove transacion shall render whole operation as failed
-        LOG.debug("scenario: fail with one entry, available writeOnlyTransaction, available readOnlyTransaction, check->false");
-        PowerMockito.stub(PowerMockito.method(PolicyWriterUtil.class, "deleteTransaction")).toReturn(false);
         Assert.assertTrue(PolicyWriterUtil.removePolicyMapEntries(POLICY_MAP_NAME, classEntries, NODE_ID, dataBroker));
     }
 
@@ -199,9 +194,9 @@ public class PolicyWriterUtilTest {
         final String interfaceName = "unit-interface-1";
         Assert.assertFalse(PolicyWriterUtil.writeInterface(POLICY_MAP_NAME, interfaceName, NODE_ID, dataBroker));
 
-        LOG.debug("scenario: succeed - available writeOnlyTransaction, no submit future");
+        LOG.debug("scenario: fail - available writeOnlyTransaction, no submit future");
         PowerMockito.stub(PowerMockito.method(NetconfTransactionCreator.class, "netconfWriteOnlyTransaction")).toReturn(wTxOptional);
-        Assert.assertTrue(PolicyWriterUtil.writeInterface(POLICY_MAP_NAME, interfaceName, NODE_ID, dataBroker));
+        Assert.assertFalse(PolicyWriterUtil.writeInterface(POLICY_MAP_NAME, interfaceName, NODE_ID, dataBroker));
 
         LOG.debug("scenario: succeed - available writeOnlyTransaction, available future");
         Mockito.when(wTx.submit()).thenReturn(Futures.immediateCheckedFuture(null));
@@ -220,9 +215,9 @@ public class PolicyWriterUtilTest {
         final Set<ServiceFfName> remotes = Collections.singleton(new ServiceFfNameBuilder().build());
         Assert.assertFalse(PolicyWriterUtil.writeRemote(remotes, NODE_ID, dataBroker));
 
-        LOG.debug("scenario: succeed - available writeOnlyTransaction, no submit future");
+        LOG.debug("scenario: fail - available writeOnlyTransaction, no submit future");
         PowerMockito.stub(PowerMockito.method(NetconfTransactionCreator.class, "netconfWriteOnlyTransaction")).toReturn(wTxOptional);
-        Assert.assertTrue(PolicyWriterUtil.writeRemote(remotes, NODE_ID, dataBroker));
+        Assert.assertFalse(PolicyWriterUtil.writeRemote(remotes, NODE_ID, dataBroker));
 
         LOG.debug("scenario: succeed - available writeOnlyTransaction, available future");
         Mockito.when(wTx.submit()).thenReturn(Futures.immediateCheckedFuture(null));
@@ -242,9 +237,9 @@ public class PolicyWriterUtilTest {
                 .build());
         Assert.assertFalse(PolicyWriterUtil.writeServicePaths(serviceChains, NODE_ID, dataBroker));
 
-        LOG.debug("scenario: succeed - available writeOnlyTransaction, no submit future");
+        LOG.debug("scenario: fail - available writeOnlyTransaction, no submit future");
         PowerMockito.stub(PowerMockito.method(NetconfTransactionCreator.class, "netconfWriteOnlyTransaction")).toReturn(wTxOptional);
-        Assert.assertTrue(PolicyWriterUtil.writeServicePaths(serviceChains, NODE_ID, dataBroker));
+        Assert.assertFalse(PolicyWriterUtil.writeServicePaths(serviceChains, NODE_ID, dataBroker));
 
         LOG.debug("scenario: succeed - available writeOnlyTransaction, available future");
         Mockito.when(wTx.submit()).thenReturn(Futures.immediateCheckedFuture(null));
@@ -260,6 +255,7 @@ public class PolicyWriterUtilTest {
         Assert.assertTrue(PolicyWriterUtil.removeServicePaths(Collections.emptySet(), NODE_ID, dataBroker));
 
         LOG.debug("scenario: fail with service path present, no writeOnlyTransaction");
+        PowerMockito.stub(PowerMockito.method(PolicyWriterUtil.class, "netconfRead")).toReturn(new ClassBuilder().build());
         final Set<ServiceChain> serviceChains = Collections.singleton(new ServiceChainBuilder()
                 .setServicePath(Collections.singletonList(new ServicePathBuilder()
                         .setServicePathId(42L)
@@ -269,7 +265,7 @@ public class PolicyWriterUtilTest {
 
         LOG.debug("scenario: fail with service path present, available writeOnlyTransaction, no submit future");
         PowerMockito.stub(PowerMockito.method(NetconfTransactionCreator.class, "netconfWriteOnlyTransaction")).toReturn(wTxOptional);
-        Assert.assertTrue(PolicyWriterUtil.removeServicePaths(serviceChains, NODE_ID, dataBroker));
+        Assert.assertFalse(PolicyWriterUtil.removeServicePaths(serviceChains, NODE_ID, dataBroker));
 
         LOG.debug("scenario: fail with service path present, available writeOnlyTransaction, available future");
         Mockito.when(wTx.submit()).thenReturn(Futures.immediateCheckedFuture(null));
