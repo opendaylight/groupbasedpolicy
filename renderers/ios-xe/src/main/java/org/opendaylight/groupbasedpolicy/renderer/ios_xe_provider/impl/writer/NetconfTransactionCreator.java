@@ -8,6 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer;
 
+import java.util.Optional;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
@@ -16,7 +18,7 @@ import org.opendaylight.netconf.api.NetconfDocumentedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Optional;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Purpose: safely create transaction
@@ -25,7 +27,7 @@ import java.util.Optional;
 public class NetconfTransactionCreator {
 
     private final static Logger LOG = LoggerFactory.getLogger(NetconfTransactionCreator.class);
-    private static final long TIMEOUT = 5000L;
+    private static long timeout = 5000L;
 
     public static Optional<ReadOnlyTransaction> netconfReadOnlyTransaction(DataBroker mountpoint) {
         int attempt = 0;
@@ -39,7 +41,7 @@ public class NetconfTransactionCreator {
                     attempt++;
                     LOG.warn("NetconfDocumentedException thrown, retrying ({})...", attempt);
                     try {
-                        Thread.sleep(TIMEOUT);
+                        Thread.sleep(timeout);
                     } catch (InterruptedException i) {
                         LOG.error("Thread interrupted while waiting ... {} ", i);
                     }
@@ -65,7 +67,7 @@ public class NetconfTransactionCreator {
                     attempt++;
                     LOG.warn("NetconfDocumentedException thrown, retrying ({})...", attempt);
                     try {
-                        Thread.sleep(TIMEOUT);
+                        Thread.sleep(timeout);
                     } catch (InterruptedException i) {
                         LOG.error("Thread interrupted while waiting ... {} ", i);
                     }
@@ -91,7 +93,7 @@ public class NetconfTransactionCreator {
                     attempt++;
                     LOG.warn("NetconfDocumentedException thrown, retrying ({})...", attempt);
                     try {
-                        Thread.sleep(TIMEOUT);
+                        Thread.sleep(timeout);
                     } catch (InterruptedException i) {
                         LOG.error("Thread interrupted while waiting ... {} ", i);
                     }
@@ -103,5 +105,10 @@ public class NetconfTransactionCreator {
         } while (attempt <= 5);
         LOG.error("Maximum number of attempts reached");
         return Optional.empty();
+    }
+
+    @VisibleForTesting
+    public static void setTimeout (long newTimeout) {
+        timeout = newTimeout;
     }
 }
