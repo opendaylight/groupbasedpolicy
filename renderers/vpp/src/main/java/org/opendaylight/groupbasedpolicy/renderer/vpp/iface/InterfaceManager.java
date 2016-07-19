@@ -19,6 +19,7 @@ import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.ConfigCommand;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.TapPortCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.VhostUserCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.VhostUserCommand.VhostUserCommandBuilder;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.NodeOperEvent;
@@ -33,6 +34,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint.InterfaceTypeChoice;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.TapCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.VhostUserCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VhostUserRole;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VppInterfaceAugmentation;
@@ -61,7 +63,8 @@ public class InterfaceManager implements AutoCloseable {
     private final VppEndpointLocationProvider vppEndpointLocationProvider;
     private final ExecutorService netconfWorker;
 
-    public InterfaceManager(@Nonnull MountedDataBrokerProvider mountDataProvider, @Nonnull DataBroker dataProvider, @Nonnull ExecutorService netconfWorker) {
+    public InterfaceManager(@Nonnull MountedDataBrokerProvider mountDataProvider, @Nonnull DataBroker dataProvider,
+            @Nonnull ExecutorService netconfWorker) {
         this.mountDataProvider = Preconditions.checkNotNull(mountDataProvider);
         this.netconfWorker = Preconditions.checkNotNull(netconfWorker);
         this.vppEndpointLocationProvider = new VppEndpointLocationProvider(dataProvider);
@@ -83,14 +86,21 @@ public class InterfaceManager implements AutoCloseable {
                     break;
             }
         } catch (InterruptedException | ExecutionException e) {
-            LOG.error("Failed to update Vpp Endpoint. {}", e);
-            e.printStackTrace();
+            LOG.error("Failed to update Vpp Endpoint. {}", event, e);
         }
     }
 
     private ListenableFuture<Void> vppEndpointCreated(VppEndpoint vppEndpoint) {
-        Optional<ConfigCommand> potentialIfaceCommand = createInterfaceWithoutBdCommand(vppEndpoint, Operations.PUT);
+        InterfaceTypeChoice interfaceTypeChoice = vppEndpoint.getInterfaceTypeChoice();
+        Optional<ConfigCommand> potentialIfaceCommand = Optional.absent();
+        if (interfaceTypeChoice instanceof VhostUserCase) {
+            potentialIfaceCommand = createInterfaceWithoutBdCommand(vppEndpoint, Operations.PUT);
+        } else if (interfaceTypeChoice instanceof TapCase) {
+            potentialIfaceCommand = createTapInterfaceWithoutBdCommand(vppEndpoint, Operations.PUT);
+        }
+
         if (!potentialIfaceCommand.isPresent()) {
+            LOG.debug("Interface/PUT command was not created for VppEndpoint point {}", vppEndpoint);
             return Futures.immediateFuture(null);
         }
         ConfigCommand ifaceWithoutBdCommand = potentialIfaceCommand.get();
@@ -98,7 +108,7 @@ public class InterfaceManager implements AutoCloseable {
         Optional<DataBroker> potentialVppDataProvider = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
         if (!potentialVppDataProvider.isPresent()) {
             LOG.debug("Cannot get data broker for mount point {}", vppNodeIid);
-            Futures.immediateFuture(null);
+            return Futures.immediateFuture(null);
         }
         DataBroker vppDataBroker = potentialVppDataProvider.get();
         return createIfaceOnVpp(ifaceWithoutBdCommand, vppDataBroker, vppEndpoint, vppNodeIid);
@@ -119,9 +129,17 @@ public class InterfaceManager implements AutoCloseable {
         }, netconfWorker);
     }
 
-    private ListenableFuture<Void> vppEndpointDeleted(VppEndpoint vppEndpoint) {
-        Optional<ConfigCommand> potentialIfaceCommand = createInterfaceWithoutBdCommand(vppEndpoint, Operations.DELETE);
+    private ListenableFuture<Void> vppEndpointDeleted(@Nonnull VppEndpoint vppEndpoint) {
+        InterfaceTypeChoice interfaceTypeChoice = vppEndpoint.getInterfaceTypeChoice();
+        Optional<ConfigCommand> potentialIfaceCommand = Optional.absent();
+        if (interfaceTypeChoice instanceof VhostUserCase) {
+            potentialIfaceCommand = createInterfaceWithoutBdCommand(vppEndpoint, Operations.DELETE);
+        } else if (interfaceTypeChoice instanceof TapCase) {
+            potentialIfaceCommand = createTapInterfaceWithoutBdCommand(vppEndpoint, Operations.DELETE);
+        }
+
         if (!potentialIfaceCommand.isPresent()) {
+            LOG.debug("Interface/DELETE command was not created for VppEndpoint point {}", vppEndpoint);
             return Futures.immediateFuture(null);
         }
         ConfigCommand ifaceWithoutBdCommand = potentialIfaceCommand.get();
@@ -166,7 +184,7 @@ public class InterfaceManager implements AutoCloseable {
                 break;
             case DELETED:
                 if (event.isBeforeConnected()) {
-                    // TODO we could do snapshot of VppEndpoints 
+                    // TODO we could do snapshot of VppEndpoints
                     // which can be used for reconciliation
                 }
                 break;
@@ -197,6 +215,32 @@ public class InterfaceManager implements AutoCloseable {
         return Optional.of(vhostUserCommand);
     }
 
+    private static Optional<ConfigCommand> createTapInterfaceWithoutBdCommand(@Nonnull VppEndpoint vppEp,
+            @Nonnull Operations operation) {
+        if (!hasNodeAndInterface(vppEp)) {
+            LOG.debug("Interface command is not created for {}", vppEp);
+            return Optional.absent();
+        }
+        TapPortCommand.TapPortCommandBuilder builder = TapPortCommand.builder();
+        InterfaceTypeChoice interfaceTypeChoice = vppEp.getInterfaceTypeChoice();
+        if (interfaceTypeChoice instanceof TapCase) {
+            TapCase tapIface = (TapCase) interfaceTypeChoice;
+            String name = tapIface.getName();
+            if (Strings.isNullOrEmpty(name)) {
+                LOG.debug("Tap interface command is not created because name is missing. {}", vppEp);
+                return Optional.absent();
+            }
+            builder.setTapName(name);
+            builder.setPhysAddress(tapIface.getPhysicalAddress());
+        }
+        TapPortCommand tapPortCommand = builder
+                .setOperation(operation)
+                .setDescription(vppEp.getDescription())
+                .setInterfaceName(vppEp.getVppInterfaceName())
+                .build();
+        return Optional.of(tapPortCommand);
+    }
+
     /**
      * Adds bridge domain to an interface if the interface exist.<br>
      * It rewrites bridge domain in case it already exist.<br>
@@ -205,7 +249,7 @@ public class InterfaceManager implements AutoCloseable {
      * If the interface does not exist or other problems occur {@link ListenableFuture} will fail
      * as {@link Futures#immediateFailedFuture(Throwable)} with {@link Exception}
      * containing message in {@link Exception#getMessage()}
-     * 
+     *
      * @param bridgeDomainName bridge domain
      * @param addrEpWithLoc {@link AddressEndpointWithLocation} containing
      *        {@link ExternalLocationCase} where
@@ -282,7 +326,6 @@ public class InterfaceManager implements AutoCloseable {
     }
 
     /**
-     * <p>
      * Removes bridge domain (if exist) from an interface (if exist).<br>
      * {@link VppEndpointLocationProvider#VPP_ENDPOINT_LOCATION_PROVIDER} will update endpoint
      * location.
@@ -290,7 +333,7 @@ public class InterfaceManager implements AutoCloseable {
      * If the interface does not exist or other problems occur {@link ListenableFuture} will fail
      * as {@link Futures#immediateFailedFuture(Throwable)} with {@link Exception}
      * containing message in {@link Exception#getMessage()}
-     * 
+     *
      * @param addrEpWithLoc {@link AddressEndpointWithLocation} containing
      *        {@link ExternalLocationCase} where
      *        {@link ExternalLocationCase#getExternalNodeMountPoint()} MUST NOT be {@code null}
