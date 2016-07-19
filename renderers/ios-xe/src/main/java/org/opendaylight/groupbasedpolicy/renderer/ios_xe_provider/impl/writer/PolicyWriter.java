@@ -8,6 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer;
 
+import java.util.HashSet;
+import java.util.Set;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.Futures;
@@ -20,10 +22,6 @@ import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.serv
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 public class PolicyWriter {
 
@@ -54,26 +52,10 @@ public class PolicyWriter {
         this.policyMapName = Preconditions.checkNotNull(policyMapName);
     }
 
-    public void cache(ClassMap classMap) {
-        classMapEntries.add(classMap);
-    }
-
-    public void cache(List<Class> policyMapEntries) {
-        this.policyMapEntries.addAll(policyMapEntries);
-    }
-
-    public void cache(ServiceFfName remoteForwarder) {
-        remoteForwarders.add(remoteForwarder);
-    }
-
-    public void cache(ServiceChain serviceChain) {
-        serviceChains.add(serviceChain);
-    }
-
     public CheckedFuture<Boolean, TransactionCommitFailedException> commitToDatastore() {
-        LOG.info("Configuring policy on node {} ... ", nodeId.getValue());
+        LOG.debug("Configuring policy on node {}, interface {} ... ", nodeId.getValue(), interfaceName);
         if (policyMapEntries.isEmpty()) {
-            LOG.info("Policy map {} is empty, skipping", policyMapName);
+            LOG.debug("Policy map {} is empty, skipping", policyMapName);
             return Futures.immediateCheckedFuture(true);
         }
         // SFC
@@ -84,40 +66,55 @@ public class PolicyWriter {
         boolean policyMapResult = PolicyWriterUtil.writePolicyMap(policyMapName, policyMapEntries, nodeId, mountpoint);
         boolean interfaceResult = PolicyWriterUtil.writeInterface(policyMapName, interfaceName, nodeId, mountpoint);
         // Result
-        LOG.info("Policy configuration on node {} completed", nodeId.getValue());
+        LOG.info("Policy-map created on node {}, interface {}", nodeId.getValue(), interfaceName);
         return Futures.immediateCheckedFuture(classMapResult && policyMapResult && interfaceResult && remoteResult
                 && servicePathsResult);
     }
 
     public CheckedFuture<Boolean, TransactionCommitFailedException> removeFromDatastore() {
-        LOG.info("Removing policy from node {} ... ", nodeId.getValue());
+        LOG.debug("Removing policy from node {}, interface {} ... ", nodeId.getValue(), interfaceName);
         if (policyMapEntries.isEmpty()) {
-            LOG.info("Policy map {} is empty, nothing to remove", policyMapName);
+            LOG.debug("Policy map {} is empty, nothing to remove", policyMapName);
             return Futures.immediateCheckedFuture(true);
         }
         // GBP - maintain order!
         boolean policyMapEntriesResult = PolicyWriterUtil.removePolicyMapEntries(policyMapName, policyMapEntries,
                 nodeId, mountpoint);
         boolean classMapResult = PolicyWriterUtil.removeClassMaps(classMapEntries, nodeId, mountpoint);
-        // TODO remove class map?
         // SFC
-        boolean servicePathsResult = PolicyWriterUtil.removeServicePaths(serviceChains, nodeId, mountpoint);
         boolean remoteSffResult = PolicyWriterUtil.removeRemote(remoteForwarders, nodeId, mountpoint);
+        boolean servicePathsResult = PolicyWriterUtil.removeServicePaths(serviceChains, nodeId, mountpoint);
         // Result
-        LOG.info("Policy removed from node {}", nodeId.getValue());
+        LOG.info("Policy-map removed from node {}, interface {}", nodeId.getValue(), interfaceName);
         return Futures.immediateCheckedFuture(classMapResult && policyMapEntriesResult && servicePathsResult
-            && remoteSffResult);
+                && remoteSffResult);
+    }
+
+    public void cache(ClassMap classMap) {
+        classMapEntries.add(classMap);
+    }
+
+    public void cache(Class policyMapEntry) {
+        this.policyMapEntries.add(policyMapEntry);
+    }
+
+    public void cache(ServiceFfName remoteForwarder) {
+        remoteForwarders.add(remoteForwarder);
+    }
+
+    public void cache(ServiceChain serviceChain) {
+        serviceChains.add(serviceChain);
     }
 
     public String getManagementIpAddress() {
         return managementIpAddress;
     }
 
-    public DataBroker getCurrentMountpoint() {
+    public DataBroker getMountpoint() {
         return mountpoint;
     }
 
-    public NodeId getCurrentNodeId() {
+    public NodeId getNodeId() {
         return nodeId;
     }
 }

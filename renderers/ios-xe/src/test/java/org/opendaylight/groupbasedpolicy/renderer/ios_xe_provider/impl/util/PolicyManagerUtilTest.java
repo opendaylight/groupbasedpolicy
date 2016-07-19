@@ -90,7 +90,7 @@ public class PolicyManagerUtilTest {
         Mockito.when(roTx.read(LogicalDatastoreType.CONFIGURATION, InstanceIdentifier.create(ServiceFunctionPaths.class)))
                 .thenReturn(Futures.immediateCheckedFuture(Optional.of(sfPaths)));
 
-        final ServiceFunctionPath servicePath = ServiceChainingUtil.getServicePath(Collections.singletonList(paramValueSfc));
+        final ServiceFunctionPath servicePath = ServiceChainingUtil.findServicePathFromParameterValues(Collections.singletonList(paramValueSfc));
         Assert.assertEquals(serviceFunctionPath, servicePath);
     }
 
@@ -107,7 +107,7 @@ public class PolicyManagerUtilTest {
                 dataBroker);
         Assert.assertEquals(renderedSP, renderedPath);
         final InstanceIdentifier<RenderedServicePath> ii = rendererServicePathIICaptor.getValue();
-        Assert.assertEquals("sfp-name-01tenant-id-01-gbp-rsp", ii.firstKeyOf(RenderedServicePath.class).getName().getValue());
+        Assert.assertEquals("sfp-name-01-tenant-id-01-gbp-rsp", ii.firstKeyOf(RenderedServicePath.class).getName().getValue());
     }
 
     @Test
@@ -120,11 +120,11 @@ public class PolicyManagerUtilTest {
                 .thenReturn(Futures.immediateCheckedFuture(Optional.of(renderedServicePath)));
 
 
-        final RenderedServicePath symmetricRenderedPath = ServiceChainingUtil.createSymmetricRenderedPath(
+        final RenderedServicePath symmetricRenderedPath = ServiceChainingUtil.createReversedRenderedPath(
                 serviceFunctionPath, renderedServicePath, tenantId, dataBroker);
         Assert.assertEquals(renderedServicePath, symmetricRenderedPath);
         final InstanceIdentifier<RenderedServicePath> ii = rendererServicePathIICaptor.getValue();
-        Assert.assertEquals("sfp-name-01tenant-id-02-gbp-rsp-Reverse", ii.firstKeyOf(RenderedServicePath.class).getName().getValue());
+        Assert.assertEquals("sfp-name-01-tenant-id-02-gbp-rsp-Reverse", ii.firstKeyOf(RenderedServicePath.class).getName().getValue());
     }
 
     @Test

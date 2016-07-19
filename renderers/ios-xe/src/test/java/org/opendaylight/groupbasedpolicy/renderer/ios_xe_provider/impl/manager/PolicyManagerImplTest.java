@@ -263,7 +263,7 @@ public class PolicyManagerImplTest {
         when(nodeManager.getNodeIdByMountpointIid(eq(createMountpointIid()))).thenReturn(nodeId);
         when(nodeManager.getNodeManagementIpByMountPointIid(eq(createMountpointIid()))).thenReturn(ipAddress);
         ServiceFunctionPath sfp = createServiceFunctionPath();
-        stub(method(ServiceChainingUtil.class, "getServicePath")).toReturn(sfp);
+        stub(method(ServiceChainingUtil.class, "findServicePathFromParameterValues")).toReturn(sfp);
         RenderedServicePath rsp = createRenderedServicePath();
         stub(method(ServiceChainingUtil.class, "createRenderedPath")).toReturn(rsp);
         ServiceFunctionForwarder serviceFunctionForwarder = createServiceForwarder();
