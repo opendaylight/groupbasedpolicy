@@ -14,6 +14,7 @@ import java.util.Objects;
 
 import javax.annotation.Nullable;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.CommonEndpointFields;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoint.locations.AddressEndpointLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoint.locations.ContainmentEndpointLocation;
@@ -42,7 +43,9 @@ class DtoEquivalenceUtils {
                     return input.getTenantId();
                 }
             };
-    private static final Equivalence<AddressEndpoint> ADDR_EP_EQ = new Equivalence<AddressEndpoint>() {
+
+    @VisibleForTesting
+    static final Equivalence<AddressEndpoint> ADDR_EP_EQ = new Equivalence<AddressEndpoint>() {
 
         @Override
         protected boolean doEquivalent(AddressEndpoint a, AddressEndpoint b) {
@@ -67,7 +70,8 @@ class DtoEquivalenceUtils {
         }
     };
 
-    private static final Equivalence<ContainmentEndpoint> CONT_EP_EQ = new Equivalence<ContainmentEndpoint>() {
+    @VisibleForTesting
+    static final Equivalence<ContainmentEndpoint> CONT_EP_EQ = new Equivalence<ContainmentEndpoint>() {
 
         @Override
         protected boolean doEquivalent(ContainmentEndpoint a, ContainmentEndpoint b) {
@@ -89,7 +93,8 @@ class DtoEquivalenceUtils {
         }
     };
 
-    private static final Equivalence<AddressEndpointLocation> ADDR_EP_LOC_EQ =
+    @VisibleForTesting
+    static final Equivalence<AddressEndpointLocation> ADDR_EP_LOC_EQ =
             new Equivalence<AddressEndpointLocation>() {
 
                 @Override
@@ -112,7 +117,8 @@ class DtoEquivalenceUtils {
                 }
             };
 
-    private static final Equivalence<ContainmentEndpointLocation> CONT_EP_LOC_EQ =
+    @VisibleForTesting
+    static final Equivalence<ContainmentEndpointLocation> CONT_EP_LOC_EQ =
             new Equivalence<ContainmentEndpointLocation>() {
 
                 @Override
@@ -132,7 +138,8 @@ class DtoEquivalenceUtils {
                 }
             };
 
-    private static final Equivalence<ForwardingByTenant> FWD_BY_TENANT_EQ = new Equivalence<ForwardingByTenant>() {
+    @VisibleForTesting
+    static final Equivalence<ForwardingByTenant> FWD_BY_TENANT_EQ = new Equivalence<ForwardingByTenant>() {
 
         @Override
         protected boolean doEquivalent(ForwardingByTenant x, ForwardingByTenant y) {

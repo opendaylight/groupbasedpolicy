@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.opendaylight.groupbasedpolicy.dto.ConditionSet;
 import org.opendaylight.groupbasedpolicy.dto.EgKey;
 import org.opendaylight.groupbasedpolicy.dto.EndpointConstraint;
@@ -180,7 +181,8 @@ public class PolicyInfoUtils {
         return policyRuleGroupWithEndpointConstraintsList;
     }
 
-    private static List<ResolvedRule> buildResolvedRules(List<Rule> rules, Tenant tenant) {
+    @VisibleForTesting
+    static List<ResolvedRule> buildResolvedRules(List<Rule> rules, Tenant tenant) {
         if (rules == null) {
             return null;
         }
