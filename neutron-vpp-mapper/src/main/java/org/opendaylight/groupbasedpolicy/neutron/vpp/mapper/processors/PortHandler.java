@@ -18,6 +18,7 @@ import org.opendaylight.controller.md.sal.common.api.data.TransactionChain;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionChainListener;
 import org.opendaylight.groupbasedpolicy.neutron.vpp.mapper.SocketInfo;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.PhysAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.UniqueId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.Mappings;
@@ -29,6 +30,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_render
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.TapCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.TapCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.VhostUserCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.PortBindingExtension;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.Ports;
@@ -54,9 +57,13 @@ public class PortHandler implements TransactionChainListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(MappingProvider.class);
 
-    private static final String[] COMPUTE_OWNER = {"compute"};
+    private static final String COMPUTE_OWNER = "compute";
+    private static final String DHCP_OWNER = "dhcp";
+    private static final String[] SUPPORTED_DEVICE_OWNERS = {COMPUTE_OWNER, DHCP_OWNER};
     private static final String VHOST_USER = "vhostuser";
     private static final String NETCONF_TOPOLOGY_ID = "topology-netconf";
+    private static final String VPP_INTERFACE_NAME_PREFIX = "neutron_port_";
+    private static final String TAP_PORT_NAME_PREFIX = "tap";
 
     private BindingTransactionChain transactionChain;
     PortAware portByBaseEpListener;
@@ -94,7 +101,7 @@ public class PortHandler implements TransactionChainListener {
     @VisibleForTesting
     void processCreatedData(Port port, BaseEndpointByPort bebp) {
         if (isValidVhostUser(port)) {
-            VppEndpoint vppEp = buildVhostUserEndpoint(port, bebp);
+            VppEndpoint vppEp = buildVppEndpoint(port, bebp);
             writeVppEndpoint(createVppEndpointIid(vppEp.getKey()), vppEp);
             LOG.debug("Created vpp-endpoint {}", vppEp);
         }
@@ -107,8 +114,8 @@ public class PortHandler implements TransactionChainListener {
             String deviceOwner = port.getDeviceOwner();
             if (vifType != null && deviceOwner != null) {
                 if (vifType.contains(VHOST_USER)) {
-                    for (String computeOwner : COMPUTE_OWNER) {
-                        if (deviceOwner.contains(computeOwner)) {
+                    for (String supportedDeviceOwner : SUPPORTED_DEVICE_OWNERS) {
+                        if (deviceOwner.contains(supportedDeviceOwner)) {
                             return true;
                         }
                     }
@@ -156,18 +163,36 @@ public class PortHandler implements TransactionChainListener {
     }
 
     @VisibleForTesting
-    VppEndpoint buildVhostUserEndpoint(Port port, BaseEndpointByPort bebp) {
+    VppEndpoint buildVppEndpoint(Port port, BaseEndpointByPort bebp) {
         PortBindingExtension portBinding = port.getAugmentation(PortBindingExtension.class);
-        String socket = socketInfo.getSocketPath() + socketInfo.getSocketPrefix() + bebp.getPortId().getValue();
-        return new VppEndpointBuilder().setDescription("neutron port")
+        VppEndpointBuilder vppEpBuilder = new VppEndpointBuilder().setDescription("neutron port")
             .setContextId(bebp.getContextId())
             .setContextType(bebp.getContextType())
             .setAddress(bebp.getAddress())
-            .setInterfaceTypeChoice(new VhostUserCaseBuilder().setSocket(socket).build())
             .setAddressType(bebp.getAddressType())
-            .setVppInterfaceName(bebp.getPortId().getValue())
-            .setVppNodePath(createNodeIid(new NodeId(portBinding.getHostId())))
-            .build();
+            .setVppInterfaceName(VPP_INTERFACE_NAME_PREFIX + bebp.getPortId().getValue())
+            .setVppNodePath(createNodeIid(new NodeId(portBinding.getHostId())));
+        if (port.getDeviceOwner().contains(COMPUTE_OWNER)) {
+            String socket = socketInfo.getSocketPath() + socketInfo.getSocketPrefix() + bebp.getPortId().getValue();
+            vppEpBuilder.setInterfaceTypeChoice(new VhostUserCaseBuilder().setSocket(socket).build());
+        } else if (port.getDeviceOwner().contains(DHCP_OWNER) && port.getMacAddress() != null) {
+            TapCase tapCase = new TapCaseBuilder().setPhysicalAddress(new PhysAddress(port.getMacAddress().getValue()))
+                .setName(createPortName(port.getUuid()))
+                .build();
+            vppEpBuilder.setInterfaceTypeChoice(tapCase);
+        }
+        return vppEpBuilder.build();
+    }
+
+    private String createPortName(Uuid portUuid) {
+        String tapPortName;
+        String uuid = portUuid.getValue();
+        if (uuid != null && uuid.length() >= 12) {
+            tapPortName = TAP_PORT_NAME_PREFIX + uuid.substring(0, 11);
+        } else {
+            tapPortName = TAP_PORT_NAME_PREFIX + uuid;
+        }
+        return tapPortName;
     }
 
     private InstanceIdentifier<Node> createNodeIid(NodeId nodeId) {

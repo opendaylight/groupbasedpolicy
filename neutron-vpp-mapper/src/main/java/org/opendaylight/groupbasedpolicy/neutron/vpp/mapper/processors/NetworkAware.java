@@ -68,7 +68,7 @@ public class NetworkAware implements MappingProvider<Network> {
         BridgeDomain bridgeDomain = createBridgeDomain(network);
         if (bridgeDomain != null) {
             ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
-            rwTx.put(LogicalDatastoreType.CONFIGURATION, getBridgeDomainIid(bridgeDomain.getId()), bridgeDomain);
+            rwTx.put(LogicalDatastoreType.CONFIGURATION, getBridgeDomainIid(bridgeDomain.getId()), bridgeDomain, true);
             DataStoreHelper.submitToDs(rwTx);
         }
     }
@@ -154,21 +154,28 @@ public class NetworkAware implements MappingProvider<Network> {
 
     @Override
     public void processUpdatedNeutronDto(Network originalNetwork, Network updatedNetwork) {
-        InstanceIdentifier<BridgeDomain> bdId = getBridgeDomainIid(originalNetwork.getUuid().getValue());
-        WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
-        wTx.delete(LogicalDatastoreType.CONFIGURATION, bdId);
+        InstanceIdentifier<BridgeDomain> bdIid = getBridgeDomainIid(originalNetwork.getUuid().getValue());
+        ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
+        deleteBridgeDomainIfPresent(rwTx, bdIid);
         BridgeDomain updatedBridgeDomain = createBridgeDomain(updatedNetwork);
         if (updatedBridgeDomain != null) {
-            wTx.put(LogicalDatastoreType.CONFIGURATION, bdId, updatedBridgeDomain);
+            rwTx.put(LogicalDatastoreType.CONFIGURATION, bdIid, updatedBridgeDomain, true);
         }
-        DataStoreHelper.submitToDs(wTx);
+        DataStoreHelper.submitToDs(rwTx);
+    }
+
+    private void deleteBridgeDomainIfPresent(ReadWriteTransaction rwTx, InstanceIdentifier<BridgeDomain> bdIid) {
+        Optional<BridgeDomain> readFromDs = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, bdIid, rwTx);
+        if (readFromDs.isPresent()) {
+            rwTx.delete(LogicalDatastoreType.CONFIGURATION, bdIid);
+        }
     }
 
     @Override
     public void processDeletedNeutronDto(Network network) {
-        InstanceIdentifier<BridgeDomain> bdId = getBridgeDomainIid(network.getUuid().getValue());
+        InstanceIdentifier<BridgeDomain> bdIid = getBridgeDomainIid(network.getUuid().getValue());
         ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
-        rwTx.delete(LogicalDatastoreType.CONFIGURATION, bdId);
+        deleteBridgeDomainIfPresent(rwTx, bdIid);
         DataStoreHelper.submitToDs(rwTx);
     }
 }

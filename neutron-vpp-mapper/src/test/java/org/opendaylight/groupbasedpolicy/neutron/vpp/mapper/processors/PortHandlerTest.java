@@ -84,7 +84,7 @@ public class PortHandlerTest extends AbstractDataBrokerTest {
 
     @Test
     public void testBuildVhostUserEndpoint() {
-        VppEndpoint vppEp = portHandler.buildVhostUserEndpoint(port, bebp);
+        VppEndpoint vppEp = portHandler.buildVppEndpoint(port, bebp);
         assertEquals(vppEp.getAddress(), bebp.getAddress());
         assertEquals(vppEp.getAddressType(), bebp.getAddressType());
         assertEquals(vppEp.getContextId(), bebp.getContextId());
@@ -100,7 +100,7 @@ public class PortHandlerTest extends AbstractDataBrokerTest {
     public void testBuildVhostUserEndpoint_notValidVppEp() {
         port = TestUtils.createNonVppPort();
         thrown.expect(NullPointerException.class);
-        portHandler.buildVhostUserEndpoint(port, bebp);
+        portHandler.buildVppEndpoint(port, bebp);
     }
 
     @Test
@@ -171,7 +171,7 @@ public class PortHandlerTest extends AbstractDataBrokerTest {
 
     private void putVppEp(Port port, BaseEndpointByPort bebp, WriteTransaction rwTx) {
         rwTx.put(LogicalDatastoreType.CONFIGURATION, TestUtils.createVppEpIid(TestUtils.createVppEndpointKey(bebp)),
-                portHandler.buildVhostUserEndpoint(port, bebp));
+                portHandler.buildVppEndpoint(port, bebp));
     }
 
     private void putBaseEpByPort(Port port, BaseEndpointByPort bebp, WriteTransaction rwTx) {
