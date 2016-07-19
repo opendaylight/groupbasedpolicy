@@ -383,9 +383,9 @@ public class NeLocationProvider implements DataTreeChangeListener<NetworkElement
                     .child(AbsoluteLocation.class);
                 wtx.put(LogicalDatastoreType.CONFIGURATION, iid, createRealLocation(nodeIID, connectorIID), true);
                 LOG.debug("New location created for endpoint {}", endpoint);
-                return;
             }
         }
+        return;
     }
 
     private void processDeletedEN(EndpointNetwork en, WriteTransaction wtx) {
@@ -400,9 +400,9 @@ public class NeLocationProvider implements DataTreeChangeListener<NetworkElement
                     .child(AbsoluteLocation.class);
                 wtx.delete(LogicalDatastoreType.CONFIGURATION, iid);
                 LOG.debug("Location deleted for endpoint {}", endpoint);
-                return;
             }
         }
+        return;
     }
 
     private AbsoluteLocation createRealLocation(InstanceIdentifier<?> node, String iface) {
