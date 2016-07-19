@@ -57,6 +57,7 @@ import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.policy.map.Class;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.ServicePath;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.ServicePathBuilder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.ServicePathKey;
+import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.ServiceFfName;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.ServiceFfNameBuilder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.ServiceFfNameKey;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.path.ConfigServiceChainPathModeBuilder;
@@ -182,36 +183,72 @@ public class ServiceChainingUtil {
         if (tenantId == null) {
             return;
         }
-        // Cache class-maps, appropriate policy-map entries and service-chains
+        // Cache class-maps, appropriate policy-map entries and service-path (if there are some created by gbp)
         final List<Class> policyMapEntries = new ArrayList<>();
         final String classMapName = PolicyManagerUtil.generateClassMapName(sourceSgt.getValue(), destinationSgt.getValue());
         final ClassMap classMap = PolicyManagerUtil.createClassMap(classMapName, null);
-        final RspName rspName = generateRspName(servicePath, tenantId);
-        final ServiceChain serviceChain = findServiceChainToRsp(rspName);
-        policyMapEntries.add(PolicyManagerUtil.createPolicyEntry(classMapName, null, PolicyManagerImpl.ActionCase.CHAIN));
         policyWriter.cache(classMap);
-        policyWriter.cache(serviceChain);
+        policyMapEntries.add(PolicyManagerUtil.createPolicyEntry(classMapName, null, PolicyManagerImpl.ActionCase.CHAIN));
+
+        final RspName rspName = generateRspName(servicePath, tenantId);
+        final RenderedServicePath renderedServicePath = SfcProviderRenderedPathAPI.readRenderedServicePath(rspName);
+        final ServiceFunctionForwarder firstHopSff = getFirstHopSff(renderedServicePath);
+        if (firstHopSff != null && firstHopSff.getIpMgmtAddress() != null &&
+                firstHopSff.getIpMgmtAddress().getIpv4Address() != null) {
+            final String sffMgmtIpValue = firstHopSff.getIpMgmtAddress().getIpv4Address().getValue();
+            if (sffMgmtIpValue.equals(policyWriter.getManagementIpAddress())) {
+                // Remove service chain and remote forwarder
+                final ServiceChain serviceChain = findServiceChainToRsp(renderedServicePath);
+                final ServiceFfName remoteForwarder = findRemoteForwarder(firstHopSff);
+                policyWriter.cache(serviceChain);
+                policyWriter.cache(remoteForwarder);
+            }
+        }
         if (servicePath.isSymmetric()) {
             final String oppositeClassMapName = PolicyManagerUtil.generateClassMapName(destinationSgt.getValue(), sourceSgt.getValue());
             final ClassMap oppositeClassMap = PolicyManagerUtil.createClassMap(oppositeClassMapName, null);
-            final RspName reversedRspName = generateReversedRspName(servicePath, tenantId);
-            final ServiceChain reversedServiceChain = findServiceChainToRsp(reversedRspName);
-            policyMapEntries.add(PolicyManagerUtil.createPolicyEntry(oppositeClassMapName, null, PolicyManagerImpl.ActionCase.CHAIN));
             policyWriter.cache(oppositeClassMap);
-            policyWriter.cache(reversedServiceChain);
+            policyMapEntries.add(PolicyManagerUtil.createPolicyEntry(oppositeClassMapName, null, PolicyManagerImpl.ActionCase.CHAIN));
+
+            final RspName reversedRspName = generateReversedRspName(servicePath, tenantId);
+            final RenderedServicePath reversedRenderedServicePath = SfcProviderRenderedPathAPI.readRenderedServicePath(reversedRspName);
+            final ServiceFunctionForwarder reversedFirstHopSff = getFirstHopSff(reversedRenderedServicePath);
+            if (reversedFirstHopSff != null && reversedFirstHopSff.getIpMgmtAddress() != null &&
+                    reversedFirstHopSff.getIpMgmtAddress().getIpv4Address() != null) {
+                final String reversedSffMgmtIpValue = reversedFirstHopSff.getIpMgmtAddress().getIpv4Address().getValue();
+                if (reversedSffMgmtIpValue.equals(policyWriter.getManagementIpAddress())) {
+                    // Remove service chain and remote forwarder
+                    final ServiceChain serviceChain = findServiceChainToRsp(renderedServicePath);
+                    final ServiceFfName remoteForwarder = findRemoteForwarder(reversedFirstHopSff);
+                    policyWriter.cache(serviceChain);
+                    policyWriter.cache(remoteForwarder);
+                }
+            }
         }
         policyWriter.cache(policyMapEntries);
-        // TODO remove other sfc stuff - forwarders, etc.
     }
 
-    private static ServiceChain findServiceChainToRsp(final RspName rspName) {
-        // Do not actually remove rsp from DS, could be used by someone else
-        final RenderedServicePath renderedServicePath = SfcProviderRenderedPathAPI.readRenderedServicePath(rspName);
-        if (renderedServicePath == null) {
-            LOG.debug("Rendered service path not found, if there is service-path created according to that rsp, " +
-                    "it cannot be removed. Rendered path name: {} ", rspName.getValue());
+    private static ServiceFfName findRemoteForwarder(ServiceFunctionForwarder firstHopSff) {
+        ServiceFfNameBuilder serviceFfNameBuilder = new ServiceFfNameBuilder();
+        serviceFfNameBuilder.setName(firstHopSff.getName().getValue())
+                .setKey(new ServiceFfNameKey(firstHopSff.getName().getValue()));
+        return serviceFfNameBuilder.build();
+    }
+
+    private static ServiceFunctionForwarder getFirstHopSff(RenderedServicePath renderedServicePath) {
+        if (renderedServicePath == null || renderedServicePath.getRenderedServicePathHop() == null ||
+                renderedServicePath.getRenderedServicePathHop().isEmpty()) {
             return null;
         }
+        final RenderedServicePathHop firstHop = renderedServicePath.getRenderedServicePathHop().get(0);
+        final SffName firstHopSff = firstHop.getServiceFunctionForwarder();
+        if (firstHopSff == null) {
+            return null;
+        }
+        return SfcProviderServiceForwarderAPI.readServiceFunctionForwarder(firstHopSff);
+    }
+
+    private static ServiceChain findServiceChainToRsp(final RenderedServicePath renderedServicePath) {
         // Construct service chain with key
         final Long pathId = renderedServicePath.getPathId();
         final ServicePathBuilder servicePathBuilder = new ServicePathBuilder();
@@ -257,40 +294,6 @@ public class ServiceChainingUtil {
         LOG.info("Rendered service path {} created", rspName.getValue());
         checkSfcRspStatus(rspName, dataBroker);
         return reversedRenderedPath;
-    }
-
-    /**
-     * Method checks up, if some {@link ServicePath} is present on device.
-     *
-     * @param mountpoint used to access specific device
-     * @return true if service chain does not exist, is null or does not contain any service path. False otherwise
-     */
-    public static boolean checkServicePathPresence(DataBroker mountpoint) {
-        InstanceIdentifier<ServiceChain> serviceChainIid = InstanceIdentifier.builder(Native.class)
-                .child(ServiceChain.class).build();
-        java.util.Optional<ReadOnlyTransaction> optionalTransaction =
-                NetconfTransactionCreator.netconfReadOnlyTransaction(mountpoint);
-        if (!optionalTransaction.isPresent()) {
-            LOG.warn("Failed to create transaction, mountpoint: {}", mountpoint);
-            return false;
-        }
-        ReadOnlyTransaction transaction = optionalTransaction.get();
-        CheckedFuture<Optional<ServiceChain>, ReadFailedException> submitFuture = transaction.read(LogicalDatastoreType.CONFIGURATION,
-                serviceChainIid);
-        try {
-            Optional<ServiceChain> optionalServiceChain = submitFuture.checkedGet();
-            if (optionalServiceChain.isPresent()) {
-                ServiceChain chain = optionalServiceChain.get();
-                return chain == null || chain.getServicePath() == null || chain.getServicePath().isEmpty();
-            } else {
-                return true;
-            }
-        } catch (ReadFailedException e) {
-            LOG.warn("Read transaction failed to {} ", e);
-        } catch (Exception e) {
-            LOG.error("Failed to .. {}", e.getMessage());
-        }
-        return false;
     }
 
     static ServiceFunctionPath findServiceFunctionPath(final SfcName chainName) {
@@ -368,14 +371,7 @@ public class ServiceChainingUtil {
         }
         final SffName sffName = firstHop.getServiceFunctionForwarder();
 
-        // Forwarders
-        //
-        // If classifier node is also forwarder, first entry in service path has to point to first service function
-        // (Local case)
-        //
-        // If first hop Sff is on different node, first service path entry has to point to that specific service
-        // forwarder (Remote case)
-
+        // Create remote forwarder if necessary
         final java.util.Optional<ServiceFunctionForwarder> serviceFunctionForwarder = java.util.Optional.ofNullable(
                 SfcProviderServiceForwarderAPI.readServiceFunctionForwarder(sffName));
         if (!serviceFunctionForwarder.isPresent()) {
@@ -402,7 +398,6 @@ public class ServiceChainingUtil {
                     .map(org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress::getIpv4Address)
                     .map(Ipv4Address::getValue)
                     .map(addressValue -> {
-                        // Set up choice. If remote, this choice is overwritten
                         final ServiceTypeChoice serviceTypeChoice;
                         if (!addressValue.equals(policyWriter.getManagementIpAddress())) {
                             final ServiceFfNameBuilder remoteSffBuilder = new ServiceFfNameBuilder();
@@ -411,29 +406,25 @@ public class ServiceChainingUtil {
                                     .setIp(new IpBuilder().setAddress(new Ipv4Address(remoteForwarderStringIp)).build());
                             policyWriter.cache(remoteSffBuilder.build());
                             serviceTypeChoice = forwarderTypeChoice(sffName.getValue());
-                        } else {
-                            serviceTypeChoice = functionTypeChoice(firstHop.getServiceFunctionName().getValue());
+                            // Service chain
+                            final List<Services> services = new ArrayList<>();
+                            final ServicesBuilder servicesBuilder = new ServicesBuilder();
+                            servicesBuilder.setServiceIndexId(renderedServicePath.getStartingIndex())
+                                    .setServiceTypeChoice(serviceTypeChoice);
+                            services.add(servicesBuilder.build());
+                            final List<ServicePath> servicePaths = new ArrayList<>();
+                            final ServicePathBuilder servicePathBuilder = new ServicePathBuilder();
+                            servicePathBuilder.setKey(new ServicePathKey(renderedServicePath.getPathId()))
+                                    .setServicePathId(renderedServicePath.getPathId())
+                                    .setConfigServiceChainPathMode(new ConfigServiceChainPathModeBuilder()
+                                            .setServiceIndex(new ServiceIndexBuilder()
+                                                    .setServices(services).build()).build());
+                            servicePaths.add(servicePathBuilder.build());
+                            final ServiceChainBuilder chainBuilder = new ServiceChainBuilder();
+                            chainBuilder.setServicePath(servicePaths);
+                            final ServiceChain serviceChain = chainBuilder.build();
+                            policyWriter.cache(serviceChain);
                         }
-
-                        // Service chain
-                        final List<Services> services = new ArrayList<>();
-                        final ServicesBuilder servicesBuilder = new ServicesBuilder();
-                        servicesBuilder.setServiceIndexId(renderedServicePath.getStartingIndex())
-                                .setServiceTypeChoice(serviceTypeChoice);
-                        services.add(servicesBuilder.build());
-                        final List<ServicePath> servicePaths = new ArrayList<>();
-                        final ServicePathBuilder servicePathBuilder = new ServicePathBuilder();
-                        servicePathBuilder.setKey(new ServicePathKey(renderedServicePath.getPathId()))
-                                .setServicePathId(renderedServicePath.getPathId())
-                                .setConfigServiceChainPathMode(new ConfigServiceChainPathModeBuilder()
-                                        .setServiceIndex(new ServiceIndexBuilder()
-                                                .setServices(services).build()).build());
-                        servicePaths.add(servicePathBuilder.build());
-                        final ServiceChainBuilder chainBuilder = new ServiceChainBuilder();
-                        chainBuilder.setServicePath(servicePaths);
-                        final ServiceChain serviceChain = chainBuilder.build();
-                        policyWriter.cache(serviceChain);
-
                         return true;
                     }).orElseGet(createNegativePathWithLogSupplier(sffName.getValue(),
                             (value) -> LOG.error("Cannot create remote forwarder, SFF {} does not contain management ip address",

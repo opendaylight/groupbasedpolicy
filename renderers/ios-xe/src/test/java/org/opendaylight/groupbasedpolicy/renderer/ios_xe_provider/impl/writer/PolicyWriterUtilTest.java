@@ -12,7 +12,10 @@ import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -77,7 +80,7 @@ public class PolicyWriterUtilTest {
         Assert.assertTrue(PolicyWriterUtil.writeClassMaps(null, NODE_ID, dataBroker));
 
         LOG.debug("scenario: pass through with empty classMapEntries collection");
-        final List<ClassMap> classMapEntries = new ArrayList<>();
+        final Set<ClassMap> classMapEntries = new HashSet<>();
         Assert.assertTrue(PolicyWriterUtil.writeClassMaps(classMapEntries, NODE_ID, dataBroker));
 
         LOG.debug("scenario: fail with one entry, no writeOnlyTransaction");
@@ -107,7 +110,7 @@ public class PolicyWriterUtilTest {
         Assert.assertTrue(PolicyWriterUtil.removeClassMaps(null, NODE_ID, dataBroker));
 
         LOG.debug("scenario: pass through with empty classMapEntries collection");
-        final List<ClassMap> classMapEntries = new ArrayList<>();
+        final Set<ClassMap> classMapEntries = new HashSet<>();
         Assert.assertTrue(PolicyWriterUtil.removeClassMaps(classMapEntries, NODE_ID, dataBroker));
 
         LOG.debug("scenario: fail with one entry, no writeOnlyTransaction");
@@ -132,7 +135,7 @@ public class PolicyWriterUtilTest {
 
     @Test
     public void testWritePolicyMap() throws Exception {
-        final List<Class> classEntries = new ArrayList<>();
+        final Set<Class> classEntries = new HashSet<>();
 
         LOG.debug("scenario: fail with one entry, no writeOnlyTransaction");
         classEntries.add(new ClassBuilder().setName(new ClassNameType("unit-classEntry-name")).build());
@@ -172,7 +175,7 @@ public class PolicyWriterUtilTest {
         Assert.assertTrue(PolicyWriterUtil.removePolicyMapEntries(POLICY_MAP_NAME, null, NODE_ID, dataBroker));
 
         LOG.debug("scenario: pass through with empty classEntries collection");
-        final List<Class> classEntries = new ArrayList<>();
+        final Set<Class> classEntries = new HashSet<>();
         Assert.assertTrue(PolicyWriterUtil.removePolicyMapEntries(POLICY_MAP_NAME, classEntries, NODE_ID, dataBroker));
 
         LOG.debug("scenario: fail with one entry, no writeOnlyTransaction");
@@ -206,51 +209,15 @@ public class PolicyWriterUtilTest {
     }
 
     @Test
-    public void testWriteLocal() throws Exception {
-        LOG.debug("scenario: succeed with null localForwarder");
-        Assert.assertTrue(PolicyWriterUtil.writeLocal(null, NODE_ID, dataBroker));
-
-        LOG.debug("scenario: fail with no writeOnlyTransaction");
-        final Local localForwarder = new LocalBuilder().build();
-        Assert.assertFalse(PolicyWriterUtil.writeLocal(localForwarder, NODE_ID, dataBroker));
-
-        LOG.debug("scenario: succeed - available writeOnlyTransaction, no submit future");
-        PowerMockito.stub(PowerMockito.method(NetconfTransactionCreator.class, "netconfWriteOnlyTransaction")).toReturn(wTxOptional);
-        Assert.assertTrue(PolicyWriterUtil.writeLocal(localForwarder, NODE_ID, dataBroker));
-
-        LOG.debug("scenario: succeed - available writeOnlyTransaction, available future");
-        Mockito.when(wTx.submit()).thenReturn(Futures.immediateCheckedFuture(null));
-        Assert.assertTrue(PolicyWriterUtil.writeLocal(localForwarder, NODE_ID, dataBroker));
-    }
-
-    @Test
-    public void testRemoveLocal() throws Exception {
-        LOG.debug("scenario: succeed with no service path present");
-        Assert.assertTrue(PolicyWriterUtil.removeLocal(NODE_ID, dataBroker));
-
-        LOG.debug("scenario: fail with service path present, no writeOnlyTransaction");
-        PowerMockito.stub(PowerMockito.method(ServiceChainingUtil.class, "checkServicePathPresence")).toReturn(true);
-        Assert.assertFalse(PolicyWriterUtil.removeLocal(NODE_ID, dataBroker));
-
-        LOG.debug("scenario: fail with service path present, available writeOnlyTransaction, no submit future");
-        PowerMockito.stub(PowerMockito.method(NetconfTransactionCreator.class, "netconfWriteOnlyTransaction")).toReturn(wTxOptional);
-        Assert.assertTrue(PolicyWriterUtil.removeLocal(NODE_ID, dataBroker));
-
-        LOG.debug("scenario: fail with service path present, available writeOnlyTransaction, available future");
-        Mockito.when(wTx.submit()).thenReturn(Futures.immediateCheckedFuture(null));
-        Assert.assertTrue(PolicyWriterUtil.removeLocal(NODE_ID, dataBroker));
-    }
-
-    @Test
     public void testWriteRemote() throws Exception {
         LOG.debug("scenario: succeed with null List<ServiceFfName>");
         Assert.assertTrue(PolicyWriterUtil.writeRemote(null, NODE_ID, dataBroker));
 
         LOG.debug("scenario: succeed with empty List<ServiceFfName>");
-        Assert.assertTrue(PolicyWriterUtil.writeRemote(Collections.emptyList(), NODE_ID, dataBroker));
+        Assert.assertTrue(PolicyWriterUtil.writeRemote(Collections.emptySet(), NODE_ID, dataBroker));
 
         LOG.debug("scenario: fail with no writeOnlyTransaction");
-        final List<ServiceFfName> remotes = Collections.singletonList(new ServiceFfNameBuilder().build());
+        final Set<ServiceFfName> remotes = Collections.singleton(new ServiceFfNameBuilder().build());
         Assert.assertFalse(PolicyWriterUtil.writeRemote(remotes, NODE_ID, dataBroker));
 
         LOG.debug("scenario: succeed - available writeOnlyTransaction, no submit future");
@@ -265,10 +232,10 @@ public class PolicyWriterUtilTest {
     @Test
     public void testWriteServicePaths() throws Exception {
         LOG.debug("scenario: succeed with empty List<remote>");
-        Assert.assertTrue(PolicyWriterUtil.writeServicePaths(Collections.emptyList(), NODE_ID, dataBroker));
+        Assert.assertTrue(PolicyWriterUtil.writeServicePaths(Collections.emptySet(), NODE_ID, dataBroker));
 
         LOG.debug("scenario: fail with no writeOnlyTransaction");
-        final List<ServiceChain> serviceChains = Collections.singletonList(new ServiceChainBuilder()
+        final Set<ServiceChain> serviceChains = Collections.singleton(new ServiceChainBuilder()
                 .setServicePath(Collections.singletonList(new ServicePathBuilder()
                         .setServicePathId(42L)
                         .build()))
@@ -290,10 +257,10 @@ public class PolicyWriterUtilTest {
         Assert.assertTrue(PolicyWriterUtil.removeServicePaths(null, NODE_ID, dataBroker));
 
         LOG.debug("scenario: succeed with no service path present");
-        Assert.assertTrue(PolicyWriterUtil.removeServicePaths(Collections.emptyList(), NODE_ID, dataBroker));
+        Assert.assertTrue(PolicyWriterUtil.removeServicePaths(Collections.emptySet(), NODE_ID, dataBroker));
 
         LOG.debug("scenario: fail with service path present, no writeOnlyTransaction");
-        final List<ServiceChain> serviceChains = Collections.singletonList(new ServiceChainBuilder()
+        final Set<ServiceChain> serviceChains = Collections.singleton(new ServiceChainBuilder()
                 .setServicePath(Collections.singletonList(new ServicePathBuilder()
                         .setServicePathId(42L)
                         .build()))

@@ -21,8 +21,9 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class PolicyWriter {
 
@@ -30,10 +31,10 @@ public class PolicyWriter {
 
     private final DataBroker mountpoint;
     // Local cache
-    private final List<ClassMap> classMapEntries;
-    private final List<Class> policyMapEntries;
-    private final List<ServiceFfName> remoteForwarders;
-    private final List<ServiceChain> serviceChains;
+    private final Set<ClassMap> classMapEntries;
+    private final Set<Class> policyMapEntries;
+    private final Set<ServiceFfName> remoteForwarders;
+    private final Set<ServiceChain> serviceChains;
     private final NodeId nodeId;
     private final String interfaceName;
     private final String policyMapName;
@@ -41,10 +42,10 @@ public class PolicyWriter {
 
     public PolicyWriter(final DataBroker dataBroker, final String interfaceName, final String ipAddress,
                         final String policyMapName, final NodeId nodeId) {
-        classMapEntries = new ArrayList<>();
-        policyMapEntries = new ArrayList<>();
-        remoteForwarders = new ArrayList<>();
-        serviceChains = new ArrayList<>();
+        classMapEntries = new HashSet<>();
+        policyMapEntries = new HashSet<>();
+        remoteForwarders = new HashSet<>();
+        serviceChains = new HashSet<>();
 
         this.nodeId = Preconditions.checkNotNull(nodeId);
         mountpoint = Preconditions.checkNotNull(dataBroker);
@@ -71,6 +72,10 @@ public class PolicyWriter {
 
     public CheckedFuture<Boolean, TransactionCommitFailedException> commitToDatastore() {
         LOG.info("Configuring policy on node {} ... ", nodeId.getValue());
+        if (policyMapEntries.isEmpty()) {
+            LOG.info("Policy map {} is empty, skipping", policyMapName);
+            return Futures.immediateCheckedFuture(true);
+        }
         // SFC
         boolean remoteResult = PolicyWriterUtil.writeRemote(remoteForwarders, nodeId, mountpoint);
         boolean servicePathsResult = PolicyWriterUtil.writeServicePaths(serviceChains, nodeId, mountpoint);
@@ -86,6 +91,10 @@ public class PolicyWriter {
 
     public CheckedFuture<Boolean, TransactionCommitFailedException> removeFromDatastore() {
         LOG.info("Removing policy from node {} ... ", nodeId.getValue());
+        if (policyMapEntries.isEmpty()) {
+            LOG.info("Policy map {} is empty, nothing to remove", policyMapName);
+            return Futures.immediateCheckedFuture(true);
+        }
         // GBP - maintain order!
         boolean policyMapEntriesResult = PolicyWriterUtil.removePolicyMapEntries(policyMapName, policyMapEntries,
                 nodeId, mountpoint);
@@ -93,10 +102,11 @@ public class PolicyWriter {
         // TODO remove class map?
         // SFC
         boolean servicePathsResult = PolicyWriterUtil.removeServicePaths(serviceChains, nodeId, mountpoint);
-        // TODO remove remote forwarders
+        boolean remoteSffResult = PolicyWriterUtil.removeRemote(remoteForwarders, nodeId, mountpoint);
         // Result
         LOG.info("Policy removed from node {}", nodeId.getValue());
-        return Futures.immediateCheckedFuture(classMapResult && policyMapEntriesResult && servicePathsResult);
+        return Futures.immediateCheckedFuture(classMapResult && policyMapEntriesResult && servicePathsResult
+            && remoteSffResult);
     }
 
     public String getManagementIpAddress() {

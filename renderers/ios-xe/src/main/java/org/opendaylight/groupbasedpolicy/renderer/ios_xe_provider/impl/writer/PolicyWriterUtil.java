@@ -8,6 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer;
 
+import java.util.List;
+import java.util.Set;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -17,7 +19,6 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil;
-import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.ServiceChainingUtil;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308.ClassNameType;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308.Native;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._interface.common.grouping.ServicePolicy;
@@ -44,8 +45,6 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-
 /**
  * Purpose: Util class for every policy writer
  */
@@ -53,7 +52,7 @@ class PolicyWriterUtil {
 
     private static final Logger LOG = LoggerFactory.getLogger(PolicyWriterUtil.class);
 
-    static boolean writeClassMaps(final List<ClassMap> classMapEntries, final NodeId nodeId, final DataBroker mountpoint) {
+    static boolean writeClassMaps(final Set<ClassMap> classMapEntries, final NodeId nodeId, final DataBroker mountpoint) {
         if (classMapEntries == null || classMapEntries.isEmpty()) {
             return true;
         }
@@ -83,7 +82,7 @@ class PolicyWriterUtil {
         return true;
     }
 
-    static boolean removeClassMaps(final List<ClassMap> classMapEntries, final NodeId nodeId, final DataBroker mountpoint) {
+    static boolean removeClassMaps(final Set<ClassMap> classMapEntries, final NodeId nodeId, final DataBroker mountpoint) {
         boolean result = true;
         if (classMapEntries == null || classMapEntries.isEmpty()) {
             return true;
@@ -112,7 +111,7 @@ class PolicyWriterUtil {
         return result;
     }
 
-    static boolean writePolicyMap(final String policyMapName, final List<Class> policyMapEntries, NodeId nodeId,
+    static boolean writePolicyMap(final String policyMapName, final Set<Class> policyMapEntries, NodeId nodeId,
                                   final DataBroker mountpoint) {
         final java.util.Optional<WriteTransaction> optionalWriteTransaction =
                 NetconfTransactionCreator.netconfWriteOnlyTransaction(mountpoint);
@@ -139,7 +138,7 @@ class PolicyWriterUtil {
         return true;
     }
 
-    static boolean removePolicyMapEntries(final String policyMapName, final List<Class> policyMapEntries,
+    static boolean removePolicyMapEntries(final String policyMapName, final Set<Class> policyMapEntries,
                                           final NodeId nodeId, final DataBroker mountpoint) {
         if (policyMapEntries == null || policyMapEntries.isEmpty()) {
             return true;
@@ -177,41 +176,7 @@ class PolicyWriterUtil {
         return true;
     }
 
-    static boolean writeLocal(final Local localForwarder, final NodeId nodeId, final DataBroker mountpoint) {
-        if (localForwarder == null) {
-            return true;
-        }
-        final java.util.Optional<WriteTransaction> optionalWriteTransaction =
-                NetconfTransactionCreator.netconfWriteOnlyTransaction(mountpoint);
-        if (!optionalWriteTransaction.isPresent()) {
-            LOG.warn("Failed to create write-only transaction, mountpoint: {}", mountpoint);
-            return false;
-        }
-        final WriteTransaction writeTransaction = optionalWriteTransaction.get();
-        final InstanceIdentifier<Local> localIid = localSffInstanceIdentifier();
-        writeMergeTransaction(writeTransaction, localIid, localForwarder);
-        LOG.info("Local forwarder created on node {}", nodeId.getValue());
-        return true;
-    }
-
-    static boolean removeLocal(final NodeId nodeId, final DataBroker mountpoint) {
-        // Remove local forwarder only when there are no more service-paths
-        if (ServiceChainingUtil.checkServicePathPresence(mountpoint)) {
-            final java.util.Optional<WriteTransaction> optionalWriteTransaction =
-                    NetconfTransactionCreator.netconfWriteOnlyTransaction(mountpoint);
-            if (!optionalWriteTransaction.isPresent()) {
-                LOG.warn("Failed to create write-only transaction, mountpoint: {}", mountpoint);
-                return false;
-            }
-            final WriteTransaction writeTransaction = optionalWriteTransaction.get();
-            final InstanceIdentifier<Local> localIid = localSffInstanceIdentifier();
-            deleteTransaction(writeTransaction, localIid);
-            LOG.info("Local forwarder removed from node {}", nodeId.getValue());
-        }
-        return true;
-    }
-
-    static boolean writeRemote(final List<ServiceFfName> remoteForwarders, final NodeId nodeId,
+    static boolean writeRemote(final Set<ServiceFfName> remoteForwarders, final NodeId nodeId,
                                final DataBroker mountpoint) {
         if (remoteForwarders == null || remoteForwarders.isEmpty()) {
             return true;
@@ -231,7 +196,27 @@ class PolicyWriterUtil {
         return true;
     }
 
-    static boolean writeServicePaths(final List<ServiceChain> serviceChains, final NodeId nodeId,
+    static boolean removeRemote(final Set<ServiceFfName> remoteForwarders, final NodeId nodeId,
+                                final DataBroker mountpoint) {
+        if (remoteForwarders == null || remoteForwarders.isEmpty()) {
+            return true;
+        }
+        for (ServiceFfName forwarder : remoteForwarders) {
+            final java.util.Optional<WriteTransaction> optionalWriteTransaction =
+                    NetconfTransactionCreator.netconfWriteOnlyTransaction(mountpoint);
+            if (!optionalWriteTransaction.isPresent()) {
+                LOG.warn("Failed to create transaction, mountpoint: {}", mountpoint);
+                return false;
+            }
+            final WriteTransaction writeTransaction = optionalWriteTransaction.get();
+            final InstanceIdentifier<ServiceFfName> forwarderIid = remoteSffInstanceIdentifier(forwarder);
+            deleteTransaction(writeTransaction, forwarderIid);
+            LOG.info("Remote forwarder {} removed from node {}", forwarder.getName(), nodeId.getValue());
+        }
+        return true;
+    }
+
+    static boolean writeServicePaths(final Set<ServiceChain> serviceChains, final NodeId nodeId,
                                      final DataBroker mountpoint) {
         for (org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ServiceChain serviceChain : serviceChains) {
             for (ServicePath entry : serviceChain.getServicePath()) {
@@ -250,7 +235,7 @@ class PolicyWriterUtil {
         return true;
     }
 
-    static boolean removeServicePaths(final List<ServiceChain> serviceChains, final NodeId nodeId,
+    static boolean removeServicePaths(final Set<ServiceChain> serviceChains, final NodeId nodeId,
                                       final DataBroker mountpoint) {
         if (serviceChains == null || serviceChains.isEmpty()) {
             return true;

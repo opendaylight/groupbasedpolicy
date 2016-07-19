@@ -80,7 +80,6 @@ import org.slf4j.LoggerFactory;
 public class PolicyManagerUtil {
 
     private static final Logger LOG = LoggerFactory.getLogger(PolicyManagerUtil.class);
-    private static final String DEFAULT = "class-default";
 
     public static void syncPolicyEntities(final Sgt sourceSgt, final Sgt destinationSgt, final PolicyConfigurationContext context,
                                           final Configuration dataAfter, final PeerEndpoint peerEndpoint,
@@ -187,19 +186,16 @@ public class PolicyManagerUtil {
         return policyClassBuilder.build();
     }
 
-    public static PolicyMap createPolicyMap(final String policyMapName, final List<Class> policyMapEntries) {
-        // Create default class entry
-        final ClassBuilder defaultBuilder = new ClassBuilder();
-        defaultBuilder.setName(new ClassNameType(DEFAULT))
-                .setKey(new ClassKey(new ClassNameType(DEFAULT)));
-        // TODO add pass-through value
-        policyMapEntries.add(defaultBuilder.build());
+    public static PolicyMap createPolicyMap(final String policyMapName, final Set<Class> policyMapEntries) {
+        // TODO maybe could be better to create also class-default entry with pass-through value than not to create any default entry at all
+        final List<Class> policyMapEntriesList = new ArrayList<>(policyMapEntries);
+
         // Construct policy map
         final PolicyMapBuilder policyMapBuilder = new PolicyMapBuilder();
         policyMapBuilder.setName(policyMapName)
                 .setKey(new PolicyMapKey(policyMapName))
                 .setType(PolicyMap.Type.ServiceChain)
-                .setXmlClass(policyMapEntries);
+                .setXmlClass(policyMapEntriesList);
         return policyMapBuilder.build();
     }
 
