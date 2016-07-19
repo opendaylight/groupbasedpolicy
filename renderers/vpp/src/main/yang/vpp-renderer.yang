@@ -15,6 +15,7 @@ module vpp-renderer {
     import base-endpoint { prefix base-ep; revision-date 2016-04-27; }
     import network-topology { prefix nt; revision-date 2013-10-21; }
     import opendaylight-l2-types { prefix l2-types; revision-date "2013-08-27"; }
+    import ietf-yang-types { prefix yang-types; revision-date "2013-07-15"; }
 
     description
         "This module is a baseline for the group-based policy vpp renderer model.";
@@ -54,10 +55,12 @@ module vpp-renderer {
 
             leaf vpp-node-path {
                 description "Path to a node representing mount-point to VPP instance.";
+                mandatory true;
                 type instance-identifier;
             }
             leaf vpp-interface-name {
                 description "Name of interface for the endpoint on VPP";
+                mandatory true;
                 type string;
             }
             leaf description {
@@ -67,10 +70,23 @@ module vpp-renderer {
             choice interface-type-choice {
                 case vhost-user-case {
                     leaf socket {
-                        description "A unique ID for the neutron port";
+                        description "Identifier of a vhost user";
                         type string {
                             length 1..255;
                         }
+                    }
+                }
+                case tap-case {
+                    leaf name {
+                        description "Identifier of a tap port";
+                        mandatory true;
+                        type string {
+                            length 1..255;
+                        }
+                    }
+                    leaf physical-address {
+                        description "MAC address of a tap port";
+                        type yang-types:phys-address;
                     }
                 }
             }
