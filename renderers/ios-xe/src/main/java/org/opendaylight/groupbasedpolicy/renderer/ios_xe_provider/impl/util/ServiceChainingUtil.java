@@ -11,7 +11,7 @@ package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util;
 import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.ActionCase;
 import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil.ActionInDirection;
 import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil.createClassMap;
-import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil.createPolicyEntry;
+import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil.createPolicyMapEntry;
 import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil.createSecurityGroupMatch;
 import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil.generateClassMapName;
 import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil.getTenantId;
@@ -21,6 +21,7 @@ import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ren
 import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation.PROVIDER;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -31,6 +32,7 @@ import java.util.function.Supplier;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.Futures;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -39,7 +41,7 @@ import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyConfigurationContext;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.NetconfTransactionCreator;
-import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriter;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriterUtil;
 import org.opendaylight.sfc.provider.api.SfcProviderRenderedPathAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServiceForwarderAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServicePathAPI;
@@ -84,10 +86,12 @@ import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.serv
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.path.config.service.chain.path.mode.service.index.ServicesBuilder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.path.config.service.chain.path.mode.service.index.services.ServiceTypeChoice;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.path.config.service.chain.path.mode.service.index.services.service.type.choice.ServiceFunctionForwarderBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.RuleName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.unconfigured.rule.groups.unconfigured.rule.group.UnconfiguredResolvedRuleBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.actions.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
@@ -103,24 +107,31 @@ public class ServiceChainingUtil {
     private static long timeout = 5000L;
 
     /**
-     * According to input, creates class-maps ({@link ClassMap}) and entries into policy-map ({@link Class}). These
-     * components are created when particular RSP is build by SFC ios-xe renderer. If so, method continues by resolving
-     * first RSP hop in {@link this#resolveRemoteSfcComponents(RenderedServicePath, PolicyWriter)}.
+     * According to provided action, this method gets service function path and collects all info about participation
+     * and orientation of path. According to path symmetricity, participation and direction, one of these cases happens:
+     * 1. Path is asymmetric, and it starts in  this classifier (specified by context) - direct chain is created
+     * 2. Path is asymmetric, and it starts in classifier on opposite side of the chain - skipped
+     * 3. Path is symmetric, and it starts in this classifier - direct chain is created
+     * 2. Path is symmetric, and it starts in classifier on opposite side of the chain - reversed path is created
+     * <p>
+     * Behaviour is correct also in case when "this" and "opposite" classifier is the same
      *
      * @param peerEndpoint   - peer endpoint, used to generate status and access to tenant ID
      * @param sourceSgt      - security group tag of source endpoint
      * @param destinationSgt - security group tag of destination endpoint
      * @param actionMap      - contains all info to evaluate correct chain orientation according to endpoint participation
-     * @param context        - contains policy writer
+     * @param context        - contains policy-map location and status info
      * @param dataBroker     - to access odl datastore
      */
-    static void resolveNewChainAction(final PeerEndpoint peerEndpoint, final Sgt sourceSgt,
-                                      final Sgt destinationSgt, final Map<PolicyManagerImpl.ActionCase, ActionInDirection> actionMap,
-                                      final PolicyConfigurationContext context, final DataBroker dataBroker) {
+    static void newChainAction(final PeerEndpoint peerEndpoint, final Sgt sourceSgt,
+                               final Sgt destinationSgt, final Map<PolicyManagerImpl.ActionCase, ActionInDirection> actionMap,
+                               final PolicyConfigurationContext context, final DataBroker dataBroker) {
         final ActionInDirection actionInDirection = actionMap.get(ActionCase.CHAIN);
         if (actionInDirection == null) {
             return;
         }
+        context.setCurrentUnconfiguredRule(new UnconfiguredResolvedRuleBuilder()
+                .setRuleName(new RuleName(actionInDirection.getRuleName())).build());
         // Rule action + orientation
         final Action action = actionInDirection.getAction();
         final EndpointPolicyParticipation participation = actionInDirection.getParticipation();
@@ -140,71 +151,40 @@ public class ServiceChainingUtil {
             context.appendUnconfiguredRendererEP(StatusUtil.assembleNotConfigurableRendererEPForPeer(context, peerEndpoint, info));
             return;
         }
-        RenderedServicePath renderedServicePath;
         boolean sfcPartSuccessful = true;
-        // Symmetric chain - create direct or reversed rendered service path in corresponding direction
-        if (servicePath.isSymmetric()) {
-            if ((participation.equals(PROVIDER) && direction.equals(Out)) ||
-                    (participation.equals(CONSUMER) && direction.equals(In))) {
-                renderedServicePath = ServiceChainingUtil.createRenderedPath(servicePath, tenantId, dataBroker);
-                // Rsp found, create class-map and policy-map entry
-                final String classMapName = generateClassMapName(sourceSgt.getValue(), destinationSgt.getValue());
-                final Match match = createSecurityGroupMatch(sourceSgt.getValue(), destinationSgt.getValue());
-                final ClassMap classMap = createClassMap(classMapName, match);
-                final Class policyMapEntry = createPolicyEntry(classMapName, renderedServicePath, ActionCase.CHAIN);
-                context.getPolicyWriter().cache(classMap);
-                context.getPolicyWriter().cache(policyMapEntry);
-                sfcPartSuccessful = resolveRemoteSfcComponents(renderedServicePath, context.getPolicyWriter());
-            } else {
-                // Direct path required if reversed has to be created
-                final RenderedServicePath directPath = ServiceChainingUtil.createRenderedPath(servicePath, tenantId, dataBroker);
-                // Create reversed path
-                renderedServicePath =
-                        ServiceChainingUtil.createReversedRenderedPath(servicePath, directPath, tenantId, dataBroker);
-                // Rsp found, create class-map and policy-map entry
-                final String classMapName = generateClassMapName(sourceSgt.getValue(), destinationSgt.getValue());
-                final Match match = createSecurityGroupMatch(sourceSgt.getValue(), destinationSgt.getValue());
-                final ClassMap classMap = createClassMap(classMapName, match);
-                final Class policyMapEntry = createPolicyEntry(classMapName, renderedServicePath, ActionCase.CHAIN);
-                context.getPolicyWriter().cache(classMap);
-                context.getPolicyWriter().cache(policyMapEntry);
-                sfcPartSuccessful = resolveRemoteSfcComponents(renderedServicePath, context.getPolicyWriter());
-            }
-        }
-        // Asymmetric chain - create direct path if corresponding direction or skip
-        else if ((participation.equals(PROVIDER) && direction.equals(Out)) ||
+        // Creates direct path in corresponding direction
+        if ((participation.equals(PROVIDER) && direction.equals(Out)) ||
                 (participation.equals(CONSUMER) && direction.equals(In))) {
-            renderedServicePath = ServiceChainingUtil.createRenderedPath(servicePath, tenantId, dataBroker);
-            // Rsp found, create class-map and policy-map entry
-            final String classMapName = generateClassMapName(sourceSgt.getValue(), destinationSgt.getValue());
-            final Match match = createSecurityGroupMatch(sourceSgt.getValue(), destinationSgt.getValue());
-            final ClassMap classMap = createClassMap(classMapName, match);
-            final Class policyMapEntry = createPolicyEntry(classMapName, renderedServicePath, ActionCase.CHAIN);
-            context.getPolicyWriter().cache(classMap);
-            context.getPolicyWriter().cache(policyMapEntry);
-            sfcPartSuccessful = resolveRemoteSfcComponents(renderedServicePath, context.getPolicyWriter());
+            final RenderedServicePath renderedServicePath = ServiceChainingUtil.resolveRenderedServicePath(servicePath,
+                    tenantId, dataBroker, sourceSgt, destinationSgt, context);
+            sfcPartSuccessful = resolveRemoteSfcComponents(renderedServicePath, context);
+            // Creates reversed path if symmetric
+        } else if (servicePath.isSymmetric()) {
+            final RenderedServicePath renderedServicePath =
+                    ServiceChainingUtil.resolveReversedRenderedServicePath(servicePath, tenantId, dataBroker, sourceSgt,
+                            destinationSgt, context);
+            sfcPartSuccessful = resolveRemoteSfcComponents(renderedServicePath, context);
         }
-        // Create appropriate service path && remote forwarder
         if (!sfcPartSuccessful) {
-            //TODO: extract resolved-rule name
             final String info = String.format("failed during sfc-part execution (sourceSgt=%s, destinationSgt=%s)",
                     sourceSgt, destinationSgt);
-            //context.appendUnconfiguredRendererEP(StatusUtil.assembleNotConfigurableRendererEPForPeerAndAction(context, peerEndpoint, info));
+            context.appendUnconfiguredRendererEP(StatusUtil.assembleNotConfigurableRendererEPForPeer(context,
+                    peerEndpoint, info));
         }
     }
 
     /**
-     * Removes class-map and policy-map entry in policy between endpoint pair. If necessary, method deletes remote SFC
-     * components.
+     * According to service function path and direction, creates appropriate rendered service path name {@link RspName}
+     * and starts appropriate method which removes policy for resolved endpoint pair
      *
-     * @param peerEndpoint    - contains info about tenant ID
-     * @param sourceSgt       - security group tag of source endpoint
-     * @param destinationSgt- security group tag of destination endpoint
-     * @param actionMap       - contains all info to evaluate correct chain orientation according to endpoint participation
-     * @param policyWriter    - used to access ios-xe capable device
+     * @param peerEndpoint   - contains info about tenant ID
+     * @param sourceSgt      - security group tag of source endpoint
+     * @param destinationSgt - security group tag of destination endpoint
+     * @param actionMap      - contains all info to evaluate correct chain orientation according to endpoint participation
+     * @param context        - contains policy-map location and status info
      */
     static void resolveRemovedChainAction(final PeerEndpoint peerEndpoint, final Sgt sourceSgt, final Sgt destinationSgt,
-                                          final Map<ActionCase, ActionInDirection> actionMap, PolicyWriter policyWriter) {
+                                          final Map<ActionCase, ActionInDirection> actionMap, final PolicyConfigurationContext context) {
         final ActionInDirection actionInDirection = actionMap.get(ActionCase.CHAIN);
         final Action action = actionInDirection.getAction();
         final EndpointPolicyParticipation participation = actionInDirection.getParticipation();
@@ -218,75 +198,14 @@ public class ServiceChainingUtil {
             return;
         }
         //Symmetric chain
-        if (servicePath.isSymmetric()) {
-            if ((participation.equals(PROVIDER) && direction.equals(Out)) ||
-                    (participation.equals(CONSUMER) && direction.equals(In))) {
-                // Cache class-maps, appropriate policy-map entries and service-chains
-                final String classMapName = PolicyManagerUtil.generateClassMapName(sourceSgt.getValue(), destinationSgt.getValue());
-                final ClassMap classMap = PolicyManagerUtil.createClassMap(classMapName, null);
-                final Class policyMapEntry = PolicyManagerUtil.createPolicyEntry(classMapName, null, PolicyManagerImpl.ActionCase.CHAIN);
-                policyWriter.cache(classMap);
-                policyWriter.cache(policyMapEntry);
-
-                final RspName rspName = generateRspName(servicePath, tenantId);
-                final RenderedServicePath renderedServicePath = SfcProviderRenderedPathAPI.readRenderedServicePath(rspName);
-                final ServiceFunctionForwarder firstHopSff = getFirstHopSff(renderedServicePath);
-                if (firstHopSff != null && firstHopSff.getIpMgmtAddress() != null &&
-                        firstHopSff.getIpMgmtAddress().getIpv4Address() != null) {
-                    final String sffMgmtIpValue = firstHopSff.getIpMgmtAddress().getIpv4Address().getValue();
-                    if (!sffMgmtIpValue.equals(policyWriter.getManagementIpAddress())) {
-                        // Remove service chain and remote forwarder
-                        final ServiceChain serviceChain = createServiceChain(renderedServicePath);
-                        final ServiceFfName remoteForwarder = createRemoteForwarder(firstHopSff);
-                        policyWriter.cache(serviceChain);
-                        policyWriter.cache(remoteForwarder);
-                    }
-                }
-            } else {
-                final String oppositeClassMapName = PolicyManagerUtil.generateClassMapName(sourceSgt.getValue(), destinationSgt.getValue());
-                final ClassMap oppositeClassMap = PolicyManagerUtil.createClassMap(oppositeClassMapName, null);
-                final Class policyMapEntry = PolicyManagerUtil.createPolicyEntry(oppositeClassMapName, null, PolicyManagerImpl.ActionCase.CHAIN);
-                policyWriter.cache(oppositeClassMap);
-                policyWriter.cache(policyMapEntry);
-
-                final RspName reversedRspName = generateReversedRspName(servicePath, tenantId);
-                final RenderedServicePath reversedRenderedServicePath = SfcProviderRenderedPathAPI.readRenderedServicePath(reversedRspName);
-                final ServiceFunctionForwarder reversedFirstHopSff = getFirstHopSff(reversedRenderedServicePath);
-                if (reversedFirstHopSff != null && reversedFirstHopSff.getIpMgmtAddress() != null &&
-                        reversedFirstHopSff.getIpMgmtAddress().getIpv4Address() != null) {
-                    final String reversedSffMgmtIpValue = reversedFirstHopSff.getIpMgmtAddress().getIpv4Address().getValue();
-                    if (!reversedSffMgmtIpValue.equals(policyWriter.getManagementIpAddress())) {
-                        // Remove service chain and remote forwarder
-                        final ServiceChain serviceChain = createServiceChain(reversedRenderedServicePath);
-                        final ServiceFfName remoteForwarder = createRemoteForwarder(reversedFirstHopSff);
-                        policyWriter.cache(serviceChain);
-                        policyWriter.cache(remoteForwarder);
-                    }
-                }
-            }
-        } else if ((participation.equals(PROVIDER) && direction.equals(Out)) ||
+        if ((participation.equals(PROVIDER) && direction.equals(Out)) ||
                 (participation.equals(CONSUMER) && direction.equals(In))) {
-            // Asymmetric chain
-            final String classMapName = PolicyManagerUtil.generateClassMapName(sourceSgt.getValue(), destinationSgt.getValue());
-            final ClassMap classMap = PolicyManagerUtil.createClassMap(classMapName, null);
-            final Class policyMapEntry = PolicyManagerUtil.createPolicyEntry(classMapName, null, PolicyManagerImpl.ActionCase.CHAIN);
-            policyWriter.cache(classMap);
-            policyWriter.cache(policyMapEntry);
-
             final RspName rspName = generateRspName(servicePath, tenantId);
-            final RenderedServicePath renderedServicePath = SfcProviderRenderedPathAPI.readRenderedServicePath(rspName);
-            final ServiceFunctionForwarder firstHopSff = getFirstHopSff(renderedServicePath);
-            if (firstHopSff != null && firstHopSff.getIpMgmtAddress() != null &&
-                    firstHopSff.getIpMgmtAddress().getIpv4Address() != null) {
-                final String sffMgmtIpValue = firstHopSff.getIpMgmtAddress().getIpv4Address().getValue();
-                if (!sffMgmtIpValue.equals(policyWriter.getManagementIpAddress())) {
-                    // Remove service chain and remote forwarder
-                    final ServiceChain serviceChain = createServiceChain(renderedServicePath);
-                    final ServiceFfName remoteForwarder = createRemoteForwarder(firstHopSff);
-                    policyWriter.cache(serviceChain);
-                    policyWriter.cache(remoteForwarder);
-                }
-            }
+            resolveRemovedRenderedServicePath(rspName, sourceSgt, destinationSgt, context);
+
+        } else if (servicePath.isSymmetric()) {
+            final RspName rspName = generateReversedRspName(servicePath, tenantId);
+            resolveRemovedRenderedServicePath(rspName, sourceSgt, destinationSgt, context);
         }
     }
 
@@ -295,13 +214,15 @@ public class ServiceChainingUtil {
      * chain. Classifier has to be able to reach first service function forwarder in order to send packet to chain. If
      * first service function forwarder is present on the same node as classifier, service-path entry should be already
      * present (created by IOS-XE renderer in SFC) also with appropriate remote SFF if necessary. If first SFF is on
-     * different node, classifier has to create it's own service-path entry with remote SFF.
+     * different node (remote classifier), classifier has to create it's own service-path entry with remote SFF.
      *
-     * @param renderedServicePath classifier has to reach
-     * @param policyWriter        policy entries writer
+     * @param renderedServicePath - path classifier has to reach
+     * @param context             - contains policy-map location and status info
      * @return true if everything went good, false otherwise
      */
-    static boolean resolveRemoteSfcComponents(final RenderedServicePath renderedServicePath, PolicyWriter policyWriter) {
+    public static boolean resolveRemoteSfcComponents(final RenderedServicePath renderedServicePath,
+                                                      final PolicyConfigurationContext context) {
+        final PolicyManagerImpl.PolicyMapLocation location = context.getPolicyMapLocation();
         final ServiceFunctionForwarder forwarder = getFirstHopSff(renderedServicePath);
         if (forwarder == null) {
             return false;
@@ -328,13 +249,14 @@ public class ServiceChainingUtil {
                     .map(Ipv4Address::getValue)
                     .map(addressValue -> {
                         final ServiceTypeChoice serviceTypeChoice;
-                        if (!addressValue.equals(policyWriter.getManagementIpAddress())) {
+                        if (!addressValue.equals(location.getManagementIpAddress())) {
                             // Remote forwarder
                             final ServiceFfNameBuilder remoteSffBuilder = new ServiceFfNameBuilder();
                             remoteSffBuilder.setName(sffName.getValue())
                                     .setKey(new ServiceFfNameKey(sffName.getValue()))
                                     .setIp(new IpBuilder().setAddress(new Ipv4Address(remoteForwarderStringIp)).build());
-                            policyWriter.cache(remoteSffBuilder.build());
+                            boolean rsResult = PolicyWriterUtil.writeRemote(remoteSffBuilder.build(), location);
+                            context.setFutureResult(Futures.immediateCheckedFuture(rsResult));
                             serviceTypeChoice = createForwarderTypeChoice(sffName.getValue());
                             // Service chain
                             final List<Services> services = new ArrayList<>();
@@ -353,7 +275,8 @@ public class ServiceChainingUtil {
                             final ServiceChainBuilder chainBuilder = new ServiceChainBuilder();
                             chainBuilder.setServicePath(servicePaths);
                             final ServiceChain serviceChain = chainBuilder.build();
-                            policyWriter.cache(serviceChain);
+                            boolean scResult = PolicyWriterUtil.writeServicePath(serviceChain, location);
+                            context.setFutureResult(Futures.immediateCheckedFuture(scResult));
                         }
                         return true;
                     }).orElseGet(createNegativePathWithLogSupplier(sffName.getValue(),
@@ -364,6 +287,15 @@ public class ServiceChainingUtil {
         return false;
     }
 
+    /**
+     * Investigates provided parameter values and derives service chain name. This name is used to find service function
+     * path
+     *
+     * @param params - list of parameters
+     * @return - service function path if found, null if provided parameters does not correspond with any chain or there
+     * is no service function path defined by that chain
+     */
+    @Nullable
     static ServiceFunctionPath findServicePathFromParameterValues(final List<ParameterValue> params) {
         if (params == null || params.isEmpty()) {
             LOG.error("Cannot found service path, parameter value is null");
@@ -413,59 +345,127 @@ public class ServiceChainingUtil {
     /**
      * Creates {@link RenderedServicePath} if not exist. If created, ios-xe renderer in SFC is invoked, so this method
      * has to wait till SFC part is done to prevent transaction collisions in {@link this#checkRspManagerStatus(RspName,
-     * DataBroker)}
+     * DataBroker)}. If this operation is successful, class-map {@link ClassMap} and entry in policy-map {@link Class}
+     * is written
      *
-     * @param sfp        - path used to create RSP
-     * @param tenantId   - used to generate RSP name according to GBP standards
-     * @param dataBroker - data provider to access odl controller
+     * @param sfp            - path used to create RSP
+     * @param tenantId       - used to generate RSP name according to GBP standards
+     * @param dataBroker     - data provider to access odl controller
+     * @param sourceSgt      - source security group tag
+     * @param destinationSgt - destination security group tag
+     * @param context        - contains policy-map location and status info
      * @return read/created RSP
      */
-    static RenderedServicePath createRenderedPath(final ServiceFunctionPath sfp, final TenantId tenantId,
-                                                  final DataBroker dataBroker) {
-        RenderedServicePath renderedServicePath;
-        // Try to read existing RSP
+    static RenderedServicePath resolveRenderedServicePath(final ServiceFunctionPath sfp, final TenantId tenantId,
+                                                                  final DataBroker dataBroker, final Sgt sourceSgt, final Sgt destinationSgt,
+                                                                  final PolicyConfigurationContext context) {
+        // Get rendered service path
         final RspName rspName = generateRspName(sfp, tenantId);
-        renderedServicePath = SfcProviderRenderedPathAPI.readRenderedServicePath(rspName);
-        if (renderedServicePath != null) {
-            return renderedServicePath;
+        RenderedServicePath renderedServicePath = SfcProviderRenderedPathAPI.readRenderedServicePath(rspName);
+        if (renderedServicePath == null) {
+            LOG.info("Rendered service path with name {} not found, creating a new one ..", rspName.getValue());
+            final CreateRenderedPathInput input = new CreateRenderedPathInputBuilder()
+                    .setParentServiceFunctionPath(sfp.getName().getValue())
+                    .setName(rspName.getValue())
+                    .setSymmetric(sfp.isSymmetric())
+                    .build();
+            renderedServicePath = SfcProviderRenderedPathAPI.createRenderedServicePathAndState(sfp, input);
+            LOG.info("Rendered service path {} created", rspName.getValue());
+            checkRspManagerStatus(rspName, dataBroker);
         }
-        LOG.info("Rendered service path with name {} not found, creating a new one ..", rspName.getValue());
-        final CreateRenderedPathInput input = new CreateRenderedPathInputBuilder()
-                .setParentServiceFunctionPath(sfp.getName().getValue())
-                .setName(rspName.getValue())
-                .setSymmetric(sfp.isSymmetric())
-                .build();
-        renderedServicePath = SfcProviderRenderedPathAPI.createRenderedServicePathAndState(sfp, input);
-        LOG.info("Rendered service path {} created", rspName.getValue());
-        checkRspManagerStatus(rspName, dataBroker);
+        // Create class-map and policy-map entry
+        final String classMapName = generateClassMapName(sourceSgt.getValue(), destinationSgt.getValue());
+        final Match match = createSecurityGroupMatch(sourceSgt.getValue(), destinationSgt.getValue());
+        final ClassMap classMap = createClassMap(classMapName, match);
+        final Class policyMapEntry = createPolicyMapEntry(classMapName, renderedServicePath, ActionCase.CHAIN);
+        boolean cmResult = PolicyWriterUtil.writeClassMap(classMap, context.getPolicyMapLocation());
+        context.setFutureResult(Futures.immediateCheckedFuture(cmResult));
+        boolean pmeResult = PolicyWriterUtil.writePolicyMapEntry(policyMapEntry, context.getPolicyMapLocation());
+        context.setFutureResult(Futures.immediateCheckedFuture(pmeResult));
         return renderedServicePath;
     }
 
     /**
      * Creates reversed {@link RenderedServicePath} if not exist. To be successful, direct path has to exist.
      * If created, ios-xe renderer in SFC is invoked, so this method has to wait till SFC part is done to prevent
-     * transaction collisions in {@link this#checkRspManagerStatus(RspName, DataBroker)}
+     * transaction collisions. If this operation is successful, class-map {@link ClassMap} and entry in policy-map
+     * {@link Class} is written
      *
-     * @param sfp        - path used to create RSP
-     * @param rsp        - appropriate direct RSP, used when the reversed path is created
-     * @param tenantId   - used to generate RSP name according to GBP standards
-     * @param dataBroker - data provider to access odl controller
+     * @param sfp            - path used to create RSP
+     * @param tenantId       - used to generate RSP name according to GBP standards
+     * @param dataBroker     - data provider to access odl controller
+     * @param sourceSgt      - source security group tag
+     * @param destinationSgt - destination security group tag
+     * @param context        - contains policy-map location and status info
      * @return read/created RSP
      */
-    static RenderedServicePath createReversedRenderedPath(final ServiceFunctionPath sfp, final RenderedServicePath rsp,
-                                                          final TenantId tenantId, final DataBroker dataBroker) {
-        RenderedServicePath reversedRenderedPath;
-        // Try to read existing RSP
-        final RspName rspName = generateReversedRspName(sfp, tenantId);
-        reversedRenderedPath = SfcProviderRenderedPathAPI.readRenderedServicePath(rspName);
-        if (reversedRenderedPath != null) {
-            return reversedRenderedPath;
+    public static RenderedServicePath resolveReversedRenderedServicePath(final ServiceFunctionPath sfp, final TenantId tenantId,
+                                                                          final DataBroker dataBroker, final Sgt sourceSgt,
+                                                                          final Sgt destinationSgt, final PolicyConfigurationContext context) {
+        // Get rendered service path
+        final RspName rspName = generateRspName(sfp, tenantId);
+        RenderedServicePath renderedServicePath = SfcProviderRenderedPathAPI.readRenderedServicePath(rspName);
+        if (renderedServicePath == null) {
+            LOG.info("Rendered service path with name {} not found, creating a new one ..", rspName.getValue());
+            final CreateRenderedPathInput input = new CreateRenderedPathInputBuilder()
+                    .setParentServiceFunctionPath(sfp.getName().getValue())
+                    .setName(rspName.getValue())
+                    .setSymmetric(sfp.isSymmetric())
+                    .build();
+            renderedServicePath = SfcProviderRenderedPathAPI.createRenderedServicePathAndState(sfp, input);
+            LOG.info("Rendered service path {} created", rspName.getValue());
+            checkRspManagerStatus(rspName, dataBroker);
         }
-        LOG.info("Reversed rendered service path with name {} not found, creating a new one ..", rspName.getValue());
-        reversedRenderedPath = SfcProviderRenderedPathAPI.createReverseRenderedServicePathEntry(rsp);
-        LOG.info("Rendered service path {} created", rspName.getValue());
-        checkRspManagerStatus(rspName, dataBroker);
+        // Get reversed rendered service path
+        final RspName reversedRspName = generateReversedRspName(sfp, tenantId);
+        RenderedServicePath reversedRenderedPath = SfcProviderRenderedPathAPI.readRenderedServicePath(reversedRspName);
+        if (reversedRenderedPath == null) {
+            LOG.info("Reversed rendered service path with name {} not found, creating a new one ..", reversedRspName.getValue());
+            reversedRenderedPath = SfcProviderRenderedPathAPI.createReverseRenderedServicePathEntry(renderedServicePath);
+            LOG.info("Rendered service path {} created", reversedRspName.getValue());
+            checkRspManagerStatus(reversedRspName, dataBroker);
+        }
+        // Create class-map and policy-map entry
+        final String classMapName = generateClassMapName(sourceSgt.getValue(), destinationSgt.getValue());
+        final Match match = createSecurityGroupMatch(sourceSgt.getValue(), destinationSgt.getValue());
+        final ClassMap classMap = createClassMap(classMapName, match);
+        final Class policyMapEntry = createPolicyMapEntry(classMapName, renderedServicePath, ActionCase.CHAIN);
+        boolean cmResult = PolicyWriterUtil.writeClassMap(classMap, context.getPolicyMapLocation());
+        context.setFutureResult(Futures.immediateCheckedFuture(cmResult));
+        boolean pmeResult = PolicyWriterUtil.writePolicyMapEntry(policyMapEntry, context.getPolicyMapLocation());
+        context.setFutureResult(Futures.immediateCheckedFuture(pmeResult));
+        resolveRemoteSfcComponents(renderedServicePath, context);
         return reversedRenderedPath;
+    }
+
+    /**
+     * Removes all policy setup created according to rendered service path.
+     *
+     * @param rspName        - rendered service path name
+     * @param sourceSgt      - source security group tag
+     * @param destinationSgt - destination security group tag
+     * @param context        - context with policy-map location
+     */
+    private static void resolveRemovedRenderedServicePath(final RspName rspName, final Sgt sourceSgt, final Sgt destinationSgt,
+                                                          final PolicyConfigurationContext context) {
+        final String classMapName = PolicyManagerUtil.generateClassMapName(sourceSgt.getValue(), destinationSgt.getValue());
+        final ClassMap classMap = PolicyManagerUtil.createClassMap(classMapName, null);
+        final Class policyMapEntry = PolicyManagerUtil.createPolicyMapEntry(classMapName, null, PolicyManagerImpl.ActionCase.CHAIN);
+        PolicyWriterUtil.removePolicyMapEntry(policyMapEntry, context.getPolicyMapLocation());
+        PolicyWriterUtil.removeClassMap(classMap, context.getPolicyMapLocation());
+        final RenderedServicePath renderedServicePath = SfcProviderRenderedPathAPI.readRenderedServicePath(rspName);
+        final ServiceFunctionForwarder firstHopSff = getFirstHopSff(renderedServicePath);
+        if (firstHopSff != null && firstHopSff.getIpMgmtAddress() != null &&
+                firstHopSff.getIpMgmtAddress().getIpv4Address() != null) {
+            final String sffMgmtIpValue = firstHopSff.getIpMgmtAddress().getIpv4Address().getValue();
+            if (!sffMgmtIpValue.equals(context.getPolicyMapLocation().getManagementIpAddress())) {
+                // Remove service chain and remote forwarder
+                final ServiceChain serviceChain = createServiceChain(renderedServicePath);
+                final ServiceFfName remoteForwarder = createRemoteForwarder(firstHopSff);
+                PolicyWriterUtil.removeServicePath(serviceChain, context.getPolicyMapLocation());
+                PolicyWriterUtil.removeRemote(remoteForwarder, context.getPolicyMapLocation());
+            }
+        }
     }
 
     static ServiceFfName createRemoteForwarder(ServiceFunctionForwarder firstHopSff) {
@@ -584,6 +584,7 @@ public class ServiceChainingUtil {
 
     /**
      * Only for test purposes
+     *
      * @param value - set actual timeout value
      */
     @VisibleForTesting

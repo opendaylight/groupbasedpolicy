@@ -15,14 +15,14 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.ActionCase.ALLOW;
 import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.ActionCase.CHAIN;
 import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction.In;
 import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction.Out;
 import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation.PROVIDER;
+import static org.powermock.api.mockito.PowerMockito.verifyStatic;
 import static org.powermock.api.support.membermodification.MemberMatcher.method;
 import static org.powermock.api.support.membermodification.MemberModifier.stub;
 
@@ -41,9 +41,10 @@ import org.mockito.Mock;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyConfigurationContext;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.ActionCase;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil.ActionInDirection;
-import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriter;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriterUtil;
 import org.opendaylight.sfc.provider.api.SfcProviderRenderedPathAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServiceForwarderAPI;
 import org.opendaylight.sfc.provider.api.SfcProviderServicePathAPI;
@@ -75,6 +76,7 @@ import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.serv
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.ServiceFfNameBuilder;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.service.chain.service.function.forwarder.ServiceFfNameKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.RuleName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
@@ -86,6 +88,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.actions.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.actions.ActionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
@@ -99,7 +102,7 @@ import org.powermock.modules.junit4.PowerMockRunner;
         SfcProviderServicePathAPI.class,
         SfcProviderRenderedPathAPI.class,
         PolicyManagerUtil.class,
-        PolicyWriter.class
+        PolicyWriterUtil.class
 })
 public class ServiceChainingUtilTest {
 
@@ -108,9 +111,10 @@ public class ServiceChainingUtilTest {
     private final String TENANT_ID = "tenant-id";
     private final String IP_ADDRESS = "170.0.0.1";
     private final String SERVICE_FUNCTION_FORWARDER = "service-function-forwarder";
+    private final RuleName RULE_NAME = new RuleName("rule-name");
 
     private DataBroker dataBroker;
-    private PolicyWriter policyWriter;
+    private PolicyWriterUtil policyWriterUtil;
 
 
     @Captor
@@ -133,7 +137,7 @@ public class ServiceChainingUtilTest {
     @Before
     public void setUp() {
         dataBroker = mock(DataBroker.class);
-        policyWriter = mock(PolicyWriter.class);
+        policyWriterUtil = mock(PolicyWriterUtil.class);
     }
 
     @Test
@@ -142,10 +146,10 @@ public class ServiceChainingUtilTest {
         final Action action = actionBuilder(null);
         final PolicyConfigurationContext context = policyConfigurationContextBuilder();
 
-        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sgtBuilder(10), sgtBuilder(20),
-                resolvedActionBuilder(ALLOW, action, In), context, dataBroker);
+        ServiceChainingUtil.newChainAction(peerEndpoint, sgtBuilder(10), sgtBuilder(20),
+                resolvedActionBuilder(RULE_NAME, ALLOW, action, In), context, dataBroker);
 
-        verifyNoMoreInteractions(policyWriter);
+        verifyNoMoreInteractions(policyWriterUtil);
         verifyNoMoreInteractions(dataBroker);
     }
 
@@ -155,10 +159,10 @@ public class ServiceChainingUtilTest {
         final Action action = actionBuilder(null);
         final PolicyConfigurationContext context = policyConfigurationContextBuilder();
 
-        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sgtBuilder(10), sgtBuilder(20),
-                resolvedActionBuilder(CHAIN, action, In), context, dataBroker);
+        ServiceChainingUtil.newChainAction(peerEndpoint, sgtBuilder(10), sgtBuilder(20),
+                resolvedActionBuilder(RULE_NAME, CHAIN, action, In), context, dataBroker);
 
-        verifyNoMoreInteractions(policyWriter);
+        verifyNoMoreInteractions(policyWriterUtil);
         verifyNoMoreInteractions(dataBroker);
     }
 
@@ -180,10 +184,10 @@ public class ServiceChainingUtilTest {
         stub(method(SfcProviderServicePathAPI.class, "readAllServiceFunctionPaths")).toReturn(pathsBuilder.build());
         stub(method(PolicyManagerUtil.class, "getTenantId")).toReturn(null);
 
-        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sgtBuilder(10), sgtBuilder(20),
-                resolvedActionBuilder(CHAIN, action, In), context, dataBroker);
+        ServiceChainingUtil.newChainAction(peerEndpoint, sgtBuilder(10), sgtBuilder(20),
+                resolvedActionBuilder(RULE_NAME, CHAIN, action, In), context, dataBroker);
 
-        verifyNoMoreInteractions(policyWriter);
+        verifyNoMoreInteractions(policyWriterUtil);
         verifyNoMoreInteractions(dataBroker);
     }
 
@@ -206,10 +210,10 @@ public class ServiceChainingUtilTest {
         stub(method(SfcProviderServicePathAPI.class, "readAllServiceFunctionPaths")).toReturn(pathsBuilder.build());
         stub(method(PolicyManagerUtil.class, "getTenantId")).toReturn(new TenantId(TENANT_ID));
 
-        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sgtBuilder(10), sgtBuilder(20),
-                resolvedActionBuilder(CHAIN, action, In), context, dataBroker);
+        ServiceChainingUtil.newChainAction(peerEndpoint, sgtBuilder(10), sgtBuilder(20),
+                resolvedActionBuilder(RULE_NAME, CHAIN, action, In), context, dataBroker);
 
-        verifyNoMoreInteractions(policyWriter);
+        verifyNoMoreInteractions(policyWriterUtil);
         verifyNoMoreInteractions(dataBroker);
     }
 
@@ -230,16 +234,15 @@ public class ServiceChainingUtilTest {
         final PolicyConfigurationContext context = policyConfigurationContextBuilder();
 
         stub(method(SfcProviderServicePathAPI.class, "readAllServiceFunctionPaths")).toReturn(pathsBuilder.build());
-        stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(buildRsp(null));
-        stub(method(PolicyManagerUtil.class, "getTenantId")).toReturn(new TenantId(TENANT_ID));
+        stub(method(PolicyWriterUtil.class, "writeClassMap")).toReturn(true);
+        stub(method(PolicyWriterUtil.class, "writePolicyMapEntry")).toReturn(true);
 
-        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sgtBuilder(10), sgtBuilder(20),
-                resolvedActionBuilder(CHAIN, action, Out), context, dataBroker);
+        ServiceChainingUtil.newChainAction(peerEndpoint, sgtBuilder(10), sgtBuilder(20),
+                resolvedActionBuilder(RULE_NAME, CHAIN, action, Out), context, dataBroker);
 
-        verify(policyWriter).cache(any(ClassMap.class));
-        verify(policyWriter).cache(any(Class.class));
-        verifyNoMoreInteractions(policyWriter);
-        verifyNoMoreInteractions(dataBroker);
+        verifyStatic(times(1));
+        PolicyWriterUtil.writeClassMap(any(ClassMap.class), any(PolicyManagerImpl.PolicyMapLocation.class));
+        PolicyWriterUtil.writePolicyMapEntry(any(Class.class), any(PolicyManagerImpl.PolicyMapLocation.class));
     }
 
     @Test
@@ -259,16 +262,15 @@ public class ServiceChainingUtilTest {
         final PolicyConfigurationContext context = policyConfigurationContextBuilder();
 
         stub(method(SfcProviderServicePathAPI.class, "readAllServiceFunctionPaths")).toReturn(pathsBuilder.build());
-        stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(buildRsp(null));
-        stub(method(PolicyManagerUtil.class, "getTenantId")).toReturn(new TenantId(TENANT_ID));
+        stub(method(PolicyWriterUtil.class, "writeClassMap")).toReturn(true);
+        stub(method(PolicyWriterUtil.class, "writePolicyMapEntry")).toReturn(true);
 
-        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sgtBuilder(10), sgtBuilder(20),
-                resolvedActionBuilder(CHAIN, action, Out), context, dataBroker);
+        ServiceChainingUtil.newChainAction(peerEndpoint, sgtBuilder(10), sgtBuilder(20),
+                resolvedActionBuilder(RULE_NAME, CHAIN, action, Out), context, dataBroker);
 
-        verify(policyWriter).cache(any(ClassMap.class));
-        verify(policyWriter).cache(any(Class.class));
-        verifyNoMoreInteractions(policyWriter);
-        verifyNoMoreInteractions(dataBroker);
+        verifyStatic(times(1));
+        PolicyWriterUtil.writeClassMap(any(ClassMap.class), any(PolicyManagerImpl.PolicyMapLocation.class));
+        PolicyWriterUtil.writePolicyMapEntry(any(Class.class), any(PolicyManagerImpl.PolicyMapLocation.class));
     }
 
     @Test
@@ -288,31 +290,34 @@ public class ServiceChainingUtilTest {
         final PolicyConfigurationContext context = policyConfigurationContextBuilder();
 
         stub(method(SfcProviderServicePathAPI.class, "readAllServiceFunctionPaths")).toReturn(pathsBuilder.build());
-        stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(buildRsp(null));
-        stub(method(PolicyManagerUtil.class, "getTenantId")).toReturn(new TenantId(TENANT_ID));
+        stub(method(PolicyWriterUtil.class, "writeClassMap")).toReturn(true);
+        stub(method(PolicyWriterUtil.class, "writePolicyMapEntry")).toReturn(true);
 
-        ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sgtBuilder(10), sgtBuilder(20),
-                resolvedActionBuilder(CHAIN, action, In), context, dataBroker);
+        ServiceChainingUtil.newChainAction(peerEndpoint, sgtBuilder(10), sgtBuilder(20),
+                resolvedActionBuilder(RULE_NAME, CHAIN, action, In), context, dataBroker);
 
-        verify(policyWriter).cache(any(ClassMap.class));
-        verify(policyWriter).cache(any(Class.class));
-        verifyNoMoreInteractions(policyWriter);
-        verifyNoMoreInteractions(dataBroker);
+        verifyStatic(times(1));
+        PolicyWriterUtil.writeClassMap(any(ClassMap.class), any(PolicyManagerImpl.PolicyMapLocation.class));
+        PolicyWriterUtil.writePolicyMapEntry(any(Class.class), any(PolicyManagerImpl.PolicyMapLocation.class));
     }
 
     @Test
     public void testResolveRemovedChainAction_noParameterValue() {
+        final PolicyConfigurationContext context = new PolicyConfigurationContext();
+        context.setPolicyMapLocation(getLocation());
         final PeerEndpoint peerEndpoint = peerEndpointBuilder();
         final Action action = actionBuilder(null);
 
         ServiceChainingUtil.resolveRemovedChainAction(peerEndpoint, sgtBuilder(10), sgtBuilder(20),
-                resolvedActionBuilder(CHAIN, action, In), policyWriter);
+                resolvedActionBuilder(new RuleName("rule-name"), CHAIN, action, In), context);
 
-        verifyNoMoreInteractions(policyWriter);
+        verifyNoMoreInteractions(policyWriterUtil);
     }
 
     @Test
     public void testResolveRemovedChainAction_noTenantId() {
+        final PolicyConfigurationContext context = new PolicyConfigurationContext();
+        context.setPolicyMapLocation(getLocation());
         final ParameterValueBuilder parameterValueBuilder = new ParameterValueBuilder();
         parameterValueBuilder.setName(new ParameterName(SFC_CHAIN_NAME)).setStringValue(SFC_CHAIN_NAME);
         final ParameterValue parameterValue = parameterValueBuilder.build();
@@ -329,13 +334,15 @@ public class ServiceChainingUtilTest {
         stub(method(PolicyManagerUtil.class, "getTenantId")).toReturn(null);
 
         ServiceChainingUtil.resolveRemovedChainAction(peerEndpoint, sgtBuilder(10), sgtBuilder(20),
-                resolvedActionBuilder(CHAIN, action, In), policyWriter);
+                resolvedActionBuilder(new RuleName("rule-name"), CHAIN, action, In), context);
 
-        verifyNoMoreInteractions(policyWriter);
+        verifyNoMoreInteractions(policyWriterUtil);
     }
 
     @Test
     public void testResolveRemovedChainAction_asymmetricChainOpposite() {
+        final PolicyConfigurationContext context = new PolicyConfigurationContext();
+        context.setPolicyMapLocation(getLocation());
         final ParameterValueBuilder parameterValueBuilder = new ParameterValueBuilder();
         parameterValueBuilder.setName(new ParameterName(SFC_CHAIN_NAME)).setStringValue(SFC_CHAIN_NAME);
         final ParameterValue parameterValue = parameterValueBuilder.build();
@@ -353,13 +360,15 @@ public class ServiceChainingUtilTest {
         stub(method(PolicyManagerUtil.class, "getTenantId")).toReturn(new TenantId(TENANT_ID));
 
         ServiceChainingUtil.resolveRemovedChainAction(peerEndpoint, sgtBuilder(10), sgtBuilder(20),
-                resolvedActionBuilder(CHAIN, action, In), policyWriter);
+                resolvedActionBuilder(new RuleName("rule-name"), CHAIN, action, In), context);
 
-        verifyNoMoreInteractions(policyWriter);
+        verifyNoMoreInteractions(policyWriterUtil);
     }
 
     @Test
     public void testResolveRemovedChainAction_asymmetricChainDirect() {
+        final PolicyConfigurationContext context = new PolicyConfigurationContext();
+        context.setPolicyMapLocation(getLocation());
         final ParameterValueBuilder parameterValueBuilder = new ParameterValueBuilder();
         parameterValueBuilder.setName(new ParameterName(SFC_CHAIN_NAME)).setStringValue(SFC_CHAIN_NAME);
         final ParameterValue parameterValue = parameterValueBuilder.build();
@@ -372,29 +381,30 @@ public class ServiceChainingUtilTest {
         final Action action = actionBuilder(Collections.singletonList(parameterValue));
         final RenderedServicePathHopBuilder hopBuilder = new RenderedServicePathHopBuilder();
         hopBuilder.setServiceFunctionForwarder(new SffName(SERVICE_FUNCTION_FORWARDER));
-        final List<RenderedServicePathHop> hops = Collections.singletonList(hopBuilder.build());
         final ServiceFunctionForwarderBuilder forwarder = new ServiceFunctionForwarderBuilder();
         forwarder.setName(new SffName(SERVICE_FUNCTION_FORWARDER))
                 .setIpMgmtAddress(new IpAddress(new Ipv4Address(IP_ADDRESS)));
 
         stub(method(SfcProviderServicePathAPI.class, "readAllServiceFunctionPaths")).toReturn(pathsBuilder.build());
-        stub(method(SfcProviderServiceForwarderAPI.class, "readServiceFunctionForwarder")).toReturn(forwarder.build());
-        stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(buildRsp(hops));
-        stub(method(PolicyManagerUtil.class, "getTenantId")).toReturn(new TenantId(TENANT_ID));
+        stub(method(PolicyWriterUtil.class, "removeClassMap")).toReturn(true);
+        stub(method(PolicyWriterUtil.class, "removePolicyMapEntry")).toReturn(true);
+        stub(method(PolicyWriterUtil.class, "removeServicePath")).toReturn(true);
+        stub(method(PolicyWriterUtil.class, "removeRemote")).toReturn(true);
 
         ServiceChainingUtil.resolveRemovedChainAction(peerEndpoint, sgtBuilder(10), sgtBuilder(20),
-                resolvedActionBuilder(CHAIN, action, Out), policyWriter);
+                resolvedActionBuilder(new RuleName("rule-name"), CHAIN, action, Out), context);
 
-        verify(policyWriter).cache(any(ClassMap.class));
-        verify(policyWriter).cache(any(Class.class));
-        verify(policyWriter).getManagementIpAddress();
-        verify(policyWriter).cache(any(ServiceChain.class));
-        verify(policyWriter).cache(any(ServiceFfName.class));
-        verifyNoMoreInteractions(policyWriter);
+        verifyStatic(times(1));
+        PolicyWriterUtil.removeClassMap(any(ClassMap.class), any(PolicyManagerImpl.PolicyMapLocation.class));
+        PolicyWriterUtil.removePolicyMapEntry(any(Class.class), any(PolicyManagerImpl.PolicyMapLocation.class));
+        PolicyWriterUtil.removeServicePath(any(ServiceChain.class), any(PolicyManagerImpl.PolicyMapLocation.class));
+        PolicyWriterUtil.removeRemote(any(ServiceFfName.class), any(PolicyManagerImpl.PolicyMapLocation.class));
     }
 
     @Test
     public void testResolveRemovedChainAction_symmetricChainDirect() {
+        final PolicyConfigurationContext context = new PolicyConfigurationContext();
+        context.setPolicyMapLocation(getLocation());
         final ParameterValueBuilder parameterValueBuilder = new ParameterValueBuilder();
         parameterValueBuilder.setName(new ParameterName(SFC_CHAIN_NAME)).setStringValue(SFC_CHAIN_NAME);
         final ParameterValue parameterValue = parameterValueBuilder.build();
@@ -407,29 +417,30 @@ public class ServiceChainingUtilTest {
         final Action action = actionBuilder(Collections.singletonList(parameterValue));
         final RenderedServicePathHopBuilder hopBuilder = new RenderedServicePathHopBuilder();
         hopBuilder.setServiceFunctionForwarder(new SffName(SERVICE_FUNCTION_FORWARDER));
-        final List<RenderedServicePathHop> hops = Collections.singletonList(hopBuilder.build());
         final ServiceFunctionForwarderBuilder forwarder = new ServiceFunctionForwarderBuilder();
         forwarder.setName(new SffName(SERVICE_FUNCTION_FORWARDER))
                 .setIpMgmtAddress(new IpAddress(new Ipv4Address(IP_ADDRESS)));
 
         stub(method(SfcProviderServicePathAPI.class, "readAllServiceFunctionPaths")).toReturn(pathsBuilder.build());
-        stub(method(SfcProviderServiceForwarderAPI.class, "readServiceFunctionForwarder")).toReturn(forwarder.build());
-        stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(buildRsp(hops));
-        stub(method(PolicyManagerUtil.class, "getTenantId")).toReturn(new TenantId(TENANT_ID));
+        stub(method(PolicyWriterUtil.class, "removeClassMap")).toReturn(true);
+        stub(method(PolicyWriterUtil.class, "removePolicyMapEntry")).toReturn(true);
+        stub(method(PolicyWriterUtil.class, "removeServicePath")).toReturn(true);
+        stub(method(PolicyWriterUtil.class, "removeRemote")).toReturn(true);
 
         ServiceChainingUtil.resolveRemovedChainAction(peerEndpoint, sgtBuilder(10), sgtBuilder(20),
-                resolvedActionBuilder(CHAIN, action, Out), policyWriter);
+                resolvedActionBuilder(new RuleName("rule-name"), CHAIN, action, Out), context);
 
-        verify(policyWriter).cache(any(ClassMap.class));
-        verify(policyWriter).cache(any(Class.class));
-        verify(policyWriter).getManagementIpAddress();
-        verify(policyWriter).cache(any(ServiceChain.class));
-        verify(policyWriter).cache(any(ServiceFfName.class));
-        verifyNoMoreInteractions(policyWriter);
+        verifyStatic(times(1));
+        PolicyWriterUtil.removeClassMap(any(ClassMap.class), any(PolicyManagerImpl.PolicyMapLocation.class));
+        PolicyWriterUtil.removePolicyMapEntry(any(Class.class), any(PolicyManagerImpl.PolicyMapLocation.class));
+        PolicyWriterUtil.removeServicePath(any(ServiceChain.class), any(PolicyManagerImpl.PolicyMapLocation.class));
+        PolicyWriterUtil.removeRemote(any(ServiceFfName.class), any(PolicyManagerImpl.PolicyMapLocation.class));
     }
 
     @Test
     public void testResolveRemovedChainAction_symmetricChainReversed() {
+        final PolicyConfigurationContext context = new PolicyConfigurationContext();
+        context.setPolicyMapLocation(getLocation());
         final ParameterValueBuilder parameterValueBuilder = new ParameterValueBuilder();
         parameterValueBuilder.setName(new ParameterName(SFC_CHAIN_NAME)).setStringValue(SFC_CHAIN_NAME);
         final ParameterValue parameterValue = parameterValueBuilder.build();
@@ -442,35 +453,38 @@ public class ServiceChainingUtilTest {
         final Action action = actionBuilder(Collections.singletonList(parameterValue));
         final RenderedServicePathHopBuilder hopBuilder = new RenderedServicePathHopBuilder();
         hopBuilder.setServiceFunctionForwarder(new SffName(SERVICE_FUNCTION_FORWARDER));
-        final List<RenderedServicePathHop> hops = Collections.singletonList(hopBuilder.build());
         final ServiceFunctionForwarderBuilder forwarder = new ServiceFunctionForwarderBuilder();
         forwarder.setName(new SffName(SERVICE_FUNCTION_FORWARDER))
                 .setIpMgmtAddress(new IpAddress(new Ipv4Address(IP_ADDRESS)));
 
         stub(method(SfcProviderServicePathAPI.class, "readAllServiceFunctionPaths")).toReturn(pathsBuilder.build());
-        stub(method(SfcProviderServiceForwarderAPI.class, "readServiceFunctionForwarder")).toReturn(forwarder.build());
-        stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(buildRsp(hops));
-        stub(method(PolicyManagerUtil.class, "getTenantId")).toReturn(new TenantId(TENANT_ID));
+        stub(method(PolicyWriterUtil.class, "removeClassMap")).toReturn(true);
+        stub(method(PolicyWriterUtil.class, "removePolicyMapEntry")).toReturn(true);
+        stub(method(PolicyWriterUtil.class, "removeServicePath")).toReturn(true);
+        stub(method(PolicyWriterUtil.class, "removeRemote")).toReturn(true);
 
         ServiceChainingUtil.resolveRemovedChainAction(peerEndpoint, sgtBuilder(10), sgtBuilder(20),
-                resolvedActionBuilder(CHAIN, action, In), policyWriter);
+                resolvedActionBuilder(new RuleName("rule-name"), CHAIN, action, In), context);
 
-        verify(policyWriter).cache(any(ClassMap.class));
-        verify(policyWriter).cache(any(Class.class));
-        verify(policyWriter).getManagementIpAddress();
-        verify(policyWriter).cache(any(ServiceChain.class));
-        verify(policyWriter).cache(any(ServiceFfName.class));
-        verifyNoMoreInteractions(policyWriter);
+        verifyStatic(times(1));
+        PolicyWriterUtil.removeClassMap(any(ClassMap.class), any(PolicyManagerImpl.PolicyMapLocation.class));
+        PolicyWriterUtil.removePolicyMapEntry(any(Class.class), any(PolicyManagerImpl.PolicyMapLocation.class));
+        PolicyWriterUtil.removeServicePath(any(ServiceChain.class), any(PolicyManagerImpl.PolicyMapLocation.class));
+        PolicyWriterUtil.removeRemote(any(ServiceFfName.class), any(PolicyManagerImpl.PolicyMapLocation.class));
     }
 
     @Test
     public void testResolveRemoteSfcComponents_noForwarder() {
-        boolean result = ServiceChainingUtil.resolveRemoteSfcComponents(buildRsp(null), policyWriter);
+        final PolicyConfigurationContext context = new PolicyConfigurationContext();
+        context.setPolicyMapLocation(getLocation());
+        boolean result = ServiceChainingUtil.resolveRemoteSfcComponents(buildRsp(), context);
         assertFalse(result);
     }
 
     @Test
     public void testResolveRemoteSfcComponents_noForwarderLocator() {
+        final PolicyConfigurationContext context = new PolicyConfigurationContext();
+        context.setPolicyMapLocation(getLocation());
         final ServiceFunctionForwarderBuilder forwarderBuilder = new ServiceFunctionForwarderBuilder();
         forwarderBuilder.setName(new SffName(SERVICE_FUNCTION_FORWARDER));
         final RenderedServicePathHopBuilder hopBuilder = new RenderedServicePathHopBuilder();
@@ -480,13 +494,14 @@ public class ServiceChainingUtilTest {
 
         stub(method(SfcProviderServiceForwarderAPI.class, "readServiceFunctionForwarder")).toReturn(forwarderBuilder.build());
 
-        boolean result = ServiceChainingUtil.resolveRemoteSfcComponents(rspBuilder.build(), policyWriter);
+        boolean result = ServiceChainingUtil.resolveRemoteSfcComponents(rspBuilder.build(), context);
         assertFalse(result);
-        verifyZeroInteractions(policyWriter);
     }
 
     @Test
     public void testResolveRemoteSfcComponents_dplWithoutLocatorType() {
+        final PolicyConfigurationContext context = new PolicyConfigurationContext();
+        context.setPolicyMapLocation(getLocation());
         final DataPlaneLocatorBuilder dplBuilder = new DataPlaneLocatorBuilder();
         final SffDataPlaneLocatorBuilder sffDplBuilder = new SffDataPlaneLocatorBuilder();
         sffDplBuilder.setDataPlaneLocator(dplBuilder.build());
@@ -500,13 +515,14 @@ public class ServiceChainingUtilTest {
 
         stub(method(SfcProviderServiceForwarderAPI.class, "readServiceFunctionForwarder")).toReturn(forwarderBuilder.build());
 
-        boolean result = ServiceChainingUtil.resolveRemoteSfcComponents(rspBuilder.build(), policyWriter);
+        boolean result = ServiceChainingUtil.resolveRemoteSfcComponents(rspBuilder.build(), context);
         assertFalse(result);
-        verifyZeroInteractions(policyWriter);
     }
 
     @Test
     public void testResolveRemoteSfcComponents_dplWithoutIp() {
+        final PolicyConfigurationContext context = new PolicyConfigurationContext();
+        context.setPolicyMapLocation(getLocation());
         final DataPlaneLocatorBuilder dplBuilder = new DataPlaneLocatorBuilder();
         dplBuilder.setLocatorType(new IpBuilder().build());
         final SffDataPlaneLocatorBuilder sffDplBuilder = new SffDataPlaneLocatorBuilder();
@@ -521,13 +537,14 @@ public class ServiceChainingUtilTest {
 
         stub(method(SfcProviderServiceForwarderAPI.class, "readServiceFunctionForwarder")).toReturn(forwarderBuilder.build());
 
-        boolean result = ServiceChainingUtil.resolveRemoteSfcComponents(rspBuilder.build(), policyWriter);
+        boolean result = ServiceChainingUtil.resolveRemoteSfcComponents(rspBuilder.build(), context);
         assertFalse(result);
-        verifyZeroInteractions(policyWriter);
     }
 
     @Test
     public void testResolveRemoteSfcComponents_sffWithoutMgmtAddress() {
+        final PolicyConfigurationContext context = new PolicyConfigurationContext();
+        context.setPolicyMapLocation(getLocation());
         final DataPlaneLocatorBuilder dplBuilder = new DataPlaneLocatorBuilder();
         dplBuilder.setLocatorType(new IpBuilder().setIp(new IpAddress(new Ipv4Address(IP_ADDRESS))).build());
         final SffDataPlaneLocatorBuilder sffDplBuilder = new SffDataPlaneLocatorBuilder();
@@ -542,13 +559,14 @@ public class ServiceChainingUtilTest {
 
         stub(method(SfcProviderServiceForwarderAPI.class, "readServiceFunctionForwarder")).toReturn(forwarderBuilder.build());
 
-        boolean result = ServiceChainingUtil.resolveRemoteSfcComponents(rspBuilder.build(), policyWriter);
+        boolean result = ServiceChainingUtil.resolveRemoteSfcComponents(rspBuilder.build(), context);
         assertFalse(result);
-        verifyZeroInteractions(policyWriter);
     }
 
     @Test
     public void testResolveRemoteSfcComponents_remoteCase() {
+        final PolicyConfigurationContext context = new PolicyConfigurationContext();
+        context.setPolicyMapLocation(getLocation());
         final DataPlaneLocatorBuilder dplBuilder = new DataPlaneLocatorBuilder();
         dplBuilder.setLocatorType(new IpBuilder().setIp(new IpAddress(new Ipv4Address("190.1.1.12"))).build());
         final SffDataPlaneLocatorBuilder sffDplBuilder = new SffDataPlaneLocatorBuilder();
@@ -563,13 +581,14 @@ public class ServiceChainingUtilTest {
         rspBuilder.setRenderedServicePathHop(Collections.singletonList(hopBuilder.build()));
 
         stub(method(SfcProviderServiceForwarderAPI.class, "readServiceFunctionForwarder")).toReturn(forwarderBuilder.build());
+        stub(method(PolicyWriterUtil.class, "writeServicePath")).toReturn(true);
+        stub(method(PolicyWriterUtil.class, "writeRemote")).toReturn(true);
 
-        boolean result = ServiceChainingUtil.resolveRemoteSfcComponents(rspBuilder.build(), policyWriter);
+        boolean result = ServiceChainingUtil.resolveRemoteSfcComponents(rspBuilder.build(), context);
         assertTrue(result);
-        verify(policyWriter).getManagementIpAddress();
-        verify(policyWriter).cache(any(ServiceChain.class));
-        verify(policyWriter).cache(any(ServiceFfName.class));
-        verifyNoMoreInteractions(policyWriter);
+        verifyStatic(times(1));
+        PolicyWriterUtil.writeServicePath(any(ServiceChain.class), any(PolicyManagerImpl.PolicyMapLocation.class));
+        PolicyWriterUtil.writeRemote(any(ServiceFfName.class), any(PolicyManagerImpl.PolicyMapLocation.class));
     }
 
     @Test
@@ -669,6 +688,10 @@ public class ServiceChainingUtilTest {
 
     @Test
     public void testCreateRenderedPath_renderedPathFound() {
+        final Sgt sourceSgt = new Sgt(1);
+        final Sgt destinationSgt = new Sgt(2);
+        final PolicyConfigurationContext context = new PolicyConfigurationContext();
+        context.setPolicyMapLocation(getLocation());
         final ServiceFunctionPathBuilder serviceFunctionPathBuilder = new ServiceFunctionPathBuilder();
         serviceFunctionPathBuilder.setName(new SfpName(SFC_PATH_NAME))
                 .setSymmetric(true);
@@ -677,13 +700,18 @@ public class ServiceChainingUtilTest {
 
         stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(new RenderedServicePathBuilder().build());
 
-        final RenderedServicePath result = ServiceChainingUtil.createRenderedPath(serviceFunctionPath, tenantId, dataBroker);
+        final RenderedServicePath result = ServiceChainingUtil.resolveRenderedServicePath(serviceFunctionPath, tenantId,
+                dataBroker, sourceSgt, destinationSgt, context);
         assertNotNull(result);
     }
 
     @Test
     public void testCreateRenderedPath_renderedPathCreated() {
         ServiceChainingUtil.setTimeout(1L);
+        final Sgt sourceSgt = new Sgt(1);
+        final Sgt destinationSgt = new Sgt(2);
+        final PolicyConfigurationContext context = new PolicyConfigurationContext();
+        context.setPolicyMapLocation(getLocation());
         final ServiceFunctionPathBuilder serviceFunctionPathBuilder = new ServiceFunctionPathBuilder();
         serviceFunctionPathBuilder.setName(new SfpName(SFC_PATH_NAME))
                 .setSymmetric(true);
@@ -694,12 +722,17 @@ public class ServiceChainingUtilTest {
         stub(method(SfcProviderRenderedPathAPI.class, "createRenderedServicePathAndState", ServiceFunctionPath.class,
                 CreateRenderedPathInput.class)).toReturn(new RenderedServicePathBuilder().build());
 
-        final RenderedServicePath result = ServiceChainingUtil.createRenderedPath(serviceFunctionPath, tenantId, dataBroker);
+        final RenderedServicePath result = ServiceChainingUtil.resolveRenderedServicePath(serviceFunctionPath, tenantId,
+                dataBroker, sourceSgt, destinationSgt, context);
         assertNotNull(result);
     }
 
     @Test
     public void testCreateReversedRenderedPath_renderedPathFound() {
+        final Sgt sourceSgt = new Sgt(1);
+        final Sgt destinationSgt = new Sgt(2);
+        final PolicyConfigurationContext context = new PolicyConfigurationContext();
+        context.setPolicyMapLocation(getLocation());
         final ServiceFunctionPathBuilder serviceFunctionPathBuilder = new ServiceFunctionPathBuilder();
         serviceFunctionPathBuilder.setName(new SfpName(SFC_PATH_NAME))
                 .setSymmetric(true);
@@ -708,27 +741,30 @@ public class ServiceChainingUtilTest {
 
         stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(new RenderedServicePathBuilder().build());
 
-        final RenderedServicePath result = ServiceChainingUtil.createReversedRenderedPath(serviceFunctionPath, null,
-                tenantId, dataBroker);
+        final RenderedServicePath result = ServiceChainingUtil.resolveReversedRenderedServicePath(serviceFunctionPath,
+                tenantId, dataBroker, sourceSgt, destinationSgt, context);
         assertNotNull(result);
     }
 
     @Test
     public void testCreateReversedRenderedPath_renderedPathCreated() {
         ServiceChainingUtil.setTimeout(1L);
+        final Sgt sourceSgt = new Sgt(1);
+        final Sgt destinationSgt = new Sgt(2);
+        final PolicyConfigurationContext context = new PolicyConfigurationContext();
+        context.setPolicyMapLocation(getLocation());
         final ServiceFunctionPathBuilder serviceFunctionPathBuilder = new ServiceFunctionPathBuilder();
         serviceFunctionPathBuilder.setName(new SfpName(SFC_PATH_NAME))
                 .setSymmetric(true);
         final ServiceFunctionPath serviceFunctionPath = serviceFunctionPathBuilder.build();
         final TenantId tenantId = new TenantId(TENANT_ID);
-        final RenderedServicePath renderedServicePath = new RenderedServicePathBuilder().build();
 
         stub(method(SfcProviderRenderedPathAPI.class, "readRenderedServicePath")).toReturn(null);
         stub(method(SfcProviderRenderedPathAPI.class, "createReverseRenderedServicePathEntry"))
                 .toReturn(new RenderedServicePathBuilder().build());
 
-        final RenderedServicePath result = ServiceChainingUtil.createReversedRenderedPath(serviceFunctionPath, renderedServicePath,
-                tenantId, dataBroker);
+        final RenderedServicePath result = ServiceChainingUtil.resolveReversedRenderedServicePath(serviceFunctionPath,
+                tenantId, dataBroker, sourceSgt, destinationSgt, context);
         assertNotNull(result);
     }
 
@@ -744,7 +780,6 @@ public class ServiceChainingUtilTest {
         final ServiceFfName result = ServiceChainingUtil.createRemoteForwarder(serviceFunctionForwarderBuilder.build());
         assertEquals(testForwarder, result);
     }
-
 
     @Test
     public void testGetServicePath() throws Exception {
@@ -771,13 +806,18 @@ public class ServiceChainingUtilTest {
         final String sfcNameValue = "123";
         final ServiceFunctionPath sfp = createSfp(sfcNameValue);
         final TenantId tenantId = new TenantId("unit-tenant-01");
+        final Sgt sourceSgt = new Sgt(1);
+        final Sgt destinationSgt = new Sgt(2);
+        final PolicyConfigurationContext context = new PolicyConfigurationContext();
+        context.setPolicyMapLocation(getLocation());
 
         final RenderedServicePath rsp = createRsp("unit-rsp-01");
 
         PowerMockito.mockStatic(SfcProviderRenderedPathAPI.class);
         PowerMockito.when(SfcProviderRenderedPathAPI.readRenderedServicePath(rspNameCaptor.capture())).thenReturn(rsp);
 
-        final RenderedServicePath renderedPath = ServiceChainingUtil.createRenderedPath(sfp, tenantId, dataBroker);
+        final RenderedServicePath renderedPath = ServiceChainingUtil.resolveRenderedServicePath(sfp, tenantId,
+                dataBroker, sourceSgt, destinationSgt, context);
 
         assertEquals("123_plain-unit-tenant-01-gbp-rsp", rspNameCaptor.getValue().getValue());
         assertEquals(rsp, renderedPath);
@@ -788,11 +828,18 @@ public class ServiceChainingUtilTest {
         final ServiceFunctionPath sfp = createSfp("unit-sfp-02");
         final RenderedServicePath rsp = createRsp("unit-rsp-02");
         final TenantId tenantId = new TenantId("tenant-02");
+        final Sgt sourceSgt = new Sgt(1);
+        final Sgt destinationSgt = new Sgt(2);
+        final PolicyConfigurationContext context = new PolicyConfigurationContext();
+        context.setPolicyMapLocation(getLocation());
 
         PowerMockito.mockStatic(SfcProviderRenderedPathAPI.class);
         PowerMockito.when(SfcProviderRenderedPathAPI.readRenderedServicePath(rspNameCaptor.capture())).thenReturn(rsp);
+        stub(method(SfcProviderServiceForwarderAPI.class, "readServiceFunctionForwarder"))
+                .toReturn(new ServiceFunctionForwarderBuilder().setName(new SffName("sff-name")).build());
 
-        final RenderedServicePath symmetricRenderedPath = ServiceChainingUtil.createReversedRenderedPath(sfp, rsp, tenantId, dataBroker);
+        final RenderedServicePath symmetricRenderedPath = ServiceChainingUtil.resolveReversedRenderedServicePath(sfp,
+                tenantId, dataBroker, sourceSgt, destinationSgt, context);
 
         assertEquals("unit-sfp-02_plain-tenant-02-gbp-rsp-Reverse", rspNameCaptor.getValue().getValue());
         assertEquals(rsp, symmetricRenderedPath);
@@ -814,9 +861,9 @@ public class ServiceChainingUtilTest {
 
     // Auxiliary methods
 
-    private RenderedServicePath buildRsp(List<RenderedServicePathHop> hop) {
+    private RenderedServicePath buildRsp() {
         RenderedServicePathBuilder renderedServicePathBuilder = new RenderedServicePathBuilder();
-        renderedServicePathBuilder.setRenderedServicePathHop(hop);
+        renderedServicePathBuilder.setRenderedServicePathHop(null);
         return renderedServicePathBuilder.build();
     }
 
@@ -850,17 +897,17 @@ public class ServiceChainingUtilTest {
         return peerEndpointBuilder.build();
     }
 
-    private Map<ActionCase, ActionInDirection> resolvedActionBuilder(@Nonnull final ActionCase actionCase,
+    private Map<ActionCase, ActionInDirection> resolvedActionBuilder(@Nonnull final RuleName ruleName,
+                                                                     @Nonnull final ActionCase actionCase,
                                                                      @Nonnull final Action action,
                                                                      @Nonnull final Direction direction) {
-        final ActionInDirection actionInDirection = new ActionInDirection(action, PROVIDER, direction);
+        final ActionInDirection actionInDirection = new ActionInDirection(ruleName, action, PROVIDER, direction);
         return Collections.singletonMap(actionCase, actionInDirection);
     }
 
     private PolicyConfigurationContext policyConfigurationContextBuilder() {
         final RendererEndpointBuilder rendererEndpointBuilder = new RendererEndpointBuilder();
         final PolicyConfigurationContext context = new PolicyConfigurationContext();
-        context.setPolicyWriter(policyWriter);
         context.setCurrentRendererEP(rendererEndpointBuilder.build());
         return context;
     }
@@ -873,5 +920,13 @@ public class ServiceChainingUtilTest {
         final ActionBuilder actionBuilder = new ActionBuilder();
         actionBuilder.setParameterValue(parameters);
         return actionBuilder.build();
+    }
+
+    private PolicyManagerImpl.PolicyMapLocation getLocation() {
+        final String POLICY_MAP = "policy-map";
+        final String INTERFACE = "interface";
+        final NodeId nodeId = new NodeId("node-id");
+        final String IP_ADDRESS = "ip-address";
+        return new PolicyManagerImpl.PolicyMapLocation(POLICY_MAP, INTERFACE, nodeId, IP_ADDRESS, dataBroker);
     }
 }

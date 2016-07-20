@@ -17,6 +17,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.RendererPolicyUtil;
@@ -114,16 +115,16 @@ public class PolicyManagerImplTest {
     private PolicyManagerImpl policyManager;
     private DataBroker mountpoint;
     private NodeManager nodeManager;
-    private WriteTransaction writeTransaction;
+    private ReadWriteTransaction readWriteTransaction;
 
     @Before
     public void init() {
         mountpoint = mock(DataBroker.class);
-        writeTransaction = mock(WriteTransaction.class);
+        readWriteTransaction = mock(ReadWriteTransaction.class);
         nodeManager = mock(NodeManager.class);
         policyManager = new PolicyManagerImpl(mountpoint, nodeManager);
-        when(mountpoint.newWriteOnlyTransaction()).thenReturn(writeTransaction);
-        when(writeTransaction.submit()).thenReturn(Futures.immediateCheckedFuture((Void) null));
+        when(mountpoint.newReadWriteTransaction()).thenReturn(readWriteTransaction);
+        when(readWriteTransaction.submit()).thenReturn(Futures.immediateCheckedFuture((Void) null));
     }
 
     @Test
@@ -265,7 +266,7 @@ public class PolicyManagerImplTest {
         ServiceFunctionPath sfp = createServiceFunctionPath();
         stub(method(ServiceChainingUtil.class, "findServicePathFromParameterValues")).toReturn(sfp);
         RenderedServicePath rsp = createRenderedServicePath();
-        stub(method(ServiceChainingUtil.class, "createRenderedPath")).toReturn(rsp);
+        stub(method(ServiceChainingUtil.class, "resolveRenderedServicePath")).toReturn(rsp);
         ServiceFunctionForwarder serviceFunctionForwarder = createServiceForwarder();
         stub(method(SfcProviderServiceForwarderAPI.class, "readServiceFunctionForwarder"))
                 .toReturn(serviceFunctionForwarder);

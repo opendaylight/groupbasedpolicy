@@ -10,7 +10,11 @@ package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriter;
+import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.unconfigured.rule.groups.unconfigured.rule.group.UnconfiguredResolvedRule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Status;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.status.unconfigured.endpoints.UnconfiguredRendererEndpoint;
@@ -18,47 +22,60 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 /**
  * Purpose: placeholder for
  * <ul>
- *     <li>{@link PolicyWriter}</li>
- *     <li>{@link Status} parts</li>
+ * <li>{@link PolicyManagerImpl.PolicyMapLocation}</li>
+ * <li>{@link Status} parts</li>
  * </ul>
  */
 public class PolicyConfigurationContext {
 
     private final List<UnconfiguredRendererEndpoint> unconfiguredRendererEPBag;
-    private PolicyWriter policyWriter;
+    private final List<CheckedFuture<Boolean, TransactionCommitFailedException>> cumulativeResult;
+    private PolicyManagerImpl.PolicyMapLocation policyMapLocation;
     private RendererEndpoint currentRendererEP;
+    private UnconfiguredResolvedRule currentUnconfiguredRule;
 
     public PolicyConfigurationContext() {
         unconfiguredRendererEPBag = new ArrayList<>();
+        cumulativeResult = new ArrayList<>();
     }
 
     /**
-     * @return policyWriter for mountpoint currently being configured
+     * Set transaction result to result pool
+     *
+     * @param result current result
      */
-    public PolicyWriter getPolicyWriter() {
-        return policyWriter;
-    }
-
-    /**
-     * @param policyWriter for mountpoint currently being configured
-     */
-    public void setPolicyWriter(final PolicyWriter policyWriter) {
-        this.policyWriter = policyWriter;
-    }
-
-    /**
-     * @return list of not configurable policies
-     */
-    public List<UnconfiguredRendererEndpoint> getUnconfiguredRendererEPBag() {
-        return unconfiguredRendererEPBag;
+    public void setFutureResult(final CheckedFuture<Boolean, TransactionCommitFailedException> result) {
+        cumulativeResult.add(result);
     }
 
     /**
      * append given endpoint to collection of not configurable policies
+     *
      * @param endpoint not configurable endpoint
      */
     public void appendUnconfiguredRendererEP(UnconfiguredRendererEndpoint endpoint) {
         unconfiguredRendererEPBag.add(endpoint);
+    }
+
+    /**
+     * @return policy-map location
+     */
+    public PolicyManagerImpl.PolicyMapLocation getPolicyMapLocation() {
+        return policyMapLocation;
+    }
+
+    /**
+     * @param policyMapLocation for actual policy-map/interface location
+     */
+    public void setPolicyMapLocation(final PolicyManagerImpl.PolicyMapLocation policyMapLocation) {
+        this.policyMapLocation = policyMapLocation;
+    }
+
+    /**
+     * @return endpoint currently being configured
+     */
+    public RendererEndpoint getCurrentRendererEP() {
+        return currentRendererEP;
     }
 
     /**
@@ -69,9 +86,32 @@ public class PolicyConfigurationContext {
     }
 
     /**
-     * @return endpoint currently being configured
+     * @return list of not configurable policies
      */
-    public RendererEndpoint getCurrentRendererEP() {
-        return currentRendererEP;
+    List<UnconfiguredRendererEndpoint> getUnconfiguredRendererEPBag() {
+        return unconfiguredRendererEPBag;
+    }
+
+    /**
+     * @return all unconfigured rules
+     */
+    public UnconfiguredResolvedRule getCurrentUnconfiguredRule() {
+        return currentUnconfiguredRule;
+    }
+
+    /**
+     * Add unconfigured rule to list
+     *
+     * @param unconfiguredResolvedRule unconfigured rule
+     */
+    public void setCurrentUnconfiguredRule(final UnconfiguredResolvedRule unconfiguredResolvedRule) {
+        this.currentUnconfiguredRule = unconfiguredResolvedRule;
+    }
+
+    /**
+     * @return get all transaction results as a list
+     */
+    ListenableFuture<List<Boolean>> getCumulativeResult() {
+        return Futures.allAsList(cumulativeResult);
     }
 }

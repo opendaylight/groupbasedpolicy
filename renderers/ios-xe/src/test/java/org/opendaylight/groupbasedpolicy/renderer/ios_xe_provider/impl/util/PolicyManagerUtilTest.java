@@ -8,9 +8,11 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util;
 
+import static org.junit.Assert.assertNotNull;
+
+import java.util.Collections;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
-import java.util.Collections;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -25,6 +27,8 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyConfigurationContext;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl;
 import org.opendaylight.sfc.provider.OpendaylightSfc;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.SfcName;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.SfpName;
@@ -40,9 +44,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValueBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-
-import static org.junit.Assert.assertNotNull;
 
 /**
  * Test for {@link PolicyManagerUtil}.
@@ -96,15 +100,23 @@ public class PolicyManagerUtilTest {
 
     @Test
     public void testCreateRenderedPath() throws Exception {
+        final String POLICY_MAP = "policy-map";
+        final String INTERFACE = "interface";
+        final NodeId nodeId = new NodeId("node-id");
+        final String IP_ADDRESS = "ip-address";
         final TenantId tenantId = new TenantId("tenant-id-01");
         final RenderedServicePath renderedSP = new RenderedServicePathBuilder().build();
+        final PolicyManagerImpl.PolicyMapLocation location = new PolicyManagerImpl.PolicyMapLocation(POLICY_MAP, INTERFACE,
+                nodeId, IP_ADDRESS, dataBroker);
+        final PolicyConfigurationContext context = new PolicyConfigurationContext();
+        context.setPolicyMapLocation(location);
 
         Mockito.when(dataBroker.newReadOnlyTransaction()).thenReturn(roTx);
         Mockito.when(roTx.read(Matchers.eq(LogicalDatastoreType.OPERATIONAL), rendererServicePathIICaptor.capture()))
                 .thenReturn(Futures.immediateCheckedFuture(Optional.of(renderedSP)));
 
-        final RenderedServicePath renderedPath = ServiceChainingUtil.createRenderedPath(serviceFunctionPath, tenantId,
-                dataBroker);
+        final RenderedServicePath renderedPath = ServiceChainingUtil.resolveRenderedServicePath(serviceFunctionPath, tenantId,
+                dataBroker, new Sgt(1), new Sgt(2), context);
         Assert.assertEquals(renderedSP, renderedPath);
         final InstanceIdentifier<RenderedServicePath> ii = rendererServicePathIICaptor.getValue();
         Assert.assertEquals("sfp-name-01-tenant-id-01-gbp-rsp", ii.firstKeyOf(RenderedServicePath.class).getName().getValue());
@@ -112,6 +124,14 @@ public class PolicyManagerUtilTest {
 
     @Test
     public void testCreateSymmetricRenderedPath() throws Exception {
+        final String POLICY_MAP = "policy-map";
+        final String INTERFACE = "interface";
+        final NodeId nodeId = new NodeId("node-id");
+        final String IP_ADDRESS = "ip-address";
+        final PolicyManagerImpl.PolicyMapLocation location = new PolicyManagerImpl.PolicyMapLocation(POLICY_MAP, INTERFACE,
+                nodeId, IP_ADDRESS, dataBroker);
+        final PolicyConfigurationContext context = new PolicyConfigurationContext();
+        context.setPolicyMapLocation(location);
         final RenderedServicePath renderedServicePath = new RenderedServicePathBuilder().build();
         final TenantId tenantId = new TenantId("tenant-id-02");
 
@@ -119,9 +139,8 @@ public class PolicyManagerUtilTest {
         Mockito.when(roTx.read(Matchers.eq(LogicalDatastoreType.OPERATIONAL), rendererServicePathIICaptor.capture()))
                 .thenReturn(Futures.immediateCheckedFuture(Optional.of(renderedServicePath)));
 
-
-        final RenderedServicePath symmetricRenderedPath = ServiceChainingUtil.createReversedRenderedPath(
-                serviceFunctionPath, renderedServicePath, tenantId, dataBroker);
+        final RenderedServicePath symmetricRenderedPath = ServiceChainingUtil.resolveReversedRenderedServicePath(
+                serviceFunctionPath, tenantId, dataBroker, new Sgt(1), new Sgt(2), context);
         Assert.assertEquals(renderedServicePath, symmetricRenderedPath);
         final InstanceIdentifier<RenderedServicePath> ii = rendererServicePathIICaptor.getValue();
         Assert.assertEquals("sfp-name-01-tenant-id-02-gbp-rsp-Reverse", ii.firstKeyOf(RenderedServicePath.class).getName().getValue());

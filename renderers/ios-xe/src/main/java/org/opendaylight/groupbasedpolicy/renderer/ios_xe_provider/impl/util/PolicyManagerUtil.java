@@ -9,8 +9,6 @@
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util;
 
 import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.ActionCase.CHAIN;
-import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Create;
-import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Delete;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -20,13 +18,16 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.Futures;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyConfigurationContext;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.ActionCase;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriterUtil;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.paths.RenderedServicePath;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308.ClassNameType;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308.PolicyActionType;
@@ -66,6 +67,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.RuleName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection;
@@ -81,6 +83,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.p
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.resolved.rules.ResolvedRule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.mapper.model.rev160302.AddressEndpointWithLocationAug;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,22 +93,58 @@ public class PolicyManagerUtil {
     private static final Logger LOG = LoggerFactory.getLogger(PolicyManagerUtil.class);
 
     /**
-     * Main method which looks for all actions specified in rules between two endpoints. Whichever action has been found,
-     * it is resolved. Only chain action is supported for now.
+     * Main method for policy creation which looks for all actions specified in rules between two endpoints. Whichever
+     * action has been found, it is resolved (only chain action is supported for now).
      *
      * @param sourceSgt      - security group tag of source endpoint
      * @param destinationSgt - security group tag of destination endpoint
-     * @param context        - stores policy writer and info about not configurable rules
-     * @param dataAfter      - new data, used to found appropriate rule group
+     * @param context        - stores info about location of classifier/policy-map and status
+     * @param data           - new data, used to found appropriate rule group
      * @param peerEndpoint   - contains info about rule groups between endpoint pairs
      * @param dataBroker     - data provider for odl controller
-     * @param action         - required action crate/delete
      */
-    public static void syncResolvedPolicy(final Sgt sourceSgt, final Sgt destinationSgt, final PolicyConfigurationContext context,
-                                          final Configuration dataAfter, final PeerEndpoint peerEndpoint,
-                                          final DataBroker dataBroker, final PolicyManagerImpl.DsAction action) {
+    public static void syncEndpointPairCreatePolicy(final Sgt sourceSgt, final Sgt destinationSgt,
+                                                    final PolicyConfigurationContext context, final Configuration data,
+                                                    final PeerEndpoint peerEndpoint, final DataBroker dataBroker) {
+        // Create appropriate policy map
+        if (!PolicyManagerUtil.constructEmptyPolicyMapWithInterface(context)) {
+            final String policyMapName = context.getPolicyMapLocation().getPolicyMapName();
+            final String interfaceName = context.getPolicyMapLocation().getInterfaceName();
+            final String info = String.format("Unable to create policy-map %s on interface %s", policyMapName, interfaceName);
+            context.appendUnconfiguredRendererEP(StatusUtil.assembleFullyNotConfigurableRendererEP(context, info));
+            LOG.warn(info);
+            return;
+        }
+
         // Find actions from acquired data
-        final Map<ActionCase, ActionInDirection> actionMap = PolicyManagerUtil.getActionInDirection(dataAfter, peerEndpoint);
+        final Map<ActionCase, ActionInDirection> actionMap = PolicyManagerUtil.getActionInDirection(data, peerEndpoint);
+        if (actionMap.isEmpty()) {
+            LOG.debug("No usable action found for EP-sgt[{}] | peerEP-sgt[{}]", sourceSgt, destinationSgt);
+            return;
+        }
+
+        // Chain action
+        if (actionMap.containsKey(ActionCase.CHAIN)) {
+            ServiceChainingUtil.newChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, context,
+                    dataBroker);
+        }
+    }
+
+    /**
+     * Method for policy removal which looks for all actions specified in rules between two endpoints. Whichever
+     * action has been found, it is resolved (only chain action is supported).
+     *
+     * @param sourceSgt      - security group tag of source endpoint
+     * @param destinationSgt - security group tag of destination endpoint
+     * @param context        - stores info about location of classifier/policy-map and status
+     * @param data           - data used to identify all elements marked to remove
+     * @param peerEndpoint   - contains info about rule groups between endpoint pairs
+     */
+    public static void syncEndpointPairRemovePolicy(final Sgt sourceSgt, final Sgt destinationSgt,
+                                                    final PolicyConfigurationContext context, final Configuration data,
+                                                    final PeerEndpoint peerEndpoint) {
+        // Find actions from acquired data
+        final Map<ActionCase, ActionInDirection> actionMap = PolicyManagerUtil.getActionInDirection(data, peerEndpoint);
         if (actionMap.isEmpty()) {
             LOG.debug("no usable action found for EP-sgt[{}] | peerEP-sgt[{}]",
                     sourceSgt, destinationSgt);
@@ -113,13 +152,17 @@ public class PolicyManagerUtil {
         }
 
         // Chain action
-        if (actionMap.containsKey(ActionCase.CHAIN) && action.equals(Create)) {
-            ServiceChainingUtil.resolveNewChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap, context,
-                    dataBroker);
-        }
-        if (actionMap.containsKey(ActionCase.CHAIN) && action.equals(Delete)) {
+        if (actionMap.containsKey(ActionCase.CHAIN)) {
             ServiceChainingUtil.resolveRemovedChainAction(peerEndpoint, sourceSgt, destinationSgt, actionMap,
-                    context.getPolicyWriter());
+                    context);
+        }
+
+        // Remove policy-map if empty
+        if (!deleteEmptyPolicyMapWithInterface(context.getPolicyMapLocation())) {
+            final PolicyManagerImpl.PolicyMapLocation location = context.getPolicyMapLocation();
+            final String info = String.format("Unable to remove policy-map %s and interface %s", location.getPolicyMapName(),
+                    location.getInterfaceName());
+            LOG.warn(info);
         }
     }
 
@@ -166,6 +209,82 @@ public class PolicyManagerUtil {
         return augmentation.getSgt();
     }
 
+    /**
+     * Creates empty policy-map if does not exist and bounds it to interface if it is not. If policy-map exists, method
+     * checks whether it is connected to correct interface and creates it if necessary. If policy-map does not exist,
+     * it is created with particular interface
+     *
+     * @param context - all data required to create/localize policy-map
+     * @return true if policy-map and interface is present/written on the device, false otherwise
+     */
+    private static boolean constructEmptyPolicyMapWithInterface(final PolicyConfigurationContext context) {
+        final PolicyManagerImpl.PolicyMapLocation policyMapLocation = context.getPolicyMapLocation();
+        final String policyMapName = policyMapLocation.getPolicyMapName();
+        final DataBroker mountpoint = policyMapLocation.getMountpoint();
+        final String interfaceName = policyMapLocation.getInterfaceName();
+        final NodeId nodeId = policyMapLocation.getNodeId();
+        final InstanceIdentifier<PolicyMap> policyMapIid = PolicyWriterUtil.policyMapInstanceIdentifier(policyMapName);
+        final Optional<PolicyMap> optionalPolicyMap =
+                Optional.ofNullable(PolicyWriterUtil.netconfRead(mountpoint, policyMapIid));
+        if (optionalPolicyMap.isPresent()) {
+            LOG.trace("Policy map with name {} on interface {} already exists", policyMapName, interfaceName);
+            final InstanceIdentifier<ServicePolicy> servicePolicyIid = PolicyWriterUtil.interfaceInstanceIdentifier(interfaceName);
+            final Optional<ServicePolicy> optionalServicePolicy =
+                    Optional.ofNullable(PolicyWriterUtil.netconfRead(mountpoint, servicePolicyIid));
+            if (optionalServicePolicy.isPresent()) {
+                LOG.trace("Policy map {} is bound to correct interface {} ", policyMapName, interfaceName);
+                return true;
+            } else {
+                boolean iResult = PolicyWriterUtil.writeInterface(context.getPolicyMapLocation());
+                context.setFutureResult(Futures.immediateCheckedFuture(iResult));
+                return iResult;
+            }
+        } else {
+            final PolicyMap emptyMap = createEmptyPolicyMap(policyMapName);
+            boolean pmResult = PolicyWriterUtil.writePolicyMap(emptyMap, context.getPolicyMapLocation());
+            context.setFutureResult(Futures.immediateCheckedFuture(pmResult));
+            if (pmResult) {
+                LOG.info("Created policy-map {} on node {}", policyMapName, nodeId.getValue());
+                LOG.trace("Adding policy-map {} to interface {}", policyMapName, interfaceName);
+                boolean iResult = PolicyWriterUtil.writeInterface(context.getPolicyMapLocation());
+                context.setFutureResult(Futures.immediateCheckedFuture(iResult));
+                return iResult;
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Removes empty policy-map and its interface
+     *
+     * @param policyMapLocation - location of policy-map
+     * @return true if policy-map is present and not empty or if it is successfully removed also with interface, false
+     * otherwise
+     */
+    private static boolean deleteEmptyPolicyMapWithInterface(PolicyManagerImpl.PolicyMapLocation policyMapLocation) {
+        final String policyMapName = policyMapLocation.getPolicyMapName();
+        final DataBroker mountpoint = policyMapLocation.getMountpoint();
+        final InstanceIdentifier<PolicyMap> policyMapIid = PolicyWriterUtil.policyMapInstanceIdentifier(policyMapName);
+        // Read policy map
+        final Optional<PolicyMap> optionalPolicyMap = Optional.ofNullable(PolicyWriterUtil.netconfRead(mountpoint, policyMapIid));
+        if (optionalPolicyMap.isPresent()) {
+            final PolicyMap policyMap = optionalPolicyMap.get();
+            if (policyMap.getXmlClass() == null || policyMap.getXmlClass().isEmpty()) {
+                // No entries, remove
+                if (PolicyWriterUtil.removePolicyMap(policyMapLocation)) {
+                    // Remove interface binding if exists
+                    LOG.info("Policy-map {} removed", policyMapName);
+                    return PolicyWriterUtil.removeInterface(policyMapLocation);
+                }
+                return false;
+            }
+            LOG.debug("Policy-map {} still contains entries, cannot be removed", policyMapLocation.getPolicyMapName());
+            return true;
+        }
+        return true;
+
+    }
+
     public static ServicePolicy createServicePolicy(final String chainName, final Direction direction) {
         // Service Chain
         final ServiceChainBuilder serviceChainBuilder = new ServiceChainBuilder();
@@ -181,20 +300,18 @@ public class PolicyManagerUtil {
         return servicePolicyBuilder.build();
     }
 
-    public static PolicyMap createPolicyMap(final String policyMapName, final Set<Class> policyMapEntries) {
+    private static PolicyMap createEmptyPolicyMap(String policyMapName) {
         // TODO maybe could be better to create also class-default entry with pass-through value than not to create any default entry at all
         // Construct policy map
-        final List<Class> policyMapEntriesList = new ArrayList<>(policyMapEntries);
         final PolicyMapBuilder policyMapBuilder = new PolicyMapBuilder();
         policyMapBuilder.setName(policyMapName)
                 .setKey(new PolicyMapKey(policyMapName))
-                .setType(PolicyMap.Type.ServiceChain)
-                .setXmlClass(policyMapEntriesList);
+                .setType(PolicyMap.Type.ServiceChain);
         return policyMapBuilder.build();
     }
 
-    static Class createPolicyEntry(final String policyClassName, final RenderedServicePath renderedPath,
-                                   final ActionCase actionCase) {
+    static Class createPolicyMapEntry(final String policyClassName, final RenderedServicePath renderedPath,
+                                      final ActionCase actionCase) {
         // Forward Case
         final ForwardCaseBuilder forwardCaseBuilder = new ForwardCaseBuilder();
         if (actionCase.equals(CHAIN) && renderedPath != null) {
@@ -236,6 +353,7 @@ public class PolicyManagerUtil {
         return matchBuilder.build();
     }
 
+    @Nonnull
     static ClassMap createClassMap(final String classMapName, final Match match) {
         final ClassMapBuilder cmBuilder = new ClassMapBuilder();
         cmBuilder.setName(classMapName)
@@ -289,11 +407,12 @@ public class PolicyManagerUtil {
         for (ResolvedRule resolvedRule : rulesInDirection) {
             // TODO only first action used for now
             final Action action = resolvedRule.getAction().get(0);
+            final RuleName name = resolvedRule.getName();
             if (action.getActionDefinitionId() != null) {
                 final ActionDefinitionId actionDefinitionId = action.getActionDefinitionId();
                 // Currently only chain action is supported
                 if (actionDefinitionId.equals(ChainActionDefinition.ID)) {
-                    ActionInDirection actionInDirection = new ActionInDirection(action, participation, direction);
+                    ActionInDirection actionInDirection = new ActionInDirection(name, action, participation, direction);
                     result.put(ActionCase.CHAIN, actionInDirection);
                     return result;
                 }
@@ -357,16 +476,23 @@ public class PolicyManagerUtil {
      */
     static class ActionInDirection {
 
+        private final RuleName ruleName;
         private final Action action;
         private final EndpointPolicyParticipation participation;
         private final HasDirection.Direction direction;
 
-        ActionInDirection(final Action action,
+        ActionInDirection(final RuleName ruleName,
+                          final Action action,
                           final EndpointPolicyParticipation participation,
                           final HasDirection.Direction direction) {
+            this.ruleName = Preconditions.checkNotNull(ruleName);
             this.action = Preconditions.checkNotNull(action);
             this.participation = Preconditions.checkNotNull(participation);
             this.direction = Preconditions.checkNotNull(direction);
+        }
+
+        RuleName getRuleName() {
+            return ruleName;
         }
 
         Action getAction() {

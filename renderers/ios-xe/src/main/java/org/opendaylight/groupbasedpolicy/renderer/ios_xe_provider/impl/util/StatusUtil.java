@@ -8,15 +8,17 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import com.google.common.annotations.VisibleForTesting;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyConfigurationContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.rule.group.with.renderer.endpoint.participation.RuleGroupWithRendererEndpointParticipation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.unconfigured.rule.groups.UnconfiguredRuleGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.unconfigured.rule.groups.UnconfiguredRuleGroupBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.unconfigured.rule.groups.unconfigured.rule.group.UnconfiguredResolvedRule;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.unconfigured.rule.groups.unconfigured.rule.group.UnconfiguredResolvedRuleBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Status;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpoint;
@@ -46,46 +48,60 @@ public class StatusUtil {
     public static UnconfiguredRendererEndpoint assembleFullyNotConfigurableRendererEP(final PolicyConfigurationContext context,
                                                                                       final String info) {
         final RendererEndpoint rendererEndpoint = context.getCurrentRendererEP();
-        LOG.trace("fully not configurable EP: {}", info);
+        LOG.trace("Fully not configurable EP: {}", info);
         return new UnconfiguredRendererEndpointBuilder(rendererEndpoint)
-                .setUnconfiguredPeerEndpoint(assemblePeerEndpoint(rendererEndpoint.getPeerEndpoint().stream()))
+                .setUnconfiguredPeerEndpoint(assemblePeerEndpoint(rendererEndpoint.getPeerEndpoint().stream(), context))
                 .setInfo(info)
                 .build();
     }
 
     /**
-     * @param context holder of actual configuration state
-     * @param info    detailed message for not configurable item
+     * @param context      holder of actual configuration state
+     * @param peerEndpoint peer endpoint
+     * @param info         detailed message for not configurable item
      * @return filtered collection of not configurable items under given endpoint and peer
      */
     public static UnconfiguredRendererEndpoint assembleNotConfigurableRendererEPForPeer(final PolicyConfigurationContext context,
                                                                                         final PeerEndpoint peerEndpoint,
                                                                                         final String info) {
         final RendererEndpoint rendererEndpoint = context.getCurrentRendererEP();
-        LOG.trace("not configurable EP for peer: {}", info);
+        LOG.trace("Not configurable EP for peer: {}", info);
         return new UnconfiguredRendererEndpointBuilder(rendererEndpoint)
-                .setUnconfiguredPeerEndpoint(assemblePeerEndpoint(Stream.of(peerEndpoint)))
+                .setUnconfiguredPeerEndpoint(assemblePeerEndpoint(Stream.of(peerEndpoint), context))
                 .setInfo(info)
                 .build();
     }
 
     @VisibleForTesting
-    static List<UnconfiguredPeerEndpoint> assemblePeerEndpoint(final Stream<PeerEndpoint> peerEndpoint) {
+    static List<UnconfiguredPeerEndpoint> assemblePeerEndpoint(final Stream<PeerEndpoint> peerEndpoint,
+                                                               final PolicyConfigurationContext context) {
         return peerEndpoint
                 .map((peerEP) -> new UnconfiguredPeerEndpointBuilder(peerEP)
                         .setUnconfiguredRuleGroup(
-                                assembleRuleGroups(peerEP.getRuleGroupWithRendererEndpointParticipation().stream())
+                                assembleRuleGroups(peerEP.getRuleGroupWithRendererEndpointParticipation().stream(), context)
                         ).build())
                 .collect(Collectors.toList());
     }
 
     @VisibleForTesting
-    static List<UnconfiguredRuleGroup> assembleRuleGroups(final Stream<RuleGroupWithRendererEndpointParticipation> stream) {
+    static List<UnconfiguredRuleGroup> assembleRuleGroups(final Stream<RuleGroupWithRendererEndpointParticipation> stream,
+                                                          final PolicyConfigurationContext context) {
         return stream
                 .filter(Objects::nonNull)
                 .map((ruleGroup) -> new UnconfiguredRuleGroupBuilder(ruleGroup)
                         .setRendererEndpointParticipation(ruleGroup.getRendererEndpointParticipation())
-                        // TODO: find rule-group and append names of resolved rules ...setUnconfiguredResolvedRule()
+                        .setUnconfiguredResolvedRule(assembleResolvedRule(Stream.of(context.getCurrentUnconfiguredRule()), context))
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @VisibleForTesting
+    private static List<UnconfiguredResolvedRule> assembleResolvedRule(final Stream<UnconfiguredResolvedRule> stream,
+                                                                       final PolicyConfigurationContext context) {
+        return stream
+                .filter(Objects::nonNull)
+                .map((unconfiguredRule) -> new UnconfiguredResolvedRuleBuilder(context.getCurrentUnconfiguredRule())
+                        .setRuleName(context.getCurrentUnconfiguredRule().getRuleName())
                         .build())
                 .collect(Collectors.toList());
     }

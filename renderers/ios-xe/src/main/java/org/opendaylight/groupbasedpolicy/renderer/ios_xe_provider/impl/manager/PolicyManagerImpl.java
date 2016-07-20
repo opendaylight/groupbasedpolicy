@@ -13,10 +13,7 @@ import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.ma
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -31,8 +28,6 @@ import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFaile
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.manager.PolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.StatusUtil;
-import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.NetconfTransactionCreator;
-import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriter;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.Renderers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.RendererKey;
@@ -93,21 +88,26 @@ public class PolicyManagerImpl implements PolicyManager {
         });
     }
 
-    private ListenableFuture<Optional<Status>> syncEndpoints(final Configuration dataAfter, DsAction action) {
+    /**
+     * Resolve policy for all endpoint pairs
+     *
+     * @param dataAfter - data used while processing
+     * @param action    - specifies whether data are intended for creating or removing of configuration
+     * @return status of policy resolution
+     */
+    private ListenableFuture<Optional<Status>> syncEndpoints(final Configuration dataAfter, final DsAction action) {
         if (dataAfter.getRendererEndpoints() == null
                 || dataAfter.getRendererEndpoints().getRendererEndpoint() == null) {
-            LOG.debug("no configuration obtained - skipping");
+            LOG.debug("No configuration obtained - skipping");
             return Futures.immediateFuture(Optional.empty());
         }
-
         final PolicyConfigurationContext context = new PolicyConfigurationContext();
-        final Map<String, PolicyWriter> policyWriterPerDeviceCache = new HashMap<>();
+        // Renderer endpoint
         for (RendererEndpoint rendererEndpoint : dataAfter.getRendererEndpoints().getRendererEndpoint()) {
-            // Store the endpoint currently being configured
             context.setCurrentRendererEP(rendererEndpoint);
 
             if (dataAfter.getEndpoints() == null || dataAfter.getEndpoints().getAddressEndpointWithLocation() == null) {
-                final String info = "renderer-endpoint: missing address-endpoint-with-location";
+                final String info = "Renderer-endpoint: missing address-endpoint-with-location";
                 context.appendUnconfiguredRendererEP(StatusUtil.assembleFullyNotConfigurableRendererEP(context, info));
                 continue;
             }
@@ -116,36 +116,29 @@ public class PolicyManagerImpl implements PolicyManager {
             final InstanceIdentifier mountpointIid = PolicyManagerUtil.getMountpointIidFromAbsoluteLocation(rendererEndpoint, endpointsWithLocation);
             final DataBroker mountpoint = nodeManager.getNodeMountPoint(mountpointIid);
             if (mountpoint == null) {
-                final String info = String.format("no data-broker for mount-point [%s] available", mountpointIid);
+                final String info = String.format("No data-broker for mount-point [%s] available", mountpointIid);
                 context.appendUnconfiguredRendererEP(StatusUtil.assembleFullyNotConfigurableRendererEP(context, info));
                 continue;
             }
-            // Generate policy writer key - policy map name, composed from base value, interface name and node id
+            final String managementIpAddress = nodeManager.getNodeManagementIpByMountPointIid(mountpointIid);
+            if (managementIpAddress == null) {
+                final String info = String.format("Can not create policyWriter, managementIpAddress for mountpoint %s is null",
+                        mountpointIid);
+                context.appendUnconfiguredRendererEP(StatusUtil.assembleFullyNotConfigurableRendererEP(context, info));
+                continue;
+            }
             final String interfaceName = PolicyManagerUtil.getInterfaceNameFromAbsoluteLocation(rendererEndpoint, endpointsWithLocation);
             final NodeId nodeId = nodeManager.getNodeIdByMountpointIid(mountpointIid);
             if (interfaceName == null || nodeId == null) {
-                LOG.warn("Cannot compose policy-map, missing value. Interface: {}, NodeId: {}", interfaceName, nodeId);
+                final String info = String.format("Cannot compose policy-map, missing value. Interface: %s, NodeId: %s", interfaceName, nodeId);
+                context.appendUnconfiguredRendererEP(StatusUtil.assembleFullyNotConfigurableRendererEP(context, info));
+                LOG.warn(info);
                 continue;
             }
             final String policyMapName = BASE_POLICY_MAP_NAME.concat(interfaceName);
-            final String policyWriterKey = policyMapName.concat("-" + nodeId.getValue());
-            // Find appropriate writer
-            PolicyWriter policyWriter = policyWriterPerDeviceCache.get(policyWriterKey);
-            if (policyWriter == null) {
-                // Initialize new policy writer
-                final String managementIpAddress = nodeManager.getNodeManagementIpByMountPointIid(mountpointIid);
-                if (managementIpAddress == null) {
-                    final String info = String.format("can not create policyWriter, managementIpAddress for mountpoint %s is null",
-                            mountpointIid);
-                    context.appendUnconfiguredRendererEP(StatusUtil.assembleFullyNotConfigurableRendererEP(context, info));
-                    continue;
-                }
-                policyWriter = new PolicyWriter(mountpoint, interfaceName, managementIpAddress, policyMapName, nodeId);
-                policyWriterPerDeviceCache.put(policyWriterKey, policyWriter);
-            }
-
-            // Assign policyWriter for current policy-map
-            context.setPolicyWriter(policyWriter);
+            final PolicyMapLocation policyMapLocation = new PolicyMapLocation(policyMapName, interfaceName, nodeId,
+                    managementIpAddress, mountpoint);
+            context.setPolicyMapLocation(policyMapLocation);
 
             final Sgt sourceSgt = PolicyManagerUtil.findSgtTag(rendererEndpoint, dataAfter.getEndpoints()
                     .getAddressEndpointWithLocation());
@@ -154,28 +147,27 @@ public class PolicyManagerImpl implements PolicyManager {
                 final Sgt destinationSgt = PolicyManagerUtil.findSgtTag(peerEndpoint, dataAfter.getEndpoints()
                         .getAddressEndpointWithLocation());
                 if (sourceSgt == null || destinationSgt == null) {
-                    final String info = String.format("endpoint-policy: missing sgt value(sourceSgt=%s, destinationSgt=%s)",
+                    final String info = String.format("Endpoint-policy: missing sgt value(sourceSgt=%s, destinationSgt=%s)",
                             sourceSgt, destinationSgt);
                     context.appendUnconfiguredRendererEP(
                             StatusUtil.assembleNotConfigurableRendererEPForPeer(context, peerEndpoint, info));
                     continue;
                 }
-                PolicyManagerUtil.syncResolvedPolicy(sourceSgt, destinationSgt, context, dataAfter, peerEndpoint,
-                        dataBroker, action);
+                // Resolve policy between endpoints
+                if (action.equals(Create)) {
+                    LOG.debug("Setting up policy between endpoint {}, sgt: {} and peer {}, sgt: {}", rendererEndpoint,
+                            sourceSgt, peerEndpoint, destinationSgt);
+                    PolicyManagerUtil.syncEndpointPairCreatePolicy(sourceSgt, destinationSgt, context, dataAfter,
+                            peerEndpoint, dataBroker);
+                } else {
+                    LOG.debug("Removing policy between endpoint {}, sgt: {} and peer {}, sgt: {}", rendererEndpoint,
+                            sourceSgt, peerEndpoint, destinationSgt);
+                    PolicyManagerUtil.syncEndpointPairRemovePolicy(sourceSgt, destinationSgt, context, dataAfter,
+                            peerEndpoint);
+                }
             }
         }
-
-        final List<CheckedFuture<Boolean, TransactionCommitFailedException>> allFutureResults = new ArrayList<>();
-        if (action.equals(Create)) {
-            // TODO ensure that last transaction is done before the next one starts
-            policyWriterPerDeviceCache.values().forEach((pw) -> allFutureResults.add(pw.commitToDatastore()));
-        } else if (action.equals(Delete)) {
-            policyWriterPerDeviceCache.values().forEach((pw) -> allFutureResults.add(pw.removeFromDatastore()));
-        } else {
-            LOG.info("unsupported policy manage action: {}", action);
-        }
-        final ListenableFuture<List<Boolean>> cumulativeResult = Futures.allAsList(allFutureResults);
-
+        final ListenableFuture<List<Boolean>> cumulativeResult = context.getCumulativeResult();
         return Futures.transform(cumulativeResult, new Function<List<Boolean>, Optional<Status>>() {
             @Nullable
             @Override
@@ -194,14 +186,9 @@ public class PolicyManagerImpl implements PolicyManager {
         });
     }
 
-    private CheckedFuture<Void, TransactionCommitFailedException> reportPolicy(long version, @Nonnull final Optional<Status> statusValue) {
-        final Optional<ReadWriteTransaction> optionalReadWriteTransaction =
-                NetconfTransactionCreator.netconfReadWriteTransaction(dataBroker);
-        if (!optionalReadWriteTransaction.isPresent()) {
-            LOG.warn("Failed to create transaction, mountpoint: {}", dataBroker);
-            return Futures.immediateCheckedFuture(null);
-        }
-        final ReadWriteTransaction readWriteTransaction = optionalReadWriteTransaction.get();
+    private CheckedFuture<Void, TransactionCommitFailedException> reportPolicy(final long version,
+                                                                               @Nonnull final Optional<Status> statusValue) {
+        final ReadWriteTransaction readWriteTransaction = dataBroker.newReadWriteTransaction();
         final InstanceIdentifier<RendererPolicy> iid = InstanceIdentifier.create(Renderers.class)
                 .child(Renderer.class, new RendererKey(NodeManager.iosXeRenderer))
                 .child(RendererPolicy.class);
@@ -218,7 +205,48 @@ public class PolicyManagerImpl implements PolicyManager {
         //NOOP
     }
 
-    public enum DsAction {Create, Delete}
+    enum DsAction {Create, Delete}
 
     public enum ActionCase {ALLOW, CHAIN}
+
+    /**
+     * Wrapper class - contains all necessary information to clearly localize policy-map/interface/node in network
+     */
+    public static class PolicyMapLocation {
+
+        private final String policyMapName;
+        private final String interfaceName;
+        private final NodeId nodeId;
+        private final String managementIpAddress;
+        private final DataBroker mountpoint;
+
+        public PolicyMapLocation(final String policyMapName, final String interfaceName, final NodeId nodeId,
+                                 final String managementIpAddress, final DataBroker mountpoint) {
+            this.policyMapName = Preconditions.checkNotNull(policyMapName);
+            this.interfaceName = Preconditions.checkNotNull(interfaceName);
+            this.nodeId = Preconditions.checkNotNull(nodeId);
+            this.managementIpAddress = Preconditions.checkNotNull(managementIpAddress);
+            this.mountpoint = Preconditions.checkNotNull(mountpoint);
+        }
+
+        public String getPolicyMapName() {
+            return policyMapName;
+        }
+
+        public String getInterfaceName() {
+            return interfaceName;
+        }
+
+        public NodeId getNodeId() {
+            return nodeId;
+        }
+
+        public String getManagementIpAddress() {
+            return managementIpAddress;
+        }
+
+        public DataBroker getMountpoint() {
+            return mountpoint;
+        }
+    }
 }
