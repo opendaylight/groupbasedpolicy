@@ -20,12 +20,15 @@ import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.NetconfTransactionCreator;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.NodeWriter;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Host;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNodeBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNodeKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNode;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionParameters;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
@@ -214,41 +217,29 @@ public class NodeManager {
         return identifier.getNodeId();
     }
 
-    String getNodeManagementIpByMountPointIid(InstanceIdentifier mountpointIid) {
+    String getNodeManagementIpByMountPointIid(InstanceIdentifier<?> mountpointIid) {
         NodeId nodeId = getNodeIdByMountpointIid(mountpointIid);
         InstanceIdentifier<Node> nodeIid = InstanceIdentifier.builder(NetworkTopology.class)
                 .child(Topology.class, new TopologyKey(new TopologyId(NodeManager.TOPOLOGY_ID)))
-                .child(Node.class, new NodeKey(nodeId)).build();
-        java.util.Optional<ReadOnlyTransaction> optionalTransaction =
-                NetconfTransactionCreator.netconfReadOnlyTransaction(dataBroker);
-        if (!optionalTransaction.isPresent()) {
-            LOG.warn("Failed to create transaction, mountpoint: {}", dataBroker);
-            return null;
-        }
-        ReadOnlyTransaction transaction = optionalTransaction.get();
+                .child(Node.class, new NodeKey(nodeId))
+                .build();
+        ReadOnlyTransaction transaction = dataBroker.newReadOnlyTransaction();
+        CheckedFuture<Optional<Node>, ReadFailedException> submitFuture =
+                transaction.read(LogicalDatastoreType.CONFIGURATION, nodeIid);
+        transaction.close();
         try {
-            CheckedFuture<Optional<Node>, ReadFailedException> submitFuture =
-                    transaction.read(LogicalDatastoreType.CONFIGURATION, nodeIid);
-            Optional<Node> optional = submitFuture.checkedGet();
-            if (optional != null && optional.isPresent()) {
-                Node node = optional.get();
-                if (node != null) {
-                    NetconfNode netconfNode = getNodeAugmentation(node);
-                    if (netconfNode != null && netconfNode.getHost() != null) {
-                        IpAddress ipAddress = netconfNode.getHost().getIpAddress();
-                        if (ipAddress != null && ipAddress.getIpv4Address() != null) {
-                            return ipAddress.getIpv4Address().getValue();
-                        }
-                        return null;
-                    }
-                }
-            } else {
-                LOG.debug("Failed to read. {}", Thread.currentThread().getStackTrace()[1]);
+            Optional<Node> nodeOptional = submitFuture.checkedGet();
+            if (nodeOptional.isPresent()) {
+                NetconfNode netconfNode = getNodeAugmentation(nodeOptional.get());
+                return java.util.Optional.ofNullable(netconfNode)
+                        .map(NetconfNodeConnectionParameters::getHost)
+                        .map(Host::getIpAddress)
+                        .map(IpAddress::getIpv4Address)
+                        .map(Ipv4Address::getValue)
+                        .orElse(null);
             }
         } catch (ReadFailedException e) {
-            LOG.warn("Read transaction failed to {} ", e);
-        } catch (Exception e) {
-            LOG.error("Failed to .. {}", e.getMessage());
+            LOG.warn("Read node failed {}", nodeId, e);
         }
         return null;
     }

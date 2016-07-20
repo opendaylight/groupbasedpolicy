@@ -7,6 +7,7 @@ import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
+import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
@@ -262,13 +263,11 @@ public class NodeManagerTest extends CustomDataBrokerTest {
         InstanceIdentifier<Node> testNodeIid = InstanceIdentifier.builder(NetworkTopology.class)
                 .child(Topology.class, new TopologyKey(new TopologyId(TOPOLOGY_ID)))
                 .child(Node.class, new NodeKey(testNode.getNodeId())).build();
-        ReadWriteTransaction rwt = dataBroker.newReadWriteTransaction();
-        rwt.put(LogicalDatastoreType.CONFIGURATION, testNodeIid, testNode, true);
-        rwt.submit().checkedGet();
-        InstanceIdentifier mountpointIid = InstanceIdentifier.builder(NetworkTopology.class)
-                .child(Topology.class, new TopologyKey(new TopologyId(TOPOLOGY_ID)))
-                .child(Node.class, new NodeKey(NODE_NAME)).build();
-        String result = nodeManager.getNodeManagementIpByMountPointIid(mountpointIid);
+        WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
+        wTx.put(LogicalDatastoreType.CONFIGURATION, testNodeIid, testNode, true);
+        wTx.submit().checkedGet();
+
+        String result = nodeManager.getNodeManagementIpByMountPointIid(testNodeIid);
         assertEquals(IPv4_ADDRESS.getValue(), result);
     }
 
