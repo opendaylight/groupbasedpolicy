@@ -1,0 +1,83 @@
+/*
+ * Copyright (c) 2016 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
+module sxp-ep-provider-model {
+    yang-version 1;
+    namespace "urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy:sxp-ep-provider:model";
+    prefix "sxp-ep-prvd-model";
+
+    import sxp-database { prefix sxp-database; revision-date 2016-03-08; }
+    import gbp-common { prefix gbp-common; revision-date 2014-04-21; }
+    import ietf-inet-types { prefix inet; revision-date 2013-07-15; }
+    import forwarding { prefix forwarding; revision-date 2016-04-27; }
+    import base-endpoint { prefix base-edpoint; revision-date 2016-04-27; }
+    import yang-ext { prefix ext; revision-date 2013-07-09; }
+    import renderer { prefix renderer; revision-date 2015-11-03; }
+
+    description
+        "This module contains the YANG definitions for
+          sxp-ep-provider implementation.";
+
+    revision "2016-03-02" {
+        description
+            "Initial revision.";
+    }
+
+    container sxp-ep-mapper {
+        description "root point for endpoint templates";
+
+        list endpoint-policy-template-by-sgt {
+            key sgt;
+            leaf sgt {
+                type sxp-database:sgt;
+                description
+                    "SGT for which this endpoint template is used";
+            }
+            leaf tenant {
+               type gbp-common:tenant-id;
+               mandatory true;
+               description
+                    "The tenant of this endpoint";
+            }
+            leaf-list endpoint-groups {
+               type gbp-common:endpoint-group-id;
+               min-elements 1;
+               description
+                    "The groups associated with this endpoint";
+            }
+            leaf-list conditions {
+               type gbp-common:condition-name;
+               description
+                    "The conditions associated with this endpoint";
+            }
+        }
+
+        list endpoint-forwarding-template-by-subnet {
+            description "If the IP from IP/SGT binding is inside of ip-prefix then
+                the endpoint will be in the l3-context.";
+            key ip-prefix;
+            leaf ip-prefix {
+                type inet:ip-prefix;
+                description
+                    "The IP prefix where an endpoint can be connected.";
+            }
+            leaf l3-context {
+               type gbp-common:context-id;
+               mandatory true;
+               description
+                    "The context for the endpoint's layer 3 address";
+            }
+            container network-containment {
+                description
+                            "The network domain associated with this endpoint's fowarding
+                            context.";
+                uses forwarding:network-domain-key;
+            }
+        }
+    }
+}

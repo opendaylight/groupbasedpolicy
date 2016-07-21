@@ -101,6 +101,11 @@
         <artifactId>groupbasedpolicy-ise-adapter</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.opendaylight.groupbasedpolicy</groupId>
+        <artifactId>sxp-ep-provider</artifactId>
+        <version>${project.version}</version>
+      </dependency>
 
       <!-- GBP configuration -->
       <dependency>
