@@ -65,18 +65,26 @@ public class PolicyManagerImpl implements PolicyManager {
     @Nonnull
     public ListenableFuture<Boolean> syncPolicy(@Nullable final Configuration dataAfter, @Nullable final Configuration dataBefore,
                                                 final long version) {
-        final ListenableFuture<Optional<Status>> result;
+        ListenableFuture<Optional<Status>> creationResult;
         if (dataBefore == null && dataAfter != null) {
-            result = syncEndpoints(dataAfter, Create);
+            creationResult = syncEndpoints(dataAfter, Create);
         } else if (dataBefore != null && dataAfter == null) {
-            result = syncEndpoints(dataBefore, Delete);
+            creationResult = syncEndpoints(dataBefore, Delete);
         } else {
-            syncEndpoints(dataBefore, Delete);
-            syncEndpoints(dataAfter, Create);
-            result = Futures.immediateFuture(Optional.empty());
+            final ListenableFuture<Optional<Status>> deletionResult = syncEndpoints(dataBefore, Delete);
+            creationResult = Futures.transform(deletionResult, new AsyncFunction<Optional<Status>, Optional<Status>>() {
+                @Nonnull
+                @Override
+                public ListenableFuture<Optional<Status>> apply(@Nonnull Optional<Status> deletionResult) throws Exception {
+                    if (deletionResult.isPresent()) {
+                        // Wait till task is done. Result is not used, delete case has no status
+                        deletionResult.get();
+                    }
+                    return syncEndpoints(dataAfter, Create);
+                }
+            });
         }
-
-        return Futures.transform(result, new AsyncFunction<Optional<Status>, Boolean>() {
+        return Futures.transform(creationResult, new AsyncFunction<Optional<Status>, Boolean>() {
             @Override
             public ListenableFuture<Boolean> apply(@Nullable final Optional<Status> statusValue) throws Exception {
                 Preconditions.checkArgument(statusValue != null, "provided status must not be null");
@@ -97,6 +105,7 @@ public class PolicyManagerImpl implements PolicyManager {
      * @param action    - specifies whether data are intended for creating or removing of configuration
      * @return status of policy resolution
      */
+    @Nonnull
     private ListenableFuture<Optional<Status>> syncEndpoints(final Configuration dataAfter, final DsAction action) {
         if (dataAfter.getRendererEndpoints() == null
                 || dataAfter.getRendererEndpoints().getRendererEndpoint() == null) {
@@ -191,6 +200,9 @@ public class PolicyManagerImpl implements PolicyManager {
 
     private CheckedFuture<Void, TransactionCommitFailedException> reportPolicy(final long version,
                                                                                @Nonnull final Optional<Status> statusValue) {
+        if (statusValue.isPresent()) {
+            LOG.warn("IOS-XE renderer: operation not successfully completed, check unconfigured policy in operational/renderer:renderers");
+        }
         final ReadWriteTransaction readWriteTransaction = dataBroker.newReadWriteTransaction();
         final InstanceIdentifier<RendererPolicy> iid = InstanceIdentifier.create(Renderers.class)
                 .child(Renderer.class, new RendererKey(IOS_XE_RENDERER))
