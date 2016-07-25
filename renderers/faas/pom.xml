@@ -25,7 +25,7 @@
   <dependencies>
     <dependency>
       <groupId>org.opendaylight.faas</groupId>
-      <artifactId>uln-mapper-model</artifactId>
+      <artifactId>uln-mapper-impl</artifactId>
       <version>${faas.version}</version>
     </dependency>
     <!-- testing dependencies -->
