@@ -52,6 +52,7 @@ def addGpeTunnel(sw, sourceIp=None):
     cmd = ['ovs-vsctl', 'add-port', sw, ifaceName,
            '--', 'set', 'Interface', ifaceName,
            'type=vxlan',
+           'options:exts=gpe',
            'options:remote_ip=flow',
            'options:dst_port=6633',
            'options:nshc1=flow',

@@ -342,7 +342,7 @@ def get_endpoint_data():
                 "l3-context": "l3-context-vrf-red"
             }
         ],
-        "port-name": "vethl-h35_2",
+        "port-name": "vethl-h35-2",
         "tenant": "tenant-red"
     }
 },
@@ -362,7 +362,7 @@ def get_endpoint_data():
                 "l3-context": "l3-context-vrf-red"
             }
         ],
-        "port-name": "vethl-h35_3",
+        "port-name": "vethl-h35-3",
         "tenant": "tenant-red"
     }
 },
@@ -382,7 +382,7 @@ def get_endpoint_data():
                 "l3-context": "l3-context-vrf-red"
             }
         ],
-        "port-name": "vethl-h35_4",
+        "port-name": "vethl-h35-4",
         "tenant": "tenant-red"
     }
 },
@@ -402,7 +402,7 @@ def get_endpoint_data():
                 "l3-context": "l3-context-vrf-red"
             }
         ],
-        "port-name": "vethl-h35_5",
+        "port-name": "vethl-h35-5",
         "tenant": "tenant-red"
     }
 },
@@ -422,7 +422,7 @@ def get_endpoint_data():
                 "l3-context": "l3-context-vrf-red"
             }
         ],
-        "port-name": "vethl-h36_2",
+        "port-name": "vethl-h36-2",
         "tenant": "tenant-red"
     }
 },
@@ -442,7 +442,7 @@ def get_endpoint_data():
                 "l3-context": "l3-context-vrf-red"
             }
         ],
-        "port-name": "vethl-h36_3",
+        "port-name": "vethl-h36-3",
         "tenant": "tenant-red"
     }
 },
@@ -462,7 +462,7 @@ def get_endpoint_data():
                 "l3-context": "l3-context-vrf-red"
             }
         ],
-        "port-name": "vethl-h36_4",
+        "port-name": "vethl-h36-4",
         "tenant": "tenant-red"
     }
 },{
@@ -481,7 +481,7 @@ def get_endpoint_data():
                 "l3-context": "l3-context-vrf-red"
             }
         ],
-        "port-name": "vethl-h36_5",
+        "port-name": "vethl-h36-5",
         "tenant": "tenant-red"
     }
 }]
