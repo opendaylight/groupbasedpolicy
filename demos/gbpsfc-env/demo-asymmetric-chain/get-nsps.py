@@ -4,6 +4,7 @@ import requests,json
 from requests.auth import HTTPBasicAuth
 import sys
 import os
+import time
 from subprocess import check_output
 from infrastructure_config import *
 
@@ -13,9 +14,14 @@ USERNAME='admin'
 PASSWORD='admin'
 
 def get(host, port, uri):
+    proxies = {
+        "http": None,
+        "https": None
+    }
+
     url='http://'+host+":"+port+uri
     #print url
-    r = requests.get(url, auth=HTTPBasicAuth(USERNAME, PASSWORD))
+    r = requests.get(url, proxies=proxies, auth=HTTPBasicAuth(USERNAME, PASSWORD))
     jsondata=json.loads(r.text)
     return jsondata
 

@@ -20,7 +20,7 @@ EOL
 
 docker pull alagalah/odlpoc_ovs230
 # OVS
-curl https://raw.githubusercontent.com/pritesh/ovs/nsh-v8/third-party/start-ovs-deb.sh | bash
+curl https://raw.githubusercontent.com/yyang13/ovs_nsh_patches/master/start-ovs-deb.sh | bash
 
 # this part is just for local spinup DON'T copy it to releng bootstrap.sh
 pip install ipaddr
