@@ -61,7 +61,7 @@ public class MatchEquivalence extends Equivalence<Match> {
         if (!Objects.equals(a.getProtocolMatchFields(), b.getProtocolMatchFields())) {
             return false;
         }
-        if (!Objects.equals(a.getTcpFlagMatch(), b.getTcpFlagMatch())) {
+        if (!Objects.equals(a.getTcpFlagsMatch(), b.getTcpFlagsMatch())) {
             return false;
         }
         if (!Objects.equals(a.getTunnel(), b.getTunnel())) {
@@ -113,7 +113,7 @@ public class MatchEquivalence extends Equivalence<Match> {
         result = prime * result + ((m.getLayer4Match() == null) ? 0 : m.getLayer4Match().hashCode());
         result = prime * result + ((m.getMetadata() == null) ? 0 : m.getMetadata().hashCode());
         result = prime * result + ((m.getProtocolMatchFields() == null) ? 0 : m.getProtocolMatchFields().hashCode());
-        result = prime * result + ((m.getTcpFlagMatch() == null) ? 0 : m.getTcpFlagMatch().hashCode());
+        result = prime * result + ((m.getTcpFlagsMatch() == null) ? 0 : m.getTcpFlagsMatch().hashCode());
         result = prime * result + ((m.getTunnel() == null) ? 0 : m.getTunnel().hashCode());
         result = prime * result + ((m.getVlanMatch() == null) ? 0 : m.getVlanMatch().hashCode());
 

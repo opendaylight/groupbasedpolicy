@@ -144,13 +144,13 @@ public class FlowIdUtils {
             }
             builder.append(match.getProtocolMatchFields());
         }
-        if (match.getTcpFlagMatch() != null) {
+        if (match.getTcpFlagsMatch() != null) {
             if (first) {
                 first = false;
             } else {
                 builder.append(MATCH_SEPARATOR);
             }
-            builder.append(match.getTcpFlagMatch());
+            builder.append(match.getTcpFlagsMatch());
         }
         if (match.getTunnel() != null) {
             if (first) {

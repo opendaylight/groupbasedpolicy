@@ -27,7 +27,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Layer4Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Metadata;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.ProtocolMatchFields;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.TcpFlagMatch;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.TcpFlagsMatch;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.Tunnel;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.VlanMatch;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.openflowplugin.extension.general.rev140714.GeneralAugMatchNodesNodeTableFlow;
@@ -50,7 +50,7 @@ public class MatchEquivalenceTest {
     private Layer4Match layer4Match;
     private Metadata metadata;
     private ProtocolMatchFields protocolMatchFields;
-    private TcpFlagMatch tcpFlagMatch;
+    private TcpFlagsMatch tcpFlagMatch;
     private Tunnel tunnel;
     private VlanMatch vlanMatch;
 
@@ -88,8 +88,8 @@ public class MatchEquivalenceTest {
         when(matchA.getMetadata()).thenReturn(metadata);
         protocolMatchFields = mock(ProtocolMatchFields.class);
         when(matchA.getProtocolMatchFields()).thenReturn(protocolMatchFields);
-        tcpFlagMatch = mock(TcpFlagMatch.class);
-        when(matchA.getTcpFlagMatch()).thenReturn(tcpFlagMatch);
+        tcpFlagMatch = mock(TcpFlagsMatch.class);
+        when(matchA.getTcpFlagsMatch()).thenReturn(tcpFlagMatch);
         tunnel = mock(Tunnel.class);
         when(matchA.getTunnel()).thenReturn(tunnel);
         vlanMatch = mock(VlanMatch.class);
@@ -160,11 +160,11 @@ public class MatchEquivalenceTest {
         Assert.assertNotEquals(equivalence.doHash(matchA), equivalence.doHash(matchB));
 
         when(matchB.getProtocolMatchFields()).thenReturn(protocolMatchFields);
-        when(matchB.getTcpFlagMatch()).thenReturn(mock(TcpFlagMatch.class));
+        when(matchB.getTcpFlagsMatch()).thenReturn(mock(TcpFlagsMatch.class));
         Assert.assertFalse(equivalence.doEquivalent(matchA, matchB));
         Assert.assertNotEquals(equivalence.doHash(matchA), equivalence.doHash(matchB));
 
-        when(matchB.getTcpFlagMatch()).thenReturn(tcpFlagMatch);
+        when(matchB.getTcpFlagsMatch()).thenReturn(tcpFlagMatch);
         when(matchB.getTunnel()).thenReturn(mock(Tunnel.class));
         Assert.assertFalse(equivalence.doEquivalent(matchA, matchB));
         Assert.assertNotEquals(equivalence.doHash(matchA), equivalence.doHash(matchB));
