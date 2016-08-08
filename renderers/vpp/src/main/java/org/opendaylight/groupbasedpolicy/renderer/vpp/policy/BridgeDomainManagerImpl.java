@@ -166,6 +166,8 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
             public ListenableFuture<Void> apply(Optional<BridgeDomain> optBridgeDomainConf) throws Exception {
                 if (optBridgeDomainConf.isPresent() && optBridgeDomainConf.get().getPhysicalLocationRef() != null) {
                     for (PhysicalLocationRef ref : optBridgeDomainConf.get().getPhysicalLocationRef()) {
+                        if (!ref.getNodeId().equals(vppNodeId)) continue; //not our referenced node skipping
+
                         if (ref.getInterface() != null && ref.getInterface().size() > 0) {
                             NodeVbridgeVlanAugment vppNodeVlanAug = new NodeVbridgeVlanAugmentBuilder()
                                 .setSuperInterface(ref.getInterface().get(0)).build();
