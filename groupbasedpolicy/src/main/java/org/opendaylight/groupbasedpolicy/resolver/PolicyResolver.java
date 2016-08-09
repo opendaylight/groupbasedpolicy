@@ -101,7 +101,7 @@ public class PolicyResolver implements PolicyValidatorRegistry, AutoCloseable {
     // AutoCloseable
     // *************
     @Override
-    public void close() throws Exception {
+    public void close() {
         if (tenantChangeListener != null) {
             tenantChangeListener.close();
         }

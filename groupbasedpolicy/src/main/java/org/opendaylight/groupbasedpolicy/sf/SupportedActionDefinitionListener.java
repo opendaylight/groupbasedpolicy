@@ -87,7 +87,7 @@ public class SupportedActionDefinitionListener
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         registration.close();
     }
 

@@ -15,6 +15,7 @@ import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Deprecated
 public class EpRendererAugmentationRegistryImplModule extends org.opendaylight.controller.config.yang.config.groupbasedpolicy.AbstractEpRendererAugmentationRegistryImplModule {
 
     private static final Logger LOG = LoggerFactory.getLogger(EpRendererAugmentationRegistryImplModule.class);

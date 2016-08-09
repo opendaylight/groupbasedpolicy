@@ -107,7 +107,7 @@ public abstract class DataTreeChangeHandler<T extends DataObject> implements Dat
     protected abstract void onSubtreeModified(DataObjectModification<T> rootNode, InstanceIdentifier<T> rootIdentifier);
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         registeredListener.close();
     }
 

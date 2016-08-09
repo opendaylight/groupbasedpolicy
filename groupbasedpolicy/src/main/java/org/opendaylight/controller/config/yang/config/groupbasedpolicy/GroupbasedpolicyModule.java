@@ -12,6 +12,7 @@ import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Deprecated
 public class GroupbasedpolicyModule extends org.opendaylight.controller.config.yang.config.groupbasedpolicy.AbstractGroupbasedpolicyModule {
 
     private static final Logger LOG = LoggerFactory.getLogger(GroupbasedpolicyModule.class);

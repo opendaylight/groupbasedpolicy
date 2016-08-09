@@ -9,7 +9,9 @@
 package org.opendaylight.controller.config.yang.config.groupbasedpolicy;
 
 import java.util.concurrent.Future;
-
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.groupbasedpolicy.api.DomainSpecificRegistry;
 import org.opendaylight.groupbasedpolicy.api.EndpointAugmentorRegistry;
@@ -18,29 +20,35 @@ import org.opendaylight.groupbasedpolicy.base_endpoint.BaseEndpointServiceImpl;
 import org.opendaylight.groupbasedpolicy.base_endpoint.EndpointAugmentorRegistryImpl;
 import org.opendaylight.groupbasedpolicy.forwarding.NetworkDomainAugmentorRegistryImpl;
 import org.opendaylight.groupbasedpolicy.renderer.RendererManager;
+import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonService;
+import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider;
+import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceRegistration;
+import org.opendaylight.mdsal.singleton.common.api.ServiceGroupIdentifier;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.BaseEndpointService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.RegisterEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.UnregisterEndpointInput;
 import org.opendaylight.yangtools.yang.common.RpcResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class DomainSpecificRegistryInstance implements DomainSpecificRegistry, BaseEndpointService, AutoCloseable {
+public class DomainSpecificRegistryInstance implements ClusterSingletonService, DomainSpecificRegistry, BaseEndpointService, AutoCloseable {
 
-    private final EndpointAugmentorRegistryImpl endpointAugmentorRegistryImpl;
-    private final NetworkDomainAugmentorRegistryImpl netDomainAugmentorRegistryImpl;
-    private final BaseEndpointServiceImpl baseEndpointServiceImpl;
-    private final RendererManager rendererManager;
+    private static final Logger LOG = LoggerFactory.getLogger(DomainSpecificRegistryInstance.class);
 
-    public DomainSpecificRegistryInstance(DataBroker dataProvider) {
-        endpointAugmentorRegistryImpl = new EndpointAugmentorRegistryImpl();
-        netDomainAugmentorRegistryImpl = new NetworkDomainAugmentorRegistryImpl();
-        baseEndpointServiceImpl = new BaseEndpointServiceImpl(dataProvider, endpointAugmentorRegistryImpl);
-        rendererManager = new RendererManager(dataProvider, netDomainAugmentorRegistryImpl, endpointAugmentorRegistryImpl);
-    }
+    private static final ServiceGroupIdentifier IDENTIFIER =
+            ServiceGroupIdentifier.create(GroupbasedpolicyInstance.GBP_SERVICE_GROUP_IDENTIFIER);
+    private final DataBroker dataBroker;
+    private ClusterSingletonServiceProvider clusterSingletonService;
+    private ClusterSingletonServiceRegistration singletonServiceRegistration;
+    private EndpointAugmentorRegistryImpl endpointAugmentorRegistryImpl;
+    private NetworkDomainAugmentorRegistryImpl netDomainAugmentorRegistryImpl;
+    private BaseEndpointServiceImpl baseEndpointServiceImpl;
+    private RendererManager rendererManager;
 
-    @Override
-    public void close() throws Exception {
-        baseEndpointServiceImpl.close();
-        rendererManager.close();
+    public DomainSpecificRegistryInstance(final DataBroker dataBroker,
+                                          final ClusterSingletonServiceProvider clusterSingletonService) {
+        this.dataBroker = Preconditions.checkNotNull(dataBroker);
+        this.clusterSingletonService = Preconditions.checkNotNull(clusterSingletonService);
     }
 
     @Override
@@ -63,4 +71,43 @@ public class DomainSpecificRegistryInstance implements DomainSpecificRegistry, B
         return baseEndpointServiceImpl.registerEndpoint(input);
     }
 
+    public void initialize() {
+        LOG.info("Clustering session initiated for {}", this.getClass().getSimpleName());
+        singletonServiceRegistration = clusterSingletonService.registerClusterSingletonService(this);
+    }
+
+    @Override
+    public void instantiateServiceInstance() {
+        LOG.info("Instantiating {}", this.getClass().getSimpleName());
+        endpointAugmentorRegistryImpl = new EndpointAugmentorRegistryImpl();
+        netDomainAugmentorRegistryImpl = new NetworkDomainAugmentorRegistryImpl();
+        baseEndpointServiceImpl = new BaseEndpointServiceImpl(dataBroker, endpointAugmentorRegistryImpl);
+        rendererManager = new RendererManager(dataBroker, netDomainAugmentorRegistryImpl, endpointAugmentorRegistryImpl);
+    }
+
+    @Override
+    public ListenableFuture<Void> closeServiceInstance() {
+        LOG.info("Instance {} closed", this.getClass().getSimpleName());
+        baseEndpointServiceImpl.close();
+        rendererManager.close();
+        return Futures.immediateFuture(null);
+    }
+
+    @Override
+    public void close() throws Exception {
+        LOG.info("Clustering provider closed for {}", this.getClass().getSimpleName());
+        if (singletonServiceRegistration != null) {
+            try {
+                singletonServiceRegistration.close();
+            } catch (Exception e) {
+                LOG.warn("{} closed unexpectedly", this.getClass().getSimpleName(), e);
+            }
+            singletonServiceRegistration = null;
+        }
+    }
+
+    @Override
+    public ServiceGroupIdentifier getIdentifier() {
+        return IDENTIFIER;
+    }
 }

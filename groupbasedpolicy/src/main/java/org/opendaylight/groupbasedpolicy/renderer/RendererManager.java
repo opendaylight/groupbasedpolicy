@@ -10,6 +10,14 @@ package org.opendaylight.groupbasedpolicy.renderer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -18,14 +26,6 @@ import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import javax.annotation.Nullable;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -180,7 +180,7 @@ public class RendererManager implements AutoCloseable {
     }
 
     public RendererManager(DataBroker dataProvider, NetworkDomainAugmentorRegistryImpl netDomainAugmentorRegistry,
-            EndpointAugmentorRegistryImpl epAugmentorRegistry) {
+                           EndpointAugmentorRegistryImpl epAugmentorRegistry) {
         this.dataProvider = checkNotNull(dataProvider);
         this.netDomainAugmentorRegistry = checkNotNull(netDomainAugmentorRegistry);
         this.epAugmentorRegistry = checkNotNull(epAugmentorRegistry);
@@ -293,8 +293,8 @@ public class RendererManager implements AutoCloseable {
             RendererPolicy rendererPolicy = null;
             if (configsByRendererName.get(rendererName).isPresent()) {
                 rendererPolicy = new RendererPolicyBuilder().setVersion(version)
-                    .setConfiguration(configsByRendererName.get(rendererName).get())
-                    .build();
+                        .setConfiguration(configsByRendererName.get(rendererName).get())
+                        .build();
 
             } else {
                 rendererPolicy = new RendererPolicyBuilder().setVersion(version).build();
@@ -333,7 +333,7 @@ public class RendererManager implements AutoCloseable {
                 rendererConfigBuilderByRendererName.put(rendererName, rendererConfigBuilder);
             }
             for (AddressEndpointKey rendererAdrEpKey : currentState.epLocInfo
-                .getAddressEpsWithAbsoluteNodeLocation(absEpLocation)) {
+                    .getAddressEpsWithAbsoluteNodeLocation(absEpLocation)) {
                 Optional<AddressEndpoint> potentialAddressEp = currentState.epInfo.getEndpoint(rendererAdrEpKey);
                 if (!potentialAddressEp.isPresent()) {
                     LOG.trace("Endpoint does not exist but has location: {}", rendererAdrEpKey);
@@ -382,7 +382,7 @@ public class RendererManager implements AutoCloseable {
 
     @VisibleForTesting
     void resolveRendererConfigForEndpoint(AddressEndpoint rendererAdrEp,
-            RendererConfigurationBuilder rendererPolicyBuilder) {
+                                          RendererConfigurationBuilder rendererPolicyBuilder) {
         Set<EpgKeyDto> rendererEpgs = toEpgKeys(rendererAdrEp.getEndpointGroup(), rendererAdrEp.getTenant());
         RendererEndpointKey rendererEpKey = AddressEndpointUtils.toRendererEpKey(rendererAdrEp.getKey());
         for (EpgKeyDto rendererEpg : rendererEpgs) {
@@ -416,8 +416,8 @@ public class RendererManager implements AutoCloseable {
     }
 
     private void resolveRendererPolicyBetweenEpAndContPeers(RendererEndpointKey rendererEpKey,
-            Set<ContainmentEndpointKey> peerContEps, ResolvedPolicy policy,
-            EndpointPolicyParticipation rendererEpParticipation, RendererConfigurationBuilder rendererPolicyBuilder) {
+                                                            Set<ContainmentEndpointKey> peerContEps, ResolvedPolicy policy,
+                                                            EndpointPolicyParticipation rendererEpParticipation, RendererConfigurationBuilder rendererPolicyBuilder) {
         if (isRendererEpInEig(policy, rendererEpParticipation)) {
             LOG.info("Renderer EP cannot be in EIG therefore it is ignored: {}. \nPolicy: {}", rendererEpKey);
             LOG.debug("Renderer EP participation: {}, Policy: {}", rendererEpParticipation, policy);
@@ -434,7 +434,7 @@ public class RendererManager implements AutoCloseable {
                 PeerExternalContainmentEndpointKey peerExtContEpKey =
                         ContainmentEndpointUtils.toPeerExtContEpKey(peerContEpKey);
                 for (PolicyRuleGroupWithEndpointConstraints ruleGrpsWithEpConstraints : policy
-                    .getPolicyRuleGroupWithEndpointConstraints()) {
+                        .getPolicyRuleGroupWithEndpointConstraints()) {
                     // TODO filter based on endpoint constraints
                     for (PolicyRuleGroup ruleGrp : ruleGrpsWithEpConstraints.getPolicyRuleGroup()) {
                         rendererPolicyBuilder.add(rendererEpKey, peerExtContEpKey, ruleGrp.getKey(),
@@ -449,8 +449,8 @@ public class RendererManager implements AutoCloseable {
     }
 
     private void resolveRendererPolicyBetweenEpAndPeers(RendererEndpointKey rendererEpKey,
-            Set<AddressEndpointKey> peerAdrEps, ResolvedPolicy policy,
-            EndpointPolicyParticipation rendererEpParticipation, RendererConfigurationBuilder rendererPolicyBuilder) {
+                                                        Set<AddressEndpointKey> peerAdrEps, ResolvedPolicy policy,
+                                                        EndpointPolicyParticipation rendererEpParticipation, RendererConfigurationBuilder rendererPolicyBuilder) {
         if (isRendererEpInEig(policy, rendererEpParticipation)) {
             LOG.info("Renderer EP cannot be in EIG therefore it is ignored: {}. \nPolicy: {}", rendererEpKey);
             LOG.debug("Renderer EP participation: {}, Policy: {}", rendererEpParticipation, policy);
@@ -468,7 +468,7 @@ public class RendererManager implements AutoCloseable {
                 }
                 PeerExternalEndpointKey peerExtEpKey = AddressEndpointUtils.toPeerExtEpKey(peerAdrEpKey);
                 for (PolicyRuleGroupWithEndpointConstraints ruleGrpsWithEpConstraints : policy
-                    .getPolicyRuleGroupWithEndpointConstraints()) {
+                        .getPolicyRuleGroupWithEndpointConstraints()) {
                     // TODO filter based on endpoint constraints
                     for (PolicyRuleGroup ruleGrp : ruleGrpsWithEpConstraints.getPolicyRuleGroup()) {
                         rendererPolicyBuilder.add(rendererEpKey, peerExtEpKey, ruleGrp.getKey(),
@@ -482,7 +482,7 @@ public class RendererManager implements AutoCloseable {
                 }
                 PeerEndpointKey peerEpKey = AddressEndpointUtils.toPeerEpKey(peerAdrEpKey);
                 for (PolicyRuleGroupWithEndpointConstraints ruleGrpsWithEpConstraints : policy
-                    .getPolicyRuleGroupWithEndpointConstraints()) {
+                        .getPolicyRuleGroupWithEndpointConstraints()) {
                     // TODO filter based on endpoint constraints
                     for (PolicyRuleGroup ruleGrp : ruleGrpsWithEpConstraints.getPolicyRuleGroup()) {
                         rendererPolicyBuilder.add(rendererEpKey, peerEpKey, ruleGrp.getKey(), rendererEpParticipation);
@@ -535,12 +535,16 @@ public class RendererManager implements AutoCloseable {
     }
 
     @Override
-    public void close() throws Exception {
-        endpointsListener.close();
-        endpointLocationsListener.close();
-        resolvedPoliciesListener.close();
-        forwardingListener.close();
-        renderersListener.close();
+    public void close() {
+        try {
+            endpointsListener.close();
+            endpointLocationsListener.close();
+            resolvedPoliciesListener.close();
+            forwardingListener.close();
+            renderersListener.close();
+        } catch (Exception e) {
+            LOG.warn("Exception while closing", e);
+        }
     }
 
 }

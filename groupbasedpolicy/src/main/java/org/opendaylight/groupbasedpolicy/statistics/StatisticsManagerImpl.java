@@ -248,7 +248,7 @@ public class StatisticsManagerImpl implements StatisticsManager, AutoCloseable {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         // TODO Auto-generated method stub
 
     }
