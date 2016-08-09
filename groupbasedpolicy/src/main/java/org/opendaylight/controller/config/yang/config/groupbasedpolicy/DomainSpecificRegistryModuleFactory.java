@@ -11,6 +11,7 @@ package org.opendaylight.controller.config.yang.config.groupbasedpolicy;
 import org.opendaylight.controller.config.api.DependencyResolver;
 import org.osgi.framework.BundleContext;
 
+@Deprecated
 public class DomainSpecificRegistryModuleFactory extends org.opendaylight.controller.config.yang.config.groupbasedpolicy.AbstractDomainSpecificRegistryModuleFactory {
 
     @Override

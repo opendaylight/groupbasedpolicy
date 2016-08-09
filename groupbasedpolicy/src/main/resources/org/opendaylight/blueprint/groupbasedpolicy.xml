@@ -4,28 +4,34 @@
            odl:use-default-for-reference-types="true">
 
     <reference id="dataBroker" interface="org.opendaylight.controller.md.sal.binding.api.DataBroker"/>
+    <reference id="clusterSingletonService" interface="org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider"/>
 
     <!-- Modules /-->
     <bean id="groupbasedpolicy" class="org.opendaylight.controller.config.yang.config.groupbasedpolicy.GroupbasedpolicyInstance"
-        destroy-method="close">
+        init-method="initialize" destroy-method="close">
         <argument ref="dataBroker"/>
         <argument ref="policyValidatorRegistry"/>
+        <argument ref="clusterSingletonService"/>
     </bean>
     <bean id="domainSpecificRegistry" class="org.opendaylight.controller.config.yang.config.groupbasedpolicy.DomainSpecificRegistryInstance"
-        destroy-method="close">
+        init-method="initialize" destroy-method="close">
         <argument ref="dataBroker"/>
+        <argument ref="clusterSingletonService"/>
     </bean>
     <bean id="epRendererAugmentationRegistry" class="org.opendaylight.controller.config.yang.config.groupbasedpolicy.EpRendererAugmentationRegistryImplInstance"
-        destroy-method="close">
+        init-method="initialize" destroy-method="close">
         <argument ref="dataBroker"/>
+        <argument ref="clusterSingletonService"/>
     </bean>
     <bean id="statisticsManagerImpl" class="org.opendaylight.controller.config.yang.config.groupbasedpolicy.StatisticsManagerImplInstance"
-        destroy-method="close">
+        init-method="initialize" destroy-method="close">
         <argument ref="dataBroker"/>
+        <argument ref="clusterSingletonService"/>
     </bean>
     <bean id="policyValidatorRegistry" class="org.opendaylight.controller.config.yang.config.groupbasedpolicy.PolicyValidatorRegistryInstance"
-        destroy-method="close">
+        init-method="initialize" destroy-method="close">
         <argument ref="dataBroker"/>
+        <argument ref="clusterSingletonService"/>
     </bean>
 
     <!-- Services -->

@@ -219,7 +219,7 @@ public class LocationResolver implements DataTreeChangeListener<LocationProvider
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         listenerRegistation.close();
     }
 }

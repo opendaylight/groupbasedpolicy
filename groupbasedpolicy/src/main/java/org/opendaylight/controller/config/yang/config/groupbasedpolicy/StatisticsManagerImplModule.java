@@ -22,6 +22,7 @@ import org.opendaylight.groupbasedpolicy.api.StatisticsManager;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.statistics.rev151215.statistic.records.StatRecords;
 import org.osgi.framework.BundleContext;
 
+@Deprecated
 public class StatisticsManagerImplModule extends org.opendaylight.controller.config.yang.config.groupbasedpolicy.AbstractStatisticsManagerImplModule {
 
     private BundleContext bundleContext;
