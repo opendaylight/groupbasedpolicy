@@ -10,6 +10,7 @@ package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.config;
 
 import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 
+@Deprecated
 public class IosXeProviderModule extends org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.config.AbstractIosXeProviderModule {
     public IosXeProviderModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {
         super(identifier, dependencyResolver);

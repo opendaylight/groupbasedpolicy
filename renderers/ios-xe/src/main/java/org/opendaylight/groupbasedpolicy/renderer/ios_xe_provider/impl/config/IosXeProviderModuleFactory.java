@@ -7,6 +7,7 @@
  */
 
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.config;
+@Deprecated
 public class IosXeProviderModuleFactory extends org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.config.AbstractIosXeProviderModuleFactory {
 
 }
