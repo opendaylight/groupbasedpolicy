@@ -5,12 +5,14 @@
 
     <reference id="dataBroker" interface="org.opendaylight.controller.md.sal.binding.api.DataBroker"/>
     <reference id="domainSpecificRegistry" interface="org.opendaylight.groupbasedpolicy.api.DomainSpecificRegistry"/>
+    <reference id="clusterSingletonService" interface="org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider"/>
     <odl:rpc-service id="baseEndpointService" interface="org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.BaseEndpointService"/>
 
     <bean id="sxpMapper" class="org.opendaylight.controller.config.yang.config.groupbasedpolicy.sxp_mapper.SxpMapperProviderInstance"
-        destroy-method="close">
+        init-method="initialize" destroy-method="close">
         <argument ref="dataBroker"/>
         <argument ref="baseEndpointService"/>
         <argument ref="domainSpecificRegistry"/>
+        <argument ref="clusterSingletonService"/>
     </bean>
 </blueprint>

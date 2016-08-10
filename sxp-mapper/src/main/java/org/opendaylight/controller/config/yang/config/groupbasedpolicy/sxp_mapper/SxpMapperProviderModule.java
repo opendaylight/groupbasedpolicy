@@ -14,6 +14,7 @@ import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 /**
 * sxp-mapper impl module
 */
+@Deprecated
 public class SxpMapperProviderModule extends org.opendaylight.controller.config.yang.config.groupbasedpolicy.sxp_mapper.AbstractSxpMapperProviderModule {
     public SxpMapperProviderModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {
         super(identifier, dependencyResolver);
