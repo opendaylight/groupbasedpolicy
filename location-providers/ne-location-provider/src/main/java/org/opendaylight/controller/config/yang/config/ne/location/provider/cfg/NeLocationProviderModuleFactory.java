@@ -7,6 +7,7 @@
  */
 
 package org.opendaylight.controller.config.yang.config.ne.location.provider.cfg;
+@Deprecated
 public class NeLocationProviderModuleFactory extends org.opendaylight.controller.config.yang.config.ne.location.provider.cfg.AbstractNeLocationProviderModuleFactory {
 
 }
