@@ -7,6 +7,7 @@
  */
 
 package org.opendaylight.controller.config.yang.config.domain_extension.l2_l3.impl;
+@Deprecated
 public class L2L3DomainExtensionModuleFactory extends org.opendaylight.controller.config.yang.config.domain_extension.l2_l3.impl.AbstractL2L3DomainExtensionModuleFactory {
 
 }
