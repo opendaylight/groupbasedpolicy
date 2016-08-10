@@ -38,7 +38,7 @@ public class GbpIseAdapterProvider implements AutoCloseable, BindingAwareProvide
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         if (registration != null) {
             LOG.info("closing GbpIseAdapterProvider");
             registration.close();
