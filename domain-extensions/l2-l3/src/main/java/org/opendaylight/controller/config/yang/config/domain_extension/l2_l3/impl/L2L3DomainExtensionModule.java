@@ -11,7 +11,7 @@ package org.opendaylight.controller.config.yang.config.domain_extension.l2_l3.im
 import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+@Deprecated
 public class L2L3DomainExtensionModule extends org.opendaylight.controller.config.yang.config.domain_extension.l2_l3.impl.AbstractL2L3DomainExtensionModule {
 
     private static final Logger LOG = LoggerFactory.getLogger(L2L3DomainExtensionModule.class);

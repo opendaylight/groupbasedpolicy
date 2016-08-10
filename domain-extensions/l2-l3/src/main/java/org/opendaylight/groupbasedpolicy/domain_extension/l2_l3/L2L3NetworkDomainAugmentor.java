@@ -43,7 +43,7 @@ public class L2L3NetworkDomainAugmentor implements NetworkDomainAugmentor, AutoC
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         networkDomainAugmentorRegistry.unregister(this);
     }
 
