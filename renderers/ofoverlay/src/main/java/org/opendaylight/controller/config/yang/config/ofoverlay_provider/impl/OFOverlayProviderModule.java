@@ -12,7 +12,7 @@ package org.opendaylight.controller.config.yang.config.ofoverlay_provider.impl;
 import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+@Deprecated
 public class OFOverlayProviderModule extends org.opendaylight.controller.config.yang.config.ofoverlay_provider.impl.AbstractOFOverlayProviderModule {
     private static final Logger LOG = LoggerFactory
             .getLogger(OFOverlayProviderModule.class);
