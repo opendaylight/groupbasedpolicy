@@ -8,11 +8,12 @@
     <reference id="epAugmentation" interface="org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry"/>
     <reference id="policyValidator" interface="org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistry"/>
     <reference id="statisticsManager" interface="org.opendaylight.groupbasedpolicy.api.StatisticsManager"/>
+    <reference id="clusterSingletonService" interface="org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider"/>
     <odl:rpc-service id="packetProcessing" interface="org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketProcessingService"/>
     <odl:rpc-service id="salFlowService" interface="org.opendaylight.yang.gen.v1.urn.opendaylight.flow.service.rev130819.SalFlowService"/>
 
     <bean id="ofOverlay" class="org.opendaylight.controller.config.yang.config.ofoverlay_provider.impl.OFOverlayProviderInstance"
-        destroy-method="close">
+        init-method="initialize" destroy-method="close">
         <argument ref="dataBroker"/>
         <argument ref="packetProcessing"/>
         <argument ref="salFlowService"/>
@@ -20,6 +21,7 @@
         <argument ref="epAugmentation"/>
         <argument ref="policyValidator"/>
         <argument ref="statisticsManager"/>
+        <argument ref="clusterSingletonService"/>
         <argument value="0"/>
     </bean>
 </blueprint>
