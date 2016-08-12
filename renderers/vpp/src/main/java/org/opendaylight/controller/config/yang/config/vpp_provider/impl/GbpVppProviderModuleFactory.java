@@ -15,6 +15,7 @@
 * Do not modify this file unless it is present under src/main directory
 */
 package org.opendaylight.controller.config.yang.config.vpp_provider.impl;
+@Deprecated
 public class GbpVppProviderModuleFactory extends org.opendaylight.controller.config.yang.config.vpp_provider.impl.AbstractGbpVppProviderModuleFactory {
 
 }
