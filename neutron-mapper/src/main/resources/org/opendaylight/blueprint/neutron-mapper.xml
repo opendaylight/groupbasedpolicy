@@ -6,11 +6,13 @@
     <reference id="dataBroker" interface="org.opendaylight.controller.md.sal.binding.api.DataBroker"/>
     <odl:rpc-service id="epService" interface="org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService"/>
     <odl:rpc-service id="baseEpService" interface="org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.BaseEndpointService"/>
+    <reference id="clusterSingletonService" interface="org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider"/>
 
     <bean id="neutronMapper" class="org.opendaylight.controller.config.yang.config.neutron_mapper.impl.NeutronMapperInstance"
-        destroy-method="close">
+        init-method="instantiate" destroy-method="close">
         <argument ref="dataBroker"/>
         <argument ref="epService"/>
         <argument ref="baseEpService"/>
+        <argument ref="clusterSingletonService" />
     </bean>
 </blueprint>
