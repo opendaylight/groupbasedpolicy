@@ -16,6 +16,7 @@
 * Do not modify this file unless it is present under src/main directory
 */
 package org.opendaylight.controller.config.yang.config.iovisor_provider.impl;
+@Deprecated
 public class IovisorProviderModuleFactory extends org.opendaylight.controller.config.yang.config.iovisor_provider.impl.AbstractIovisorProviderModuleFactory {
 
 }
