@@ -53,7 +53,8 @@
               <outputDirectory>${project.build.directory}/generated-resources</outputDirectory>
               <groupId>org.opendaylight.dlux</groupId>
               <includeArtifactIds>groupbasedpolicy-ui-module</includeArtifactIds>
-              <excludes>META-INF\/**,gbp/node\/**,gbp/node_modules\/**</excludes>
+                <includes>gbp/build\/**</includes>
+                <excludes>META-INF\/**,gbp/node\/**,gbp/node_modules\/**</excludes>
               <excludeTransitive>true</excludeTransitive>
               <ignorePermissions>false</ignorePermissions>
             </configuration>
