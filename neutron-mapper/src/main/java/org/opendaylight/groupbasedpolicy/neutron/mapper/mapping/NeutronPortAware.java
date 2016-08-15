@@ -17,6 +17,7 @@ import javax.annotation.Nullable;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
+import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.domain_extension.l2_l3.util.L2L3IidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.gbp.util.NeutronGbpIidFactory;
@@ -134,6 +135,11 @@ public class NeutronPortAware implements NeutronAware<Port> {
             NetworkDomain subnetDomain = NeutronSubnetAware.createSubnet(
                     routerPortSubnet, portIpWithSubnet.getIpAddress());
             rwTx.merge(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.subnetIid(tenantId, subnetDomain.getNetworkDomainId()), subnetDomain);
+
+            AddressEndpointKey addrEpKey = new AddressEndpointKey(port.getMacAddress().getValue(),
+                    MacAddressType.class, new ContextId(port.getNetworkId().getValue()), MappingUtils.L2_BRDIGE_DOMAIN);
+            UniqueId portId = new UniqueId(port.getUuid().getValue());
+            addBaseEndpointMappings(addrEpKey, portId, rwTx);
 
             // does the same for tenant forwarding domains
             processTenantForwarding(routerPortSubnet, routerL3Context, portIpWithSubnet, tenantId, rwTx);
@@ -442,7 +448,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
     }
 
     private void registerBaseEndpointAndStoreMapping(List<AddressEndpointReg> addrEpRegs, Port port,
-            ReadWriteTransaction rwTx) {
+            WriteTransaction wTx) {
         RegisterEndpointInput regBaseEpInput = new RegisterEndpointInputBuilder().setAddressEndpointReg(addrEpRegs)
             .build();
 
@@ -458,15 +464,19 @@ public class NeutronPortAware implements NeutronAware<Port> {
                         port.getUuid());
                 AddressEndpointKey addrEpKey = new AddressEndpointKey(addrEpReg.getAddress(),
                         addrEpReg.getAddressType(), addrEpReg.getContextId(), addrEpReg.getContextType());
-                BaseEndpointByPort baseEndpointByPort = MappingFactory.createBaseEndpointByPort(addrEpKey, portId);
-                rwTx.put(LogicalDatastoreType.OPERATIONAL, NeutronGbpIidFactory.baseEndpointByPortIid(portId),
-                        baseEndpointByPort, true);
-                PortByBaseEndpoint portByBaseEndpoint = MappingFactory.createPortByBaseEndpoint(portId, addrEpKey);
-                rwTx.put(LogicalDatastoreType.OPERATIONAL,
-                        NeutronGbpIidFactory.portByBaseEndpointIid(new PortByBaseEndpointKey(
-                                portByBaseEndpoint.getKey())), portByBaseEndpoint, true);
+                addBaseEndpointMappings(addrEpKey, portId, wTx);
             }
         }
+    }
+
+    private void addBaseEndpointMappings(AddressEndpointKey addrEpKey, UniqueId portId, WriteTransaction wTx) {
+        BaseEndpointByPort baseEndpointByPort = MappingFactory.createBaseEndpointByPort(addrEpKey, portId);
+        wTx.put(LogicalDatastoreType.OPERATIONAL, NeutronGbpIidFactory.baseEndpointByPortIid(portId),
+                baseEndpointByPort, true);
+        PortByBaseEndpoint portByBaseEndpoint = MappingFactory.createPortByBaseEndpoint(portId, addrEpKey);
+        wTx.put(LogicalDatastoreType.OPERATIONAL,
+                NeutronGbpIidFactory.portByBaseEndpointIid(new PortByBaseEndpointKey(
+                        portByBaseEndpoint.getKey())), portByBaseEndpoint, true);
     }
 
     private void unregisterEndpointAndRemoveMapping(UnregisterEndpointInput baseEpUnreg, Port port,
@@ -474,17 +484,19 @@ public class NeutronPortAware implements NeutronAware<Port> {
         boolean isUnregisteredBaseEndpoint = epRegistrator.unregisterEndpoint(baseEpUnreg);
         if (isUnregisteredBaseEndpoint) {
             UniqueId portId = new UniqueId(port.getUuid().getValue());
-            EndpointKey epKey = new EndpointKey(new L2BridgeDomainId(port.getNetworkId().getValue()), new MacAddress(
-                    port.getMacAddress().getValue()));
-            LOG.trace("Removing Port-BaseEndpoint mapping for port {} (device owner {}) and endpoint {}",
-                    port.getUuid().getValue(), port.getDeviceOwner(), epKey);
             PortByBaseEndpointKey portByBaseEndpointKey = new PortByBaseEndpointKey(port.getMacAddress().getValue(),
                     MacAddressType.class, new ContextId(port.getNetworkId().getValue()), MappingUtils.L2_BRDIGE_DOMAIN);
-            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
-                    NeutronGbpIidFactory.baseEndpointByPortIid(portId), rwTx);
-            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
-                    NeutronGbpIidFactory.portByBaseEndpointIid(portByBaseEndpointKey), rwTx);
+            LOG.trace("Removing Port-BaseEndpoint mapping for port {} (device owner {}) and endpoint {}",
+                    port.getUuid().getValue(), port.getDeviceOwner(), portByBaseEndpointKey);
+            removeBaseEndpointMappings(portByBaseEndpointKey, portId, rwTx);
         }
+    }
+
+    private void removeBaseEndpointMappings(PortByBaseEndpointKey portByBaseEndpointKey, UniqueId portId, ReadWriteTransaction rwTx) {
+        DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
+                NeutronGbpIidFactory.baseEndpointByPortIid(portId), rwTx);
+        DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
+                NeutronGbpIidFactory.portByBaseEndpointIid(portByBaseEndpointKey), rwTx);
     }
 
     @Override
@@ -531,6 +543,10 @@ public class NeutronPortAware implements NeutronAware<Port> {
             NetworkDomain subnet = NeutronSubnetAware.createSubnet(routerPortSubnet, null);
             rwTx.put(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.subnetIid(tenantId, subnet.getNetworkDomainId()),
                     subnet);
+            UniqueId portId = new UniqueId(port.getUuid().getValue());
+            PortByBaseEndpointKey portByBaseEndpointKey = new PortByBaseEndpointKey(port.getMacAddress().getValue(),
+                    MacAddressType.class, new ContextId(port.getNetworkId().getValue()), MappingUtils.L2_BRDIGE_DOMAIN);
+            removeBaseEndpointMappings(portByBaseEndpointKey, portId, rwTx);
             DataStoreHelper.submitToDs(rwTx);
         } else if (PortUtils.isDhcpPort(port)) {
             LOG.trace("Port is DHCP port: {}", port.getUuid().getValue());
