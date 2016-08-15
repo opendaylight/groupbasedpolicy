@@ -6,13 +6,13 @@
         <property name="loader" ref="loader"/>
         <property name="moduleName" value="gbp"/>
         <property name="url" value="/src/app/gbp"/>
-        <property name="directory" value="/gbp"/>
+        <property name="directory" value="/gbp/build"/>
         <property name="requireJs" value="app/gbp/main"/>
         <property name="angularJs" value="app.gbp"/>
 		<property name="cssDependencies">
             <list>
                 <value>src/app/gbp/common/gbp.css</value>
-                <value>src/app/gbp/vendor/angular-material/angular-material.css</value>
+                <value>src/app/gbp/vendor/angular-material/angular-material.min.css</value>
                 <value>src/app/gbp/vendor/angular-material-data-table/dist/md-data-table.min.css</value>
                 <value>src/app/gbp/vendor/roboto-fontface/css/roboto-fontface.css</value>
                 <value>src/app/gbp/vendor/NeXt/css/next.min.css</value>
