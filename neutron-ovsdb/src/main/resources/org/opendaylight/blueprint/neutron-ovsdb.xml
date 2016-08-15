@@ -5,6 +5,7 @@
 
     <reference id="dataBroker" interface="org.opendaylight.controller.md.sal.binding.api.DataBroker"/>
     <odl:rpc-service id="epService" interface="org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService"/>
+    <reference id="clusterSingletonService" interface="org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider"/>
 
     <odl:clustered-app-config id="moduleConfig"
         binding-class="org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.ovsdb.params.rev160812.IntegrationBridgeSetting">
@@ -19,9 +20,10 @@
     </odl:clustered-app-config>
 
     <bean id="neutronOvsdb" class="org.opendaylight.controller.config.yang.config.neutron_ovsdb.impl.NeutronOvsdbInstance"
-        destroy-method="close">
+        init-method="initialize" destroy-method="close">
         <argument ref="dataBroker"/>
         <argument ref="epService"/>
         <argument ref="moduleConfig"/>
+        <argument ref="clusterSingletonService" />
     </bean>
 </blueprint>
