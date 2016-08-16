@@ -34,6 +34,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_render
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.TapCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.VhostUserCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.PortBindingExtension;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.Routers;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.routers.Router;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.routers.RouterKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.Ports;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.PortKey;
@@ -59,16 +62,17 @@ public class PortHandler implements TransactionChainListener {
 
     private static final String COMPUTE_OWNER = "compute";
     private static final String DHCP_OWNER = "dhcp";
-    private static final String[] SUPPORTED_DEVICE_OWNERS = {COMPUTE_OWNER, DHCP_OWNER};
+    private static final String ROUTER_OWNER = "network:router_interface";
+    private static final String[] SUPPORTED_DEVICE_OWNERS = {COMPUTE_OWNER, DHCP_OWNER, ROUTER_OWNER};
     private static final String VHOST_USER = "vhostuser";
     private static final String NETCONF_TOPOLOGY_ID = "topology-netconf";
     private static final String VPP_INTERFACE_NAME_PREFIX = "neutron_port_";
     private static final String TAP_PORT_NAME_PREFIX = "tap";
+    private static final String RT_PORT_NAME_PREFIX = "qr-";
 
     private BindingTransactionChain transactionChain;
-    PortAware portByBaseEpListener;
-    DataBroker dataBroker;
-    SocketInfo socketInfo;
+    private DataBroker dataBroker;
+    private SocketInfo socketInfo;
 
     PortHandler(DataBroker dataBroker, SocketInfo socketInfo) {
         this.dataBroker = dataBroker;
@@ -180,8 +184,29 @@ public class PortHandler implements TransactionChainListener {
                 .setName(createPortName(port.getUuid()))
                 .build();
             vppEpBuilder.setInterfaceTypeChoice(tapCase);
+        } else if (isValidQRouterPort(port)) {
+            TapCase tapCase = new TapCaseBuilder().setPhysicalAddress(new PhysAddress(port.getMacAddress().getValue()))
+                    .setName(createQRouterPortName(port.getUuid()))
+                    .build();
+            vppEpBuilder.setInterfaceTypeChoice(tapCase);
         }
         return vppEpBuilder.build();
+    }
+
+    /**
+     * If Qrouter (L3 Agent) is in use, any of Openstack neutron routers is not going be mapped
+     * to ODL neutron.
+     */
+    private boolean isValidQRouterPort(Port port) {
+        ReadOnlyTransaction rTx = transactionChain.newReadOnlyTransaction();
+        InstanceIdentifier<Router> routerIid = InstanceIdentifier.builder(Neutron.class)
+            .child(Routers.class)
+            .child(Router.class, new RouterKey(new Uuid(port.getDeviceId())))
+            .build();
+        Optional<Router> optRouter = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, routerIid, rTx);
+        rTx.close();
+        return !optRouter.isPresent() && port.getDeviceOwner().contains(ROUTER_OWNER)
+                && port.getMacAddress() != null;
     }
 
     private String createPortName(Uuid portUuid) {
@@ -191,6 +216,17 @@ public class PortHandler implements TransactionChainListener {
             tapPortName = TAP_PORT_NAME_PREFIX + uuid.substring(0, 11);
         } else {
             tapPortName = TAP_PORT_NAME_PREFIX + uuid;
+        }
+        return tapPortName;
+    }
+
+    private String createQRouterPortName(Uuid portUuid) {
+        String tapPortName;
+        String uuid = portUuid.getValue();
+        if (uuid != null && uuid.length() >= 12) {
+            tapPortName = RT_PORT_NAME_PREFIX + uuid.substring(0, 11);
+        } else {
+            tapPortName = RT_PORT_NAME_PREFIX + uuid;
         }
         return tapPortName;
     }
