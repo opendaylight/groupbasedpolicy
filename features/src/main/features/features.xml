@@ -229,7 +229,8 @@
         <bundle>mvn:commons-net/commons-net/{{VERSION}}</bundle>
         <bundle>mvn:com.sun.jersey/jersey-client/{{VERSION}}</bundle>
         <bundle>mvn:com.sun.jersey/jersey-core/{{VERSION}}</bundle>
-        <bundle>mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-ise-adapter/{{VERSION}}</bundle>
-        <configfile finalname="${config.configfile.directory}/16-groupbasedpolicy-ise-adapter.xml">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-ise-adapter/{{VERSION}}/xml/config</configfile>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/sxp-ise-adapter/{{VERSION}}</bundle>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/sxp-ep-provider/{{VERSION}}</bundle>
+        <configfile finalname="${config.configfile.directory}/16-groupbasedpolicy-ise-adapter.xml">mvn:org.opendaylight.groupbasedpolicy/sxp-ise-adapter/{{VERSION}}/xml/config</configfile>
     </feature>
 </features>

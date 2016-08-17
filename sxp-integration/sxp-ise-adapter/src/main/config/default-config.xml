@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2016 Cisco Systems, Inc. and others.  All rights reserved.
+  ~
+  ~ This program and the accompanying materials are made available under the
+  ~ terms of the Eclipse Public License v1.0 which accompanies this distribution,
+  ~ and is available at http://www.eclipse.org/legal/epl-v10.html
+  -->
+
+<!-- vi: set et smarttab sw=4 tabstop=4: -->
+
+<snapshot>
+    <configuration>
+        <data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <modules xmlns="urn:opendaylight:params:xml:ns:yang:controller:config">
+                <module>
+                    <type xmlns:gbp-sxp-ise-adapter="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy:sxp-integration:gbp-sxp-ise-adapter">
+                        gbp-sxp-ise-adapter:gbp-ise-adapter-impl
+                    </type>
+                    <name>gbp-ise-adapter</name>
+                </module>
+            </modules>
+        </data>
+    </configuration>
+
+    <required-capabilities>
+        <capability>urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy:gbp-sxp-ise-adapter:model?module=gbp-sxp-ise-adapter-model&amp;revision=2016-06-30</capability>
+    </required-capabilities>
+
+</snapshot>
