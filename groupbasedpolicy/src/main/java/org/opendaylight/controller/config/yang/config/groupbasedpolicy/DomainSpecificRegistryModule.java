@@ -8,21 +8,18 @@
 
 package org.opendaylight.controller.config.yang.config.groupbasedpolicy;
 
-import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
+import org.opendaylight.controller.config.api.osgi.WaitingServiceTracker;
 import org.opendaylight.groupbasedpolicy.api.DomainSpecificRegistry;
 import org.opendaylight.groupbasedpolicy.api.EndpointAugmentorRegistry;
 import org.opendaylight.groupbasedpolicy.api.NetworkDomainAugmentorRegistry;
-import org.opendaylight.groupbasedpolicy.base_endpoint.BaseEndpointServiceImpl;
-import org.opendaylight.groupbasedpolicy.base_endpoint.EndpointAugmentorRegistryImpl;
-import org.opendaylight.groupbasedpolicy.forwarding.NetworkDomainAugmentorRegistryImpl;
-import org.opendaylight.groupbasedpolicy.renderer.RendererManager;
+import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class DomainSpecificRegistryModule extends org.opendaylight.controller.config.yang.config.groupbasedpolicy.AbstractDomainSpecificRegistryModule {
 
     private static final Logger LOG = LoggerFactory.getLogger(DomainSpecificRegistryModule.class);
+    private BundleContext bundleContext;
 
     public DomainSpecificRegistryModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {
         super(identifier, dependencyResolver);
@@ -39,43 +36,31 @@ public class DomainSpecificRegistryModule extends org.opendaylight.controller.co
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        final DataBroker dataProvider = getDataBrokerDependency();
-        final RpcProviderRegistry rpcRegistry = getRpcRegistryDependency();
-        Instance instance = new Instance(dataProvider, rpcRegistry);
-        LOG.info("{} successfully started.", DomainSpecificRegistryModule.class.getCanonicalName());
-        return instance;
+        final WaitingServiceTracker<DomainSpecificRegistry> tracker = WaitingServiceTracker.create(
+                DomainSpecificRegistry.class, bundleContext);
+        final DomainSpecificRegistry service = tracker.waitForService(WaitingServiceTracker.FIVE_MINUTES);
+
+        final class Instance implements DomainSpecificRegistry, AutoCloseable {
+            @Override
+            public void close() {
+                tracker.close();
+            }
+
+            @Override
+            public EndpointAugmentorRegistry getEndpointAugmentorRegistry() {
+                return service.getEndpointAugmentorRegistry();
+            }
+
+            @Override
+            public NetworkDomainAugmentorRegistry getNetworkDomainAugmentorRegistry() {
+                return service.getNetworkDomainAugmentorRegistry();
+            }
+        }
+
+        return new Instance();
     }
 
-    private static class Instance implements DomainSpecificRegistry, AutoCloseable {
-
-        private final EndpointAugmentorRegistryImpl endpointAugmentorRegistryImpl;
-        private final NetworkDomainAugmentorRegistryImpl netDomainAugmentorRegistryImpl;
-        private final BaseEndpointServiceImpl baseEndpointServiceImpl;
-        private final RendererManager rendererManager;
-
-        Instance(DataBroker dataProvider, RpcProviderRegistry rpcRegistry) {
-            endpointAugmentorRegistryImpl = new EndpointAugmentorRegistryImpl();
-            netDomainAugmentorRegistryImpl = new NetworkDomainAugmentorRegistryImpl();
-            baseEndpointServiceImpl = new BaseEndpointServiceImpl(dataProvider, rpcRegistry, endpointAugmentorRegistryImpl);
-            rendererManager = new RendererManager(dataProvider, netDomainAugmentorRegistryImpl, endpointAugmentorRegistryImpl);
-        }
-
-        @Override
-        public void close() throws Exception {
-            baseEndpointServiceImpl.close();
-            rendererManager.close();
-        }
-
-        @Override
-        public EndpointAugmentorRegistry getEndpointAugmentorRegistry() {
-            return endpointAugmentorRegistryImpl;
-        }
-
-        @Override
-        public NetworkDomainAugmentorRegistry getNetworkDomainAugmentorRegistry() {
-            return netDomainAugmentorRegistryImpl;
-        }
-
+    void setBundleContext(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
     }
-
 }

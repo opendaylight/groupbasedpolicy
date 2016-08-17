@@ -16,75 +16,30 @@
                         groupbasedpolicy:groupbasedpolicy-impl
                     </type>
                     <name>groupbasedpolicy-impl</name>
-
-                    <data-broker>
-                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
-                        <name>binding-data-broker</name>
-                    </data-broker>
-
-                    <rpc-registry>
-                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-rpc-registry</type>
-                        <name>binding-rpc-broker</name>
-                    </rpc-registry>
-
-                    <policy-validator-registry>
-                        <type xmlns:groupbasedpolicy="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">groupbasedpolicy:policy-validator-registry</type>
-                        <name>policy-validator-registry</name>
-                    </policy-validator-registry>
                 </module>
                 <module>
                     <type xmlns:groupbasedpolicy="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">
                         groupbasedpolicy:policy-validator-registry-impl
                     </type>
                     <name>policy-validator-registry</name>
-
-                    <data-broker>
-                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
-                        <name>binding-data-broker</name>
-                    </data-broker>
                 </module>
                 <module>
                     <type xmlns:groupbasedpolicy="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">
                         groupbasedpolicy:ep-renderer-augmentation-registry-impl
                     </type>
                     <name>ep-renderer-augmentation-registry</name>
-
-                    <data-broker>
-                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
-                        <name>binding-data-broker</name>
-                    </data-broker>
-
-                    <rpc-registry>
-                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-rpc-registry</type>
-                        <name>binding-rpc-broker</name>
-                    </rpc-registry>
                 </module>
                 <module>
                     <type xmlns:groupbasedpolicy="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">
                         groupbasedpolicy:domain-specific-registry-impl
                     </type>
                     <name>domain-specific-registry</name>
-
-                    <data-broker>
-                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
-                        <name>binding-data-broker</name>
-                    </data-broker>
-
-                    <rpc-registry>
-                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-rpc-registry</type>
-                        <name>binding-rpc-broker</name>
-                    </rpc-registry>
                 </module>
                 <module>
                     <type xmlns:groupbasedpolicy="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">
                         groupbasedpolicy:statistics-manager-impl
                     </type>
                     <name>statistics-manager-impl</name>
-
-                    <data-broker>
-                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
-                        <name>binding-data-broker</name>
-                    </data-broker>
                 </module>
             </modules>
 

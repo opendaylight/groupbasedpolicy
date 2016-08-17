@@ -7,6 +7,26 @@
  */
 
 package org.opendaylight.controller.config.yang.config.groupbasedpolicy;
+
+import org.opendaylight.controller.config.api.DependencyResolver;
+import org.osgi.framework.BundleContext;
+
 public class DomainSpecificRegistryModuleFactory extends org.opendaylight.controller.config.yang.config.groupbasedpolicy.AbstractDomainSpecificRegistryModuleFactory {
 
+    @Override
+    public DomainSpecificRegistryModule instantiateModule(String instanceName, DependencyResolver dependencyResolver,
+            DomainSpecificRegistryModule oldModule, AutoCloseable oldInstance, BundleContext bundleContext) {
+        DomainSpecificRegistryModule module = super.instantiateModule(instanceName, dependencyResolver, oldModule,
+                oldInstance, bundleContext);
+        module.setBundleContext(bundleContext);
+        return module;
+    }
+
+    @Override
+    public DomainSpecificRegistryModule instantiateModule(String instanceName, DependencyResolver dependencyResolver,
+            BundleContext bundleContext) {
+        DomainSpecificRegistryModule module = super.instantiateModule(instanceName, dependencyResolver, bundleContext);
+        module.setBundleContext(bundleContext);
+        return module;
+    }
 }

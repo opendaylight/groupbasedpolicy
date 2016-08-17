@@ -8,14 +8,7 @@
 
 package org.opendaylight.controller.config.yang.config.groupbasedpolicy;
 
-import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
-import org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistry;
-import org.opendaylight.groupbasedpolicy.location.resolver.LocationResolver;
-import org.opendaylight.groupbasedpolicy.resolver.ForwardingResolver;
-import org.opendaylight.groupbasedpolicy.sf.SubjectFeatureDefinitionProvider;
-import org.opendaylight.groupbasedpolicy.sf.SupportedActionDefinitionListener;
-import org.opendaylight.groupbasedpolicy.sf.SupportedClassifierDefinitionListener;
+import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,44 +36,6 @@ public class GroupbasedpolicyModule extends org.opendaylight.controller.config.y
      */
     @Override
     public java.lang.AutoCloseable createInstance() {
-        DataBroker dataProvider = getDataBrokerDependency();
-        PolicyValidatorRegistry validatorRegistry = getPolicyValidatorRegistryDependency();
-
-        try {
-            Instance instance = new Instance(dataProvider, validatorRegistry);
-            LOG.info("{} successfully started.", GroupbasedpolicyModule.class.getCanonicalName());
-            return instance;
-        } catch (TransactionCommitFailedException e) {
-            LOG.error(
-                    "Error creating instance of SubjectFeatureDefinitionProvider; Subject Feature Definitions were not put to Datastore");
-            throw new RuntimeException(e);
-        }
+        return NoopAutoCloseable.INSTANCE;
     }
-
-    private static class Instance implements AutoCloseable {
-
-        private final SubjectFeatureDefinitionProvider sfdp;
-        private final SupportedClassifierDefinitionListener supportedClassifierDefinitionListener;
-        private final SupportedActionDefinitionListener supportedActionDefinitionListener;
-        private final LocationResolver locationResolver;
-        private final ForwardingResolver forwardingResolver;
-
-        Instance(DataBroker dataProvider, PolicyValidatorRegistry validatorRegistry) throws TransactionCommitFailedException {
-            sfdp = new SubjectFeatureDefinitionProvider(dataProvider);
-            supportedClassifierDefinitionListener = new SupportedClassifierDefinitionListener(dataProvider, validatorRegistry);
-            supportedActionDefinitionListener = new SupportedActionDefinitionListener(dataProvider);
-            locationResolver = new LocationResolver(dataProvider);
-            forwardingResolver = new ForwardingResolver(dataProvider);
-        }
-
-        @Override
-        public void close() throws Exception {
-            sfdp.close();
-            supportedClassifierDefinitionListener.close();
-            supportedActionDefinitionListener.close();
-            locationResolver.close();
-            forwardingResolver.close();
-        }
-    }
-
 }
