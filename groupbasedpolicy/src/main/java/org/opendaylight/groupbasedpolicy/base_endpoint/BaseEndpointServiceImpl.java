@@ -18,8 +18,6 @@ import javax.annotation.Nullable;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.api.EndpointAugmentor;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.EndpointUtils;
@@ -65,7 +63,6 @@ public class BaseEndpointServiceImpl implements BaseEndpointService, AutoCloseab
 
     private static final Logger LOG = LoggerFactory.getLogger(BaseEndpointServiceImpl.class);
     private final DataBroker dataProvider;
-    private final BindingAwareBroker.RpcRegistration<BaseEndpointService> rpcRegistration;
     private final EndpointAugmentorRegistryImpl epAugRegistry;
 
     private static final Function<Void, RpcResult<Void>> TO_SUCCESS_RPC_RESULT = new Function<Void, RpcResult<Void>>() {
@@ -76,12 +73,9 @@ public class BaseEndpointServiceImpl implements BaseEndpointService, AutoCloseab
         }
     };
 
-    public BaseEndpointServiceImpl(DataBroker dataProvider, RpcProviderRegistry rpcRegistry,
-            EndpointAugmentorRegistryImpl epAugRegistry) {
+    public BaseEndpointServiceImpl(DataBroker dataProvider, EndpointAugmentorRegistryImpl epAugRegistry) {
         this.epAugRegistry = Preconditions.checkNotNull(epAugRegistry);
         this.dataProvider = Preconditions.checkNotNull(dataProvider);
-        Preconditions.checkNotNull(rpcRegistry);
-        this.rpcRegistration = rpcRegistry.addRpcImplementation(BaseEndpointService.class, this);
     }
 
     /**
@@ -315,10 +309,7 @@ public class BaseEndpointServiceImpl implements BaseEndpointService, AutoCloseab
     }
 
     @Override
-    public void close() throws Exception {
-        if (rpcRegistration != null) {
-            rpcRegistration.close();
-        }
+    public void close() {
     }
 
     private <T> List<T> nullToEmpty(@Nullable List<T> list) {

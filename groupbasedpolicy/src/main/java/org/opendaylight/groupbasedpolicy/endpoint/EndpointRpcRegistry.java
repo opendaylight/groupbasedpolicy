@@ -18,8 +18,6 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
-import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentation;
 import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
@@ -70,9 +68,6 @@ public class EndpointRpcRegistry implements EndpointService, EpRendererAugmentat
     private static final Logger LOG = LoggerFactory.getLogger(EndpointRpcRegistry.class);
 
     private final DataBroker dataProvider;
-    private final RpcProviderRegistry rpcRegistry;
-
-    private final BindingAwareBroker.RpcRegistration<EndpointService> rpcRegistration;
 
     final static ConcurrentMap<String, EpRendererAugmentation> registeredRenderers =
             new ConcurrentHashMap<String, EpRendererAugmentation>();
@@ -110,17 +105,9 @@ public class EndpointRpcRegistry implements EndpointService, EpRendererAugmentat
      * Constructor
      *
      * @param dataProvider the {@link DataBroker}
-     * @param rpcRegistry the {@link RpcProviderRegistry}
      */
-    public EndpointRpcRegistry(DataBroker dataProvider, RpcProviderRegistry rpcRegistry) {
+    public EndpointRpcRegistry(DataBroker dataProvider) {
         this.dataProvider = dataProvider;
-        this.rpcRegistry = rpcRegistry;
-        if (this.rpcRegistry != null) {
-            rpcRegistration = this.rpcRegistry.addRpcImplementation(EndpointService.class, this);
-            LOG.debug("Added RPC Implementation Correctly");
-        } else {
-            rpcRegistration = null;
-        }
 
         if (dataProvider != null) {
             InstanceIdentifier<Endpoints> iid = InstanceIdentifier.builder(Endpoints.class).build();
@@ -146,10 +133,7 @@ public class EndpointRpcRegistry implements EndpointService, EpRendererAugmentat
     }
 
     @Override
-    public void close() throws Exception {
-        if (rpcRegistration != null) {
-            rpcRegistration.close();
-        }
+    public void close() {
     }
 
     /**

@@ -17,10 +17,15 @@
 */
 package org.opendaylight.controller.config.yang.config.groupbasedpolicy;
 
-import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.groupbasedpolicy.statistics.StatisticsManagerImpl;
+import org.opendaylight.controller.config.api.osgi.WaitingServiceTracker;
+import org.opendaylight.groupbasedpolicy.api.StatisticsManager;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.statistics.rev151215.statistic.records.StatRecords;
+import org.osgi.framework.BundleContext;
 
 public class StatisticsManagerImplModule extends org.opendaylight.controller.config.yang.config.groupbasedpolicy.AbstractStatisticsManagerImplModule {
+
+    private BundleContext bundleContext;
+
     public StatisticsManagerImplModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {
         super(identifier, dependencyResolver);
     }
@@ -36,9 +41,32 @@ public class StatisticsManagerImplModule extends org.opendaylight.controller.con
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        DataBroker broker = getDataBrokerDependency();
-        StatisticsManagerImpl manager = new StatisticsManagerImpl(broker);
-        return manager;
+        final WaitingServiceTracker<StatisticsManager> tracker = WaitingServiceTracker.create(
+                StatisticsManager.class, bundleContext);
+        final StatisticsManager service = tracker.waitForService(WaitingServiceTracker.FIVE_MINUTES);
+
+        final class Instance implements StatisticsManager, AutoCloseable {
+            @Override
+            public void close() {
+                tracker.close();
+            }
+
+            @Override
+            public boolean writeStat(StatRecords record) {
+                return service.writeStat(record);
+            }
+
+            @Override
+            public StatRecords readStats() {
+                return service.readStats();
+            }
+        }
+
+        return new Instance();
+    }
+
+    void setBundleContext(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
     }
 
 }

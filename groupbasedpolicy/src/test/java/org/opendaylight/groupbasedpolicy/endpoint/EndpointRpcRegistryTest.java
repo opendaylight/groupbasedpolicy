@@ -18,7 +18,6 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.common.util.concurrent.CheckedFuture;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,7 +26,6 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentation;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
@@ -63,6 +61,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
+import com.google.common.util.concurrent.CheckedFuture;
+
 public class EndpointRpcRegistryTest {
 
     private static final String L2_BD_ID = "l2bdId";
@@ -83,15 +83,13 @@ public class EndpointRpcRegistryTest {
         dataProvider = mock(DataBroker.class);
         epRendererAugmentation = mock(EpRendererAugmentation.class);
         WriteTransaction wt = newWriteTransactionMock();
-        RpcProviderRegistry rpcRegistry = mock(RpcProviderRegistry.class);
 
-        endpointRpcRegistry = new EndpointRpcRegistry(dataProvider, rpcRegistry);
+        endpointRpcRegistry = new EndpointRpcRegistry(dataProvider);
     }
 
     @Test
     public void testConstructor() throws Exception {
-        RpcProviderRegistry rpcRegistry = mock(RpcProviderRegistry.class);
-        EndpointRpcRegistry other = new EndpointRpcRegistry(dataProvider, rpcRegistry);
+        EndpointRpcRegistry other = new EndpointRpcRegistry(dataProvider);
         other.close();
     }
 

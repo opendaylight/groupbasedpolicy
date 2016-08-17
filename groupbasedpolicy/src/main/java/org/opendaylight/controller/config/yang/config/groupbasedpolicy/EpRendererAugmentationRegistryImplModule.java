@@ -8,15 +8,17 @@
 
 package org.opendaylight.controller.config.yang.config.groupbasedpolicy;
 
-import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
-import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
+import org.opendaylight.controller.config.api.osgi.WaitingServiceTracker;
+import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentation;
+import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry;
+import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class EpRendererAugmentationRegistryImplModule extends org.opendaylight.controller.config.yang.config.groupbasedpolicy.AbstractEpRendererAugmentationRegistryImplModule {
 
     private static final Logger LOG = LoggerFactory.getLogger(EpRendererAugmentationRegistryImplModule.class);
+    private BundleContext bundleContext;
 
     public EpRendererAugmentationRegistryImplModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {
         super(identifier, dependencyResolver);
@@ -33,12 +35,31 @@ public class EpRendererAugmentationRegistryImplModule extends org.opendaylight.c
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        final DataBroker dataProvider = getDataBrokerDependency();
-        final RpcProviderRegistry rpcRegistry = getRpcRegistryDependency();
+        final WaitingServiceTracker<EpRendererAugmentationRegistry> tracker = WaitingServiceTracker.create(
+                EpRendererAugmentationRegistry.class, bundleContext);
+        final EpRendererAugmentationRegistry service = tracker.waitForService(WaitingServiceTracker.FIVE_MINUTES);
 
-        EndpointRpcRegistry endpointRpcRegistry = new EndpointRpcRegistry(dataProvider, rpcRegistry);
-        LOG.info("{} successfully started.", EpRendererAugmentationRegistryImplModule.class.getCanonicalName());
-        return endpointRpcRegistry;
+        final class Instance implements EpRendererAugmentationRegistry, AutoCloseable {
+            @Override
+            public void close() {
+                tracker.close();
+            }
+
+            @Override
+            public void register(EpRendererAugmentation epRendererAugmentation) {
+                service.register(epRendererAugmentation);
+            }
+
+            @Override
+            public void unregister(EpRendererAugmentation epRendererAugmentation) {
+                service.unregister(epRendererAugmentation);
+            }
+        }
+
+        return new Instance();
     }
 
+    void setBundleContext(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
+    }
 }

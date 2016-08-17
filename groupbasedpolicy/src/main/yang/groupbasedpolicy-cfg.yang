@@ -24,35 +24,43 @@ module groupbasedpolicy-cfg {
     }
 
     identity ep-renderer-augmentation-registry {
+        status deprecated;
         description
             "ep-renderer-augmentation-registry service definition";
 
         base "config:service-type";
         config:java-class "org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry";
+        config:disable-osgi-service-registration;
     }
 
     identity domain-specific-registry {
+        status deprecated;
         description
             "domain-specific-registry service definition";
 
         base "config:service-type";
         config:java-class "org.opendaylight.groupbasedpolicy.api.DomainSpecificRegistry";
+        config:disable-osgi-service-registration;
     }
 
     identity policy-validator-registry {
+        status deprecated;
         description
             "policy-validator-registry service definition";
 
         base "config:service-type";
         config:java-class "org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistry";
+        config:disable-osgi-service-registration;
     }
 
     identity statistics-manager {
+        status deprecated;
         description
             "statistics-manager service definition";
 
         base "config:service-type";
         config:java-class "org.opendaylight.groupbasedpolicy.api.StatisticsManager";
+        config:disable-osgi-service-registration;
     }
 
     identity policy-validator-registry-impl {
@@ -93,103 +101,18 @@ module groupbasedpolicy-cfg {
     augment "/config:modules/config:module/config:configuration" {
         case groupbasedpolicy-impl {
             when "/config:modules/config:module/config:type = 'groupbasedpolicy-impl'";
-
-            //wires in the data-broker service
-            container data-broker {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-async-data-broker;
-                    }
-                }
-            }
-            //RPC Registry
-            container rpc-registry {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-rpc-registry;
-                    }
-                }
-            }
-            // EpRendererAugmentationRegistry service
-            container policy-validator-registry {
-                uses config:service-ref {
-                    refine type {
-                        config:required-identity policy-validator-registry;
-                    }
-                }
-            }
         }
         case policy-validator-registry-impl {
             when "/config:modules/config:module/config:type = 'policy-validator-registry-impl'";
-
-            //wires in the data-broker service
-            container data-broker {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-async-data-broker;
-                    }
-                }
-            }
         }
         case ep-renderer-augmentation-registry-impl {
             when "/config:modules/config:module/config:type = 'ep-renderer-augmentation-registry-impl'";
-
-            //wires in the data-broker service
-            container data-broker {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-async-data-broker;
-                    }
-                }
-            }
-            //RPC Registry
-            container rpc-registry {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-rpc-registry;
-                    }
-                }
-            }
         }
         case domain-specific-registry-impl {
             when "/config:modules/config:module/config:type = 'domain-specific-registry-impl'";
-
-            //wires in the data-broker service
-            container data-broker {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-async-data-broker;
-                    }
-                }
-            }
-            //RPC Registry
-            container rpc-registry {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-rpc-registry;
-                    }
-                }
-            }
         }
         case statistics-manager-impl {
             when "/config:modules/config:module/config:type = 'statistics-manager-impl'";
-
-          //wires in the data-broker service
-            container data-broker {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-async-data-broker;
-                    }
-                }
-            }
         }
     }
 }

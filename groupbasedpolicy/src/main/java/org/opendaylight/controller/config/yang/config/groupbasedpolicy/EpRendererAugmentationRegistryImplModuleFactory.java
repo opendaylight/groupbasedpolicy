@@ -16,6 +16,26 @@
 * Do not modify this file unless it is present under src/main directory
 */
 package org.opendaylight.controller.config.yang.config.groupbasedpolicy;
+
+import org.opendaylight.controller.config.api.DependencyResolver;
+import org.osgi.framework.BundleContext;
+
 public class EpRendererAugmentationRegistryImplModuleFactory extends org.opendaylight.controller.config.yang.config.groupbasedpolicy.AbstractEpRendererAugmentationRegistryImplModuleFactory {
 
+    @Override
+    public EpRendererAugmentationRegistryImplModule instantiateModule(String instanceName, DependencyResolver dependencyResolver,
+            EpRendererAugmentationRegistryImplModule oldModule, AutoCloseable oldInstance, BundleContext bundleContext) {
+        EpRendererAugmentationRegistryImplModule module = super.instantiateModule(instanceName, dependencyResolver, oldModule,
+                oldInstance, bundleContext);
+        module.setBundleContext(bundleContext);
+        return module;
+    }
+
+    @Override
+    public EpRendererAugmentationRegistryImplModule instantiateModule(String instanceName, DependencyResolver dependencyResolver,
+            BundleContext bundleContext) {
+        EpRendererAugmentationRegistryImplModule module = super.instantiateModule(instanceName, dependencyResolver, bundleContext);
+        module.setBundleContext(bundleContext);
+        return module;
+    }
 }

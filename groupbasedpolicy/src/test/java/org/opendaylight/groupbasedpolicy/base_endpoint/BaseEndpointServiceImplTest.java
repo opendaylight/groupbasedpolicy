@@ -8,8 +8,6 @@
 
 package org.opendaylight.groupbasedpolicy.base_endpoint;
 
-import static org.mockito.Mockito.mock;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -22,7 +20,6 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.test.CustomDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.EndpointUtils;
@@ -100,17 +97,15 @@ public class BaseEndpointServiceImplTest extends CustomDataBrokerTest {
     @Before
     public void init() {
         dataProvider = getDataBroker();
-        RpcProviderRegistry rpcRegistry = mock(RpcProviderRegistry.class);
 
         baseEndpointRpcRegistry =
-                new BaseEndpointServiceImpl(dataProvider, rpcRegistry, new EndpointAugmentorRegistryImpl());
+                new BaseEndpointServiceImpl(dataProvider, new EndpointAugmentorRegistryImpl());
     }
 
     @Test
     public void testConstructor() throws Exception {
-        RpcProviderRegistry rpcRegistry = mock(RpcProviderRegistry.class);
         BaseEndpointServiceImpl registry =
-                new BaseEndpointServiceImpl(dataProvider, rpcRegistry, new EndpointAugmentorRegistryImpl());
+                new BaseEndpointServiceImpl(dataProvider, new EndpointAugmentorRegistryImpl());
         registry.close();
     }
 
@@ -126,7 +121,7 @@ public class BaseEndpointServiceImplTest extends CustomDataBrokerTest {
         ContainmentEndpoint contEp = createBaseContEpBuilder().build();
         RegisterEndpointInputBuilder inputBuilder = new RegisterEndpointInputBuilder();
         setAddrEpsToBuilder(inputBuilder, l2EpWithL3Parent, l3EpWithL2Child);
-        setContEpsToBuilder(inputBuilder, contEp);      
+        setContEpsToBuilder(inputBuilder, contEp);
 
         RpcResult<Void> rpcResult = baseEndpointRpcRegistry.registerEndpoint(inputBuilder.build()).get();
         Assert.assertTrue(rpcResult.isSuccessful());
