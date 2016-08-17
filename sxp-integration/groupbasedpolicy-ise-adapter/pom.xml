@@ -7,17 +7,15 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>org.opendaylight.controller</groupId>
-        <artifactId>config-parent</artifactId>
-        <version>0.5.1-SNAPSHOT</version>
-        <relativePath/>
+        <groupId>org.opendaylight.groupbasedpolicy</groupId>
+        <artifactId>sxp-integration</artifactId>
+        <version>0.4.1-SNAPSHOT</version>
+        <relativePath>..</relativePath>
     </parent>
 
-    <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>groupbasedpolicy-ise-adapter</artifactId>
-    <version>0.4.1-SNAPSHOT</version>
     <packaging>bundle</packaging>
-    <name>groupbasedpolicy-ise-adapter</name>
+    <name>sxp-integration_groupbasedpolicy-ise-adapter</name>
 
     <properties>
         <sxp.version>1.3.1-SNAPSHOT</sxp.version>
