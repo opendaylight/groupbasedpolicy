@@ -305,11 +305,15 @@
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>sxp-ep-provider</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>ios-xe-renderer</artifactId>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
-      <artifactId>groupbasedpolicy-ise-adapter</artifactId>
+      <artifactId>sxp-ise-adapter</artifactId>
     </dependency>
 
     <!-- GBP configuration -->
@@ -399,7 +403,7 @@
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
-      <artifactId>groupbasedpolicy-ise-adapter</artifactId>
+      <artifactId>sxp-ise-adapter</artifactId>
       <type>xml</type>
       <classifier>config</classifier>
     </dependency>

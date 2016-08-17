@@ -25,7 +25,7 @@
 
     <modules>
         <module>sxp-ep-provider</module>
-        <module>groupbasedpolicy-ise-adapter</module>
+        <module>sxp-ise-adapter</module>
         <!--<module>ep-sgt-mapper</module>-->
     </modules>
 
