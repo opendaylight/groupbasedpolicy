@@ -34,34 +34,6 @@ module ios-xe-provider-impl {
     augment "/config:modules/config:module/config:configuration" {
         case ios-xe-provider-impl {
             when "/config:modules/config:module/config:type = 'ios-xe-provider-impl'";
-
-            // Wires in the data-broker service
-            container data-broker {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-async-data-broker;
-                    }
-                }
-            }
-            // binding aware broker
-            container broker {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-broker-osgi-registry;
-                    }
-                }
-            }
-            // PolicyProviderRegistry service
-            container policy-validator-registry {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity gbpcfg:policy-validator-registry;
-                    }
-                }
-            }
         }
     }
 }
