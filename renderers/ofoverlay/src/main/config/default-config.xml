@@ -16,41 +16,6 @@
                         ofoverlay:ofoverlay-provider-impl
                     </type>
                     <name>ofoverlay-provider-impl</name>
-
-                    <rpc-registry>
-                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-rpc-registry</type>
-                        <name>binding-rpc-broker</name>
-                    </rpc-registry>
-
-                    <data-broker>
-                      <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
-                      <name>binding-data-broker</name>
-                    </data-broker>
-
-                    <notification-adapter>
-                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding:impl">binding:binding-new-notification-service</type>
-                        <name>binding-notification-adapter</name>
-                    </notification-adapter>
-
-                    <ep-renderer-augmentation-registry>
-                        <type xmlns:gbp="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">gbp:ep-renderer-augmentation-registry</type>
-                        <name>ep-renderer-augmentation-registry</name>
-                    </ep-renderer-augmentation-registry>
-
-                    <policy-validator-registry>
-                        <type xmlns:gbp="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">gbp:policy-validator-registry</type>
-                        <name>policy-validator-registry</name>
-                    </policy-validator-registry>
-
-                    <statistics-manager>
-                        <type xmlns:gbp="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">gbp:statistics-manager</type>
-                        <name>statistics-manager</name>
-                    </statistics-manager>
-
-                    <gbp-ofoverlay-table-offset>0</gbp-ofoverlay-table-offset>
-
-                    <!--<gbp-ofoverlay-sflow-start>false</gbp-ofoverlay-sflow-start>-->
-                    <!--<gbp-ofoverlay-sflow-collector-uri>http://192.168.53.2:8008</gbp-ofoverlay-sflow-collector-uri>-->
                 </module>
             </modules>
         </data>

@@ -9,7 +9,7 @@
 package org.opendaylight.controller.config.yang.config.ofoverlay_provider.impl;
 
 
-import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.OFOverlayRenderer;
+import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,14 +32,7 @@ public class OFOverlayProviderModule extends org.opendaylight.controller.config.
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        LOG.info("OFoffset: {}",getGbpOfoverlayTableOffset());
-        return new OFOverlayRenderer(getDataBrokerDependency(),
-                                     getRpcRegistryDependency(),
-                                     getNotificationAdapterDependency(),
-                                     getEpRendererAugmentationRegistryDependency(),
-                                     getPolicyValidatorRegistryDependency(),
-                                     getStatisticsManagerDependency(),
-                                     getGbpOfoverlayTableOffset().shortValue());
+        return NoopAutoCloseable.INSTANCE;
     }
 
 }

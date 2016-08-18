@@ -25,7 +25,6 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.openflowplugin.api.OFConstants;
@@ -127,18 +126,11 @@ public class ArpTasker implements PacketProcessingListener {
             .build();
     }
 
-    public ArpTasker(RpcProviderRegistry rpcRegistry, DataBroker dataProvider) {
+    public ArpTasker(DataBroker dataProvider, PacketProcessingService packetProcessingService,
+            SalFlowService flowService) {
         this.dataProvider = checkNotNull(dataProvider);
-        checkNotNull(rpcRegistry);
-        PacketProcessingService packetProcessingService = rpcRegistry.getRpcService(PacketProcessingService.class);
-        if (packetProcessingService != null) {
-            LOG.info("{} was found.", PacketProcessingService.class.getSimpleName());
-            this.arpSender = new ArpSender(packetProcessingService);
-        } else {
-            LOG.info("Missing service {}", PacketProcessingService.class.getSimpleName());
-            this.arpSender = null;
-        }
-        flowService = rpcRegistry.getRpcService(SalFlowService.class);
+        this.arpSender = new ArpSender(packetProcessingService);
+        this.flowService = flowService;
     }
 
     @Override

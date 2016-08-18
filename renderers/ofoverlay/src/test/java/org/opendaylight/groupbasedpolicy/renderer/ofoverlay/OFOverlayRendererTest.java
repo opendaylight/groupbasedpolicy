@@ -29,11 +29,12 @@ import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataCh
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistry;
 import org.opendaylight.groupbasedpolicy.api.StatisticsManager;
 import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.service.rev130819.SalFlowService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketProcessingService;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
@@ -46,7 +47,8 @@ public class OFOverlayRendererTest {
     private OFOverlayRenderer renderer;
 
     private DataBroker dataProvider;
-    private RpcProviderRegistry rpcRegistry;
+    private PacketProcessingService packetService;
+    private SalFlowService flowService;
     private EndpointRpcRegistry endpointRpcRegistry;
     private NotificationService notificationService;
     private PolicyValidatorRegistry policyValidatorRegistry;
@@ -60,7 +62,8 @@ public class OFOverlayRendererTest {
     @Before
     public void initialisation() {
         dataProvider = mock(DataBroker.class);
-        rpcRegistry = mock(RpcProviderRegistry.class);
+        packetService = mock(PacketProcessingService.class);
+        flowService = mock(SalFlowService.class);
         endpointRpcRegistry = mock(EndpointRpcRegistry.class);
         notificationService = mock(NotificationService.class);
         policyValidatorRegistry = mock(PolicyValidatorRegistry.class);
@@ -81,7 +84,7 @@ public class OFOverlayRendererTest {
         when(dataProvider.newReadOnlyTransaction()).thenReturn(readTransaction);
         future = Futures.immediateCheckedFuture(Optional.<OfOverlayConfig> absent());
         when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(future);
-        renderer = new OFOverlayRenderer(dataProvider, rpcRegistry, notificationService, endpointRpcRegistry,
+        renderer = new OFOverlayRenderer(dataProvider, packetService, flowService, notificationService, endpointRpcRegistry,
                 policyValidatorRegistry, statisticsManager, tableOffset);
     }
 

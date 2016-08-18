@@ -29,8 +29,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.CheckedFuture;
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -46,7 +44,6 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.dto.EgKey;
 import org.opendaylight.groupbasedpolicy.dto.EpKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.EndpointListener;
@@ -54,6 +51,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node.SwitchManager;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.MacAddress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.service.rev130819.SalFlowService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
@@ -71,16 +69,20 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayL3Context;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketProcessingService;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-import org.opendaylight.yangtools.yang.binding.RpcService;
+
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.CheckedFuture;
 
 public class EndpointManagerTest {
 
     private EndpointManager manager;
     private DataBroker dataProvider;
-    private RpcProviderRegistry rpcRegistry;
+    private PacketProcessingService packetService;
+    private SalFlowService flowService;
     private NotificationService notificationService;
     private ScheduledExecutorService executor;
     private SwitchManager switchManager;
@@ -105,7 +107,8 @@ public class EndpointManagerTest {
     @Before
     public void initialisation() throws Exception {
         dataProvider = mock(DataBroker.class);
-        rpcRegistry = mock(RpcProviderRegistry.class);
+        packetService = mock(PacketProcessingService.class);
+        flowService = mock(SalFlowService.class);
         notificationService = mock(NotificationService.class);
         executor = mock(ScheduledExecutorService.class);
         switchManager = mock(SwitchManager.class);
@@ -121,9 +124,7 @@ public class EndpointManagerTest {
         when(dataProvider.registerDataTreeChangeListener(any(DataTreeIdentifier.class),
                 any(DataTreeChangeListener.class))).thenReturn(listenerReg);
 
-        when(rpcRegistry.addRpcImplementation(any(Class.class), any(RpcService.class))).thenReturn(rpcRegistration);
-
-        manager = spy(new EndpointManager(dataProvider, rpcRegistry, notificationService, executor, switchManager));
+        manager = spy(new EndpointManager(dataProvider, packetService, flowService, notificationService, executor, switchManager));
         endpointListener = mock(EndpointListener.class);
         manager.registerListener(endpointListener);
 
@@ -255,7 +256,7 @@ public class EndpointManagerTest {
         when(optional.get()).thenReturn(endpoints);
         assertEquals(endpoints, manager.getEndpointsFromDataStore());
 
-        manager = new EndpointManager(null, rpcRegistry, notificationService, executor, switchManager);
+        manager = new EndpointManager(null, packetService, flowService, notificationService, executor, switchManager);
         assertNull(manager.getEndpointsFromDataStore());
     }
 

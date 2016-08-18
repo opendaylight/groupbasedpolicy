@@ -37,64 +37,6 @@ module ofoverlay-provider-impl {
     augment "/config:modules/config:module/config:configuration" {
         case ofoverlay-provider-impl {
             when "/config:modules/config:module/config:type = 'ofoverlay-provider-impl'";
-
-            // Wires in the data-broker service
-            container data-broker {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-async-data-broker;
-                    }
-                }
-            }
-            // RPC Registry
-            container rpc-registry {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-rpc-registry;
-                    }
-                }
-            }
-            // Notification service
-            container notification-adapter {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity sal-broker:binding-new-notification-service;
-                    }
-                }
-            }
-            // EpRendererAugmentationRegistry service
-            container ep-renderer-augmentation-registry {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity gbpcfg:ep-renderer-augmentation-registry;
-                    }
-                }
-            }
-            // PolicyProviderRegistry service
-            container policy-validator-registry {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity gbpcfg:policy-validator-registry;
-                    }
-                }
-            }
-            // StatisticsManager service
-            container statistics-manager {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity gbpcfg:statistics-manager;
-                    }
-                }
-            }
-
-            uses ofoverlay:initial-values;
-            //uses ofoverlay:sflow-values;
         }
     }
 }
