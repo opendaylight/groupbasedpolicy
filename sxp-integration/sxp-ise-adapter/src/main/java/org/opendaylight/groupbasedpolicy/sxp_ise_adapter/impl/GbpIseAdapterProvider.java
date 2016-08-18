@@ -14,9 +14,12 @@ import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareProvider;
+import org.opendaylight.groupbasedpolicy.sxp.ep.provider.api.EPPolicyTemplateProvider;
+import org.opendaylight.groupbasedpolicy.sxp.ep.provider.spi.SxpEpProviderProvider;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.gbp.sxp.ise.adapter.model.rev160630.GbpSxpIseAdapter;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.gbp.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.IseSourceConfig;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
+import org.opendaylight.yangtools.concepts.ObjectRegistration;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,19 +34,29 @@ public class GbpIseAdapterProvider implements AutoCloseable, BindingAwareProvide
     private static final Logger LOG = LoggerFactory.getLogger(GbpIseAdapterProvider.class);
 
     private final DataBroker dataBroker;
+    private final SxpEpProviderProvider sxpEpProvider;
     private ListenerRegistration<ClusteredDataTreeChangeListener<IseSourceConfig>> registration;
+    private ObjectRegistration<EPPolicyTemplateProvider> epPolicyTemplateProviderRegistration;
 
-    public GbpIseAdapterProvider(final DataBroker dataBroker, final BindingAwareBroker brokerDependency) {
+    public GbpIseAdapterProvider(final DataBroker dataBroker, final BindingAwareBroker broker,
+                                 final SxpEpProviderProvider sxpEpProvider) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker, "provided dataBroker must not be null");
-        brokerDependency.registerProvider(this);
+        this.sxpEpProvider = Preconditions.checkNotNull(sxpEpProvider, "provided sxp-ep-provider must not be null");
+
+        broker.registerProvider(this);
     }
 
     @Override
-    public void close() {
+    public void close() throws Exception {
         if (registration != null) {
             LOG.info("closing GbpIseAdapterProvider");
             registration.close();
             registration = null;
+        }
+        if (epPolicyTemplateProviderRegistration != null) {
+            LOG.info("closing EPPolicyTemplateProvider");
+            epPolicyTemplateProviderRegistration.close();
+            epPolicyTemplateProviderRegistration = null;
         }
     }
 
@@ -51,11 +64,17 @@ public class GbpIseAdapterProvider implements AutoCloseable, BindingAwareProvide
     public void onSessionInitiated(final BindingAwareBroker.ProviderContext providerContext) {
         LOG.info("Starting GbpIseAdapterProvider ..");
 
+        // setup template provider pipeline
+        final EPPolicyTemplateProviderFacade templateProviderFacade = new EPPolicyTemplateProviderIseImpl();
+        epPolicyTemplateProviderRegistration = sxpEpProvider.getEPPolicyTemplateProviderRegistry()
+                .registerTemplateProvider(templateProviderFacade);
+
         // setup harvesting and processing pipeline
         final SgtInfoProcessor epgGenerator = new SgtToEpgGeneratorImpl(dataBroker);
         final SgtInfoProcessor templateGenerator = new SgtToEPTemplateGeneratorImpl(dataBroker);
         final GbpIseSgtHarvester gbpIseSgtHarvester = new GbpIseSgtHarvesterImpl(epgGenerator, templateGenerator);
-        final GbpIseConfigListenerImpl gbpIseConfigListener = new GbpIseConfigListenerImpl(dataBroker, gbpIseSgtHarvester);
+        final GbpIseConfigListenerImpl gbpIseConfigListener = new GbpIseConfigListenerImpl(
+                dataBroker, gbpIseSgtHarvester, templateProviderFacade);
 
         // build data-tree path
         final DataTreeIdentifier<IseSourceConfig> dataTreePath = new DataTreeIdentifier<>(

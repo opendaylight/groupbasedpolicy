@@ -12,8 +12,10 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.api.DomainSpecificRegistry;
 import org.opendaylight.groupbasedpolicy.api.EndpointAugmentor;
+import org.opendaylight.groupbasedpolicy.sxp.ep.provider.api.EPPolicyTemplateDaoFacade;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.api.EPPolicyTemplateProviderRegistry;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.dao.EPForwardingTemplateDaoImpl;
+import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.dao.EPPolicyTemplateDaoFacadeImpl;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.dao.EPPolicyTemplateDaoImpl;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.dao.EpPolicyTemplateValueKeyFactory;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.dao.MasterDatabaseBindingDaoImpl;
@@ -41,7 +43,6 @@ public class SxpEpProviderProviderImpl implements SxpEpProviderProvider {
     private static final Logger LOG = LoggerFactory.getLogger(SxpEpProviderProviderImpl.class);
 
     private final MasterDatabaseBindingListenerImpl sxpDatabaseListener;
-    private final SxpMapperReactor sxpMapperReactor;
     private final EPTemplateListener epPolicyTemplateListener;
     private final EPTemplateListener epForwardingTemplateListener;
     private final DomainSpecificRegistry domainSpecificRegistry;
@@ -53,10 +54,10 @@ public class SxpEpProviderProviderImpl implements SxpEpProviderProvider {
         LOG.info("starting SxmMapper ..");
         this.domainSpecificRegistry = domainSpecificRegistry;
 
-        epPolicyTemplateRegistry = new EPPolicyTemplateFacade();
+        epPolicyTemplateRegistry = new EPPolicyTemplateProviderRegistryImpl();
 
         final BaseEndpointService endpointService = rpcRegistryDependency.getRpcService(BaseEndpointService.class);
-        sxpMapperReactor = new SxpMapperReactorImpl(endpointService, dataBroker);
+        final SxpMapperReactor sxpMapperReactor = new SxpMapperReactorImpl(endpointService, dataBroker);
 
         final SimpleCachedDao<Sgt, EndpointPolicyTemplateBySgt> epPolicyTemplateCachedDao = new SimpleCachedDaoImpl<>();
         final SimpleCachedDao<IpPrefix, EndpointForwardingTemplateBySubnet> epForwardingTemplateCachedDao =
@@ -66,18 +67,21 @@ public class SxpEpProviderProviderImpl implements SxpEpProviderProvider {
         final EpPolicyTemplateValueKeyFactory epPolicyTemplateKeyFactory = new EpPolicyTemplateValueKeyFactory(
                 EPTemplateUtil.createEndpointGroupIdOrdering(), EPTemplateUtil.createConditionNameOrdering());
         final EPPolicyTemplateDaoImpl epPolicyTemplateDao = new EPPolicyTemplateDaoImpl(dataBroker, epPolicyTemplateCachedDao, epPolicyTemplateKeyFactory);
-        //TODO: inject delegate (ise-adapter-provider)
+        final EPPolicyTemplateDaoFacade epPolicyTemplateDaoFacade = new EPPolicyTemplateDaoFacadeImpl(dataBroker, epPolicyTemplateDao);
+        epPolicyTemplateRegistry.addDistributionTarget(epPolicyTemplateDaoFacade);
+
         final EPForwardingTemplateDaoImpl epForwardingTemplateDao = new EPForwardingTemplateDaoImpl(dataBroker,
                 epForwardingTemplateCachedDao);
+
         final MasterDatabaseBindingDaoImpl masterDBBindingDao = new MasterDatabaseBindingDaoImpl(dataBroker, masterDBBindingCachedDao);
 
         sxpDatabaseListener = new MasterDatabaseBindingListenerImpl(dataBroker, sxpMapperReactor, masterDBBindingCachedDao,
-                epPolicyTemplateDao, epForwardingTemplateDao);
+                epPolicyTemplateDaoFacade, epForwardingTemplateDao);
         epPolicyTemplateListener = new EPPolicyTemplateListenerImpl(dataBroker, sxpMapperReactor, epPolicyTemplateCachedDao,
                 masterDBBindingDao, epForwardingTemplateDao);
         epForwardingTemplateListener = new EPForwardingTemplateListenerImpl(dataBroker, sxpMapperReactor, epForwardingTemplateCachedDao,
-                masterDBBindingDao, epPolicyTemplateDao);
-        sxpEndpointAugmentor = new SxpEndpointAugmentorImpl(epPolicyTemplateDao, epPolicyTemplateKeyFactory);
+                masterDBBindingDao, epPolicyTemplateDaoFacade);
+        sxpEndpointAugmentor = new SxpEndpointAugmentorImpl(epPolicyTemplateDaoFacade, epPolicyTemplateKeyFactory);
         domainSpecificRegistry.getEndpointAugmentorRegistry().register(sxpEndpointAugmentor);
         LOG.info("started SxmMapper");
     }
@@ -92,6 +96,7 @@ public class SxpEpProviderProviderImpl implements SxpEpProviderProvider {
         sxpDatabaseListener.close();
         epPolicyTemplateListener.close();
         epForwardingTemplateListener.close();
+        epPolicyTemplateRegistry.close();
         domainSpecificRegistry.getEndpointAugmentorRegistry().unregister(sxpEndpointAugmentor);
     }
 }

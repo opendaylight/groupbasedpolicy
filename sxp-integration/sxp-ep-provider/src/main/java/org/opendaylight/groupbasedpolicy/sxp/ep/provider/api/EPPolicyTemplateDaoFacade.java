@@ -8,20 +8,15 @@
 
 package org.opendaylight.groupbasedpolicy.sxp.ep.provider.api;
 
-import java.util.Optional;
-import javax.annotation.Nonnull;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.DSAsyncDao;
+import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.ReadableByKey;
+import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.dao.EpPolicyTemplateValueKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.model.rev160302.sxp.ep.mapper.EndpointPolicyTemplateBySgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 
 /**
- * Contract: based on given {@link Sgt} and {@link TenantId} deliver {@link EndpointPolicyTemplateBySgt} value
+ * Purpose: union of template-dao and template provider consumer
  */
-public interface EPPolicyTemplateProvider {
-
-    /**
-     * @param sgt of template
-     * @return template if available (expecting empty conditions field)
-     */
-    Optional<EndpointPolicyTemplateBySgt> provideTemplate(@Nonnull final Sgt sgt);
+public interface EPPolicyTemplateDaoFacade extends TemplateProviderDistributionTarget<EPPolicyTemplateProvider>,
+        DSAsyncDao<Sgt, EndpointPolicyTemplateBySgt>, ReadableByKey<EpPolicyTemplateValueKey, EndpointPolicyTemplateBySgt> {
 }

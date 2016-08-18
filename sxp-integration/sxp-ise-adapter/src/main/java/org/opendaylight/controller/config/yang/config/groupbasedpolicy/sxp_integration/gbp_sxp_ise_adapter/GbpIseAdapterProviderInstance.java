@@ -14,6 +14,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.opendaylight.controller.config.yang.config.groupbasedpolicy.GroupbasedpolicyInstance;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
+import org.opendaylight.groupbasedpolicy.sxp.ep.provider.spi.SxpEpProviderProvider;
 import org.opendaylight.groupbasedpolicy.sxp_ise_adapter.impl.GbpIseAdapterProvider;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonService;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider;
@@ -31,15 +32,18 @@ public class GbpIseAdapterProviderInstance implements ClusterSingletonService, A
     private final DataBroker dataBroker;
     private final BindingAwareBroker bindingAwareBroker;
     private final ClusterSingletonServiceProvider clusterSingletonService;
+    private final SxpEpProviderProvider sxpEpProvider;
     private ClusterSingletonServiceRegistration singletonServiceRegistration;
     private GbpIseAdapterProvider iseAdapterProvider;
 
     public GbpIseAdapterProviderInstance(final DataBroker dataBroker,
                                          final BindingAwareBroker bindingAwareBroker,
-                                         final ClusterSingletonServiceProvider clusterSingletonService) {
+                                         final ClusterSingletonServiceProvider clusterSingletonService,
+                                         final SxpEpProviderProvider sxpEpProvider) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.bindingAwareBroker = Preconditions.checkNotNull(bindingAwareBroker);
         this.clusterSingletonService = Preconditions.checkNotNull(clusterSingletonService);
+        this.sxpEpProvider = Preconditions.checkNotNull(sxpEpProvider);
     }
 
     public void initialize() {
@@ -50,13 +54,17 @@ public class GbpIseAdapterProviderInstance implements ClusterSingletonService, A
     @Override
     public void instantiateServiceInstance() {
         LOG.info("Instantiating {}", this.getClass().getSimpleName());
-        iseAdapterProvider = new GbpIseAdapterProvider(dataBroker, bindingAwareBroker);
+        iseAdapterProvider = new GbpIseAdapterProvider(dataBroker, bindingAwareBroker, sxpEpProvider);
     }
 
     @Override
     public ListenableFuture<Void> closeServiceInstance() {
         LOG.info("Instance {} closed", this.getClass().getSimpleName());
-        iseAdapterProvider.close();
+        try {
+            iseAdapterProvider.close();
+        } catch (Exception e) {
+            LOG.warn("iseAdapterProvider closing failed: {}", e.getMessage());
+        }
         return Futures.immediateFuture(null);
     }
 

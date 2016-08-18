@@ -45,12 +45,14 @@ public class GbpIseConfigListenerImplTest {
     private WriteTransaction wTx;
     @Mock
     private IseSourceConfig config;
+    @Mock
+    private EPPolicyTemplateProviderFacade templateProviderFacade;
 
     private GbpIseConfigListenerImpl listener;
 
     @Before
     public void setUp() throws Exception {
-        listener = new GbpIseConfigListenerImpl(dataBroker, harvester);
+        listener = new GbpIseConfigListenerImpl(dataBroker, harvester, templateProviderFacade);
     }
 
     @Test

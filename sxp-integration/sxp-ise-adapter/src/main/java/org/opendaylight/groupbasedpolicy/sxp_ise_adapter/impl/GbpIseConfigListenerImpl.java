@@ -48,11 +48,14 @@ public class GbpIseConfigListenerImpl implements GbpIseConfigListener {
 
     private final DataBroker dataBroker;
     private final GbpIseSgtHarvester gbpIseSgtHarvester;
+    @Nonnull private final EPPolicyTemplateProviderFacade templateProviderFacade;
     private final ThreadPoolExecutor pool;
 
-    public GbpIseConfigListenerImpl(@Nonnull final DataBroker dataBroker, @Nonnull final GbpIseSgtHarvester gbpIseSgtHarvester) {
+    public GbpIseConfigListenerImpl(@Nonnull final DataBroker dataBroker, @Nonnull final GbpIseSgtHarvester gbpIseSgtHarvester,
+                                    @Nonnull final EPPolicyTemplateProviderFacade templateProviderFacade) {
         this.dataBroker = dataBroker;
         this.gbpIseSgtHarvester = gbpIseSgtHarvester;
+        this.templateProviderFacade = templateProviderFacade;
         pool = new ThreadPoolExecutor(1, 1, 0, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(10),
                 new ThreadFactoryBuilder().setNameFormat("ise-sgt-harverster-%d").build()) {
             @Override
@@ -69,6 +72,8 @@ public class GbpIseConfigListenerImpl implements GbpIseConfigListener {
     public void onDataTreeChanged(@Nonnull final Collection<DataTreeModification<IseSourceConfig>> collection) {
         for (DataTreeModification<IseSourceConfig> modification : collection) {
             final IseSourceConfig iseSourceConfig = modification.getRootNode().getDataAfter();
+            //TODO: separate template provider from harvesting
+            templateProviderFacade.assignIseSourceConfig(iseSourceConfig);
             if (iseSourceConfig != null) {
                 pool.submit(() -> {
                     final ListenableFuture<Integer> harvestResult = gbpIseSgtHarvester.harvest(iseSourceConfig);
