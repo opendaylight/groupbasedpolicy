@@ -56,15 +56,12 @@ public class IosXeRendererProviderImpl implements IosXeRendererProvider, Binding
     private static final Logger LOG = LoggerFactory.getLogger(IosXeRendererProviderImpl.class);
 
     private final DataBroker dataBroker;
-    private final RendererName rendererName;
     private RendererConfigurationListenerImpl rendererConfigurationListener;
     private IosXeCapableNodeListenerImpl iosXeCapableNodeListener;
 
-    public IosXeRendererProviderImpl(final DataBroker dataBroker, final BindingAwareBroker broker,
-                                     final RendererName rendererName) {
+    public IosXeRendererProviderImpl(final DataBroker dataBroker, final BindingAwareBroker broker) {
         LOG.debug("ios-xe renderer bootstrap");
         this.dataBroker = Preconditions.checkNotNull(dataBroker, "missing dataBroker dependency");
-        this.rendererName = Preconditions.checkNotNull(rendererName, "missing rendererName param");
         broker.registerProvider(this);
     }
 
@@ -94,7 +91,7 @@ public class IosXeRendererProviderImpl implements IosXeRendererProvider, Binding
         final PolicyManager policyManagerZip = new PolicyManagerZipImpl(policyManager);
 
         // renderer-configuration endpoints
-        rendererConfigurationListener = new RendererConfigurationListenerImpl(dataBroker, rendererName, policyManagerZip);
+        rendererConfigurationListener = new RendererConfigurationListenerImpl(dataBroker, policyManagerZip);
         // supported node list maintenance
         // TODO: upkeep of available renderer-nodes
 

@@ -16,6 +16,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.manager.PolicyManager;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.Renderers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
@@ -40,11 +41,11 @@ public class RendererConfigurationListenerImpl implements DataTreeChangeListener
     private final ListenerRegistration<RendererConfigurationListenerImpl> listenerRegistration;
     private final PolicyManager policyManager;
 
-    public RendererConfigurationListenerImpl(final DataBroker dataBroker, final RendererName rendererName,
+    public RendererConfigurationListenerImpl(final DataBroker dataBroker,
                                              final PolicyManager policyManager) {
         this.policyManager = Preconditions.checkNotNull(policyManager, "missing endpoint template cache");
         final InstanceIdentifier<RendererPolicy> policyPath = InstanceIdentifier.create(Renderers.class)
-                .child(Renderer.class, new RendererKey(rendererName))
+                .child(Renderer.class, new RendererKey(PolicyManagerImpl.IOS_XE_RENDERER))
                 .child(RendererPolicy.class);
 
         final DataTreeIdentifier<RendererPolicy> treePath = new DataTreeIdentifier<>(

@@ -33,8 +33,6 @@
                         <type xmlns:gbp="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">gbp:policy-validator-registry</type>
                         <name>policy-validator-registry</name>
                     </policy-validator-registry>
-
-                    <renderer-name>ios-xe-renderer</renderer-name>
                 </module>
             </modules>
         </data>

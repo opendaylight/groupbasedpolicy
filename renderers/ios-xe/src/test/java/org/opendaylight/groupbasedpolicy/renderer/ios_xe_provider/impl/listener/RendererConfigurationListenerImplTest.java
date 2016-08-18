@@ -23,7 +23,6 @@ import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicyBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.ConfigurationBuilder;
@@ -37,7 +36,6 @@ import org.opendaylight.yangtools.concepts.ListenerRegistration;
 @RunWith(MockitoJUnitRunner.class)
 public class RendererConfigurationListenerImplTest {
 
-    private static final RendererName RENDERER_NAME = new RendererName("renderer1");
     private final RendererPolicy policy1;
     private final RendererPolicy policy2;
     @Mock
@@ -83,7 +81,7 @@ public class RendererConfigurationListenerImplTest {
                 Matchers.<DataTreeIdentifier<RendererPolicy>>any(),
                 Matchers.<RendererConfigurationListenerImpl>any()))
                 .thenReturn(listenerRegistration);
-        listener = new RendererConfigurationListenerImpl(dataBroker, RENDERER_NAME, policyManager);
+        listener = new RendererConfigurationListenerImpl(dataBroker, policyManager);
         Mockito.verify(dataBroker).registerDataTreeChangeListener(Matchers.<DataTreeIdentifier<RendererPolicy>>any(),
                 Matchers.<RendererConfigurationListenerImpl>any());
     }
