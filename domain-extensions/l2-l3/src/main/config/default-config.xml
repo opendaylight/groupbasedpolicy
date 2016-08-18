@@ -16,12 +16,6 @@
                         l2l3:l2-l3-domain-extension-impl
                     </type>
                     <name>l2-l3-domain-extension-impl</name>
-
-                    <domain-specific-registry>
-                        <type xmlns:gbp="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">gbp:domain-specific-registry</type>
-                        <name>domain-specific-registry</name>
-                    </domain-specific-registry>
-                </module>
             </modules>
         </data>
 
