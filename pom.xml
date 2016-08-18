@@ -34,7 +34,6 @@
     <module>groupbasedpolicy-ui</module>
     <module>distribution-karaf</module>
     <module>features</module>
-    <module>sxp-mapper</module>
     <module>sxp-integration</module>
   </modules>
 

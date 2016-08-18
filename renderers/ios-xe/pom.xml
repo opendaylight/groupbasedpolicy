@@ -76,7 +76,7 @@
         </dependency>
         <dependency>
             <groupId>org.opendaylight.groupbasedpolicy</groupId>
-            <artifactId>sxp-mapper</artifactId>
+            <artifactId>sxp-ep-provider</artifactId>
         </dependency>
         <dependency>
             <groupId>org.opendaylight.sfc</groupId>
