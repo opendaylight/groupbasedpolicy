@@ -8,12 +8,9 @@
 
 package org.opendaylight.controller.config.yang.config.domain_extension.l2_l3.impl;
 
-import org.opendaylight.groupbasedpolicy.api.DomainSpecificRegistry;
-import org.opendaylight.groupbasedpolicy.domain_extension.l2_l3.L2L3NetworkDomainAugmentor;
+import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Preconditions;
 
 public class L2L3DomainExtensionModule extends org.opendaylight.controller.config.yang.config.domain_extension.l2_l3.impl.AbstractL2L3DomainExtensionModule {
 
@@ -34,12 +31,7 @@ public class L2L3DomainExtensionModule extends org.opendaylight.controller.confi
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        DomainSpecificRegistry domainSpecificRegistry = getDomainSpecificRegistryDependency();
-        Preconditions.checkNotNull(domainSpecificRegistry);
-        L2L3NetworkDomainAugmentor l2l3NetworkDomainAugmentor =
-                new L2L3NetworkDomainAugmentor(domainSpecificRegistry.getNetworkDomainAugmentorRegistry());
-        LOG.info("{} successfully started.", L2L3DomainExtensionModule.class.getCanonicalName());
-        return l2l3NetworkDomainAugmentor;
+        return NoopAutoCloseable.INSTANCE;
     }
 
 }

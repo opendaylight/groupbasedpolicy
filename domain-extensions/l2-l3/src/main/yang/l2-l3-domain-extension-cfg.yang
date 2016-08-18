@@ -34,15 +34,6 @@ module l2-l3-domain-extension-cfg {
     augment "/config:modules/config:module/config:configuration" {
         case l2-l3-domain-extension-impl {
             when "/config:modules/config:module/config:type = 'l2-l3-domain-extension-impl'";
-
-            // DomainSpecificRegistry service
-            container domain-specific-registry {
-                uses config:service-ref {
-                    refine type {
-                        config:required-identity gbpcfg:domain-specific-registry;
-                    }
-                }
-            }
         }
     }
 }
