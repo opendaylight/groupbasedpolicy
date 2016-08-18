@@ -28,25 +28,6 @@ module neutron-mapper-impl {
     augment "/config:modules/config:module/config:configuration" {
         case neutron-mapper-impl {
             when "/config:modules/config:module/config:type = 'neutron-mapper-impl'";
-
-            container data-broker {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-async-data-broker;
-                    }
-                }
-            }
-
-            container rpc-registry {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-rpc-registry;
-                    }
-                }
-            }
-
         }
     }
 }
