@@ -1,0 +1,35 @@
+module neutron-ovsdb-impl {
+
+    yang-version 1;
+    namespace "urn:opendaylight:groupbasedpolicy:neutron:ovsdb:params";
+    prefix "neutron-ovsdb-params";
+
+    import config { prefix config; revision-date 2013-04-05; }
+    import opendaylight-md-sal-binding { prefix mdsal; revision-date 2013-10-28; }
+
+    description
+        "This module contains the base YANG definitions for
+        neutron-ovsdb mudule params.";
+
+    revision "2016-08-12" {
+        description
+            "Initial revision.";
+    }
+
+    container integration-bridge-setting {
+        leaf name {
+            mandatory true;
+            type string;
+        }
+        leaf openflow-port {
+            mandatory true;
+            type uint16;
+        }
+        leaf openflow-protocol {
+            mandatory true;
+            type string {
+                pattern "^tcp$|^udp$";
+           }
+        }
+    }
+}

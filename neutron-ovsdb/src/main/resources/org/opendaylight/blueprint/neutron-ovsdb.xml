@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
+           xmlns:odl="http://opendaylight.org/xmlns/blueprint/v1.0.0"
+           odl:use-default-for-reference-types="true">
+
+    <reference id="dataBroker" interface="org.opendaylight.controller.md.sal.binding.api.DataBroker"/>
+    <odl:rpc-service id="epService" interface="org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService"/>
+
+    <odl:clustered-app-config id="moduleConfig"
+        binding-class="org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.ovsdb.params.rev160812.IntegrationBridgeSetting">
+        <odl:default-config><![CDATA[
+            <integration-bridge-setting xmlns="urn:opendaylight:groupbasedpolicy:neutron:ovsdb:params">
+                <name>br-int</name>
+                <openflow-port>6653</openflow-port>
+                <openflow-protocol>tcp</openflow-protocol>
+            </integration-bridge-setting>
+            ]]>
+        </odl:default-config>
+    </odl:clustered-app-config>
+
+    <bean id="neutronOvsdb" class="org.opendaylight.controller.config.yang.config.neutron_ovsdb.impl.NeutronOvsdbInstance"
+        destroy-method="close">
+        <argument ref="dataBroker"/>
+        <argument ref="epService"/>
+        <argument ref="moduleConfig"/>
+    </bean>
+</blueprint>

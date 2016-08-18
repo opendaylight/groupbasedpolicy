@@ -15,24 +15,6 @@
                         neutron-ovsdb:neutron-ovsdb-impl
                     </type>
                     <name>neutron-ovsdb-impl</name>
-
-                    <rpc-registry>
-                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-rpc-registry</type>
-                        <name>binding-rpc-broker</name>
-                    </rpc-registry>
-
-                    <data-broker>
-                      <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
-                      <name>binding-data-broker</name>
-                    </data-broker>
-
-                    <!-- Remove the following if integration bridge should not be automatically created on OVSDB node. -->
-                    <integration-bridge-setting>
-                        <name>br-int</name>
-                        <openflow-protocol>tcp</openflow-protocol>
-                        <openflow-port>6653</openflow-port>
-                    </integration-bridge-setting>
-
                 </module>
             </modules>
         </data>
