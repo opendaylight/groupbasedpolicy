@@ -16,17 +16,6 @@
                         faas:faas-provider-impl
                     </type>
                     <name>faas-provider-impl</name>
-
-                    <data-broker>
-                      <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
-                      <name>binding-data-broker</name>
-                    </data-broker>
-                    
-                    <ep-renderer-augmentation-registry>
-                        <type xmlns:epr="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">epr:ep-renderer-augmentation-registry</type>
-                        <name>ep-renderer-augmentation-registry</name>
-                    </ep-renderer-augmentation-registry>
-                    
                 </module>
             </modules>
         </data>

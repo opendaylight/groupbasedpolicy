@@ -35,25 +35,6 @@ module faas-provider-impl {
     augment "/config:modules/config:module/config:configuration" {
         case faas-provider-impl {
             when "/config:modules/config:module/config:type = 'faas-provider-impl'";
-
-            //wires in the data-broker service
-            container data-broker {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-async-data-broker;
-                    }
-                }
-            }
-            // EpRendererAugmentationRegistry service
-            container ep-renderer-augmentation-registry {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity gbpcfg:ep-renderer-augmentation-registry;
-                    }
-                }
-            }
         }
     }
 }
