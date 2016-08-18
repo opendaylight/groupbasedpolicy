@@ -15,14 +15,6 @@
                         neutron-vpp-mapper:neutron-vpp-mapper-impl
                     </type>
                     <name>neutron-vpp-mapper-impl</name>
-                    <rpc-registry>
-                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-rpc-registry</type>
-                        <name>binding-rpc-broker</name>
-                    </rpc-registry>
-                    <data-broker>
-                      <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
-                      <name>binding-data-broker</name>
-                    </data-broker>
                 </module>
             </modules>
         </data>

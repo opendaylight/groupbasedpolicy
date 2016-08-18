@@ -8,7 +8,7 @@
 
 package org.opendaylight.controller.config.yang.config.neutron_vpp_mapper.impl;
 
-import org.opendaylight.groupbasedpolicy.neutron.vpp.mapper.NeutronVppMapper;
+import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 
 public class NeutronVppMapperModule extends org.opendaylight.controller.config.yang.config.neutron_vpp_mapper.impl.AbstractNeutronVppMapperModule {
     public NeutronVppMapperModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {
@@ -25,10 +25,7 @@ public class NeutronVppMapperModule extends org.opendaylight.controller.config.y
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        String vhostSocketPath = getVhostSocketPath();
-        String vhostSocketPrefix = getVhostSocketPrefix();
-        NeutronVppMapper neutronVppMapper = new NeutronVppMapper(vhostSocketPath, vhostSocketPrefix, getDataBrokerDependency());
-        return neutronVppMapper;
+        return NoopAutoCloseable.INSTANCE;
     }
 
 }
