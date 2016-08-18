@@ -9,7 +9,7 @@
 package org.opendaylight.controller.config.yang.config.groupbasedpolicy.sxp_mapper;
 
 
-import org.opendaylight.groupbasedpolicy.sxp.mapper.impl.SxpMapperProviderImpl;
+import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 
 /**
 * sxp-mapper impl module
@@ -30,7 +30,6 @@ public class SxpMapperProviderModule extends org.opendaylight.controller.config.
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        return new SxpMapperProviderImpl(getDataBrokerDependency(), getRpcRegistryDependency(),
-                getDomainSpecificRegistryDependency());
+        return NoopAutoCloseable.INSTANCE;
     }
 }

@@ -9,7 +9,6 @@
 package org.opendaylight.groupbasedpolicy.sxp.mapper.impl;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.api.DomainSpecificRegistry;
 import org.opendaylight.groupbasedpolicy.api.EndpointAugmentor;
 import org.opendaylight.groupbasedpolicy.sxp.mapper.api.EPTemplateListener;
@@ -48,12 +47,11 @@ public class SxpMapperProviderImpl implements AutoCloseable {
     private final DomainSpecificRegistry domainSpecificRegistry;
     private final EndpointAugmentor sxpEndpointAugmentor;
 
-    public SxpMapperProviderImpl(final DataBroker dataBroker, final RpcProviderRegistry rpcRegistryDependency,
+    public SxpMapperProviderImpl(final DataBroker dataBroker, final BaseEndpointService endpointService,
             final DomainSpecificRegistry domainSpecificRegistry) {
         LOG.info("starting SxmMapper ..");
         this.domainSpecificRegistry = domainSpecificRegistry;
 
-        final BaseEndpointService endpointService = rpcRegistryDependency.getRpcService(BaseEndpointService.class);
         sxpMapperReactor = new SxpMapperReactorImpl(endpointService, dataBroker);
 
         final SimpleCachedDao<Sgt, EndpointPolicyTemplateBySgt> epPolicyTemplateCachedDao = new SimpleCachedDaoImpl<>();
