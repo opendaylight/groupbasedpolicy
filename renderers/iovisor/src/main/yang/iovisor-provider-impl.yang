@@ -35,34 +35,6 @@ module iovisor-provider-impl {
     augment "/config:modules/config:module/config:configuration" {
         case iovisor-provider-impl {
             when "/config:modules/config:module/config:type = 'iovisor-provider-impl'";
-
-            // Wires in the data-broker service
-            container data-broker {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-async-data-broker;
-                    }
-                }
-            }
-            // EpRendererAugmentationRegistry service
-            container ep-renderer-augmentation-registry {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity gbpcfg:ep-renderer-augmentation-registry;
-                    }
-                }
-            }
-            // PolicyProviderRegistry service
-            container policy-validator-registry {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity gbpcfg:policy-validator-registry;
-                    }
-                }
-            }
         }
     }
 }
