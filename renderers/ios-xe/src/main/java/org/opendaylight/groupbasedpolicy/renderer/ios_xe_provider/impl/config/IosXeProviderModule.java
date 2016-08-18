@@ -8,7 +8,7 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.config;
 
-import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.IosXeRendererProviderImpl;
+import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 
 public class IosXeProviderModule extends org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.config.AbstractIosXeProviderModule {
     public IosXeProviderModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {
@@ -26,7 +26,7 @@ public class IosXeProviderModule extends org.opendaylight.groupbasedpolicy.rende
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        return new IosXeRendererProviderImpl(getDataBrokerDependency(), getBrokerDependency());
+        return NoopAutoCloseable.INSTANCE;
     }
 
 }

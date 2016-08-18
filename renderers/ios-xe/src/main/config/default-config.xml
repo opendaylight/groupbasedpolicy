@@ -18,21 +18,6 @@
                         iosxe:ios-xe-provider-impl
                     </type>
                     <name>ios-xe-provider-impl</name>
-
-                    <data-broker>
-                      <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
-                      <name>binding-data-broker</name>
-                    </data-broker>
-
-                    <broker>
-                        <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-broker-osgi-registry</type>
-                        <name>binding-osgi-broker</name>
-                    </broker>
-
-                    <policy-validator-registry>
-                        <type xmlns:gbp="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">gbp:policy-validator-registry</type>
-                        <name>policy-validator-registry</name>
-                    </policy-validator-registry>
                 </module>
             </modules>
         </data>
