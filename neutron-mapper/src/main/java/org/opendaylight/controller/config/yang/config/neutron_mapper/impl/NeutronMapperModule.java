@@ -8,7 +8,7 @@
 
 package org.opendaylight.controller.config.yang.config.neutron_mapper.impl;
 
-import org.opendaylight.groupbasedpolicy.neutron.mapper.NeutronMapper;
+import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,9 +31,7 @@ public class NeutronMapperModule extends org.opendaylight.controller.config.yang
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        final NeutronMapper neutronMapper = new NeutronMapper(getDataBrokerDependency(), getRpcRegistryDependency());
-        LOG.info("Neutron mapper started.");
-        return neutronMapper;
+        return NoopAutoCloseable.INSTANCE;
     }
 
     public static boolean isDebugEnabled() {

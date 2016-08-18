@@ -22,7 +22,6 @@ import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronFloatingIpAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronNetworkAware;
@@ -105,9 +104,8 @@ public class NeutronMapper implements DataTreeChangeListener<Neutron>, AutoClose
     private Neutron neutronBefore;
     private Neutron neutronAfter;
 
-    public NeutronMapper(DataBroker dataProvider, RpcProviderRegistry rpcProvider) {
-        EndpointService epService = rpcProvider.getRpcService(EndpointService.class);
-        BaseEndpointService baseEpService = rpcProvider.getRpcService(BaseEndpointService.class);
+    public NeutronMapper(DataBroker dataProvider, EndpointService epService,
+            BaseEndpointService baseEpService) {
         EndpointRegistrator epRegistrator = new EndpointRegistrator(epService, baseEpService);
         networkAware = new NeutronNetworkAware(dataProvider);
         securityGroupAware = new NeutronSecurityGroupAware(dataProvider);

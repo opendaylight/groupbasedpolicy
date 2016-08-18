@@ -19,9 +19,6 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.Set;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -55,6 +52,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.security.groups.SecurityGroupBuilder;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+
 public class NeutronMapperTest extends NeutronMapperDataBrokerTest {
 
     private final Uuid tenantUuid = new Uuid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
@@ -82,11 +83,8 @@ public class NeutronMapperTest extends NeutronMapperDataBrokerTest {
         dataBroker = getDataBroker();
         epService = mock(EndpointService.class);
         baseEpService = mock(BaseEndpointService.class);
-        rpcProvider = mock(RpcProviderRegistry.class);
-        when(rpcProvider.getRpcService(EndpointService.class)).thenReturn(epService);
-        when(rpcProvider.getRpcService(BaseEndpointService.class)).thenReturn(baseEpService);
 
-        mapper = new NeutronMapper(dataBroker, rpcProvider);
+        mapper = new NeutronMapper(dataBroker, epService, baseEpService);
 
         networkL3Extension = new NetworkL3ExtensionBuilder().setExternal(true).build();
 
@@ -119,7 +117,7 @@ public class NeutronMapperTest extends NeutronMapperDataBrokerTest {
     @Test
     public void testConstructor() throws IOException {
         DataBroker dataBrokerSpy = spy(dataBroker);
-        NeutronMapper other = new NeutronMapper(dataBrokerSpy, rpcProvider);
+        NeutronMapper other = new NeutronMapper(dataBrokerSpy, epService, baseEpService);
 
         verify(dataBrokerSpy).registerDataTreeChangeListener(new DataTreeIdentifier<>(
                 LogicalDatastoreType.CONFIGURATION, InstanceIdentifier.builder(Neutron.class).build()), other);
