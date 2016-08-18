@@ -22,12 +22,10 @@ import java.net.InetAddress;
 import java.util.Collections;
 import java.util.concurrent.Future;
 
-import com.google.common.util.concurrent.UncheckedExecutionException;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Matchers;
-import org.mockito.Mockito;
 import org.opendaylight.controller.liblldp.EtherTypes;
 import org.opendaylight.controller.liblldp.Ethernet;
 import org.opendaylight.controller.liblldp.HexEncode;
@@ -36,7 +34,6 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.test.OfOverlayDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
@@ -101,22 +98,20 @@ import org.opendaylight.yangtools.yang.common.RpcResult;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.UncheckedExecutionException;
 
 public class ArpTaskerTest extends OfOverlayDataBrokerTest {
 
     private ArpTasker arpTasker;
     private DataBroker broker;
-    private RpcProviderRegistry rpcRegistry;
+    private PacketProcessingService packetService;
     private SalFlowService flowService;
 
     @Before
     public void init() {
 
-        PacketProcessingService packetService = mock(PacketProcessingService.class);
+        packetService = mock(PacketProcessingService.class);
         flowService = mock(SalFlowService.class);
-        rpcRegistry = mock(RpcProviderRegistry.class);
-        when(rpcRegistry.getRpcService(PacketProcessingService.class)).thenReturn(packetService);
-        when(rpcRegistry.getRpcService(SalFlowService.class)).thenReturn(flowService);
     }
 
     @SuppressWarnings("unchecked")
@@ -159,7 +154,7 @@ public class ArpTaskerTest extends OfOverlayDataBrokerTest {
         // test without key
         ReadOnlyTransaction rtx = mock(ReadOnlyTransaction.class);
         broker = mock(DataBroker.class);
-        arpTasker = new ArpTasker(rpcRegistry, broker);
+        arpTasker = new ArpTasker(broker, packetService, flowService);
 
         epL3.setKey(new EndpointL3Key(mock(IpAddress.class), null));
         arpTasker.addMacForL3EpAndCreateEp(epL3.build());
@@ -179,7 +174,7 @@ public class ArpTaskerTest extends OfOverlayDataBrokerTest {
 
         // test correct
         broker = getDataBroker();
-        arpTasker = new ArpTasker(rpcRegistry, broker);
+        arpTasker = new ArpTasker(broker, packetService, flowService);
         WriteTransaction wtx = broker.newWriteOnlyTransaction();
         wtx.put(LogicalDatastoreType.CONFIGURATION, InstanceIdentifier.builder(Nodes.class).build(),
                 new NodesBuilder().setNode(Collections.singletonList(node.build())).build(), true);

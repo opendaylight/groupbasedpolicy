@@ -25,7 +25,7 @@ public class MockEndpointManager extends EndpointManager {
     private Map<EndpointL3Key, EndpointL3> endpointsL3 = new HashMap<>();
 
     public MockEndpointManager() {
-        super(null, null, null, null, null);
+        super(null, null, null, null, null, null);
     }
 
     public void addEndpoint(Endpoint ep) {

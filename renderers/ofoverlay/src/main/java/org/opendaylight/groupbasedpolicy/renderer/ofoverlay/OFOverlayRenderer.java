@@ -25,7 +25,6 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry;
 import org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistry;
 import org.opendaylight.groupbasedpolicy.api.StatisticsManager;
@@ -39,10 +38,12 @@ import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.ClassifierDefinit
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.sf.SubjectFeatures;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.statistics.SflowClientSettingsListener;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.service.rev130819.SalFlowService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfig;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayConfigBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketProcessingService;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -81,7 +82,8 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     ListenerRegistration<DataChangeListener> configReg;
 
     public OFOverlayRenderer(final DataBroker dataProvider,
-            RpcProviderRegistry rpcRegistry,
+            PacketProcessingService packetProcessingService,
+            SalFlowService flowService,
             NotificationService notificationService,
             EpRendererAugmentationRegistry epRendererAugmentationRegistry,
             PolicyValidatorRegistry policyValidatorRegistry,
@@ -94,7 +96,7 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
         executor = Executors.newScheduledThreadPool(numCPU * 2);
 
         switchManager = new SwitchManager(dataProvider);
-        endpointManager = new EndpointManager(dataProvider, rpcRegistry, notificationService,
+        endpointManager = new EndpointManager(dataProvider, packetProcessingService, flowService, notificationService,
                 executor, switchManager);
 
         classifierDefinitionListener = new ClassifierDefinitionListener(dataBroker);

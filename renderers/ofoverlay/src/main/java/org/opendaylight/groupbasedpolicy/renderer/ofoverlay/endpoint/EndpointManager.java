@@ -27,7 +27,6 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.NotificationService;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.dto.EgKey;
 import org.opendaylight.groupbasedpolicy.dto.EpKey;
 import org.opendaylight.groupbasedpolicy.renderer.ofoverlay.EndpointListener;
@@ -39,6 +38,7 @@ import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.groupbasedpolicy.util.SetUtils;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.MacAddress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.service.rev130819.SalFlowService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
@@ -59,6 +59,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ExternalImplicitGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketProcessingService;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,24 +107,19 @@ public class EndpointManager implements AutoCloseable {
         }
     };
 
-    public EndpointManager(DataBroker dataProvider, RpcProviderRegistry rpcRegistry,
-            NotificationService notificationService, ScheduledExecutorService executor, SwitchManager switchManager) {
+    public EndpointManager(DataBroker dataProvider,PacketProcessingService packetProcessingService,
+            SalFlowService flowService, NotificationService notificationService,
+            ScheduledExecutorService executor, SwitchManager switchManager) {
         this.executor = executor;
         this.dataProvider = dataProvider;
-        if (rpcRegistry != null) {
             if (notificationService != null && dataProvider != null) {
-                this.arpTasker = new ArpTasker(rpcRegistry, dataProvider);
+                this.arpTasker = new ArpTasker(dataProvider, packetProcessingService, flowService);
                 notificationListenerRegistration = notificationService.registerNotificationListener(arpTasker);
             } else {
                 LOG.info("Missing service {}", NotificationService.class.getSimpleName());
                 this.arpTasker = null;
                 this.notificationListenerRegistration = null;
             }
-        } else {
-            LOG.warn("Missing service {}", RpcProviderRegistry.class.getSimpleName());
-            this.arpTasker = null;
-            this.notificationListenerRegistration = null;
-        }
         if (dataProvider != null) {
             endpointListener = new EndpointManagerListener(this.dataProvider, this);
             ofOverlayContextListener = new OfOverlayContextListener(dataProvider, switchManager);
