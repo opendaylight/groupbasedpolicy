@@ -10,7 +10,6 @@ package org.opendaylight.groupbasedpolicy.neutron.ovsdb;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -24,7 +23,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.CheckedFuture;
 import org.junit.Before;
 import org.junit.Test;
-import org.opendaylight.controller.config.yang.config.neutron_ovsdb.impl.IntegrationBridgeSetting;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
@@ -36,6 +34,8 @@ import org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.NeutronOvsdbIidFacto
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Uri;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.ovsdb.params.rev160812.IntegrationBridgeSetting;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.ovsdb.params.rev160812.IntegrationBridgeSettingBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.DatapathId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbBridgeAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.OvsdbBridgeAugmentationBuilder;
@@ -87,10 +87,11 @@ public class OvsdbNodeListenerTest {
     @Before
     public void init() {
         dataBroker = mock(DataBroker.class);
-        integrationBridgeSetting = new IntegrationBridgeSetting();
-        integrationBridgeSetting.setName("bridgeName");
-        integrationBridgeSetting.setOpenflowProtocol("ooofff");
-        integrationBridgeSetting.setOpenflowPort(1234);
+        integrationBridgeSetting = new IntegrationBridgeSettingBuilder()
+                .setName("bridgeName")
+                .setOpenflowProtocol("ooofff")
+                .setOpenflowPort(1234)
+                .build();
 
         rootNode = mock(DataObjectModification.class);
         rootIdentifier = NeutronOvsdbIidFactory.nodeIid(topologyId, nodeId);
