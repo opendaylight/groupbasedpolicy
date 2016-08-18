@@ -8,7 +8,7 @@
 
 package org.opendaylight.controller.config.yang.config.ne.location.provider.cfg;
 
-import org.opendaylight.groupbasedpolicy.ne.location.provider.NeLocationProvider;
+import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 
 public class NeLocationProviderModule extends org.opendaylight.controller.config.yang.config.ne.location.provider.cfg.AbstractNeLocationProviderModule {
     public NeLocationProviderModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {
@@ -26,7 +26,7 @@ public class NeLocationProviderModule extends org.opendaylight.controller.config
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        return new NeLocationProvider(getDataBrokerDependency());
+        return NoopAutoCloseable.INSTANCE;
     }
 
 }

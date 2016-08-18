@@ -33,16 +33,6 @@ module ne-location-provider-cfg {
     augment "/config:modules/config:module/config:configuration" {
         case ne-location-provider {
             when "/config:modules/config:module/config:type = 'ne-location-provider'";
-
-            // Wires in the data-broker service
-            container data-broker {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-async-data-broker;
-                    }
-                }
-            }
         }
     }
 }
