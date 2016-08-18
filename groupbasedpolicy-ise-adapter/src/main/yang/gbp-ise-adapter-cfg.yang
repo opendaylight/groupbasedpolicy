@@ -35,26 +35,6 @@ module gbp-ise-adapter-cfg {
     augment "/config:modules/config:module/config:configuration" {
         case gbp-ise-adapter-impl {
             when "/config:modules/config:module/config:type = 'gbp-ise-adapter-impl'";
-
-            //wires in the data-broker service
-            container data-broker {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-async-data-broker;
-                    }
-                }
-            }
-
-            container broker {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-broker-osgi-registry;
-                    }
-                }
-            }
-
         }
     }
 }

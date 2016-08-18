@@ -8,7 +8,7 @@
 
 package org.opendaylight.controller.config.yang.config.groupbasedpolicy.gbp_ise_adapter;
 
-import org.opendaylight.groupbasedpolicy.gbp_ise_adapter.impl.GbpIseAdapterProvider;
+import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 
 /**
 * gbp-ise-adapter impl module
@@ -29,7 +29,7 @@ public class GpbIseAdapterProviderModule extends org.opendaylight.controller.con
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        return new GbpIseAdapterProvider(getDataBrokerDependency(), getBrokerDependency());
+        return NoopAutoCloseable.INSTANCE;
     }
 
 }
