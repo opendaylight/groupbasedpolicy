@@ -36,36 +36,6 @@ module neutron-vpp-mapper-impl {
     augment "/config:modules/config:module/config:configuration" {
         case neutron-vpp-mapper-impl {
             when "/config:modules/config:module/config:type = 'neutron-vpp-mapper-impl'";
-
-            container data-broker {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-async-data-broker;
-                    }
-                }
-            }
-
-            container rpc-registry {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-rpc-registry;
-                    }
-                }
-            }
-
-            leaf vhostSocketPath {
-                description "Base system directory path for the vhost user host socket filehandle";
-                type string;
-                default "/tmp/";
-            }
-
-            leaf vhostSocketPrefix {
-                description "Prefix for the vhost user host socket filehandle";
-                type string;
-                default "socket_";
-            }
         }
     }
 }
