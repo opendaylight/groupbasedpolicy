@@ -36,34 +36,6 @@ module sxp-mapper-cfg {
     augment "/config:modules/config:module/config:configuration" {
         case sxp-mapper-impl {
             when "/config:modules/config:module/config:type = 'sxp-mapper-impl'";
-
-            //wires in the data-broker service
-            container data-broker {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-async-data-broker;
-                    }
-                }
-            }
-            //RPC Registry
-            container rpc-registry {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-rpc-registry;
-                    }
-                }
-            }
-            //Domain specific registry
-            container domain-specific-registry {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity gbpcfg:domain-specific-registry;
-                    }
-                }
-            }
         }
     }
 }
