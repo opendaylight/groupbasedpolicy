@@ -108,5 +108,7 @@ module sxp-ep-provider-model {
     augment "renderer:renderers/renderer:renderer/renderer:renderer-policy/renderer:configuration/renderer:endpoints/renderer:address-endpoint-with-location" {
         ext:augment-identifier "address-endpoint-with-location-aug";
         uses sxp-sgt;
+        status deprecated;
+        description "deprecated: to be replaced by sxp-ep-provider mechanism (lookup template with sgt or generate sgt)";
     }
 }

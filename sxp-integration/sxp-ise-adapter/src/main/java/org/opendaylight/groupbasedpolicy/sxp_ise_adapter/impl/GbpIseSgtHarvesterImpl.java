@@ -13,21 +13,16 @@ import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
-import java.io.StringReader;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.xml.XMLConstants;
-import javax.xml.namespace.NamespaceContext;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
+import org.opendaylight.groupbasedpolicy.sxp_ise_adapter.impl.util.IseReplyUtil;
 import org.opendaylight.groupbasedpolicy.sxp_ise_adapter.impl.util.RestClientFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.gbp.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.IseSourceConfig;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.gbp.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.ise.source.config.ConnectionConfig;
@@ -46,12 +41,6 @@ public class GbpIseSgtHarvesterImpl implements GbpIseSgtHarvester {
 
     private static final Logger LOG = LoggerFactory.getLogger(GbpIseSgtHarvesterImpl.class);
 
-    public static final String PATH_ERS_CONFIG_SGT = "/ers/config/sgt";
-    public static final String EXPRESSION_SGT_ALL_LINK_HREFS = "/ns3:searchResult/ns3:resources/ns5:resource/link/@href";
-    public static final String EXPRESSION_SGT_DETAIL = "./ns4:sgt";
-    public static final String EXPRESSION_SGT_NAME_ATTR = "./@name";
-    public static final String EXPRESSION_SGT_VALUE = "./value/text()";
-
     private final SgtInfoProcessor[] sgtInfoProcessors;
 
     /**
@@ -69,9 +58,9 @@ public class GbpIseSgtHarvesterImpl implements GbpIseSgtHarvester {
             final Client iseClient = RestClientFactory.createIseClient(connectionConfig);
             final WebResource baseWebResource = iseClient.resource(connectionConfig.getIseRestUrl().getValue());
 
-            final WebResource.Builder requestBuilder = createRequestBuilder(baseWebResource,
-                    connectionConfig.getHeader(), PATH_ERS_CONFIG_SGT);
-            final String rawSgtSummary = deliverResponse(requestBuilder);
+            final WebResource.Builder requestBuilder = RestClientFactory.createRequestBuilder(baseWebResource,
+                    connectionConfig.getHeader(), RestClientFactory.PATH_ERS_CONFIG_SGT);
+            final String rawSgtSummary = IseReplyUtil.deliverResponse(requestBuilder);
 
             final List<SgtInfo> sgtInfos = harvestDetails(rawSgtSummary, baseWebResource, connectionConfig.getHeader());
 
@@ -101,29 +90,16 @@ public class GbpIseSgtHarvesterImpl implements GbpIseSgtHarvester {
         return result;
     }
 
-    private static String deliverResponse(final WebResource.Builder requestBuilder) {
-        return requestBuilder.get(ClientResponse.class).getEntity(String.class);
-    }
-
-    private static WebResource.Builder createRequestBuilder(final WebResource resource, final List<Header> headers,
-                                                            final String path) {
-        final WebResource webResource = resource.path(path);
-        final WebResource.Builder requestBuilder = webResource.getRequestBuilder();
-        headers.stream().forEach(
-                (header) -> requestBuilder.header(header.getName(), header.getValue()));
-        return requestBuilder;
-    }
-
     private List<SgtInfo> harvestDetails(final String rawSgtSummary, final WebResource baseWebResource, final List<Header> headers) {
         LOG.trace("rawSgtSummary: {}", rawSgtSummary);
         final List<SgtInfo> sgtInfos = new ArrayList<>();
 
         // parse sgtSummary
-        final XPath xpath = setupXpath();
+        final XPath xpath = IseReplyUtil.setupXpath();
 
-        InputSource inputSource = new InputSource(new StringReader(rawSgtSummary));
+        InputSource inputSource = IseReplyUtil.createInputSource(rawSgtSummary);
         try {
-            final NodeList sgtLinkNodes = (NodeList) xpath.evaluate(EXPRESSION_SGT_ALL_LINK_HREFS, inputSource,
+            final NodeList sgtLinkNodes = (NodeList) xpath.evaluate(IseReplyUtil.EXPRESSION_SGT_ALL_LINK_HREFS, inputSource,
                     XPathConstants.NODESET);
             for (int i = 0; i < sgtLinkNodes.getLength(); i++) {
                 final String sgtLinkHrefValue = sgtLinkNodes.item(i).getNodeValue();
@@ -131,14 +107,14 @@ public class GbpIseSgtHarvesterImpl implements GbpIseSgtHarvester {
 
                 // query all sgt entries (serial-vise)
                 final URI hrefToSgtDetailUri = URI.create(sgtLinkHrefValue);
-                final WebResource.Builder requestBuilder = createRequestBuilder(baseWebResource, headers, hrefToSgtDetailUri.getPath());
-                final String rawSgtDetail = deliverResponse(requestBuilder);
+                final WebResource.Builder requestBuilder = RestClientFactory.createRequestBuilder(baseWebResource, headers, hrefToSgtDetailUri.getPath());
+                final String rawSgtDetail = IseReplyUtil.deliverResponse(requestBuilder);
                 LOG.trace("rawSgtDetail: {}", rawSgtDetail);
 
-                final Node sgtNode = (Node) xpath.evaluate(EXPRESSION_SGT_DETAIL, new InputSource(new StringReader(rawSgtDetail)),
+                final Node sgtNode = (Node) xpath.evaluate(IseReplyUtil.EXPRESSION_SGT_DETAIL, IseReplyUtil.createInputSource(rawSgtDetail),
                         XPathConstants.NODE);
-                final Node sgtName = (Node) xpath.evaluate(EXPRESSION_SGT_NAME_ATTR, sgtNode, XPathConstants.NODE);
-                final Node sgtValue = (Node) xpath.evaluate(EXPRESSION_SGT_VALUE, sgtNode, XPathConstants.NODE);
+                final Node sgtName = (Node) xpath.evaluate(IseReplyUtil.EXPRESSION_SGT_NAME_ATTR, sgtNode, XPathConstants.NODE);
+                final Node sgtValue = (Node) xpath.evaluate(IseReplyUtil.EXPRESSION_SGT_VALUE, sgtNode, XPathConstants.NODE);
                 LOG.debug("sgt value [{}]: {} -> {}", i, sgtValue, sgtName);
 
                 // store replies into list of SgtInfo
@@ -153,42 +129,4 @@ public class GbpIseSgtHarvesterImpl implements GbpIseSgtHarvester {
         return sgtInfos;
     }
 
-    /**
-     * @return initiated xpath with ise namespace context injected
-     */
-    private static XPath setupXpath() {
-        final NamespaceContext nsContext = new NamespaceContext() {
-            public String getNamespaceURI(String prefix) {
-                final String outcome;
-                if (prefix == null) {
-                    throw new NullPointerException("Null prefix");
-                }
-
-                if ("ns5".equals(prefix)) {
-                    outcome = "ers.ise.cisco.com";
-                } else if ("ns3".equals(prefix)) {
-                    outcome = "v2.ers.ise.cisco.com";
-                } else if ("ns4".equals(prefix)) {
-                    outcome = "trustsec.ers.ise.cisco.com";
-                } else {
-                    outcome = XMLConstants.NULL_NS_URI;
-                }
-                return outcome;
-            }
-
-            // This method isn't necessary for XPath processing.
-            public String getPrefix(String uri) {
-                throw new UnsupportedOperationException();
-            }
-
-            // This method isn't necessary for XPath processing either.
-            public Iterator getPrefixes(String uri) {
-                throw new UnsupportedOperationException();
-            }
-        };
-
-        XPath xpath = XPathFactory.newInstance().newXPath();
-        xpath.setNamespaceContext(nsContext);
-        return xpath;
-    }
 }

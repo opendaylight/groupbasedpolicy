@@ -9,21 +9,26 @@
 package org.opendaylight.groupbasedpolicy.sxp_ise_adapter.impl.util;
 
 import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 import com.sun.jersey.client.urlconnection.HTTPSProperties;
 import java.security.GeneralSecurityException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import org.apache.commons.net.util.TrustManagerUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.gbp.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.ise.source.config.ConnectionConfig;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.gbp.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.ise.source.config.connection.config.Header;
 
 /**
  * Purpose: setup ise-ready jersey {@link Client}
  */
 public class RestClientFactory {
+
+    public static final String PATH_ERS_CONFIG_SGT = "/ers/config/sgt";
 
     private RestClientFactory() {
         throw new IllegalAccessError("factory class - no instances supported");
@@ -57,5 +62,14 @@ public class RestClientFactory {
                 (s, sslSession) -> true,
                 sslContext
         ));
+    }
+
+    public static WebResource.Builder createRequestBuilder(final WebResource resource, final List<Header> headers,
+                                                           final String path) {
+        final WebResource webResource = resource.path(path);
+        final WebResource.Builder requestBuilder = webResource.getRequestBuilder();
+        headers.stream().forEach(
+                (header) -> requestBuilder.header(header.getName(), header.getValue()));
+        return requestBuilder;
     }
 }

@@ -7,6 +7,7 @@
  */
 package org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.dao;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -55,11 +56,10 @@ public class EPPolicyTemplateDaoImpl implements DSAsyncDao<Sgt, EndpointPolicyTe
 
     @Override
     public ListenableFuture<Optional<EndpointPolicyTemplateBySgt>> read(@Nonnull final Sgt key) {
-        final Optional<EndpointPolicyTemplateBySgt> cachedEndpointPolicyTemplateBySgtalue = lookup(cachedDao, key);
-        if (cachedEndpointPolicyTemplateBySgtalue.isPresent()) {
-            return Futures.immediateFuture(cachedEndpointPolicyTemplateBySgtalue);
+        final Optional<EndpointPolicyTemplateBySgt> cachedEndpointPolicyTemplateBySgtValue = lookup(cachedDao, key);
+        if (cachedEndpointPolicyTemplateBySgtValue.isPresent()) {
+            return Futures.immediateFuture(cachedEndpointPolicyTemplateBySgtValue);
         } else if (!cachedDao.isEmpty()) {
-            //TODO: delegate to ise-template-provider
             return READ_FUTURE_ABSENT;
         } else {
             final ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
@@ -81,6 +81,7 @@ public class EPPolicyTemplateDaoImpl implements DSAsyncDao<Sgt, EndpointPolicyTe
         }
     }
 
+    @VisibleForTesting
     protected InstanceIdentifier<EndpointPolicyTemplateBySgt> buildReadPath(final Sgt key) {
         return EPTemplateListener.SXP_MAPPER_TEMPLATE_PARENT_PATH
                 .child(EndpointPolicyTemplateBySgt.class, new EndpointPolicyTemplateBySgtKey(key));

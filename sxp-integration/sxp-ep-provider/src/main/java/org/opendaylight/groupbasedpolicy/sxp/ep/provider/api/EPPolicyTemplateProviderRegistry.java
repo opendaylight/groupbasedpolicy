@@ -13,11 +13,19 @@ import org.opendaylight.yangtools.concepts.ObjectRegistration;
 /**
  * Purpose: injection point for a {@link EPPolicyTemplateProvider}
  */
-public interface EPPolicyTemplateProviderRegistry {
+public interface EPPolicyTemplateProviderRegistry extends AutoCloseable {
 
     /**
      * @param templateProvider provider to register
      * @return corresponding registration
      */
     ObjectRegistration<EPPolicyTemplateProvider> registerTemplateProvider(EPPolicyTemplateProvider templateProvider);
+
+    /**
+     * @param templateProviderDistributionTarget consumer of template provider
+     */
+    void addDistributionTarget(TemplateProviderDistributionTarget<EPPolicyTemplateProvider> templateProviderDistributionTarget);
+
+    @Override
+    void close();
 }

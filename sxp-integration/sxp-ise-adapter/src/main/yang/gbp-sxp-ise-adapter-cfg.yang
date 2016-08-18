@@ -13,6 +13,7 @@ module gbp-sxp-ise-adapter-cfg {
 
     import config { prefix config; revision-date 2013-04-05; }
     import opendaylight-md-sal-binding { prefix mdsal; revision-date 2013-10-28; }
+    import sxp-ep-provider-cfg { prefix gbp-sxp-ep; revision-date 2016-07-22; }
 
     description
         "This module contains the base YANG definitions for
