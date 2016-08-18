@@ -16,22 +16,6 @@
                         iovisor:iovisor-provider-impl
                     </type>
                     <name>iovisor-provider-impl</name>
-
-                    <data-broker>
-                      <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
-                      <name>binding-data-broker</name>
-                    </data-broker>
-
-                    <ep-renderer-augmentation-registry>
-                        <type xmlns:gbp="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">gbp:ep-renderer-augmentation-registry</type>
-                        <name>ep-renderer-augmentation-registry</name>
-                    </ep-renderer-augmentation-registry>
-
-                    <policy-validator-registry>
-                        <type xmlns:gbp="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy">gbp:policy-validator-registry</type>
-                        <name>policy-validator-registry</name>
-                    </policy-validator-registry>
-
                 </module>
             </modules>
         </data>

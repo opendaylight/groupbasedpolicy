@@ -8,7 +8,7 @@
 
 package org.opendaylight.controller.config.yang.config.iovisor_provider.impl;
 
-import org.opendaylight.groupbasedpolicy.renderer.iovisor.IovisorRenderer;
+import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 
 public class IovisorProviderModule
         extends org.opendaylight.controller.config.yang.config.iovisor_provider.impl.AbstractIovisorProviderModule {
@@ -32,7 +32,6 @@ public class IovisorProviderModule
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        return new IovisorRenderer(getDataBrokerDependency(), getEpRendererAugmentationRegistryDependency(),
-                getPolicyValidatorRegistryDependency());
+        return NoopAutoCloseable.INSTANCE;
     }
 }
