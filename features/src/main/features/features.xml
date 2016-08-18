@@ -29,7 +29,7 @@
     <repository>mvn:org.opendaylight.dlux/features-dlux/{{VERSION}}/xml/features</repository>
     <!-- Repos needed by IOvisor Renderer -->
     <repository>mvn:org.opendaylight.aaa/features-aaa-shiro/${aaa.version}/xml/features</repository>
-    <!-- Repos needed by sxp-mapper -->
+    <!-- Repos needed by sxp-integration -->
     <repository>mvn:org.opendaylight.sxp/features/${sxp.version}/xml/features</repository>
     <!-- Repos needed by iosxe renderer -->
     <repository>mvn:org.opendaylight.netconf/features-netconf-connector/${netconf.version}/xml/features</repository>
@@ -182,19 +182,6 @@
     </feature>
 
     <!--
-        SXP-MAPPER
-    -->
-    <feature name='odl-groupbasedpolicy-sxp-mapper' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: sxp-mapper'>
-        <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
-        <feature version="${sxp.version}">odl-sxp-core</feature>
-        <bundle>mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}</bundle>
-        <bundle>mvn:commons-net/commons-net/{{VERSION}}</bundle>
-        <bundle>mvn:org.opendaylight.groupbasedpolicy/sxp-mapper/{{VERSION}}</bundle>
-        <configfile finalname="${config.configfile.directory}/15-l2-l3-domain-extension.xml">mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}/xml/config</configfile>
-        <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-sxp-mapper.xml">mvn:org.opendaylight.groupbasedpolicy/sxp-mapper/{{VERSION}}/xml/config</configfile>
-    </feature>
-
-    <!--
          NE Location Provider
     -->
     <feature name='odl-groupbasedpolicy-ne-location-provider' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: NE location provider'>
@@ -215,7 +202,6 @@
         <feature version="${sxp.version}">odl-sxp-core</feature>
         <feature version="${netconf.version}">odl-netconf-topology</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}</bundle>
-        <bundle>mvn:org.opendaylight.groupbasedpolicy/sxp-mapper/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/ios-xe-renderer/{{VERSION}}</bundle>
         <configfile finalname="${config.configfile.directory}/15-l2-l3-domain-extension.xml">mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}/xml/config</configfile>
         <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-ios-xe-renderer.xml">mvn:org.opendaylight.groupbasedpolicy/ios-xe-renderer/{{VERSION}}/xml/config</configfile>
@@ -232,18 +218,20 @@
         <configfile finalname="${config.configfile.directory}/15-l2-l3-domain-extension.xml">mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}/xml/config</configfile>
         <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-sxp-ep-provider.xml">mvn:org.opendaylight.groupbasedpolicy/sxp-ep-provider/{{VERSION}}/xml/config</configfile>
     </feature>
+    <feature name='odl-groupbasedpolicy-sxp-mapper' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: sxp-mapper'>
+        <!-- TODO: remove later - this is temporary "feature-forwarding" in order to keep integration feature test working -->
+        <feature version="${project.version}">odl-groupbasedpolicy-sxp-ep-provider</feature>
+    </feature>
 
     <!--
-       GBP-ISE ADAPTER
+       GBP-SXP integration : ise-adapter
    -->
-    <feature name='odl-groupbasedpolicy-ise-adapter' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: gbp-ise adapter'>
+    <feature name='odl-groupbasedpolicy-sxp-ise-adapter' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: sxp ise adapter'>
         <feature version="${project.version}">odl-groupbasedpolicy-sxp-ep-provider</feature>
-        <feature version="${sxp.version}">odl-sxp-core</feature>
-        <bundle>mvn:commons-net/commons-net/{{VERSION}}</bundle>
         <bundle>mvn:com.sun.jersey/jersey-client/{{VERSION}}</bundle>
         <bundle>mvn:com.sun.jersey/jersey-core/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/sxp-ise-adapter/{{VERSION}}</bundle>
-        <bundle>mvn:org.opendaylight.groupbasedpolicy/sxp-ep-provider/{{VERSION}}</bundle>
-        <configfile finalname="${config.configfile.directory}/16-groupbasedpolicy-ise-adapter.xml">mvn:org.opendaylight.groupbasedpolicy/sxp-ise-adapter/{{VERSION}}/xml/config</configfile>
+        <configfile finalname="${config.configfile.directory}/16-groupbasedpolicy-sxp-ise-adapter.xml">mvn:org.opendaylight.groupbasedpolicy/sxp-ise-adapter/{{VERSION}}/xml/config</configfile>
     </feature>
+
 </features>

@@ -301,7 +301,7 @@
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
-      <artifactId>sxp-mapper</artifactId>
+      <artifactId>sxp-ep-provider</artifactId>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
@@ -391,7 +391,7 @@
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
-      <artifactId>sxp-mapper</artifactId>
+      <artifactId>sxp-ep-provider</artifactId>
       <type>xml</type>
       <classifier>config</classifier>
     </dependency>

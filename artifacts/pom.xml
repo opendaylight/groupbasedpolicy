@@ -93,11 +93,6 @@
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
-        <artifactId>sxp-mapper</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>${project.groupId}</groupId>
         <artifactId>sxp-ise-adapter</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -201,13 +196,6 @@
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
-        <artifactId>sxp-mapper</artifactId>
-        <version>${project.version}</version>
-        <type>xml</type>
-        <classifier>config</classifier>
-      </dependency>
-      <dependency>
-        <groupId>${project.groupId}</groupId>
         <artifactId>ios-xe-renderer</artifactId>
         <version>${project.version}</version>
         <type>xml</type>
@@ -216,6 +204,13 @@
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>sxp-ise-adapter</artifactId>
+        <version>${project.version}</version>
+        <type>xml</type>
+        <classifier>config</classifier>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>sxp-ep-provider</artifactId>
         <version>${project.version}</version>
         <type>xml</type>
         <classifier>config</classifier>

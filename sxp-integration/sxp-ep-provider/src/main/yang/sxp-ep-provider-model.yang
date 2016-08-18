@@ -96,4 +96,17 @@ module sxp-ep-provider-model {
             }
         }
     }
+
+    grouping sxp-sgt {
+        description "SGT leaf dedicated for endpoint-rpc, endpoint container and renderer configuration
+            (attach by augmentation)";
+        leaf sgt {
+            type sxp-database:sgt;
+        }
+    }
+
+    augment "renderer:renderers/renderer:renderer/renderer:renderer-policy/renderer:configuration/renderer:endpoints/renderer:address-endpoint-with-location" {
+        ext:augment-identifier "address-endpoint-with-location-aug";
+        uses sxp-sgt;
+    }
 }
