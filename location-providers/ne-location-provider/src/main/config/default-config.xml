@@ -16,11 +16,6 @@
                         ne-location:ne-location-provider
                     </type>
                     <name>ne-location-provider</name>
-
-                    <data-broker>
-                      <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-async-data-broker</type>
-                      <name>binding-data-broker</name>
-                    </data-broker>
                 </module>
             </modules>
         </data>
