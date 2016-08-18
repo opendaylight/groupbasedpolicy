@@ -8,6 +8,7 @@
 
 package org.opendaylight.controller.config.yang.config.vpp_provider.impl;
 
+import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,17 +31,7 @@ public class GbpVppProviderModule extends org.opendaylight.controller.config.yan
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        final VppRenderer vppRenderer = new VppRenderer(getDataBrokerDependency(), getBrokerDependency());
-
-        LOG.info("VPP Renderer instance has been created");
-
-        return new AutoCloseable() {
-
-            @Override
-            public void close() throws Exception {
-                vppRenderer.close();
-            }
-        };
+        return NoopAutoCloseable.INSTANCE;
     }
 
 }

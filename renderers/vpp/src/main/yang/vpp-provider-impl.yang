@@ -36,25 +36,6 @@ module vpp-provider-impl {
     augment "/config:modules/config:module/config:configuration" {
         case vpp-provider-impl {
             when "/config:modules/config:module/config:type = 'vpp-provider-impl'";
-
-            // Wires in the data-broker service
-            container data-broker {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-async-data-broker;
-                    }
-                }
-            }
-            // binding aware broker
-            container broker {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity mdsal:binding-broker-osgi-registry;
-                    }
-                }
-            }
         }
     }
 }
