@@ -53,7 +53,7 @@ public class TapPortCommandTest extends VppRendererDataBrokerTest {
     private final static VppInterfaceAugmentationBuilder vppAugmentationBuilderWithBD =
             new VppInterfaceAugmentationBuilder(vppAugmentationBuilder.build())
                 .setL2(new L2Builder().setInterconnection(new BridgeBasedBuilder().setBridgeDomain(BRIDGE_DOMAIN)
-                    .setBridgedVirtualInterface(false)
+                    .setBridgedVirtualInterface(false).setSplitHorizonGroup((short)0)
                     .build()).build());
 
     private final static InterfaceBuilder interfaceBuilder =

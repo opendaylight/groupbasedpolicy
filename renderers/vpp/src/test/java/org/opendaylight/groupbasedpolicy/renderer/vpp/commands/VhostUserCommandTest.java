@@ -57,7 +57,7 @@ public class VhostUserCommandTest extends VppRendererDataBrokerTest {
 
         VppInterfaceAugmentation vppAugmentation = new VppInterfaceAugmentationBuilder().setVhostUser(vhostUser)
             .setL2(new L2Builder().setInterconnection(new BridgeBasedBuilder().setBridgeDomain(BRIDGE_DOMAIN)
-                .setBridgedVirtualInterface(IS_BRIDGED_DEFAULT)
+                .setBridgedVirtualInterface(IS_BRIDGED_DEFAULT).setSplitHorizonGroup((short)0)
                 .build()).build())
             .build();
 
