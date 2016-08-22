@@ -8,11 +8,6 @@
 
 package org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl;
 
-import static org.powermock.api.mockito.PowerMockito.verifyNew;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
-import static org.powermock.api.support.membermodification.MemberMatcher.method;
-import static org.powermock.api.support.membermodification.MemberModifier.stub;
-
 import com.google.common.collect.Ordering;
 import org.junit.Assert;
 import org.junit.Before;
@@ -21,7 +16,6 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.api.DomainSpecificRegistry;
 import org.opendaylight.groupbasedpolicy.api.EndpointAugmentorRegistry;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.dao.EPForwardingTemplateDaoImpl;
@@ -40,10 +34,16 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ConditionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.model.rev160302.sxp.ep.mapper.EndpointPolicyTemplateBySgt;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.rev160722.SgtGeneratorConfig;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBinding;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+
+import static org.powermock.api.mockito.PowerMockito.verifyNew;
+import static org.powermock.api.mockito.PowerMockito.whenNew;
+import static org.powermock.api.support.membermodification.MemberMatcher.method;
+import static org.powermock.api.support.membermodification.MemberModifier.stub;
 
 /**
  * Test for {@link SxpEpProviderProviderImpl}.
@@ -55,15 +55,13 @@ public class SxpEpProviderProviderImplTest {
     @Mock
     private DataBroker dataBroker;
     @Mock
-    private RpcProviderRegistry rpcRegistry;
-    @Mock
     private DomainSpecificRegistry domainSpecificRegistry;
     @Mock
     private EPPolicyTemplateProviderRegistryImpl templateProviderRegistry;
     @Mock
     private SxpMapperReactorImpl sxpMapperReactor;
     @Mock
-    private BaseEndpointService endPointService;
+    private BaseEndpointService endpointService;
     @Mock
     private SimpleCachedDaoImpl<Sgt, EndpointPolicyTemplateBySgt> epPolicyTemplateCachedDao;
     @Mock
@@ -94,16 +92,21 @@ public class SxpEpProviderProviderImplTest {
     private EndpointAugmentorRegistry epAugmentorRegistry;
     @Mock
     private EPPolicyTemplateDaoFacadeImpl epPolicyTemplateDaoFacade;
+    @Mock
+    private SgtGeneratorConfig sgtGeneratorConfig;
+    @Mock
+    private SgtGeneratorImpl sgtGenerator;
+    @Mock
+    private EPToSgtMapperImpl epToSgtMapper;
 
     private SxpEpProviderProviderImpl provider;
 
     @Before
     public void setUp() throws Exception {
-        Mockito.when(rpcRegistry.getRpcService(BaseEndpointService.class)).thenReturn(endPointService);
         Mockito.when(domainSpecificRegistry.getEndpointAugmentorRegistry()).thenReturn(epAugmentorRegistry);
 
         whenNew(EPPolicyTemplateProviderRegistryImpl.class).withNoArguments().thenReturn(templateProviderRegistry);
-        whenNew(SxpMapperReactorImpl.class).withArguments(endPointService, dataBroker).thenReturn(sxpMapperReactor);
+        whenNew(SxpMapperReactorImpl.class).withArguments(endpointService, dataBroker).thenReturn(sxpMapperReactor);
         whenNew(SimpleCachedDaoImpl.class).withNoArguments().thenReturn(epPolicyTemplateCachedDao, masterDBBindingCachedDao);
         whenNew(SimpleCachedDaoEPForwardingTemplateImpl.class).withNoArguments().thenReturn(epFwTemplateCachedDao);
         stub(method(EPTemplateUtil.class, "createEndpointGroupIdOrdering")).toReturn(groupOrdering);
@@ -112,8 +115,11 @@ public class SxpEpProviderProviderImplTest {
                 .thenReturn(epPolicyTemplateKeyFactory);
         whenNew(EPPolicyTemplateDaoImpl.class).withArguments(dataBroker, epPolicyTemplateCachedDao, epPolicyTemplateKeyFactory)
                 .thenReturn(epPolicyTemplateDao);
-        whenNew(EPPolicyTemplateDaoFacadeImpl.class).withArguments(dataBroker, epPolicyTemplateDao)
+        whenNew(SgtGeneratorImpl.class).withArguments(sgtGeneratorConfig).thenReturn(sgtGenerator);
+        whenNew(EPPolicyTemplateDaoFacadeImpl.class).withArguments(dataBroker, epPolicyTemplateDao, epPolicyTemplateCachedDao, sgtGenerator)
                 .thenReturn(epPolicyTemplateDaoFacade);
+        whenNew(EPToSgtMapperImpl.class).withArguments(epPolicyTemplateDaoFacade).thenReturn(epToSgtMapper);
+
         whenNew(EPForwardingTemplateDaoImpl.class).withArguments(dataBroker, epFwTemplateCachedDao)
                 .thenReturn(epForwardingTemplateDao);
         whenNew(MasterDatabaseBindingDaoImpl.class).withArguments(dataBroker, masterDBBindingCachedDao)
@@ -124,24 +130,25 @@ public class SxpEpProviderProviderImplTest {
                 masterDBBindingDao, epForwardingTemplateDao).thenReturn(epPolicyTemplateListener);
         whenNew(EPForwardingTemplateListenerImpl.class).withArguments(dataBroker, sxpMapperReactor, epFwTemplateCachedDao,
                 masterDBBindingDao, epPolicyTemplateDaoFacade).thenReturn(epForwardingTemplateListener);
-        whenNew(SxpEndpointAugmentorImpl.class).withArguments(epPolicyTemplateDaoFacade,epPolicyTemplateKeyFactory)
+        whenNew(SxpEndpointAugmentorImpl.class).withArguments(epPolicyTemplateDao, epPolicyTemplateKeyFactory)
                 .thenReturn(sxpEPAugmentor);
 
 
-        provider = new SxpEpProviderProviderImpl(dataBroker, rpcRegistry, domainSpecificRegistry);
+        provider = new SxpEpProviderProviderImpl(dataBroker, endpointService, domainSpecificRegistry, sgtGeneratorConfig);
 
-        Mockito.verify(rpcRegistry).getRpcService(BaseEndpointService.class);
         Mockito.verify(templateProviderRegistry).addDistributionTarget(epPolicyTemplateDaoFacade);
         Mockito.verify(epAugmentorRegistry).register(sxpEPAugmentor);
 
         // check if all expected object got constructed and wired
         verifyNew(EPPolicyTemplateProviderRegistryImpl.class).withNoArguments();
-        verifyNew(SxpMapperReactorImpl.class).withArguments(endPointService, dataBroker);
+        verifyNew(SxpMapperReactorImpl.class).withArguments(endpointService, dataBroker);
         verifyNew(SimpleCachedDaoImpl.class, Mockito.times(2)).withNoArguments();
         verifyNew(SimpleCachedDaoEPForwardingTemplateImpl.class).withNoArguments();
         verifyNew(EpPolicyTemplateValueKeyFactory.class).withArguments(groupOrdering, conditionOrdering);
         verifyNew(EPPolicyTemplateDaoImpl.class).withArguments(dataBroker, epPolicyTemplateCachedDao, epPolicyTemplateKeyFactory);
-        verifyNew(EPPolicyTemplateDaoFacadeImpl.class).withArguments(dataBroker, epPolicyTemplateDao);
+        verifyNew(SgtGeneratorImpl.class).withArguments(sgtGeneratorConfig);
+        verifyNew(EPPolicyTemplateDaoFacadeImpl.class).withArguments(dataBroker, epPolicyTemplateDao, epPolicyTemplateCachedDao, sgtGenerator);
+        verifyNew(EPToSgtMapperImpl.class).withArguments(epPolicyTemplateDaoFacade);
         verifyNew(EPForwardingTemplateDaoImpl.class).withArguments(dataBroker, epFwTemplateCachedDao);
         verifyNew(MasterDatabaseBindingDaoImpl.class).withArguments(dataBroker, masterDBBindingCachedDao);
         verifyNew(MasterDatabaseBindingListenerImpl.class).withArguments(dataBroker, sxpMapperReactor, masterDBBindingCachedDao,
@@ -150,7 +157,7 @@ public class SxpEpProviderProviderImplTest {
                 masterDBBindingDao, epForwardingTemplateDao);
         verifyNew(EPForwardingTemplateListenerImpl.class).withArguments(dataBroker, sxpMapperReactor, epFwTemplateCachedDao,
                 masterDBBindingDao, epPolicyTemplateDaoFacade);
-        verifyNew(SxpEndpointAugmentorImpl.class).withArguments(epPolicyTemplateDaoFacade,epPolicyTemplateKeyFactory);
+        verifyNew(SxpEndpointAugmentorImpl.class).withArguments(epPolicyTemplateDao, epPolicyTemplateKeyFactory);
     }
 
     @Test

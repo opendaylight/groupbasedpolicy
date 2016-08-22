@@ -28,6 +28,8 @@ import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFaile
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.manager.PolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.StatusUtil;
+import org.opendaylight.groupbasedpolicy.sxp.ep.provider.api.EPToSgtMapper;
+import org.opendaylight.groupbasedpolicy.sxp.ep.provider.spi.SxpEpProviderProvider;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.Renderers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
@@ -54,11 +56,13 @@ public class PolicyManagerImpl implements PolicyManager {
     private static final String BASE_POLICY_MAP_NAME = "service-chains-";
     private final DataBroker dataBroker;
     private final NodeManager nodeManager;
+    private final EPToSgtMapper epToSgtMapper;
 
     public PolicyManagerImpl(final DataBroker dataBroker,
-                             final NodeManager nodeManager) {
+                             final NodeManager nodeManager, final EPToSgtMapper epToSgtMapper) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.nodeManager = Preconditions.checkNotNull(nodeManager);
+        this.epToSgtMapper = Preconditions.checkNotNull(epToSgtMapper);
     }
 
     @Override
@@ -152,11 +156,11 @@ public class PolicyManagerImpl implements PolicyManager {
                     managementIpAddress, mountpoint);
             context.setPolicyMapLocation(policyMapLocation);
 
-            final Sgt sourceSgt = PolicyManagerUtil.findSgtTag(rendererEndpoint, dataAfter.getEndpoints()
+            final Sgt sourceSgt = PolicyManagerUtil.findSgtTag(epToSgtMapper, rendererEndpoint, dataAfter.getEndpoints()
                     .getAddressEndpointWithLocation());
             // Peer Endpoint
             for (PeerEndpoint peerEndpoint : rendererEndpoint.getPeerEndpoint()) {
-                final Sgt destinationSgt = PolicyManagerUtil.findSgtTag(peerEndpoint, dataAfter.getEndpoints()
+                final Sgt destinationSgt = PolicyManagerUtil.findSgtTag(epToSgtMapper, peerEndpoint, dataAfter.getEndpoints()
                         .getAddressEndpointWithLocation());
                 if (sourceSgt == null || destinationSgt == null) {
                     final String info = String.format("Endpoint-policy: missing sgt value(sourceSgt=%s, destinationSgt=%s)",

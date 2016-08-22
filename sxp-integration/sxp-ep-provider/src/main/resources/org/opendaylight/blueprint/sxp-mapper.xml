@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
+           xmlns:odl="http://opendaylight.org/xmlns/blueprint/v1.0.0"
+           odl:use-default-for-reference-types="true">
+
+    <reference id="dataBroker" interface="org.opendaylight.controller.md.sal.binding.api.DataBroker"/>
+    <reference id="domainSpecificRegistry" interface="org.opendaylight.groupbasedpolicy.api.DomainSpecificRegistry"/>
+    <reference id="clusterSingletonService" interface="org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider"/>
+    <odl:rpc-service id="baseEndpointService"
+                     interface="org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.BaseEndpointService"/>
+
+    <odl:clustered-app-config id="sgtGeneratorConfig"
+                              binding-class="org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.rev160722.SgtGeneratorConfig">
+        <odl:default-config><![CDATA[
+            <sgt-generator-config
+                xmlns="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy:sxp-integration:sxp-ep-provider">
+                <sgt-low>100</sgt-low>
+                <sgt-high>200</sgt-high>
+            </sgt-generator-config>
+        ]]></odl:default-config>
+    </odl:clustered-app-config>
+
+    <bean id="sxpEpProvider"
+          class="org.opendaylight.controller.config.yang.config.groupbasedpolicy.sxp_integration.sxp_ep_provider.SxpEpProviderProviderInstance"
+          init-method="initialize" destroy-method="close">
+        <argument ref="dataBroker"/>
+        <argument ref="baseEndpointService"/>
+        <argument ref="domainSpecificRegistry"/>
+        <argument ref="clusterSingletonService"/>
+        <argument ref="sgtGeneratorConfig"/>
+    </bean>
+
+    <service ref="sxpEpProvider" interface="org.opendaylight.groupbasedpolicy.sxp.ep.provider.spi.SxpEpProviderProvider"/>
+</blueprint>

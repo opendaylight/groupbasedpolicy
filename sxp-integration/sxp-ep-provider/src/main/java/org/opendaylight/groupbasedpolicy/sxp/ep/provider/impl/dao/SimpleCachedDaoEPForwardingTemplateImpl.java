@@ -125,4 +125,10 @@ public class SimpleCachedDaoEPForwardingTemplateImpl implements SimpleCachedDao<
     public Iterable<EndpointForwardingTemplateBySubnet> values() {
         return Iterables.unmodifiableIterable(Iterables.concat(plainCache.values(), subnetCache.values()));
     }
+
+    @Override
+    public Iterable<IpPrefix> keySet() {
+        // bypassing subnets
+        return Iterables.unmodifiableIterable(plainCache.keySet());
+    }
 }

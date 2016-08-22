@@ -7,20 +7,8 @@
  */
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager;
 
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction.Out;
-import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation.PROVIDER;
-import static org.powermock.api.support.membermodification.MemberMatcher.method;
-import static org.powermock.api.support.membermodification.MemberModifier.stub;
-
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -29,6 +17,7 @@ import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.RendererPolicyUtil;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.ServiceChainingUtil;
+import org.opendaylight.groupbasedpolicy.sxp.ep.provider.api.EPToSgtMapper;
 import org.opendaylight.groupbasedpolicy.util.IetfModelCodec;
 import org.opendaylight.sfc.provider.api.SfcProviderServiceForwarderAPI;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.common.rev151017.RspName;
@@ -97,6 +86,19 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction.Out;
+import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation.PROVIDER;
+import static org.powermock.api.support.membermodification.MemberMatcher.method;
+import static org.powermock.api.support.membermodification.MemberModifier.stub;
+
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({RendererPolicyUtil.class, PolicyManagerUtil.class, SfcProviderServiceForwarderAPI.class})
 public class PolicyManagerImplTest {
@@ -122,13 +124,15 @@ public class PolicyManagerImplTest {
     private PolicyManagerImpl policyManager;
     private DataBroker mountpoint;
     private NodeManager nodeManager;
+    private EPToSgtMapper epToSgtMapper;
 
     @Before
     public void init() {
         mountpoint = mock(DataBroker.class);
         ReadWriteTransaction readWriteTransaction = mock(ReadWriteTransaction.class);
         nodeManager = mock(NodeManager.class);
-        policyManager = new PolicyManagerImpl(mountpoint, nodeManager);
+        epToSgtMapper = mock(EPToSgtMapper.class);
+        policyManager = new PolicyManagerImpl(mountpoint, nodeManager, epToSgtMapper);
         when(mountpoint.newReadWriteTransaction()).thenReturn(readWriteTransaction);
         when(readWriteTransaction.submit()).thenReturn(Futures.immediateCheckedFuture(null));
     }

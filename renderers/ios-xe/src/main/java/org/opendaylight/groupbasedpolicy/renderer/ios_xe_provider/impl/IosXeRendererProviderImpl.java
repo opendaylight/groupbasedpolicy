@@ -13,6 +13,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import java.util.List;
+import java.util.Optional;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -31,6 +33,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.sf.ChainAction
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.sf.Classifier;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.sf.EtherTypeClassifier;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.sf.IpProtoClassifier;
+import org.opendaylight.groupbasedpolicy.sxp.ep.provider.spi.SxpEpProviderProvider;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.Renderers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
@@ -45,9 +48,6 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.Optional;
-
 /**
  * Purpose: bootstrap provider implementation of Ios-xe renderer
  */
@@ -56,12 +56,15 @@ public class IosXeRendererProviderImpl implements IosXeRendererProvider, Binding
     private static final Logger LOG = LoggerFactory.getLogger(IosXeRendererProviderImpl.class);
 
     private final DataBroker dataBroker;
+    private final SxpEpProviderProvider sxpEpProvider;
     private RendererConfigurationListenerImpl rendererConfigurationListener;
     private IosXeCapableNodeListenerImpl iosXeCapableNodeListener;
 
-    public IosXeRendererProviderImpl(final DataBroker dataBroker, final BindingAwareBroker broker) {
+    public IosXeRendererProviderImpl(final DataBroker dataBroker, final BindingAwareBroker broker,
+                                     final SxpEpProviderProvider sxpEpProvider) {
         LOG.debug("ios-xe renderer bootstrap");
         this.dataBroker = Preconditions.checkNotNull(dataBroker, "missing dataBroker dependency");
+        this.sxpEpProvider = Preconditions.checkNotNull(sxpEpProvider, "missing sxpEpProvider param");
         broker.registerProvider(this);
     }
 
@@ -87,7 +90,7 @@ public class IosXeRendererProviderImpl implements IosXeRendererProvider, Binding
         iosXeCapableNodeListener = new IosXeCapableNodeListenerImpl(dataBroker, nodeManager);
 
         // policy-manager and delegates
-        final PolicyManager policyManager = new PolicyManagerImpl(dataBroker, nodeManager);
+        final PolicyManager policyManager = new PolicyManagerImpl(dataBroker, nodeManager, sxpEpProvider.getEPToSgtMapper());
         final PolicyManager policyManagerZip = new PolicyManagerZipImpl(policyManager);
 
         // renderer-configuration endpoints

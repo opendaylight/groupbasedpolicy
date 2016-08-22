@@ -47,4 +47,9 @@ public interface SimpleCachedDao<K, V> extends SimpleDao<K, V> {
      * @return unmodifiable iterator through all cached values
      */
     Iterable<V> values();
+
+    /**
+     * @return unmodifiable iterator through all cached keys
+     */
+    Iterable<K> keySet();
 }

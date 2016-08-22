@@ -9,8 +9,10 @@
 package org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.dao;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.concurrent.ExecutionException;
 import org.hamcrest.BaseMatcher;
@@ -28,6 +30,8 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.api.EPPolicyTemplateProvider;
+import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.SgtGeneratorImpl;
+import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.SimpleCachedDao;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.model.rev160302.TemplateGenerated;
@@ -52,15 +56,20 @@ public class EPPolicyTemplateDaoFacadeImplTest {
     @Mock
     private EPPolicyTemplateDaoImpl delegateDao;
     @Mock
+    private SimpleCachedDao<Sgt, EndpointPolicyTemplateBySgt> delegateCachedDao;
+    @Mock
     private DataBroker dataBroker;
     @Mock
     private EPPolicyTemplateProvider provider;
+    @Mock
+    private SgtGeneratorImpl sgtGeneratorImpl;
     @Mock
     private WriteTransaction wTx;
 
 
     private EndpointPolicyTemplateBySgtBuilder templateBld;
     private EPPolicyTemplateDaoFacadeImpl facade;
+    private EndpointPolicyTemplateBySgt first;
 
     @Before
     public void setUp() throws Exception {
@@ -71,7 +80,7 @@ public class EPPolicyTemplateDaoFacadeImplTest {
                 .setSgt(SGT)
                 .setEndpointGroups(Collections.singletonList(EPG_ID));
 
-        facade = new EPPolicyTemplateDaoFacadeImpl(dataBroker, delegateDao);
+        facade = new EPPolicyTemplateDaoFacadeImpl(dataBroker, delegateDao, delegateCachedDao, sgtGeneratorImpl);
     }
 
     @Test
@@ -153,5 +162,30 @@ public class EPPolicyTemplateDaoFacadeImplTest {
             }
         });
         actual.get();
+    }
+
+    @Test
+    public void testReadBy() throws Exception {
+        Mockito.when(sgtGeneratorImpl.generateNextSgt(delegateCachedDao))
+                .thenReturn(java.util.Optional.empty())
+                .thenReturn(java.util.Optional.of(new Sgt(42)));
+
+        final EpPolicyTemplateValueKey lookupKey = new EpPolicyTemplateValueKey(TENANT_ID,
+                Collections.singletonList(EPG_ID), Collections.emptyList());
+
+        final ListenableFuture<Collection<EndpointPolicyTemplateBySgt>> templateFail = facade.readBy(lookupKey);
+        Assert.assertTrue(templateFail.isDone());
+        Assert.assertTrue(templateFail.get().isEmpty());
+
+        final ListenableFuture<Collection<EndpointPolicyTemplateBySgt>> templateSuccess = facade.readBy(lookupKey);
+        Assert.assertTrue(templateSuccess.isDone());
+        final Collection<EndpointPolicyTemplateBySgt> templateBag = templateSuccess.get();
+        Assert.assertFalse(templateBag.isEmpty());
+        first = Iterables.getFirst(templateBag, null);
+        Assert.assertNotNull(templateBag);
+        Assert.assertEquals(TemplateGenerated.class, first.getOrigin());
+        Assert.assertEquals(Collections.singletonList(EPG_ID), Iterables.getFirst(templateBag, null).getEndpointGroups());
+        Assert.assertTrue(Iterables.getFirst(templateBag, null).getConditions().isEmpty());
+        Assert.assertEquals(42, Iterables.getFirst(templateBag, null).getSgt().getValue().intValue());
     }
 }
