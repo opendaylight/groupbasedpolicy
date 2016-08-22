@@ -8,7 +8,7 @@
 
 package org.opendaylight.controller.config.yang.config.neutron_ovsdb.impl;
 
-import org.opendaylight.groupbasedpolicy.neutron.ovsdb.NeutronOvsdb;
+import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,10 +33,7 @@ public class NeutronOvsdbModule extends org.opendaylight.controller.config.yang.
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        final NeutronOvsdb neutronOvsdb = new NeutronOvsdb(getDataBrokerDependency(), getRpcRegistryDependency(),
-                getIntegrationBridgeSetting());
-        LOG.info("Neutron ovsdb started.");
-        return neutronOvsdb;
+        return NoopAutoCloseable.INSTANCE;
     }
 
     public void setBundleContext(BundleContext bundleContext) {

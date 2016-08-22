@@ -15,13 +15,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
-import org.opendaylight.controller.config.yang.config.neutron_ovsdb.impl.IntegrationBridgeSetting;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
@@ -32,6 +33,7 @@ import org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.NeutronOvsdbIidFacto
 import org.opendaylight.groupbasedpolicy.util.DataTreeChangeHandler;
 import org.opendaylight.ovsdb.southbound.SouthboundConstants;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Uri;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.ovsdb.params.rev160812.IntegrationBridgeSetting;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.ovsdb.rev150105.DatapathTypeSystem;

@@ -10,10 +10,9 @@ package org.opendaylight.groupbasedpolicy.neutron.ovsdb;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import org.opendaylight.controller.config.yang.config.neutron_ovsdb.impl.IntegrationBridgeSetting;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.ovsdb.params.rev160812.IntegrationBridgeSetting;
 
 public class NeutronOvsdb implements AutoCloseable {
 
@@ -22,12 +21,9 @@ public class NeutronOvsdb implements AutoCloseable {
     private final OvsdbNodeListener ovsdbNodeListener;
     private final ProviderPhysicalNetworkListener provPhysNetListener;
 
-    public NeutronOvsdb(DataBroker dataProvider, RpcProviderRegistry rpcProvider,
+    public NeutronOvsdb(DataBroker dataProvider, EndpointService epService,
             IntegrationBridgeSetting integrationbridgeSettings) {
         checkNotNull(dataProvider);
-        checkNotNull(rpcProvider);
-
-        EndpointService epService = rpcProvider.getRpcService(EndpointService.class);
         tpListener = new TerminationPointDataChangeListener(dataProvider, epService);
         ovsdbNodeListener = new OvsdbNodeListener(dataProvider, integrationbridgeSettings);
         portByEndpointListener = new PortByEndpointListener(dataProvider);
