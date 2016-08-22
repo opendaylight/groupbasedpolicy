@@ -28,6 +28,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.P
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.ActionCase;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriterUtil;
+import org.opendaylight.groupbasedpolicy.sxp.ep.provider.api.EPToSgtMapper;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.paths.RenderedServicePath;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308.ClassNameType;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308.PolicyActionType;
@@ -198,13 +199,15 @@ public class PolicyManagerUtil {
     }
 
     @Nullable
-    public static Sgt findSgtTag(final AddressEndpointKey endpointKey,
+    public static Sgt findSgtTag(final EPToSgtMapper sxpEpProvider, final AddressEndpointKey endpointKey,
                                  final List<AddressEndpointWithLocation> endpointsWithLocation) {
         if (endpointKey == null || endpointsWithLocation == null) {
             return null;
         }
         final AddressEndpointWithLocation endpointWithLocation = RendererPolicyUtil.lookupEndpoint(endpointKey,
                 endpointsWithLocation);
+
+        //TODO: involve sxpEpProvider
         final AddressEndpointWithLocationAug augmentation = endpointWithLocation.getAugmentation(AddressEndpointWithLocationAug.class);
         if (augmentation == null) {
             return null;

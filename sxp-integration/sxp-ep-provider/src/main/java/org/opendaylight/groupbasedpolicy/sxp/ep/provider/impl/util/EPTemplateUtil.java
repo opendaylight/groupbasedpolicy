@@ -25,6 +25,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.model.rev160302.sxp.ep.mapper.EndpointForwardingTemplateBySubnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.model.rev160302.sxp.ep.mapper.EndpointPolicyTemplateBySgt;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 
 /**
  * Purpose: util methods for {@link EndpointForwardingTemplateBySubnet} and {@link EndpointPolicyTemplateBySgt}
@@ -120,6 +121,19 @@ public final class EPTemplateUtil {
             @Nullable
             @Override
             public Comparable apply(@Nullable final ConditionName input) {
+                if (input == null) {
+                    return EMPTY_COMPARABLE;
+                }
+                return MoreObjects.firstNonNull(input.getValue(), EMPTY_COMPARABLE);
+            }
+        });
+    }
+
+    public static Ordering<Sgt> createSgtOrdering() {
+        return Ordering.natural().onResultOf(new Function<Sgt, Comparable>() {
+            @Nullable
+            @Override
+            public Comparable apply(@Nullable final Sgt input) {
                 if (input == null) {
                     return EMPTY_COMPARABLE;
                 }

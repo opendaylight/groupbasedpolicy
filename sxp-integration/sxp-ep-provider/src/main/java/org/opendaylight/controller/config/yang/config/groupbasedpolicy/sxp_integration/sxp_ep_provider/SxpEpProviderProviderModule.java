@@ -8,7 +8,8 @@
 
 package org.opendaylight.controller.config.yang.config.groupbasedpolicy.sxp_integration.sxp_ep_provider;
 
-import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.SxpEpProviderProviderImpl;
+
+import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 
 /**
 * sxp-ep-provider impl module
@@ -29,8 +30,7 @@ public class SxpEpProviderProviderModule extends org.opendaylight.controller.con
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        return new SxpEpProviderProviderImpl(getDataBrokerDependency(), getRpcRegistryDependency(),
-                getDomainSpecificRegistryDependency());
+        return NoopAutoCloseable.INSTANCE;
     }
 
 }

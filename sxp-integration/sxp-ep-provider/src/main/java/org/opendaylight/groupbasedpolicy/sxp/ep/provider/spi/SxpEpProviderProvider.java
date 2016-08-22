@@ -10,6 +10,7 @@ package org.opendaylight.groupbasedpolicy.sxp.ep.provider.spi;
 
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.api.EPPolicyTemplateProvider;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.api.EPPolicyTemplateProviderRegistry;
+import org.opendaylight.groupbasedpolicy.sxp.ep.provider.api.EPToSgtMapper;
 
 /**
  * Purpose: spi for sxp-ep-provider
@@ -20,4 +21,9 @@ public interface SxpEpProviderProvider extends AutoCloseable {
      * @return registry point for {@link EPPolicyTemplateProvider}
      */
     EPPolicyTemplateProviderRegistry getEPPolicyTemplateProviderRegistry();
+
+    /**
+     * @return endpoint-to-sgt mapper
+     */
+    EPToSgtMapper getEPToSgtMapper();
 }

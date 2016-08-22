@@ -58,4 +58,9 @@ public class SimpleCachedDaoImpl<K, V extends DataObject> implements SimpleCache
     public Iterable<V> values() {
         return Iterables.unmodifiableIterable(cache.values());
     }
+
+    @Override
+    public Iterable<K> keySet() {
+        return Iterables.unmodifiableIterable(cache.keySet());
+    }
 }
