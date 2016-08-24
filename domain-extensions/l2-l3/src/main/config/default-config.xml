@@ -16,6 +16,7 @@
                         l2l3:l2-l3-domain-extension-impl
                     </type>
                     <name>l2-l3-domain-extension-impl</name>
+                </module>
             </modules>
         </data>
 
