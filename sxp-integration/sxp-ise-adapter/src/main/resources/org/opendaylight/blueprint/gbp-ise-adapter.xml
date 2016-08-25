@@ -15,7 +15,7 @@
     <reference id="broker" interface="org.opendaylight.controller.sal.binding.api.BindingAwareBroker"/>
     <reference id="clusterSingletonService" interface="org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider"/>
     <reference id="sxpEpProvider" interface="org.opendaylight.groupbasedpolicy.sxp.ep.provider.spi.SxpEpProviderProvider"/>
-    <bean id="gbpIseAdapter" class="org.opendaylight.controller.config.yang.config.groupbasedpolicy.gbp_ise_adapter.GbpIseAdapterProviderInstance"
+    <bean id="gbpIseAdapter" class="org.opendaylight.controller.config.yang.config.groupbasedpolicy.sxp_integration.sxp_ise_adapter.SxpIseAdapterProviderInstance"
         init-method="initialize" destroy-method="close">
         <argument ref="dataBroker"/>
         <argument ref="broker"/>

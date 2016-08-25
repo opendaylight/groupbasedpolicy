@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.controller.config.yang.config.groupbasedpolicy.sxp_integration.gbp_sxp_ise_adapter;
+package org.opendaylight.controller.config.yang.config.groupbasedpolicy.sxp_integration.sxp_ise_adapter;
 
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
@@ -23,12 +23,13 @@ import org.opendaylight.mdsal.singleton.common.api.ServiceGroupIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class GbpIseAdapterProviderInstance implements ClusterSingletonService, AutoCloseable {
+public class SxpIseAdapterProviderInstance implements ClusterSingletonService, AutoCloseable {
 
-    private static final Logger LOG = LoggerFactory.getLogger(GbpIseAdapterProviderInstance.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SxpIseAdapterProviderInstance.class);
 
     private static final ServiceGroupIdentifier IDENTIFIER =
             ServiceGroupIdentifier.create(GroupbasedpolicyInstance.GBP_SERVICE_GROUP_IDENTIFIER);
+
     private final DataBroker dataBroker;
     private final BindingAwareBroker bindingAwareBroker;
     private final ClusterSingletonServiceProvider clusterSingletonService;
@@ -36,7 +37,7 @@ public class GbpIseAdapterProviderInstance implements ClusterSingletonService, A
     private ClusterSingletonServiceRegistration singletonServiceRegistration;
     private GbpIseAdapterProvider iseAdapterProvider;
 
-    public GbpIseAdapterProviderInstance(final DataBroker dataBroker,
+    public SxpIseAdapterProviderInstance(final DataBroker dataBroker,
                                          final BindingAwareBroker bindingAwareBroker,
                                          final ClusterSingletonServiceProvider clusterSingletonService,
                                          final SxpEpProviderProvider sxpEpProvider) {

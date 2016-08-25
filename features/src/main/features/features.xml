@@ -203,7 +203,6 @@
         <feature version="${netconf.version}">odl-netconf-topology</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/ios-xe-renderer/{{VERSION}}</bundle>
-        <configfile finalname="${config.configfile.directory}/15-l2-l3-domain-extension.xml">mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}/xml/config</configfile>
         <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-ios-xe-renderer.xml">mvn:org.opendaylight.groupbasedpolicy/ios-xe-renderer/{{VERSION}}/xml/config</configfile>
     </feature>
 
@@ -215,7 +214,6 @@
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/sxp-ep-provider/{{VERSION}}</bundle>
-        <configfile finalname="${config.configfile.directory}/15-l2-l3-domain-extension.xml">mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}/xml/config</configfile>
         <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-sxp-ep-provider.xml">mvn:org.opendaylight.groupbasedpolicy/sxp-ep-provider/{{VERSION}}/xml/config</configfile>
     </feature>
     <feature name='odl-groupbasedpolicy-sxp-mapper' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: sxp-mapper'>
