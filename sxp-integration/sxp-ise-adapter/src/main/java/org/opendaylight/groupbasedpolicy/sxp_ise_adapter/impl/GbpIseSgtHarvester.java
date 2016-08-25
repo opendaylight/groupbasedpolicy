@@ -10,7 +10,7 @@ package org.opendaylight.groupbasedpolicy.sxp_ise_adapter.impl;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import javax.annotation.Nonnull;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.gbp.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.IseSourceConfig;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.IseSourceConfig;
 
 /**
  * Purpose: read sgts and naming from ISE via rest-API and have apropriate templates generated and stored
