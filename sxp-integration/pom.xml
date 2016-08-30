@@ -26,7 +26,6 @@
     <modules>
         <module>sxp-ep-provider</module>
         <module>sxp-ise-adapter</module>
-        <!--<module>ep-sgt-mapper</module>-->
     </modules>
 
     <dependencyManagement>

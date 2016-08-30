@@ -8,7 +8,7 @@
 
 module sxp-ep-provider-model {
     yang-version 1;
-    namespace "urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy:sxp-ep-provider:model";
+    namespace "urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy:sxp-integration:sxp-ep-provider:model";
     prefix "sxp-ep-prvd-model";
 
     import sxp-database { prefix sxp-database; revision-date 2016-03-08; }
@@ -27,6 +27,16 @@ module sxp-ep-provider-model {
         description
             "Initial revision.";
     }
+
+    identity template-origin {
+        description "identifies the way of creation of given template";
+    }
+
+    identity template-generated {
+        description "template was generated";
+        base template-origin;
+    }
+
 
     container sxp-ep-mapper {
         description "root point for endpoint templates";
@@ -54,6 +64,12 @@ module sxp-ep-provider-model {
                type gbp-common:condition-name;
                description
                     "The conditions associated with this endpoint";
+            }
+            leaf origin {
+                description "template origin flag";
+                type identityref {
+                    base template-origin;
+                }
             }
         }
 

@@ -27,8 +27,8 @@ import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.EPTemplateListener
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.ReadableByKey;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.SimpleCachedDao;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.util.SxpListenerUtil;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.ep.provider.model.rev160302.sxp.ep.mapper.EndpointPolicyTemplateBySgt;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.ep.provider.model.rev160302.sxp.ep.mapper.EndpointPolicyTemplateBySgtKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.model.rev160302.sxp.ep.mapper.EndpointPolicyTemplateBySgt;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.model.rev160302.sxp.ep.mapper.EndpointPolicyTemplateBySgtKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
@@ -59,6 +59,7 @@ public class EPPolicyTemplateDaoImpl implements DSAsyncDao<Sgt, EndpointPolicyTe
         if (cachedEndpointPolicyTemplateBySgtalue.isPresent()) {
             return Futures.immediateFuture(cachedEndpointPolicyTemplateBySgtalue);
         } else if (!cachedDao.isEmpty()) {
+            //TODO: delegate to ise-template-provider
             return READ_FUTURE_ABSENT;
         } else {
             final ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();

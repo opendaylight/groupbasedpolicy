@@ -210,6 +210,7 @@
     -->
     <feature name='odl-groupbasedpolicy-ios-xe' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: ios-xe renderer'>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
+        <feature version="${project.version}">odl-groupbasedpolicy-sxp-ep-provider</feature>
         <feature version="${sfc.version}">odl-sfc-provider</feature>
         <feature version="${sxp.version}">odl-sxp-core</feature>
         <feature version="${netconf.version}">odl-netconf-topology</feature>
@@ -221,10 +222,22 @@
     </feature>
 
     <!--
+       GBP-SXP integration : ep-provider
+   -->
+    <feature name='odl-groupbasedpolicy-sxp-ep-provider' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: sxp ep provider'>
+        <feature version="${sxp.version}">odl-sxp-core</feature>
+        <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}</bundle>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/sxp-ep-provider/{{VERSION}}</bundle>
+        <configfile finalname="${config.configfile.directory}/15-l2-l3-domain-extension.xml">mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}/xml/config</configfile>
+        <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-sxp-ep-provider.xml">mvn:org.opendaylight.groupbasedpolicy/sxp-ep-provider/{{VERSION}}/xml/config</configfile>
+    </feature>
+
+    <!--
        GBP-ISE ADAPTER
    -->
     <feature name='odl-groupbasedpolicy-ise-adapter' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: gbp-ise adapter'>
-        <feature version="${project.version}">odl-groupbasedpolicy-sxp-mapper</feature>
+        <feature version="${project.version}">odl-groupbasedpolicy-sxp-ep-provider</feature>
         <feature version="${sxp.version}">odl-sxp-core</feature>
         <bundle>mvn:commons-net/commons-net/{{VERSION}}</bundle>
         <bundle>mvn:com.sun.jersey/jersey-client/{{VERSION}}</bundle>
