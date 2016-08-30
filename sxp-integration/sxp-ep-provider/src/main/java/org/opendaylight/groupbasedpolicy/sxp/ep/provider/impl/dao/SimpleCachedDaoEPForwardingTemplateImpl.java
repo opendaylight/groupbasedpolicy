@@ -21,7 +21,7 @@ import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.SimpleCachedDao;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.util.EPTemplateUtil;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.util.SubnetInfoKeyDecorator;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.ep.provider.model.rev160302.sxp.ep.mapper.EndpointForwardingTemplateBySubnet;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.model.rev160302.sxp.ep.mapper.EndpointForwardingTemplateBySubnet;
 
 /**
  * Purpose: generic implementation of {@link SimpleCachedDao}

@@ -12,6 +12,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.api.DomainSpecificRegistry;
 import org.opendaylight.groupbasedpolicy.api.EndpointAugmentor;
+import org.opendaylight.groupbasedpolicy.sxp.ep.provider.api.EPPolicyTemplateProviderRegistry;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.dao.EPForwardingTemplateDaoImpl;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.dao.EPPolicyTemplateDaoImpl;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.dao.EpPolicyTemplateValueKeyFactory;
@@ -22,10 +23,11 @@ import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.listen.EPForwardin
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.listen.EPPolicyTemplateListenerImpl;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.listen.MasterDatabaseBindingListenerImpl;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.util.EPTemplateUtil;
+import org.opendaylight.groupbasedpolicy.sxp.ep.provider.spi.SxpEpProviderProvider;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.BaseEndpointService;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.ep.provider.model.rev160302.sxp.ep.mapper.EndpointForwardingTemplateBySubnet;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.ep.provider.model.rev160302.sxp.ep.mapper.EndpointPolicyTemplateBySgt;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.model.rev160302.sxp.ep.mapper.EndpointForwardingTemplateBySubnet;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.model.rev160302.sxp.ep.mapper.EndpointPolicyTemplateBySgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBinding;
 import org.slf4j.Logger;
@@ -34,7 +36,7 @@ import org.slf4j.LoggerFactory;
 /**
  * SxpMapper provider implementation.
  */
-public class SxpEpProviderProviderImpl implements AutoCloseable {
+public class SxpEpProviderProviderImpl implements SxpEpProviderProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(SxpEpProviderProviderImpl.class);
 
@@ -44,11 +46,14 @@ public class SxpEpProviderProviderImpl implements AutoCloseable {
     private final EPTemplateListener epForwardingTemplateListener;
     private final DomainSpecificRegistry domainSpecificRegistry;
     private final EndpointAugmentor sxpEndpointAugmentor;
+    private final EPPolicyTemplateProviderRegistry epPolicyTemplateRegistry;
 
     public SxpEpProviderProviderImpl(final DataBroker dataBroker, final RpcProviderRegistry rpcRegistryDependency,
                                      final DomainSpecificRegistry domainSpecificRegistry) {
         LOG.info("starting SxmMapper ..");
         this.domainSpecificRegistry = domainSpecificRegistry;
+
+        epPolicyTemplateRegistry = new EPPolicyTemplateFacade();
 
         final BaseEndpointService endpointService = rpcRegistryDependency.getRpcService(BaseEndpointService.class);
         sxpMapperReactor = new SxpMapperReactorImpl(endpointService, dataBroker);
@@ -61,6 +66,7 @@ public class SxpEpProviderProviderImpl implements AutoCloseable {
         final EpPolicyTemplateValueKeyFactory epPolicyTemplateKeyFactory = new EpPolicyTemplateValueKeyFactory(
                 EPTemplateUtil.createEndpointGroupIdOrdering(), EPTemplateUtil.createConditionNameOrdering());
         final EPPolicyTemplateDaoImpl epPolicyTemplateDao = new EPPolicyTemplateDaoImpl(dataBroker, epPolicyTemplateCachedDao, epPolicyTemplateKeyFactory);
+        //TODO: inject delegate (ise-adapter-provider)
         final EPForwardingTemplateDaoImpl epForwardingTemplateDao = new EPForwardingTemplateDaoImpl(dataBroker,
                 epForwardingTemplateCachedDao);
         final MasterDatabaseBindingDaoImpl masterDBBindingDao = new MasterDatabaseBindingDaoImpl(dataBroker, masterDBBindingCachedDao);
@@ -74,6 +80,11 @@ public class SxpEpProviderProviderImpl implements AutoCloseable {
         sxpEndpointAugmentor = new SxpEndpointAugmentorImpl(epPolicyTemplateDao, epPolicyTemplateKeyFactory);
         domainSpecificRegistry.getEndpointAugmentorRegistry().register(sxpEndpointAugmentor);
         LOG.info("started SxmMapper");
+    }
+
+    @Override
+    public EPPolicyTemplateProviderRegistry getEPPolicyTemplateProviderRegistry() {
+        return epPolicyTemplateRegistry;
     }
 
     @Override

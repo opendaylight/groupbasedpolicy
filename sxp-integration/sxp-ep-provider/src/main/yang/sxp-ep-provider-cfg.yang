@@ -29,7 +29,16 @@ module sxp-ep-provider-cfg {
             "sxp-ep-provider impl module";
 
         base "config:module-type";
+        config:provided-service sxp-ep-provider;
         config:java-name-prefix SxpEpProviderProvider;
+    }
+
+    identity sxp-ep-provider {
+        description
+            "sxp-ep-provider injection point service for template provider";
+
+        base "config:service-type";
+        config:java-class "org.opendaylight.groupbasedpolicy.sxp.ep.provider.spi.SxpEpProviderProvider";
     }
 
     // Augments the 'configuration' choice node under modules/module.
