@@ -74,6 +74,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gb
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.neutron.by.gbp.mappings.ports.by.endpoints.PortByEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomainBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.PortBindingExtension;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.port.attributes.FixedIps;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.Ports;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
@@ -143,6 +144,39 @@ public class NeutronPortAware implements NeutronAware<Port> {
 
             // does the same for tenant forwarding domains
             processTenantForwarding(routerPortSubnet, routerL3Context, portIpWithSubnet, tenantId, rwTx);
+
+            // Add Qrouter port as Endpoint
+            if (port.getAugmentation(PortBindingExtension.class) != null &&
+                PortUtils.DEVICE_VIF_TYPE.equals(port.getAugmentation(PortBindingExtension.class).getVifType())) {
+                LOG.trace("Port is QRouter port: {}", port.getUuid().getValue());
+                Optional<FixedIps> firstFixedIps = PortUtils.resolveFirstFixedIps(port);
+                if (!firstFixedIps.isPresent()) {
+                    LOG.warn("QRouter port does not have an IP address. {}", port);
+                    return;
+                }
+
+                FixedIps ipWithSubnet = firstFixedIps.get();
+                NetworkDomainId networkContainment = new NetworkDomainId(ipWithSubnet.getSubnetId().getValue());
+                List<EndpointGroupId> epgsFromSecGroups = resolveEpgIdsFromSecGroups(port.getSecurityGroups());
+                epgsFromSecGroups.add(NetworkService.EPG_ID);
+
+                // BUILD BASE ENDPOINT
+                AddressEndpointRegBuilder l2BaseEp = createBasicMacAddrEpInputBuilder(port, networkContainment,
+                    epgsFromSecGroups);
+                AddressEndpointRegBuilder l3BaseEp = createBasicL3AddrEpInputBuilder(port, networkContainment,
+                    epgsFromSecGroups, neutron);
+                setParentChildRelationshipForEndpoints(l3BaseEp, l2BaseEp);
+
+                // BUILD ENDPOINT
+                org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInputBuilder
+                    epInBuilder =
+                    createEndpointRegFromPort(
+                        port, ipWithSubnet, networkContainment, epgsFromSecGroups, neutron);
+
+                registerBaseEndpointAndStoreMapping(
+                    ImmutableList.of(l2BaseEp.build(), l3BaseEp.build()), port, rwTx);
+                registerEndpointAndStoreMapping(epInBuilder.build(), port, rwTx);
+            }
 
             DataStoreHelper.submitToDs(rwTx);
         } else if (PortUtils.isDhcpPort(port)) {
@@ -256,7 +290,8 @@ public class NeutronPortAware implements NeutronAware<Port> {
     private void changeL3ContextForEpsInSubnet(Uuid subnetUuid, Neutron neutron) {
         Set<Port> portsInSameSubnet = PortUtils.findPortsBySubnet(subnetUuid, neutron.getPorts());
         for (Port portInSameSubnet : portsInSameSubnet) {
-            if (PortUtils.isNormalPort(portInSameSubnet) || PortUtils.isDhcpPort(portInSameSubnet)) {
+            if (PortUtils.isNormalPort(portInSameSubnet) || PortUtils.isDhcpPort(portInSameSubnet)
+                || PortUtils.isQrouterPort(portInSameSubnet)) {
                 // endpoints are created only from neutron normal port or DHCP port
                 Optional<FixedIps> firstFixedIps = PortUtils.resolveFirstFixedIps(portInSameSubnet);
                 if (firstFixedIps.isPresent()) {

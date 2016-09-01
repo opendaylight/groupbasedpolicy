@@ -16,6 +16,7 @@ import java.util.Set;
 import javax.annotation.Nullable;
 
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.PortBindingExtension;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.port.attributes.FixedIps;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.Ports;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
@@ -28,6 +29,7 @@ public class PortUtils {
     public static final String DEVICE_OWNER_ROUTER_IFACE = "network:router_interface";
     public static final String DEVICE_OWNER_ROUTER_GATEWAY = "network:router_gateway";
     public static final String DEVICE_OWNER_FLOATING_IP = "network:floatingip";
+    public static final String DEVICE_VIF_TYPE = "vhostuser";
 
     public static Optional<Port> findPort(Uuid uuid, @Nullable Ports ports) {
         if (ports == null || ports.getPort() == null) {
@@ -89,6 +91,12 @@ public class PortUtils {
 
     public static boolean isDhcpPort(Port port) {
         return DEVICE_OWNER_DHCP.equals(port.getDeviceOwner());
+    }
+
+    public static boolean isQrouterPort(Port port) {
+        return DEVICE_OWNER_ROUTER_IFACE.equals(port.getDeviceOwner())
+            && port.getAugmentation(PortBindingExtension.class) != null
+            && DEVICE_VIF_TYPE.equals(port.getAugmentation(PortBindingExtension.class).getVifType());
     }
 
     public static boolean isRouterInterfacePort(Port port) {
