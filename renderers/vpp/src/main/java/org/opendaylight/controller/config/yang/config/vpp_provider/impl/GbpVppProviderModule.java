@@ -11,7 +11,7 @@ package org.opendaylight.controller.config.yang.config.vpp_provider.impl;
 import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+@Deprecated
 public class GbpVppProviderModule extends org.opendaylight.controller.config.yang.config.vpp_provider.impl.AbstractGbpVppProviderModule {
 
     private static final Logger LOG = LoggerFactory.getLogger(GbpVppProviderModule.class);
