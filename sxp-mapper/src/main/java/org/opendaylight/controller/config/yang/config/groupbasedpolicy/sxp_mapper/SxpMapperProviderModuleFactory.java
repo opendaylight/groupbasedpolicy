@@ -16,6 +16,7 @@
 * Do not modify this file unless it is present under src/main directory
 */
 package org.opendaylight.controller.config.yang.config.groupbasedpolicy.sxp_mapper;
+@Deprecated
 public class SxpMapperProviderModuleFactory extends org.opendaylight.controller.config.yang.config.groupbasedpolicy.sxp_mapper.AbstractSxpMapperProviderModuleFactory {
 
 }
