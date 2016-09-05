@@ -11,7 +11,7 @@ package org.opendaylight.controller.config.yang.config.neutron_mapper.impl;
 import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+@Deprecated
 public class NeutronMapperModule extends org.opendaylight.controller.config.yang.config.neutron_mapper.impl.AbstractNeutronMapperModule {
 
     private final Logger LOG = LoggerFactory.getLogger(NeutronMapperModule.class);
