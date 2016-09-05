@@ -13,6 +13,7 @@ import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 /**
 * gbp-ise-adapter impl module
 */
+@Deprecated
 public class GpbIseAdapterProviderModule extends org.opendaylight.controller.config.yang.config.groupbasedpolicy.gbp_ise_adapter.AbstractGpbIseAdapterProviderModule {
     public GpbIseAdapterProviderModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {
         super(identifier, dependencyResolver);
