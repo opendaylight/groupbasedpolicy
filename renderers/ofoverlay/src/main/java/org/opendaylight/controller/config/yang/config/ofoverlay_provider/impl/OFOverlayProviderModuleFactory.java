@@ -16,6 +16,7 @@
 * Do not modify this file unless it is present under src/main directory
 */
 package org.opendaylight.controller.config.yang.config.ofoverlay_provider.impl;
+@Deprecated
 public class OFOverlayProviderModuleFactory extends org.opendaylight.controller.config.yang.config.ofoverlay_provider.impl.AbstractOFOverlayProviderModuleFactory {
 
 }
