@@ -1,15 +1,15 @@
 {
   "name": "opendaylight-gbp",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "dependencies": {
-    "angular-animate": "~1.5.0",
-    "angular-aria": "~1.5.0",
+    "angular-animate": "~1.4.0",
+    "angular-aria": "~1.4.0",
     "angular-material": "1.0.5",
     "roboto-fontface": "~0.4.3",
     "angular-material-data-table": "~0.9.11",
     "NeXt": "~0.9.1"
   },
   "resolutions": {
-    "angular": "1.5.7"
+    "angular": "~1.4.0"
   }
 }
