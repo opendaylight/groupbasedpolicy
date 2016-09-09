@@ -10,6 +10,7 @@ package org.opendaylight.controller.config.yang.config.neutron_vpp_mapper.impl;
 
 import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 
+@Deprecated
 public class NeutronVppMapperModule extends org.opendaylight.controller.config.yang.config.neutron_vpp_mapper.impl.AbstractNeutronVppMapperModule {
     public NeutronVppMapperModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {
         super(identifier, dependencyResolver);

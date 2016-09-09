@@ -308,7 +308,7 @@ public class NeutronMapper implements DataTreeChangeListener<Neutron>, AutoClose
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         registerDataTreeChangeListener.close();
     }
 

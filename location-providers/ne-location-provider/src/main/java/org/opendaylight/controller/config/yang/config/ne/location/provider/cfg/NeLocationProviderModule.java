@@ -9,7 +9,7 @@
 package org.opendaylight.controller.config.yang.config.ne.location.provider.cfg;
 
 import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
-
+@Deprecated
 public class NeLocationProviderModule extends org.opendaylight.controller.config.yang.config.ne.location.provider.cfg.AbstractNeLocationProviderModule {
     public NeLocationProviderModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {
         super(identifier, dependencyResolver);

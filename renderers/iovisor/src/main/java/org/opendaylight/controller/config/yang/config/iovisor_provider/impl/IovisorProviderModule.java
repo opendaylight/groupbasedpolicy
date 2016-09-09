@@ -9,7 +9,7 @@
 package org.opendaylight.controller.config.yang.config.iovisor_provider.impl;
 
 import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
-
+@Deprecated
 public class IovisorProviderModule
         extends org.opendaylight.controller.config.yang.config.iovisor_provider.impl.AbstractIovisorProviderModule {
 

@@ -22,7 +22,7 @@ import org.opendaylight.controller.config.api.DependencyResolver;
 import org.opendaylight.controller.config.api.DynamicMBeanWithInstance;
 import org.opendaylight.controller.config.spi.Module;
 import org.osgi.framework.BundleContext;
-
+@Deprecated
 public class NeutronMapperModuleFactory extends org.opendaylight.controller.config.yang.config.neutron_mapper.impl.AbstractNeutronMapperModuleFactory {
 
     /**
