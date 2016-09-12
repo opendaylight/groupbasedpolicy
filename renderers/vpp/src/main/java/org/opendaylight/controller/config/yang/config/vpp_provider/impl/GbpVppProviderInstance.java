@@ -11,6 +11,7 @@ package org.opendaylight.controller.config.yang.config.vpp_provider.impl;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.opendaylight.controller.config.yang.config.groupbasedpolicy.GroupbasedpolicyInstance;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonService;
@@ -25,7 +26,7 @@ public class GbpVppProviderInstance implements ClusterSingletonService, AutoClos
     private static final Logger LOG = LoggerFactory.getLogger(GbpVppProviderInstance.class);
 
     private static final ServiceGroupIdentifier IDENTIFIER =
-            ServiceGroupIdentifier.create(GbpVppProviderInstance.class.getName());
+            ServiceGroupIdentifier.create(GroupbasedpolicyInstance.GBP_SERVICE_GROUP_IDENTIFIER);
     private final DataBroker dataBroker;
     private final BindingAwareBroker bindingAwareBroker;
     private final ClusterSingletonServiceProvider clusterSingletonService;

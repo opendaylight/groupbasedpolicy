@@ -11,6 +11,7 @@ package org.opendaylight.controller.config.yang.config.neutron_vpp_mapper.impl;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.opendaylight.controller.config.yang.config.groupbasedpolicy.GroupbasedpolicyInstance;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.groupbasedpolicy.neutron.vpp.mapper.NeutronVppMapper;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonService;
@@ -25,7 +26,7 @@ public class NeutronVppMapperInstance implements ClusterSingletonService, AutoCl
     private static final Logger LOG = LoggerFactory.getLogger(NeutronVppMapperInstance.class);
 
     private static final ServiceGroupIdentifier IDENTIFIER =
-            ServiceGroupIdentifier.create(NeutronVppMapperInstance.class.getName());
+            ServiceGroupIdentifier.create(GroupbasedpolicyInstance.GBP_SERVICE_GROUP_IDENTIFIER);
     private final DataBroker dataBroker;
     private final String socketPath;
     private final String socketPrefix;
