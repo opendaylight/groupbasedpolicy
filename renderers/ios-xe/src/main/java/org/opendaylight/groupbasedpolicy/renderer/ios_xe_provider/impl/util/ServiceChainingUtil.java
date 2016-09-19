@@ -106,6 +106,10 @@ public class ServiceChainingUtil {
     private static final String RSP_REVERSED_SUFFIX = "-gbp-rsp-Reverse";
     private static long timeout = 5000L;
 
+    private ServiceChainingUtil() {
+        throw new IllegalAccessError("instance of util class not supported");
+    }
+
     /**
      * According to provided action, this method gets service function path and collects all info about participation
      * and orientation of path. According to path symmetricity, participation and direction, one of these cases happens:

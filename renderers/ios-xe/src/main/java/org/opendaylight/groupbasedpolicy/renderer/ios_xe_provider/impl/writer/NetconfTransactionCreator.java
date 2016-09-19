@@ -29,6 +29,10 @@ public class NetconfTransactionCreator {
     private final static Logger LOG = LoggerFactory.getLogger(NetconfTransactionCreator.class);
     private static long timeout = 5000L;
 
+    private NetconfTransactionCreator() {
+        throw new IllegalAccessError("instance of util class not supported");
+    }
+
     public static Optional<ReadOnlyTransaction> netconfReadOnlyTransaction(DataBroker mountpoint) {
         int attempt = 0;
         do {
