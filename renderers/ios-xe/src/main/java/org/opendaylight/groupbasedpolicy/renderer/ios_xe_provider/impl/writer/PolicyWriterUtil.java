@@ -51,6 +51,10 @@ public class PolicyWriterUtil {
 
     private static final Logger LOG = LoggerFactory.getLogger(PolicyWriterUtil.class);
 
+    private PolicyWriterUtil() {
+        throw new IllegalAccessError("instance of util class not supported");
+    }
+
     public static boolean writeClassMap(@Nonnull final ClassMap classMap,
                                         final PolicyManagerImpl.PolicyMapLocation policyMapLocation) {
         boolean result = true;

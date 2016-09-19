@@ -92,6 +92,10 @@ public class PolicyManagerUtil {
 
     private static final Logger LOG = LoggerFactory.getLogger(PolicyManagerUtil.class);
 
+    private PolicyManagerUtil() {
+        throw new IllegalAccessError("instance of util class not supported");
+    }
+
     /**
      * Main method for policy creation which looks for all actions specified in rules between two endpoints. Whichever
      * action has been found, it is resolved (only chain action is supported for now).
