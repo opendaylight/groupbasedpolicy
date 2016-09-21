@@ -7,16 +7,12 @@
  */
 package org.opendaylight.groupbasedpolicy.sxp.mapper.impl.listen;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.AsyncFunction;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import java.util.Collection;
+
 import javax.annotation.Nonnull;
+
+import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -45,6 +41,13 @@ import org.opendaylight.yangtools.yang.common.RpcResultBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.AsyncFunction;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+
 /**
  * listens to sxp master database and propagates change events for further processing
  */
@@ -63,7 +66,7 @@ public class MasterDatabaseBindingListenerImpl implements MasterDatabaseBindingL
     private final DSAsyncDao<Sgt, EndpointPolicyTemplateBySgt> epPolicyTemplateDao;
     private final DSAsyncDao<IpPrefix, EndpointForwardingTemplateBySubnet> epForwardingTemplateDao;
 
-    private final ListenerRegistration<? extends DataTreeChangeListener> listenerRegistration;
+    private final ListenerRegistration<? extends ClusteredDataTreeChangeListener> listenerRegistration;
     private final InstanceIdentifier<MasterDatabaseBinding> sxpDbPath;
 
     public MasterDatabaseBindingListenerImpl(final DataBroker dataBroker,

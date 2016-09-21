@@ -9,6 +9,7 @@
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.listener;
 
 import java.util.Collections;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -17,9 +18,9 @@ import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
+import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
-import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.NodeManager;
@@ -40,7 +41,7 @@ public class IosXeCapableNodeListenerImplTest {
     @Mock
     private NodeManager nodeManager;
     @Mock
-    private ListenerRegistration<DataTreeChangeListener<Node>> listenerRegistration;
+    private ListenerRegistration<ClusteredDataTreeChangeListener<Node>> listenerRegistration;
     @Mock
     private DataTreeModification<Node> dataTreeModification;
     @Mock
@@ -52,12 +53,12 @@ public class IosXeCapableNodeListenerImplTest {
     public void setUp() throws Exception {
         Mockito.when(dataBroker.registerDataTreeChangeListener(
                 Matchers.<DataTreeIdentifier<Node>>any(),
-                Matchers.<DataTreeChangeListener<Node>>any()))
+                Matchers.<ClusteredDataTreeChangeListener<Node>>any()))
                 .thenReturn(listenerRegistration);
         listener = new IosXeCapableNodeListenerImpl(dataBroker, nodeManager);
         Mockito.verify(dataBroker).registerDataTreeChangeListener(
                 Matchers.<DataTreeIdentifier<NetworkTopology>>any(),
-                Matchers.<DataTreeChangeListener<NetworkTopology>>any());
+                Matchers.<ClusteredDataTreeChangeListener<NetworkTopology>>any());
     }
 
     @After

@@ -12,9 +12,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Collection;
 
+import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
-import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 
-public class ClassifierDefinitionListener implements DataTreeChangeListener<ClassifierDefinition>, AutoCloseable {
+public class ClassifierDefinitionListener implements ClusteredDataTreeChangeListener<ClassifierDefinition>, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(ClassifierDefinitionListener.class);
     private static final InstanceIdentifier<Capabilities> RENDERER_CAPABILITIES_IID = InstanceIdentifier.builder(Renderers.class)

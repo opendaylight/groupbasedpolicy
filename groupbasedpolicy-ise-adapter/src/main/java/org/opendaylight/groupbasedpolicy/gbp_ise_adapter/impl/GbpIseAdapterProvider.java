@@ -8,9 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.gbp_ise_adapter.impl;
 
-import com.google.common.base.Preconditions;
+import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
@@ -22,6 +21,8 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Preconditions;
+
 /**
  * Purpose: main provider of gbp-ise adapter (for reading sgts and generating EndpointPolicyTemplates)
  */
@@ -30,7 +31,7 @@ public class GbpIseAdapterProvider implements AutoCloseable, BindingAwareProvide
     private static final Logger LOG = LoggerFactory.getLogger(GbpIseAdapterProvider.class);
 
     private final DataBroker dataBroker;
-    private ListenerRegistration<DataTreeChangeListener<IseHarvestConfig>> registration;
+    private ListenerRegistration<ClusteredDataTreeChangeListener<IseHarvestConfig>> registration;
 
     public GbpIseAdapterProvider(final DataBroker dataBroker, final BindingAwareBroker brokerDependency) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker, "provided dataBroker must not be null");

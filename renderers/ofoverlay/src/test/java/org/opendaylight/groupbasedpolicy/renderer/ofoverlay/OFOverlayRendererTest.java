@@ -18,9 +18,9 @@ import java.lang.reflect.Method;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
-import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.NotificationService;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
@@ -73,7 +73,7 @@ public class OFOverlayRendererTest {
         when(dataProvider.registerDataChangeListener(any(LogicalDatastoreType.class), any(InstanceIdentifier.class),
                 any(DataChangeListener.class), any(DataChangeScope.class))).thenReturn(configReg);
         when(dataProvider.registerDataTreeChangeListener(any(DataTreeIdentifier.class),
-                any(DataTreeChangeListener.class))).thenReturn(configReg);
+                any(ClusteredDataTreeChangeListener.class))).thenReturn(configReg);
 
         WriteTransaction writeTransaction = mock(WriteTransaction.class);
         when(dataProvider.newWriteOnlyTransaction()).thenReturn(writeTransaction);
