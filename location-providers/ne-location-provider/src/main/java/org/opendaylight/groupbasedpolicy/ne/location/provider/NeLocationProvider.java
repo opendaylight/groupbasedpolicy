@@ -15,9 +15,9 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
+import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
-import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
-public class NeLocationProvider implements DataTreeChangeListener<NetworkElements>, AutoCloseable {
+public class NeLocationProvider implements ClusteredDataTreeChangeListener<NetworkElements>, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(NeLocationProvider.class);
     public static final String NE_LOCATION_PROVIDER_NAME = "ne-location-provider";

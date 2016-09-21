@@ -31,9 +31,9 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
-import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.NotificationService;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
@@ -122,7 +122,7 @@ public class EndpointManagerTest {
         when(dataProvider.registerDataChangeListener(any(LogicalDatastoreType.class), any(InstanceIdentifier.class),
                 any(DataChangeListener.class), any(DataChangeScope.class))).thenReturn(listenerReg);
         when(dataProvider.registerDataTreeChangeListener(any(DataTreeIdentifier.class),
-                any(DataTreeChangeListener.class))).thenReturn(listenerReg);
+                any(ClusteredDataTreeChangeListener.class))).thenReturn(listenerReg);
 
         manager = spy(new EndpointManager(dataProvider, packetService, flowService, notificationService, executor, switchManager));
         endpointListener = mock(EndpointListener.class);

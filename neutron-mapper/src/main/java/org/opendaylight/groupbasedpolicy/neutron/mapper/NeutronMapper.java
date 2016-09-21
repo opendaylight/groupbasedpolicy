@@ -15,10 +15,10 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification.ModificationType;
-import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -65,7 +65,7 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 
-public class NeutronMapper implements DataTreeChangeListener<Neutron>, AutoCloseable {
+public class NeutronMapper implements ClusteredDataTreeChangeListener<Neutron>, AutoCloseable {
 
     public static final String EXC_MSG_UNKNOWN_MODIFICATION_TYPE_WITHIN_DATA = "Unknown modification type within data ";
 

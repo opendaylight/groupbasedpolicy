@@ -7,10 +7,8 @@
  */
 package org.opendaylight.groupbasedpolicy.sxp.mapper.impl.listen;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.Futures;
 import java.util.Collections;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -19,9 +17,9 @@ import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
+import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
-import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -43,6 +41,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.mast
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcResultBuilder;
+
+import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.Futures;
 
 /**
  * Test for {@link EPPolicyTemplateListenerImpl}.
@@ -88,7 +90,7 @@ public class EPPolicyTemplateListenerImplTest {
     @Before
     public void setUp() throws Exception {
         Mockito.when(dataBroker.registerDataTreeChangeListener(Matchers.<DataTreeIdentifier>any(),
-                Matchers.<DataTreeChangeListener>any())).thenReturn(listenerRegistration);
+                Matchers.<ClusteredDataTreeChangeListener>any())).thenReturn(listenerRegistration);
         listener = new EPPolicyTemplateListenerImpl(dataBroker, sxpMapper, simpleCachedDao, masterDBDao, epForwardingTemplateDao);
     }
 

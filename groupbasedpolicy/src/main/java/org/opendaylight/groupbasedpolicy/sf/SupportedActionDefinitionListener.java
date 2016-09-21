@@ -14,9 +14,9 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
-import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
@@ -39,7 +39,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
 
 public class SupportedActionDefinitionListener
-        implements DataTreeChangeListener<SupportedActionDefinition>, AutoCloseable {
+        implements ClusteredDataTreeChangeListener<SupportedActionDefinition>, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(SupportedActionDefinitionListener.class);
 
