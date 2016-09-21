@@ -8,12 +8,12 @@
 
 package org.opendaylight.groupbasedpolicy.gbp_ise_adapter.impl;
 
-import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.gbp.ise.adapter.model.rev160630.gbp.ise.adapter.IseHarvestConfig;
 
 /**
  * Purpose: dtcl for {@link IseHarvestConfig}
  */
-public interface GbpIseConfigListener extends DataTreeChangeListener<IseHarvestConfig>, AutoCloseable {
+public interface GbpIseConfigListener extends ClusteredDataTreeChangeListener<IseHarvestConfig>, AutoCloseable {
     // nobody
 }

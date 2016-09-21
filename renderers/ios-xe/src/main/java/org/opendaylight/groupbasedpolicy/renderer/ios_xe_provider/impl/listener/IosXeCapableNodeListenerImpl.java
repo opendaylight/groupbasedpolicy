@@ -8,10 +8,15 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.listener;
 
-import com.google.common.base.Preconditions;
+import static org.opendaylight.sfc.provider.SfcProviderDebug.printTraceStart;
+
+import java.util.Collection;
+
+import javax.annotation.Nonnull;
+
+import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
-import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -24,12 +29,9 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nonnull;
-import java.util.Collection;
+import com.google.common.base.Preconditions;
 
-import static org.opendaylight.sfc.provider.SfcProviderDebug.printTraceStart;
-
-public class IosXeCapableNodeListenerImpl implements DataTreeChangeListener<Node>, AutoCloseable {
+public class IosXeCapableNodeListenerImpl implements ClusteredDataTreeChangeListener<Node>, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(IosXeCapableNodeListenerImpl.class);
     private final NodeManager nodeManager;

@@ -12,10 +12,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Collection;
 
+import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification.ModificationType;
-import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
@@ -24,11 +24,11 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 /**
  * The purpose of this class is to eliminate boilerplate code used in most of
- * {@link DataTreeChangeListener} implementations.
+ * {@link ClusteredDataTreeChangeListener} implementations.
  *
  * @param <T> target class
  */
-public abstract class DataTreeChangeHandler<T extends DataObject> implements DataTreeChangeListener<T>, AutoCloseable {
+public abstract class DataTreeChangeHandler<T extends DataObject> implements ClusteredDataTreeChangeListener<T>, AutoCloseable {
 
     protected final DataBroker dataProvider;
     protected ListenerRegistration<DataTreeChangeHandler<T>> registeredListener;

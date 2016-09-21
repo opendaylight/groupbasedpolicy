@@ -10,8 +10,8 @@ package org.opendaylight.groupbasedpolicy.ne.location.provider;
 
 import java.util.Collection;
 
+import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -23,7 +23,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class EndpointsListener implements DataTreeChangeListener<AddressEndpoint>{
+public class EndpointsListener implements ClusteredDataTreeChangeListener<AddressEndpoint>{
 
     private static final Logger LOG = LoggerFactory.getLogger(EndpointsListener.class);
 

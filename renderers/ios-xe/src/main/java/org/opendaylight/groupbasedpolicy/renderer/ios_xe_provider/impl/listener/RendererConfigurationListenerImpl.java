@@ -8,16 +8,18 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.listener;
 
-import com.google.common.base.Preconditions;
+import java.util.Collection;
+
+import javax.annotation.Nonnull;
+
+import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
-import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.manager.PolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.Renderers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.RendererKey;
@@ -28,14 +30,12 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nonnull;
-import java.util.Collection;
-import java.util.Optional;
+import com.google.common.base.Preconditions;
 
 /**
  * Purpose: process changes of configured renderer policies
  */
-public class RendererConfigurationListenerImpl implements DataTreeChangeListener<RendererPolicy>, AutoCloseable {
+public class RendererConfigurationListenerImpl implements ClusteredDataTreeChangeListener<RendererPolicy>, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(RendererConfigurationListenerImpl.class);
     private final ListenerRegistration<RendererConfigurationListenerImpl> listenerRegistration;

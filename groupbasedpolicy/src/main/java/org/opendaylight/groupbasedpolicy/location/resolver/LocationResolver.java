@@ -16,8 +16,8 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
@@ -44,7 +44,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class LocationResolver implements DataTreeChangeListener<LocationProvider>, AutoCloseable {
+public class LocationResolver implements ClusteredDataTreeChangeListener<LocationProvider>, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(LocationResolver.class);
     private Map<AddressEndpointLocationKey, Map<Long, AbsoluteLocation>> realLocations;
