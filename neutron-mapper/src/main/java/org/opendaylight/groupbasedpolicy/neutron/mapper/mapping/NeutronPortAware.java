@@ -114,36 +114,12 @@ public class NeutronPortAware implements NeutronAware<Port> {
             }
             FixedIps portIpWithSubnet = potentialPortIpWithSubnet.get();
             ContextId routerL3Context = new ContextId(port.getDeviceId());
-            // change L3Context for all EPs with same subnet as router port
-            changeL3ContextForEpsInSubnet(portIpWithSubnet.getSubnetId(), neutron);
-            // set L3Context as parent for bridge domain which is parent of subnet
-            TenantId tenantId = new TenantId(port.getTenantId().getValue());
-            Optional<Subnet> potentialRouterPortSubnet = SubnetUtils.findSubnet(portIpWithSubnet.getSubnetId(), neutron.getSubnets());
-            if (!potentialRouterPortSubnet.isPresent()) {
-                LOG.warn("Illegal state - router interface port is in subnet which does not exist. {}",
-                        port);
-                return;
-            }
-            Subnet routerPortSubnet = potentialRouterPortSubnet.get();
             ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
-            ContextId l2BdId = new ContextId(routerPortSubnet.getNetworkId().getValue());
-            ForwardingContext l2Bd = new ForwardingContextBuilder().setContextId(l2BdId)
-                .setContextType(MappingUtils.L2_BRDIGE_DOMAIN)
-                .setParent(MappingUtils.createParent(routerL3Context, MappingUtils.L3_CONTEXT))
-                .build();
-            rwTx.merge(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.l2BridgeDomainIid(tenantId, l2BdId), l2Bd, true);
-            // set virtual router IP for subnet
-            NetworkDomain subnetDomain = NeutronSubnetAware.createSubnet(
-                    routerPortSubnet, portIpWithSubnet.getIpAddress());
-            rwTx.merge(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.subnetIid(tenantId, subnetDomain.getNetworkDomainId()), subnetDomain);
 
             AddressEndpointKey addrEpKey = new AddressEndpointKey(port.getMacAddress().getValue(),
-                    MacAddressType.class, new ContextId(port.getNetworkId().getValue()), MappingUtils.L2_BRDIGE_DOMAIN);
+                MacAddressType.class, new ContextId(port.getNetworkId().getValue()), MappingUtils.L2_BRDIGE_DOMAIN);
             UniqueId portId = new UniqueId(port.getUuid().getValue());
             addBaseEndpointMappings(addrEpKey, portId, rwTx);
-
-            // does the same for tenant forwarding domains
-            processTenantForwarding(routerPortSubnet, routerL3Context, portIpWithSubnet, tenantId, rwTx);
 
             // Add Qrouter port as Endpoint
             if (port.getAugmentation(PortBindingExtension.class) != null &&
@@ -172,11 +148,35 @@ public class NeutronPortAware implements NeutronAware<Port> {
                     epInBuilder =
                     createEndpointRegFromPort(
                         port, ipWithSubnet, networkContainment, epgsFromSecGroups, neutron);
-
                 registerBaseEndpointAndStoreMapping(
                     ImmutableList.of(l2BaseEp.build(), l3BaseEp.build()), port, rwTx);
                 registerEndpointAndStoreMapping(epInBuilder.build(), port, rwTx);
             }
+
+            // change L3Context for all EPs with same subnet as router port
+            changeL3ContextForEpsInSubnet(portIpWithSubnet.getSubnetId(), neutron);
+            // set L3Context as parent for bridge domain which is parent of subnet
+            TenantId tenantId = new TenantId(port.getTenantId().getValue());
+            Optional<Subnet> potentialRouterPortSubnet = SubnetUtils.findSubnet(portIpWithSubnet.getSubnetId(), neutron.getSubnets());
+            if (!potentialRouterPortSubnet.isPresent()) {
+                LOG.warn("Illegal state - router interface port is in subnet which does not exist. {}",
+                        port);
+                return;
+            }
+            Subnet routerPortSubnet = potentialRouterPortSubnet.get();
+            ContextId l2BdId = new ContextId(routerPortSubnet.getNetworkId().getValue());
+            ForwardingContext l2Bd = new ForwardingContextBuilder().setContextId(l2BdId)
+                .setContextType(MappingUtils.L2_BRDIGE_DOMAIN)
+                .setParent(MappingUtils.createParent(routerL3Context, MappingUtils.L3_CONTEXT))
+                .build();
+            rwTx.merge(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.l2BridgeDomainIid(tenantId, l2BdId), l2Bd, true);
+            // set virtual router IP for subnet
+            NetworkDomain subnetDomain = NeutronSubnetAware.createSubnet(
+                    routerPortSubnet, portIpWithSubnet.getIpAddress());
+            rwTx.merge(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.subnetIid(tenantId, subnetDomain.getNetworkDomainId()), subnetDomain);
+
+            // does the same for tenant forwarding domains
+            processTenantForwarding(routerPortSubnet, routerL3Context, portIpWithSubnet, tenantId, rwTx);
 
             DataStoreHelper.submitToDs(rwTx);
         } else if (PortUtils.isDhcpPort(port)) {
@@ -298,7 +298,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
                     // endpoint has only one network containment therefore only first IP is used
                     FixedIps ipWithSubnet = firstFixedIps.get();
                     List<EndpointGroupId> endpointGroupIds = new ArrayList<>();
-                    if (PortUtils.isDhcpPort(portInSameSubnet)) {
+                    if (PortUtils.isDhcpPort(portInSameSubnet) || PortUtils.isQrouterPort(portInSameSubnet)) {
                         endpointGroupIds.add(NetworkService.EPG_ID);
                     } else if (PortUtils.isNormalPort(portInSameSubnet)) {
                         endpointGroupIds.add(NetworkClient.EPG_ID);
@@ -315,7 +315,9 @@ public class NeutronPortAware implements NeutronAware<Port> {
                         .setContextType(l3BaseEp.getContextType())
                         .build();
                     epRegistrator.unregisterEndpoint(addrEpUnreg);
-                    epRegistrator.registerEndpoint(l3BaseEp.build());
+                    RegisterEndpointInput regBaseEpInput = new RegisterEndpointInputBuilder()
+                        .setAddressEndpointReg(ImmutableList.of(l2BaseEp.build(), l3BaseEp.build())).build();
+                    epRegistrator.registerEndpoint(regBaseEpInput);
 
                     modifyL3ContextForEndpoints(portInSameSubnet, ipWithSubnet, l3BaseEp.getContextId());
                 }
