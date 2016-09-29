@@ -31,12 +31,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Configuration;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpoint;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.NetworkTypeBase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.VlanNetwork;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.BridgeDomain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.BridgeDomainBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpBridgeDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpBridgeDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.VlanId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VxlanVni;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
@@ -67,22 +66,22 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
 
     @Override
     public Collection<Class<?>> getClassesFromModules() {
-        return Arrays.asList(BridgeDomain.class);
+        return Arrays.asList(GbpBridgeDomain.class);
     }
 
     @Test
     public void testReadBridgeDomainConfig() throws Exception {
-        BridgeDomain bd = new BridgeDomainBuilder().setId(BD_1).setType(NetworkTypeBase.class).build();
-        InstanceIdentifier<BridgeDomain> bdIid =
-                InstanceIdentifier.builder(Config.class).child(BridgeDomain.class, bd.getKey()).build();
-        Optional<BridgeDomain> bdOptional = fwdManager.readBridgeDomainConfig(bd.getId());
+        GbpBridgeDomain bd = new GbpBridgeDomainBuilder().setId(BD_1).setType(NetworkTypeBase.class).build();
+        InstanceIdentifier<GbpBridgeDomain> bdIid =
+                InstanceIdentifier.builder(Config.class).child(GbpBridgeDomain.class, bd.getKey()).build();
+        Optional<GbpBridgeDomain> bdOptional = fwdManager.readGbpBridgeDomainConfig(bd.getId());
         Assert.assertFalse(bdOptional.isPresent());
 
         WriteTransaction wTx = getDataBroker().newWriteOnlyTransaction();
         wTx.put(LogicalDatastoreType.CONFIGURATION, bdIid, bd);
         wTx.submit().get();
 
-        bdOptional = fwdManager.readBridgeDomainConfig(bd.getId());
+        bdOptional = fwdManager.readGbpBridgeDomainConfig(bd.getId());
         Assert.assertTrue(bdOptional.isPresent());
         Assert.assertEquals(bd, bdOptional.get());
     }
@@ -104,9 +103,9 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
         Mockito.when(bdManager.createVlanBridgeDomainOnVppNode(Mockito.eq(BD_1), Mockito.any(VlanId.class),
                 Mockito.eq(NODE_1)))
             .thenReturn(Futures.immediateFuture(null));
-        BridgeDomain bd = new BridgeDomainBuilder().setId(BD_1).setType(VlanNetwork.class).setVlan(VLAN_1).build();
-        InstanceIdentifier<BridgeDomain> bdIid =
-                InstanceIdentifier.builder(Config.class).child(BridgeDomain.class, bd.getKey()).build();
+        GbpBridgeDomain bd = new GbpBridgeDomainBuilder().setId(BD_1).setType(VlanNetwork.class).setVlan(VLAN_1).build();
+        InstanceIdentifier<GbpBridgeDomain> bdIid =
+                InstanceIdentifier.builder(Config.class).child(GbpBridgeDomain.class, bd.getKey()).build();
         WriteTransaction wTx = getDataBroker().newWriteOnlyTransaction();
         wTx.put(LogicalDatastoreType.CONFIGURATION, bdIid, bd);
         wTx.submit().get();
