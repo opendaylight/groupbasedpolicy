@@ -92,7 +92,7 @@ module vpp-renderer {
             }
         }
 
-        list bridge-domain {
+        list gbp-bridge-domain {
             key "id";
             leaf id {
                 description "Same as in VBD.";

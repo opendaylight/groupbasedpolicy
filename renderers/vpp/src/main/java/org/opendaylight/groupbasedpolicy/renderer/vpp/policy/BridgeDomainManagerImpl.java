@@ -8,11 +8,20 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.policy;
 
-import java.util.Arrays;
-import java.util.Collection;
-
 import javax.annotation.Nonnull;
-
+import javax.annotation.Nullable;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.AsyncFunction;
+import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
@@ -26,11 +35,15 @@ import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.BridgeDomain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.BridgeDomainKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.bridge.domain.PhysicalLocationRef;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpBridgeDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpBridgeDomainKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.gbp.bridge.domain.PhysicalLocationRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.VlanId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VxlanVni;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.vpp.state.bridge.domains.BridgeDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.vpp.state.bridge.domains.BridgeDomainKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.status.rev161005.BridgeDomainStatusAugmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.status.rev161005.BridgeDomainStatusFields.BridgeDomainStatus;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.NodeVbridgeAugment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyTypesVbridgeAugment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyTypesVbridgeAugmentBuilder;
@@ -62,15 +75,6 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.AsyncFunction;
-import com.google.common.util.concurrent.CheckedFuture;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.SettableFuture;
-
 public class BridgeDomainManagerImpl implements BridgeDomainManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(BridgeDomainManagerImpl.class);
@@ -78,8 +82,8 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
     private static final TopologyTypes VBRIDGE_TOPOLOGY_TYPE = new TopologyTypesBuilder().addAugmentation(
             TopologyTypesVbridgeAugment.class,
             new TopologyTypesVbridgeAugmentBuilder().setVbridgeTopology(new VbridgeTopologyBuilder().build()).build())
-        .build();
-    private final DataBroker dataProvder;
+            .build();
+    private final DataBroker dataProvider;
 
     private static final class ListenableFutureSetter<T extends DataObject>
             implements ClusteredDataTreeChangeListener<T> {
@@ -91,7 +95,7 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
         private final ListenerRegistration<ListenableFutureSetter<T>> registeredListener;
 
         private ListenableFutureSetter(DataBroker dataProvider, SettableFuture<Void> future,
-                DataTreeIdentifier<T> iid, ModificationType modificationForFutureSet) {
+                                       DataTreeIdentifier<T> iid, ModificationType modificationForFutureSet) {
             this.future = Preconditions.checkNotNull(future);
             Preconditions.checkArgument(!future.isDone());
             this.modificationForFutureSet = Preconditions.checkNotNull(modificationForFutureSet);
@@ -101,18 +105,44 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
         }
 
         @Override
-        public void onDataTreeChanged(Collection<DataTreeModification<T>> changes) {
-            changes.forEach(modif -> {
-                DataObjectModification<T> rootNode = modif.getRootNode();
-                ModificationType modificationType = rootNode.getModificationType();
+        public void onDataTreeChanged(@Nonnull final Collection<DataTreeModification<T>> changes) {
+            changes.forEach(modification -> {
+                final DataObjectModification<T> rootNode = modification.getRootNode();
+                final ModificationType modificationType = rootNode.getModificationType();
                 if (modificationType == modificationForFutureSet) {
                     LOG.debug("{} in OPER DS: {}", modificationType.name(), iid.getRootIdentifier());
-                    unregisterOnTrue(future.set(null));
+                    final T data = rootNode.getDataAfter();
+                    // If waiting for bridge domain creation, do more specific check about BD status
+                    if (data != null && data instanceof BridgeDomain) {
+                        final BridgeDomain domain = (BridgeDomain) data;
+                        final BridgeDomainStatusAugmentation statusAugment =
+                                domain.getAugmentation(BridgeDomainStatusAugmentation.class);
+                        final BridgeDomainStatus status = statusAugment.getBridgeDomainStatus();
+                        switch (status) {
+                            case Started: {
+                                LOG.debug("Bridge domain {} started", domain.getName());
+                                unregister(future.set(null));
+                                break;
+                            }
+                            case Failed: {
+                                LOG.warn("Bridge domain {} failed to start", domain.getName());
+                                unregister(future.set(null));
+                                break;
+                            }
+                            case Starting:
+                            case Stopped: {
+                                LOG.debug("Bridge domain {} status changed to {}", domain.getName(), status.getName());
+                                break;
+                            }
+                        }
+                    } else {
+                        unregister(future.set(null));
+                    }
                 }
             });
         }
 
-        private void unregisterOnTrue(boolean _true) {
+        private void unregister(boolean _true) {
             if (_true) {
                 LOG.debug("Unregistering listener for path {}", iid.getRootIdentifier());
                 if (registeredListener != null) {
@@ -122,58 +152,65 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
         }
     }
 
-    public BridgeDomainManagerImpl(DataBroker dataProvder) {
-        this.dataProvder = Preconditions.checkNotNull(dataProvder);
+    public BridgeDomainManagerImpl(DataBroker dataProvider) {
+        this.dataProvider = Preconditions.checkNotNull(dataProvider);
+    }
+
+    private static NodeBuilder createBasicVppNodeBuilder(NodeId nodeId) {
+        return new NodeBuilder().setNodeId(nodeId).setSupportingNode(Collections.singletonList(
+                new SupportingNodeBuilder().setTopologyRef(SUPPORTING_TOPOLOGY_NETCONF).setNodeRef(nodeId).build()));
     }
 
     @Override
-    public ListenableFuture<Void> createVxlanBridgeDomainOnVppNode(@Nonnull String bridgeDomainName,
-            @Nonnull VxlanVni vni, @Nonnull NodeId vppNodeId) {
-        TopologyVbridgeAugment topoAug = new TopologyVbridgeAugmentBuilder().setTunnelType(TunnelTypeVxlan.class)
-            .setArpTermination(false)
-            .setFlood(true)
-            .setForward(true)
-            .setLearn(true)
-            .setUnknownUnicastFlood(true)
-            .setTunnelParameters(new VxlanTunnelParametersBuilder().setVni(vni).build())
-            .build();
-        return createBridgeDomainOnVppNode(bridgeDomainName, topoAug,
+    public ListenableFuture<Void> createVxlanBridgeDomainOnVppNode(@Nonnull final String bridgeDomainName,
+                                                                   @Nonnull final VxlanVni vni,
+                                                                   @Nonnull final NodeId vppNodeId) {
+        TopologyVbridgeAugment topologyAug = new TopologyVbridgeAugmentBuilder().setTunnelType(TunnelTypeVxlan.class)
+                .setArpTermination(false)
+                .setFlood(true)
+                .setForward(true)
+                .setLearn(true)
+                .setUnknownUnicastFlood(true)
+                .setTunnelParameters(new VxlanTunnelParametersBuilder().setVni(vni).build())
+                .build();
+        return createBridgeDomainOnVppNode(bridgeDomainName, topologyAug,
                 createBasicVppNodeBuilder(vppNodeId).build());
     }
 
     @Override
-    public ListenableFuture<Void> createVlanBridgeDomainOnVppNode(@Nonnull String bridgeDomainName,
-            @Nonnull VlanId vlanId, @Nonnull NodeId vppNodeId) {
-        TopologyVbridgeAugment topoAug = new TopologyVbridgeAugmentBuilder().setTunnelType(TunnelTypeVlan.class)
-            .setArpTermination(false)
-            .setFlood(true)
-            .setForward(true)
-            .setLearn(true)
-            .setUnknownUnicastFlood(true)
-            .setTunnelParameters(
-                    new VlanNetworkParametersBuilder().setVlanId(vlanId).setVlanType(_802dot1q.class).build())
-            .build();
-        InstanceIdentifier<BridgeDomain> bridgeDomainConfigIid = InstanceIdentifier.builder(Config.class)
-            .child(BridgeDomain.class, new BridgeDomainKey(bridgeDomainName))
-            .build();
-        ReadOnlyTransaction rTx = dataProvder.newReadOnlyTransaction();
-        CheckedFuture<Optional<BridgeDomain>, ReadFailedException> futureTopology =
+    public ListenableFuture<Void> createVlanBridgeDomainOnVppNode(@Nonnull final String bridgeDomainName,
+                                                                  @Nonnull final VlanId vlanId,
+                                                                  @Nonnull final NodeId vppNodeId) {
+        TopologyVbridgeAugment topologyAug = new TopologyVbridgeAugmentBuilder().setTunnelType(TunnelTypeVlan.class)
+                .setArpTermination(false)
+                .setFlood(true)
+                .setForward(true)
+                .setLearn(true)
+                .setUnknownUnicastFlood(true)
+                .setTunnelParameters(
+                        new VlanNetworkParametersBuilder().setVlanId(vlanId).setVlanType(_802dot1q.class).build())
+                .build();
+        InstanceIdentifier<GbpBridgeDomain> bridgeDomainConfigIid = InstanceIdentifier.builder(Config.class)
+                .child(GbpBridgeDomain.class, new GbpBridgeDomainKey(bridgeDomainName))
+                .build();
+        ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
+        CheckedFuture<Optional<GbpBridgeDomain>, ReadFailedException> futureTopology =
                 rTx.read(LogicalDatastoreType.CONFIGURATION, bridgeDomainConfigIid);
         rTx.close();
-        return Futures.transform(futureTopology, new AsyncFunction<Optional<BridgeDomain>, Void>() {
+        return Futures.transform(futureTopology, new AsyncFunction<Optional<GbpBridgeDomain>, Void>() {
 
             @Override
-            public ListenableFuture<Void> apply(Optional<BridgeDomain> optBridgeDomainConf) throws Exception {
+            public ListenableFuture<Void> apply(@Nonnull Optional<GbpBridgeDomain> optBridgeDomainConf) throws Exception {
                 if (optBridgeDomainConf.isPresent() && optBridgeDomainConf.get().getPhysicalLocationRef() != null) {
                     for (PhysicalLocationRef ref : optBridgeDomainConf.get().getPhysicalLocationRef()) {
                         if (!ref.getNodeId().equals(vppNodeId)) continue; //not our referenced node skipping
 
                         if (ref.getInterface() != null && ref.getInterface().size() > 0) {
                             NodeVbridgeVlanAugment vppNodeVlanAug = new NodeVbridgeVlanAugmentBuilder()
-                                .setSuperInterface(ref.getInterface().get(0)).build();
+                                    .setSuperInterface(ref.getInterface().get(0)).build();
                             Node vppNode = createBasicVppNodeBuilder(vppNodeId)
-                                .addAugmentation(NodeVbridgeVlanAugment.class, vppNodeVlanAug).build();
-                            return createBridgeDomainOnVppNode(bridgeDomainName, topoAug, vppNode);
+                                    .addAugmentation(NodeVbridgeVlanAugment.class, vppNodeVlanAug).build();
+                            return createBridgeDomainOnVppNode(bridgeDomainName, topologyAug, vppNode);
                         }
                     }
                 }
@@ -183,61 +220,103 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
         });
     }
 
-    private static NodeBuilder createBasicVppNodeBuilder(NodeId nodeId) {
-        return new NodeBuilder().setNodeId(nodeId).setSupportingNode(Arrays.asList(
-                new SupportingNodeBuilder().setTopologyRef(SUPPORTING_TOPOLOGY_NETCONF).setNodeRef(nodeId).build()));
-    }
-
-    private ListenableFuture<Void> createBridgeDomainOnVppNode(@Nonnull String bridgeDomainName,
-            final TopologyVbridgeAugment vBridgeAug, Node vppNode) {
-        TopologyKey topologyKey = new TopologyKey(new TopologyId(bridgeDomainName));
-        ReadOnlyTransaction rTx = dataProvder.newReadOnlyTransaction();
-        InstanceIdentifier<Topology> topologyIid = VppIidFactory.getTopologyIid(topologyKey);
-        CheckedFuture<Optional<Topology>, ReadFailedException> futureTopology =
+    /**
+     * Method checks whether bridge domain already exists in topology under its {@link TopologyId}. If not, BD is
+     * written into CONF DS (request for VBD) and registers listener which awaits result from VBD. Result can be
+     * checked in OPER DS as a {@link BridgeDomainStatus}. If status is {@link BridgeDomainStatus#Started}, listener
+     * unregisters itself and bridge domain creation in VBD is considered successful.
+     * <p>
+     * Next part creates request for {@link BridgeMember} in topology CONF DS and registers listener listening on
+     * topology OPER DS. If bridge member is created in VBD, listener is closed.
+     * <p>
+     * This process has limited time, limit is defined in {@link ForwardingManager#WAIT_FOR_BD_CREATION} to prevent
+     * stuck if VBD processing fails in some point.
+     *
+     * @param bridgeDomainName serving as a topology-id
+     * @param vBridgeAug       augmented data in BD
+     * @param vppNode          transformed into bridge member
+     * @return composed future which serves as a marker for caller method that the computation is done. If future is
+     * not returned in time, {@link TimeoutException} will be thrown there.
+     */
+    private ListenableFuture<Void> createBridgeDomainOnVppNode(@Nonnull final String bridgeDomainName,
+                                                               @Nonnull final TopologyVbridgeAugment vBridgeAug,
+                                                               @Nonnull final Node vppNode) {
+        final TopologyKey topologyKey = new TopologyKey(new TopologyId(bridgeDomainName));
+        final ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
+        final InstanceIdentifier<Topology> topologyIid = VppIidFactory.getTopologyIid(topologyKey);
+        final CheckedFuture<Optional<Topology>, ReadFailedException> optTopology =
                 rTx.read(LogicalDatastoreType.CONFIGURATION, topologyIid);
         rTx.close();
-        return Futures.transform(futureTopology, new AsyncFunction<Optional<Topology>, Void>() {
-
+        return Futures.transform(optTopology, new AsyncFunction<Optional<Topology>, Void>() {
             @Override
-            public ListenableFuture<Void> apply(Optional<Topology> optTopology) throws Exception {
-                WriteTransaction wTx = dataProvder.newWriteOnlyTransaction();
+            public ListenableFuture<Void> apply(@Nonnull final Optional<Topology> optTopology)
+                    throws InterruptedException, ExecutionException {
+                // Topology
+                final SettableFuture<Void> topologyFuture = SettableFuture.create();
                 if (!optTopology.isPresent()) {
-                    Topology topology = new TopologyBuilder().setKey(topologyKey)
-                        .setTopologyTypes(VBRIDGE_TOPOLOGY_TYPE)
-                        .addAugmentation(TopologyVbridgeAugment.class, vBridgeAug)
-                        .build();
-                    wTx.put(LogicalDatastoreType.CONFIGURATION, topologyIid,
-                            topology, true);
+                    final WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
+                    final Topology topology = new TopologyBuilder().setKey(topologyKey)
+                            .setTopologyTypes(VBRIDGE_TOPOLOGY_TYPE)
+                            .addAugmentation(TopologyVbridgeAugment.class, vBridgeAug)
+                            .build();
+                    wTx.put(LogicalDatastoreType.CONFIGURATION, topologyIid, topology, true);
+                    Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
+
+                        @Override
+                        public void onSuccess(@Nullable final Void result) {
+                            final InstanceIdentifier<BridgeDomain> bridgeDomainStateIid =
+                                    VppIidFactory.getBridgeDomainStateIid(new BridgeDomainKey(bridgeDomainName));
+                            final DataTreeIdentifier<BridgeDomain> bridgeDomainStateIidDTI = new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
+                                    bridgeDomainStateIid);
+                            new ListenableFutureSetter<>(dataProvider, topologyFuture, bridgeDomainStateIidDTI, ModificationType.WRITE);
+                        }
+
+                        @Override
+                        public void onFailure(@Nonnull Throwable t) {
+                            LOG.warn("Request create topology for VBD was not stored to CONF DS. {}", topologyIid, t);
+                            topologyFuture.setException(new Exception("Cannot send request to VBD."));
+                        }
+                    });
+                } else {
+                    topologyFuture.set(null);
                 }
-                InstanceIdentifier<Node> nodeIid = VppIidFactory.getNodeIid(topologyKey, vppNode.getKey());
-                wTx.put(LogicalDatastoreType.CONFIGURATION, nodeIid, vppNode);
-                SettableFuture<Void> future = SettableFuture.create();
-                Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
-
+                return Futures.transform(topologyFuture, new AsyncFunction<Void, Void>() {
                     @Override
-                    public void onSuccess(Void result) {
-                        DataTreeIdentifier<BridgeMember> bridgeMemberIid =
-                                new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
-                                        nodeIid.augmentation(NodeVbridgeAugment.class).child(BridgeMember.class));
-                        LOG.debug("Request create node in topology for VBD was stored to CONF DS. {}", nodeIid);
-                        new ListenableFutureSetter<>(dataProvder, future, bridgeMemberIid,
-                                ModificationType.WRITE);
-                    }
+                    public ListenableFuture<Void> apply(@Nonnull Void topologyInput) throws Exception {
+                        // Bridge member
+                        final SettableFuture<Void> futureBridgeMember = SettableFuture.create();
+                        final InstanceIdentifier<Node> nodeIid = VppIidFactory.getNodeIid(topologyKey, vppNode.getKey());
+                        final WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
+                        wTx.put(LogicalDatastoreType.CONFIGURATION, nodeIid, vppNode);
+                        Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
 
-                    @Override
-                    public void onFailure(Throwable t) {
-                        LOG.warn("Request create node in topology for VBD was not stored to CONF DS. {}", nodeIid, t);
-                        future.setException(new Exception("Cannot send request to VBD."));
+                            @Override
+                            public void onSuccess(@Nullable final Void _void) {
+                                final DataTreeIdentifier<BridgeMember> bridgeMemberIid =
+                                        new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
+                                                nodeIid.augmentation(NodeVbridgeAugment.class).child(BridgeMember.class));
+                                LOG.debug("Request create node in topology for VBD was stored to CONF DS. {}", nodeIid);
+                                new ListenableFutureSetter<>(dataProvider, futureBridgeMember, bridgeMemberIid,
+                                        ModificationType.WRITE);
+                            }
+
+                            @Override
+                            public void onFailure(@Nonnull final Throwable t) {
+                                LOG.warn("Request create node in topology for VBD was not stored to CONF DS. {}", nodeIid, t);
+                                futureBridgeMember.setException(new Exception("Cannot send request to VBD."));
+                            }
+                        });
+                        return futureBridgeMember;
                     }
                 });
-                return future;
             }
         });
     }
 
     @Override
-    public ListenableFuture<Void> removeBridgeDomainFromVppNode(@Nonnull String bridgeDomainName, NodeId vppNode) {
-        WriteTransaction wTx = dataProvder.newWriteOnlyTransaction();
+    public ListenableFuture<Void> removeBridgeDomainFromVppNode(@Nonnull final String bridgeDomainName,
+                                                                @Nonnull final NodeId vppNode) {
+        WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
         InstanceIdentifier<Node> nodeIid =
                 VppIidFactory.getNodeIid(new TopologyKey(new TopologyId(bridgeDomainName)), new NodeKey(vppNode));
         wTx.delete(LogicalDatastoreType.CONFIGURATION, nodeIid);
@@ -250,16 +329,15 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
                         new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
                                 nodeIid.augmentation(NodeVbridgeAugment.class).child(BridgeMember.class));
                 LOG.debug("Request delete node in topology for VBD was stored to CONF DS. {}", nodeIid);
-                new ListenableFutureSetter<>(dataProvder, future, bridgeMemberIid, ModificationType.DELETE);
+                new ListenableFutureSetter<>(dataProvider, future, bridgeMemberIid, ModificationType.DELETE);
             }
 
             @Override
-            public void onFailure(Throwable t) {
+            public void onFailure(@Nonnull Throwable t) {
                 LOG.warn("Request delete node in topology for VBD was not stored to CONF DS. {}", nodeIid, t);
                 future.setException(new Exception("Cannot send request to VBD."));
             }
         });
         return future;
     }
-
 }

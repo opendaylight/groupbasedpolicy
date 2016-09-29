@@ -8,16 +8,20 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.policy;
 
+import javax.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.concurrent.ExecutionException;
 
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.groupbasedpolicy.test.CustomDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
@@ -59,11 +63,11 @@ public class BridgeDomainManagerImplTest extends CustomDataBrokerTest {
     private final static boolean BRIDGE_DOMAIN_ARP = false;
     private final static NodeId VPP_NODE_ID = new NodeId("vppNode");
     private final static Topology BASE_TOPOLOGY = new TopologyBuilder().setTopologyId(BASE_TOPOLOGY_ID)
-        .setNode(Arrays.asList(new NodeBuilder().setNodeId(VPP_NODE_ID)
-            .setSupportingNode(Arrays.asList(new SupportingNodeBuilder().setTopologyRef(SUPPORTING_TOPOLOGY_NETCONF)
-                .setNodeRef(VPP_NODE_ID)
+        .setNode(Collections.singletonList(new NodeBuilder().setNodeId(VPP_NODE_ID)
+                .setSupportingNode(Collections.singletonList(new SupportingNodeBuilder().setTopologyRef(SUPPORTING_TOPOLOGY_NETCONF)
+                        .setNodeRef(VPP_NODE_ID)
+                        .build()))
                 .build()))
-            .build()))
         .setTopologyTypes(new TopologyTypesBuilder()
             .addAugmentation(TopologyTypesVbridgeAugment.class, new TopologyTypesVbridgeAugmentBuilder()
                 .setVbridgeTopology(new VbridgeTopologyBuilder().build()).build())
@@ -83,6 +87,7 @@ public class BridgeDomainManagerImplTest extends CustomDataBrokerTest {
     private BridgeDomainManagerImpl bridgeDomainManager;
 
     @Override
+    @Nonnull
     public Collection<Class<?>> getClassesFromModules() {
         return Arrays.asList(NetworkTopology.class, Topology.class, TopologyVbridgeAugment.class,
                 TunnelTypeVxlan.class);
@@ -92,12 +97,14 @@ public class BridgeDomainManagerImplTest extends CustomDataBrokerTest {
     public void init() {
         dataBroker = getDataBroker();
         bridgeDomainManager = new BridgeDomainManagerImpl(dataBroker);
+        final InterfaceManager interfaceManager = Mockito.mock(InterfaceManager.class);
+        final ForwardingManager fwManager = new ForwardingManager(interfaceManager, bridgeDomainManager, dataBroker);
+        fwManager.setTimer((byte) 1);
     }
 
     @Test
     public void testCreateVxlanBridgeDomainOnVppNode() throws Exception {
         bridgeDomainManager.createVxlanBridgeDomainOnVppNode(BRIDGE_DOMAIN_ID, BRIDGE_DOMAIN_VNI, VPP_NODE_ID);
-
         // simulates VBD - when BD is created a node is stored to OPER DS
         Thread vbdThread = new Thread(() -> {
             WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
@@ -121,7 +128,8 @@ public class BridgeDomainManagerImplTest extends CustomDataBrokerTest {
         Assert.assertTrue(topologyOptional.isPresent());
 
         Topology topology = topologyOptional.get();
-        Assert.assertEquals(BASE_TOPOLOGY, topology);
+        Assert.assertEquals(BASE_TOPOLOGY.getAugmentation(TopologyVbridgeAugment.class),
+                topology.getAugmentation(TopologyVbridgeAugment.class));
     }
 
     @Test

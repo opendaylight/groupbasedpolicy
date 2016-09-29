@@ -18,6 +18,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererNodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNodeKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VppState;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.vpp.state.BridgeDomains;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.vpp.state.bridge.domains.BridgeDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.vpp.state.bridge.domains.BridgeDomainKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
@@ -37,28 +41,35 @@ public class VppIidFactory {
 
     public static InstanceIdentifier<RendererNodes> getRendererNodesIid() {
         return InstanceIdentifier.builder(Renderers.class)
-            .child(Renderer.class, new RendererKey(VppRenderer.NAME))
-            .child(RendererNodes.class)
-            .build();
+                .child(Renderer.class, new RendererKey(VppRenderer.NAME))
+                .child(RendererNodes.class)
+                .build();
     }
 
     public static InstanceIdentifier<RendererNode> getRendererNodeIid(RendererNode rendererNode) {
         return InstanceIdentifier.builder(Renderers.class)
-            .child(Renderer.class, new RendererKey(VppRenderer.NAME))
-            .child(RendererNodes.class)
-            .child(RendererNode.class, new RendererNodeKey(rendererNode.getNodePath()))
-            .build();
+                .child(Renderer.class, new RendererKey(VppRenderer.NAME))
+                .child(RendererNodes.class)
+                .child(RendererNode.class, new RendererNodeKey(rendererNode.getNodePath()))
+                .build();
     }
 
     public static InstanceIdentifier<Node> getNodeIid(TopologyKey topologyKey, NodeKey nodeKey) {
         return InstanceIdentifier.builder(NetworkTopology.class)
-            .child(Topology.class, topologyKey)
-            .child(Node.class, nodeKey)
-            .build();
+                .child(Topology.class, topologyKey)
+                .child(Node.class, nodeKey)
+                .build();
     }
 
     public static InstanceIdentifier<Topology> getTopologyIid(TopologyKey bridgeDomainKey) {
         return InstanceIdentifier.builder(NetworkTopology.class)
                 .child(Topology.class, bridgeDomainKey).build();
+    }
+
+    public static InstanceIdentifier<BridgeDomain> getBridgeDomainStateIid(final BridgeDomainKey bridgeDomainStateKey) {
+        return InstanceIdentifier.builder(VppState.class)
+                .child(BridgeDomains.class)
+                .child(BridgeDomain.class, bridgeDomainStateKey)
+                .build();
     }
 }

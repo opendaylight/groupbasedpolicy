@@ -43,8 +43,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererNetworkDomainKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.VlanNetwork;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.BridgeDomain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.BridgeDomainKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpBridgeDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpBridgeDomainKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.VlanId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VxlanVni;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
@@ -63,7 +63,7 @@ public final class ForwardingManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(ForwardingManager.class);
     @VisibleForTesting
-    static long WAIT_FOR_BD_CREATION = 10; // seconds
+    private byte WAIT_FOR_BD_CREATION = 60; // seconds
     private long lastVxlanVni = 1L;
     private final Map<String, VxlanVni> vxlanVniByBridgeDomain = new HashMap<>();
     private final InterfaceManager ifaceManager;
@@ -75,9 +75,9 @@ public final class ForwardingManager {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
     }
 
-    public Optional<BridgeDomain> readBridgeDomainConfig(String name) {
-        InstanceIdentifier<BridgeDomain> bdIid = InstanceIdentifier.builder(Config.class)
-            .child(BridgeDomain.class, new BridgeDomainKey(name))
+    public Optional<GbpBridgeDomain> readGbpBridgeDomainConfig(String name) {
+        InstanceIdentifier<GbpBridgeDomain> bdIid = InstanceIdentifier.builder(Config.class)
+            .child(GbpBridgeDomain.class, new GbpBridgeDomainKey(name))
             .build();
         ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
         return DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, bdIid, rTx);
@@ -85,7 +85,7 @@ public final class ForwardingManager {
 
     public void createBridgeDomainOnNodes(SetMultimap<String, NodeId> vppNodesByBridgeDomain) {
         for (String bd : vppNodesByBridgeDomain.keySet()) {
-            Optional<BridgeDomain> bdConfig = readBridgeDomainConfig(bd);
+            Optional<GbpBridgeDomain> bdConfig = readGbpBridgeDomainConfig(bd);
             Set<NodeId> vppNodes = vppNodesByBridgeDomain.get(bd);
             if (bdConfig.isPresent()) {
                 if (bdConfig.get().getType().equals(VlanNetwork.class)) {
@@ -102,41 +102,41 @@ public final class ForwardingManager {
         }
     }
 
-    private void createVxlanBridgeDomains(String bd, VxlanVni vni, Set<NodeId> vppNodes) {
+    private void createVxlanBridgeDomains(final String bd, final VxlanVni vni, final Set<NodeId> vppNodes) {
         for (NodeId vppNode : vppNodes) {
             try {
                 LOG.debug("Creating VXLAN bridge-domain {} on node {} with VNI {}", bd, vppNode.getValue(),
                         vni);
-                // TODO think about propagating ListenableFuture - timeout set as workaround
                 bdManager.createVxlanBridgeDomainOnVppNode(bd, vni, vppNode).get(WAIT_FOR_BD_CREATION,
                         TimeUnit.SECONDS);
             } catch (InterruptedException | ExecutionException e) {
                 LOG.warn("VXLAN Bridge domain {} was not created on node {}", bd, vppNode.getValue(), e);
             } catch (TimeoutException e) {
                 LOG.warn("Probably, VXLAN Bridge domain {} was not created on node {} because BridgeDomainManager "
-                        + "did not respond by {} seconds.", bd, vppNode.getValue(), WAIT_FOR_BD_CREATION, e);
+                        + "did not respond by {} seconds. Check VBD log for more details",
+                        bd, vppNode.getValue(), WAIT_FOR_BD_CREATION, e);
             }
         }
     }
 
-    private void createVlanBridgeDomains(String bd, VlanId vlanId, Set<NodeId> vppNodes) {
+    private void createVlanBridgeDomains(final String bd, final VlanId vlanId, final Set<NodeId> vppNodes) {
         for (NodeId vppNode : vppNodes) {
             try {
                 LOG.debug("Creating VLAN bridge-domain {} on node {} with VLAN ID {}", bd, vppNode.getValue(),
                         vlanId.getValue());
-                // TODO think about propagating ListenableFuture - timeout set as workaround
                 bdManager.createVlanBridgeDomainOnVppNode(bd, vlanId, vppNode).get(WAIT_FOR_BD_CREATION,
                         TimeUnit.SECONDS);
             } catch (InterruptedException | ExecutionException e) {
                 LOG.warn("VLAN Bridge domain {} was not created on node {}", bd, vppNode.getValue(), e);
             } catch (TimeoutException e) {
                 LOG.warn("Probably, VLAN Bridge domain {} was not created on node {} because BridgeDomainManager "
-                        + "did not respond by {} seconds.", bd, vppNode.getValue(), WAIT_FOR_BD_CREATION, e);
+                        + "did not respond by {} seconds. Check VBD log for more details",
+                        bd, vppNode.getValue(), WAIT_FOR_BD_CREATION, e);
             }
         }
     }
 
-    public void removeBridgeDomainOnNodes(SetMultimap<String, NodeId> vppNodesByBridgeDomain) {
+    public void removeBridgeDomainOnNodes(final SetMultimap<String, NodeId> vppNodesByBridgeDomain) {
         for (String bd : vppNodesByBridgeDomain.keySet()) {
             Set<NodeId> vppNodes = vppNodesByBridgeDomain.get(bd);
             for (NodeId vppNode : vppNodes) {
@@ -147,7 +147,8 @@ public final class ForwardingManager {
                     LOG.warn("Bridge domain {} was not removed from node {}", bd, vppNode.getValue(), e);
                 } catch (TimeoutException e) {
                     LOG.warn("Probably, bridge domain {} was not removed from node {} because BridgeDomainManager "
-                            + "did not respond by {} seconds.", bd, vppNode.getValue(), WAIT_FOR_BD_CREATION, e);
+                            + "did not respond by {} seconds. Check VBD log for more details",
+                            bd, vppNode.getValue(), WAIT_FOR_BD_CREATION, e);
                 }
             }
         }
@@ -158,7 +159,7 @@ public final class ForwardingManager {
         ExternalLocationCase rEpLoc = resolveAndValidateLocation(rEp);
         if (Strings.isNullOrEmpty(rEpLoc.getExternalNodeConnector())) {
             // TODO add it to the status for renderer manager
-            LOG.info("Rednerer endpoint does not have external-node-connector therefore it is ignored {}", rEp);
+            LOG.info("Renderer endpoint does not have external-node-connector therefore it is ignored {}", rEp);
             return;
         }
 
@@ -166,7 +167,7 @@ public final class ForwardingManager {
             java.util.Optional<String> optL2FloodDomain = resolveL2FloodDomain(rEp, policyCtx);
             if (!optL2FloodDomain.isPresent()) {
                 // TODO add it to the status for renderer manager
-                LOG.info("Rednerer endpoint does not have l2FloodDomain as network containment {}", rEp);
+                LOG.info("Renderer endpoint does not have l2FloodDomain as network containment {}", rEp);
                 return;
             }
             String l2FloodDomain = optL2FloodDomain.get();
@@ -252,7 +253,7 @@ public final class ForwardingManager {
         return java.util.Optional.empty();
     }
 
-    public static @Nonnull java.util.Optional<RendererForwardingContext> getForwardingCtxForParent(
+    private static @Nonnull java.util.Optional<RendererForwardingContext> getForwardingCtxForParent(
             @Nullable TenantId tenant, @Nullable Parent parent,
             Table<TenantId, RendererForwardingContextKey, RendererForwardingContext> forwardingCtxTable) {
         if (tenant == null || parent == null) {
@@ -265,4 +266,8 @@ public final class ForwardingManager {
         return java.util.Optional.empty();
     }
 
+    @VisibleForTesting
+    void setTimer(byte time) {
+        WAIT_FOR_BD_CREATION = time;
+    }
 }
