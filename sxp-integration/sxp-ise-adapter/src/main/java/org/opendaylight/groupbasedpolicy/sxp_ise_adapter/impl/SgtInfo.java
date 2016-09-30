@@ -19,14 +19,17 @@ public class SgtInfo {
 
     private final Sgt sgt;
     private final String name;
+    private final String uuid;
 
     /**
      * @param sgt  value to hold
      * @param name value to hold
+     * @param uuid
      */
-    public SgtInfo(@Nonnull final Sgt sgt, @Nullable final String name) {
+    public SgtInfo(@Nonnull final Sgt sgt, @Nullable final String name, final String uuid) {
         this.sgt = sgt;
         this.name = name;
+        this.uuid = uuid;
     }
 
     /**

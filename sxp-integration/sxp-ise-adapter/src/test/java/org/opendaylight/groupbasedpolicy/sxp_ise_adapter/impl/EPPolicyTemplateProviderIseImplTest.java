@@ -11,6 +11,8 @@ package org.opendaylight.groupbasedpolicy.sxp_ise_adapter.impl;
 import static org.powermock.api.support.membermodification.MemberMatcher.method;
 import static org.powermock.api.support.membermodification.MemberModifier.stub;
 
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 import java.util.Collections;
@@ -53,6 +55,7 @@ public class EPPolicyTemplateProviderIseImplTest {
     private static final Sgt SGT_LOW = new Sgt(1);
     private static final Sgt SGT_HI = new Sgt(100);
     private static final TenantId TENANT_ID = new TenantId("tenant-01");
+    private static final SgtInfo SGT_INFO = new SgtInfo(SGT, "ultimate_group", "uuidOf42");
 
     @Mock
     private XPath xpathWalker;
@@ -60,18 +63,25 @@ public class EPPolicyTemplateProviderIseImplTest {
     private Client iseClient;
     @Mock
     private WebResource.Builder wrBuilder;
+    @Mock
+    private GbpIseSgtHarvester iseSgtHarvester;
+    @Mock
+    private IseContext iseContext;
 
     private EPPolicyTemplateProviderIseImpl templateProvider;
 
     @Before
     public void setUp() throws Exception {
         templateProvider = new EPPolicyTemplateProviderIseImpl();
+        templateProvider.setIseSgtHarvester(iseSgtHarvester);
     }
 
     @Test
     public void testProvideTemplate_noConfig() throws Exception {
-        final Optional<EndpointPolicyTemplateBySgt> endpointPolicyTemplateBySgt = templateProvider.provideTemplate(SGT);
-        Assert.assertFalse(endpointPolicyTemplateBySgt.isPresent());
+        final ListenableFuture<Optional<EndpointPolicyTemplateBySgt>> endpointPolicyTemplateBySgt =
+                templateProvider.provideTemplate(SGT);
+        Assert.assertTrue(endpointPolicyTemplateBySgt.isDone());
+        Assert.assertFalse(endpointPolicyTemplateBySgt.get().isPresent());
     }
 
     @Test
@@ -99,18 +109,23 @@ public class EPPolicyTemplateProviderIseImplTest {
         stub(method(RestClientFactory.class, "createRequestBuilder", WebResource.class, List.class, String.class)).toReturn(wrBuilder);
 
 
-        final String epgName = "name-for-sgt42";
+        final String epgName = SGT_INFO.getName();
         final Node sgtNameNode = Mockito.mock(Node.class);
         Mockito.when(sgtNameNode.getNodeValue()).thenReturn(epgName);
         Mockito.when(xpathWalker.evaluate(Matchers.same(IseReplyUtil.EXPRESSION_SGT_NAME_ATTR),
                 Matchers.<InputSource>any(), Matchers.same(XPathConstants.NODE)))
                 .thenReturn(sgtNameNode);
 
-        templateProvider.assignIseSourceConfig(sourceConfig);
-        final Optional<EndpointPolicyTemplateBySgt> templateWrap = templateProvider.provideTemplate(SGT);
+        Mockito.when(iseContext.getIseSourceConfig()).thenReturn(sourceConfig);
+        Mockito.when(iseSgtHarvester.update(iseContext))
+                .thenReturn(Futures.immediateFuture(Collections.singletonList(SGT_INFO)));
 
-        Assert.assertTrue(templateWrap.isPresent());
-        final EndpointPolicyTemplateBySgt template = templateWrap.get();
+        templateProvider.assignIseContext(iseContext);
+        final ListenableFuture<Optional<EndpointPolicyTemplateBySgt>> templateWrap = templateProvider.provideTemplate(SGT);
+
+        Assert.assertTrue(templateWrap.isDone());
+        Assert.assertTrue(templateWrap.get().isPresent());
+        final EndpointPolicyTemplateBySgt template = templateWrap.get().get();
         Assert.assertEquals(SGT, template.getSgt());
         Assert.assertNull(template.getConditions());
         Assert.assertEquals(TENANT_ID, template.getTenant());

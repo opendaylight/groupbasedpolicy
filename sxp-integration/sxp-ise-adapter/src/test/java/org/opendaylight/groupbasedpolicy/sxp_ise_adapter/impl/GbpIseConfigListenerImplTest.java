@@ -8,11 +8,15 @@
 
 package org.opendaylight.groupbasedpolicy.sxp_ise_adapter.impl;
 
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import java.util.Collections;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InOrder;
 import org.mockito.Matchers;
 import org.mockito.Mock;
@@ -25,6 +29,7 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.IseHarvestStatus;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.IseSourceConfig;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 /**
@@ -33,6 +38,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 @RunWith(MockitoJUnitRunner.class)
 public class GbpIseConfigListenerImplTest {
 
+    private static final SgtInfo SGT_INFO = new SgtInfo(new Sgt(42), "ultimate_group", "uuidOf42");
     @Mock
     private DataBroker dataBroker;
     @Mock
@@ -47,6 +53,8 @@ public class GbpIseConfigListenerImplTest {
     private IseSourceConfig config;
     @Mock
     private EPPolicyTemplateProviderFacade templateProviderFacade;
+    @Captor
+    private ArgumentCaptor<IseContext> iseContextCpt;
 
     private GbpIseConfigListenerImpl listener;
 
@@ -69,7 +77,7 @@ public class GbpIseConfigListenerImplTest {
         Mockito.when(dataModification.getDataAfter()).thenReturn(config);
         Mockito.when(treeModification.getRootNode()).thenReturn(dataModification);
 
-        Mockito.when(harvester.harvest(config)).thenReturn(Futures.immediateFuture(42));
+        Mockito.when(harvester.harvestAll(iseContextCpt.capture())).thenReturn(Futures.immediateFuture(Lists.newArrayList(SGT_INFO)));
 
         Mockito.when(wTx.submit()).thenReturn(Futures.immediateCheckedFuture(null));
         Mockito.when(dataBroker.newWriteOnlyTransaction()).thenReturn(wTx);
@@ -77,8 +85,9 @@ public class GbpIseConfigListenerImplTest {
         listener.onDataTreeChanged(Collections.singleton(treeModification));
         listener.close();
 
+        Assert.assertSame(config, iseContextCpt.getValue().getIseSourceConfig());
         final InOrder inOrder = Mockito.inOrder(harvester, dataBroker, wTx);
-        inOrder.verify(harvester).harvest(config);
+        inOrder.verify(harvester).harvestAll(Matchers.<IseContext>any());
         inOrder.verify(dataBroker).newWriteOnlyTransaction();
         inOrder.verify(wTx).put(Matchers.eq(LogicalDatastoreType.OPERATIONAL),
                 Matchers.<InstanceIdentifier<IseHarvestStatus>>any(),
@@ -93,8 +102,8 @@ public class GbpIseConfigListenerImplTest {
         Mockito.when(dataModification.getDataAfter()).thenReturn(config);
         Mockito.when(treeModification.getRootNode()).thenReturn(dataModification);
 
-        Mockito.when(harvester.harvest(config)).thenReturn(Futures.immediateFailedFuture(
-                new Exception("extremely poor harvest occurred")));
+        Mockito.when(harvester.harvestAll(iseContextCpt.capture())).thenReturn(Futures.immediateFailedFuture(
+                new Exception("extremely poor harvestAll occurred")));
 
         Mockito.when(wTx.submit()).thenReturn(Futures.immediateCheckedFuture(null));
         Mockito.when(dataBroker.newWriteOnlyTransaction()).thenReturn(wTx);
@@ -102,8 +111,9 @@ public class GbpIseConfigListenerImplTest {
         listener.onDataTreeChanged(Collections.singleton(treeModification));
         listener.close();
 
+        Assert.assertSame(config, iseContextCpt.getValue().getIseSourceConfig());
         final InOrder inOrder = Mockito.inOrder(harvester, dataBroker, wTx);
-        inOrder.verify(harvester).harvest(config);
+        inOrder.verify(harvester).harvestAll(Matchers.<IseContext>any());
         inOrder.verify(dataBroker).newWriteOnlyTransaction();
         inOrder.verify(wTx).put(Matchers.eq(LogicalDatastoreType.OPERATIONAL),
                 Matchers.<InstanceIdentifier<IseHarvestStatus>>any(),
