@@ -26,6 +26,7 @@ public class IseReplyUtil {
     public static final String EXPRESSION_SGT_ALL_LINK_HREFS = "/ns3:searchResult/ns3:resources/ns5:resource/link/@href";
     public static final String EXPRESSION_SGT_DETAIL = "./ns4:sgt";
     public static final String EXPRESSION_SGT_NAME_ATTR = "./@name";
+    public static final String EXPRESSION_SGT_UUID_ATTR = "./@id";
     public static final String EXPRESSION_SGT_VALUE = "./value/text()";
 
     private IseReplyUtil() {

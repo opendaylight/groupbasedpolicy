@@ -16,6 +16,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -30,9 +31,9 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.DateAndTime;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ise.adapter.model.rev160630.GbpSxpIseAdapter;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.IseSourceConfig;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.IseHarvestStatus;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.IseHarvestStatusBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.IseSourceConfig;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,15 +74,16 @@ public class GbpIseConfigListenerImpl implements GbpIseConfigListener {
         for (DataTreeModification<IseSourceConfig> modification : collection) {
             final IseSourceConfig iseSourceConfig = modification.getRootNode().getDataAfter();
             //TODO: separate template provider from harvesting
-            templateProviderFacade.assignIseSourceConfig(iseSourceConfig);
+            final IseContext iseContext = new IseContext(iseSourceConfig);
+            templateProviderFacade.assignIseContext(iseContext);
             if (iseSourceConfig != null) {
                 pool.submit(() -> {
-                    final ListenableFuture<Integer> harvestResult = gbpIseSgtHarvester.harvest(iseSourceConfig);
-                    Futures.addCallback(harvestResult, new FutureCallback<Integer>() {
+                    final ListenableFuture<Collection<SgtInfo>> harvestResult = gbpIseSgtHarvester.harvestAll(iseContext);
+                    Futures.addCallback(harvestResult, new FutureCallback<Collection<SgtInfo>>() {
                         @Override
-                        public void onSuccess(@Nullable final Integer result) {
+                        public void onSuccess(@Nullable final Collection<SgtInfo> result) {
                             LOG.debug("ise harvest finished, outcome: {}", result);
-                            storeOutcome(true, result.intValue(), null);
+                            storeOutcome(true, Optional.ofNullable(result).map(Collection::size).orElse(0), null);
                         }
 
                         @Override

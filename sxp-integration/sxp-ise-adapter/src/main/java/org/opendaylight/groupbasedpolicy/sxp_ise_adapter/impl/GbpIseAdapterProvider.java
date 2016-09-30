@@ -75,6 +75,7 @@ public class GbpIseAdapterProvider implements AutoCloseable, BindingAwareProvide
         final GbpIseSgtHarvester gbpIseSgtHarvester = new GbpIseSgtHarvesterImpl(epgGenerator, templateGenerator);
         final GbpIseConfigListenerImpl gbpIseConfigListener = new GbpIseConfigListenerImpl(
                 dataBroker, gbpIseSgtHarvester, templateProviderFacade);
+        templateProviderFacade.setIseSgtHarvester(gbpIseSgtHarvester);
 
         // build data-tree path
         final DataTreeIdentifier<IseSourceConfig> dataTreePath = new DataTreeIdentifier<>(

@@ -101,7 +101,7 @@ public class EPPolicyTemplateDaoFacadeImplTest {
                 .build();
 
         Mockito.when(delegateDao.read(SGT)).thenReturn(Futures.immediateFuture(Optional.absent()));
-        Mockito.when(provider.provideTemplate(SGT)).thenReturn(java.util.Optional.of(template));
+        Mockito.when(provider.provideTemplate(SGT)).thenReturn(Futures.immediateFuture(java.util.Optional.of(template)));
         Mockito.when(wTx.submit()).thenReturn(Futures.immediateCheckedFuture(null));
         facade.setTemplateProvider(provider);
 
@@ -124,7 +124,7 @@ public class EPPolicyTemplateDaoFacadeImplTest {
     @Test
     public void testRead_failProviderMiss() throws Exception {
         Mockito.when(delegateDao.read(SGT)).thenReturn(Futures.immediateFuture(Optional.absent()));
-        Mockito.when(provider.provideTemplate(SGT)).thenReturn(java.util.Optional.empty());
+        Mockito.when(provider.provideTemplate(SGT)).thenReturn(Futures.immediateFuture(java.util.Optional.empty()));
         facade.setTemplateProvider(provider);
 
 
@@ -141,8 +141,7 @@ public class EPPolicyTemplateDaoFacadeImplTest {
                 .build();
 
         Mockito.when(delegateDao.read(SGT)).thenReturn(Futures.immediateFuture(Optional.absent()));
-        Mockito.when(provider.provideTemplate(SGT)).thenReturn(java.util.Optional.of(template));
-        Mockito.when(wTx.submit()).thenReturn(Futures.immediateFailedCheckedFuture(TX_EXCEPTION));
+        Mockito.when(provider.provideTemplate(SGT)).thenReturn(Futures.immediateFailedCheckedFuture(TX_EXCEPTION));
         facade.setTemplateProvider(provider);
 
         final ListenableFuture<Optional<EndpointPolicyTemplateBySgt>> actual = facade.read(SGT);

@@ -9,8 +9,8 @@
 package org.opendaylight.groupbasedpolicy.sxp_ise_adapter.impl;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import java.util.Collection;
 import javax.annotation.Nonnull;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.IseSourceConfig;
 
 /**
  * Purpose: read sgts and naming from ISE via rest-API and have apropriate templates generated and stored
@@ -18,8 +18,14 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controll
 public interface GbpIseSgtHarvester {
 
     /**
-     * @param configuration user given
-     * @return amount of successfully written items
+     * @param iseContext user given ise info
+     * @return retrieved and stored sgts
      */
-    ListenableFuture<Integer> harvest(@Nonnull IseSourceConfig configuration);
+    ListenableFuture<Collection<SgtInfo>> harvestAll(@Nonnull IseContext iseContext);
+
+    /**
+     * @param iseContext user given ise info
+     * @return retrieved and stored sgts
+     */
+    ListenableFuture<Collection<SgtInfo>> update(@Nonnull IseContext iseContext);
 }

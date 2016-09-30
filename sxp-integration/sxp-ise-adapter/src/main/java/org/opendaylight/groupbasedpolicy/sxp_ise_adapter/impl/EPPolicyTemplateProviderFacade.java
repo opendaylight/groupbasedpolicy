@@ -17,8 +17,13 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controll
 public interface EPPolicyTemplateProviderFacade extends EPPolicyTemplateProvider {
 
     /**
-     * @param iseSourceConfig current ise configuration
+     * @param iseContext current ise configuration
      */
-    void assignIseSourceConfig(final IseSourceConfig iseSourceConfig);
+    void assignIseContext(final IseContext iseContext);
+
+    /**
+     * @param iseSgtHarvester stateless ise harvester
+     */
+    void setIseSgtHarvester(final GbpIseSgtHarvester iseSgtHarvester);
 
 }

@@ -17,6 +17,7 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Callable;
@@ -59,9 +60,10 @@ public class GbpIseSgtHarvesterImpl implements GbpIseSgtHarvester {
     }
 
     @Override
-    public ListenableFuture<Integer> harvest(@Nonnull final IseSourceConfig configuration) {
-        final ConnectionConfig connectionConfig = configuration.getConnectionConfig();
-        ListenableFuture<Integer> result;
+    public ListenableFuture<Collection<SgtInfo>> harvestAll(@Nonnull final IseContext iseContext) {
+        final IseSourceConfig iseSourceConfig = iseContext.getIseSourceConfig();
+        final ConnectionConfig connectionConfig = iseSourceConfig.getConnectionConfig();
+        ListenableFuture<Collection<SgtInfo>> result;
         try {
             final Client iseClient = RestClientFactory.createIseClient(connectionConfig);
             final WebResource baseWebResource = iseClient.resource(connectionConfig.getIseRestUrl().getValue());
@@ -78,16 +80,16 @@ public class GbpIseSgtHarvesterImpl implements GbpIseSgtHarvester {
                     @Override
                     public ListenableFuture<Void> apply(final Void input) throws Exception {
                         LOG.debug("entering stg-info processor {}", processor.getClass().getSimpleName());
-                        return processor.processSgtInfo(configuration.getTenant(), sgtInfos);
+                        return processor.processSgtInfo(iseSourceConfig.getTenant(), sgtInfos);
                     }
                 });
             }
-            result = Futures.transform(processingResult, new Function<Void, Integer>() {
+            result = Futures.transform(processingResult, new Function<Void, Collection<SgtInfo>>() {
                 @Nullable
                 @Override
-                public Integer apply(@Nullable final Void input) {
+                public Collection<SgtInfo> apply(@Nullable final Void input) {
                     // always success, otherwise there will be TransactionCommitFailedException thrown
-                    return sgtInfos.size();
+                    return sgtInfos;
                 }
             });
         } catch (Exception e) {
@@ -136,7 +138,7 @@ public class GbpIseSgtHarvesterImpl implements GbpIseSgtHarvester {
             // stop pool
             pool.shutdown();
             final boolean terminated = pool.awaitTermination(1, TimeUnit.MINUTES);
-            if (!terminated) {
+            if (! terminated) {
                 LOG.debug("NOT all sgt-detail queries succeeded - timed out");
                 pool.shutdownNow();
             }
@@ -153,7 +155,7 @@ public class GbpIseSgtHarvesterImpl implements GbpIseSgtHarvester {
 
     private SgtInfo gainSgtInfoSafely(final Future<SgtInfo> response) {
         SgtInfo result = null;
-        if (response.isDone() && !response.isCancelled()) {
+        if (response.isDone() && ! response.isCancelled()) {
             try {
                 result = response.get();
             } catch (Exception e) {
@@ -176,12 +178,18 @@ public class GbpIseSgtHarvesterImpl implements GbpIseSgtHarvester {
         final Node sgtNode = (Node) xpath.evaluate(IseReplyUtil.EXPRESSION_SGT_DETAIL, IseReplyUtil.createInputSource(rawSgtDetail),
                 XPathConstants.NODE);
         final Node sgtName = (Node) xpath.evaluate(IseReplyUtil.EXPRESSION_SGT_NAME_ATTR, sgtNode, XPathConstants.NODE);
+        final Node sgtUuid = (Node) xpath.evaluate(IseReplyUtil.EXPRESSION_SGT_UUID_ATTR, sgtNode, XPathConstants.NODE);
         final Node sgtValue = (Node) xpath.evaluate(IseReplyUtil.EXPRESSION_SGT_VALUE, sgtNode, XPathConstants.NODE);
         LOG.debug("sgt value [{}]: {} -> {}", idx, sgtValue, sgtName);
 
         // store replies into list of SgtInfo
         final Sgt sgt = new Sgt(Integer.parseInt(sgtValue.getNodeValue(), 10));
-        return new SgtInfo(sgt, sgtName.getNodeValue());
+        return new SgtInfo(sgt, sgtName.getNodeValue(), sgtUuid.getNodeValue());
     }
 
+    @Override
+    public ListenableFuture<Collection<SgtInfo>> update(@Nonnull final IseContext iseContext) {
+        //TODO: stub
+        return null;
+    }
 }

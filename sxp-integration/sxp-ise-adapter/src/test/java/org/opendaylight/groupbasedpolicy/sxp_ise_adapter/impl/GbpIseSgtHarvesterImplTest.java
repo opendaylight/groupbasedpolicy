@@ -20,6 +20,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -69,6 +70,7 @@ public class GbpIseSgtHarvesterImplTest {
     private ClientResponse response;
 
     private IseSourceConfig config;
+    private IseContext iseContext;
 
     private GbpIseSgtHarvesterImpl harvester;
 
@@ -106,6 +108,7 @@ public class GbpIseSgtHarvesterImplTest {
                         .build())
                 .build();
 
+        iseContext = new IseContext(config);
         harvester = new GbpIseSgtHarvesterImpl(processor);
     }
 
@@ -121,7 +124,7 @@ public class GbpIseSgtHarvesterImplTest {
         Mockito.when(processor.processSgtInfo(Matchers.eq(TENANT_ID), Matchers.<List<SgtInfo>>any())).thenReturn(
                 Futures.immediateCheckedFuture(null));
 
-        final ListenableFuture<Integer> harvestResult = harvester.harvest(config);
+        final ListenableFuture<Collection<SgtInfo>> harvestResult = harvester.harvestAll(iseContext);
 
         final InOrder inOrder = Mockito.inOrder(client, webResource, builder);
         inOrder.verify(client).resource(ISE_REST_URL.getValue());
@@ -137,7 +140,7 @@ public class GbpIseSgtHarvesterImplTest {
         inOrder.verify(builder).get(ClientResponse.class);
         inOrder.verifyNoMoreInteractions();
 
-        final Integer count = harvestResult.get(2, TimeUnit.SECONDS);
-        Assert.assertEquals(1, count.intValue());
+        final Collection<SgtInfo> count = harvestResult.get(2, TimeUnit.SECONDS);
+        Assert.assertEquals(1, count.size());
     }
 }

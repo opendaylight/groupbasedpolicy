@@ -42,8 +42,10 @@ public class SgtToEPTemplateGeneratorImplTest {
 
     public static final TenantId TENANT_ID = new TenantId("tenant-unit-1");
     public static final Sgt SGT_1 = new Sgt(1);
+    public static final String SGT_1_UUID = "uuid-1";
     public static final String EPG_NAME_1 = "epg-unit-1";
     public static final Sgt SGT_2 = new Sgt(2);
+    public static final String SGT_2_UUID = "uuid-2";
     public static final String EPG_NAME_2 = "epg-unit-2";
 
     @Mock
@@ -62,8 +64,8 @@ public class SgtToEPTemplateGeneratorImplTest {
 
     @Test
     public void testProcessSgtInfo() throws Exception {
-        final SgtInfo sgtInfo1 = new SgtInfo(SGT_1, EPG_NAME_1);
-        final SgtInfo sgtInfo2 = new SgtInfo(SGT_2, EPG_NAME_2);
+        final SgtInfo sgtInfo1 = new SgtInfo(SGT_1, EPG_NAME_1, SGT_1_UUID);
+        final SgtInfo sgtInfo2 = new SgtInfo(SGT_2, EPG_NAME_2, SGT_2_UUID);
 
         final CheckedFuture<Void, TransactionCommitFailedException> outcome =
                 generator.processSgtInfo(TENANT_ID, Lists.newArrayList(sgtInfo1, sgtInfo2));

@@ -8,6 +8,7 @@
 
 package org.opendaylight.groupbasedpolicy.sxp.ep.provider.api;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
@@ -23,5 +24,5 @@ public interface EPPolicyTemplateProvider {
      * @param sgt of template
      * @return template if available (expecting empty conditions field)
      */
-    Optional<EndpointPolicyTemplateBySgt> provideTemplate(@Nonnull final Sgt sgt);
+    ListenableFuture<Optional<EndpointPolicyTemplateBySgt>> provideTemplate(@Nonnull final Sgt sgt);
 }
