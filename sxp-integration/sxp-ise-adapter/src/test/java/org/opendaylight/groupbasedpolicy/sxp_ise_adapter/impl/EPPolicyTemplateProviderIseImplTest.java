@@ -31,13 +31,13 @@ import org.opendaylight.groupbasedpolicy.sxp_ise_adapter.impl.util.IseReplyUtil;
 import org.opendaylight.groupbasedpolicy.sxp_ise_adapter.impl.util.RestClientFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Uri;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.model.rev160302.TemplateGenerated;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.model.rev160302.sxp.ep.mapper.EndpointPolicyTemplateBySgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.IseSourceConfig;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.IseSourceConfigBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.ise.source.config.ConnectionConfig;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.ise.source.config.ConnectionConfigBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.ise.source.config.connection.config.HeaderBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.model.rev160302.TemplateGenerated;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.model.rev160302.sxp.ep.mapper.EndpointPolicyTemplateBySgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
@@ -112,12 +112,13 @@ public class EPPolicyTemplateProviderIseImplTest {
         final String epgName = SGT_INFO.getName();
         final Node sgtNameNode = Mockito.mock(Node.class);
         Mockito.when(sgtNameNode.getNodeValue()).thenReturn(epgName);
-        Mockito.when(xpathWalker.evaluate(Matchers.same(IseReplyUtil.EXPRESSION_SGT_NAME_ATTR),
+        // matching value of IseReplyUtil.EXPRESSION_SGT_NAME_ATTR
+        Mockito.when(xpathWalker.evaluate(Matchers.same("./@name"),
                 Matchers.<InputSource>any(), Matchers.same(XPathConstants.NODE)))
                 .thenReturn(sgtNameNode);
 
         Mockito.when(iseContext.getIseSourceConfig()).thenReturn(sourceConfig);
-        Mockito.when(iseSgtHarvester.update(iseContext))
+        Mockito.when(iseSgtHarvester.harvestAll(iseContext))
                 .thenReturn(Futures.immediateFuture(Collections.singletonList(SGT_INFO)));
 
         templateProvider.assignIseContext(iseContext);

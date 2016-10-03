@@ -11,8 +11,11 @@ package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util;
 import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.ActionCase.CHAIN;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -20,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -82,7 +86,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.actions.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.classifiers.Classifier;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.resolved.rules.ResolvedRule;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.model.rev160302.AddressEndpointWithLocationAug;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -200,20 +203,24 @@ public class PolicyManagerUtil {
 
     @Nullable
     public static Sgt findSgtTag(final EPToSgtMapper sxpEpProvider, final AddressEndpointKey endpointKey,
-                                 final List<AddressEndpointWithLocation> endpointsWithLocation) {
+                                 final List<AddressEndpointWithLocation> endpointsWithLocation, final long timeout, final TimeUnit unit) {
         if (endpointKey == null || endpointsWithLocation == null) {
             return null;
         }
         final AddressEndpointWithLocation endpointWithLocation = RendererPolicyUtil.lookupEndpoint(endpointKey,
                 endpointsWithLocation);
 
-        //TODO: involve sxpEpProvider
-        final AddressEndpointWithLocationAug augmentation = endpointWithLocation.getAugmentation(AddressEndpointWithLocationAug.class);
-        if (augmentation == null) {
-            return null;
+        final ListenableFuture<Collection<Sgt>> sgtForEPFu = sxpEpProvider.findSgtForEP(endpointWithLocation);
+
+        Sgt sgt = null;
+        try {
+            sgt = Iterables.getFirst(sgtForEPFu.get(timeout, unit), null);
+            LOG.trace("For ep[{}] found sgt: {}", endpointKey, sgt);
+        } catch (Exception e) {
+            LOG.debug("failed to obtain sgt for given endpoint: ", e.getMessage());
         }
 
-        return augmentation.getSgt();
+        return sgt;
     }
 
     /**

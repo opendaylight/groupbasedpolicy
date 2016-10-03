@@ -22,10 +22,4 @@ public interface GbpIseSgtHarvester {
      * @return retrieved and stored sgts
      */
     ListenableFuture<Collection<SgtInfo>> harvestAll(@Nonnull IseContext iseContext);
-
-    /**
-     * @param iseContext user given ise info
-     * @return retrieved and stored sgts
-     */
-    ListenableFuture<Collection<SgtInfo>> update(@Nonnull IseContext iseContext);
 }

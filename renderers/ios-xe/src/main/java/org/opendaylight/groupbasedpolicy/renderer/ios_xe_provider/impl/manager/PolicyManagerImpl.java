@@ -11,6 +11,7 @@ package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager;
 import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Create;
 import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Delete;
 
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
@@ -29,7 +30,6 @@ import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.manager.Po
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.StatusUtil;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.api.EPToSgtMapper;
-import org.opendaylight.groupbasedpolicy.sxp.ep.provider.spi.SxpEpProviderProvider;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.Renderers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
@@ -156,12 +156,16 @@ public class PolicyManagerImpl implements PolicyManager {
                     managementIpAddress, mountpoint);
             context.setPolicyMapLocation(policyMapLocation);
 
+            // TODO: pull timeout for async ops from config
+            final long TIMEOUT = 10;
+            final TimeUnit UNIT = TimeUnit.SECONDS;
+
             final Sgt sourceSgt = PolicyManagerUtil.findSgtTag(epToSgtMapper, rendererEndpoint, dataAfter.getEndpoints()
-                    .getAddressEndpointWithLocation());
+                    .getAddressEndpointWithLocation(), TIMEOUT, UNIT);
             // Peer Endpoint
             for (PeerEndpoint peerEndpoint : rendererEndpoint.getPeerEndpoint()) {
                 final Sgt destinationSgt = PolicyManagerUtil.findSgtTag(epToSgtMapper, peerEndpoint, dataAfter.getEndpoints()
-                        .getAddressEndpointWithLocation());
+                        .getAddressEndpointWithLocation(), TIMEOUT, UNIT);
                 if (sourceSgt == null || destinationSgt == null) {
                     final String info = String.format("Endpoint-policy: missing sgt value(sourceSgt=%s, destinationSgt=%s)",
                             sourceSgt, destinationSgt);

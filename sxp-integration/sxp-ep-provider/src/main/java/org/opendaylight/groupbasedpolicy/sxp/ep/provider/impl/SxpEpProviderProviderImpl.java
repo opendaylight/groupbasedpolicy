@@ -10,7 +10,6 @@ package org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.groupbasedpolicy.api.DomainSpecificRegistry;
-import org.opendaylight.groupbasedpolicy.api.EndpointAugmentor;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.api.EPPolicyTemplateDaoFacade;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.api.EPPolicyTemplateProviderRegistry;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.api.EPToSgtMapper;
@@ -47,7 +46,6 @@ public class SxpEpProviderProviderImpl implements SxpEpProviderProvider {
     private final EPTemplateListener epPolicyTemplateListener;
     private final EPTemplateListener epForwardingTemplateListener;
     private final DomainSpecificRegistry domainSpecificRegistry;
-    private final EndpointAugmentor sxpEndpointAugmentor;
     private final EPPolicyTemplateProviderRegistry epPolicyTemplateRegistry;
     private final EPToSgtMapper epToSgtMapper;
 
@@ -89,10 +87,6 @@ public class SxpEpProviderProviderImpl implements SxpEpProviderProvider {
         epForwardingTemplateListener = new EPForwardingTemplateListenerImpl(dataBroker, sxpMapperReactor, epForwardingTemplateCachedDao,
                 masterDBBindingDao, epPolicyTemplateDaoFacade);
 
-        // sxp-ep-augmentor -> deprecated, will use ep2sxpMapper service
-        sxpEndpointAugmentor = new SxpEndpointAugmentorImpl(epPolicyTemplateDao, epPolicyTemplateKeyFactory);
-        domainSpecificRegistry.getEndpointAugmentorRegistry().register(sxpEndpointAugmentor);
-
         LOG.info("started SxmMapper");
     }
 
@@ -112,6 +106,5 @@ public class SxpEpProviderProviderImpl implements SxpEpProviderProvider {
         epPolicyTemplateListener.close();
         epForwardingTemplateListener.close();
         epPolicyTemplateRegistry.close();
-        domainSpecificRegistry.getEndpointAugmentorRegistry().unregister(sxpEndpointAugmentor);
     }
 }

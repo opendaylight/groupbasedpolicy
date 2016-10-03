@@ -16,9 +16,11 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 import java.net.URI;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -29,7 +31,6 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import org.opendaylight.groupbasedpolicy.sxp_ise_adapter.impl.util.IseReplyUtil;
 import org.opendaylight.groupbasedpolicy.sxp_ise_adapter.impl.util.RestClientFactory;
@@ -61,18 +62,17 @@ public class GbpIseSgtHarvesterImpl implements GbpIseSgtHarvester {
 
     @Override
     public ListenableFuture<Collection<SgtInfo>> harvestAll(@Nonnull final IseContext iseContext) {
-        final IseSourceConfig iseSourceConfig = iseContext.getIseSourceConfig();
-        final ConnectionConfig connectionConfig = iseSourceConfig.getConnectionConfig();
         ListenableFuture<Collection<SgtInfo>> result;
         try {
-            final Client iseClient = RestClientFactory.createIseClient(connectionConfig);
-            final WebResource baseWebResource = iseClient.resource(connectionConfig.getIseRestUrl().getValue());
+            final IseSourceConfig iseSourceConfig = iseContext.getIseSourceConfig();
+            final ConnectionConfig connectionConfig = iseSourceConfig.getConnectionConfig();
+            final WebResource baseWebResource = createWebResource(connectionConfig);
 
             final WebResource.Builder requestBuilder = RestClientFactory.createRequestBuilder(baseWebResource,
                     connectionConfig.getHeader(), RestClientFactory.PATH_ERS_CONFIG_SGT);
             final String rawSgtSummary = IseReplyUtil.deliverResponse(requestBuilder);
 
-            final List<SgtInfo> sgtInfos = harvestDetails(rawSgtSummary, baseWebResource, connectionConfig.getHeader());
+            final List<SgtInfo> sgtInfos = harvestDetails(rawSgtSummary, baseWebResource, connectionConfig, iseContext.getUuidToSgtMap());
 
             ListenableFuture<Void> processingResult = Futures.immediateCheckedFuture(null);
             for (SgtInfoProcessor processor : sgtInfoProcessors) {
@@ -88,6 +88,11 @@ public class GbpIseSgtHarvesterImpl implements GbpIseSgtHarvester {
                 @Nullable
                 @Override
                 public Collection<SgtInfo> apply(@Nullable final Void input) {
+                    // update uuid map
+                    for (SgtInfo sgtInfo : sgtInfos) {
+                        iseContext.getUuidToSgtMap().put(sgtInfo.getUuid(), sgtInfo.getSgt().getValue());
+                    }
+                    //TODO: store harvest stats to DS/operational
                     // always success, otherwise there will be TransactionCommitFailedException thrown
                     return sgtInfos;
                 }
@@ -100,7 +105,13 @@ public class GbpIseSgtHarvesterImpl implements GbpIseSgtHarvester {
         return result;
     }
 
-    private List<SgtInfo> harvestDetails(final String rawSgtSummary, final WebResource baseWebResource, final List<Header> headers) {
+    private WebResource createWebResource(final ConnectionConfig connectionConfig) throws GeneralSecurityException {
+        final Client iseClient = RestClientFactory.createIseClient(connectionConfig);
+        return iseClient.resource(connectionConfig.getIseRestUrl().getValue());
+    }
+
+    private List<SgtInfo> harvestDetails(final String rawSgtSummary, final WebResource baseWebResource,
+                                         final ConnectionConfig connectionConfig, final Map<String, Integer> uuidToSgtMap) {
         LOG.trace("rawSgtSummary: {}", rawSgtSummary);
         final List<Future<SgtInfo>> sgtInfoFutureBag = new ArrayList<>();
 
@@ -111,22 +122,24 @@ public class GbpIseSgtHarvesterImpl implements GbpIseSgtHarvester {
         // parse sgtSummary
         final XPath xpath = IseReplyUtil.setupXpath();
 
-        InputSource inputSource = IseReplyUtil.createInputSource(rawSgtSummary);
+        final InputSource inputSource = IseReplyUtil.createInputSource(rawSgtSummary);
         try {
-            final NodeList sgtLinkNodes = (NodeList) xpath.evaluate(IseReplyUtil.EXPRESSION_SGT_ALL_LINK_HREFS, inputSource,
-                    XPathConstants.NODESET);
-            for (int i = 0; i < sgtLinkNodes.getLength(); i++) {
-                final String sgtLinkHrefValue = sgtLinkNodes.item(i).getNodeValue();
-                LOG.debug("found sgt resource [{}]: {}", i, sgtLinkHrefValue);
+            final NodeList sgtResources = IseReplyUtil.findAllSgtResourceNodes(xpath, inputSource);
+            final Collection<Node> sgtLinkNodes = IseReplyUtil.filterNewResourcesByID(uuidToSgtMap, xpath, sgtResources);
+
+            int counter = 0;
+            for (Node sgtLinkNode : sgtLinkNodes) {
+                final String sgtLinkHrefValue = sgtLinkNode.getNodeValue();
+                LOG.debug("found sgt resource: {}", sgtLinkHrefValue);
 
                 // submit all query tasks to pool
-                final int idx = i;
+                final int idx = counter++;
                 sgtInfoFutureBag.add(pool.submit(new Callable<SgtInfo>() {
                     @Override
                     public SgtInfo call() {
                         SgtInfo sgtInfo = null;
                         try {
-                            sgtInfo = querySgtDetail(baseWebResource, headers, xpath, idx, sgtLinkHrefValue);
+                            sgtInfo = querySgtDetail(baseWebResource, connectionConfig.getHeader(), xpath, idx, sgtLinkHrefValue);
                         } catch (XPathExpressionException e) {
                             LOG.info("failed to parse sgt response for {}: {}", sgtLinkHrefValue, e.getMessage());
                         }
@@ -169,17 +182,17 @@ public class GbpIseSgtHarvesterImpl implements GbpIseSgtHarvester {
                                    final int idx, final String sgtLinkHrefValue) throws XPathExpressionException {
         // query all sgt entries (serial-vise)
         final URI hrefToSgtDetailUri = URI.create(sgtLinkHrefValue);
-        final WebResource.Builder requestBuilder = RestClientFactory.createRequestBuilder(baseWebResource, headers, hrefToSgtDetailUri.getPath());
+        final WebResource.Builder requestBuilder = RestClientFactory.createRequestBuilder(baseWebResource, headers,
+                hrefToSgtDetailUri.getPath());
         // time consuming operation - wait for rest response
         final String rawSgtDetail = IseReplyUtil.deliverResponse(requestBuilder);
         LOG.trace("rawSgtDetail: {}", rawSgtDetail);
 
         // process response xml
-        final Node sgtNode = (Node) xpath.evaluate(IseReplyUtil.EXPRESSION_SGT_DETAIL, IseReplyUtil.createInputSource(rawSgtDetail),
-                XPathConstants.NODE);
-        final Node sgtName = (Node) xpath.evaluate(IseReplyUtil.EXPRESSION_SGT_NAME_ATTR, sgtNode, XPathConstants.NODE);
-        final Node sgtUuid = (Node) xpath.evaluate(IseReplyUtil.EXPRESSION_SGT_UUID_ATTR, sgtNode, XPathConstants.NODE);
-        final Node sgtValue = (Node) xpath.evaluate(IseReplyUtil.EXPRESSION_SGT_VALUE, sgtNode, XPathConstants.NODE);
+        final Node sgtNode = IseReplyUtil.findSgtDetailNode(xpath, rawSgtDetail);
+        final Node sgtName = IseReplyUtil.gainSgtName(xpath, sgtNode);
+        final Node sgtUuid = IseReplyUtil.gainSgtUuid(xpath, sgtNode);
+        final Node sgtValue = IseReplyUtil.gainSgtValue(xpath, sgtNode);
         LOG.debug("sgt value [{}]: {} -> {}", idx, sgtValue, sgtName);
 
         // store replies into list of SgtInfo
@@ -187,9 +200,4 @@ public class GbpIseSgtHarvesterImpl implements GbpIseSgtHarvester {
         return new SgtInfo(sgt, sgtName.getNodeValue(), sgtUuid.getNodeValue());
     }
 
-    @Override
-    public ListenableFuture<Collection<SgtInfo>> update(@Nonnull final IseContext iseContext) {
-        //TODO: stub
-        return null;
-    }
 }

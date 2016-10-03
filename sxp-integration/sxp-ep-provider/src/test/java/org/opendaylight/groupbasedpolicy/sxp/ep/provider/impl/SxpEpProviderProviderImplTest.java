@@ -8,6 +8,11 @@
 
 package org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl;
 
+import static org.powermock.api.mockito.PowerMockito.verifyNew;
+import static org.powermock.api.mockito.PowerMockito.whenNew;
+import static org.powermock.api.support.membermodification.MemberMatcher.method;
+import static org.powermock.api.support.membermodification.MemberModifier.stub;
+
 import com.google.common.collect.Ordering;
 import org.junit.Assert;
 import org.junit.Before;
@@ -39,11 +44,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBinding;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-
-import static org.powermock.api.mockito.PowerMockito.verifyNew;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
-import static org.powermock.api.support.membermodification.MemberMatcher.method;
-import static org.powermock.api.support.membermodification.MemberModifier.stub;
 
 /**
  * Test for {@link SxpEpProviderProviderImpl}.
@@ -103,8 +103,6 @@ public class SxpEpProviderProviderImplTest {
 
     @Before
     public void setUp() throws Exception {
-        Mockito.when(domainSpecificRegistry.getEndpointAugmentorRegistry()).thenReturn(epAugmentorRegistry);
-
         whenNew(EPPolicyTemplateProviderRegistryImpl.class).withNoArguments().thenReturn(templateProviderRegistry);
         whenNew(SxpMapperReactorImpl.class).withArguments(endpointService, dataBroker).thenReturn(sxpMapperReactor);
         whenNew(SimpleCachedDaoImpl.class).withNoArguments().thenReturn(epPolicyTemplateCachedDao, masterDBBindingCachedDao);
@@ -137,7 +135,6 @@ public class SxpEpProviderProviderImplTest {
         provider = new SxpEpProviderProviderImpl(dataBroker, endpointService, domainSpecificRegistry, sgtGeneratorConfig);
 
         Mockito.verify(templateProviderRegistry).addDistributionTarget(epPolicyTemplateDaoFacade);
-        Mockito.verify(epAugmentorRegistry).register(sxpEPAugmentor);
 
         // check if all expected object got constructed and wired
         verifyNew(EPPolicyTemplateProviderRegistryImpl.class).withNoArguments();
@@ -157,7 +154,6 @@ public class SxpEpProviderProviderImplTest {
                 masterDBBindingDao, epForwardingTemplateDao);
         verifyNew(EPForwardingTemplateListenerImpl.class).withArguments(dataBroker, sxpMapperReactor, epFwTemplateCachedDao,
                 masterDBBindingDao, epPolicyTemplateDaoFacade);
-        verifyNew(SxpEndpointAugmentorImpl.class).withArguments(epPolicyTemplateDao, epPolicyTemplateKeyFactory);
     }
 
     @Test
@@ -172,6 +168,5 @@ public class SxpEpProviderProviderImplTest {
         Mockito.verify(epPolicyTemplateListener).close();
         Mockito.verify(epForwardingTemplateListener).close();
         Mockito.verify(templateProviderRegistry).close();
-        Mockito.verify(epAugmentorRegistry).unregister(sxpEPAugmentor);
     }
 }
