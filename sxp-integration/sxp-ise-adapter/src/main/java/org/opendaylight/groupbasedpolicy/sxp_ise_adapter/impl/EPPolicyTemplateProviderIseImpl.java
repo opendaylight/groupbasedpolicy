@@ -67,7 +67,7 @@ public class EPPolicyTemplateProviderIseImpl implements EPPolicyTemplateProvider
     }
 
     private ListenableFuture<Optional<String>> queryIseOnSgt(final IseContext iseContext, @Nonnull final Sgt sgt) {
-        final ListenableFuture<Collection<SgtInfo>> sgtUpdateFu = iseSgtHarvester.update(iseContext);
+        final ListenableFuture<Collection<SgtInfo>> sgtUpdateFu = iseSgtHarvester.harvestAll(iseContext);
         return Futures.transform(sgtUpdateFu, new Function<Collection<SgtInfo>, Optional<String>>() {
             @Nullable
             @Override

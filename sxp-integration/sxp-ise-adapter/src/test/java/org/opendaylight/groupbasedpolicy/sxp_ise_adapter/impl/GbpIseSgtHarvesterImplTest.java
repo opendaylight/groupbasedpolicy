@@ -16,10 +16,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -75,22 +72,8 @@ public class GbpIseSgtHarvesterImplTest {
     private GbpIseSgtHarvesterImpl harvester;
 
     public GbpIseSgtHarvesterImplTest() throws IOException {
-        iseReplyAllSgts = readLocalResource("./rawIse-allSgts.xml");
-        iseReplySgtDetail = readLocalResource("./rawIse-sgtDetail.xml");
-    }
-
-    private static String readLocalResource(final String resourcePath) throws IOException {
-        final StringBuilder collector = new StringBuilder();
-        try (
-                final InputStream iseReplySource = GbpIseSgtHarvesterImplTest.class.getResourceAsStream(resourcePath);
-                final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(iseReplySource))
-        ) {
-            String line;
-            while ((line = bufferedReader.readLine()) != null) {
-                collector.append(line);
-            }
-        }
-        return collector.toString();
+        iseReplyAllSgts = IseResourceTestHelper.readLocalResource("./rawIse-allSgts1.xml");
+        iseReplySgtDetail = IseResourceTestHelper.readLocalResource("./rawIse-sgtDetail.xml");
     }
 
     @Before
@@ -125,6 +108,7 @@ public class GbpIseSgtHarvesterImplTest {
                 Futures.immediateCheckedFuture(null));
 
         final ListenableFuture<Collection<SgtInfo>> harvestResult = harvester.harvestAll(iseContext);
+        final Collection<SgtInfo> addedSgts = harvestResult.get(2, TimeUnit.SECONDS);
 
         final InOrder inOrder = Mockito.inOrder(client, webResource, builder);
         inOrder.verify(client).resource(ISE_REST_URL.getValue());
@@ -140,7 +124,6 @@ public class GbpIseSgtHarvesterImplTest {
         inOrder.verify(builder).get(ClientResponse.class);
         inOrder.verifyNoMoreInteractions();
 
-        final Collection<SgtInfo> count = harvestResult.get(2, TimeUnit.SECONDS);
-        Assert.assertEquals(1, count.size());
+        Assert.assertEquals(1, addedSgts.size());
     }
 }

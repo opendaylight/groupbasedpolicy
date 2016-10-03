@@ -45,4 +45,11 @@ public class SgtInfo {
     public String getName() {
         return name;
     }
+
+    /**
+     * @return uuid of sgt
+     */
+    public String getUuid() {
+        return uuid;
+    }
 }

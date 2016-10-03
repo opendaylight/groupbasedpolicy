@@ -11,11 +11,18 @@ package org.opendaylight.groupbasedpolicy.sxp_ise_adapter.impl.util;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
+import java.util.Map;
 import javax.xml.XMLConstants;
 import javax.xml.namespace.NamespaceContext;
 import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 /**
@@ -23,11 +30,12 @@ import org.xml.sax.InputSource;
  */
 public class IseReplyUtil {
 
-    public static final String EXPRESSION_SGT_ALL_LINK_HREFS = "/ns3:searchResult/ns3:resources/ns5:resource/link/@href";
-    public static final String EXPRESSION_SGT_DETAIL = "./ns4:sgt";
-    public static final String EXPRESSION_SGT_NAME_ATTR = "./@name";
-    public static final String EXPRESSION_SGT_UUID_ATTR = "./@id";
-    public static final String EXPRESSION_SGT_VALUE = "./value/text()";
+    private static final String EXPRESSION_SGT_ALL_RESOURCES = "/ns3:searchResult/ns3:resources/ns5:resource";
+    private static final String EXPRESSION_SGT_DETAIL_LINK = "./link/@href";
+    private static final String EXPRESSION_SGT_DETAIL = "./ns4:sgt";
+    private static final String EXPRESSION_SGT_NAME_ATTR = "./@name";
+    private static final String EXPRESSION_SGT_UUID_ATTR = "./@id";
+    private static final String EXPRESSION_SGT_VALUE = "./value/text()";
 
     private IseReplyUtil() {
         throw new IllegalAccessError("util class - no instances supported");
@@ -79,5 +87,49 @@ public class IseReplyUtil {
 
     public static InputSource createInputSource(final String rawSgtDetail) {
         return new InputSource(new StringReader(rawSgtDetail));
+    }
+
+    /**
+     * @param uuidToSgtMap map of existing sgts (by uuid)
+     * @param xpath        xpath instance
+     * @param sgtResources input node list
+     * @return new/unknown sgts to explore
+     * @throws XPathExpressionException in case xpath processing fails
+     */
+    public static Collection<Node> filterNewResourcesByID(final Map<String, Integer> uuidToSgtMap, final XPath xpath,
+                                                          final NodeList sgtResources)
+            throws XPathExpressionException {
+        final Collection<Node> nodesToExplore = new ArrayList<>();
+        for (int i = 0; i < sgtResources.getLength(); i++) {
+            final String uuid = ((Node) xpath.evaluate(EXPRESSION_SGT_UUID_ATTR, sgtResources.item(i), XPathConstants.NODE)).getNodeValue();
+            if (!uuidToSgtMap.containsKey(uuid)) {
+                nodesToExplore.add(
+                        (Node) xpath.evaluate(EXPRESSION_SGT_DETAIL_LINK, sgtResources.item(i), XPathConstants.NODE)
+                );
+            }
+        }
+        return nodesToExplore;
+    }
+
+    public static NodeList findAllSgtResourceNodes(final XPath xpath, final InputSource inputSource) throws XPathExpressionException {
+        return (NodeList) xpath.evaluate(EXPRESSION_SGT_ALL_RESOURCES, inputSource,
+                XPathConstants.NODESET);
+    }
+
+    public static Node gainSgtValue(final XPath xpath, final Node sgtNode) throws XPathExpressionException {
+        return (Node) xpath.evaluate(EXPRESSION_SGT_VALUE, sgtNode, XPathConstants.NODE);
+    }
+
+    public static Node gainSgtUuid(final XPath xpath, final Node sgtNode) throws XPathExpressionException {
+        return (Node) xpath.evaluate(EXPRESSION_SGT_UUID_ATTR, sgtNode, XPathConstants.NODE);
+    }
+
+    public static Node gainSgtName(final XPath xpath, final Node sgtNode) throws XPathExpressionException {
+        return (Node) xpath.evaluate(EXPRESSION_SGT_NAME_ATTR, sgtNode, XPathConstants.NODE);
+    }
+
+    public static Node findSgtDetailNode(final XPath xpath, final String rawSgtDetail) throws XPathExpressionException {
+        return (Node) xpath.evaluate(EXPRESSION_SGT_DETAIL, createInputSource(rawSgtDetail),
+                XPathConstants.NODE);
     }
 }

@@ -73,7 +73,6 @@ public class GbpIseConfigListenerImpl implements GbpIseConfigListener {
     public void onDataTreeChanged(@Nonnull final Collection<DataTreeModification<IseSourceConfig>> collection) {
         for (DataTreeModification<IseSourceConfig> modification : collection) {
             final IseSourceConfig iseSourceConfig = modification.getRootNode().getDataAfter();
-            //TODO: separate template provider from harvesting
             final IseContext iseContext = new IseContext(iseSourceConfig);
             templateProviderFacade.assignIseContext(iseContext);
             if (iseSourceConfig != null) {
