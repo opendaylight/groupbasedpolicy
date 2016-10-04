@@ -91,9 +91,9 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
     private final ListenerRegistration<DataChangeListener> registerListener;
     private final ScheduledExecutorService executor;
     private final DataBroker dataProvider;
-    protected final Map<Pair<EndpointGroupId, TenantId>, List<SubnetId>> epgSubnetsMap = new HashMap<>();
+    final Map<Pair<EndpointGroupId, TenantId>, List<SubnetId>> epgSubnetsMap = new HashMap<>();
     private final ConcurrentHashMap<TenantId, Uuid> mappedTenants = new ConcurrentHashMap<>();
-    protected final ConcurrentHashMap<TenantId, ArrayList<ListenerRegistration<DataChangeListener>>> registeredTenants =
+    final ConcurrentHashMap<TenantId, ArrayList<ListenerRegistration<DataChangeListener>>> registeredTenants =
             new ConcurrentHashMap<>();
 
     public FaasPolicyManager(DataBroker dataBroker, ScheduledExecutorService executor) {
@@ -118,9 +118,7 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
     public void close() throws Exception {
         synchronized (registeredTenants) {
             for (ArrayList<ListenerRegistration<DataChangeListener>> list : registeredTenants.values()) {
-                for (ListenerRegistration<DataChangeListener> reg : list) {
-                    reg.close();
-                }
+                list.forEach(ListenerRegistration::close);
             }
             registeredTenants.clear();
 
@@ -287,6 +285,7 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
         if (!resolvedPoliciesOptional.isPresent() || resolvedPoliciesOptional.get().getResolvedPolicy() == null) {
             return;
         }
+        //TODO forEach possible?
         List<ResolvedPolicy> resolvedPolicies = resolvedPoliciesOptional.get().getResolvedPolicy();
         for (ResolvedPolicy policy : resolvedPolicies) {
             if (policy.getConsumerTenantId().equals(gbpTenantId)) {
@@ -565,7 +564,7 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
         LogicalRouterBuilder provLR = initLogicalRouterBuilder(provEpg, faasTenantId,
                 isProviderPublic(externalImplicitGroup));
 
-        if (!UlnDatastoreApi.attachAndSubmitToDs(consLR, provLR, new Pair<Uuid, Uuid>(null, privateSecRulesId), null)) {
+        if (!UlnDatastoreApi.attachAndSubmitToDs(consLR, provLR, new Pair<>(null, privateSecRulesId), null)) {
             LOG.error("Failed to join Logical Routers in a Logical Network");
             return;
         }
