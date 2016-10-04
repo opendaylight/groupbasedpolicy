@@ -14,6 +14,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -89,11 +90,17 @@ public class MasterDatabaseBindingDaoImpl implements DSAsyncDao<IpPrefix, Master
             @Nullable
             @Override
             public Void apply(@Nullable final Optional<Topology> input) {
-                if (input.isPresent()) {
+                if (input != null) {
                     // clean cache
                     cachedDao.invalidateCache();
 
-                    for (Node node : input.get().getNode()) {
+                    final List<Node> nodeList = java.util.Optional.ofNullable(input.orNull())
+                            .map(Topology::getNode)
+                            .orElseGet(() -> {
+                                LOG.warn("failed to update cache of SxpMasterDB - no data");
+                                return Collections.emptyList();
+                            });
+                    for (Node node : nodeList) {
                         java.util.Optional.ofNullable(node.getAugmentation(SxpNodeIdentity.class))
                                 .map(SxpNodeIdentity::getSxpDomains)
                                 .map(SxpDomains::getSxpDomain)
@@ -119,7 +126,7 @@ public class MasterDatabaseBindingDaoImpl implements DSAsyncDao<IpPrefix, Master
                                 });
                     }
                 } else {
-                    LOG.warn("failed to update cache of SxpMasterDB - no data");
+                    LOG.warn("failed to update cache of SxpMasterDB - null input");
                 }
                 return null;
             }

@@ -83,6 +83,7 @@ public class EPForwardingTemplateListenerImpl implements EPTemplateListener<Endp
             final IpPrefix changeKey = changePath.firstKeyOf(EndpointForwardingTemplateBySubnet.class).getIpPrefix();
             SxpListenerUtil.updateCachedDao(templateCachedDao, changeKey, change);
 
+            //TODO: handle removal (now causes NPE)
             final EndpointForwardingTemplateBySubnet epForwardingTemplate = change.getRootNode().getDataAfter();
             processWithEPTemplates(epForwardingTemplate);
         }

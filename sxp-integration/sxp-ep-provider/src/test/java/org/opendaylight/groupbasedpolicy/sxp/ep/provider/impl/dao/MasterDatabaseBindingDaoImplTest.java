@@ -112,6 +112,21 @@ public class MasterDatabaseBindingDaoImplTest {
     }
 
     @Test
+    public void testRead_absentNull() throws Exception {
+        Mockito.when(cachedDao.find(Matchers.<IpPrefix>any())).thenReturn(Optional.<MasterDatabaseBinding>absent());
+        Mockito.when(dataBroker.newReadOnlyTransaction()).thenReturn(rTx);
+        Mockito.when(rTx.read(Matchers.eq(LogicalDatastoreType.CONFIGURATION),
+                Matchers.<InstanceIdentifier<Topology>>any())).thenReturn(
+                Futures.<Optional<Topology>, ReadFailedException>immediateCheckedFuture(
+                        Optional.of(new TopologyBuilder().build())));
+
+
+        final ListenableFuture<Optional<MasterDatabaseBinding>> read = dao.read(IP_PREFIX);
+        Assert.assertTrue(read.isDone());
+        Assert.assertFalse(read.get().isPresent());
+    }
+
+    @Test
     public void testRead_presentCached() throws Exception {
         Mockito.when(cachedDao.find(Matchers.<IpPrefix>any())).thenReturn(Optional.of(MASTER_DB_BINDING_VALUE));
 
