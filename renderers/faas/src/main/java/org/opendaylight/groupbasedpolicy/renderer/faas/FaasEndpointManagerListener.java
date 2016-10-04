@@ -204,7 +204,8 @@ public class FaasEndpointManagerListener implements DataChangeListener, AutoClos
         }
     }
 
-    private Uuid getFaasSubnetId(Endpoint endpoint) {
+    @VisibleForTesting
+    Uuid getFaasSubnetId(Endpoint endpoint) {
         if (endpoint.getEndpointGroup() == null) {
             LOG.error("Failed Endpoint registration -- No Endpoint-Group Id in endpoint {}", endpoint);
             return null;
@@ -232,7 +233,8 @@ public class FaasEndpointManagerListener implements DataChangeListener, AutoClos
         return null;
     }
 
-    private boolean validate(Endpoint endpoint) {
+    @VisibleForTesting
+    boolean validate(Endpoint endpoint) {
         if (endpoint.getL2Context() == null) {
             LOG.error("Endpoint Failed Validation -- Missing L2 Context. Endpoint {}", endpoint);
             return false;

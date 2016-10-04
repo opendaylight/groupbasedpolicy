@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -197,7 +198,8 @@ public class FaasContractManagerListener implements DataChangeListener {
         return val;
     }
 
-    private List<SecurityRuleGroup> buildSecurityRuleGroup(Contract contract) {
+    @VisibleForTesting
+    List<SecurityRuleGroup> buildSecurityRuleGroup(Contract contract) {
         LOG.trace("Start buildSecurityRuleGroup for contract {}", contract.getId().getValue());
         List<SecurityRuleGroup> securityRuleGroups = new ArrayList<>();
         if (contract.getClause() == null) {
@@ -241,7 +243,8 @@ public class FaasContractManagerListener implements DataChangeListener {
         return securityRuleGroups;
     }
 
-    private List<SecurityRule> getSecurityRules(Contract contract, SubjectName subjectRef, List<Rule> subRules) {
+    @VisibleForTesting
+    List<SecurityRule> getSecurityRules(Contract contract, SubjectName subjectRef, List<Rule> subRules) {
         List<SecurityRule> securityRules = new ArrayList<>();
         for (Rule rule : subRules) {
             List<ClassifierRef> classifierRefs = rule.getClassifierRef();
@@ -417,7 +420,7 @@ public class FaasContractManagerListener implements DataChangeListener {
                 return data.get();
             }
         } catch (Exception e) {
-            LOG.error("Couldn't read Action instance from datastore. Exception: ", e);
+            LOG.error("Couldn't read Classifier instance from datastore. Exception: ", e);
         }
         return null;
     }
