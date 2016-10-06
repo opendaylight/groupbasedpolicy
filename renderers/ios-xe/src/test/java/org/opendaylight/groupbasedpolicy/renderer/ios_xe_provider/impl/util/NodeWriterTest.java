@@ -15,9 +15,9 @@ import static org.mockito.Mockito.when;
 import static org.powermock.api.support.membermodification.MemberMatcher.method;
 import static org.powermock.api.support.membermodification.MemberModifier.stub;
 
-import java.util.concurrent.ExecutionException;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.ListenableFuture;
+import java.util.concurrent.ExecutionException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,6 +63,7 @@ public class NodeWriterTest {
     @Test
     public void commitToDs_failure() {
         nodeWriter.cache(rendererNode);
+        when(dataBroker.newWriteOnlyTransaction()).thenReturn(transaction);
         stub(method(DataStoreHelper.class, "submitToDs")).toReturn(false);
         final ListenableFuture<Boolean> result = nodeWriter.commitToDatastore(dataBroker);
         assertFalse(getFutureResult(result));
