@@ -51,7 +51,8 @@ public class SgtGeneratorImplTest {
     @Test
     public void testGenerateNextSgt_noData() throws Exception {
         final Optional<Sgt> sgt = generator.generateNextSgt(templateDao);
-        Assert.assertFalse(sgt.isPresent());
+        Assert.assertTrue(sgt.isPresent());
+        Assert.assertEquals(10, sgt.get().getValue().intValue());
     }
 
     @Test

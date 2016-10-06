@@ -11,12 +11,11 @@ package org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Range;
+import java.util.Optional;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl.util.EPTemplateUtil;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.model.rev160302.sxp.ep.mapper.EndpointPolicyTemplateBySgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.rev160722.SgtGeneratorConfig;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
-
-import java.util.Optional;
 
 /**
  * Purpose: generate {@link Sgt} value on demand
@@ -39,15 +38,17 @@ public class SgtGeneratorImpl {
      */
     public java.util.Optional<Sgt> generateNextSgt(SimpleCachedDao<Sgt, EndpointPolicyTemplateBySgt> templateCache) {
         return sgtRange.flatMap(range ->
-                findTopUsedSgt(templateCache.keySet())
+                findTopUsedSgt(templateCache.keySet(), range.lowerEndpoint())
                         .map(topUsedSgt -> incrementSafely(range, topUsedSgt))
         );
     }
 
-    private Optional<Sgt> findTopUsedSgt(final Iterable<Sgt> sgts) {
-        return java.util.Optional.ofNullable(sgts)
-                .filter(sgtBag -> !Iterables.isEmpty(sgtBag))
-                .map(sgtOrdering::max);
+    private Optional<Sgt> findTopUsedSgt(final Iterable<Sgt> sgts, final Integer lowerEndPoint) {
+        final Sgt sgt = java.util.Optional.ofNullable(sgts)
+                .filter(sgtBag -> ! Iterables.isEmpty(sgtBag))
+                .map(sgtOrdering::max)
+                .orElseGet(() -> new Sgt(lowerEndPoint - 1));
+        return Optional.of(sgt);
     }
 
     private Sgt incrementSafely(final Range<Integer> range, final Sgt topUsedSgt) {
