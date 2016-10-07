@@ -5,31 +5,34 @@
 
     <reference id="dataBroker" interface="org.opendaylight.controller.md.sal.binding.api.DataBroker"/>
     <reference id="clusterSingletonService" interface="org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider"/>
+    <reference id="rpcRegistry" interface="org.opendaylight.controller.sal.binding.api.RpcProviderRegistry"/>
 
     <!-- Modules /-->
     <bean id="groupbasedpolicy" class="org.opendaylight.controller.config.yang.config.groupbasedpolicy.GroupbasedpolicyInstance"
-        init-method="initialize" destroy-method="close">
+          init-method="initialize" destroy-method="close">
         <argument ref="dataBroker"/>
         <argument ref="policyValidatorRegistry"/>
         <argument ref="clusterSingletonService"/>
     </bean>
     <bean id="domainSpecificRegistry" class="org.opendaylight.controller.config.yang.config.groupbasedpolicy.DomainSpecificRegistryInstance"
-        init-method="initialize" destroy-method="close">
+          init-method="initialize" destroy-method="close">
         <argument ref="dataBroker"/>
         <argument ref="clusterSingletonService"/>
+        <argument ref="rpcRegistry"/>
     </bean>
     <bean id="epRendererAugmentationRegistry" class="org.opendaylight.controller.config.yang.config.groupbasedpolicy.EpRendererAugmentationRegistryImplInstance"
-        init-method="initialize" destroy-method="close">
+          init-method="initialize" destroy-method="close">
         <argument ref="dataBroker"/>
         <argument ref="clusterSingletonService"/>
+        <argument ref="rpcRegistry"/>
     </bean>
     <bean id="statisticsManagerImpl" class="org.opendaylight.controller.config.yang.config.groupbasedpolicy.StatisticsManagerImplInstance"
-        init-method="initialize" destroy-method="close">
+          init-method="initialize" destroy-method="close">
         <argument ref="dataBroker"/>
         <argument ref="clusterSingletonService"/>
     </bean>
     <bean id="policyValidatorRegistry" class="org.opendaylight.controller.config.yang.config.groupbasedpolicy.PolicyValidatorRegistryInstance"
-        init-method="initialize" destroy-method="close">
+          init-method="initialize" destroy-method="close">
         <argument ref="dataBroker"/>
         <argument ref="clusterSingletonService"/>
     </bean>
@@ -40,7 +43,4 @@
     <service ref="policyValidatorRegistry" interface="org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistry" odl:type="default"/>
     <service ref="statisticsManagerImpl" interface="org.opendaylight.groupbasedpolicy.api.StatisticsManager" odl:type="default"/>
 
-    <!-- RPC implementations -->
-    <odl:rpc-implementation ref="domainSpecificRegistry"/>
-    <odl:rpc-implementation ref="epRendererAugmentationRegistry"/>
 </blueprint>

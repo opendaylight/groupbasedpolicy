@@ -8,11 +8,13 @@
 
 package org.opendaylight.controller.config.yang.config.groupbasedpolicy;
 
-import java.util.concurrent.Future;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import java.util.concurrent.Future;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
+import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.api.DomainSpecificRegistry;
 import org.opendaylight.groupbasedpolicy.api.EndpointAugmentorRegistry;
 import org.opendaylight.groupbasedpolicy.api.NetworkDomainAugmentorRegistry;
@@ -39,16 +41,20 @@ public class DomainSpecificRegistryInstance implements ClusterSingletonService, 
             ServiceGroupIdentifier.create(GroupbasedpolicyInstance.GBP_SERVICE_GROUP_IDENTIFIER);
     private final DataBroker dataBroker;
     private ClusterSingletonServiceProvider clusterSingletonService;
+    private final RpcProviderRegistry rpcProviderRegistry;
     private ClusterSingletonServiceRegistration singletonServiceRegistration;
     private EndpointAugmentorRegistryImpl endpointAugmentorRegistryImpl;
     private NetworkDomainAugmentorRegistryImpl netDomainAugmentorRegistryImpl;
     private BaseEndpointServiceImpl baseEndpointServiceImpl;
     private RendererManager rendererManager;
+    private BindingAwareBroker.RpcRegistration<BaseEndpointService> baseEndpointServiceRpcRegistration;
 
     public DomainSpecificRegistryInstance(final DataBroker dataBroker,
-                                          final ClusterSingletonServiceProvider clusterSingletonService) {
+                                          final ClusterSingletonServiceProvider clusterSingletonService,
+                                          final RpcProviderRegistry rpcProviderRegistry) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.clusterSingletonService = Preconditions.checkNotNull(clusterSingletonService);
+        this.rpcProviderRegistry = Preconditions.checkNotNull(rpcProviderRegistry);
     }
 
     @Override
@@ -83,13 +89,17 @@ public class DomainSpecificRegistryInstance implements ClusterSingletonService, 
         netDomainAugmentorRegistryImpl = new NetworkDomainAugmentorRegistryImpl();
         baseEndpointServiceImpl = new BaseEndpointServiceImpl(dataBroker, endpointAugmentorRegistryImpl);
         rendererManager = new RendererManager(dataBroker, netDomainAugmentorRegistryImpl, endpointAugmentorRegistryImpl);
+
+        baseEndpointServiceRpcRegistration = rpcProviderRegistry.addRpcImplementation(BaseEndpointService.class, this);
     }
 
     @Override
     public ListenableFuture<Void> closeServiceInstance() {
         LOG.info("Instance {} closed", this.getClass().getSimpleName());
         baseEndpointServiceImpl.close();
+        baseEndpointServiceRpcRegistration.close();
         rendererManager.close();
+
         return Futures.immediateFuture(null);
     }
 

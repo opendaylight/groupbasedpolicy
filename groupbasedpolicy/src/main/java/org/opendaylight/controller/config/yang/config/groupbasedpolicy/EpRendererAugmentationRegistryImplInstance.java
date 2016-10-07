@@ -8,11 +8,13 @@
 
 package org.opendaylight.controller.config.yang.config.groupbasedpolicy;
 
-import java.util.concurrent.Future;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import java.util.concurrent.Future;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
+import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentation;
 import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry;
 import org.opendaylight.groupbasedpolicy.endpoint.EndpointRpcRegistry;
@@ -38,13 +40,17 @@ public class EpRendererAugmentationRegistryImplInstance implements ClusterSingle
             ServiceGroupIdentifier.create(GroupbasedpolicyInstance.GBP_SERVICE_GROUP_IDENTIFIER);
     private final DataBroker dataBroker;
     private ClusterSingletonServiceProvider clusterSingletonService;
+    private final RpcProviderRegistry rpcProviderRegistry;
     private ClusterSingletonServiceRegistration singletonServiceRegistration;
     private EndpointRpcRegistry endpointRpcRegistry;
+    private BindingAwareBroker.RpcRegistration<EndpointService> serviceRpcRegistration;
 
     public EpRendererAugmentationRegistryImplInstance(final DataBroker dataBroker,
-                                                      final ClusterSingletonServiceProvider clusterSingletonService) {
+                                                      final ClusterSingletonServiceProvider clusterSingletonService,
+                                                      final RpcProviderRegistry rpcProviderRegistry) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.clusterSingletonService = Preconditions.checkNotNull(clusterSingletonService);
+        this.rpcProviderRegistry = rpcProviderRegistry;
     }
 
     @Override
@@ -91,12 +97,15 @@ public class EpRendererAugmentationRegistryImplInstance implements ClusterSingle
     public void instantiateServiceInstance() {
         LOG.info("Instantiating {}", this.getClass().getSimpleName());
         endpointRpcRegistry = new EndpointRpcRegistry(dataBroker);
+
+        serviceRpcRegistration = rpcProviderRegistry.addRpcImplementation(EndpointService.class, this);
     }
 
     @Override
     public ListenableFuture<Void> closeServiceInstance() {
         LOG.info("Instance {} closed", this.getClass().getSimpleName());
         endpointRpcRegistry.close();
+        serviceRpcRegistration.close();
         return Futures.immediateFuture(null);
     }
 

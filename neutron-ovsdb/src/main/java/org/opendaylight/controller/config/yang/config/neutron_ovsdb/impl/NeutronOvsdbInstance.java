@@ -13,6 +13,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.opendaylight.controller.config.yang.config.groupbasedpolicy.GroupbasedpolicyInstance;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.neutron.ovsdb.NeutronOvsdb;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonService;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider;
@@ -30,18 +31,18 @@ public class NeutronOvsdbInstance implements ClusterSingletonService, AutoClosea
     private static final ServiceGroupIdentifier IDENTIFIER =
             ServiceGroupIdentifier.create(GroupbasedpolicyInstance.GBP_SERVICE_GROUP_IDENTIFIER);
     private final DataBroker dataBroker;
-    private final EndpointService epService;
     private final IntegrationBridgeSetting settings;
     private final ClusterSingletonServiceProvider clusterSingletonService;
+    private final RpcProviderRegistry rpcBroker;
     private ClusterSingletonServiceRegistration singletonServiceRegistration;
     private NeutronOvsdb neutronOvsdb;
 
     public NeutronOvsdbInstance(final DataBroker dataBroker,
-                                final EndpointService epService,
+                                final RpcProviderRegistry rpcBroker,
                                 final IntegrationBridgeSetting settings,
                                 final ClusterSingletonServiceProvider clusterSingletonService) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
-        this.epService = Preconditions.checkNotNull(epService);
+        this.rpcBroker = Preconditions.checkNotNull(rpcBroker);
         this.settings = Preconditions.checkNotNull(settings);
         this.clusterSingletonService = Preconditions.checkNotNull(clusterSingletonService);
     }
@@ -54,6 +55,7 @@ public class NeutronOvsdbInstance implements ClusterSingletonService, AutoClosea
     @Override
     public void instantiateServiceInstance() {
         LOG.info("Instantiating {}", this.getClass().getSimpleName());
+        final EndpointService epService = rpcBroker.getRpcService(EndpointService.class);
         neutronOvsdb = new NeutronOvsdb(dataBroker, epService, settings);
     }
 

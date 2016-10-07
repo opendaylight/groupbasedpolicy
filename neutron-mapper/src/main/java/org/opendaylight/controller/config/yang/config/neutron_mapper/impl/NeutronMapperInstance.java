@@ -13,6 +13,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.opendaylight.controller.config.yang.config.groupbasedpolicy.GroupbasedpolicyInstance;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.NeutronMapper;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonService;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider;
@@ -30,19 +31,16 @@ public class NeutronMapperInstance implements ClusterSingletonService, AutoClose
     private static final ServiceGroupIdentifier IDENTIFIER =
             ServiceGroupIdentifier.create(GroupbasedpolicyInstance.GBP_SERVICE_GROUP_IDENTIFIER);
     private final DataBroker dataBroker;
-    private final EndpointService epService;
-    private final BaseEndpointService baseEndpointService;
     private final ClusterSingletonServiceProvider clusterSingletonService;
+    private final RpcProviderRegistry rpcBroker;
     private ClusterSingletonServiceRegistration singletonServiceRegistration;
     private NeutronMapper mapper;
 
     public NeutronMapperInstance(final DataBroker dataBroker,
-                                 final EndpointService epService,
-                                 final BaseEndpointService baseEndpointService,
+                                 final RpcProviderRegistry rpcBroker,
                                  final ClusterSingletonServiceProvider clusterSingletonService) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
-        this.epService = Preconditions.checkNotNull(epService);
-        this.baseEndpointService = Preconditions.checkNotNull(baseEndpointService);
+        this.rpcBroker = Preconditions.checkNotNull(rpcBroker);
         this.clusterSingletonService = Preconditions.checkNotNull(clusterSingletonService);
     }
 
@@ -54,6 +52,8 @@ public class NeutronMapperInstance implements ClusterSingletonService, AutoClose
     @Override
     public void instantiateServiceInstance() {
         LOG.info("Instantiating {}", this.getClass().getSimpleName());
+        final EndpointService epService = rpcBroker.getRpcService(EndpointService.class);
+        final BaseEndpointService baseEndpointService = rpcBroker.getRpcService(BaseEndpointService.class);
         mapper = new NeutronMapper(dataBroker, epService, baseEndpointService);
     }
 
