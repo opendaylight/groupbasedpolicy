@@ -39,6 +39,8 @@
     <sxp.version>1.4.0-SNAPSHOT</sxp.version>
     <netconf.version>1.2.0-SNAPSHOT</netconf.version>
     <vbd.version>1.1.0-SNAPSHOT</vbd.version>
+    <!-- for jolokia -->
+    <feature.controller.extras.version>1.8.0-SNAPSHOT</feature.controller.extras.version>
   </properties>
 
   <dependencyManagement>
@@ -74,6 +76,15 @@
         <scope>import</scope>
         <type>pom</type>
       </dependency>
+
+      <dependency>
+        <groupId>org.opendaylight.controller</groupId>
+        <artifactId>features-extras</artifactId>
+        <version>${feature.controller.extras.version}</version>
+        <classifier>features</classifier>
+        <type>xml</type>
+      </dependency>
+
 
       <!-- netconf -->
       <dependency>
@@ -125,6 +136,12 @@
       <classifier>features</classifier>
       <type>xml</type>
       <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.controller</groupId>
+      <artifactId>features-extras</artifactId>
+      <classifier>features</classifier>
+      <type>xml</type>
     </dependency>
 
     <!-- Openflow plugin -->
