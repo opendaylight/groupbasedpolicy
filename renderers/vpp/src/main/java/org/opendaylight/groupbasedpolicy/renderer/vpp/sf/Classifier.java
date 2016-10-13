@@ -25,6 +25,7 @@ public abstract class Classifier {
 
     public static final EtherTypeClassifier ETHER_TYPE_CL = new EtherTypeClassifier(null);
     public static final IpProtoClassifier IP_PROTO_CL = new IpProtoClassifier(ETHER_TYPE_CL);
+    public static final L4Classifier L4_CL = new L4Classifier(IP_PROTO_CL);
 
     protected Classifier(Classifier parent) {
         this.parent = parent;
