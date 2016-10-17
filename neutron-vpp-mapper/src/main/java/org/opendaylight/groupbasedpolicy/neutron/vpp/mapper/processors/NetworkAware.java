@@ -14,18 +14,17 @@ import java.util.List;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
-import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.FlatNetwork;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.NetworkTypeBase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.VlanNetwork;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.BridgeDomain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.BridgeDomainBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.BridgeDomainKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.bridge.domain.PhysicalLocationRef;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.bridge.domain.PhysicalLocationRefBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpBridgeDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpBridgeDomainBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpBridgeDomainKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.gbp.bridge.domain.PhysicalLocationRef;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.gbp.bridge.domain.PhysicalLocationRefBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.VlanId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.NetworkTypeFlat;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.NetworkTypeVlan;
@@ -65,17 +64,17 @@ public class NetworkAware implements MappingProvider<Network> {
 
     @Override
     public void processCreatedNeutronDto(Network network) {
-        BridgeDomain bridgeDomain = createBridgeDomain(network);
+        GbpBridgeDomain bridgeDomain = createGbpBridgeDomain(network);
         if (bridgeDomain != null) {
             ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
-            rwTx.put(LogicalDatastoreType.CONFIGURATION, getBridgeDomainIid(bridgeDomain.getId()), bridgeDomain, true);
+            rwTx.put(LogicalDatastoreType.CONFIGURATION, getGbpBridgeDomainIid(bridgeDomain.getId()), bridgeDomain, true);
             DataStoreHelper.submitToDs(rwTx);
         }
     }
 
     @VisibleForTesting
-    BridgeDomain createBridgeDomain(Network network) {
-        BridgeDomainBuilder bridgeDomainBuilder = new BridgeDomainBuilder();
+    GbpBridgeDomain createGbpBridgeDomain(Network network) {
+        GbpBridgeDomainBuilder bridgeDomainBuilder = new GbpBridgeDomainBuilder();
         String description = (network.getName() != null) ? network.getName() : "Neutron network";
         bridgeDomainBuilder.setDescription(description);
         bridgeDomainBuilder.setId(network.getUuid().getValue());
@@ -148,24 +147,24 @@ public class NetworkAware implements MappingProvider<Network> {
             .build();
     }
 
-    InstanceIdentifier<BridgeDomain> getBridgeDomainIid(String id) {
-        return InstanceIdentifier.builder(Config.class).child(BridgeDomain.class, new BridgeDomainKey(id)).build();
+    InstanceIdentifier<GbpBridgeDomain> getGbpBridgeDomainIid(String id) {
+        return InstanceIdentifier.builder(Config.class).child(GbpBridgeDomain.class, new GbpBridgeDomainKey(id)).build();
     }
 
     @Override
     public void processUpdatedNeutronDto(Network originalNetwork, Network updatedNetwork) {
-        InstanceIdentifier<BridgeDomain> bdIid = getBridgeDomainIid(originalNetwork.getUuid().getValue());
+        InstanceIdentifier<GbpBridgeDomain> bdIid = getGbpBridgeDomainIid(originalNetwork.getUuid().getValue());
         ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
         deleteBridgeDomainIfPresent(rwTx, bdIid);
-        BridgeDomain updatedBridgeDomain = createBridgeDomain(updatedNetwork);
+        GbpBridgeDomain updatedBridgeDomain = createGbpBridgeDomain(updatedNetwork);
         if (updatedBridgeDomain != null) {
             rwTx.put(LogicalDatastoreType.CONFIGURATION, bdIid, updatedBridgeDomain, true);
         }
         DataStoreHelper.submitToDs(rwTx);
     }
 
-    private void deleteBridgeDomainIfPresent(ReadWriteTransaction rwTx, InstanceIdentifier<BridgeDomain> bdIid) {
-        Optional<BridgeDomain> readFromDs = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, bdIid, rwTx);
+    private void deleteBridgeDomainIfPresent(ReadWriteTransaction rwTx, InstanceIdentifier<GbpBridgeDomain> bdIid) {
+        Optional<GbpBridgeDomain> readFromDs = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, bdIid, rwTx);
         if (readFromDs.isPresent()) {
             rwTx.delete(LogicalDatastoreType.CONFIGURATION, bdIid);
         }
@@ -173,7 +172,7 @@ public class NetworkAware implements MappingProvider<Network> {
 
     @Override
     public void processDeletedNeutronDto(Network network) {
-        InstanceIdentifier<BridgeDomain> bdIid = getBridgeDomainIid(network.getUuid().getValue());
+        InstanceIdentifier<GbpBridgeDomain> bdIid = getGbpBridgeDomainIid(network.getUuid().getValue());
         ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
         deleteBridgeDomainIfPresent(rwTx, bdIid);
         DataStoreHelper.submitToDs(rwTx);

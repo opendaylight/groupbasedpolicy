@@ -28,8 +28,8 @@ import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.FlatNetwork;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.VlanNetwork;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.BridgeDomain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.bridge.domain.PhysicalLocationRef;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpBridgeDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.gbp.bridge.domain.PhysicalLocationRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.VlanId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.NetworkTypeFlat;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.NetworkTypeVlan;
@@ -70,8 +70,8 @@ public class NetworkAwareTest extends AbstractDataBrokerTest {
         Network network = createTestNetwork("net", netExtBuilder.build());
         networkAware.processCreatedNeutronDto(network);
         ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
-        Optional<BridgeDomain> optBrDomain = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
-                networkAware.getBridgeDomainIid(network.getUuid().getValue()), rTx);
+        Optional<GbpBridgeDomain> optBrDomain = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
+                networkAware.getGbpBridgeDomainIid(network.getUuid().getValue()), rTx);
         assertTrue(optBrDomain.isPresent());
     }
 
@@ -84,8 +84,8 @@ public class NetworkAwareTest extends AbstractDataBrokerTest {
             .build();
         networkAware.processUpdatedNeutronDto(network1, network2);
         ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
-        Optional<BridgeDomain> optBrDomain = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
-                networkAware.getBridgeDomainIid(network2.getUuid().getValue()), rTx);
+        Optional<GbpBridgeDomain> optBrDomain = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
+                networkAware.getGbpBridgeDomainIid(network2.getUuid().getValue()), rTx);
         assertTrue(optBrDomain.isPresent());
         assertEquals(optBrDomain.get().getDescription(), "net2");
     }
@@ -96,8 +96,8 @@ public class NetworkAwareTest extends AbstractDataBrokerTest {
         Network network = createTestNetwork("net1", netExtBuilder.build());
         networkAware.processDeletedNeutronDto(network);
         ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
-        Optional<BridgeDomain> optBrDomain = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
-                networkAware.getBridgeDomainIid(network.getUuid().getValue()), rTx);
+        Optional<GbpBridgeDomain> optBrDomain = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
+                networkAware.getGbpBridgeDomainIid(network.getUuid().getValue()), rTx);
         assertFalse(optBrDomain.isPresent());
     }
 
@@ -106,7 +106,7 @@ public class NetworkAwareTest extends AbstractDataBrokerTest {
         netExtBuilder.setNetworkType(NetworkTypeVlan.class);
         netExtBuilder.setSegmentationId("2016");
         Network vlanNetwork = createTestNetwork("VlanNet", netExtBuilder.build());
-        BridgeDomain bridgeDomain = networkAware.createBridgeDomain(vlanNetwork);
+        GbpBridgeDomain bridgeDomain = networkAware.createGbpBridgeDomain(vlanNetwork);
         assertEquals(bridgeDomain.getId(), vlanNetwork.getUuid().getValue());
         assertEquals(bridgeDomain.getDescription(), vlanNetwork.getName());
         assertEquals(bridgeDomain.getType(), VlanNetwork.class);
@@ -117,7 +117,7 @@ public class NetworkAwareTest extends AbstractDataBrokerTest {
     public void testCreateBridgeDomain_flatNetwork() {
         netExtBuilder.setNetworkType(NetworkTypeFlat.class);
         Network flatNetwork = createTestNetwork("FlatNet", netExtBuilder.build());
-        BridgeDomain bridgeDomain = networkAware.createBridgeDomain(flatNetwork);
+        GbpBridgeDomain bridgeDomain = networkAware.createGbpBridgeDomain(flatNetwork);
         assertEquals(bridgeDomain.getId(), flatNetwork.getUuid().getValue());
         assertEquals(bridgeDomain.getDescription(), flatNetwork.getName());
         assertEquals(bridgeDomain.getType(), FlatNetwork.class);
@@ -128,14 +128,14 @@ public class NetworkAwareTest extends AbstractDataBrokerTest {
         netExtBuilder.setNetworkType(NetworkTypeFlat.class);
         netExtBuilder.setPhysicalNetwork(null);
         Network flatNetwork = createTestNetwork("FlatNet", netExtBuilder.build());
-        BridgeDomain bridgeDomain = networkAware.createBridgeDomain(flatNetwork);
+        GbpBridgeDomain bridgeDomain = networkAware.createGbpBridgeDomain(flatNetwork);
         assertNull(bridgeDomain.getPhysicalLocationRef());
     }
 
     @Test
     public void testCreateBridgeDomain_noNetworkType() {
         Network vlanNetwork = createTestNetwork("noTypeNet", new NetworkProviderExtensionBuilder().build());
-        BridgeDomain bridgeDomain = networkAware.createBridgeDomain(vlanNetwork);
+        GbpBridgeDomain bridgeDomain = networkAware.createGbpBridgeDomain(vlanNetwork);
         assertNull(bridgeDomain);
     }
 

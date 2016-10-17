@@ -24,7 +24,6 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.DtoFactory;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.RendererPolicyConfEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.VppEndpointConfEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
@@ -51,7 +50,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_render
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpointKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.bridge.domain.PhysicalLocationRef;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.gbp.bridge.domain.PhysicalLocationRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.VhostUserCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VppInterfaceAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VxlanVni;
@@ -79,7 +78,7 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
     private DataBroker mountPointDataBroker;
     private DataBroker dataBroker;
 
-    private BridgeDomainManager bdManager;
+    private BridgeDomainManagerImpl bdManager;
     private InterfaceManager ifaceManager;
     private ForwardingManager fwManager;
     private VppRendererPolicyManager vppRendererPolicyManager;
@@ -93,7 +92,6 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
 
     @Before
     public void init() throws Exception {
-        ForwardingManager.WAIT_FOR_BD_CREATION = 2;
         mountedDataProviderMock = Mockito.mock(MountedDataBrokerProvider.class);
         mountPointDataBroker = getDataBroker();
         setup(); // initialize new data broker for ODL data store
@@ -105,6 +103,7 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         bdManager = new BridgeDomainManagerImpl(mountPointDataBroker);
         fwManager = new ForwardingManager(ifaceManager, bdManager, dataBroker);
         vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, dataBroker);
+        fwManager.setTimer((byte) 1);
     }
 
     @Test
