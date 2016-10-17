@@ -59,15 +59,13 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.faas.rev15
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.faas.rev151009.logical.networks.logical.network.ProviderNetworkBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.faas.rev151009.mapped.tenants.entities.MappedEntity;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.faas.rev151009.mapped.tenants.entities.MappedTenant;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.faas.rev151009.mapped.tenants.entities.mapped.entity.MappedSubnet;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.faas.rev151009.mapped.tenants.entities.mapped.entity.MappedSubnetBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2FloodDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3Context;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3ContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.SubnetBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroupBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.ResolvedPolicies;
@@ -85,27 +83,27 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({UlnDatastoreApi.class})
+@PrepareForTest(UlnDatastoreApi.class)
 public class FaasPolicyManagerCovrgTest {
 
     private InstanceIdentifier<DataObject> policyId;
     private AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change;
     DataBroker dataProvider;
     private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(Runtime.getRuntime()
-        .availableProcessors());
-    EndpointGroupId consumerEpgId = new EndpointGroupId("consumerEpgId");
-    SubnetId consumerSubnet = new SubnetId("consumerSubnet");
-    SubnetId providerSubnet = new SubnetId("providerSubnet");
-    EndpointGroupId providerEpgId = new EndpointGroupId("providerEpgId");
-    ContractId contractId = new ContractId("contractId");
-    TenantId tenantId = new TenantId("tenantId");
-    Uuid faasTenantId = new Uuid("0eb98cf5-086c-4a81-8a4e-0c3b4566108b");
-    Uuid faasSecRulesId = new Uuid("1eb98cf5-086c-4a81-8a4e-0c3b4566108b");
-    L3ContextId l3Context = new L3ContextId("l3ContextId");
-    EndpointGroupId epgId = new EndpointGroupId("epgId");
-    SubnetId subnetId = new SubnetId("subnetId");
-    Uuid dummyUuid1 = new Uuid("2eb98cf5-086c-4a81-8a4e-0c3b4566108b");
-    Uuid dummyUuid2 = new Uuid("3eb98cf5-086c-4a81-8a4e-0c3b4566108b");
+            .availableProcessors());
+    private EndpointGroupId consumerEpgId = new EndpointGroupId("consumerEpgId");
+    private SubnetId consumerSubnet = new SubnetId("consumerSubnet");
+    private SubnetId providerSubnet = new SubnetId("providerSubnet");
+    private EndpointGroupId providerEpgId = new EndpointGroupId("providerEpgId");
+    private ContractId contractId = new ContractId("contractId");
+    private TenantId tenantId = new TenantId("tenantId");
+    private Uuid faasTenantId = new Uuid("0eb98cf5-086c-4a81-8a4e-0c3b4566108b");
+    private Uuid faasSecRulesId = new Uuid("1eb98cf5-086c-4a81-8a4e-0c3b4566108b");
+    private L3ContextId l3Context = new L3ContextId("l3ContextId");
+    private EndpointGroupId epgId = new EndpointGroupId("epgId");
+    private SubnetId subnetId = new SubnetId("subnetId");
+    private Uuid dummyUuid1 = new Uuid("2eb98cf5-086c-4a81-8a4e-0c3b4566108b");
+    private Uuid dummyUuid2 = new Uuid("3eb98cf5-086c-4a81-8a4e-0c3b4566108b");
 
     @SuppressWarnings("unchecked")
     @Before
@@ -181,7 +179,7 @@ public class FaasPolicyManagerCovrgTest {
         when(roTx.read(LogicalDatastoreType.OPERATIONAL,
                 FaasIidFactory.logicalNetworksIid())).thenReturn(futureLogicalNetworks);
         LogicalNetworks logicalNetworks = new LogicalNetworksBuilder()
-                .setLogicalNetwork( new ArrayList<LogicalNetwork>())
+                .setLogicalNetwork(new ArrayList<LogicalNetwork>())
                 .build();
         Optional<LogicalNetworks> optLogicalNetworks = mock(Optional.class);
         when(optLogicalNetworks.isPresent()).thenReturn(true);
@@ -196,7 +194,7 @@ public class FaasPolicyManagerCovrgTest {
     }
 
     @Test
-    public void testRegisterTenant_null(){
+    public void testRegisterTenant_null() {
         FaasPolicyManager policyManager = spy(new FaasPolicyManager(dataProvider, executor));
         doNothing().when(policyManager).registerTenant(tenantId, null);
 
@@ -277,14 +275,14 @@ public class FaasPolicyManagerCovrgTest {
     }
 
     @Test
-    public void testIsUuid(){
+    public void testIsUuid() {
         assertFalse(FaasPolicyManager.isUUid(null));
         assertFalse(FaasPolicyManager.isUUid("non-matching string"));
         assertTrue(FaasPolicyManager.isUUid("12345678-1234-5123-b123-0123456789ab"));
     }
 
     @Test
-    public void testHandledPolicy_notEquals(){
+    public void testHandledPolicy_notEquals() {
         FaasPolicyManager policyManager = new FaasPolicyManager(dataProvider, executor);
         ResolvedPolicy policy = new ResolvedPolicyBuilder()
                 .setConsumerTenantId(new TenantId("t1"))
@@ -295,7 +293,7 @@ public class FaasPolicyManagerCovrgTest {
     }
 
     @Test
-    public void testRegisterFollowedEndpointgroup(){
+    public void testRegisterFollowedEndpointgroup() {
         EndpointGroupId epgId = new EndpointGroupId("epgId");
         FaasPolicyManager policyManager = new FaasPolicyManager(dataProvider, executor);
 
@@ -565,22 +563,23 @@ public class FaasPolicyManagerCovrgTest {
     }
 
     @Test
-    public void testRemoveLogicalNetwork_null(){
+    public void testRemoveLogicalNetwork_null() {
         FaasPolicyManager policyManager = new FaasPolicyManager(dataProvider, executor);
 
         policyManager.removeLogicalNetwork(null);
     }
 
-    /*@SuppressWarnings("unchecked")
+    @SuppressWarnings("unchecked")
     @Test
     public void testCreateLayer3LogicalNetwork() throws ReadFailedException {
-        ReadOnlyTransaction roTx = mock(ReadOnlyTransaction.class);
+        ReadOnlyTransaction roTx1 = mock(ReadOnlyTransaction.class);
+        ReadOnlyTransaction roTx2 = mock(ReadOnlyTransaction.class);
 
         CheckedFuture<Optional<ResolvedPolicies>, ReadFailedException> futureResolvedPolicies =
                 mock(CheckedFuture.class);
         Optional<ResolvedPolicies> optResolvedPolicies = mock(Optional.class);
         when(futureResolvedPolicies.checkedGet()).thenReturn(optResolvedPolicies);
-        when(roTx.read(LogicalDatastoreType.OPERATIONAL,
+        when(roTx1.read(LogicalDatastoreType.OPERATIONAL,
                 InstanceIdentifier.builder(ResolvedPolicies.class).build())).thenReturn(
                 futureResolvedPolicies);
 
@@ -590,84 +589,22 @@ public class FaasPolicyManagerCovrgTest {
         CheckedFuture<Optional<MappedSubnet>, ReadFailedException> futureMappedSubnet =
                 mock(CheckedFuture.class);
         Optional<MappedSubnet> optMappedSubnet = mock(Optional.class);
-        when(optMappedSubnet.isPresent()).thenReturn(true);
+        when(optMappedSubnet.isPresent()).thenReturn(false);
         when(optMappedSubnet.get()).thenReturn(mappedSubnet);
         when(futureMappedSubnet.checkedGet()).thenReturn(optMappedSubnet);
-        when(roTx.read(LogicalDatastoreType.OPERATIONAL,
+        when(roTx2.read(LogicalDatastoreType.OPERATIONAL,
                 FaasIidFactory.mappedSubnetIid(tenantId, subnetId))).thenReturn(
                 futureMappedSubnet);
 
-        when(dataProvider.newReadOnlyTransaction()).thenReturn(roTx);
+        when(dataProvider.newReadOnlyTransaction()).thenReturn(roTx1);
+        when(dataProvider.newReadOnlyTransaction()).thenReturn(roTx2);
 
         EndpointGroup consumerEpg = new EndpointGroupBuilder().setId(consumerEpgId).build();
         EndpointGroup providerEpg = new EndpointGroupBuilder().setId(providerEpgId).build();
         FaasPolicyManager policyManager = new FaasPolicyManager(dataProvider, executor);
 
-        policyManager.registerSubnetWithEpg(consumerEpgId, tenantId, consumerSubnet);
-        policyManager.registerSubnetWithEpg(providerEpgId, tenantId, providerSubnet);
         policyManager.createLayer3LogicalNetwork(consumerEpg, contractId, providerEpg, tenantId,
                 ServiceCommunicationLayer.Layer3, ExternalImplicitGroup.ProviderEpg);
-    }*/
-
-
-
-
-
-    private L3Context makeTestL3Context() {
-        L3ContextBuilder builder = new L3ContextBuilder();
-        builder.setId(l3Context);
-        return builder.build();
     }
 
-    private L2FloodDomain makeTestL2FloodDomain(String id, L2BridgeDomainId brdgId) {
-        L2FloodDomainBuilder builder = new L2FloodDomainBuilder();
-        builder.setId(new L2FloodDomainId(id));
-        builder.setParent(brdgId);
-        return builder.build();
-    }
-
-    private L2BridgeDomain makeTestBridgeDomain(String id) {
-        L2BridgeDomainBuilder builder = new L2BridgeDomainBuilder();
-        builder.setId(new L2BridgeDomainId(id));
-        builder.setParent(l3Context);
-        return builder.build();
-    }
-
-    private EndpointGroup makeTestEndpointGroup(EndpointGroupId epgId) {
-        EndpointGroupBuilder builder = new EndpointGroupBuilder();
-        builder.setId(epgId);
-        return builder.build();
-    }
-
-    private Subnet makeTestSubnet(SubnetId subnetId, L2FloodDomainId l2FloodDomainId) {
-        SubnetBuilder builder = new SubnetBuilder();
-        builder.setId(subnetId);
-        builder.setParent(l2FloodDomainId);
-        return builder.build();
-
-    }
-
-    private DataObject makeTestResolvedPolicy() {
-        ResolvedPolicyBuilder builder = new ResolvedPolicyBuilder();
-        builder.setConsumerEpgId(consumerEpgId);
-        builder.setConsumerTenantId(tenantId);
-        builder.setProviderEpgId(providerEpgId);
-        builder.setProviderTenantId(tenantId);
-        List<PolicyRuleGroupWithEndpointConstraints> pRulesGrpsWEp = new ArrayList<>();
-        PolicyRuleGroupWithEndpointConstraintsBuilder pRulesGrpWEp = new PolicyRuleGroupWithEndpointConstraintsBuilder();
-        List<PolicyRuleGroup> pRulesGrps = new ArrayList<>();
-        PolicyRuleGroupBuilder pRulesGrp = new PolicyRuleGroupBuilder();
-        pRulesGrp.setContractId(contractId);
-        pRulesGrps.add(pRulesGrp.build());
-        pRulesGrpWEp.setPolicyRuleGroup(pRulesGrps);
-        pRulesGrpsWEp.add(pRulesGrpWEp.build());
-        builder.setPolicyRuleGroupWithEndpointConstraints(pRulesGrpsWEp);
-        return builder.build();
-    }
-
-    private DataObject makeTestResolvedPolicyWithImpExternalEpg() {
-        ResolvedPolicyBuilder builder = new ResolvedPolicyBuilder((ResolvedPolicy) makeTestResolvedPolicy());
-        builder.setExternalImplicitGroup(ExternalImplicitGroup.ConsumerEpg);
-        return builder.build();
-    }
 }
