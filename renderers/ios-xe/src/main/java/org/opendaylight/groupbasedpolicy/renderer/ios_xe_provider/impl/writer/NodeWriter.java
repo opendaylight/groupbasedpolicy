@@ -8,13 +8,12 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer;
 
-import java.util.ArrayList;
-import java.util.List;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import java.util.ArrayList;
+import java.util.List;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
@@ -25,7 +24,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.RendererKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererNodes;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererNodesBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNodeKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -54,14 +52,20 @@ public class NodeWriter {
         if (rendererNodesCache.isEmpty()) {
             return Futures.immediateFuture(true);
         }
-        final RendererNodes rendererNodes = loadCachedRendererNodes();
+
         final WriteTransaction writeTransaction = dataBroker.newWriteOnlyTransaction();
-        final InstanceIdentifier<RendererNodes> iid = buildRendererNodesIid();
+        final ArrayList<RendererNode> rendererNodes = new ArrayList<>(rendererNodesCache);
+        // Clear cache
+        rendererNodesCache.clear();
+
+        boolean createParents = true;
+        for (RendererNode rendererNode : rendererNodes) {
+            final InstanceIdentifier<RendererNode> iid = buildRendererNodeIid(rendererNode);
+            writeTransaction.put(LogicalDatastoreType.OPERATIONAL, iid, rendererNode, createParents);
+            createParents = false;
+        }
         try {
-            writeTransaction.put(LogicalDatastoreType.OPERATIONAL, iid, rendererNodes, true);
-            final boolean result  = DataStoreHelper.submitToDs(writeTransaction);
-            // Clear cache
-            rendererNodesCache.clear();
+            final boolean result = DataStoreHelper.submitToDs(writeTransaction);
             return Futures.immediateFuture(result);
         } catch (Exception e) {
             LOG.error("Failed to .. {}", e.getMessage());
@@ -97,24 +101,11 @@ public class NodeWriter {
         return Futures.immediateFuture(result);
     }
 
-    private InstanceIdentifier<RendererNodes> buildRendererNodesIid() {
-        return InstanceIdentifier.builder(Renderers.class)
-                .child(Renderer.class, new RendererKey(new RendererName(PolicyManagerImpl.IOS_XE_RENDERER)))
-                .child(RendererNodes.class)
-                .build();
-    }
-
     private InstanceIdentifier<RendererNode> buildRendererNodeIid(final RendererNode rendererNode) {
         return InstanceIdentifier.builder(Renderers.class)
                 .child(Renderer.class, new RendererKey(new RendererName(PolicyManagerImpl.IOS_XE_RENDERER)))
                 .child(RendererNodes.class)
                 .child(RendererNode.class, new RendererNodeKey(rendererNode.getNodePath()))
                 .build();
-    }
-
-    private RendererNodes loadCachedRendererNodes() {
-        final RendererNodesBuilder rendererNodesBuilder = new RendererNodesBuilder();
-        rendererNodesBuilder.setRendererNode(new ArrayList<>(rendererNodesCache));
-        return rendererNodesBuilder.build();
     }
 }
