@@ -11,17 +11,17 @@
   <parent>
     <groupId>org.opendaylight.controller</groupId>
     <artifactId>config-parent</artifactId>
-    <version>0.4.4-SNAPSHOT</version>
+    <version>0.4.5-SNAPSHOT</version>
     <relativePath/>
   </parent>
 
   <groupId>org.opendaylight.groupbasedpolicy</groupId>
   <artifactId>neutron-ovsdb</artifactId>
-  <version>0.3.4-SNAPSHOT</version>
+  <version>0.3.5-SNAPSHOT</version>
   <packaging>bundle</packaging>
   
   <properties>
-    <ovsdb.version>1.2.5-SNAPSHOT</ovsdb.version>
+    <ovsdb.version>1.2.6-SNAPSHOT</ovsdb.version>
   </properties>
 
   <dependencies>
