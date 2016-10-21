@@ -12,17 +12,13 @@ import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topolog
 import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus.ConnectionStatus.Connecting;
 import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus.ConnectionStatus.UnableToConnect;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.CheckedFuture;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPoint;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
@@ -41,6 +37,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev15
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionParameters;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus.ConnectionStatus;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.netconf.node.connection.status.AvailableCapabilities;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.netconf.node.connection.status.available.capabilities.AvailableCapability;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.netconf.node.connection.status.available.capabilities.AvailableCapabilityBuilder;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
@@ -52,13 +50,20 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+
 public class NodeManager {
 
     private static final TopologyId TOPOLOGY_ID = new TopologyId("topology-netconf");
     private static final Logger LOG = LoggerFactory.getLogger(NodeManager.class);
     private final DataBroker dataBroker;
     private final MountPointService mountService;
-    private final List<String> requiredCapabilities;
+    private final List<AvailableCapability> requiredCapabilities;
 
     public NodeManager(final DataBroker dataBroker, final BindingAwareBroker.ProviderContext session) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
@@ -240,8 +245,8 @@ public class NodeManager {
         return true;
     }
 
-    private boolean capabilityCheck(final List<String> capabilities) {
-        for (String requiredCapability : requiredCapabilities) {
+    private boolean capabilityCheck(final List<AvailableCapability> capabilities) {
+        for (AvailableCapability requiredCapability : requiredCapabilities) {
             if (!capabilities.contains(requiredCapability)) {
                 return false;
             }
@@ -315,14 +320,20 @@ public class NodeManager {
         return netconfNode;
     }
 
-    private class RequiredCapabilities {
+    private static class RequiredCapabilities {
 
-        private static final String NED = "(urn:ios?revision=2016-03-08)ned";
-        private static final String TAILF_COMMON = "(http://tail-f.com/yang/common?revision=2015-05-22)tailf-common";
-        private static final String TAILF_CLI_EXTENSION = "(http://tail-f.com/yang/common?revision=2015-03-19)tailf-cli-extensions";
-        private static final String TAILF_META_EXTENSION = "(http://tail-f.com/yang/common?revision=2013-11-07)tailf-meta-extensions";
-        private static final String IETF_YANG_TYPES = "(urn:ietf:params:xml:ns:yang:ietf-yang-types?revision=2013-07-15)ietf-yang-types";
-        private static final String IETF_INET_TYPES = "(urn:ietf:params:xml:ns:yang:ietf-inet-types?revision=2013-07-15)ietf-inet-types";
+        private static final AvailableCapability NED =
+                new AvailableCapabilityBuilder().setCapability("(urn:ios?revision=2016-03-08)ned").build();
+        private static final AvailableCapability TAILF_COMMON = new AvailableCapabilityBuilder()
+            .setCapability("(http://tail-f.com/yang/common?revision=2015-05-22)tailf-common").build();
+        private static final AvailableCapability TAILF_CLI_EXTENSION = new AvailableCapabilityBuilder()
+            .setCapability("(http://tail-f.com/yang/common?revision=2015-03-19)tailf-cli-extensions").build();
+        private static final AvailableCapability TAILF_META_EXTENSION = new AvailableCapabilityBuilder()
+            .setCapability("(http://tail-f.com/yang/common?revision=2013-11-07)tailf-meta-extensions").build();
+        private static final AvailableCapability IETF_YANG_TYPES = new AvailableCapabilityBuilder()
+            .setCapability("(urn:ietf:params:xml:ns:yang:ietf-yang-types?revision=2013-07-15)ietf-yang-types").build();
+        private static final AvailableCapability IETF_INET_TYPES = new AvailableCapabilityBuilder()
+            .setCapability("(urn:ietf:params:xml:ns:yang:ietf-inet-types?revision=2013-07-15)ietf-inet-types").build();
 
         /**
          * Initialize all common capabilities required by IOS-XE renderer. Any connected node is examined whether it's
@@ -331,8 +342,8 @@ public class NodeManager {
          *
          * @return list of string representations of required capabilities
          */
-        List<String> initializeRequiredCapabilities() {
-            final String capabilityEntries[] = {NED, TAILF_COMMON, TAILF_CLI_EXTENSION, TAILF_META_EXTENSION,
+        List<AvailableCapability> initializeRequiredCapabilities() {
+            final AvailableCapability capabilityEntries[] = {NED, TAILF_COMMON, TAILF_CLI_EXTENSION, TAILF_META_EXTENSION,
                     IETF_YANG_TYPES, IETF_INET_TYPES};
             return Arrays.asList(capabilityEntries);
         }

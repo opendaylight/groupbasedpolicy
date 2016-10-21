@@ -18,13 +18,13 @@ import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topolog
 import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus.ConnectionStatus.Connecting;
 import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus.ConnectionStatus.UnableToConnect;
 
-import javax.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.CheckedFuture;
+
+import javax.annotation.Nonnull;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -46,6 +46,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev15
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.netconf.node.connection.status.AvailableCapabilities;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.netconf.node.connection.status.AvailableCapabilitiesBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.netconf.node.connection.status.available.capabilities.AvailableCapability;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.netconf.node.connection.status.available.capabilities.AvailableCapabilityBuilder;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
@@ -55,6 +57,9 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeBuilder;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.CheckedFuture;
 
 
 public class NodeManagerTest extends CustomDataBrokerTest {
@@ -336,23 +341,41 @@ public class NodeManagerTest extends CustomDataBrokerTest {
     }
 
     private AvailableCapabilities partialCapabilities() {
-        final String c1 = "(urn:ios?revision=2016-03-08)ned";
-        final String c2 = "(http://tail-f.com/yang/common?revision=2015-05-22)tailf-common";
-        final String c3 = "(http://tail-f.com/yang/common?revision=2015-03-19)tailf-cli-extensions";
-        String[] capabilityList = {c1, c2, c3};
+        final AvailableCapability c1 = new AvailableCapabilityBuilder()
+                .setCapability("(urn:ios?revision=2016-03-08)ned")
+                .build();
+        final AvailableCapability c2 = new AvailableCapabilityBuilder()
+                .setCapability("(http://tail-f.com/yang/common?revision=2015-05-22)tailf-common")
+                .build();
+        final AvailableCapability c3 = new AvailableCapabilityBuilder()
+                .setCapability("(http://tail-f.com/yang/common?revision=2015-03-19)tailf-cli-extensions")
+                .build();
+        AvailableCapability[] capabilityList = {c1, c2, c3};
         AvailableCapabilitiesBuilder availableCapabilitiesBuilder = new AvailableCapabilitiesBuilder();
         availableCapabilitiesBuilder.setAvailableCapability(Arrays.asList(capabilityList));
         return availableCapabilitiesBuilder.build();
     }
 
     private AvailableCapabilities fullCapabilities() {
-        final String c1 = "(urn:ios?revision=2016-03-08)ned";
-        final String c2 = "(http://tail-f.com/yang/common?revision=2015-05-22)tailf-common";
-        final String c3 = "(http://tail-f.com/yang/common?revision=2015-03-19)tailf-cli-extensions";
-        final String c4 = "(http://tail-f.com/yang/common?revision=2013-11-07)tailf-meta-extensions";
-        final String c5 = "(urn:ietf:params:xml:ns:yang:ietf-yang-types?revision=2013-07-15)ietf-yang-types";
-        final String c6 = "(urn:ietf:params:xml:ns:yang:ietf-inet-types?revision=2013-07-15)ietf-inet-types";
-        String[] capabilityList = {c1, c2, c3, c4, c5, c6};
+        final AvailableCapability c1 = new AvailableCapabilityBuilder()
+                .setCapability("(urn:ios?revision=2016-03-08)ned")
+                .build();
+        final AvailableCapability c2 = new AvailableCapabilityBuilder()
+                .setCapability("(http://tail-f.com/yang/common?revision=2015-05-22)tailf-common")
+                .build();
+        final AvailableCapability c3 = new AvailableCapabilityBuilder()
+                .setCapability("(http://tail-f.com/yang/common?revision=2015-03-19)tailf-cli-extensions")
+                .build();
+        final AvailableCapability c4 = new AvailableCapabilityBuilder()
+                .setCapability("(http://tail-f.com/yang/common?revision=2013-11-07)tailf-meta-extensions")
+                .build();
+        final AvailableCapability c5 = new AvailableCapabilityBuilder()
+                .setCapability("(urn:ietf:params:xml:ns:yang:ietf-yang-types?revision=2013-07-15)ietf-yang-types")
+                .build();
+        final AvailableCapability c6 = new AvailableCapabilityBuilder()
+                .setCapability("(urn:ietf:params:xml:ns:yang:ietf-inet-types?revision=2013-07-15)ietf-inet-types")
+                .build();
+        AvailableCapability[] capabilityList = {c1, c2, c3, c4, c5, c6};
         AvailableCapabilitiesBuilder availableCapabilitiesBuilder = new AvailableCapabilitiesBuilder();
         availableCapabilitiesBuilder.setAvailableCapability(Arrays.asList(capabilityList));
         return availableCapabilitiesBuilder.build();

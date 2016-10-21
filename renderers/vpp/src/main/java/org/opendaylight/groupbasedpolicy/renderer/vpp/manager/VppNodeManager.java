@@ -26,6 +26,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNodeKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.netconf.node.connection.status.available.capabilities.AvailableCapability;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.netconf.node.connection.status.available.capabilities.AvailableCapabilityBuilder;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
@@ -45,13 +47,14 @@ public class VppNodeManager {
     private static final TopologyId TOPOLOGY_ID = new TopologyId("topology-netconf");
     private static final Logger LOG = LoggerFactory.getLogger(VppNodeManager.class);
     private static final Map<InstanceIdentifier<Node>, DataBroker> netconfNodeCache = new HashMap<>();
-    private static final String V3PO_CAPABILITY = "(urn:opendaylight:params:xml:ns:yang:v3po?revision=2016-12-14)v3po";
-    private static final String INTERFACES_CAPABILITY =
-            "(urn:ietf:params:xml:ns:yang:ietf-interfaces?revision=2014-05-08)ietf-interfaces";
+    private static final AvailableCapability V3PO_CAPABILITY = new AvailableCapabilityBuilder()
+            .setCapability("(urn:opendaylight:params:xml:ns:yang:v3po?revision=2016-12-14)v3po").build();
+    private static final AvailableCapability INTERFACES_CAPABILITY = new AvailableCapabilityBuilder()
+            .setCapability("(urn:ietf:params:xml:ns:yang:ietf-interfaces?revision=2014-05-08)ietf-interfaces").build();
     private static final NodeId CONTROLLER_CONFIG_NODE = new NodeId("controller-config");
     private final DataBroker dataBroker;
     private final MountPointService mountService;
-    private final List<String> requiredCapabilities;
+    private final List<AvailableCapability> requiredCapabilities;
 
     public VppNodeManager(DataBroker dataBroker, BindingAwareBroker.ProviderContext session) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
@@ -184,8 +187,8 @@ public class VppNodeManager {
         return true;
     }
 
-    private boolean capabilityCheck(final List<String> capabilities) {
-        for (String requiredCapability : requiredCapabilities) {
+    private boolean capabilityCheck(final List<AvailableCapability> capabilities) {
+        for (AvailableCapability requiredCapability : requiredCapabilities) {
             if (!capabilities.contains(requiredCapability)) {
                 return false;
             }
@@ -230,10 +233,10 @@ public class VppNodeManager {
      *
      * @return list of string representations of required capabilities
      */
-    private List<String> initializeRequiredCapabilities() {
+    private List<AvailableCapability> initializeRequiredCapabilities() {
         // Required device capabilities
 
-        String[] capabilityEntries = {V3PO_CAPABILITY, INTERFACES_CAPABILITY};
+        AvailableCapability[] capabilityEntries = {V3PO_CAPABILITY, INTERFACES_CAPABILITY};
         return Arrays.asList(capabilityEntries);
     }
 

@@ -42,6 +42,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev15
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.netconf.node.connection.status.AvailableCapabilitiesBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.netconf.node.connection.status.UnavailableCapabilitiesBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.netconf.node.connection.status.available.capabilities.AvailableCapability;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.netconf.node.connection.status.available.capabilities.AvailableCapabilityBuilder;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
@@ -96,9 +98,9 @@ public class VppManagerDataStoreTest extends VppRendererDataBrokerTest {
         Host host = new Host(new IpAddress(new Ipv4Address("192.168.255.101")));
         PortNumber portNumber = new PortNumber(2830);
 
-        List<String> avaibleCapabilitiesList = new ArrayList<>();
-        avaibleCapabilitiesList.add(V3PO_CAPABILITY);
-        avaibleCapabilitiesList.add(INTERFACES_CAPABILITY);
+        List<AvailableCapability> avaibleCapabilitiesList = new ArrayList<>();
+        avaibleCapabilitiesList.add(new AvailableCapabilityBuilder().setCapability(V3PO_CAPABILITY).build());
+        avaibleCapabilitiesList.add(new AvailableCapabilityBuilder().setCapability(INTERFACES_CAPABILITY).build());
 
         NetconfNode netconfNode = new NetconfNodeBuilder().setHost(host)
             .setPort(portNumber)
@@ -112,13 +114,13 @@ public class VppManagerDataStoreTest extends VppRendererDataBrokerTest {
     }
 
     @Test
-    public void connectNode() throws ReadFailedException {
+    public void connectNode() throws Exception {
         WriteTransaction writeTransaction = dataBroker.newWriteOnlyTransaction();
         Node testVppNode = createNode(NODE_NAME, NetconfNodeConnectionStatus.ConnectionStatus.Connected);
 
         writeTransaction.put(LogicalDatastoreType.OPERATIONAL, NODE_IID, testVppNode, true);
 
-        writeTransaction.submit();
+        writeTransaction.submit().get();
 
         ReadOnlyTransaction readOnlyTransaction = dataBroker.newReadOnlyTransaction();
         CheckedFuture<Optional<Renderer>, ReadFailedException> future =
@@ -132,13 +134,13 @@ public class VppManagerDataStoreTest extends VppRendererDataBrokerTest {
     }
 
     @Test
-    public void disconnectNode() throws ReadFailedException, InterruptedException {
+    public void disconnectNode() throws Exception {
         WriteTransaction writeTransaction = dataBroker.newWriteOnlyTransaction();
         Node testVppNode = createNode(NODE_NAME, NetconfNodeConnectionStatus.ConnectionStatus.Connected);
 
         writeTransaction.put(LogicalDatastoreType.OPERATIONAL, NODE_IID, testVppNode, true);
 
-        writeTransaction.submit();
+        writeTransaction.submit().get();
 
         ReadOnlyTransaction readOnlyTransaction = dataBroker.newReadOnlyTransaction();
         CheckedFuture<Optional<Renderer>, ReadFailedException> future =
