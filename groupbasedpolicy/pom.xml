@@ -34,6 +34,10 @@
       <groupId>org.opendaylight.mdsal.model</groupId>
       <artifactId>yang-ext</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.opendaylight.mdsal</groupId>
+      <artifactId>mdsal-singleton-common-api</artifactId>
+    </dependency>
     <!-- net utils dependencies -->
     <dependency>
       <groupId>com.googlecode.java-ipv6</groupId>
