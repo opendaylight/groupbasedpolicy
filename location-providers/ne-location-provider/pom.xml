@@ -10,7 +10,7 @@
   <parent>
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>groupbasedpolicy-location-providers</artifactId>
-    <version>0.4.1-SNAPSHOT</version>
+    <version>0.4.1-Boron-SR1</version>
     <relativePath>../</relativePath>
   </parent>
 

@@ -10,13 +10,13 @@
   <parent>
     <groupId>org.opendaylight.controller</groupId>
     <artifactId>config-parent</artifactId>
-    <version>0.5.1-SNAPSHOT</version>
+    <version>0.5.1-Boron-SR1</version>
     <relativePath/>
   </parent>
 
   <groupId>org.opendaylight.groupbasedpolicy</groupId>
   <artifactId>groupbasedpolicy</artifactId>
-  <version>0.4.1-SNAPSHOT</version>
+  <version>0.4.1-Boron-SR1</version>
   <packaging>bundle</packaging>
   <name>groupbasedpolicy-base</name>
 
