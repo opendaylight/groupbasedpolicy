@@ -9,6 +9,7 @@
 package org.opendaylight.groupbasedpolicy.neutron.vpp.mapper;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.groupbasedpolicy.neutron.vpp.mapper.hostconfigs.VppNodeListener;
 import org.opendaylight.groupbasedpolicy.neutron.vpp.mapper.processors.NeutronListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,10 +17,12 @@ import org.slf4j.LoggerFactory;
 public class NeutronVppMapper implements AutoCloseable {
 
     NeutronListener neutronListener;
+    VppNodeListener vppNodeListener;
     private static final Logger LOG = LoggerFactory.getLogger(NeutronVppMapper.class);
 
     public NeutronVppMapper(String socketPath, String socketPrefix, DataBroker dataBroker) {
         SocketInfo socketInfo = new SocketInfo(socketPath, socketPrefix);
+        vppNodeListener = new VppNodeListener(dataBroker, socketInfo);
         neutronListener = new NeutronListener(dataBroker, socketInfo);
         LOG.info("Neutron VPP started!");
     }
@@ -27,5 +30,6 @@ public class NeutronVppMapper implements AutoCloseable {
     @Override
     public void close() {
         neutronListener.close();
+        vppNodeListener.close();
     }
 }

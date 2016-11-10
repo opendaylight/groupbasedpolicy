@@ -12,6 +12,7 @@ public class SocketInfo {
 
     private String socketPath;
     private String socketPrefix;
+    private final String PORT_ID = "$PORT_ID";
 
     public SocketInfo(String socketPath, String socketPrefix) {
         this.socketPath = socketPath;
@@ -24,6 +25,10 @@ public class SocketInfo {
 
     public String getSocketPrefix() {
         return socketPrefix;
+    }
+
+    public String getVhostUserSocket() {
+        return new StringBuilder().append(socketPath).append(socketPrefix).append(PORT_ID).toString();
     }
 
     @Override
