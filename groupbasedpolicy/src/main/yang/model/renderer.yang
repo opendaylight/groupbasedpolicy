@@ -177,6 +177,7 @@ module renderer {
                 }
 
                 container configuration {
+                    presence "configuration is optional";
                     description "Renderer tries to apply given policy on devices.";
                     container renderer-endpoints {
                         list renderer-endpoint {
