@@ -461,6 +461,7 @@ module policy {
                 type int64;
             }
             container range-value {
+                presence "optional range choice";
                 leaf min {
                     type int64;
                     mandatory true;
