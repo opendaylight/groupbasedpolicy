@@ -203,8 +203,10 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
             public ListenableFuture<Void> apply(@Nonnull Optional<GbpBridgeDomain> optBridgeDomainConf) throws Exception {
                 if (optBridgeDomainConf.isPresent() && optBridgeDomainConf.get().getPhysicalLocationRef() != null) {
                     for (PhysicalLocationRef ref : optBridgeDomainConf.get().getPhysicalLocationRef()) {
-                        if (!ref.getNodeId().equals(vppNodeId)) continue; //not our referenced node skipping
-
+                        if (!ref.getNodeId().equals(vppNodeId)) {
+                            LOG.debug("Node {} is not referenced node, skipping", ref.getNodeId());
+                            continue;
+                        }
                         if (ref.getInterface() != null && ref.getInterface().size() > 0) {
                             NodeVbridgeVlanAugment vppNodeVlanAug = new NodeVbridgeVlanAugmentBuilder()
                                     .setSuperInterface(ref.getInterface().get(0)).build();
@@ -229,7 +231,7 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
      * Next part creates request for {@link BridgeMember} in topology CONF DS and registers listener listening on
      * topology OPER DS. If bridge member is created in VBD, listener is closed.
      * <p>
-     * This process has limited time, limit is defined in {@link ForwardingManager#WAIT_FOR_BD_CREATION} to prevent
+     * This process has limited time, limit is defined in {@link ForwardingManager#WAIT_FOR_BD_PROCESSING} to prevent
      * stuck if VBD processing fails in some point.
      *
      * @param bridgeDomainName serving as a topology-id

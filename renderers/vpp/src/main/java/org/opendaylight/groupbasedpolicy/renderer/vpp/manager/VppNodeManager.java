@@ -115,6 +115,7 @@ public class VppNodeManager {
     }
 
     private void updateNode(Node node) {
+        LOG.info("Updating node {}", node.getNodeId());
         NetconfNode netconfNode = getNodeAugmentation(node);
         if (netconfNode == null || netconfNode.getConnectionStatus() == null) {
             return;

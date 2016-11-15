@@ -96,12 +96,12 @@ public class VppRendererPolicyManager {
 
             @Override
             public void onSuccess(Void result) {
-                LOG.debug("Renderer updated renderer policy {}", response);
+                LOG.info("Renderer updated renderer policy to version {}", response.getVersion());
             }
 
             @Override
             public void onFailure(Throwable t) {
-                LOG.warn("Renderer DIDN'T update renderer-policy {}", response);
+                LOG.warn("Renderer failed to update renderer-policy to version {}", response.getVersion());
             }
         });
     }
@@ -109,7 +109,6 @@ public class VppRendererPolicyManager {
     private void rendererPolicyUpdated(RendererPolicy rPolicyBefore, RendererPolicy rPolicyAfter) {
         PolicyContext policyCtxBefore = new PolicyContext(rPolicyBefore);
         PolicyContext policyCtxAfter = new PolicyContext(rPolicyAfter);
-
         MapDifference<String, Collection<NodeId>> vppNodesByL2FlDiff =
                 createDiffForVppNodesByL2Fd(policyCtxBefore, policyCtxAfter);
         SetMultimap<String, NodeId> removedVppNodesByL2Fd = HashMultimap.create();

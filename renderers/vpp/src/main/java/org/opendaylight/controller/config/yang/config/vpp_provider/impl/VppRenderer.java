@@ -47,8 +47,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
-import com.google.common.eventbus.SubscriberExceptionContext;
-import com.google.common.eventbus.SubscriberExceptionHandler;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -113,7 +111,7 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
 
         MountPointService mountService =
                 Preconditions.checkNotNull(providerContext.getSALService(MountPointService.class));
-        MountedDataBrokerProvider mountDataProvider = new MountedDataBrokerProvider(mountService);
+        MountedDataBrokerProvider mountDataProvider = new MountedDataBrokerProvider(mountService, dataBroker);
         vppNodeManager = new VppNodeManager(dataBroker, providerContext);
 
         EventBus dtoEventBus = new EventBus((exception, context) -> LOG.error("Could not dispatch event: {} to {}",

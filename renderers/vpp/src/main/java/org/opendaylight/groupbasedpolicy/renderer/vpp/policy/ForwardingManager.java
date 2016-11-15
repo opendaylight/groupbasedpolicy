@@ -20,6 +20,7 @@ import javax.annotation.Nullable;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
+import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
@@ -46,7 +47,13 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_render
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpBridgeDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpBridgeDomainKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.VlanId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.VppState;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.VxlanVni;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.vpp.state.BridgeDomains;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.vpp.state.bridge.domains.BridgeDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.vpp.state.bridge.domains.BridgeDomainKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.status.rev161005.BridgeDomainStatusAugmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.status.rev161005.BridgeDomainStatusFields;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
@@ -63,7 +70,7 @@ public final class ForwardingManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(ForwardingManager.class);
     @VisibleForTesting
-    private byte WAIT_FOR_BD_CREATION = 60; // seconds
+    private byte WAIT_FOR_BD_PROCESSING = 60; // seconds
     private long lastVxlanVni = 1L;
     private final Map<String, VxlanVni> vxlanVniByBridgeDomain = new HashMap<>();
     private final InterfaceManager ifaceManager;
@@ -107,14 +114,14 @@ public final class ForwardingManager {
             try {
                 LOG.debug("Creating VXLAN bridge-domain {} on node {} with VNI {}", bd, vppNode.getValue(),
                         vni);
-                bdManager.createVxlanBridgeDomainOnVppNode(bd, vni, vppNode).get(WAIT_FOR_BD_CREATION,
+                bdManager.createVxlanBridgeDomainOnVppNode(bd, vni, vppNode).get(WAIT_FOR_BD_PROCESSING,
                         TimeUnit.SECONDS);
             } catch (InterruptedException | ExecutionException e) {
                 LOG.warn("VXLAN Bridge domain {} was not created on node {}", bd, vppNode.getValue(), e);
             } catch (TimeoutException e) {
                 LOG.warn("Probably, VXLAN Bridge domain {} was not created on node {} because BridgeDomainManager "
                         + "did not respond by {} seconds. Check VBD log for more details",
-                        bd, vppNode.getValue(), WAIT_FOR_BD_CREATION, e);
+                        bd, vppNode.getValue(), WAIT_FOR_BD_PROCESSING, e);
             }
         }
     }
@@ -124,14 +131,14 @@ public final class ForwardingManager {
             try {
                 LOG.debug("Creating VLAN bridge-domain {} on node {} with VLAN ID {}", bd, vppNode.getValue(),
                         vlanId.getValue());
-                bdManager.createVlanBridgeDomainOnVppNode(bd, vlanId, vppNode).get(WAIT_FOR_BD_CREATION,
+                bdManager.createVlanBridgeDomainOnVppNode(bd, vlanId, vppNode).get(WAIT_FOR_BD_PROCESSING,
                         TimeUnit.SECONDS);
             } catch (InterruptedException | ExecutionException e) {
                 LOG.warn("VLAN Bridge domain {} was not created on node {}", bd, vppNode.getValue(), e);
             } catch (TimeoutException e) {
                 LOG.warn("Probably, VLAN Bridge domain {} was not created on node {} because BridgeDomainManager "
                         + "did not respond by {} seconds. Check VBD log for more details",
-                        bd, vppNode.getValue(), WAIT_FOR_BD_CREATION, e);
+                        bd, vppNode.getValue(), WAIT_FOR_BD_PROCESSING, e);
             }
         }
     }
@@ -141,14 +148,14 @@ public final class ForwardingManager {
             Set<NodeId> vppNodes = vppNodesByBridgeDomain.get(bd);
             for (NodeId vppNode : vppNodes) {
                 try {
-                    bdManager.removeBridgeDomainFromVppNode(bd, vppNode).get(WAIT_FOR_BD_CREATION,
+                    bdManager.removeBridgeDomainFromVppNode(bd, vppNode).get(WAIT_FOR_BD_PROCESSING,
                             TimeUnit.SECONDS);
                 } catch (InterruptedException | ExecutionException e) {
                     LOG.warn("Bridge domain {} was not removed from node {}", bd, vppNode.getValue(), e);
                 } catch (TimeoutException e) {
                     LOG.warn("Probably, bridge domain {} was not removed from node {} because BridgeDomainManager "
                             + "did not respond by {} seconds. Check VBD log for more details",
-                            bd, vppNode.getValue(), WAIT_FOR_BD_CREATION, e);
+                            bd, vppNode.getValue(), WAIT_FOR_BD_PROCESSING, e);
                 }
             }
         }
@@ -179,7 +186,7 @@ public final class ForwardingManager {
                 LOG.warn("Interface was not added to bridge-domain {} for endpoint {}", l2FloodDomain, rEp, e);
             }
         } else {
-            LOG.debug("Forwarding is not created - Location of renderer endpoint contains "
+            LOG.warn("Forwarding is not created - Location of renderer endpoint contains "
                     + "external-node therefore VPP renderer assumes that interface for endpoint is "
                     + "already assigned in bridge-domain representing external-node. {}", rEp);
         }
@@ -192,7 +199,6 @@ public final class ForwardingManager {
             // nothing was created for endpoint therefore nothing is removed
             return;
         }
-
         if (!Strings.isNullOrEmpty(rEpLoc.getExternalNode())) {
             try {
                 ifaceManager.deleteBridgeDomainFromInterface(rEp).get();
@@ -202,7 +208,7 @@ public final class ForwardingManager {
                 LOG.warn("bridge-domain was not deleted from interface for endpoint {}", rEp, e);
             }
         } else {
-            LOG.debug("Forwarding is not removed - Location of renderer endpoint does not contain "
+            LOG.warn("Forwarding is not removed - Location of renderer endpoint does not contain "
                     + "external-node therefore VPP renderer assumes that interface for endpoint is not "
                     + "assigned to bridge-domain representing external-node. {}", rEp);
         }
@@ -245,7 +251,7 @@ public final class ForwardingManager {
                         .map(RendererForwardingContext::getContextId)
                         .map(ContextId::getValue);
             if (!optL2Fd.isPresent()) {
-                LOG.info("network-domain-containment in endpoint does not have L2-flood-domain as parent. "
+                LOG.warn("network-domain-containment in endpoint does not have L2-flood-domain as parent. "
                         + "This case is not supported in VPP renderer. {}", ep);
             }
             return optL2Fd;
@@ -268,6 +274,6 @@ public final class ForwardingManager {
 
     @VisibleForTesting
     void setTimer(byte time) {
-        WAIT_FOR_BD_CREATION = time;
+        WAIT_FOR_BD_PROCESSING = time;
     }
 }

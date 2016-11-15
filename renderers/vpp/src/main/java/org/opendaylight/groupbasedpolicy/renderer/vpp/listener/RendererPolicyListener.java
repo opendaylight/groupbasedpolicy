@@ -43,7 +43,7 @@ public class RendererPolicyListener extends DataTreeChangeHandler<RendererPolicy
             InstanceIdentifier<RendererPolicy> rootIdentifier) {
         RendererPolicyConfEvent event =
                 new RendererPolicyConfEvent(rootIdentifier, rootNode.getDataBefore(), rootNode.getDataAfter());
-        LOG.trace("Dispatching event on write: {}", event);
+        LOG.trace("Dispatching event on write: {}", event.getClass());
         eventBus.post(event);
     }
 
@@ -52,7 +52,7 @@ public class RendererPolicyListener extends DataTreeChangeHandler<RendererPolicy
             InstanceIdentifier<RendererPolicy> rootIdentifier) {
         RendererPolicyConfEvent event =
                 new RendererPolicyConfEvent(rootIdentifier, rootNode.getDataBefore(), rootNode.getDataAfter());
-        LOG.trace("Dispatching event on delete: {}", event);
+        LOG.trace("Dispatching event on delete: {}", event.getClass());
         eventBus.post(event);
     }
 
@@ -61,7 +61,7 @@ public class RendererPolicyListener extends DataTreeChangeHandler<RendererPolicy
             InstanceIdentifier<RendererPolicy> rootIdentifier) {
         RendererPolicyConfEvent event =
                 new RendererPolicyConfEvent(rootIdentifier, rootNode.getDataBefore(), rootNode.getDataAfter());
-        LOG.trace("Dispatching event on subtree modified: {}", event);
+        LOG.trace("Dispatching event on subtree modified: {}", event.getClass());
         eventBus.post(event);
     }
 
