@@ -78,7 +78,7 @@
         <feature version="${openflowplugin.version}">odl-openflowplugin-flow-services</feature>
         <feature version='${openflowplugin.version}'>odl-openflowplugin-nxm-extensions</feature>
         <feature version='${ovsdb.southbound.version}'>odl-ovsdb-southbound-impl</feature>
-        <feature version='${sfc.version}'>odl-sfcofl2</feature>
+        <feature version='${sfc.version}'>odl-sfc-openflow-renderer</feature>
         <feature version='${sfc.version}'>odl-sfc-ui</feature>
         <bundle>mvn:commons-net/commons-net/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/ovssfc-renderer/{{VERSION}}</bundle>
