@@ -8,7 +8,6 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.util;
 
-import java.util.concurrent.ExecutionException;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.CheckedFuture;
@@ -57,7 +56,7 @@ public class GbpNetconfTransaction {
                 LOG.warn("Netconf write-transaction failed. Maximal number of attempts reached", e.getMessage());
                 return false;
             }
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (Exception e) {
             LOG.warn("Exception while writing data ...", e.getMessage());
             return false;
         }
@@ -95,7 +94,7 @@ public class GbpNetconfTransaction {
                 LOG.warn("Netconf write-transaction failed. Maximal number of attempts reached", e.getMessage());
                 return false;
             }
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (Exception e) {
             LOG.warn("Exception while writing data ...", e.getMessage());
             return false;
         }
@@ -136,7 +135,7 @@ public class GbpNetconfTransaction {
                 LOG.warn("Netconf read-transaction failed. Maximal number of attempts reached", e.getMessage());
                 return Optional.absent();
             }
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (Exception e) {
             LOG.warn("Exception while reading data ...", e.getMessage());
             return Optional.absent();
         }
@@ -170,7 +169,7 @@ public class GbpNetconfTransaction {
                 LOG.warn("Netconf delete-transaction failed. Maximal number of attempts reached", e.getMessage());
                 return false;
             }
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (Exception e) {
             LOG.warn("Exception while removing data ...", e.getMessage());
             return false;
         }
@@ -206,7 +205,7 @@ public class GbpNetconfTransaction {
                 LOG.warn("Netconf delete-transaction failed. Maximal number of attempts reached", e.getMessage());
                 return false;
             }
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (Exception e) {
             LOG.warn("Exception while removing data ...", e.getMessage());
             return false;
         }

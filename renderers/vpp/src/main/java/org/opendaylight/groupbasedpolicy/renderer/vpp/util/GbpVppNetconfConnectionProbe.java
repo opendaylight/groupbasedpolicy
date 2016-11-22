@@ -13,6 +13,7 @@ import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topolog
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.SettableFuture;
 import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
@@ -64,10 +65,12 @@ class GbpVppNetconfConnectionProbe implements ClusteredDataTreeChangeListener<No
         changes.forEach(modification -> {
             final DataObjectModification<Node> rootNode = modification.getRootNode();
             final Node node = rootNode.getDataAfter();
-            final NetconfNode netconfNode = getNodeAugmentation(node);
-            if (node == null || node.getNodeId() == null) {
+            if (node == null) {
+                futureStatus.set(false);
+                unregister();
                 return;
             }
+            final NetconfNode netconfNode = getNodeAugmentation(node);
             final NodeId nodeId = node.getNodeId();
             if (netconfNode == null || netconfNode.getConnectionStatus() == null) {
                 LOG.warn("Node {} does not contain netconf augmentation", nodeId);
@@ -99,11 +102,15 @@ class GbpVppNetconfConnectionProbe implements ClusteredDataTreeChangeListener<No
         return netconfNode;
     }
 
-    private void unregister() {
+    void unregister() {
         LOG.debug("Listener for path {} unregistered", path.getRootIdentifier());
         if (registeredListener != null) {
             registeredListener.close();
         }
     }
 
+    @VisibleForTesting
+    SettableFuture<Boolean> getFutureStatus() {
+        return futureStatus;
+    }
 }
