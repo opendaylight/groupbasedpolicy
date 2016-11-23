@@ -16,6 +16,7 @@ module vpp-renderer {
     import network-topology { prefix nt; revision-date 2013-10-21; }
     import opendaylight-l2-types { prefix l2-types; revision-date "2013-08-27"; }
     import ietf-yang-types { prefix yang-types; revision-date "2013-07-15"; }
+    import ietf-inet-types { prefix "inet-types"; }
 
     description
         "This module is a baseline for the group-based policy vpp renderer model.";
@@ -87,6 +88,24 @@ module vpp-renderer {
                     leaf physical-address {
                         description "MAC address of a tap port";
                         type yang-types:phys-address;
+                    }
+                }
+                case loopback-case {
+                    leaf phys-address {
+                        description "MAC address of a loopback interface";
+                        type yang-types:phys-address;
+                    }
+                    leaf ip-address {
+                        description "Ip address of a loopback interface";
+                        type inet-types:ip-address;
+                    }
+                    leaf ip-prefix {
+                        description "Ip address prefix of a loopback interface";
+                        type inet-types:ip-prefix;
+                    }
+                    leaf bvi {
+                        description "Enable/disable BVI for loopback interface";
+                        type boolean;
                     }
                 }
             }

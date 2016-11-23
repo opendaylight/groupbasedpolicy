@@ -121,7 +121,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
             UniqueId portId = new UniqueId(port.getUuid().getValue());
             addBaseEndpointMappings(addrEpKey, portId, rwTx);
 
-            // Add Qrouter port as Endpoint
+            // Add Qrouter and VPProuter port as Endpoint
             if (port.getAugmentation(PortBindingExtension.class) != null &&
                 PortUtils.DEVICE_VIF_TYPE.equals(port.getAugmentation(PortBindingExtension.class).getVifType())) {
                 LOG.trace("Port is QRouter port: {}", port.getUuid().getValue());
@@ -291,14 +291,14 @@ public class NeutronPortAware implements NeutronAware<Port> {
         Set<Port> portsInSameSubnet = PortUtils.findPortsBySubnet(subnetUuid, neutron.getPorts());
         for (Port portInSameSubnet : portsInSameSubnet) {
             if (PortUtils.isNormalPort(portInSameSubnet) || PortUtils.isDhcpPort(portInSameSubnet)
-                || PortUtils.isQrouterPort(portInSameSubnet)) {
+                || PortUtils.isQrouterOrVppRouterPort(portInSameSubnet)) {
                 // endpoints are created only from neutron normal port or DHCP port
                 Optional<FixedIps> firstFixedIps = PortUtils.resolveFirstFixedIps(portInSameSubnet);
                 if (firstFixedIps.isPresent()) {
                     // endpoint has only one network containment therefore only first IP is used
                     FixedIps ipWithSubnet = firstFixedIps.get();
                     List<EndpointGroupId> endpointGroupIds = new ArrayList<>();
-                    if (PortUtils.isDhcpPort(portInSameSubnet) || PortUtils.isQrouterPort(portInSameSubnet)) {
+                    if (PortUtils.isDhcpPort(portInSameSubnet) || PortUtils.isQrouterOrVppRouterPort(portInSameSubnet)) {
                         endpointGroupIds.add(NetworkService.EPG_ID);
                     } else if (PortUtils.isNormalPort(portInSameSubnet)) {
                         endpointGroupIds.add(NetworkClient.EPG_ID);

@@ -52,6 +52,7 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
     private static final String BD_1 = "bd1";
     private static final NodeId NODE_1 = new NodeId("node1");
     private static final VlanId VLAN_1 = new VlanId(1);
+    private static final boolean IS_BVI = false;
     @Mock
     private InterfaceManager ifaceManager;
     @Mock
@@ -146,12 +147,12 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
         AddressEndpointWithLocation firstAddrEpWithLoc =
                 policyCtx.getAddrEpByKey().get(KeyFactory.addressEndpointKey(firstRendererEp.getKey()));
         Mockito.when(ifaceManager.addBridgeDomainToInterface(Mockito.eq(DtoFactory.L2FD_CTX.getValue()),
-                Mockito.eq(firstAddrEpWithLoc)))
+                Mockito.eq(firstAddrEpWithLoc), Mockito.eq(IS_BVI)))
             .thenReturn(Futures.immediateFuture(null));
 
         fwdManager.createForwardingForEndpoint(firstRendererEp.getKey(), policyCtx);
         Mockito.verify(ifaceManager).addBridgeDomainToInterface(Matchers.eq(DtoFactory.L2FD_CTX.getValue()),
-                Matchers.eq(firstAddrEpWithLoc));
+                Matchers.eq(firstAddrEpWithLoc), Mockito.eq(IS_BVI));
     }
 
     @Test

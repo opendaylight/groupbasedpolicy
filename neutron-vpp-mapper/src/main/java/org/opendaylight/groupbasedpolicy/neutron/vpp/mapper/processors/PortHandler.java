@@ -18,6 +18,8 @@ import org.opendaylight.controller.md.sal.common.api.data.TransactionChain;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionChainListener;
 import org.opendaylight.groupbasedpolicy.neutron.vpp.mapper.SocketInfo;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.PhysAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.UniqueId;
@@ -30,6 +32,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_render
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.LoopbackCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.LoopbackCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.TapCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.TapCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.VhostUserCaseBuilder;
@@ -37,10 +41,14 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.P
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.Routers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.routers.Router;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.routers.RouterKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.port.attributes.FixedIps;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.Ports;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.PortKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.Subnets;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.SubnetKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
@@ -55,6 +63,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
+
+import java.util.List;
 
 public class PortHandler implements TransactionChainListener {
 
@@ -189,8 +199,40 @@ public class PortHandler implements TransactionChainListener {
                     .setName(createQRouterPortName(port.getUuid()))
                     .build();
             vppEpBuilder.setInterfaceTypeChoice(tapCase);
+        } else if (isValidVppRouterPort(port)) {
+            vppEpBuilder.setInterfaceTypeChoice(getLoopbackCase(port));
         }
         return vppEpBuilder.build();
+    }
+
+    private LoopbackCase getLoopbackCase(Port port) {
+        LoopbackCaseBuilder loopbackCase = new LoopbackCaseBuilder()
+            .setPhysAddress(new PhysAddress(port.getMacAddress().getValue()));
+        Optional<FixedIps> fixedIpsOptional = resolveFirstFixedIps(port);
+        if(fixedIpsOptional.isPresent() && fixedIpsOptional.get().getIpAddress() != null){
+            loopbackCase.setIpAddress(fixedIpsOptional.get().getIpAddress());
+            ReadOnlyTransaction rTx = transactionChain.newReadOnlyTransaction();
+            Optional<Subnet> subnetOptional =
+                DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
+                    InstanceIdentifier.builder(Neutron.class)
+                        .child(Subnets.class)
+                        .child(Subnet.class, new SubnetKey(fixedIpsOptional.get().getSubnetId()))
+                        .build(), rTx);
+            if (subnetOptional.isPresent()) {
+                Ipv4Prefix ipv4Prefix = subnetOptional.get().getCidr().getIpv4Prefix();
+                loopbackCase.setIpPrefix(new IpPrefix(ipv4Prefix));
+            } else {
+                LOG.warn("IpPrefix for loopback port: {} was not set.", port);
+            }
+            if (loopbackCase.getIpAddress() != null && loopbackCase.getIpPrefix() != null) {
+                loopbackCase.setBvi(true);
+                LOG.trace("Creating loopback BVI interface: {} for VPP router port: {}.", loopbackCase, port);
+            }
+
+        } else {
+            LOG.warn("IpAddress for loopback port: {} was not set.", port);
+        }
+        return loopbackCase.build();
     }
 
     /**
@@ -198,6 +240,18 @@ public class PortHandler implements TransactionChainListener {
      * to ODL neutron.
      */
     private boolean isValidQRouterPort(Port port) {
+        Optional<Router> optRouter = getRouterOptional(port);
+        return !optRouter.isPresent() && port.getDeviceOwner().contains(ROUTER_OWNER)
+                && port.getMacAddress() != null;
+    }
+
+    private boolean isValidVppRouterPort(Port port) {
+        Optional<Router> optRouter = getRouterOptional(port);
+        return optRouter.isPresent() && port.getDeviceOwner().contains(ROUTER_OWNER)
+            && port.getMacAddress() != null;
+    }
+
+    private Optional<Router> getRouterOptional(Port port) {
         ReadOnlyTransaction rTx = transactionChain.newReadOnlyTransaction();
         InstanceIdentifier<Router> routerIid = InstanceIdentifier.builder(Neutron.class)
             .child(Routers.class)
@@ -205,8 +259,15 @@ public class PortHandler implements TransactionChainListener {
             .build();
         Optional<Router> optRouter = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, routerIid, rTx);
         rTx.close();
-        return !optRouter.isPresent() && port.getDeviceOwner().contains(ROUTER_OWNER)
-                && port.getMacAddress() != null;
+        return optRouter;
+    }
+
+    public static Optional<FixedIps> resolveFirstFixedIps(Port port) {
+        List<FixedIps> fixedIps = port.getFixedIps();
+        if (fixedIps != null && !fixedIps.isEmpty()) {
+            return Optional.of(fixedIps.get(0));
+        }
+        return Optional.absent();
     }
 
     private String createPortName(Uuid portUuid) {
@@ -277,6 +338,6 @@ public class PortHandler implements TransactionChainListener {
 
     @Override
     public void onTransactionChainSuccessful(TransactionChain<?, ?> chain) {
-        LOG.trace("Transaction chain was successfull. {}", chain);
+        LOG.trace("Transaction chain was successful. {}", chain);
     }
 }

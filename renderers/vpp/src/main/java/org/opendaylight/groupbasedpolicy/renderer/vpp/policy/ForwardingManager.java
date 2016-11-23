@@ -20,7 +20,6 @@ import javax.annotation.Nullable;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
-import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
@@ -46,14 +45,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_render
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.VlanNetwork;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpBridgeDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpBridgeDomainKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint.InterfaceTypeChoice;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.LoopbackCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.VlanId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.VppState;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.VxlanVni;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.vpp.state.BridgeDomains;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.vpp.state.bridge.domains.BridgeDomain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.vpp.state.bridge.domains.BridgeDomainKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.status.rev161005.BridgeDomainStatusAugmentation;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.status.rev161005.BridgeDomainStatusFields;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
@@ -179,7 +176,7 @@ public final class ForwardingManager {
             }
             String l2FloodDomain = optL2FloodDomain.get();
             try {
-                ifaceManager.addBridgeDomainToInterface(l2FloodDomain, rEp).get();
+                ifaceManager.addBridgeDomainToInterface(l2FloodDomain, rEp, isBviForEndpoint(rEp)).get();
                 LOG.debug("Interface added to bridge-domain {} for endpoint {}", l2FloodDomain, rEp);
             } catch (InterruptedException | ExecutionException e) {
                 // TODO add it to the status for renderer manager
@@ -190,6 +187,25 @@ public final class ForwardingManager {
                     + "external-node therefore VPP renderer assumes that interface for endpoint is "
                     + "already assigned in bridge-domain representing external-node. {}", rEp);
         }
+    }
+
+    private boolean isBviForEndpoint(AddressEndpointWithLocation rEp) {
+        VppEndpointKey vppEndpointKey =
+            new VppEndpointKey(rEp.getAddress(), rEp.getAddressType(), rEp.getContextId(), rEp.getContextType());
+        ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
+        Optional<VppEndpoint> vppEndpointOptional =
+            DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
+                InstanceIdentifier.builder(Config.class).child(VppEndpoint.class, vppEndpointKey).build(), rTx);
+        if (vppEndpointOptional.isPresent()) {
+            InterfaceTypeChoice interfaceTypeChoice = vppEndpointOptional.get().getInterfaceTypeChoice();
+            if (interfaceTypeChoice instanceof LoopbackCase) {
+                LOG.trace("Vpp renderer endpoint {} IS a BVI interface.", rEp.getKey());
+                return ((LoopbackCase) interfaceTypeChoice).isBvi();
+            }
+        }
+        rTx.close();
+        LOG.trace("Vpp renderer endpoint {} IS NOT a BVI interface.", rEp.getKey());
+        return false;
     }
 
     public void removeForwardingForEndpoint(RendererEndpointKey rEpKey, PolicyContext policyCtx) {

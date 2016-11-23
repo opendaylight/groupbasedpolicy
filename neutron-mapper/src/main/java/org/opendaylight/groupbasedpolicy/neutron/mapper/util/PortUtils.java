@@ -93,10 +93,9 @@ public class PortUtils {
         return DEVICE_OWNER_DHCP.equals(port.getDeviceOwner());
     }
 
-    public static boolean isQrouterPort(Port port) {
+    public static boolean isQrouterOrVppRouterPort(Port port) {
         return DEVICE_OWNER_ROUTER_IFACE.equals(port.getDeviceOwner())
-            && port.getAugmentation(PortBindingExtension.class) != null
-            && DEVICE_VIF_TYPE.equals(port.getAugmentation(PortBindingExtension.class).getVifType());
+            && port.getAugmentation(PortBindingExtension.class) != null;
     }
 
     public static boolean isRouterInterfacePort(Port port) {

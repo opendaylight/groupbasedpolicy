@@ -25,6 +25,7 @@ import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.ConfigCommand;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.LoopbackCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.TapPortCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.VhostUserCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.VhostUserCommand.VhostUserCommandBuilder;
@@ -40,6 +41,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint.InterfaceTypeChoice;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.LoopbackCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.TapCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.VhostUserCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.VhostUserRole;
@@ -91,11 +93,14 @@ public class InterfaceManager implements AutoCloseable {
 
     private ListenableFuture<Void> vppEndpointCreated(VppEndpoint vppEndpoint) {
         InterfaceTypeChoice interfaceTypeChoice = vppEndpoint.getInterfaceTypeChoice();
+        LOG.trace("Creating VPP endpoint {}, type of {}", vppEndpoint, interfaceTypeChoice);
         Optional<ConfigCommand> potentialIfaceCommand = Optional.absent();
         if (interfaceTypeChoice instanceof VhostUserCase) {
             potentialIfaceCommand = createInterfaceWithoutBdCommand(vppEndpoint, Operations.PUT);
         } else if (interfaceTypeChoice instanceof TapCase) {
             potentialIfaceCommand = createTapInterfaceWithoutBdCommand(vppEndpoint, Operations.PUT);
+        } else if (interfaceTypeChoice instanceof LoopbackCase){
+            potentialIfaceCommand = createLoopbackWithoutBdCommand(vppEndpoint, Operations.PUT);
         }
 
         if (!potentialIfaceCommand.isPresent()) {
@@ -117,6 +122,7 @@ public class InterfaceManager implements AutoCloseable {
                                                         VppEndpoint vppEndpoint, InstanceIdentifier<?> vppNodeIid) {
         final ReadWriteTransaction rwTx = vppDataBroker.newReadWriteTransaction();
         createIfaceWithoutBdCommand.execute(rwTx);
+        LOG.trace("Creating Interface on VPP: {}", createIfaceWithoutBdCommand);
         return Futures.transform(rwTx.submit(), new AsyncFunction<Void, Void>() {
 
             @Override
@@ -146,11 +152,14 @@ public class InterfaceManager implements AutoCloseable {
 
     private ListenableFuture<Void> vppEndpointDeleted(@Nonnull VppEndpoint vppEndpoint) {
         InterfaceTypeChoice interfaceTypeChoice = vppEndpoint.getInterfaceTypeChoice();
+        LOG.trace("Deleting VPP endpoint {}, type of {}", vppEndpoint, interfaceTypeChoice.toString());
         Optional<ConfigCommand> potentialIfaceCommand = Optional.absent();
         if (interfaceTypeChoice instanceof VhostUserCase) {
             potentialIfaceCommand = createInterfaceWithoutBdCommand(vppEndpoint, Operations.DELETE);
         } else if (interfaceTypeChoice instanceof TapCase) {
             potentialIfaceCommand = createTapInterfaceWithoutBdCommand(vppEndpoint, Operations.DELETE);
+        } else if (interfaceTypeChoice instanceof LoopbackCase){
+            potentialIfaceCommand = createLoopbackWithoutBdCommand(vppEndpoint, Operations.DELETE);
         }
 
         if (!potentialIfaceCommand.isPresent()) {
@@ -172,6 +181,7 @@ public class InterfaceManager implements AutoCloseable {
             DataBroker vppDataBroker, VppEndpoint vppEndpoint, InstanceIdentifier<?> vppNodeIid) {
         ReadWriteTransaction rwTx = vppDataBroker.newReadWriteTransaction();
         deleteIfaceWithoutBdCommand.execute(rwTx);
+        LOG.trace("Deleting Interface on VPP: {}", deleteIfaceWithoutBdCommand);
 
         return Futures.transform(rwTx.submit(), new AsyncFunction<Void, Void>() {
 
@@ -256,6 +266,29 @@ public class InterfaceManager implements AutoCloseable {
         return Optional.of(tapPortCommand);
     }
 
+    private static Optional<ConfigCommand> createLoopbackWithoutBdCommand(@Nonnull VppEndpoint vppEp,
+        @Nonnull Operations operation) {
+        if (!hasNodeAndInterface(vppEp)) {
+            LOG.debug("Interface command is not created for {}", vppEp);
+            return Optional.absent();
+        }
+        LoopbackCommand.LoopbackCommandBuilder builder = LoopbackCommand.builder();
+        LoopbackCase loopIface = (LoopbackCase) vppEp.getInterfaceTypeChoice();
+
+        builder.setPhysAddress(loopIface.getPhysAddress());
+        builder.setBvi(loopIface.isBvi());
+        builder.setIpAddress(loopIface.getIpAddress());
+        builder.setIpPrefix(loopIface.getIpPrefix());
+
+        LoopbackCommand loopbackCommand = builder
+            .setOperation(operation)
+            .setDescription(vppEp.getDescription())
+            .setInterfaceName(vppEp.getVppInterfaceName())
+            .build();
+
+        return Optional.of(loopbackCommand);
+    }
+
     /**
      * Adds bridge domain to an interface if the interface exist.<br>
      * It rewrites bridge domain in case it already exist.<br>
@@ -273,7 +306,7 @@ public class InterfaceManager implements AutoCloseable {
      * @return {@link ListenableFuture}
      */
     public synchronized @Nonnull ListenableFuture<Void> addBridgeDomainToInterface(@Nonnull String bridgeDomainName,
-            @Nonnull AddressEndpointWithLocation addrEpWithLoc) {
+            @Nonnull AddressEndpointWithLocation addrEpWithLoc, boolean enableBvi) {
         ExternalLocationCase epLoc = resolveAndValidateLocation(addrEpWithLoc);
         InstanceIdentifier<?> vppNodeIid = epLoc.getExternalNodeMountPoint();
         String interfacePath = epLoc.getExternalNodeConnector();
@@ -299,7 +332,7 @@ public class InterfaceManager implements AutoCloseable {
             @Override
             public ListenableFuture<Void> apply(Optional<Interface> optIface) throws Exception {
                 if (!optIface.isPresent()) {
-                    return Futures.immediateFailedFuture(new Exception("Iterface "
+                    return Futures.immediateFailedFuture(new Exception("Interface "
                             + interfaceIid.firstKeyOf(Interface.class) + " does not exist on node " + vppNodeIid));
                 }
 
@@ -321,7 +354,10 @@ public class InterfaceManager implements AutoCloseable {
                 final ReadWriteTransaction rwTxRead = mountpoint.newReadWriteTransaction();
                 Optional<L2> optL2 = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, l2Iid, rwTxRead);
                 L2Builder l2Builder = (optL2.isPresent()) ? new L2Builder(optL2.get()) : new L2Builder();
-                L2 l2 = l2Builder.setInterconnection(new BridgeBasedBuilder().setBridgeDomain(bridgeDomainName).build()).build();
+                L2 l2 = l2Builder.setInterconnection(new BridgeBasedBuilder()
+                    .setBridgeDomain(bridgeDomainName)
+                    .setBridgedVirtualInterface(enableBvi)
+                    .build()).build();
                 final ReadWriteTransaction rwTxPut = prepareTransactionAndPutData(mountpoint, l2, l2Iid);
                 LOG.debug("Adding bridge domain {} to interface {}", bridgeDomainName, interfacePath);
                 return Futures.transform(rwTxPut.submit(), new AsyncFunction<Void, Void>() {
