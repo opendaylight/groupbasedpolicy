@@ -106,7 +106,6 @@ public class VppNodeManager {
                 break;
             case Connected:
                 resolveConnectedNode(node, netconfNode);
-                LOG.info("Node {} is capable and ready", node.getNodeId().getValue());
                 break;
             default:
                 break;
@@ -121,7 +120,6 @@ public class VppNodeManager {
         NetconfNodeConnectionStatus.ConnectionStatus afterNodeStatus = netconfNode.getConnectionStatus();
         if (afterNodeStatus.equals(Connected)) {
             resolveConnectedNode(node, netconfNode);
-            LOG.info("Node {} is capable and ready", node.getNodeId().getValue());
         }
         if (afterNodeStatus.equals(Connecting)) {
             resolveDisconnectedNode(node);
@@ -141,11 +139,13 @@ public class VppNodeManager {
         VppNodeWriter vppNodeWriter = new VppNodeWriter();
         vppNodeWriter.cache(rendererNode);
         if (!isCapableNetconfDevice(node, netconfNode)) {
+            LOG.warn("Node {} is not connected.", node.getNodeId().getValue());
             return;
         }
         vppNodeWriter.commitToDatastore(dataBroker);
         DataBroker mountpoint = getNodeMountPoint(mountPointIid);
         netconfNodeCache.put(mountPointIid, mountpoint);
+        LOG.info("Node {} is capable and ready.", node.getNodeId().getValue());
     }
 
     private void resolveDisconnectedNode(Node node) {
