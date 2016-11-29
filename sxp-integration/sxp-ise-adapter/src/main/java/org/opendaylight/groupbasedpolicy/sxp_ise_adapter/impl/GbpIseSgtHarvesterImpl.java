@@ -62,6 +62,8 @@ public class GbpIseSgtHarvesterImpl implements GbpIseSgtHarvester {
 
     @Override
     public ListenableFuture<Collection<SgtInfo>> harvestAll(@Nonnull final IseContext iseContext) {
+        LOG.debug("ise-source: harvestAll {} -> {}", iseContext.getIseSourceConfig().getTenant(),
+                iseContext.getIseSourceConfig().getConnectionConfig().getIseRestUrl());
         ListenableFuture<Collection<SgtInfo>> result;
         try {
             final IseSourceConfig iseSourceConfig = iseContext.getIseSourceConfig();

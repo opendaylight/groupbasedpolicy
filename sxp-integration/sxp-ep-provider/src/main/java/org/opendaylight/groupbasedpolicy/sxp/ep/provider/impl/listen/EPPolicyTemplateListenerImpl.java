@@ -92,7 +92,7 @@ public class EPPolicyTemplateListenerImpl implements EPTemplateListener<Endpoint
             final EndpointPolicyTemplateBySgt epPolicyTemplate = change.getRootNode().getDataAfter();
 
             // skip generated template
-            if (epPolicyTemplate != null && !TemplateGenerated.class.equals(epPolicyTemplate.getOrigin())) {
+            if (epPolicyTemplate != null && ! TemplateGenerated.class.equals(epPolicyTemplate.getOrigin())) {
                 processWithEPTemplates(epPolicyTemplate);
             } else {
                 LOG.trace("skipping ep-policy-template processing: {}", epPolicyTemplate);
@@ -123,11 +123,11 @@ public class EPPolicyTemplateListenerImpl implements EPTemplateListener<Endpoint
             apply(final List<Pair<MasterDatabaseBinding, EndpointForwardingTemplateBySubnet>> input) throws Exception {
                 final ListenableFuture<List<RpcResult<Void>>> result;
                 if (input == null || input.isEmpty()) {
-                    LOG.debug("no epForwardingTemplate available for sgt: {}", epPolicyTemplate.getSgt());
+                    LOG.debug("no pair [epForwardingTemplate, ip-sgt-binding] available for sgt: {}", epPolicyTemplate.getSgt());
                     result = Futures.immediateFuture(Collections.singletonList(
                             RpcResultBuilder.<Void>failed()
                                     .withError(RpcError.ErrorType.APPLICATION,
-                                            "no epForwardingTemplate available for sgt " + epPolicyTemplate.getSgt())
+                                            "no pair [epForwardingTemplate, ip-sgt-binding] available for sgt " + epPolicyTemplate.getSgt())
                                     .build()));
                 } else {
                     LOG.trace("processing epPolicyTemplate event for sgt: {}", epPolicyTemplate.getSgt());

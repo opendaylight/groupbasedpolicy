@@ -64,6 +64,7 @@ public class SgtToEPTemplateGeneratorImpl implements SgtInfoProcessor {
             wTx.put(LogicalDatastoreType.CONFIGURATION, epPolicyTemplatePath, epPolicyTemplate, createParent);
             createParent = false;
         }
+        LOG.trace("harvested ep-policy-templates submitted: {} -> {}", tenantId, sgtInfos.size());
         return wTx.submit();
     }
 }

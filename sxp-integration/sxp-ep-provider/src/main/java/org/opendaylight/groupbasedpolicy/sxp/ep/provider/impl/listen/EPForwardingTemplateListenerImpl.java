@@ -83,9 +83,13 @@ public class EPForwardingTemplateListenerImpl implements EPTemplateListener<Endp
             final IpPrefix changeKey = changePath.firstKeyOf(EndpointForwardingTemplateBySubnet.class).getIpPrefix();
             SxpListenerUtil.updateCachedDao(templateCachedDao, changeKey, change);
 
-            //TODO: handle removal (now causes NPE)
             final EndpointForwardingTemplateBySubnet epForwardingTemplate = change.getRootNode().getDataAfter();
-            processWithEPTemplates(epForwardingTemplate);
+            if (epForwardingTemplate == null) {
+                LOG.debug("EPForwarding template removed - NOOP {}", change.getRootNode().getDataBefore());
+                //TODO: handle removal (update cache)
+            } else {
+                processWithEPTemplates(epForwardingTemplate);
+            }
         }
     }
 
@@ -111,22 +115,27 @@ public class EPForwardingTemplateListenerImpl implements EPTemplateListener<Endp
             public ListenableFuture<RpcResult<Void>>
             apply(final Optional<Pair<MasterDatabaseBinding, EndpointPolicyTemplateBySgt>> input) throws Exception {
                 final ListenableFuture<RpcResult<Void>> result;
-                if (input == null || !input.isPresent()) {
-                    LOG.debug("no epPolicyTemplate available for ip-prefix: {}", epForwardingTemplate.getIpPrefix());
+                if (! input.isPresent()) {
+                    LOG.debug("no pair [epPolicyTemplate, ip-sgt-binding] available for ip-prefix: {}", epForwardingTemplate.getIpPrefix());
                     result = Futures.immediateFuture(
                             RpcResultBuilder.<Void>failed()
                                     .withError(RpcError.ErrorType.APPLICATION,
-                                            "no epForwardingTemplate available for ip-prefix " + epForwardingTemplate.getIpPrefix())
+                                            "no pair [epPolicyTemplate, ip-sgt-binding] available for ip-prefix " + epForwardingTemplate.getIpPrefix())
                                     .build());
                 } else {
                     LOG.trace("processing epForwardingTemplate event for ip-prefix: {}", epForwardingTemplate.getIpPrefix());
                     final Pair<MasterDatabaseBinding, EndpointPolicyTemplateBySgt> pair = input.get();
                     final MasterDatabaseBinding sxpMasterDBBinding = pair.getLeft();
                     final EndpointPolicyTemplateBySgt epPolicyTemplate = pair.getRight();
-                    LOG.trace("processing epForwardingTemplate event with resolved sxpMasterDb entry and " +
-                                    "epPolicyTemplate for sgt/ip-prefix: {}/{}",
-                            sxpMasterDBBinding.getSecurityGroupTag(), sxpMasterDBBinding.getImplementedInterface());
-                    result = sxpMapperReactor.processTemplatesAndSxpMasterDB(epPolicyTemplate, epForwardingTemplate, sxpMasterDBBinding);
+                    if (epPolicyTemplate != null && sxpMasterDBBinding != null) {
+                        LOG.trace("processing epForwardingTemplate event with resolved sxpMasterDb entry and " +
+                                        "epPolicyTemplate for sgt/ip-prefix: {}/{}",
+                                sxpMasterDBBinding.getSecurityGroupTag(), sxpMasterDBBinding.getImplementedInterface());
+                        result = sxpMapperReactor.processTemplatesAndSxpMasterDB(epPolicyTemplate, epForwardingTemplate, sxpMasterDBBinding);
+                    } else {
+                        LOG.debug("Skipped ep-forwarding-template processing");
+                        result = Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
+                    }
                 }
 
                 return result;
@@ -141,7 +150,7 @@ public class EPForwardingTemplateListenerImpl implements EPTemplateListener<Endp
             public ListenableFuture<Optional<Pair<MasterDatabaseBinding, EndpointPolicyTemplateBySgt>>>
             apply(final Optional<MasterDatabaseBinding> input) throws Exception {
                 final ListenableFuture<Pair<MasterDatabaseBinding, EndpointPolicyTemplateBySgt>> result;
-                if (input == null || !input.isPresent()) {
+                if (! input.isPresent()) {
                     LOG.debug("no sxpMasterDB entry available for ip-prefix: {}", epFowardingTemplate.getIpPrefix());
                     result = Futures.immediateFuture(null);
                 } else {

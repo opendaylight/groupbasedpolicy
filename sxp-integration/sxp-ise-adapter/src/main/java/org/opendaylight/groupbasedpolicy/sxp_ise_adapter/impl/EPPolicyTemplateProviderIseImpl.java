@@ -10,6 +10,7 @@ package org.opendaylight.groupbasedpolicy.sxp_ise_adapter.impl;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Range;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import java.util.Collection;
@@ -68,6 +69,20 @@ public class EPPolicyTemplateProviderIseImpl implements EPPolicyTemplateProvider
 
     private ListenableFuture<Optional<String>> queryIseOnSgt(final IseContext iseContext, @Nonnull final Sgt sgt) {
         final ListenableFuture<Collection<SgtInfo>> sgtUpdateFu = iseSgtHarvester.harvestAll(iseContext);
+
+        Futures.addCallback(sgtUpdateFu, new FutureCallback<Collection<SgtInfo>>() {
+            @Override
+            public void onSuccess(@Nullable final Collection<SgtInfo> result) {
+                final Integer amount = Optional.ofNullable(result).map(Collection::size).orElse(0);
+                LOG.debug("[epPolicyTemplateProvider] harvestAll succeeded: {}", amount);
+            }
+
+            @Override
+            public void onFailure(final Throwable t) {
+                LOG.debug("[epPolicyTemplateProvider] harvestAll FAILED: {}", t.getMessage());
+            }
+        });
+
         return Futures.transform(sgtUpdateFu, new Function<Collection<SgtInfo>, Optional<String>>() {
             @Nullable
             @Override
@@ -85,9 +100,10 @@ public class EPPolicyTemplateProviderIseImpl implements EPPolicyTemplateProvider
         // expected relation (ise : tenant) == (1:1)
         return iseContext
                 .filter(context ->
-                        Range.closed(context.getIseSourceConfig().getSgtRangeMin().getValue(),
-                                context.getIseSourceConfig().getSgtRangeMax().getValue())
-                                .contains(sgt.getValue())
+                        context.getIseSourceConfig() != null && Range.closed(
+                                context.getIseSourceConfig().getSgtRangeMin().getValue(),
+                                context.getIseSourceConfig().getSgtRangeMax().getValue()
+                        ).contains(sgt.getValue())
                 );
     }
 

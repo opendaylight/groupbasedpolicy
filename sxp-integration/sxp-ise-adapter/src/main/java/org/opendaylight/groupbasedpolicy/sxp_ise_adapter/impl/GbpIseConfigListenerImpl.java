@@ -29,11 +29,13 @@ import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Uri;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.DateAndTime;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ise.adapter.model.rev160630.GbpSxpIseAdapter;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.IseHarvestStatus;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.IseHarvestStatusBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.IseSourceConfig;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ise.adapter.model.rev160630.gbp.sxp.ise.adapter.ise.source.config.ConnectionConfig;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,13 +78,17 @@ public class GbpIseConfigListenerImpl implements GbpIseConfigListener {
             final IseContext iseContext = new IseContext(iseSourceConfig);
             templateProviderFacade.assignIseContext(iseContext);
             if (iseSourceConfig != null) {
+                final Optional<ConnectionConfig> connectionConfig = Optional.ofNullable(iseSourceConfig.getConnectionConfig());
+                LOG.debug("Ise-source config assigned: {} -> {}", iseSourceConfig.getTenant(),
+                        connectionConfig.map(ConnectionConfig::getIseRestUrl).orElse(new Uri("n/a")));
                 pool.submit(() -> {
                     final ListenableFuture<Collection<SgtInfo>> harvestResult = gbpIseSgtHarvester.harvestAll(iseContext);
                     Futures.addCallback(harvestResult, new FutureCallback<Collection<SgtInfo>>() {
                         @Override
                         public void onSuccess(@Nullable final Collection<SgtInfo> result) {
-                            LOG.debug("ise harvest finished, outcome: {}", result);
-                            storeOutcome(true, Optional.ofNullable(result).map(Collection::size).orElse(0), null);
+                            final Integer counter = Optional.ofNullable(result).map(Collection::size).orElse(0);
+                            LOG.debug("ise harvest finished, outcome: {}", counter);
+                            storeOutcome(true, counter, null);
                         }
 
                         @Override
@@ -98,6 +104,8 @@ public class GbpIseConfigListenerImpl implements GbpIseConfigListener {
                         LOG.debug("failed to finish ise-sgt-harvest task properly on time", e);
                     }
                 });
+            } else {
+                LOG.debug("Ise-source config removed");
             }
         }
     }
@@ -123,7 +131,7 @@ public class GbpIseConfigListenerImpl implements GbpIseConfigListener {
 
     @Override
     public void close() throws Exception {
-        if (!pool.isTerminated()) {
+        if (! pool.isTerminated()) {
             pool.shutdown();
             final boolean terminated = pool.awaitTermination(10, TimeUnit.SECONDS);
             if (! terminated) {
