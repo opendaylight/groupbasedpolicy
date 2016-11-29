@@ -19,10 +19,13 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gb
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.base.endpoints.by.ports.BaseEndpointByPort;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class PortAware extends DataTreeChangeHandler<BaseEndpointByPort> implements
         MappingProvider<Port> {
 
+    private static final Logger LOG = LoggerFactory.getLogger(PortAware.class);
     private final PortHandler portHandler;
 
     protected PortAware(PortHandler portHandler, DataBroker dataProvider) {
@@ -43,16 +46,19 @@ public class PortAware extends DataTreeChangeHandler<BaseEndpointByPort> impleme
 
     @Override
     public void processCreatedNeutronDto(Port port) {
+        LOG.trace("Neutron port created: {}", port);
         portHandler.processCreated(port);
     }
 
     @Override
     public void processUpdatedNeutronDto(Port original, Port delta) {
+        LOG.trace("Neutron port updated: {}, delta {}", original, delta);
         portHandler.processUpdated(original, delta);
     }
 
     @Override
     public void processDeletedNeutronDto(Port port) {
+        LOG.trace("Neutron port deleted: {}", port);
         // handled by BaseEndpointByPort removal
     }
 

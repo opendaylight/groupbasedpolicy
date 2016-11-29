@@ -38,6 +38,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_render
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.TapCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.vpp.endpoint._interface.type.choice.VhostUserCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.PortBindingExtension;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.binding.attributes.VifDetails;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.Routers;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.routers.Router;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.routers.RouterKey;
@@ -64,6 +65,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 
+import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 
 public class PortHandler implements TransactionChainListener {
@@ -140,6 +143,12 @@ public class PortHandler implements TransactionChainListener {
     }
 
     void processUpdated(Port original, Port delta) {
+        if (!isUpdateNeeded(original, delta)){
+            LOG.trace("Port update skipped, port didn`t change. before {}, after: {}" , original, delta);
+            return;
+        }
+
+        LOG.trace("Updating port before: {}, after: {}" , original, delta);
         if (isValidVhostUser(original)) {
             ReadOnlyTransaction rTx = transactionChain.newReadOnlyTransaction();
             Optional<BaseEndpointByPort> optBebp = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
@@ -148,12 +157,40 @@ public class PortHandler implements TransactionChainListener {
             if (!optBebp.isPresent()) {
                 return;
             }
+            LOG.trace("Updating port - deleting old port {}" , optBebp.get().getPortId());
             processDeleted(optBebp.get());
         }
+        LOG.trace("Updating port - creating new port {}" , delta.getUuid());
         processCreated(delta);
     }
 
+    private boolean isUpdateNeeded(Port oldPort, Port newPort) {
+        //TODO fix this to better support update of ports for VPP
+        PortBindingExtension oldPortAugmentation = oldPort.getAugmentation(PortBindingExtension.class);
+        PortBindingExtension newPortAugmentation = newPort.getAugmentation(PortBindingExtension.class);
+
+        List<VifDetails> vifDetails = oldPortAugmentation.getVifDetails();
+
+        if (newPortAugmentation == null) {
+            LOG.trace("Port {} is no longer a vhost type port, updating port...");
+            return true;
+        }
+
+        if (!oldPortAugmentation.getHostId().equals(newPortAugmentation.getHostId()) ||
+            nullToEmpty(vifDetails).size() != nullToEmpty(newPortAugmentation.getVifDetails()).size()) {
+            return true;
+        }
+
+        for (VifDetails vifDetail : nullToEmpty(vifDetails)) {
+            //check if vhostuser_socket, vhostuser_mode and port_filter are changed
+            if (!newPortAugmentation.getVifDetails().contains(vifDetail))
+                return true;
+        }
+        return false;
+    }
+
     void processDeleted(BaseEndpointByPort bebp) {
+        LOG.trace("Deleting vpp-endpoint by BaseEndpointByPort {}" , bebp);
         VppEndpointKey vppEpKey = new VppEndpointKey(bebp.getAddress(), bebp.getAddressType(), bebp.getContextId(),
                 bebp.getContextType());
         InstanceIdentifier<VppEndpoint> vppEpIid = createVppEndpointIid(vppEpKey);
@@ -339,5 +376,9 @@ public class PortHandler implements TransactionChainListener {
     @Override
     public void onTransactionChainSuccessful(TransactionChain<?, ?> chain) {
         LOG.trace("Transaction chain was successful. {}", chain);
+    }
+
+    private <T> List<T> nullToEmpty(@Nullable List<T> list) {
+        return list == null ? Collections.emptyList() : list;
     }
 }

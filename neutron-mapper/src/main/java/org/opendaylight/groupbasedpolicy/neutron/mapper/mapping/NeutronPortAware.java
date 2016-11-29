@@ -100,8 +100,11 @@ public class NeutronPortAware implements NeutronAware<Port> {
         this.epRegistrator = checkNotNull(epRegistrator);
     }
 
-    @Override
-    public void onCreated(Port port, Neutron neutron) {
+    @Override public void onCreated(Port createdItem, Neutron neutron) {
+        onCreated(createdItem, neutron, true);
+    }
+
+    public void onCreated(Port port, Neutron neutron, boolean addBaseEpMapping) {
         LOG.trace("created port - {}", port);
         if (PortUtils.isRouterInterfacePort(port)) {
             LOG.trace("Port is router interface port: {}", port.getUuid().getValue());
@@ -149,7 +152,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
                     createEndpointRegFromPort(
                         port, ipWithSubnet, networkContainment, epgsFromSecGroups, neutron);
                 registerBaseEndpointAndStoreMapping(
-                    ImmutableList.of(l2BaseEp.build(), l3BaseEp.build()), port, rwTx);
+                    ImmutableList.of(l2BaseEp.build(), l3BaseEp.build()), port, rwTx, addBaseEpMapping);
                 registerEndpointAndStoreMapping(epInBuilder.build(), port, rwTx);
             }
 
@@ -205,7 +208,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
 
             ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
             registerBaseEndpointAndStoreMapping(
-                    ImmutableList.of(l2BaseEp.build(), l3BaseEp.build()), port, rwTx);
+                    ImmutableList.of(l2BaseEp.build(), l3BaseEp.build()), port, rwTx, addBaseEpMapping);
             registerEndpointAndStoreMapping(epInBuilder.build(), port, rwTx);
             DataStoreHelper.submitToDs(rwTx);
         } else if (PortUtils.isNormalPort(port)) {
@@ -236,7 +239,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
                 baseEpRegs.add(l3BaseEp.build());
             }
             ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
-            registerBaseEndpointAndStoreMapping(baseEpRegs, port, rwTx);
+            registerBaseEndpointAndStoreMapping(baseEpRegs, port, rwTx, addBaseEpMapping);
             registerEndpointAndStoreMapping(epInBuilder.build(), port, rwTx);
             DataStoreHelper.submitToDs(rwTx);
         } else if (PortUtils.isRouterGatewayPort(port)) {
@@ -485,7 +488,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
     }
 
     private void registerBaseEndpointAndStoreMapping(List<AddressEndpointReg> addrEpRegs, Port port,
-            WriteTransaction wTx) {
+            WriteTransaction wTx, boolean addBaseEpMappings) {
         RegisterEndpointInput regBaseEpInput = new RegisterEndpointInputBuilder().setAddressEndpointReg(addrEpRegs)
             .build();
 
@@ -495,7 +498,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
             return;
         }
         for (AddressEndpointReg addrEpReg : addrEpRegs) {
-            if (MappingUtils.L2_BRDIGE_DOMAIN.equals(addrEpReg.getContextType())) {
+            if (MappingUtils.L2_BRDIGE_DOMAIN.equals(addrEpReg.getContextType()) && addBaseEpMappings) {
                 UniqueId portId = new UniqueId(port.getUuid().getValue());
                 LOG.trace("Adding Port-BaseEndpoint mapping for port {} (device owner {}) and endpoint {}",
                         port.getUuid());
@@ -517,7 +520,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
     }
 
     private void unregisterEndpointAndRemoveMapping(UnregisterEndpointInput baseEpUnreg, Port port,
-            ReadWriteTransaction rwTx) {
+            ReadWriteTransaction rwTx, boolean removeBaseEpMappings) {
         boolean isUnregisteredBaseEndpoint = epRegistrator.unregisterEndpoint(baseEpUnreg);
         if (isUnregisteredBaseEndpoint) {
             UniqueId portId = new UniqueId(port.getUuid().getValue());
@@ -525,7 +528,9 @@ public class NeutronPortAware implements NeutronAware<Port> {
                     MacAddressType.class, new ContextId(port.getNetworkId().getValue()), MappingUtils.L2_BRDIGE_DOMAIN);
             LOG.trace("Removing Port-BaseEndpoint mapping for port {} (device owner {}) and endpoint {}",
                     port.getUuid().getValue(), port.getDeviceOwner(), portByBaseEndpointKey);
-            removeBaseEndpointMappings(portByBaseEndpointKey, portId, rwTx);
+            if (removeBaseEpMappings) {
+                removeBaseEndpointMappings(portByBaseEndpointKey, portId, rwTx);
+            }
         }
     }
 
@@ -539,12 +544,15 @@ public class NeutronPortAware implements NeutronAware<Port> {
     @Override
     public void onUpdated(Port oldPort, Port newPort, Neutron oldNeutron, Neutron newNeutron) {
         LOG.trace("updated port - OLD: {}\nNEW: {}", oldPort, newPort);
-        onDeleted(oldPort, oldNeutron, newNeutron);
-        onCreated(newPort, newNeutron);
+        onDeleted(oldPort, oldNeutron, newNeutron, false);
+        onCreated(newPort, newNeutron, false);
     }
 
-    @Override
-    public void onDeleted(Port port, Neutron oldNeutron, Neutron newNeutron) {
+    @Override public void onDeleted(Port deletedItem, Neutron oldNeutron, Neutron newNeutron) {
+        onDeleted(deletedItem, oldNeutron, newNeutron, true);
+    }
+
+    public void onDeleted(Port port, Neutron oldNeutron, Neutron newNeutron, boolean removeBaseEpMapping) {
         LOG.trace("deleted port - {}", port);
         if (PortUtils.isRouterInterfacePort(port)) {
             LOG.trace("Port is router interface port: {}", port.getUuid().getValue());
@@ -589,13 +597,13 @@ public class NeutronPortAware implements NeutronAware<Port> {
             LOG.trace("Port is DHCP port: {}", port.getUuid().getValue());
             ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
             unregisterEndpointAndRemoveMapping(createUnregisterEndpointInput(port, oldNeutron), port, rwTx);
-            unregisterEndpointAndRemoveMapping(createUnregisterBaseEndpointInput(port, oldNeutron), port, rwTx);
+            unregisterEndpointAndRemoveMapping(createUnregisterBaseEndpointInput(port, oldNeutron), port, rwTx, removeBaseEpMapping);
             DataStoreHelper.submitToDs(rwTx);
         } else if (PortUtils.isNormalPort(port)) {
             LOG.trace("Port is normal port: {}", port.getUuid().getValue());
             ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
             unregisterEndpointAndRemoveMapping(createUnregisterEndpointInput(port, oldNeutron), port, rwTx);
-            unregisterEndpointAndRemoveMapping(createUnregisterBaseEndpointInput(port, oldNeutron), port, rwTx);
+            unregisterEndpointAndRemoveMapping(createUnregisterBaseEndpointInput(port, oldNeutron), port, rwTx, removeBaseEpMapping);
             DataStoreHelper.submitToDs(rwTx);
         } else if (PortUtils.isRouterGatewayPort(port)) {
             // do nothing because actual trigger is detaching of port from router
