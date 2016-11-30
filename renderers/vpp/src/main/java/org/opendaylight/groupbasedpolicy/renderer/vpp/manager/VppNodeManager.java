@@ -12,16 +12,20 @@ import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topolog
 import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus.ConnectionStatus.Connecting;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
-
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.CheckedFuture;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPoint;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
+import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
+import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppNodeWriter;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
+import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNodeBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNodeKey;
@@ -39,29 +43,21 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-
 public class VppNodeManager {
 
     private static final TopologyId TOPOLOGY_ID = new TopologyId("topology-netconf");
     private static final Logger LOG = LoggerFactory.getLogger(VppNodeManager.class);
-    private static final Map<InstanceIdentifier<Node>, DataBroker> netconfNodeCache = new HashMap<>();
     private static final String V3PO_CAPABILITY = "(urn:opendaylight:params:xml:ns:yang:v3po?revision=2016-12-14)v3po";
     private static final String INTERFACES_CAPABILITY = "(urn:ietf:params:xml:ns:yang:ietf-interfaces?revision=2014-05-08)ietf-interfaces";
     private static final NodeId CONTROLLER_CONFIG_NODE = new NodeId("controller-config");
     private final DataBroker dataBroker;
-    private final MountPointService mountService;
     private final List<String> requiredCapabilities;
+    private final MountPointService mountService;
 
-    public VppNodeManager(DataBroker dataBroker, BindingAwareBroker.ProviderContext session) {
+    public VppNodeManager(final DataBroker dataBroker, final BindingAwareBroker.ProviderContext session) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
-        mountService = Preconditions.checkNotNull(session.getSALService(MountPointService.class));
+        this.mountService = Preconditions.checkNotNull(session.getSALService(MountPointService.class));
         requiredCapabilities = initializeRequiredCapabilities();
-    }
-
-    static DataBroker getDataBrokerFromCache(InstanceIdentifier<Node> iid) {
-        return netconfNodeCache.get(iid); // TODO read from DS
     }
 
     /**
@@ -125,38 +121,65 @@ public class VppNodeManager {
         }
         if (afterNodeStatus.equals(Connecting)) {
             resolveDisconnectedNode(node);
-            LOG.info("Node {} has been disconnected, removing from available nodes", node.getNodeId().getValue());
+            LOG.info("Node {} is disconnected, removing from available nodes", node.getNodeId().getValue());
         }
     }
 
     private void removeNode(Node node) {
         resolveDisconnectedNode(node);
-        LOG.info("Node {} has been removed", node.getNodeId().getValue());
+        LOG.info("Node {} is removed", node.getNodeId().getValue());
     }
 
     private void resolveConnectedNode(Node node, NetconfNode netconfNode) {
         InstanceIdentifier<Node> mountPointIid = getMountpointIid(node);
-        // Mountpoint iid == path in renderer-node
         RendererNode rendererNode = remapNode(mountPointIid);
-        VppNodeWriter vppNodeWriter = new VppNodeWriter();
-        vppNodeWriter.cache(rendererNode);
         if (!isCapableNetconfDevice(node, netconfNode)) {
             LOG.warn("Node {} is not connected.", node.getNodeId().getValue());
             return;
         }
-        vppNodeWriter.commitToDatastore(dataBroker);
-        DataBroker mountpoint = getNodeMountPoint(mountPointIid);
-        netconfNodeCache.put(mountPointIid, mountpoint);
+        final DataBroker mountpoint = getNodeMountPoint(mountPointIid);
+        if (mountpoint == null) {
+            LOG.warn("Mountpoint not available for node {}", node.getNodeId().getValue());
+            return;
+        }
+        final WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
+        wTx.put(LogicalDatastoreType.OPERATIONAL, VppIidFactory.getRendererNodeIid(rendererNode), rendererNode, true);
+        DataStoreHelper.submitToDs(wTx);
         LOG.info("Node {} is capable and ready.", node.getNodeId().getValue());
     }
 
     private void resolveDisconnectedNode(Node node) {
         InstanceIdentifier<Node> mountPointIid = getMountpointIid(node);
         RendererNode rendererNode = remapNode(mountPointIid);
-        VppNodeWriter vppNodeWriter = new VppNodeWriter();
-        vppNodeWriter.cache(rendererNode);
-        vppNodeWriter.removeFromDatastore(dataBroker);
-        netconfNodeCache.remove(mountPointIid);
+        final WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
+        wTx.delete(LogicalDatastoreType.OPERATIONAL, VppIidFactory.getRendererNodeIid(rendererNode));
+        CheckedFuture<Void, TransactionCommitFailedException> submitFuture = wTx.submit();
+        try {
+            submitFuture.checkedGet();
+        } catch (TransactionCommitFailedException e) {
+            LOG.error("Write transaction failed to {}", e.getMessage());
+        } catch (Exception e) {
+            LOG.error("Failed to .. {}", e.getMessage());
+        }
+    }
+
+    private DataBroker getNodeMountPoint(InstanceIdentifier<Node> mountPointIid) {
+        Optional<MountPoint> optionalObject = mountService.getMountPoint(mountPointIid);
+        MountPoint mountPoint;
+        if (optionalObject.isPresent()) {
+            mountPoint = optionalObject.get();
+            if (mountPoint != null) {
+                Optional<DataBroker> optionalDataBroker = mountPoint.getService(DataBroker.class);
+                if (optionalDataBroker.isPresent()) {
+                    return optionalDataBroker.get();
+                } else {
+                    LOG.warn("Cannot obtain data broker from mountpoint {}", mountPoint);
+                }
+            } else {
+                LOG.warn("Cannot obtain mountpoint with IID {}", mountPointIid);
+            }
+        }
+        return null;
     }
 
     private RendererNode remapNode(InstanceIdentifier<Node> path) {
@@ -192,25 +215,6 @@ public class VppNodeManager {
                 .collect(Collectors.toList());
         return requiredCapabilities.stream()
                 .allMatch(availableCapabilities::contains);
-    }
-
-    private DataBroker getNodeMountPoint(InstanceIdentifier<Node> mountPointIid) {
-        Optional<MountPoint> optionalObject = mountService.getMountPoint(mountPointIid);
-        MountPoint mountPoint;
-        if (optionalObject.isPresent()) {
-            mountPoint = optionalObject.get();
-            if (mountPoint != null) {
-                Optional<DataBroker> optionalDataBroker = mountPoint.getService(DataBroker.class);
-                if (optionalDataBroker.isPresent()) {
-                    return optionalDataBroker.get();
-                } else {
-                    LOG.debug("Cannot obtain data broker from mountpoint {}", mountPoint);
-                }
-            } else {
-                LOG.debug("Cannot obtain mountpoint with IID {}", mountPointIid);
-            }
-        }
-        return null;
     }
 
     private NetconfNode getNodeAugmentation(Node node) {
