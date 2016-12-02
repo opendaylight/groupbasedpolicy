@@ -46,19 +46,18 @@ public class NeutronListenerTest extends AbstractDataBrokerTest {
     public void init() {
         port = TestUtils.createValidVppPort();
         bebp = TestUtils.createBaseEndpointByPortForPort();
-        socketInfo = new SocketInfo("/tmp/", "_socket");
         dataBroker = getDataBroker();
-        neutronListener = new NeutronListener(dataBroker, socketInfo);
+        neutronListener = new NeutronListener(dataBroker);
         neutronListener.clearDataChangeProviders();
         baseEpByPortListener = Mockito.spy(new PortAware(new PortHandler(
-                dataBroker, socketInfo), dataBroker));
+                dataBroker), dataBroker));
         neutronListener.addDataChangeProvider(baseEpByPortListener);
     }
 
     @Test
     public void constructorTest() {
         dataBroker = Mockito.spy(dataBroker);
-        NeutronListener neutronListener = new NeutronListener(dataBroker, socketInfo);
+        NeutronListener neutronListener = new NeutronListener(dataBroker);
         verify(dataBroker).registerDataTreeChangeListener(
                 eq(new DataTreeIdentifier<>(LogicalDatastoreType.CONFIGURATION,
                         InstanceIdentifier.builder(Neutron.class)

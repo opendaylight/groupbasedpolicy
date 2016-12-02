@@ -23,7 +23,7 @@ public class NeutronVppMapper implements AutoCloseable {
     public NeutronVppMapper(String socketPath, String socketPrefix, DataBroker dataBroker) {
         SocketInfo socketInfo = new SocketInfo(socketPath, socketPrefix);
         vppNodeListener = new VppNodeListener(dataBroker, socketInfo);
-        neutronListener = new NeutronListener(dataBroker, socketInfo);
+        neutronListener = new NeutronListener(dataBroker);
         LOG.info("Neutron VPP started!");
     }
 

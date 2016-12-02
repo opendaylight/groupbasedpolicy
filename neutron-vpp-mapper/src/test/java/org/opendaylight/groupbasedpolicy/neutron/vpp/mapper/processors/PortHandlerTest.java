@@ -51,7 +51,6 @@ public class PortHandlerTest extends AbstractDataBrokerTest {
     private BindingTransactionChain transactionChain;
 
     private Port port;
-    private SocketInfo socketInfo;
     private BaseEndpointByPort bebp;
 
     @Rule
@@ -61,11 +60,10 @@ public class PortHandlerTest extends AbstractDataBrokerTest {
     public void init() {
         port = TestUtils.createValidVppPort();
         bebp = TestUtils.createBaseEndpointByPortForPort();
-        socketInfo = new SocketInfo("/tmp/", "_socket");
         dataBroker = Mockito.spy(getDataBroker());
         transactionChain = mock(BindingTransactionChain.class);
         when(dataBroker.createTransactionChain(any(PortHandler.class))).thenReturn(transactionChain);
-        portHandler = new PortHandler(dataBroker, socketInfo);
+        portHandler = new PortHandler(dataBroker);
         when(transactionChain.newReadOnlyTransaction()).thenAnswer(new Answer<ReadTransaction>() {
 
             @Override
@@ -92,8 +90,7 @@ public class PortHandlerTest extends AbstractDataBrokerTest {
         assertTrue(vppEp.getInterfaceTypeChoice() instanceof VhostUserCase);
         VhostUserCase vhostUserCase = (VhostUserCase) vppEp.getInterfaceTypeChoice();
         assertNotNull(vhostUserCase);
-        assertEquals(vhostUserCase.getSocket(), socketInfo.getSocketPath() + socketInfo.getSocketPrefix()
-                + bebp.getPortId().getValue());
+        assertEquals(TestUtils.TEST_SOCKET, vhostUserCase.getSocket());
     }
 
     @Test

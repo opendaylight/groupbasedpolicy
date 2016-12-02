@@ -72,8 +72,8 @@ public class VppNodeListener extends DataTreeChangeHandler<RendererNode> {
     @Override
     protected void onSubtreeModified(DataObjectModification<RendererNode> rootNode,
             InstanceIdentifier<RendererNode> rootIdentifier) {
-        deleteData(rootNode.getDataAfter());
-        writeData(rootNode.getDataBefore());
+        deleteData(rootNode.getDataBefore());
+        writeData(rootNode.getDataAfter());
     }
 
     private void writeData(RendererNode rendererNode) {
