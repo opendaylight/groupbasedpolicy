@@ -24,6 +24,7 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppRendererProcessingException;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.NetworkContainment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.Containment;
@@ -183,7 +184,7 @@ public final class ForwardingManager {
                 LOG.warn("Interface was not added to bridge-domain {} for endpoint {}", l2FloodDomain, rEp, e);
             }
         } else {
-            LOG.warn("Forwarding is not created - Location of renderer endpoint contains "
+            LOG.debug("Forwarding is not created - Location of renderer endpoint contains "
                     + "external-node therefore VPP renderer assumes that interface for endpoint is "
                     + "already assigned in bridge-domain representing external-node. {}", rEp);
         }
@@ -224,7 +225,7 @@ public final class ForwardingManager {
                 LOG.warn("bridge-domain was not deleted from interface for endpoint {}", rEp, e);
             }
         } else {
-            LOG.warn("Forwarding is not removed - Location of renderer endpoint does not contain "
+            LOG.debug("Forwarding is not removed - Location of renderer endpoint does not contain "
                     + "external-node therefore VPP renderer assumes that interface for endpoint is not "
                     + "assigned to bridge-domain representing external-node. {}", rEp);
         }
@@ -267,7 +268,7 @@ public final class ForwardingManager {
                         .map(RendererForwardingContext::getContextId)
                         .map(ContextId::getValue);
             if (!optL2Fd.isPresent()) {
-                LOG.warn("network-domain-containment in endpoint does not have L2-flood-domain as parent. "
+                LOG.debug("network-domain-containment in endpoint does not have L2-flood-domain as parent. "
                         + "This case is not supported in VPP renderer. {}", ep);
             }
             return optL2Fd;

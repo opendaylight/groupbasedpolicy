@@ -9,8 +9,6 @@
 package org.opendaylight.controller.config.yang.config.vpp_provider.impl;
 
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
@@ -52,18 +50,12 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 public class VppRenderer implements AutoCloseable, BindingAwareProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(VppRenderer.class);
 
     public static final RendererName NAME = new RendererName("vpp-renderer");
-    /**
-     * Should be used for processing netconf responses so we do not consume netty thread.
-     */
-    private static final ExecutorService NETCONF_WORKER = Executors.newSingleThreadExecutor(
-            new ThreadFactoryBuilder().setNameFormat("netconf-processing-worker-%d").setDaemon(true).build());
 
     private final List<SupportedActionDefinition> actionDefinitions =
             ImmutableList.of(new SupportedActionDefinitionBuilder().setActionDefinitionId(new AllowAction().getId())
@@ -119,7 +111,7 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
 
         EventBus dtoEventBus = new EventBus((exception, context) -> LOG.error("Could not dispatch event: {} to {}",
                 context.getSubscriber(), context.getSubscriberMethod(), exception));
-        interfaceManager = new InterfaceManager(mountDataProvider, dataBroker, NETCONF_WORKER);
+        interfaceManager = new InterfaceManager(mountDataProvider, dataBroker);
         dtoEventBus.register(interfaceManager);
         BridgeDomainManager bdManager = new BridgeDomainManagerImpl(dataBroker);
         ForwardingManager fwManager = new ForwardingManager(interfaceManager, bdManager, dataBroker);

@@ -65,7 +65,6 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
-import com.google.common.util.concurrent.MoreExecutors;
 
 @RunWith(MockitoJUnitRunner.class)
 public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
@@ -99,7 +98,7 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         Mockito.when(mountedDataProviderMock.getDataBrokerForMountPoint(Mockito.any(InstanceIdentifier.class)))
             .thenReturn(Optional.of(mountPointDataBroker));
         ifaceManager =
-                new InterfaceManager(mountedDataProviderMock, dataBroker, MoreExecutors.newDirectExecutorService());
+                new InterfaceManager(mountedDataProviderMock, dataBroker);
         bdManager = new BridgeDomainManagerImpl(mountPointDataBroker);
         fwManager = new ForwardingManager(ifaceManager, bdManager, dataBroker);
         vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, dataBroker);
