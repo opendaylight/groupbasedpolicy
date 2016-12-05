@@ -13,4 +13,7 @@
         <argument ref="broker"/>
         <argument ref="clusterSingletonService" />
     </bean>
+
+    <odl:rpc-implementation ref="vppRenderer"/>
+
 </blueprint>

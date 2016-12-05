@@ -47,6 +47,93 @@ module vpp-renderer {
         }
     }
 
+    grouping bridge-domain-base-attributes {
+        leaf id {
+            description "Same as in VBD.";
+            type string;
+        }
+        leaf description {
+           type string;
+        }
+        list physical-location-ref {
+            description
+                "Refers to physical interfaces on vpp nodes through which external
+                 nodes belonging to the same bridge-domain can be reached.";
+            key "node-id";
+            leaf node-id {
+                description "Refers to a VPP node.";
+                type nt:node-id;
+            }
+            leaf-list interface {
+                description "Physical interface on the VPP node.";
+                type string;
+            }
+        }
+    }
+
+    grouping interface-attributes {
+        uses vpp-renderer:interface-location;
+        leaf description {
+            description "Additional description of the vpp-endpoint";
+            type string;
+        }
+        choice interface-type-choice {
+            mandatory true;
+            case vhost-user-case {
+                leaf socket {
+                    description "Identifier of a vhost user";
+                    type string {
+                        length 1..255;
+                    }
+                }
+            }
+            case tap-case {
+                leaf name {
+                    description "Identifier of a tap port";
+                    mandatory true;
+                    type string {
+                        length 1..255;
+                    }
+                }
+                leaf physical-address {
+                    description "MAC address of a tap port";
+                    type yang-types:phys-address;
+                }
+            }
+            case loopback-case {
+                leaf phys-address {
+                    description "MAC address of a loopback interface";
+                    type yang-types:phys-address;
+                }
+                leaf ip-address {
+                    description "Ip address of a loopback interface";
+                    type inet-types:ip-address;
+                }
+                leaf ip-prefix {
+                    description "Ip address prefix of a loopback interface";
+                    type inet-types:ip-prefix;
+                }
+                leaf bvi {
+                    description "Enable/disable BVI for loopback interface";
+                    type boolean;
+                }
+            }
+        }
+    }
+
+    grouping interface-location {
+        leaf vpp-node-path {
+            description "Path to a node representing mount-point to VPP instance.";
+            mandatory true;
+            type instance-identifier;
+        }
+        leaf vpp-interface-name {
+            description "Name of interface for the endpoint on VPP";
+            mandatory true;
+            type string;
+        }
+    }
+
     container config {
         list vpp-endpoint {
             description "Renderer creates/removes interface on VPP node based on given parameters.";
@@ -54,72 +141,12 @@ module vpp-renderer {
             key "context-type context-id address-type address";
             uses base-ep:address-endpoint-key;
 
-            leaf vpp-node-path {
-                description "Path to a node representing mount-point to VPP instance.";
-                mandatory true;
-                type instance-identifier;
-            }
-            leaf vpp-interface-name {
-                description "Name of interface for the endpoint on VPP";
-                mandatory true;
-                type string;
-            }
-            leaf description {
-                description "Additional description of the vpp-endpoint";
-                type string;
-            }
-            choice interface-type-choice {
-                case vhost-user-case {
-                    leaf socket {
-                        description "Identifier of a vhost user";
-                        type string {
-                            length 1..255;
-                        }
-                    }
-                }
-                case tap-case {
-                    leaf name {
-                        description "Identifier of a tap port";
-                        mandatory true;
-                        type string {
-                            length 1..255;
-                        }
-                    }
-                    leaf physical-address {
-                        description "MAC address of a tap port";
-                        type yang-types:phys-address;
-                    }
-                }
-                case loopback-case {
-                    leaf phys-address {
-                        description "MAC address of a loopback interface";
-                        type yang-types:phys-address;
-                    }
-                    leaf ip-address {
-                        description "Ip address of a loopback interface";
-                        type inet-types:ip-address;
-                    }
-                    leaf ip-prefix {
-                        description "Ip address prefix of a loopback interface";
-                        type inet-types:ip-prefix;
-                    }
-                    leaf bvi {
-                        description "Enable/disable BVI for loopback interface";
-                        type boolean;
-                    }
-                }
-            }
+            uses interface-attributes;
         }
 
         list gbp-bridge-domain {
             key "id";
-            leaf id {
-                description "Same as in VBD.";
-                type string;
-            }
-            leaf description {
-               type string;
-            }
+            uses bridge-domain-base-attributes;
             leaf type {
                 mandatory true;
                 type network-type;
@@ -127,20 +154,6 @@ module vpp-renderer {
             leaf vlan {
                 when "type = 'vlan-network'";
                 type l2-types:vlan-id;
-            }
-            list physical-location-ref {
-                description
-                    "Refers to physical interfaces on vpp nodes through which external
-                     nodes belonging to the same bridge-domain can be reached.";
-                key "node-id";
-                leaf node-id {
-                    description "Refers to a VPP node.";
-                    type nt:node-id;
-                }
-                leaf-list interface {
-                    description "Physical interface on the VPP node.";
-                    type string;
-                }
             }
         }
     }

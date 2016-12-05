@@ -1,0 +1,112 @@
+/*
+ * Copyright (c) 2016 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
+module vpp-adapter {
+    yang-version 1;
+
+    namespace "urn:opendaylight:groupbasedpolicy:vpp_adapter";
+    prefix "vpp-adapter";
+
+    import vpp-renderer { prefix "vpp-renderer"; }
+    import network-topology { prefix nt; revision-date 2013-10-21; }
+    import opendaylight-l2-types { prefix l2-types; revision-date "2013-08-27"; }
+    import ietf-yang-types { prefix yang-types; revision-date "2013-07-15"; }
+    import ietf-inet-types { prefix "inet-types"; }
+
+    description
+        "This module allows external plugins to use VPP renderer by calling defined RPCs.";
+
+    revision "2016-12-01" {
+        description
+            "Initial revision.";
+    }
+
+    typedef vxlan-vni-type {
+        type uint32 {
+            range "1 .. 16777214";
+        }
+    }
+
+    grouping bridge-domain-attributes {
+        uses vpp-renderer:bridge-domain-base-attributes;
+        leaf unknown-unicast-flood {
+            type boolean;
+            default "False";
+        }
+        choice tunnel-type {
+            case vxlan {
+                leaf vni {
+                    type vxlan-vni-type;
+                }
+            }
+            case vlan {
+                leaf vlan-id {
+                    type l2-types:vlan-id;
+                }
+            }
+        }
+    }
+
+    grouping bridge-domain-nodes {
+        uses bridge-domain-id;
+            leaf-list bridge-domain-node {
+                min-elements 1;
+                type nt:node-id;
+            }
+    }
+
+    grouping bridge-domain-id {
+        leaf bridge-domain-id {
+            mandatory true;
+            type string;
+        }
+    }
+
+    rpc create-virtual-bridge-domain-on-nodes {
+       input {
+            uses bridge-domain-attributes;
+       }
+    }
+
+    rpc expand-virtual-bridge-domain-on-nodes {
+       input {
+            uses bridge-domain-nodes;
+       }
+    }
+
+    rpc delete-virtual-bridge-domain-on-nodes {
+       input {
+            uses bridge-domain-nodes;
+       }
+    }
+
+    rpc create-interface-on-node {
+        input {
+            uses vpp-renderer:interface-attributes;
+        }
+    }
+
+    rpc delete-interface {
+        input {
+            uses vpp-renderer:interface-location;
+        }
+    }
+
+    rpc add-interface-to-bridge-domain {
+        input {
+            uses vpp-renderer:interface-location;
+            uses bridge-domain-id;
+        }
+    }
+
+    rpc del-interface-from-bridge-domain {
+        input {
+            uses vpp-renderer:interface-location;
+        }
+    }
+}

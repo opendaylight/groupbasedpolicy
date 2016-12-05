@@ -19,6 +19,8 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareProvider;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.adapter.VppRpcServiceImpl;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.RendererPolicyListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppEndpointListener;
@@ -81,6 +83,7 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
     private VppNodeListener vppNodeListener;
     private VppEndpointListener vppEndpointListener;
     private RendererPolicyListener rendererPolicyListener;
+    private VppRpcServiceImpl vppRpcServiceImpl;
 
     public VppRenderer(DataBroker dataBroker, BindingAwareBroker bindingAwareBroker) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
@@ -118,14 +121,15 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
                 context.getSubscriber(), context.getSubscriberMethod(), exception));
         interfaceManager = new InterfaceManager(mountDataProvider, dataBroker, NETCONF_WORKER);
         dtoEventBus.register(interfaceManager);
-        ForwardingManager fwManager = new ForwardingManager(interfaceManager, new BridgeDomainManagerImpl(dataBroker), dataBroker);
+        BridgeDomainManager bdManager = new BridgeDomainManagerImpl(dataBroker);
+        ForwardingManager fwManager = new ForwardingManager(interfaceManager, bdManager, dataBroker);
         vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, dataBroker);
         dtoEventBus.register(vppRendererPolicyManager);
 
         vppNodeListener = new VppNodeListener(dataBroker, vppNodeManager, dtoEventBus);
         vppEndpointListener = new VppEndpointListener(dataBroker, dtoEventBus);
         rendererPolicyListener = new RendererPolicyListener(dataBroker, dtoEventBus);
-
+        vppRpcServiceImpl = new VppRpcServiceImpl(dataBroker, mountDataProvider, bdManager, interfaceManager);
         registerToRendererManager();
     }
 
@@ -174,5 +178,9 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
                 LOG.debug("Renderer {} successfully unregistered.", VppRenderer.NAME);
             }
         });
+    }
+
+    VppRpcServiceImpl getVppRpcServiceImpl() {
+        return vppRpcServiceImpl;
     }
 }

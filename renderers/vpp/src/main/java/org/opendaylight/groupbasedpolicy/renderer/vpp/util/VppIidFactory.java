@@ -18,7 +18,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererNodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNodeKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.VppInterfaceAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.VppState;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.interfaces._interface.L2;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.vpp.state.BridgeDomains;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.vpp.state.bridge.domains.BridgeDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.vpp.state.bridge.domains.BridgeDomainKey;
@@ -33,6 +35,13 @@ public class VppIidFactory {
 
     public static InstanceIdentifier<Interface> getInterfaceIID(InterfaceKey interfaceKey) {
         return InstanceIdentifier.create(Interfaces.class).child(Interface.class, interfaceKey);
+    }
+
+    public static InstanceIdentifier<L2> getL2ForInterfaceIid(InterfaceKey interfaceKey) {
+        return getInterfaceIID(interfaceKey).builder()
+            .augmentation(VppInterfaceAugmentation.class)
+            .child(L2.class)
+            .build();
     }
 
     public static InstanceIdentifier<Renderer> getRendererIID(RendererKey rendererKey) {
