@@ -36,7 +36,7 @@ module vpp-adapter {
         uses vpp-renderer:bridge-domain-base-attributes;
         leaf unknown-unicast-flood {
             type boolean;
-            default "False";
+            default "True";
         }
         choice tunnel-type {
             case vxlan {
@@ -68,36 +68,54 @@ module vpp-adapter {
     }
 
     rpc create-virtual-bridge-domain-on-nodes {
-       input {
+        description "Creates a virtual bridge domain on specific nodes.
+                     If no node is specified, the bridge domain will be
+                     defined in datastore and can be cloned on nodes
+                     later. Physical interfaces on node can be also
+                     specified in cases when bridge domains exceed the
+                     virtual domain (aka provider networks).";
+        input {
             uses bridge-domain-attributes;
-       }
+        }
     }
 
-    rpc expand-virtual-bridge-domain-on-nodes {
-       input {
+    rpc clone-virtual-bridge-domain-on-nodes {
+        description "If a virtual bridge domain is already defined in DS,
+                     it can be cloned to other nodes by using this RPC.
+                     Parameters that are already known don't have to be
+                     specified again. They are found based on provided
+                     bridge domain ID.";
+        input {
             uses bridge-domain-nodes;
-       }
+        }
     }
 
-    rpc delete-virtual-bridge-domain-on-nodes {
-       input {
+    rpc delete-virtual-bridge-domain-from-nodes {
+        description "Removes a virtual bridge domain from nodes. If no node
+                     is specified, the definition of the bridge domain will
+                     be removed from the DS.";
+        input {
             uses bridge-domain-nodes;
-       }
+        }
     }
 
     rpc create-interface-on-node {
+        description "Creates an interface on a node based on provided input.";
         input {
             uses vpp-renderer:interface-attributes;
         }
     }
 
-    rpc delete-interface {
+    rpc delete-interface-from-node {
+        description "Removes an interface from a node.";
         input {
             uses vpp-renderer:interface-location;
         }
     }
 
     rpc add-interface-to-bridge-domain {
+        description "Adds existing interface on a node to a specified bridge
+                     domain.";
         input {
             uses vpp-renderer:interface-location;
             uses bridge-domain-id;
@@ -105,6 +123,8 @@ module vpp-adapter {
     }
 
     rpc del-interface-from-bridge-domain {
+        description "Removes existing interface on a node from a specified bridge
+                     domain.";
         input {
             uses vpp-renderer:interface-location;
         }

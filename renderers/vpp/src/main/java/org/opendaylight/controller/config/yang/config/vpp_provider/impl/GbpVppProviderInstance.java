@@ -17,7 +17,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.opendaylight.controller.config.yang.config.groupbasedpolicy.GroupbasedpolicyInstance;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.adapter.VppRpcServiceImpl;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonService;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceRegistration;
@@ -26,9 +25,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapte
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.CreateInterfaceOnNodeInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.CreateVirtualBridgeDomainOnNodesInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.DelInterfaceFromBridgeDomainInput;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.DeleteInterfaceInput;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.DeleteVirtualBridgeDomainOnNodesInput;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.ExpandVirtualBridgeDomainOnNodesInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.DeleteInterfaceFromNodeInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.DeleteVirtualBridgeDomainFromNodesInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.CloneVirtualBridgeDomainOnNodesInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.VppAdapterService;
 import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
@@ -96,7 +95,7 @@ public class GbpVppProviderInstance implements ClusterSingletonService, VppAdapt
     }
 
     @Override
-    public Future<RpcResult<Void>> deleteVirtualBridgeDomainOnNodes(DeleteVirtualBridgeDomainOnNodesInput input) {
+    public Future<RpcResult<Void>> deleteVirtualBridgeDomainFromNodes(DeleteVirtualBridgeDomainFromNodesInput input) {
         return renderer.getVppRpcServiceImpl().deleteVirtualBridgeDomain(input);
     }
 
@@ -107,12 +106,7 @@ public class GbpVppProviderInstance implements ClusterSingletonService, VppAdapt
 
     @Override
     public Future<RpcResult<Void>> createInterfaceOnNode(CreateInterfaceOnNodeInput input) {
-        return renderer.getVppRpcServiceImpl().createInterfaceOnNode(input);
-    }
-
-    @Override
-    public Future<RpcResult<Void>> deleteInterface(DeleteInterfaceInput input) {
-        return renderer.getVppRpcServiceImpl().deleteInterfaceOnNode(input);
+        return renderer.getVppRpcServiceImpl().createInterfaceOnNodes(input);
     }
 
     @Override
@@ -126,7 +120,12 @@ public class GbpVppProviderInstance implements ClusterSingletonService, VppAdapt
     }
 
     @Override
-    public Future<RpcResult<Void>> expandVirtualBridgeDomainOnNodes(ExpandVirtualBridgeDomainOnNodesInput input) {
-        return renderer.getVppRpcServiceImpl().expandVirtualBridgeDomainOnNode(input);
+    public Future<RpcResult<Void>> cloneVirtualBridgeDomainOnNodes(CloneVirtualBridgeDomainOnNodesInput input) {
+        return renderer.getVppRpcServiceImpl().cloneVirtualBridgeDomainOnNode(input);
+    }
+
+    @Override
+    public Future<RpcResult<Void>> deleteInterfaceFromNode(DeleteInterfaceFromNodeInput input) {
+        return renderer.getVppRpcServiceImpl().deleteInterfaceFromNodes(input);
     }
 }

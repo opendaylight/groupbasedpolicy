@@ -35,9 +35,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapte
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.CreateInterfaceOnNodeInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.CreateVirtualBridgeDomainOnNodesInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.DelInterfaceFromBridgeDomainInput;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.DeleteInterfaceInput;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.DeleteVirtualBridgeDomainOnNodesInput;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.ExpandVirtualBridgeDomainOnNodesInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.DeleteInterfaceFromNodeInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.DeleteVirtualBridgeDomainFromNodesInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.CloneVirtualBridgeDomainOnNodesInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.bridge.domain.attributes.tunnel.type.Vlan;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.bridge.domain.attributes.tunnel.type.Vxlan;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425._interface.attributes.InterfaceTypeChoice;
@@ -46,18 +46,14 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_render
 import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.VlanId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.VhostUserRole;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.VxlanVni;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyTypesVbridgeAugment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyVbridgeAugment;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vlan.rev160429.TunnelTypeVlan;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vlan.rev160429.network.topology.topology.tunnel.parameters.VlanNetworkParameters;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev160429.TunnelTypeVxlan;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev160429.network.topology.topology.tunnel.parameters.VxlanTunnelParameters;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.TopologyTypes;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcError.ErrorType;
 import org.opendaylight.yangtools.yang.common.RpcResult;
@@ -89,6 +85,7 @@ public class VppRpcServiceImpl {
     }
 
     public Future<RpcResult<Void>> createVirtualBridgeDomain(CreateVirtualBridgeDomainOnNodesInput input) {
+        LOG.info("Processing a remote call for creating bridge domain {}", input.getId());
         if (input.getTunnelType() == null) {
             return Futures.immediateFuture(RpcResultBuilder.<Void>failed()
                 .withError(ErrorType.RPC,
@@ -100,13 +97,16 @@ public class VppRpcServiceImpl {
             .stream()
             .map(locationRef -> locationRef.getNodeId())
             .collect(Collectors.toList());
+        LOG.trace("Corresponding nodes for bridge-domain {}", input.getPhysicalLocationRef());
         if (input.getTunnelType() instanceof Vxlan) {
+            LOG.trace("Detected VXLAN type for bridge domain {}", input.getId());
             Vxlan tunnelType = (Vxlan) input.getTunnelType();
             VxlanVni vxlanVni = new VxlanVni(tunnelType.getVni().getValue());
             nodeIds.forEach(nodeId -> {
                 futures.add(bridgeDomainManager.createVxlanBridgeDomainOnVppNode(input.getId(), vxlanVni, nodeId));
             });
         } else if (input.getTunnelType() instanceof Vlan) {
+            LOG.trace("Detected VLAN type for bridge domain {}", input.getId());
             Vlan vlan = (Vlan) input.getTunnelType();
             VlanId vlanId = new VlanId(vlan.getVlanId().getValue());
             nodeIds.forEach(nodeId -> {
@@ -116,7 +116,8 @@ public class VppRpcServiceImpl {
         return Futures.transform(Futures.allAsList(futures), voidsToRpcResult());
     }
 
-    public Future<RpcResult<Void>> deleteVirtualBridgeDomain(DeleteVirtualBridgeDomainOnNodesInput input) {
+    public Future<RpcResult<Void>> deleteVirtualBridgeDomain(DeleteVirtualBridgeDomainFromNodesInput input) {
+        LOG.info("Processing a remote call for removing bridge domain {}", input.getBridgeDomainId());
         List<ListenableFuture<Void>> futures = new ArrayList<>();
         input.getBridgeDomainNode().forEach(nodeId -> {
             futures.add(bridgeDomainManager.removeBridgeDomainFromVppNode(input.getBridgeDomainId(), nodeId));
@@ -124,12 +125,13 @@ public class VppRpcServiceImpl {
         return Futures.transform(Futures.allAsList(futures), voidsToRpcResult());
     }
 
-    public ListenableFuture<RpcResult<Void>> expandVirtualBridgeDomainOnNode(ExpandVirtualBridgeDomainOnNodesInput input) {
+    public ListenableFuture<RpcResult<Void>> cloneVirtualBridgeDomainOnNode(CloneVirtualBridgeDomainOnNodesInput input) {
+        LOG.info("Processing a remote call for clonning  bridge domain {}", input.getBridgeDomainId());
         List<ListenableFuture<Void>> futures = new ArrayList<>();
         ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
         InstanceIdentifier<Topology> topologyIid = VppIidFactory.getTopologyIid(new TopologyKey(new TopologyId(
                 input.getBridgeDomainId())));
-        return Futures.transform(rTx.read(LogicalDatastoreType.OPERATIONAL, topologyIid),
+        return Futures.transform(rTx.read(LogicalDatastoreType.CONFIGURATION, topologyIid),
                 new AsyncFunction<Optional<Topology>, RpcResult<Void>>() {
 
                     @Override
@@ -139,33 +141,33 @@ public class VppRpcServiceImpl {
                             return Futures.immediateFuture(RpcResultBuilder.<Void>failed()
                                 .withError(
                                         ErrorType.RPC,
-                                        "Failed to expand bridge domain. Bridge domain " + input.getBridgeDomainId()
+                                        "Failed to clone bridge domain. Bridge domain " + input.getBridgeDomainId()
                                                 + " does not exist.")
                                 .build());
                         }
-                        TopologyTypes topologyTypes = optTopology.get().getTopologyTypes();
-                        if (topologyTypes == null
-                                || topologyTypes.getAugmentation(TopologyTypesVbridgeAugment.class) == null
-                                || optTopology.get().getAugmentation(TopologyVbridgeAugment.class) == null) {
+                        TopologyVbridgeAugment vBridgeAug = optTopology.get().getAugmentation(TopologyVbridgeAugment.class);
+                        if (vBridgeAug == null) {
                             return Futures.immediateFuture(RpcResultBuilder.<Void>failed()
                                 .withError(
                                         ErrorType.RPC,
-                                        "Failed to expand bridge domain. Topology " + input.getBridgeDomainId()
+                                        "Failed to clone bridge domain. Topology " + input.getBridgeDomainId()
                                                 + " is not bridge domain type.")
                                 .build());
                         }
-                        TopologyVbridgeAugment vBridge = optTopology.get()
-                            .getAugmentation(TopologyVbridgeAugment.class);
-                        if (vBridge.getTunnelParameters() instanceof TunnelTypeVxlan) {
-                            VxlanTunnelParameters vxlanTunnelParams = (VxlanTunnelParameters) vBridge.getTunnelParameters();
+                        if (vBridgeAug.getTunnelParameters() instanceof VxlanTunnelParameters) {
+                            LOG.debug("Clonning VXLAN type bridge domain {} on nodes {}", input.getBridgeDomainId(),
+                                    input.getBridgeDomainNode());
+                            VxlanTunnelParameters vxlanTunnelParams = (VxlanTunnelParameters) vBridgeAug.getTunnelParameters();
                             VxlanVni vni = vxlanTunnelParams.getVni();
                             input.getBridgeDomainNode().forEach(
                                     nodeId -> {
                                         futures.add(bridgeDomainManager.createVxlanBridgeDomainOnVppNode(
                                                 input.getBridgeDomainId(), vni, nodeId));
                                     });
-                        } else if (vBridge.getTunnelParameters() instanceof TunnelTypeVlan) {
-                            VlanNetworkParameters vlanTunnelParams = (VlanNetworkParameters) vBridge.getTunnelParameters();
+                        } else if (vBridgeAug.getTunnelParameters() instanceof VlanNetworkParameters) {
+                            LOG.debug("Clonning VLAN type bridge domain {} on nodes {}", input.getBridgeDomainId(),
+                                    input.getBridgeDomainNode());
+                            VlanNetworkParameters vlanTunnelParams = (VlanNetworkParameters) vBridgeAug.getTunnelParameters();
                             VlanId vlanId = vlanTunnelParams.getVlanId();
                             input.getBridgeDomainNode().forEach(
                                     nodeId -> {
@@ -178,7 +180,7 @@ public class VppRpcServiceImpl {
                 });
     }
 
-    public ListenableFuture<RpcResult<Void>> createInterfaceOnNode(CreateInterfaceOnNodeInput input) {
+    public ListenableFuture<RpcResult<Void>> createInterfaceOnNodes(CreateInterfaceOnNodeInput input) {
         InterfaceTypeChoice interfaceType = input.getInterfaceTypeChoice();
         ConfigCommand ifaceCommand = null;
         if (interfaceType instanceof VhostUserCase) {
@@ -212,7 +214,7 @@ public class VppRpcServiceImpl {
                 voidToRpcResult());
     }
 
-    public ListenableFuture<RpcResult<Void>> deleteInterfaceOnNode(DeleteInterfaceInput input) {
+    public ListenableFuture<RpcResult<Void>> deleteInterfaceFromNodes(DeleteInterfaceFromNodeInput input) {
         InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(input.getVppNodeId());
         return Futures.transform(readInterface(vppNodeIid, input.getVppInterfaceName()),
                 new AsyncFunction<Optional<Interface>, RpcResult<Void>>() {

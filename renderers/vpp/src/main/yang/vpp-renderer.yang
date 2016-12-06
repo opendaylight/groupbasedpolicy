@@ -72,7 +72,7 @@ module vpp-renderer {
     }
 
     grouping interface-attributes {
-        uses vpp-renderer:interface-location;
+        uses interface-location;
         leaf description {
             description "Additional description of the vpp-endpoint";
             type string;

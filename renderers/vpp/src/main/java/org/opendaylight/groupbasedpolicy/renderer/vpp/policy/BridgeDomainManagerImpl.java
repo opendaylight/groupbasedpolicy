@@ -246,6 +246,7 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
     private ListenableFuture<Void> createBridgeDomainOnVppNode(@Nonnull final String bridgeDomainName,
                                                                @Nonnull final TopologyVbridgeAugment vBridgeAug,
                                                                @Nonnull final Node vppNode) {
+        LOG.info("Creating bridge domain {} on VPP node {}", bridgeDomainName, vppNode);
         final TopologyKey topologyKey = new TopologyKey(new TopologyId(bridgeDomainName));
         final ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
         final InstanceIdentifier<Topology> topologyIid = VppIidFactory.getTopologyIid(topologyKey);
@@ -271,6 +272,7 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
                         public void onSuccess(@Nullable final Void result) {
                             final InstanceIdentifier<BridgeDomain> bridgeDomainStateIid =
                                     VppIidFactory.getBridgeDomainStateIid(new BridgeDomainKey(bridgeDomainName));
+                            LOG.debug("Adding a listener on bridge domain state", bridgeDomainName);
                             final DataTreeIdentifier<BridgeDomain> bridgeDomainStateIidDTI = new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
                                     bridgeDomainStateIid);
                             new ListenableFutureSetter<>(dataProvider, topologyFuture, bridgeDomainStateIidDTI, ModificationType.WRITE);
@@ -284,6 +286,7 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
                     });
                 } else {
                     topologyFuture.set(null);
+                    LOG.info("Bridge domain {} already exists", optTopology.get().getTopologyId());
                 }
                 return Futures.transform(topologyFuture, new AsyncFunction<Void, Void>() {
                     @Override
@@ -291,6 +294,7 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
                         // Bridge member
                         final SettableFuture<Void> futureBridgeMember = SettableFuture.create();
                         final InstanceIdentifier<Node> nodeIid = VppIidFactory.getNodeIid(topologyKey, vppNode.getKey());
+                        LOG.debug("Adding node {} to bridge domain {}", vppNode.getKey(), topologyKey.getTopologyId());
                         final WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
                         wTx.put(LogicalDatastoreType.CONFIGURATION, nodeIid, vppNode);
                         Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
@@ -321,6 +325,7 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
     @Override
     public ListenableFuture<Void> removeBridgeDomainFromVppNode(@Nonnull final String bridgeDomainName,
                                                                 @Nonnull final NodeId vppNode) {
+        LOG.info("Removing bridge domain {} from VPP node {}", bridgeDomainName, vppNode);
         WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
         InstanceIdentifier<Node> nodeIid =
                 VppIidFactory.getNodeIid(new TopologyKey(new TopologyId(bridgeDomainName)), new NodeKey(vppNode));
