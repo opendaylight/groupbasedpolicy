@@ -8,16 +8,24 @@
 
 package org.opendaylight.groupbasedpolicy.ip.sgt.distribution.service.impl;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Future;
-
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.sxp.util.time.TimeConv;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.DateAndTime;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.ip.sgt.distribution.rev160715.IpSgtDistributionService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.ip.sgt.distribution.rev160715.RemoveIpSgtBindingFromPeerInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.ip.sgt.distribution.rev160715.SendIpSgtBindingToPeerInput;
@@ -31,6 +39,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBinding;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBindingBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBindingKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.peer.sequence.fields.PeerSequenceBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.SxpNodeIdentity;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.network.topology.topology.node.SxpDomains;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.network.topology.topology.node.sxp.domains.SxpDomain;
@@ -48,14 +57,6 @@ import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.opendaylight.yangtools.yang.common.RpcResultBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.SettableFuture;
 
 public class IpSgtDistributionServiceImpl implements AutoCloseable, IpSgtDistributionService {
 
@@ -84,12 +85,12 @@ public class IpSgtDistributionServiceImpl implements AutoCloseable, IpSgtDistrib
 
     private void createSxpNode(SxpControllerService sxpService) {
         AddNodeInput addNodeInput = new AddNodeInputBuilder().setNodeId(new NodeId(SXP_NODE_ID))
-            .setSourceIp(sourceIp)
-            .setDescription(SXP_NODE_DESCRIPTION)
-            .build();
+                .setSourceIp(sourceIp)
+                .setDescription(SXP_NODE_DESCRIPTION)
+                .build();
         Future<RpcResult<AddNodeOutput>> addNodeResult = sxpService.addNode(addNodeInput);
         try {
-            if (!addNodeResult.get().getResult().isResult()) {
+            if (! addNodeResult.get().getResult().isResult()) {
                 LOG.error("RPC add-node wasn't successfull");
             }
         } catch (Exception e) {
@@ -103,11 +104,11 @@ public class IpSgtDistributionServiceImpl implements AutoCloseable, IpSgtDistrib
         boolean success = true;
         for (Binding binding : input.getBinding()) {
             success = transformChanges(binding, bindingsMap);
-            if (!success) {
+            if (! success) {
                 break;
             }
         }
-        if (!success) {
+        if (! success) {
             return Futures.immediateCheckedFuture(RpcResultBuilder.<Void>failed().build());
         }
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
@@ -162,23 +163,27 @@ public class IpSgtDistributionServiceImpl implements AutoCloseable, IpSgtDistrib
 
     private InstanceIdentifier<MasterDatabaseBinding> bindingIid(String domainId, IpPrefix prefix) {
         return InstanceIdentifier.builder(NetworkTopology.class)
-            .child(Topology.class, new TopologyKey(new TopologyId(SXP_TOPOLOGY_ID)))
-            .child(Node.class,
-                    new NodeKey(
-                            new org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId(
-                                    SXP_NODE_ID)))
-            .augmentation(SxpNodeIdentity.class)
-            .child(SxpDomains.class)
-            .child(SxpDomain.class, new SxpDomainKey(domainId))
-            .child(MasterDatabase.class)
-            .child(MasterDatabaseBinding.class, new MasterDatabaseBindingKey(prefix))
-            .build();
+                .child(Topology.class, new TopologyKey(new TopologyId(SXP_TOPOLOGY_ID)))
+                .child(Node.class,
+                        new NodeKey(
+                                new org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId(
+                                        SXP_NODE_ID)))
+                .augmentation(SxpNodeIdentity.class)
+                .child(SxpDomains.class)
+                .child(SxpDomain.class, new SxpDomainKey(domainId))
+                .child(MasterDatabase.class)
+                .child(MasterDatabaseBinding.class, new MasterDatabaseBindingKey(prefix))
+                .build();
     }
 
     private MasterDatabaseBinding createBinding(Entry<Sgt, IpPrefix> binding) {
-        return new MasterDatabaseBindingBuilder().setIpPrefix(binding.getValue())
-            .setSecurityGroupTag(binding.getKey())
-            .build();
+        final DateAndTime nowDateTime = TimeConv.toDt(System.currentTimeMillis());
+        return new MasterDatabaseBindingBuilder()
+                .setIpPrefix(binding.getValue())
+                .setSecurityGroupTag(binding.getKey())
+                .setPeerSequence(new PeerSequenceBuilder().build())
+                .setTimestamp(nowDateTime)
+                .build();
     }
 
     @Override
@@ -187,11 +192,11 @@ public class IpSgtDistributionServiceImpl implements AutoCloseable, IpSgtDistrib
         boolean success = true;
         for (Binding binding : input.getBinding()) {
             success = transformChanges(binding, bindingsMap);
-            if (!success) {
+            if (! success) {
                 break;
             }
         }
-        if (!success) {
+        if (! success) {
             return Futures.immediateCheckedFuture(RpcResultBuilder.<Void>failed().build());
         }
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();

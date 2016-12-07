@@ -69,11 +69,15 @@
             <artifactId>sxp-controller</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.opendaylight.sxp</groupId>
+            <artifactId>sxp-core</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.opendaylight.groupbasedpolicy</groupId>
             <artifactId>groupbasedpolicy</artifactId>
             <version>${project.version}</version>
         </dependency>
-    <!-- testing dependencies -->
+        <!-- testing dependencies -->
         <dependency>
             <groupId>org.opendaylight.groupbasedpolicy</groupId>
             <artifactId>groupbasedpolicy</artifactId>

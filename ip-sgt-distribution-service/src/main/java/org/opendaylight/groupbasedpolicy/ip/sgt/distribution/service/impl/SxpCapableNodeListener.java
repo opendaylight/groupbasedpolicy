@@ -12,7 +12,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
@@ -104,16 +103,18 @@ public class SxpCapableNodeListener implements DataTreeChangeListener<SxpConnect
         String password = sxpData.getPassword();
         InstanceIdentifier<SxpDomain> iid = sxpDomainIid(domainId);
         SxpDomain domain = new SxpDomainBuilder().setDomainName(domainId)
-            .setConnections(new ConnectionsBuilder()
-                .setConnection(Collections.singletonList(new ConnectionBuilder().setPeerAddress(peerAddr)
-                    .setTcpPort(port)
-                    .setMode(ConnectionMode.Speaker)
-                    .setPassword(password)
-                    .setConnectionTimers(new ConnectionTimersBuilder().build())
-                    .setDescription("Connection to " + domainId)
-                    .build()))
-                .build())
-            .build();
+                .setConnections(new ConnectionsBuilder()
+                        .setConnection(Collections.singletonList(new ConnectionBuilder()
+                                .setPeerAddress(peerAddr)
+                                .setTcpPort(port)
+                                .setMode(ConnectionMode.Speaker)
+                                .setPassword(password)
+                                .setConnectionTimers(new ConnectionTimersBuilder().build())
+                                .setDescription("Connection to " + domainId)
+                                .setVersion(sxpData.getVersion())
+                                .build()))
+                        .build())
+                .build();
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
         wtx.merge(LogicalDatastoreType.CONFIGURATION, iid, domain);
         wtx.submit();
