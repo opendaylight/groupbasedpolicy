@@ -79,6 +79,10 @@
             <artifactId>sxp-ep-provider</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.opendaylight.groupbasedpolicy</groupId>
+            <artifactId>ip-sgt-distribution-service</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.opendaylight.sfc</groupId>
             <artifactId>sfc-provider</artifactId>
         </dependency>

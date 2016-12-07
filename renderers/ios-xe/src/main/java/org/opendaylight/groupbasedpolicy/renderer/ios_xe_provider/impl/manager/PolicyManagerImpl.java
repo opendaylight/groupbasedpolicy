@@ -11,23 +11,25 @@ package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager;
 import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Create;
 import static org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.PolicyManagerImpl.DsAction.Delete;
 
-import java.util.concurrent.TimeUnit;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.List;
-import java.util.Optional;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.manager.PolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil;
+import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.RendererPolicyUtil;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.StatusUtil;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.api.EPToSgtMapper;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
@@ -43,6 +45,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.status.UnconfiguredEndpointsBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.ip.sgt.distribution.rev160715.IpSgtDistributionService;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.ip.sgt.distribution.rev160715.SendIpSgtBindingToPeerInputBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -57,12 +61,15 @@ public class PolicyManagerImpl implements PolicyManager {
     private final DataBroker dataBroker;
     private final NodeManager nodeManager;
     private final EPToSgtMapper epToSgtMapper;
+    private final IpSgtDistributionService ipSgtDistributor;
 
     public PolicyManagerImpl(final DataBroker dataBroker,
-                             final NodeManager nodeManager, final EPToSgtMapper epToSgtMapper) {
+                             final NodeManager nodeManager, final EPToSgtMapper epToSgtMapper,
+                             final IpSgtDistributionService ipSgtDistributor) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.nodeManager = Preconditions.checkNotNull(nodeManager);
         this.epToSgtMapper = Preconditions.checkNotNull(epToSgtMapper);
+        this.ipSgtDistributor = Preconditions.checkNotNull(ipSgtDistributor);
     }
 
     @Override
@@ -136,7 +143,7 @@ public class PolicyManagerImpl implements PolicyManager {
                 continue;
             }
             final Optional<String> optionalManagementIpAddress = nodeManager.getNodeManagementIpByMountPointIid(mountpointIid);
-            if (!optionalManagementIpAddress.isPresent()) {
+            if (! optionalManagementIpAddress.isPresent()) {
                 final String info = String.format("Can not create policyWriter, managementIpAddress for mountpoint %s is null",
                         mountpointIid);
                 context.appendUnconfiguredRendererEP(StatusUtil.assembleFullyNotConfigurableRendererEP(context, info));
@@ -160,12 +167,25 @@ public class PolicyManagerImpl implements PolicyManager {
             final long TIMEOUT = 10;
             final TimeUnit UNIT = TimeUnit.SECONDS;
 
+            final SendIpSgtBindingToPeerInputBuilder ipSgtBindings = new SendIpSgtBindingToPeerInputBuilder();
+            ipSgtBindings.setBinding(new ArrayList<>());
+
             final Sgt sourceSgt = PolicyManagerUtil.findSgtTag(epToSgtMapper, rendererEndpoint, dataAfter.getEndpoints()
                     .getAddressEndpointWithLocation(), TIMEOUT, UNIT);
+            final AddressEndpointWithLocation sourceEPAddressWithLocation = RendererPolicyUtil.lookupEndpoint(
+                    rendererEndpoint, dataAfter.getEndpoints().getAddressEndpointWithLocation());
+
+            PolicyManagerUtil.createIpSgtBindingItem(sourceSgt, sourceEPAddressWithLocation).ifPresent(ipSgtBindings.getBinding()::add);
+
             // Peer Endpoint
             for (PeerEndpoint peerEndpoint : rendererEndpoint.getPeerEndpoint()) {
                 final Sgt destinationSgt = PolicyManagerUtil.findSgtTag(epToSgtMapper, peerEndpoint, dataAfter.getEndpoints()
                         .getAddressEndpointWithLocation(), TIMEOUT, UNIT);
+                final AddressEndpointWithLocation destinationEPAddressWithLocation = RendererPolicyUtil.lookupEndpoint(
+                        peerEndpoint, dataAfter.getEndpoints().getAddressEndpointWithLocation());
+                PolicyManagerUtil.createIpSgtBindingItem(destinationSgt, destinationEPAddressWithLocation)
+                        .ifPresent(ipSgtBindings.getBinding()::add);
+
                 if (sourceSgt == null || destinationSgt == null) {
                     final String info = String.format("Endpoint-policy: missing sgt value(sourceSgt=%s, destinationSgt=%s)",
                             sourceSgt, destinationSgt);
@@ -186,6 +206,8 @@ public class PolicyManagerImpl implements PolicyManager {
                             peerEndpoint);
                 }
             }
+
+            ipSgtDistributor.sendIpSgtBindingToPeer(ipSgtBindings.build());
         }
         final ListenableFuture<List<Boolean>> cumulativeResult = context.getCumulativeResult();
         return Futures.transform(cumulativeResult, new Function<List<Boolean>, Optional<Status>>() {

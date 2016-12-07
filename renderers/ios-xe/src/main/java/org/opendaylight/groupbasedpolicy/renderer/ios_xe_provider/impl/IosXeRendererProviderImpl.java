@@ -44,6 +44,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.capabilities.SupportedActionDefinitionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.capabilities.SupportedClassifierDefinition;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.capabilities.SupportedClassifierDefinitionBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.ip.sgt.distribution.rev160715.IpSgtDistributionService;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,12 +60,15 @@ public class IosXeRendererProviderImpl implements IosXeRendererProvider, Binding
     private final SxpEpProviderProvider sxpEpProvider;
     private RendererConfigurationListenerImpl rendererConfigurationListener;
     private IosXeCapableNodeListenerImpl iosXeCapableNodeListener;
+    private final IpSgtDistributionService ipSgtDistributor;
 
     public IosXeRendererProviderImpl(final DataBroker dataBroker, final BindingAwareBroker broker,
-                                     final SxpEpProviderProvider sxpEpProvider) {
+                                     final SxpEpProviderProvider sxpEpProvider,
+                                     final IpSgtDistributionService ipSgtDistributor) {
         LOG.debug("ios-xe renderer bootstrap");
         this.dataBroker = Preconditions.checkNotNull(dataBroker, "missing dataBroker dependency");
         this.sxpEpProvider = Preconditions.checkNotNull(sxpEpProvider, "missing sxpEpProvider param");
+        this.ipSgtDistributor = Preconditions.checkNotNull(ipSgtDistributor, "missing ipSgtDistributor param");
         broker.registerProvider(this);
     }
 
@@ -90,7 +94,7 @@ public class IosXeRendererProviderImpl implements IosXeRendererProvider, Binding
         iosXeCapableNodeListener = new IosXeCapableNodeListenerImpl(dataBroker, nodeManager);
 
         // policy-manager and delegates
-        final PolicyManager policyManager = new PolicyManagerImpl(dataBroker, nodeManager, sxpEpProvider.getEPToSgtMapper());
+        final PolicyManager policyManager = new PolicyManagerImpl(dataBroker, nodeManager, sxpEpProvider.getEPToSgtMapper(), ipSgtDistributor);
         final PolicyManager policyManagerZip = new PolicyManagerZipImpl(policyManager);
 
         // renderer-configuration endpoints
@@ -105,7 +109,7 @@ public class IosXeRendererProviderImpl implements IosXeRendererProvider, Binding
     private void writeRendererCapabilities() {
         final Optional<WriteTransaction> optionalWriteTransaction =
                 NetconfTransactionCreator.netconfWriteOnlyTransaction(dataBroker);
-        if (!optionalWriteTransaction.isPresent()) {
+        if (! optionalWriteTransaction.isPresent()) {
             LOG.warn("Failed to create transaction, mountpoint: {}", dataBroker);
             return;
         }

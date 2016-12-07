@@ -14,12 +14,14 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.opendaylight.controller.config.yang.config.groupbasedpolicy.GroupbasedpolicyInstance;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
+import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.IosXeRendererProviderImpl;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.spi.SxpEpProviderProvider;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonService;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceRegistration;
 import org.opendaylight.mdsal.singleton.common.api.ServiceGroupIdentifier;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.ip.sgt.distribution.rev160715.IpSgtDistributionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,17 +35,20 @@ public class IosXeProviderInstance implements ClusterSingletonService, AutoClose
     private final BindingAwareBroker bindingAwareBroker;
     private final ClusterSingletonServiceProvider clusterSingletonService;
     private final SxpEpProviderProvider sxpEpProvider;
+    private final IpSgtDistributionService ipSgtDistributor;
     private ClusterSingletonServiceRegistration singletonServiceRegistration;
     private IosXeRendererProviderImpl renderer;
 
     public IosXeProviderInstance(final DataBroker dataBroker,
                                  final BindingAwareBroker broker,
                                  final ClusterSingletonServiceProvider clusterSingletonService,
-                                 final SxpEpProviderProvider sxpEpProvider) {
+                                 final SxpEpProviderProvider sxpEpProvider,
+                                 final RpcProviderRegistry rpcProviderRegistry) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.bindingAwareBroker = Preconditions.checkNotNull(broker);
         this.clusterSingletonService = Preconditions.checkNotNull(clusterSingletonService);
         this.sxpEpProvider = Preconditions.checkNotNull(sxpEpProvider);
+        this.ipSgtDistributor = Preconditions.checkNotNull(rpcProviderRegistry.getRpcService(IpSgtDistributionService.class));
     }
 
     public void initialize() {
@@ -54,7 +59,7 @@ public class IosXeProviderInstance implements ClusterSingletonService, AutoClose
     @Override
     public void instantiateServiceInstance() {
         LOG.info("Instantiating {}", this.getClass().getSimpleName());
-        renderer = new IosXeRendererProviderImpl(dataBroker, bindingAwareBroker, sxpEpProvider);
+        renderer = new IosXeRendererProviderImpl(dataBroker, bindingAwareBroker, sxpEpProvider, ipSgtDistributor);
     }
 
     @Override
