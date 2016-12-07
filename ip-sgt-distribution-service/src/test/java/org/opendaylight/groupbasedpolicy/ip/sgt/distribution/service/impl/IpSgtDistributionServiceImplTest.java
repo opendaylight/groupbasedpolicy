@@ -16,21 +16,25 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.util.concurrent.Futures;
 import java.util.Collections;
 import java.util.concurrent.Future;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentMatcher;
+import org.mockito.Matchers;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
+import org.opendaylight.sxp.util.time.TimeConv;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.DateAndTime;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.ip.sgt.distribution.rev160715.RemoveIpSgtBindingFromPeerInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.ip.sgt.distribution.rev160715.RemoveIpSgtBindingFromPeerInputBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.ip.sgt.distribution.rev160715.SendIpSgtBindingToPeerInput;
@@ -46,6 +50,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBinding;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBindingBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.master.database.fields.MasterDatabaseBindingKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.peer.sequence.fields.PeerSequence;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.peer.sequence.fields.PeerSequenceBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.SxpNodeIdentity;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.network.topology.topology.node.SxpDomains;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.network.topology.topology.node.sxp.domains.SxpDomain;
@@ -65,12 +71,12 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import com.google.common.util.concurrent.Futures;
-
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(IpSgtDistributionServiceImpl.class)
 public class IpSgtDistributionServiceImplTest {
 
+    private static final PeerSequence EMPTY_PEER_SEQUENCE = new PeerSequenceBuilder().build();
+    private static final DateAndTime DUMMY_DT = TimeConv.toDt(123456L);
     private final IpAddress ADDR = new IpAddress(new Ipv4Address("10.0.0.1"));
     private final IpPrefix BINDING_ADDR = new IpPrefix(new Ipv4Prefix("192.168.50.1/32"));
     private final Sgt BINDING_SGT = new Sgt(1010);
@@ -139,19 +145,36 @@ public class IpSgtDistributionServiceImplTest {
         when(wtx.submit()).thenReturn(Futures.immediateCheckedFuture(null));
         when(nodeListener.getDomainIdForPeer(PEER_IID)).thenReturn(DOMAIN_ID);
         Future<RpcResult<Void>> response = impl.sendIpSgtBindingToPeer(input);
-        new MasterDatabaseBindingBuilder().setIpPrefix(BINDING_ADDR).setSecurityGroupTag(BINDING_SGT).build();
+        final MasterDatabaseBinding expectedMasterDBBinding = new MasterDatabaseBindingBuilder().setIpPrefix(BINDING_ADDR)
+                .setSecurityGroupTag(BINDING_SGT)
+                .setPeerSequence(EMPTY_PEER_SEQUENCE)
+                .setTimestamp(DUMMY_DT)
+                .build();
         verify(wtx).put(eq(LogicalDatastoreType.CONFIGURATION),
                 eq(InstanceIdentifier.builder(SXP_NODE_IID)
-                    .augmentation(SxpNodeIdentity.class)
-                    .child(SxpDomains.class)
-                    .child(SxpDomain.class, new SxpDomainKey(DOMAIN_ID))
-                    .child(MasterDatabase.class)
-                    .child(MasterDatabaseBinding.class, new MasterDatabaseBindingKey(BINDING_ADDR))
-                    .build()),
-                eq(new MasterDatabaseBindingBuilder().setIpPrefix(BINDING_ADDR)
-                    .setSecurityGroupTag(BINDING_SGT)
-                    .build()));
+                        .augmentation(SxpNodeIdentity.class)
+                        .child(SxpDomains.class)
+                        .child(SxpDomain.class, new SxpDomainKey(DOMAIN_ID))
+                        .child(MasterDatabase.class)
+                        .child(MasterDatabaseBinding.class, new MasterDatabaseBindingKey(BINDING_ADDR))
+                        .build()),
+                Matchers.argThat(createMasterBDBindingMatcher(expectedMasterDBBinding)));
         assertTrue(response.get().isSuccessful());
+    }
+
+    private static ArgumentMatcher<MasterDatabaseBinding> createMasterBDBindingMatcher(final MasterDatabaseBinding expectedMasterDBBinding) {
+        return new ArgumentMatcher<MasterDatabaseBinding>() {
+            @Override
+            public boolean matches(final Object o) {
+                boolean verdict = false;
+                if (o instanceof MasterDatabaseBinding) {
+                    final MasterDatabaseBinding otherMasterDBBinding =
+                            new MasterDatabaseBindingBuilder((MasterDatabaseBinding) o).setTimestamp(DUMMY_DT).build();
+                    verdict = expectedMasterDBBinding.equals(otherMasterDBBinding);
+                }
+                return verdict;
+            }
+        };
     }
 
     @Test
