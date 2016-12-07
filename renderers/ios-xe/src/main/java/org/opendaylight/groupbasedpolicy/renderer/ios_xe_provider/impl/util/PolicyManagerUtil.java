@@ -34,6 +34,7 @@ import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager.P
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.writer.PolicyWriterUtil;
 import org.opendaylight.groupbasedpolicy.sxp.ep.provider.api.EPToSgtMapper;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.rsp.rev140701.rendered.service.paths.RenderedServicePath;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308.ClassNameType;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308.PolicyActionType;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._class.map.match.grouping.SecurityGroup;
@@ -75,6 +76,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.RuleName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.IpPrefixType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.rule.group.with.renderer.endpoint.participation.RuleGroupWithRendererEndpointParticipation;
@@ -86,6 +88,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.actions.Action;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.classifiers.Classifier;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.resolved.rules.ResolvedRule;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.ip.sgt.distribution.rev160715.rpc.fields.Binding;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.ip.sgt.distribution.rev160715.rpc.fields.BindingBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.ip.sgt.distribution.rev160715.rpc.fields.binding.PeerNodeBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -115,7 +120,7 @@ public class PolicyManagerUtil {
                                                     final PolicyConfigurationContext context, final Configuration data,
                                                     final PeerEndpoint peerEndpoint, final DataBroker dataBroker) {
         // Create appropriate policy map
-        if (!PolicyManagerUtil.constructEmptyPolicyMapWithInterface(context)) {
+        if (! PolicyManagerUtil.constructEmptyPolicyMapWithInterface(context)) {
             final String policyMapName = context.getPolicyMapLocation().getPolicyMapName();
             final String interfaceName = context.getPolicyMapLocation().getInterfaceName();
             final String info = String.format("Unable to create policy-map %s on interface %s", policyMapName, interfaceName);
@@ -166,7 +171,7 @@ public class PolicyManagerUtil {
         }
 
         // Remove policy-map if empty
-        if (!deleteEmptyPolicyMapWithInterface(context.getPolicyMapLocation())) {
+        if (! deleteEmptyPolicyMapWithInterface(context.getPolicyMapLocation())) {
             final PolicyManagerImpl.PolicyMapLocation location = context.getPolicyMapLocation();
             final String info = String.format("Unable to remove policy-map %s and interface %s", location.getPolicyMapName(),
                     location.getInterfaceName());
@@ -188,10 +193,10 @@ public class PolicyManagerUtil {
         final ContractId contractId = ruleGroupWithParticipation.getContractId();
         final SubjectName subjectName = ruleGroupWithParticipation.getSubjectName();
         for (RuleGroup ruleGroup : data.getRuleGroups().getRuleGroup()) {
-            if (!ruleGroup.getTenantId().equals(tenantId)) {
+            if (! ruleGroup.getTenantId().equals(tenantId)) {
                 continue;
             }
-            if (!ruleGroup.getContractId().equals(contractId)) {
+            if (! ruleGroup.getContractId().equals(contractId)) {
                 continue;
             }
             if (ruleGroup.getSubjectName().equals(subjectName)) {
@@ -483,6 +488,28 @@ public class PolicyManagerUtil {
 
     static String generateClassMapName(final int sourceTag, final int destinationTag) {
         return "srcTag" + sourceTag + "_dstTag" + destinationTag;
+    }
+
+    public static Optional<Binding> createIpSgtBindingItem(final Sgt sgt, final AddressEndpointWithLocation addressEndpointWithLocation) {
+        final Optional<Binding> result;
+        final LocationType locationType = addressEndpointWithLocation.getAbsoluteLocation().getLocationType();
+
+        if (IpPrefixType.class == addressEndpointWithLocation.getAddressType() &&
+                locationType instanceof ExternalLocationCase &&
+                sgt != null) {
+            final Binding binding = new BindingBuilder()
+                    .setSgt(sgt)
+                    .setIpPrefix(new IpPrefix(addressEndpointWithLocation.getAddress().toCharArray()))
+                    .setPeerNode(Collections.singletonList(new PeerNodeBuilder()
+                            .setNodeIid(((ExternalLocationCase) locationType).getExternalNodeMountPoint())
+                            .build()))
+                    .build();
+
+            result = Optional.ofNullable(binding);
+        } else {
+            result = Optional.empty();
+        }
+        return result;
     }
 
     /**

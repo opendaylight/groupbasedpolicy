@@ -209,6 +209,7 @@
     <feature name='odl-groupbasedpolicy-ios-xe' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: ios-xe renderer'>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <feature version="${project.version}">odl-groupbasedpolicy-sxp-ep-provider</feature>
+        <feature version="${project.version}">odl-groupbasedpolicy-ip-sgt-distribution-service</feature>
         <feature version="${sfc.version}">odl-sfc-provider</feature>
         <feature version="${sxp.version}">odl-sxp-core</feature>
         <feature version="${netconf.version}">odl-netconf-topology</feature>
