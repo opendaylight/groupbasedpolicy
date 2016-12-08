@@ -544,15 +544,15 @@ public class NeutronPortAware implements NeutronAware<Port> {
     @Override
     public void onUpdated(Port oldPort, Port newPort, Neutron oldNeutron, Neutron newNeutron) {
         LOG.trace("updated port - OLD: {}\nNEW: {}", oldPort, newPort);
-        onDeleted(oldPort, oldNeutron, newNeutron, false);
+        onDeleted(oldPort, oldNeutron, false);
         onCreated(newPort, newNeutron, false);
     }
 
     @Override public void onDeleted(Port deletedItem, Neutron oldNeutron, Neutron newNeutron) {
-        onDeleted(deletedItem, oldNeutron, newNeutron, true);
+        onDeleted(deletedItem, oldNeutron, true);
     }
 
-    public void onDeleted(Port port, Neutron oldNeutron, Neutron newNeutron, boolean removeBaseEpMapping) {
+    public void onDeleted(Port port, Neutron oldNeutron, boolean removeBaseEpMapping) {
         LOG.trace("deleted port - {}", port);
         if (PortUtils.isRouterInterfacePort(port)) {
             LOG.trace("Port is router interface port: {}", port.getUuid().getValue());
@@ -591,7 +591,9 @@ public class NeutronPortAware implements NeutronAware<Port> {
             UniqueId portId = new UniqueId(port.getUuid().getValue());
             PortByBaseEndpointKey portByBaseEndpointKey = new PortByBaseEndpointKey(port.getMacAddress().getValue(),
                     MacAddressType.class, new ContextId(port.getNetworkId().getValue()), MappingUtils.L2_BRDIGE_DOMAIN);
-            removeBaseEndpointMappings(portByBaseEndpointKey, portId, rwTx);
+            if (removeBaseEpMapping) {
+                removeBaseEndpointMappings(portByBaseEndpointKey, portId, rwTx);
+            }
             DataStoreHelper.submitToDs(rwTx);
         } else if (PortUtils.isDhcpPort(port)) {
             LOG.trace("Port is DHCP port: {}", port.getUuid().getValue());
