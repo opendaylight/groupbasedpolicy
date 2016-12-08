@@ -9,6 +9,11 @@ Vagrant then creates 3VMs (controller, compute0 and compute1). After vagrant fin
 "vagrant halt" command and bring them up again with "vagrant up" command. If distribution-karaf-0.5.0-Boron.tar.gz is
 available in vpp-demo folder vagrant setup will use this one. If it is not it will download ODL to controller node.
 
+If you want to use ODL Carbon (current master) you need to change also the versions of Honeycomb and VPP. The repositories are added
+to "/etc/apt/sources.list.d/99fd.io.list". For Boron use "https://nexus.fd.io/content/repositories/fd.io.stable.1609.ubuntu.trusty.main/"
+which is default and for Carbon use "https://nexus.fd.io/content/repositories/fd.io.master.ubuntu.trusty.main/".
+You just need to comment out undesired repositories and uncomment repository that you want to use, then update VPP and honeycomb to new versions.
+
 DEMO setup
 ----------
 (repeat this everytime you want to reset the demo)

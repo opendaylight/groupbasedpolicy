@@ -8,6 +8,8 @@ sudo sed -i 's/#force_color_prompt=yes/force_color_prompt=yes/g' /root/.bashrc
 
 if [ ! -f /etc/apt/sources.list.d/99fd.io.list ];then
     echo "deb https://nexus.fd.io/content/repositories/fd.io.stable.1609.ubuntu.trusty.main/ ./" | sudo tee -a /etc/apt/sources.list.d/99fd.io.list
+    echo "#deb https://nexus.fd.io/content/repositories/fd.io.stable.1701.ubuntu.trusty.main/ ./" | sudo tee -a /etc/apt/sources.list.d/99fd.io.list
+    echo "#deb https://nexus.fd.io/content/repositories/fd.io.master.ubuntu.trusty.main/ ./" | sudo tee -a /etc/apt/sources.list.d/99fd.io.list
 fi
 sudo apt-get -qq update --allow-unauthenticated
 sudo apt-get -y remove apparmor apparmor-utils libapparmor-perl

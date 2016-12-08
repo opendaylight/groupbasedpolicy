@@ -43,7 +43,7 @@ def add_compute(config, name, mgmt_ip, port1, port2)
     node.vm.network "private_network", type: "dhcp", auto_config: false, virtualbox__intnet: port1
     node.vm.network "private_network", type: "dhcp", auto_config: false, virtualbox__intnet: port2
     node.vm.provider "virtualbox" do |vb|
-      vb.memory = "4096"
+      vb.memory = "3072"
       vb.cpus = 2
       vb.customize ["modifyvm", :id, "--ioapic", "on"]
       vb.customize ["setextradata", :id, "VBoxInternal/CPUM/SSE4.1", "1"]
@@ -84,8 +84,8 @@ def add_controller(config, name, mgmt_ip, port1, port2)
     node.vm.network "private_network", type: "dhcp", auto_config: false, virtualbox__intnet: port1
     node.vm.network "private_network", type: "dhcp", auto_config: false, virtualbox__intnet: port2
     node.vm.provider "virtualbox" do |vb|
-      vb.memory = "4096"
-      vb.cpus = 4
+      vb.memory = "3584"
+      vb.cpus = 3
       vb.customize ["modifyvm", :id, "--ioapic", "on"]
       vb.customize ["setextradata", :id, "VBoxInternal/CPUM/SSE4.1", "1"]
       vb.customize ["setextradata", :id, "VBoxInternal/CPUM/SSE4.2", "1"]
