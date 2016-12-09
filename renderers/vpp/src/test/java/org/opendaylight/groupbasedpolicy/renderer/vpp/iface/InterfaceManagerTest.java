@@ -68,10 +68,6 @@ public class InterfaceManagerTest extends CustomDataBrokerTest {
             InstanceIdentifier.builder(Config.class).child(VppEndpoint.class, BASIC_VPP_EP_KEY).build();
     private final static TopologyKey TOPO_KEY = new TopologyKey(new TopologyId("topo1"));
     private final static NodeKey NODE_KEY = new NodeKey(new NodeId("node1"));
-    private final static InstanceIdentifier<Node> NODE_IID = InstanceIdentifier.builder(NetworkTopology.class)
-        .child(Topology.class, TOPO_KEY)
-        .child(Node.class, NODE_KEY)
-        .build();
     private final static String SOCKET = "socket1";
 
     private InterfaceManager manager;
@@ -169,7 +165,7 @@ public class InterfaceManagerTest extends CustomDataBrokerTest {
 
     private VppEndpointBuilder vhostVppEpBuilder() {
         return basicVppEpBuilder().setVppInterfaceName(IFACE_NAME)
-            .setVppNodePath(NODE_IID)
+            .setVppNodeId(NODE_KEY.getNodeId())
             .setInterfaceTypeChoice(new VhostUserCaseBuilder().setSocket(SOCKET).build());
     }
 

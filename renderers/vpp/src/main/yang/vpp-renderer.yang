@@ -122,10 +122,10 @@ module vpp-renderer {
     }
 
     grouping interface-location {
-        leaf vpp-node-path {
-            description "Path to a node representing mount-point to VPP instance.";
+        leaf vpp-node-id {
+            description "Id of a VPP node represented as a mount-point in netconf topology.";
             mandatory true;
-            type instance-identifier;
+            type nt:node-id;
         }
         leaf vpp-interface-name {
             description "Name of interface for the endpoint on VPP";

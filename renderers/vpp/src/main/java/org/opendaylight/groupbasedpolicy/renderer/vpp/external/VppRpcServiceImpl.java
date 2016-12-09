@@ -56,6 +56,7 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.TopologyTypes;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcError.ErrorType;
@@ -200,10 +201,11 @@ public class VppRpcServiceImpl {
             tapBuilder.setOperation(Operations.PUT);
             ifaceCommand = tapBuilder.build();
         }
-        Optional<DataBroker> optDataBroker = mountDataProvider.getDataBrokerForMountPoint(input.getVppNodePath());
+        InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(input.getVppNodeId());
+        Optional<DataBroker> optDataBroker = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
         if (!optDataBroker.isPresent()) {
             return Futures.immediateFuture(RpcResultBuilder.<Void>failed()
-                .withError(ErrorType.RPC, "Cannot find data broker for mount point " + input.getVppNodePath())
+                .withError(ErrorType.RPC, "Cannot find data broker for mount point " + vppNodeIid)
                 .build());
         }
         return Futures.transform(interfaceManager.createInterfaceOnVpp(ifaceCommand, optDataBroker.get()),
@@ -211,7 +213,8 @@ public class VppRpcServiceImpl {
     }
 
     public ListenableFuture<RpcResult<Void>> deleteInterfaceOnNode(DeleteInterfaceInput input) {
-        return Futures.transform(readInterface(input.getVppNodePath(), input.getVppInterfaceName()),
+        InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(input.getVppNodeId());
+        return Futures.transform(readInterface(vppNodeIid, input.getVppInterfaceName()),
                 new AsyncFunction<Optional<Interface>, RpcResult<Void>>() {
 
                     @Override
@@ -221,11 +224,11 @@ public class VppRpcServiceImpl {
                             return Futures.immediateFuture(RpcResultBuilder.<Void>failed()
                                 .withError(
                                         ErrorType.RPC,
-                                        "Cannot delete interface " + iKey + " on node " + input.getVppNodePath()
+                                        "Cannot delete interface " + iKey + " on node " + vppNodeIid
                                                 + ". Not found or already deleted.")
                                 .build());
                         }
-                        Optional<DataBroker> dataBroker = mountDataProvider.getDataBrokerForMountPoint(input.getVppNodePath());
+                        Optional<DataBroker> dataBroker = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
                         WriteTransaction wTx = dataBroker.get().newWriteOnlyTransaction();
                         wTx.delete(LogicalDatastoreType.CONFIGURATION, VppIidFactory.getInterfaceIID(iKey));
                         return Futures.transform(wTx.submit(), voidToRpcResult());
@@ -234,7 +237,8 @@ public class VppRpcServiceImpl {
     }
 
     public ListenableFuture<RpcResult<Void>> addInterfaceToBridgeDomain(AddInterfaceToBridgeDomainInput input) {
-        return Futures.transform(readInterface(input.getVppNodePath(), input.getVppInterfaceName()),
+        InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(input.getVppNodeId());
+        return Futures.transform(readInterface(vppNodeIid, input.getVppInterfaceName()),
                 new AsyncFunction<Optional<Interface>, RpcResult<Void>>() {
 
                     @Override
@@ -245,10 +249,10 @@ public class VppRpcServiceImpl {
                                 .withError(
                                         ErrorType.RPC,
                                         "Cannot add interface " + iKey + " to bridge domain on node "
-                                                + input.getVppNodePath() + ". Not found or deleted.")
+                                                + vppNodeIid + ". Not found or deleted.")
                                 .build());
                         }
-                        Optional<DataBroker> dataBroker = mountDataProvider.getDataBrokerForMountPoint(input.getVppNodePath());
+                        Optional<DataBroker> dataBroker = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
                         return Futures.transform(interfaceManager.configureInterface(dataBroker.get(), iKey,
                                 input.getBridgeDomainId(), null), voidToRpcResult());
                     }
@@ -256,7 +260,8 @@ public class VppRpcServiceImpl {
     }
 
     public ListenableFuture<RpcResult<Void>> delInterfaceFromBridgeDomain(DelInterfaceFromBridgeDomainInput input) {
-        return Futures.transform(readInterface(input.getVppNodePath(), input.getVppInterfaceName()),
+        InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(input.getVppNodeId());
+        return Futures.transform(readInterface(vppNodeIid, input.getVppInterfaceName()),
                 new AsyncFunction<Optional<Interface>, RpcResult<Void>>() {
 
                     @Override
@@ -266,11 +271,11 @@ public class VppRpcServiceImpl {
                                 .withError(
                                         ErrorType.RPC,
                                         "Cannot remove interface " + input.getVppInterfaceName()
-                                                + " from bridge domain on node " + input.getVppNodePath()
+                                                + " from bridge domain on node " + vppNodeIid
                                                 + ". Not found or deleted.")
                                 .build());
                         }
-                        Optional<DataBroker> dataBroker = mountDataProvider.getDataBrokerForMountPoint(input.getVppNodePath());
+                        Optional<DataBroker> dataBroker = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
                         return Futures.transform(interfaceManager.removeInterfaceFromBridgeDomain(dataBroker.get(),
                                 optIface.get().getKey()), voidToRpcResult());
                     }

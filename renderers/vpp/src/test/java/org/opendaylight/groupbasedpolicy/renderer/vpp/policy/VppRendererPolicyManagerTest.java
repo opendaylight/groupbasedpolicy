@@ -364,7 +364,7 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
             .setContextId(epKey.getContextId())
             .setContextType(epKey.getContextType())
             .setVppInterfaceName(ifaceName)
-            .setVppNodePath(DtoFactory.VPP_NODE_1_IID)
+            .setVppNodeId(DtoFactory.VPP_NODE_1_IID.firstKeyOf(Node.class).getNodeId())
             .setInterfaceTypeChoice(new VhostUserCaseBuilder().setSocket(SOCKET).build())
             .build();
         VppEndpointConfEvent vppEpEvent = new VppEndpointConfEvent(vppEpIid, null, vhostEp);

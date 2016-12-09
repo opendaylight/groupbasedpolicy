@@ -52,6 +52,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.l2.base.attributes.Interconnection;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.l2.base.attributes.interconnection.BridgeBased;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.l2.base.attributes.interconnection.BridgeBasedBuilder;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
+import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,7 +108,7 @@ public class InterfaceManager implements AutoCloseable {
             return Futures.immediateFuture(null);
         }
         ConfigCommand ifaceWithoutBdCommand = potentialIfaceCommand.get();
-        InstanceIdentifier<?> vppNodeIid = vppEndpoint.getVppNodePath();
+        InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(vppEndpoint.getVppNodeId());
         Optional<DataBroker> potentialVppDataProvider = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
         if (!potentialVppDataProvider.isPresent()) {
             final String message = "Cannot get data broker for mount point " + vppNodeIid;
@@ -177,7 +180,7 @@ public class InterfaceManager implements AutoCloseable {
             return Futures.immediateFuture(null);
         }
         ConfigCommand ifaceWithoutBdCommand = potentialIfaceCommand.get();
-        InstanceIdentifier<?> vppNodeIid = vppEndpoint.getVppNodePath();
+        InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(vppEndpoint.getVppNodeId());
         Optional<DataBroker> potentialVppDataProvider = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
         if (!potentialVppDataProvider.isPresent()) {
             final String message = "Cannot get data broker for mount point " + vppNodeIid;
@@ -528,7 +531,7 @@ public class InterfaceManager implements AutoCloseable {
     }
 
     private static boolean hasNodeAndInterface(VppEndpoint vppEp) {
-        if (vppEp.getVppNodePath() == null) {
+        if (vppEp.getVppNodeId() == null) {
             LOG.debug("vpp-node is missing. {}", vppEp);
             return false;
         }
