@@ -1,0 +1,82 @@
+/*
+ * Copyright (c) 2016 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
+
+module ip-sgt-distribution {
+    yang-version 1;
+    namespace "urn:opendaylight:params:xml:ns:yang:controller:config:ip:sgt:distribution";
+    prefix "ip-sgt-distribution";
+
+    import sxp-database { prefix sxp-database; revision-date 2016-03-08; }
+    import sxp-protocol { prefix sxppt; revision-date 2014-10-02; }
+    import ietf-inet-types { prefix inet; revision-date 2013-07-15; }
+    import network-topology { prefix nt; revision-date 2013-10-21; }
+    import yang-ext { prefix ext; revision-date 2013-07-09; }
+
+    description
+        "This module contains the base YANG definitions for
+        ip/sgt distribution models.";
+
+    revision "2016-07-15" {
+        description
+            "Initial revision.";
+    }
+
+    grouping rpc-fields {
+        list binding {
+            key "sgt ip-prefix";
+            leaf sgt {
+                type sxp-database:sgt;
+            }
+            leaf ip-prefix {
+                type inet:ip-prefix;
+            }
+            list peer-node {
+                key "node-iid";
+                leaf node-iid {
+                    type instance-identifier;
+                }
+            }
+        }
+    }
+
+    grouping sxp-connection-fields {
+        container sxp-connection {
+            leaf ip-address {
+                type inet:ip-address;
+            }
+            leaf port-number {
+                type inet:port-number;
+                default 64999;
+            }
+            leaf password {
+                type string;
+            }
+            leaf version {
+                type sxppt:version;
+                default "version4";
+            }
+        }
+    }
+
+    rpc send-ip-sgt-binding-to-peer {
+        input {
+            uses rpc-fields;
+        }
+    }
+
+    rpc remove-ip-sgt-binding-from-peer {
+        input {
+            uses rpc-fields;
+        }
+    }
+
+    augment /nt:network-topology/nt:topology/nt:node {
+        ext:augment-identifier "sxp-connection-augmentation";
+        uses sxp-connection-fields;
+    }
+}

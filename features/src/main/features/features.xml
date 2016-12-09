@@ -182,6 +182,17 @@
     </feature>
 
     <!--
+        SXP Distribution Service
+    -->
+    <feature name='odl-groupbasedpolicy-ip-sgt-distribution-service' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: ip-sgt-distribution-service'>
+        <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
+        <feature version="${sxp.version}">odl-sxp-core</feature>
+        <feature version="${sxp.version}">odl-sxp-controller</feature>
+        <bundle>mvn:org.opendaylight.groupbasedpolicy/ip-sgt-distribution-service/{{VERSION}}</bundle>
+        <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-ip-sgt-distribution-service.xml">mvn:org.opendaylight.groupbasedpolicy/ip-sgt-distribution-service/{{VERSION}}/xml/config</configfile>
+    </feature>
+
+    <!--
          NE Location Provider
     -->
     <feature name='odl-groupbasedpolicy-ne-location-provider' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: NE location provider'>
