@@ -10,9 +10,9 @@ package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util;
 
 import static org.junit.Assert.assertNotNull;
 
-import java.util.Collections;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
+import java.util.Collections;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,14 +38,29 @@ import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev1407
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.ServiceFunctionPathsBuilder;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.service.function.paths.ServiceFunctionPath;
 import org.opendaylight.yang.gen.v1.urn.cisco.params.xml.ns.yang.sfc.sfp.rev140701.service.function.paths.ServiceFunctionPathBuilder;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native.ClassMap;
 import org.opendaylight.yang.gen.v1.urn.ios.rev160308._native._class.map.Match;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocationBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.IpPrefixType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValue;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValueBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocationBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.ip.sgt.distribution.rev160715.rpc.fields.Binding;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.ip.sgt.distribution.rev160715.rpc.fields.binding.PeerNode;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.ip.sgt.distribution.rev160715.rpc.fields.binding.PeerNodeBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 /**
@@ -150,5 +165,35 @@ public class PolicyManagerUtilTest {
     public void testMatch() {
         Match result = PolicyManagerUtil.createSecurityGroupMatch(10, 20);
         assertNotNull(result);
+    }
+
+    @Test
+    public void createIpSgtBindingItem() throws Exception {
+        final Sgt sgt = new Sgt(42);
+        final IpPrefix ipPrefix = new IpPrefix("10.11.12.42/32".toCharArray());
+        final InstanceIdentifier<Node> nodeII = InstanceIdentifier.create(NetworkTopology.class)
+                .child(Topology.class, new TopologyKey(new TopologyId("dummy-topology")))
+                .child(Node.class, new NodeKey(new NodeId("dummy-node-1")));
+        final PeerNode peerNode = new PeerNodeBuilder()
+                .setNodeIid(nodeII)
+                .build();
+        final AddressEndpointWithLocation addressEndpointWithLocation = new AddressEndpointWithLocationBuilder()
+                .setAddressType(IpPrefixType.class)
+                .setAddress(ipPrefix.getIpv4Prefix().getValue())
+                .setAbsoluteLocation(new AbsoluteLocationBuilder()
+                        .setLocationType(new ExternalLocationCaseBuilder()
+                                .setExternalNodeMountPoint(nodeII)
+                                .build())
+                        .build())
+                .build();
+
+        final java.util.Optional<Binding> ipSgtBindingItem = PolicyManagerUtil.createIpSgtBindingItem(sgt, addressEndpointWithLocation);
+
+        Assert.assertTrue(ipSgtBindingItem.isPresent());
+        final Binding binding = ipSgtBindingItem.get();
+        Assert.assertEquals(sgt, binding.getSgt());
+        Assert.assertEquals(ipPrefix, binding.getIpPrefix());
+        Assert.assertEquals(1, binding.getPeerNode().size());
+        Assert.assertEquals(peerNode, binding.getPeerNode().get(0));
     }
 }

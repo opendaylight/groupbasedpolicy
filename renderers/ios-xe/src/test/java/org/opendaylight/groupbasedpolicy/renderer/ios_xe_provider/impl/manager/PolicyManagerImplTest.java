@@ -7,11 +7,24 @@
  */
 package org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.manager;
 
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction.Out;
+import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation.PROVIDER;
+import static org.powermock.api.support.membermodification.MemberMatcher.method;
+import static org.powermock.api.support.membermodification.MemberModifier.stub;
+
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mock;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.util.PolicyManagerUtil;
@@ -74,6 +87,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.p
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.resolved.rules.ResolvedRuleBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.model.rev160302.AddressEndpointWithLocationAug;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.model.rev160302.AddressEndpointWithLocationAugBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.ip.sgt.distribution.rev160715.IpSgtDistributionService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.database.rev160308.Sgt;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
@@ -86,24 +100,11 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction.Out;
-import static org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation.PROVIDER;
-import static org.powermock.api.support.membermodification.MemberMatcher.method;
-import static org.powermock.api.support.membermodification.MemberModifier.stub;
-
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({RendererPolicyUtil.class, PolicyManagerUtil.class, SfcProviderServiceForwarderAPI.class})
 public class PolicyManagerImplTest {
 
-    private final String address = "address";
+    private final String address = "10.11.12.42/32";
     private final String connector = "connector";
     private final SfpName servicePath = new SfpName("service-path");
     private final RspName renderedPath = new RspName("rendered-path");
@@ -125,6 +126,8 @@ public class PolicyManagerImplTest {
     private DataBroker mountpoint;
     private NodeManager nodeManager;
     private EPToSgtMapper epToSgtMapper;
+    @Mock
+    private IpSgtDistributionService ipSgtDistributor;
 
     @Before
     public void init() {
@@ -132,7 +135,7 @@ public class PolicyManagerImplTest {
         ReadWriteTransaction readWriteTransaction = mock(ReadWriteTransaction.class);
         nodeManager = mock(NodeManager.class);
         epToSgtMapper = mock(EPToSgtMapper.class);
-        policyManager = new PolicyManagerImpl(mountpoint, nodeManager, epToSgtMapper);
+        policyManager = new PolicyManagerImpl(mountpoint, nodeManager, epToSgtMapper, ipSgtDistributor);
         when(mountpoint.newReadWriteTransaction()).thenReturn(readWriteTransaction);
         when(readWriteTransaction.submit()).thenReturn(Futures.immediateCheckedFuture(null));
     }
