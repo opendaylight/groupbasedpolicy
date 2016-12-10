@@ -5,14 +5,14 @@
 
     <reference id="dataBroker" interface="org.opendaylight.controller.md.sal.binding.api.DataBroker"/>
     <reference id="clusterSingletonService" interface="org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider"/>
-    <odl:rpc-service id="sxpControllerService" interface="org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.controller.rev141002.SxpControllerService"/>
+    <reference id="rpcRegistry" interface="org.opendaylight.controller.sal.binding.api.RpcProviderRegistry"/>
 
     <!-- Modules /-->
     <bean id="ipSgtDistributionService" class="org.opendaylight.controller.config.yang.config.ip.sgt.distribution.service.cfg.IpSgtDistributionServiceInstance"
-        init-method="initialize" destroy-method="close">
+          init-method="initialize" destroy-method="close">
         <argument ref="dataBroker"/>
-        <argument ref="sxpControllerService"/>
         <argument value="127.0.0.1"/>
         <argument ref="clusterSingletonService"/>
+        <argument ref="rpcRegistry"/>
     </bean>
 </blueprint>
