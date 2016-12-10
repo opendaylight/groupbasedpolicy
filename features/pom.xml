@@ -228,6 +228,11 @@
     </dependency>
     <dependency>
       <groupId>org.opendaylight.sxp</groupId>
+      <artifactId>sxp-controller</artifactId>
+      <version>${sxp.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.sxp</groupId>
       <artifactId>features</artifactId>
       <version>${sxp.version}</version>
       <type>xml</type>
@@ -306,6 +311,10 @@
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>sxp-ep-provider</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>ip-sgt-distribution-service</artifactId>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
@@ -392,6 +401,12 @@
     <dependency>
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>sxp-ep-provider</artifactId>
+      <type>xml</type>
+      <classifier>config</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.groupbasedpolicy</groupId>
+      <artifactId>ip-sgt-distribution-service</artifactId>
       <type>xml</type>
       <classifier>config</classifier>
     </dependency>
