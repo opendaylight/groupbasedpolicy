@@ -78,8 +78,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.p
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.policy.rule.group.with.endpoint.constraints.PolicyRuleGroupKey;
 import org.opendaylight.yangtools.yang.binding.Augmentation;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RendererConfigurationBuilder {
+
+    private static final Logger LOG = LoggerFactory.getLogger(RendererConfigurationBuilder.class);
 
     private final Table<RendererEndpointKey, PeerEndpointKey, Set<RuleGroupWithRendererEndpointParticipation>> policiesByEpAndPeerEp =
             HashBasedTable.create();
@@ -265,8 +269,8 @@ public class RendererConfigurationBuilder {
         return peerExtContEps;
     }
 
-    public Endpoints buildEndoints(EndpointInfo epInfo, EndpointLocationInfo epLocInfo,
-            Map<InstanceIdentifier<?>, RendererName> rendererByNode, Set<EndpointAugmentor> augmentors) {
+    public Endpoints buildEndpoints(EndpointInfo epInfo, EndpointLocationInfo epLocInfo,
+                                    Map<InstanceIdentifier<?>, RendererName> rendererByNode, Set<EndpointAugmentor> augmentors) {
         List<AddressEndpointWithLocation> epsWithLoc =
                 resolveEpsWithLoc(getAddressEndpointKeys(), epInfo, epLocInfo, rendererByNode, augmentors);
         List<ContainmentEndpointWithLocation> contEpsWithLoc =
@@ -286,6 +290,10 @@ public class RendererConfigurationBuilder {
             Optional<AddressEndpointLocation> potentionalEpLoc = epLocInfo.getAdressEndpointLocation(epKey);
             Preconditions.checkArgument(potentionalEpLoc.isPresent());
             RendererName rendererName = resolveRendererName(potentionalEpLoc.get(), rendererByNode);
+            if (rendererName == null) {
+                LOG.debug("Endpoint {} has no location, skipped", epKey);
+                continue;
+            }
             result.add(createEpWithLoc(potentialEp.get(), potentionalEpLoc.get(), rendererName, augmentors));
         }
         return result;

@@ -290,7 +290,7 @@ public class RendererManager implements AutoCloseable {
     private boolean writeRenderersConfigs(Map<RendererName, Optional<Configuration>> configsByRendererName) {
         List<Renderer> renderers = new ArrayList<>();
         for (RendererName rendererName : configsByRendererName.keySet()) {
-            RendererPolicy rendererPolicy = null;
+            RendererPolicy rendererPolicy;
             if (configsByRendererName.get(rendererName).isPresent()) {
                 rendererPolicy = new RendererPolicyBuilder().setVersion(version)
                         .setConfiguration(configsByRendererName.get(rendererName).get())
@@ -358,7 +358,7 @@ public class RendererManager implements AutoCloseable {
         configBuilder.setRendererEndpoints(rendererEndpoints);
 
         org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.Endpoints endpoints =
-                rendererPolicyBuilder.buildEndoints(currentState.epInfo, currentState.epLocInfo,
+                rendererPolicyBuilder.buildEndpoints(currentState.epInfo, currentState.epLocInfo,
                         currentState.rendererByNode, epAugmentorRegistry.getEndpointAugmentors());
         configBuilder.setEndpoints(endpoints);
 
