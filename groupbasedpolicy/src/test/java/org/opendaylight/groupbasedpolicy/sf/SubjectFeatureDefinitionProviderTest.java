@@ -32,14 +32,14 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 @RunWith(MockitoJUnitRunner.class)
 public class SubjectFeatureDefinitionProviderTest {
 
-    public static final int NUM_OF_SUBJECT_FEATURE_DEFINITIONS = 5;
+    private static final int NUM_OF_SUBJECT_FEATURE_DEFINITIONS = 5;
 
     @Mock
-    DataBroker dataProvider;
+    private DataBroker dataProvider;
     @Mock
-    WriteTransaction writeTransaction;
+    private WriteTransaction writeTransaction;
     @Mock
-    CheckedFuture<Void, TransactionCommitFailedException> checkedFuture;
+    private CheckedFuture<Void, TransactionCommitFailedException> checkedFuture;
 
     @Before
     public void init() {
@@ -55,7 +55,7 @@ public class SubjectFeatureDefinitionProviderTest {
         SubjectFeatureDefinitionProvider provider = new SubjectFeatureDefinitionProvider(dataProvider);
 
         assertNotNull(provider);
-        verify(dataProvider).newWriteOnlyTransaction();
+        verify(dataProvider, times(2)).newWriteOnlyTransaction();
         verify(writeTransaction, times(NUM_OF_SUBJECT_FEATURE_DEFINITIONS)).put(eq(LogicalDatastoreType.CONFIGURATION),
                 any(InstanceIdentifier.class), any(SubjectFeatureDefinitions.class));
 
@@ -65,6 +65,7 @@ public class SubjectFeatureDefinitionProviderTest {
     public void testClose() throws Exception {
         doNothing().when(writeTransaction).delete(eq(LogicalDatastoreType.CONFIGURATION),
                 any(InstanceIdentifier.class));
+        when(dataProvider.newWriteOnlyTransaction()).thenReturn(writeTransaction);
 
         SubjectFeatureDefinitionProvider provider = new SubjectFeatureDefinitionProvider(dataProvider);
 
@@ -75,7 +76,6 @@ public class SubjectFeatureDefinitionProviderTest {
         verify(dataProvider, times(2)).newWriteOnlyTransaction();
         verify(writeTransaction, times(NUM_OF_SUBJECT_FEATURE_DEFINITIONS))
             .delete(eq(LogicalDatastoreType.CONFIGURATION), any(InstanceIdentifier.class));
-
     }
 
 }
