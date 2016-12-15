@@ -10,17 +10,17 @@
  <parent>
     <groupId>org.opendaylight.controller</groupId>
     <artifactId>config-parent</artifactId>
-    <version>0.5.2-SNAPSHOT</version>
+    <version>0.5.2-Boron-SR2</version>
     <relativePath/>
   </parent>
 
   <groupId>org.opendaylight.groupbasedpolicy</groupId>
   <artifactId>groupbasedpolicy-renderers</artifactId>
-  <version>0.4.2-SNAPSHOT</version>
+  <version>0.4.2-Boron-SR2</version>
   <packaging>pom</packaging>
 
   <properties>
-    <sfc.version>0.3.2-SNAPSHOT</sfc.version>
+    <sfc.version>0.3.2-Boron-SR2</sfc.version>
   </properties>
 
 
