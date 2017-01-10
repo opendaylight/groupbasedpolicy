@@ -18,13 +18,15 @@ define([
     gbp.register = gbp; // for adding services, controllers, directives etc. to angular module before bootstrap
 
     gbp.config(function ($stateProvider, $compileProvider, $controllerProvider, $provide, NavHelperProvider,
-                         $translateProvider, $translatePartialLoaderProvider, $mdThemingProvider) {
+                         $translateProvider, $translatePartialLoaderProvider, $urlRouterProvider, $mdThemingProvider) {
         gbp.register = {
             controller: $controllerProvider.register,
             directive: $compileProvider.directive,
             factory: $provide.factory,
             service: $provide.service,
         };
+
+        $urlRouterProvider.otherwise('/gbp/index');
 
         /*$translatePartialLoaderProvider.addPart('app/gbp/assets/data/locale');*/
 
