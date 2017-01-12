@@ -24,7 +24,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 
 public class EndpointUtils {
 
-    public static AddressEndpointKey createAddressEndointKey(ChildEndpoint child) {
+    public static AddressEndpointKey createAddressEndpointKey(ChildEndpoint child) {
         return new AddressEndpointKey(child.getAddress(), child.getAddressType(), child.getContextId(),
                 child.getContextType());
     }
@@ -57,5 +57,4 @@ public class EndpointUtils {
         }
         return Collections.emptyList();
     }
-
 }

@@ -21,15 +21,21 @@ import org.opendaylight.controller.config.yang.config.vpp_provider.impl.VppRende
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.renderer.util.AddressEndpointUtils;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.NodeOperEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.RendererPolicyConfEvent;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.rule.group.with.renderer.endpoint.participation.RuleGroupWithRendererEndpointParticipation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicyBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.rule.groups.RuleGroupKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -54,10 +60,13 @@ public class VppRendererPolicyManager {
     private static final Logger LOG = LoggerFactory.getLogger(VppRendererPolicyManager.class);
     private final DataBroker dataProvider;
     private ForwardingManager fwManager;
+    private final AclManager aclManager;
 
-    public VppRendererPolicyManager(@Nonnull ForwardingManager fwManager, @Nonnull DataBroker dataProvider) {
+    public VppRendererPolicyManager(@Nonnull ForwardingManager fwManager, @Nonnull AclManager aclManager,
+            @Nonnull DataBroker dataProvider) {
         this.fwManager = Preconditions.checkNotNull(fwManager);
         this.dataProvider = Preconditions.checkNotNull(dataProvider);
+        this.aclManager = Preconditions.checkNotNull(aclManager);
     }
 
     @Subscribe
@@ -178,6 +187,56 @@ public class VppRendererPolicyManager {
                 fwManager.createForwardingForEndpoint(rEpKey, policyCtxAfter);
             }
         });
+        updatePolicy(policyCtxBefore, policyCtxAfter);
+    }
+
+    /**
+     * Looks for changed rule groups in {@code policyCtxBefore} and {@code policyCtxAfter}.
+     * Access lists are updated for endpoints in {@code policyCtxAfter} affected by changed rule
+     * groups.
+     *
+     * @param policyCtxBefore policy before
+     * @param policyCtxAfter policy after
+     */
+    private void updatePolicy(PolicyContext policyCtxBefore, PolicyContext policyCtxAfter) {
+        LOG.info("Updating policy by rule groups.");
+        Set<RuleGroupKey> diffRuleGroups = new HashSet<>();
+        diffRuleGroups.addAll(Sets.difference(policyCtxBefore.getRuleGroupByKey().keySet(),
+                policyCtxAfter.getRuleGroupByKey().keySet()));
+        diffRuleGroups.addAll(Sets.difference(policyCtxAfter.getRuleGroupByKey().keySet(), policyCtxBefore.getRuleGroupByKey().keySet()));
+        LOG.trace("Rule groups changed: {} ", diffRuleGroups.size());
+        Set<RendererEndpointKey> updates = new HashSet<>();
+        for (PolicyContext policy : new PolicyContext[] {policyCtxBefore, policyCtxAfter}) {
+            if (policy.getPolicy().getConfiguration() == null
+                    || policy.getPolicy().getConfiguration().getRendererEndpoints() == null
+                    || policy.getPolicy().getConfiguration().getRendererEndpoints().getRendererEndpoint() == null) {
+                continue;
+            }
+            policy.getPolicy()
+                .getConfiguration()
+                .getRendererEndpoints()
+                .getRendererEndpoint()
+                .stream()
+                .filter(rEp -> !updates.contains(rEp.getKey()))
+                .forEach(rEp -> {
+                    for (PeerEndpoint pEp : rEp.getPeerEndpoint()) {
+                        for (RuleGroupWithRendererEndpointParticipation rg : pEp
+                            .getRuleGroupWithRendererEndpointParticipation()) {
+                            if (!diffRuleGroups.contains(
+                                    new RuleGroupKey(rg.getContractId(), rg.getSubjectName(), rg.getTenantId()))) {
+                                continue;
+                            }
+                            LOG.debug("Updated resolved rule group: {}. Affected endpoints {} and {}.", rg.getKey(), rEp.getKey(), pEp.getKey());
+                            updates.add(rEp.getKey());
+                            AddressEndpointKey k1 = AddressEndpointUtils.fromPeerEpKey(pEp.getKey());
+                            updates.add(AddressEndpointUtils.toRendererEpKey(k1));
+                        }
+                    }
+                });
+        }
+        for (RendererEndpointKey rEpKey : updates) {
+            aclManager.updateAclsForRendEp(rEpKey, policyCtxAfter);
+        }
     }
 
     private static boolean isLocationChanged(AddressEndpointWithLocation before, AddressEndpointWithLocation after) {

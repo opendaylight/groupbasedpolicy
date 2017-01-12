@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -23,22 +24,28 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 
 public class EtherTypeClassifierTest {
 
+    private Classifier ethTypeCl;
     @Rule
     public ExpectedException thrown = ExpectedException.none();
+
+    @Before
+    public void init() {
+        ethTypeCl = SubjectFeatures.getClassifier(EtherTypeClassifierDefinition.ID);
+    }
 
     @Test
     public void testGetSupportedParameterValues() {
         List<SupportedParameterValues> supportedParameterValues =
-                Classifier.ETHER_TYPE_CL.getSupportedParameterValues();
+                ethTypeCl.getSupportedParameterValues();
 
         Assert.assertEquals(1, supportedParameterValues.size());
         Assert.assertEquals(ClassifierTestUtils.SUPPORTED_PARAM_NAME_ETH,
                 supportedParameterValues.get(0).getParameterName().getValue());
 
         Assert.assertEquals(EtherTypeClassifierDefinition.DEFINITION,
-                Classifier.ETHER_TYPE_CL.getClassifierDefinition());
-        Assert.assertEquals(EtherTypeClassifierDefinition.ID, Classifier.ETHER_TYPE_CL.getId());
-        Assert.assertNull(Classifier.ETHER_TYPE_CL.getParent());
+                ethTypeCl.getClassifierDefinition());
+        Assert.assertEquals(EtherTypeClassifierDefinition.ID, ethTypeCl.getId());
+        Assert.assertNull(ethTypeCl.getParent());
     }
 
     @Test
@@ -49,7 +56,7 @@ public class EtherTypeClassifierTest {
 
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage(ClassifierTestUtils.MSG_NOT_SPECIFIED);
-        Classifier.ETHER_TYPE_CL.checkPresenceOfRequiredParams(params);
+        ethTypeCl.checkPresenceOfRequiredParams(params);
     }
 
     @Test
@@ -59,6 +66,6 @@ public class EtherTypeClassifierTest {
 
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage(ClassifierTestUtils.MSG_PARAMETER_IS_NOT_PRESENT);
-        Classifier.ETHER_TYPE_CL.checkPresenceOfRequiredParams(params);
+        ethTypeCl.checkPresenceOfRequiredParams(params);
     }
 }

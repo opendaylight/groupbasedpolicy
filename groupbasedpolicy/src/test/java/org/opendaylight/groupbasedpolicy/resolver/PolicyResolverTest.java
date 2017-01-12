@@ -7,6 +7,8 @@
  */
 package org.opendaylight.groupbasedpolicy.resolver;
 
+import com.google.common.base.Preconditions;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -39,6 +41,7 @@ public class PolicyResolverTest extends GbpDataBrokerTest {
     @Before
     public void init() {
         dataProvider = getDataBroker();
+        Preconditions.checkNotNull(dataProvider);
         policyResolver = new PolicyResolver(dataProvider);
     }
 

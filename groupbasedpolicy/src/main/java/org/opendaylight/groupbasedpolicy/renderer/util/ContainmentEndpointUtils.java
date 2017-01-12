@@ -6,12 +6,15 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.renderer;
+package org.opendaylight.groupbasedpolicy.renderer.util;
 
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.containment.endpoints.ContainmentEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerExternalContainmentEndpointKey;
 
 public class ContainmentEndpointUtils {
+
+    //hiding default public constructor
+    private ContainmentEndpointUtils() {}
 
     public static PeerExternalContainmentEndpointKey toPeerExtContEpKey(ContainmentEndpointKey peerContEpKey) {
         return new PeerExternalContainmentEndpointKey(peerContEpKey.getContextId(), peerContEpKey.getContextType());

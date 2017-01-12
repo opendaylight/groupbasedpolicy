@@ -22,7 +22,9 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AccessListUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.NetworkContainment;
@@ -45,12 +47,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererNetworkDomainKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.VlanNetwork;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425._interface.attributes.InterfaceTypeChoice;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425._interface.attributes._interface.type.choice.LoopbackCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpBridgeDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpBridgeDomainKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpointKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425._interface.attributes.InterfaceTypeChoice;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425._interface.attributes._interface.type.choice.LoopbackCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.VlanId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.VxlanVni;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
@@ -73,12 +75,16 @@ public final class ForwardingManager {
     private long lastVxlanVni = 1L;
     private final Map<String, VxlanVni> vxlanVniByBridgeDomain = new HashMap<>();
     private final InterfaceManager ifaceManager;
+    private final AclManager aclManager;
     private final BridgeDomainManager bdManager;
     private final DataBroker dataBroker;
-    public ForwardingManager(@Nonnull InterfaceManager ifaceManager, @Nonnull BridgeDomainManager bdManager, @Nonnull DataBroker dataBroker) {
+
+    public ForwardingManager(@Nonnull InterfaceManager ifaceManager, @Nonnull AclManager aclManager,
+            @Nonnull BridgeDomainManager bdManager, @Nonnull DataBroker dataBroker) {
         this.ifaceManager = Preconditions.checkNotNull(ifaceManager);
         this.bdManager = Preconditions.checkNotNull(bdManager);
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
+        this.aclManager = Preconditions.checkNotNull(aclManager);
     }
 
     public Optional<GbpBridgeDomain> readGbpBridgeDomainConfig(String name) {
@@ -86,7 +92,9 @@ public final class ForwardingManager {
             .child(GbpBridgeDomain.class, new GbpBridgeDomainKey(name))
             .build();
         ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
-        return DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, bdIid, rTx);
+        Optional<GbpBridgeDomain> optBd = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, bdIid, rTx);
+        rTx.close();
+        return optBd;
     }
 
     public void createBridgeDomainOnNodes(SetMultimap<String, NodeId> vppNodesByBridgeDomain) {
@@ -178,7 +186,9 @@ public final class ForwardingManager {
             }
             String l2FloodDomain = optL2FloodDomain.get();
             try {
-                ifaceManager.addBridgeDomainToInterface(l2FloodDomain, rEp, isBviForEndpoint(rEp)).get();
+                ifaceManager.addBridgeDomainToInterface(l2FloodDomain, rEp, AccessListUtil.resolveAclsOnInterface(
+                        rEpKey, policyCtx), isBviForEndpoint(rEp)).get();
+                aclManager.updateAclsForPeers(policyCtx, rEpKey);
                 LOG.debug("Interface added to bridge-domain {} for endpoint {}", l2FloodDomain, rEp);
             } catch (InterruptedException | ExecutionException e) {
                 // TODO add it to the status for renderer manager

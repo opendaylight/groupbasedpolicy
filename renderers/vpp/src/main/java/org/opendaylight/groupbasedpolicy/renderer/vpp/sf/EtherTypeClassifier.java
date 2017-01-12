@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.opendaylight.groupbasedpolicy.api.sf.EtherTypeClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.GbpAceBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinition;
@@ -59,12 +60,23 @@ public class EtherTypeClassifier extends Classifier {
     @Override
     protected void checkPresenceOfRequiredParams(Map<String, ParameterValue> params) {
         if (params.get(EtherTypeClassifierDefinition.ETHERTYPE_PARAM) == null) {
-            throw new IllegalArgumentException(
-                    "Parameter " + EtherTypeClassifierDefinition.ETHERTYPE_PARAM + " not specified.");
+            throw new IllegalArgumentException("Parameter " + EtherTypeClassifierDefinition.ETHERTYPE_PARAM
+                    + " not specified.");
         }
         if (params.get(EtherTypeClassifierDefinition.ETHERTYPE_PARAM).getIntValue() == null) {
-            throw new IllegalArgumentException(
-                    "Value of " + EtherTypeClassifierDefinition.ETHERTYPE_PARAM + " parameter is not present.");
+            throw new IllegalArgumentException("Value of " + EtherTypeClassifierDefinition.ETHERTYPE_PARAM
+                    + " parameter is not present.");
         }
+    }
+
+    @Override
+    GbpAceBuilder update(GbpAceBuilder ruleBuilder, Map<String, ParameterValue> params) {
+        // ETHER_TYPE matching not supported yet
+        return ruleBuilder;
+    }
+
+    @Override
+    void checkPrereqs(GbpAceBuilder matchBuilders) {
+        // Nothing to consider yet.
     }
 }

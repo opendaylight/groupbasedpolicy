@@ -8,16 +8,13 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.iface;
 
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.concurrent.ExecutionException;
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-import com.google.common.eventbus.Subscribe;
-import com.google.common.util.concurrent.AsyncFunction;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -28,6 +25,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.VhostUserCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.VhostUserCommand.VhostUserCommandBuilder;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.NodeOperEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.VppEndpointConfEvent;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AccessListWrapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General.Operations;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
@@ -40,6 +38,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.ExcludeFromPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425._interface.attributes.InterfaceTypeChoice;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425._interface.attributes._interface.type.choice.LoopbackCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425._interface.attributes._interface.type.choice.TapCase;
@@ -52,16 +51,28 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.l2.base.attributes.Interconnection;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.l2.base.attributes.interconnection.BridgeBased;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.l2.base.attributes.interconnection.BridgeBasedBuilder;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.SetMultimap;
+import com.google.common.eventbus.Subscribe;
+import com.google.common.util.concurrent.AsyncFunction;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 
 public class InterfaceManager implements AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(InterfaceManager.class);
     private final MountedDataBrokerProvider mountDataProvider;
     private final VppEndpointLocationProvider vppEndpointLocationProvider;
+    private final SetMultimap<NodeId, String> excludedFromPolicy = HashMultimap.create();
 
     public InterfaceManager(@Nonnull MountedDataBrokerProvider mountDataProvider, @Nonnull DataBroker dataProvider) {
         this.mountDataProvider = Preconditions.checkNotNull(mountDataProvider);
@@ -75,18 +86,33 @@ public class InterfaceManager implements AutoCloseable {
             switch (event.getDtoModificationType()) {
                 case CREATED: {
                     vppEndpointCreated(event.getAfter().get()).get();
+                    updatePolicyExcludedEndpoints(event.getAfter().get(), true);
                 }
                 break;
                 case UPDATED:
                     vppEndpointUpdated(event.getBefore().get(), event.getAfter().get()).get();
+                    updatePolicyExcludedEndpoints(event.getBefore().get(), false);
+                    updatePolicyExcludedEndpoints(event.getAfter().get(), true);
                     break;
                 case DELETED:
                     vppEndpointDeleted(event.getBefore().get()).get();
+                    updatePolicyExcludedEndpoints(event.getBefore().get(), false);
                     break;
             }
         } catch (InterruptedException | ExecutionException e) {
             LOG.warn("Failed to update Vpp Endpoint. {}", event, e);
         }
+    }
+
+    private void updatePolicyExcludedEndpoints(VppEndpoint vppEndpoint, boolean created) {
+        if (vppEndpoint.getAugmentation(ExcludeFromPolicy.class) != null) {
+            return;
+        }
+        if (created) {
+            excludedFromPolicy.put(vppEndpoint.getVppNodeId(), vppEndpoint.getVppInterfaceName());
+            return;
+        }
+        excludedFromPolicy.remove(vppEndpoint.getVppNodeId(), vppEndpoint.getVppInterfaceName());
     }
 
     private ListenableFuture<Void> vppEndpointCreated(VppEndpoint vppEndpoint) {
@@ -318,6 +344,7 @@ public class InterfaceManager implements AutoCloseable {
      */
     public synchronized ListenableFuture<Void> addBridgeDomainToInterface(@Nonnull String bridgeDomainName,
                                                                           @Nonnull AddressEndpointWithLocation addrEpWithLoc,
+                                                                          @Nonnull List<AccessListWrapper> aclWrappers,
                                                                           boolean enableBvi) {
         ExternalLocationCase epLoc = resolveAndValidateLocation(addrEpWithLoc);
         InstanceIdentifier<?> vppNodeIid = epLoc.getExternalNodeMountPoint();
@@ -369,6 +396,16 @@ public class InterfaceManager implements AutoCloseable {
                 GbpNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
             LOG.debug("Adding bridge domain {} to interface {} successful", bridgeDomainName, interfacePath);
+            Set<String> excludedIfaces = excludedFromPolicy.get(vppNodeIid.firstKeyOf(Node.class).getNodeId());
+            if(excludedIfaces == null || !excludedIfaces.contains(interfaceIid.firstKeyOf(Interface.class).getName())) {
+                // can apply ACLs on interfaces in bridge domains
+                aclWrappers.forEach(aclWrapper -> {
+                    LOG.debug("Writing access list for interface {} on a node {}.", interfaceIid,
+                            vppNodeIid);
+                    aclWrapper.writeAcl(mountpoint, interfaceIid.firstKeyOf(Interface.class));
+                    aclWrapper.writeAclRefOnIface(mountpoint, interfaceIid);
+                });
+            }
             String bridgeDomainPath = VppPathMapper.bridgeDomainToRestPath(bridgeDomainName);
             return vppEndpointLocationProvider.replaceLocationForEndpoint(new ExternalLocationCaseBuilder()
                     .setExternalNode(bridgeDomainPath)
@@ -444,10 +481,9 @@ public class InterfaceManager implements AutoCloseable {
      *                      and {@link ExternalLocationCase#getExternalNodeConnector()} MUST NOT be {@code null}
      * @return {@link ListenableFuture}
      */
-    public synchronized
-    @Nonnull
-    ListenableFuture<Void> deleteBridgeDomainFromInterface(
+    public synchronized @Nonnull ListenableFuture<Void> deleteBridgeDomainFromInterface(
             @Nonnull AddressEndpointWithLocation addrEpWithLoc) {
+        // TODO update ACLs for peers
         ExternalLocationCase epLoc = resolveAndValidateLocation(addrEpWithLoc);
         InstanceIdentifier<?> vppNodeIid = epLoc.getExternalNodeMountPoint();
         String interfacePath = epLoc.getExternalNodeConnector();
@@ -476,23 +512,27 @@ public class InterfaceManager implements AutoCloseable {
             LOG.debug("Bridge domain does not exist therefore it is considered as deleted for interface {}",
                     interfacePath);
             // bridge domain does not exist on interface so we consider job done
-            return vppEndpointLocationProvider.replaceLocationForEndpoint(new ExternalLocationCaseBuilder()
-                    .setExternalNode(null)
-                    .setExternalNodeMountPoint(vppNodeIid)
-                    .setExternalNodeConnector(interfacePath)
-                    .build(), addrEpWithLoc.getKey());
+            return vppEndpointLocationProvider.replaceLocationForEndpoint(
+                    new ExternalLocationCaseBuilder().setExternalNode(null)
+                        .setExternalNodeMountPoint(vppNodeIid)
+                        .setExternalNodeConnector(interfacePath)
+                        .build(),
+                    addrEpWithLoc.getKey());
         }
         InstanceIdentifier<L2> l2Iid =
                 interfaceIid.builder().augmentation(VppInterfaceAugmentation.class).child(L2.class).build();
         LOG.debug("Deleting bridge domain from interface {}", interfacePath);
-        final boolean transactionState = GbpNetconfTransaction.deleteIfExists(mountpoint, l2Iid,
-                GbpNetconfTransaction.RETRY_COUNT);
+        final boolean transactionState =
+                GbpNetconfTransaction.deleteIfExists(mountpoint, l2Iid, GbpNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
-            return vppEndpointLocationProvider.replaceLocationForEndpoint(new ExternalLocationCaseBuilder()
-                    .setExternalNode(null)
-                    .setExternalNodeMountPoint(vppNodeIid)
-                    .setExternalNodeConnector(interfacePath)
-                    .build(), addrEpWithLoc.getKey());
+            AccessListWrapper.removeAclsForInterface(mountpoint, interfaceIid.firstKeyOf(Interface.class));
+            AccessListWrapper.removeAclRefFromIface(mountpoint, interfaceIid.firstKeyOf(Interface.class));
+            return vppEndpointLocationProvider.replaceLocationForEndpoint(
+                    new ExternalLocationCaseBuilder().setExternalNode(null)
+                        .setExternalNodeMountPoint(vppNodeIid)
+                        .setExternalNodeConnector(interfacePath)
+                        .build(),
+                    addrEpWithLoc.getKey());
         } else {
             final String message = "Failed to delete bridge domain from interface " + interfacePath;
             LOG.warn(message);
@@ -500,7 +540,7 @@ public class InterfaceManager implements AutoCloseable {
         }
     }
 
-    private static ExternalLocationCase resolveAndValidateLocation(AddressEndpointWithLocation addrEpWithLoc) {
+    static ExternalLocationCase resolveAndValidateLocation(AddressEndpointWithLocation addrEpWithLoc) {
         LocationType locationType = addrEpWithLoc.getAbsoluteLocation().getLocationType();
         if (!(locationType instanceof ExternalLocationCase)) {
             throw new IllegalArgumentException("Endpoint does not have external location " + addrEpWithLoc);

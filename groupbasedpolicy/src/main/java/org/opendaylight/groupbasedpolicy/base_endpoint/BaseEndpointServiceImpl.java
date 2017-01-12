@@ -122,7 +122,7 @@ public class BaseEndpointServiceImpl implements BaseEndpointService, AutoCloseab
         ParentContainmentEndpoint epAsParent = new ParentContainmentEndpointBuilder(endpoint).build();
         for (ChildEndpoint child : nullToEmpty(endpoint.getChildEndpoint())) {
             InstanceIdentifier<AddressEndpoint> childIid =
-                    IidFactory.addressEndpointIid(EndpointUtils.createAddressEndointKey(child));
+                    IidFactory.addressEndpointIid(EndpointUtils.createAddressEndpointKey(child));
             Optional<AddressEndpoint> childAddrEpOptional =
                     DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL, childIid, t);
             if (childAddrEpOptional.isPresent()) {
@@ -137,7 +137,7 @@ public class BaseEndpointServiceImpl implements BaseEndpointService, AutoCloseab
         ParentEndpoint epAsParent = new ParentEndpointBuilder(endpoint).build();
         for (ChildEndpoint child : nullToEmpty(endpoint.getChildEndpoint())) {
             InstanceIdentifier<AddressEndpoint> childIid =
-                    IidFactory.addressEndpointIid(EndpointUtils.createAddressEndointKey(child));
+                    IidFactory.addressEndpointIid(EndpointUtils.createAddressEndpointKey(child));
             Optional<AddressEndpoint> childAddrEpOptional =
                     DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL, childIid, t);
             if (childAddrEpOptional.isPresent()) {
@@ -290,7 +290,7 @@ public class BaseEndpointServiceImpl implements BaseEndpointService, AutoCloseab
     private void deleteAddressEndpointFromChilds(ReadWriteTransaction t, AddressEndpoint endpoint) {
         for (ChildEndpoint childEndpoint : nullToEmpty(endpoint.getChildEndpoint())) {
             KeyedInstanceIdentifier<ParentEndpoint, ParentEndpointKey> parentEp =
-                    IidFactory.addressEndpointIid(EndpointUtils.createAddressEndointKey(childEndpoint)).child(ParentEndpoint.class,
+                    IidFactory.addressEndpointIid(EndpointUtils.createAddressEndpointKey(childEndpoint)).child(ParentEndpoint.class,
                             new ParentEndpointKey(endpoint.getAddress(), endpoint.getAddressType(),
                                     endpoint.getContextId(), endpoint.getContextType()));
             DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL, parentEp, t);

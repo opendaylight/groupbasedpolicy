@@ -17,6 +17,7 @@ module vpp-renderer {
     import opendaylight-l2-types { prefix l2-types; revision-date "2013-08-27"; }
     import ietf-yang-types { prefix yang-types; revision-date "2013-07-15"; }
     import ietf-inet-types { prefix "inet-types"; }
+    import yang-ext {prefix ext; revision-date "2013-07-09";}
 
     description
         "This module is a baseline for the group-based policy vpp renderer model.";
@@ -155,6 +156,15 @@ module vpp-renderer {
                 when "type = 'vlan-network'";
                 type l2-types:vlan-id;
             }
+        }
+    }
+
+    augment "/vpp-renderer:config/vpp-renderer:vpp-endpoint" {
+        ext:augment-identifier "exclude-from-policy";
+        leaf exclude-from-policy {
+            description "Device attached as an endpoint may act as network element,
+                         e.g. qrouter attached via tap interface.";
+            type empty;
         }
     }
 }

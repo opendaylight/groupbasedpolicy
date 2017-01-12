@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.renderer;
+package org.opendaylight.groupbasedpolicy.renderer.util;
 
 import java.util.List;
 
@@ -24,6 +24,9 @@ import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableMultimap.Builder;
 
 public class EndpointLocationUtils {
+
+    // hiding default public constructor
+    private EndpointLocationUtils() {}
 
     public static ImmutableMultimap<InstanceIdentifier<?>, AddressEndpointLocation> resolveEndpointsByAbsoluteNodeLocation(
             @Nullable List<AddressEndpointLocation> addressEndpointLocations) {

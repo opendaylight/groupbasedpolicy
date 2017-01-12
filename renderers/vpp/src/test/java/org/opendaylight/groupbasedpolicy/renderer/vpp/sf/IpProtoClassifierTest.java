@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -23,20 +24,27 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 
 public class IpProtoClassifierTest {
 
+    private Classifier ipProtoCl;
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
+    @Before
+    public void init() {
+         ipProtoCl = SubjectFeatures.getClassifier(IpProtoClassifierDefinition.ID);
+    }
+
     @Test
     public void testGetSupportedParameterValues() {
-        List<SupportedParameterValues> supportedParameterValues = Classifier.IP_PROTO_CL.getSupportedParameterValues();
+        List<SupportedParameterValues> supportedParameterValues =
+                ipProtoCl.getSupportedParameterValues();
 
         Assert.assertEquals(1, supportedParameterValues.size());
         Assert.assertEquals(ClassifierTestUtils.SUPPORTED_PARAM_NAME_IP,
                 supportedParameterValues.get(0).getParameterName().getValue());
 
-        Assert.assertEquals(IpProtoClassifierDefinition.DEFINITION, Classifier.IP_PROTO_CL.getClassifierDefinition());
-        Assert.assertEquals(IpProtoClassifierDefinition.ID, Classifier.IP_PROTO_CL.getId());
-        Assert.assertEquals(Classifier.ETHER_TYPE_CL, Classifier.IP_PROTO_CL.getParent());
+        Assert.assertEquals(IpProtoClassifierDefinition.DEFINITION, ipProtoCl.getClassifierDefinition());
+        Assert.assertEquals(IpProtoClassifierDefinition.ID, ipProtoCl.getId());
+        Assert.assertEquals(SubjectFeatures.getClassifier(EtherTypeClassifierDefinition.ID), ipProtoCl.getParent());
     }
 
     @Test
@@ -49,7 +57,7 @@ public class IpProtoClassifierTest {
 
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage(ClassifierTestUtils.MSG_NOT_SPECIFIED);
-        Classifier.IP_PROTO_CL.checkPresenceOfRequiredParams(params);
+        ipProtoCl.checkPresenceOfRequiredParams(params);
     }
 
     @Test
@@ -61,7 +69,7 @@ public class IpProtoClassifierTest {
 
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage(ClassifierTestUtils.MSG_PARAMETER_IS_NOT_PRESENT);
-        Classifier.IP_PROTO_CL.checkPresenceOfRequiredParams(params);
+        ipProtoCl.checkPresenceOfRequiredParams(params);
     }
 
     @Test
@@ -70,7 +78,7 @@ public class IpProtoClassifierTest {
         params.putAll(ClassifierTestUtils.createIntValueParam(IpProtoClassifierDefinition.PROTO_PARAM,
                 IpProtoClassifierDefinition.TCP_VALUE));
 
-        Classifier.IP_PROTO_CL.checkPresenceOfRequiredParams(params);
+        ipProtoCl.checkPresenceOfRequiredParams(params);
 
         Assert.assertEquals(ClassifierTestUtils.TCP, IpProtoClassifier.getIpProtoValue(params));
     }

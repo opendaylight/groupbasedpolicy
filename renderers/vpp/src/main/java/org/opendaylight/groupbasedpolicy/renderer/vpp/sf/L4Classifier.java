@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Cisco Systems, Inc. and others. All rights reserved.
+ * Copyright (c) 2016 Cisco Systems, Inc. and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -8,8 +8,14 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.sf;
 
-import com.google.common.collect.ImmutableList;
+import java.util.List;
+import java.util.Map;
+
 import org.opendaylight.groupbasedpolicy.api.sf.L4ClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.GbpAceBuilder;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.PortNumber;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.packet.fields.rev160708.acl.transport.header.fields.DestinationPortRangeBuilder;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.packet.fields.rev160708.acl.transport.header.fields.SourcePortRangeBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinition;
@@ -22,20 +28,23 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.supported._int.value.fields.SupportedIntValueInRangeBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.supported.range.value.fields.SupportedRangeValue;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.supported.range.value.fields.SupportedRangeValueBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.Map;
+import com.google.common.collect.ImmutableList;
 
 /**
  * Match against TCP or UDP, and source and/or destination ports
  */
 public class L4Classifier extends Classifier {
 
+    private static final Logger LOG = LoggerFactory.getLogger(L4Classifier.class);
+
     static final String EXC_MSG_PARAM_VALUE_NOT_SPECIFIED = "Value of parameter not specified: ";
     static final String EXC_MSG_MUT_EXCLUSIVE_PARAMS = "Mutually exclusive parameters: ";
     static final String EXC_MSG_RANGE_VALUE_MISMATCH = "Range value mismatch: ";
 
-    protected L4Classifier(Classifier parent) {
+    public L4Classifier(Classifier parent) {
         super(parent);
     }
 
@@ -110,6 +119,48 @@ public class L4Classifier extends Classifier {
                 throw new IllegalArgumentException(EXC_MSG_RANGE_VALUE_MISMATCH + min + ">" + max);
             }
         }
+    }
+
+    @Override
+    GbpAceBuilder update(GbpAceBuilder ruleBuilder, Map<String, ParameterValue> params) {
+        ruleBuilder.setSourcePortRange(resolveSourcePortRange(params, L4ClassifierDefinition.SRC_PORT_PARAM,
+                L4ClassifierDefinition.SRC_PORT_RANGE_PARAM));
+        ruleBuilder.setDestinationPortRange(resolveDestinationPortRange(params, L4ClassifierDefinition.DST_PORT_PARAM,
+                L4ClassifierDefinition.DST_PORT_RANGE_PARAM));
+        return ruleBuilder;
+    }
+
+    private SourcePortRangeBuilder resolveSourcePortRange(Map<String, ParameterValue> params, String portParam, String portRangeParam) {
+        LOG.info("Updating dest port params:{}", params);
+        SourcePortRangeBuilder srcRange = new SourcePortRangeBuilder();
+        if (params.get(portParam) != null) {
+            PortNumber portNumber = new PortNumber(params.get(portParam).getIntValue().intValue());
+            srcRange.setLowerPort(portNumber).setUpperPort(portNumber);
+        }
+        if (params.get(portRangeParam) != null) {
+            srcRange.setLowerPort(new PortNumber(params.get(portParam).getRangeValue().getMin().intValue()));
+            srcRange.setUpperPort(new PortNumber(params.get(portParam).getRangeValue().getMax().intValue()));
+        }
+        return srcRange;
+    }
+
+    private DestinationPortRangeBuilder resolveDestinationPortRange(Map<String, ParameterValue> params, String portParam, String portRangeParam) {
+        LOG.info("Updating source port params:{}", params);
+        DestinationPortRangeBuilder dstRange = new DestinationPortRangeBuilder();
+        if (params.get(portParam) != null) {
+            PortNumber portNumber = new PortNumber(params.get(portParam).getIntValue().intValue());
+            dstRange.setLowerPort(portNumber).setUpperPort(portNumber);
+        }
+        if (params.get(portRangeParam) != null) {
+            dstRange.setLowerPort(new PortNumber(params.get(portParam).getRangeValue().getMin().intValue()));
+            dstRange.setUpperPort(new PortNumber(params.get(portParam).getRangeValue().getMax().intValue()));
+        }
+        return dstRange;
+    }
+
+    @Override
+    void checkPrereqs(GbpAceBuilder matchBuilders) {
+        // TODO check whether mandatory fields are set in builder
     }
 
 }

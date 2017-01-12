@@ -9,6 +9,8 @@
 package org.opendaylight.controller.config.yang.config.vpp_provider.impl;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -22,9 +24,13 @@ import org.opendaylight.controller.md.sal.binding.api.MountPoint;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
+import org.opendaylight.groupbasedpolicy.api.sf.EtherTypeClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.api.sf.IpProtoClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.api.sf.L4ClassifierDefinition;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.VppRendererDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.RendererKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.capabilities.SupportedActionDefinition;
@@ -36,21 +42,23 @@ import java.util.List;
 
 @RunWith(MockitoJUnitRunner.class)
 public class VppRendererTest  extends VppRendererDataBrokerTest {
-    private final String CLASSIFIER = "Classifier-EtherType";
+
+    private final List<ClassifierDefinitionId> classifDefs = ImmutableList.<ClassifierDefinitionId>of(
+            EtherTypeClassifierDefinition.ID, IpProtoClassifierDefinition.ID, L4ClassifierDefinition.ID);
+
     private final String ACTION_ALLOW = "Action-Allow";
-    private final String SUPPORTED_PARAM_NAME = "ethertype";
 
     private DataBroker dataBroker;
     @Mock
-    DataBroker dataBroker2;
+    private DataBroker dataBroker2;
     @Mock
-    BindingAwareBroker bindingAwareBroker;
+    private BindingAwareBroker bindingAwareBroker;
     @Mock
-    MountPointService mountPointService;
+    private MountPointService mountPointService;
     @Mock
-    MountPoint mountPoint;
+    private MountPoint mountPoint;
     @Mock
-    BindingAwareBroker.ProviderContext providerContext;
+    private BindingAwareBroker.ProviderContext providerContext;
 
     @Before
     public void init(){
@@ -79,10 +87,8 @@ public class VppRendererTest  extends VppRendererDataBrokerTest {
         Renderer renderer = rendererOptional.get();
         Assert.assertEquals(VppRenderer.NAME, renderer.getName());
         List<SupportedClassifierDefinition> definition = renderer.getCapabilities().getSupportedClassifierDefinition();
-        Assert.assertEquals(1, definition.size());
-        Assert.assertEquals(CLASSIFIER, definition.get(0).getClassifierDefinitionId().getValue());
-        Assert.assertEquals(SUPPORTED_PARAM_NAME, definition.get(0).getSupportedParameterValues().get(0).getParameterName().getValue());
-
+        Assert.assertEquals(3, definition.size());
+        definition.forEach(cl -> Assert.assertTrue(classifDefs.contains(cl.getClassifierDefinitionId())));
         List<SupportedActionDefinition> actionDefinition = renderer.getCapabilities().getSupportedActionDefinition();
         Assert.assertEquals(1, actionDefinition.size());
         Assert.assertEquals(ACTION_ALLOW, actionDefinition.get(0).getActionDefinitionId().getValue());

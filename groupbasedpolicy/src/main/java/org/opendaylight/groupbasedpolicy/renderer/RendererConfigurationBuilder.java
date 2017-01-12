@@ -16,6 +16,7 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Table;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -24,10 +25,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import org.opendaylight.groupbasedpolicy.api.EndpointAugmentor;
 import org.opendaylight.groupbasedpolicy.api.NetworkDomainAugmentor;
+import org.opendaylight.groupbasedpolicy.renderer.util.AddressEndpointUtils;
+import org.opendaylight.groupbasedpolicy.renderer.util.ContainmentEndpointUtils;
+import org.opendaylight.groupbasedpolicy.renderer.util.EndpointLocationUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoint.locations.AddressEndpointLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoint.locations.ContainmentEndpointLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpoint;
@@ -371,7 +377,7 @@ public class RendererConfigurationBuilder {
         return contEpWithLoc.build();
     }
 
-    public RuleGroups buildRuluGroups(ResolvedPolicyInfo policyInfo) {
+    public RuleGroups buildRuleGroups(ResolvedPolicyInfo policyInfo) {
         List<RuleGroup> ruleGroups = resolveRuleGroups(getPolicyRuleGroupKeys(), policyInfo);
         return new RuleGroupsBuilder().setRuleGroup(ruleGroups).build();
     }

@@ -98,6 +98,7 @@
               org.opendaylight.groupbasedpolicy.api.*,
               org.opendaylight.groupbasedpolicy.dto,
               org.opendaylight.groupbasedpolicy.util,
+              org.opendaylight.groupbasedpolicy.renderer.util
             </Export-Package>
             <Embed-Dependency>java-ipv6</Embed-Dependency>
           </instructions>

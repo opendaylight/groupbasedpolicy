@@ -11,6 +11,7 @@ package org.opendaylight.groupbasedpolicy.renderer;
 import java.util.List;
 import java.util.Set;
 
+import org.opendaylight.groupbasedpolicy.renderer.util.EndpointLocationUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.EndpointLocations;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoint.locations.AddressEndpointLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoint.locations.AddressEndpointLocationKey;

@@ -11,6 +11,7 @@ package org.opendaylight.groupbasedpolicy.renderer;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -18,6 +19,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -26,6 +28,7 @@ import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -39,6 +42,8 @@ import org.opendaylight.groupbasedpolicy.renderer.listener.EndpointsListener;
 import org.opendaylight.groupbasedpolicy.renderer.listener.ForwardingListener;
 import org.opendaylight.groupbasedpolicy.renderer.listener.RenderersListener;
 import org.opendaylight.groupbasedpolicy.renderer.listener.ResolvedPoliciesListener;
+import org.opendaylight.groupbasedpolicy.renderer.util.AddressEndpointUtils;
+import org.opendaylight.groupbasedpolicy.renderer.util.ContainmentEndpointUtils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.EndpointLocations;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.Endpoints;
@@ -362,7 +367,7 @@ public class RendererManager implements AutoCloseable {
                         currentState.rendererByNode, epAugmentorRegistry.getEndpointAugmentors());
         configBuilder.setEndpoints(endpoints);
 
-        RuleGroups ruleGroups = rendererPolicyBuilder.buildRuluGroups(currentState.policyInfo);
+        RuleGroups ruleGroups = rendererPolicyBuilder.buildRuleGroups(currentState.policyInfo);
         configBuilder.setRuleGroups(ruleGroups);
 
         RendererForwarding rendererForwarding = rendererPolicyBuilder.buildRendererForwarding(currentState.forwarding,

@@ -8,6 +8,7 @@
 
 package org.opendaylight.controller.config.yang.config.vpp_provider.impl;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -19,6 +20,7 @@ import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareProvider;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.adapter.VppRpcServiceImpl;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.RendererPolicyListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppEndpointListener;
@@ -28,7 +30,10 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.BridgeDomainManager
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.ForwardingManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.VppRendererPolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.sf.AllowAction;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.sf.Classifier;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.sf.EtherTypeClassifier;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.sf.IpProtoClassifier;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.sf.L4Classifier;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
@@ -61,15 +66,13 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
             ImmutableList.of(new SupportedActionDefinitionBuilder().setActionDefinitionId(new AllowAction().getId())
                 .setSupportedParameterValues(new AllowAction().getSupportedParameterValues())
                 .build());
-    private final List<SupportedClassifierDefinition> classifierDefinitions = ImmutableList
-        .of(new SupportedClassifierDefinitionBuilder().setClassifierDefinitionId(new EtherTypeClassifier(null).getId())
-            .setSupportedParameterValues(new EtherTypeClassifier(null).getSupportedParameterValues())
-            .build());
+    private final List<SupportedClassifierDefinition> classifierDefinitions;
 
     private final DataBroker dataBroker;
 
     private VppNodeManager vppNodeManager;
     private InterfaceManager interfaceManager;
+    private AclManager aclManager;
     private VppRendererPolicyManager vppRendererPolicyManager;
 
     private VppNodeListener vppNodeListener;
@@ -80,6 +83,24 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
     public VppRenderer(DataBroker dataBroker, BindingAwareBroker bindingAwareBroker) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         bindingAwareBroker.registerProvider(this);
+        EtherTypeClassifier etherTypeClassifier = new EtherTypeClassifier(null);
+        IpProtoClassifier ipProtoClassifier = new IpProtoClassifier(etherTypeClassifier);
+        classifierDefinitions =
+                buildClassifierDefinitions(etherTypeClassifier, ipProtoClassifier, new L4Classifier(ipProtoClassifier));
+    }
+
+    private List<SupportedClassifierDefinition> buildClassifierDefinitions(Classifier ... classifs) {
+        List<SupportedClassifierDefinition> clDefs = new ArrayList<>();
+        SupportedClassifierDefinitionBuilder clDefBuilder = new SupportedClassifierDefinitionBuilder();
+        for (Classifier classif : classifs) {
+            if (classif.getParent() != null) {
+                clDefBuilder.setParentClassifierDefinitionId(classif.getParent().getId());
+            }
+            clDefs.add(clDefBuilder.setClassifierDefinitionId(classif.getId())
+                .setSupportedParameterValues(classif.getSupportedParameterValues())
+                .build());
+        }
+        return clDefs;
     }
 
     @Override
@@ -112,10 +133,11 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         EventBus dtoEventBus = new EventBus((exception, context) -> LOG.error("Could not dispatch event: {} to {}",
                 context.getSubscriber(), context.getSubscriberMethod(), exception));
         interfaceManager = new InterfaceManager(mountDataProvider, dataBroker);
+        aclManager = new AclManager(mountDataProvider);
         dtoEventBus.register(interfaceManager);
         BridgeDomainManager bdManager = new BridgeDomainManagerImpl(dataBroker);
-        ForwardingManager fwManager = new ForwardingManager(interfaceManager, bdManager, dataBroker);
-        vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, dataBroker);
+        ForwardingManager fwManager = new ForwardingManager(interfaceManager, aclManager, bdManager, dataBroker);
+        vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, aclManager, dataBroker);
         dtoEventBus.register(vppRendererPolicyManager);
 
         vppNodeListener = new VppNodeListener(dataBroker, vppNodeManager, dtoEventBus);

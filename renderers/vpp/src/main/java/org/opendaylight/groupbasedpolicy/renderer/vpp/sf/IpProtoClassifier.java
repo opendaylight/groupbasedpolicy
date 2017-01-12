@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.opendaylight.groupbasedpolicy.api.sf.IpProtoClassifierDefinition;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.GbpAceBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierDefinitionId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.definitions.ClassifierDefinition;
@@ -29,7 +30,7 @@ import com.google.common.collect.ImmutableList;
  */
 public class IpProtoClassifier extends Classifier {
 
-    protected IpProtoClassifier(Classifier parent) {
+    public IpProtoClassifier(Classifier parent) {
         super(parent);
     }
 
@@ -68,6 +69,20 @@ public class IpProtoClassifier extends Classifier {
             throw new IllegalArgumentException(
                     "Value of " + IpProtoClassifierDefinition.PROTO_PARAM + " parameter is not present.");
         }
+    }
+
+    @Override
+    GbpAceBuilder update(GbpAceBuilder ruleBuilder, Map<String, ParameterValue> params) {
+        Long proto = getIpProtoValue(params);
+        if (ruleBuilder.getProtocol() == null && proto != null) {
+            ruleBuilder.setProtocol(proto.shortValue());
+        }
+        return ruleBuilder;
+    }
+
+    @Override
+    void checkPrereqs(GbpAceBuilder matchBuilders) {
+        // TODO check whether mandatory fields are set in builder
     }
 
     /**

@@ -22,7 +22,9 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.DtoFactory;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AccessListWrapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
 import org.opendaylight.groupbasedpolicy.test.CustomDataBrokerTest;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocation;
@@ -56,13 +58,15 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
     @Mock
     private InterfaceManager ifaceManager;
     @Mock
+    private AclManager aclManager;
+    @Mock
     private BridgeDomainManager bdManager;
 
     private ForwardingManager fwdManager;
 
     @Before
     public void init() {
-        fwdManager = new ForwardingManager(ifaceManager, bdManager, getDataBroker());
+        fwdManager = new ForwardingManager(ifaceManager, aclManager, bdManager, getDataBroker());
     }
 
     @Override
@@ -121,8 +125,6 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
     public void testRemoveBridgeDomainOnNodes() throws Exception {
         Mockito.when(bdManager.removeBridgeDomainFromVppNode(Mockito.eq(BD_1), Mockito.eq(NODE_1)))
             .thenReturn(Futures.immediateFuture(null));
-        SetMultimap<String, NodeId> vppNodesByBd = ImmutableSetMultimap.of(BD_1, NODE_1);
-
         bdManager.removeBridgeDomainFromVppNode(BD_1, NODE_1);
         Mockito.verify(bdManager).removeBridgeDomainFromVppNode(Matchers.eq(BD_1), Matchers.eq(NODE_1));
     }
@@ -147,12 +149,11 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
         AddressEndpointWithLocation firstAddrEpWithLoc =
                 policyCtx.getAddrEpByKey().get(KeyFactory.addressEndpointKey(firstRendererEp.getKey()));
         Mockito.when(ifaceManager.addBridgeDomainToInterface(Mockito.eq(DtoFactory.L2FD_CTX.getValue()),
-                Mockito.eq(firstAddrEpWithLoc), Mockito.eq(IS_BVI)))
+                Mockito.eq(firstAddrEpWithLoc), Mockito.anyListOf(AccessListWrapper.class),Mockito.eq(IS_BVI)))
             .thenReturn(Futures.immediateFuture(null));
-
         fwdManager.createForwardingForEndpoint(firstRendererEp.getKey(), policyCtx);
         Mockito.verify(ifaceManager).addBridgeDomainToInterface(Matchers.eq(DtoFactory.L2FD_CTX.getValue()),
-                Matchers.eq(firstAddrEpWithLoc), Mockito.eq(IS_BVI));
+                Matchers.eq(firstAddrEpWithLoc), Mockito.anyListOf(AccessListWrapper.class), Mockito.eq(IS_BVI));
     }
 
     @Test
