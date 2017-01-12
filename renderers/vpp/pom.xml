@@ -115,7 +115,8 @@
         <configuration>
           <instructions>
             <Export-Package>
-              org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.*
+              org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.*,
+              org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.*
             </Export-Package>
           </instructions>
         </configuration>
