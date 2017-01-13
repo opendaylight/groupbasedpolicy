@@ -66,13 +66,14 @@ import com.google.common.base.Optional;
 
 public class PortHandler implements TransactionChainListener {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MappingProvider.class);
+    private static final Logger LOG = LoggerFactory.getLogger(PortHandler.class);
 
     private static final String COMPUTE_OWNER = "compute";
     private static final String DHCP_OWNER = "dhcp";
     private static final String ROUTER_OWNER = "network:router_interface";
     private static final String[] SUPPORTED_DEVICE_OWNERS = {COMPUTE_OWNER, DHCP_OWNER, ROUTER_OWNER};
     private static final String VHOST_USER = "vhostuser";
+    private static final String UNBOUND = "unbound";
     private static final String VPP_INTERFACE_NAME_PREFIX = "neutron_port_";
     private static final String TAP_PORT_NAME_PREFIX = "tap";
     private static final String RT_PORT_NAME_PREFIX = "qr-";
@@ -158,17 +159,37 @@ public class PortHandler implements TransactionChainListener {
         processCreated(delta);
     }
 
-    private boolean isUpdateNeeded(Port oldPort, Port newPort) {
+    private boolean isUpdateNeeded(final Port oldPort, final Port newPort) {
         //TODO fix this to better support update of ports for VPP
-        PortBindingExtension oldPortAugmentation = oldPort.getAugmentation(PortBindingExtension.class);
-        PortBindingExtension newPortAugmentation = newPort.getAugmentation(PortBindingExtension.class);
-
-        List<VifDetails> vifDetails = oldPortAugmentation.getVifDetails();
+        final PortBindingExtension oldPortAugmentation = oldPort.getAugmentation(PortBindingExtension.class);
+        final PortBindingExtension newPortAugmentation = newPort.getAugmentation(PortBindingExtension.class);
 
         if (newPortAugmentation == null) {
             LOG.trace("Port {} is no longer a vhost type port, updating port...");
             return true;
         }
+
+        final String oldDeviceOwner = oldPort.getDeviceOwner();
+        final String oldVifType = oldPortAugmentation.getVifType();
+        final String newDeviceOwner = newPort.getDeviceOwner();
+        final String newVifType = newPortAugmentation.getVifType();
+
+        // TODO potential bug here
+        // Temporary change for Openstack Mitaka: If old neutron-binding:vif-type is vhost, new one is unbound and
+        // device owner is ROUTER_OWNER, skip update. Openstack (or ml2) sometimes sends router update messages in
+        // incorrect order which causes unwanted port removal
+        if (oldVifType.equals(VHOST_USER) && newVifType.equals(UNBOUND) && oldDeviceOwner != null &&
+                ROUTER_OWNER.equals(oldDeviceOwner) && ROUTER_OWNER.equals(newDeviceOwner)) {
+            LOG.warn("Port vif-type was updated from vhost to unbound. This update is currently disabled and will be skipped");
+            return false;
+        }
+
+        if (newVifType != null && !newVifType.equals(oldVifType)) {
+            LOG.trace("Vif type changed, old: {} new {}", oldVifType, newVifType);
+            return true;
+        }
+
+        final List<VifDetails> vifDetails = oldPortAugmentation.getVifDetails();
 
         if (!oldPortAugmentation.getHostId().equals(newPortAugmentation.getHostId()) ||
             nullToEmpty(vifDetails).size() != nullToEmpty(newPortAugmentation.getVifDetails()).size()) {

@@ -15,6 +15,7 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import com.sun.jndi.cosnaming.IiopUrl;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
@@ -544,15 +545,15 @@ public class NeutronPortAware implements NeutronAware<Port> {
     @Override
     public void onUpdated(Port oldPort, Port newPort, Neutron oldNeutron, Neutron newNeutron) {
         LOG.trace("updated port - OLD: {}\nNEW: {}", oldPort, newPort);
-        onDeleted(oldPort, oldNeutron, false);
+        onDeleted(oldPort, oldNeutron, newNeutron, false);
         onCreated(newPort, newNeutron, false);
     }
 
     @Override public void onDeleted(Port deletedItem, Neutron oldNeutron, Neutron newNeutron) {
-        onDeleted(deletedItem, oldNeutron, true);
+        onDeleted(deletedItem, oldNeutron, newNeutron, true);
     }
 
-    public void onDeleted(Port port, Neutron oldNeutron, boolean removeBaseEpMapping) {
+    public void onDeleted(Port port, Neutron oldNeutron, Neutron newNeutron, boolean removeBaseEpMapping) {
         LOG.trace("deleted port - {}", port);
         if (PortUtils.isRouterInterfacePort(port)) {
             LOG.trace("Port is router interface port: {}", port.getUuid().getValue());
@@ -566,7 +567,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
             FixedIps portIpWithSubnet = potentialPortIpWithSubnet.get();
             L3ContextId l3Context = new L3ContextId(port.getNetworkId().getValue());
             // change L3Context for all EPs with same subnet as router port
-            changeL3ContextForEpsInSubnet(portIpWithSubnet.getSubnetId(), oldNeutron);
+            changeL3ContextForEpsInSubnet(portIpWithSubnet.getSubnetId(), newNeutron);
             // set L3Context as parent for bridge domain which is parent of subnet
             TenantId tenantId = new TenantId(port.getTenantId().getValue());
             Optional<Subnet> potentialRouterPortSubnet = SubnetUtils.findSubnet(portIpWithSubnet.getSubnetId(),
@@ -588,12 +589,8 @@ public class NeutronPortAware implements NeutronAware<Port> {
             NetworkDomain subnet = NeutronSubnetAware.createSubnet(routerPortSubnet, null);
             rwTx.put(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.subnetIid(tenantId, subnet.getNetworkDomainId()),
                     subnet);
-            UniqueId portId = new UniqueId(port.getUuid().getValue());
-            PortByBaseEndpointKey portByBaseEndpointKey = new PortByBaseEndpointKey(port.getMacAddress().getValue(),
-                    MacAddressType.class, new ContextId(port.getNetworkId().getValue()), MappingUtils.L2_BRDIGE_DOMAIN);
-            if (removeBaseEpMapping) {
-                removeBaseEndpointMappings(portByBaseEndpointKey, portId, rwTx);
-            }
+            unregisterEndpointAndRemoveMapping(createUnregisterEndpointInput(port, oldNeutron), port, rwTx);
+            unregisterEndpointAndRemoveMapping(createUnregisterBaseEndpointInput(port, oldNeutron), port, rwTx, removeBaseEpMapping);
             DataStoreHelper.submitToDs(rwTx);
         } else if (PortUtils.isDhcpPort(port)) {
             LOG.trace("Port is DHCP port: {}", port.getUuid().getValue());
