@@ -93,10 +93,8 @@ public class VppRpcServiceImpl {
                 .build());
         }
         List<ListenableFuture<Void>> futures = new ArrayList<>();
-        List<NodeId> nodeIds = input.getPhysicalLocationRef()
-            .stream()
-            .map(locationRef -> locationRef.getNodeId())
-            .collect(Collectors.toList());
+        List<NodeId> nodeIds = (input.getPhysicalLocationRef() == null) ? new ArrayList<>() : input
+            .getPhysicalLocationRef().stream().map(locationRef -> locationRef.getNodeId()).collect(Collectors.toList());
         LOG.trace("Corresponding nodes for bridge-domain {}", input.getPhysicalLocationRef());
         if (input.getTunnelType() instanceof Vxlan) {
             LOG.trace("Detected VXLAN type for bridge domain {}", input.getId());
@@ -181,6 +179,8 @@ public class VppRpcServiceImpl {
     }
 
     public ListenableFuture<RpcResult<Void>> createInterfaceOnNodes(CreateInterfaceOnNodeInput input) {
+        LOG.info("Processing a remote call for creating interface {} on node {}", input.getVppInterfaceName(),
+                input.getVppNodeId());
         InterfaceTypeChoice interfaceType = input.getInterfaceTypeChoice();
         ConfigCommand ifaceCommand = null;
         if (interfaceType instanceof VhostUserCase) {
@@ -215,6 +215,8 @@ public class VppRpcServiceImpl {
     }
 
     public ListenableFuture<RpcResult<Void>> deleteInterfaceFromNodes(DeleteInterfaceFromNodeInput input) {
+        LOG.info("Processing a remote call for removing interface {} from node {}", input.getVppInterfaceName(),
+                input.getVppNodeId());
         InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(input.getVppNodeId());
         return Futures.transform(readInterface(vppNodeIid, input.getVppInterfaceName()),
                 new AsyncFunction<Optional<Interface>, RpcResult<Void>>() {
@@ -239,6 +241,8 @@ public class VppRpcServiceImpl {
     }
 
     public ListenableFuture<RpcResult<Void>> addInterfaceToBridgeDomain(AddInterfaceToBridgeDomainInput input) {
+        LOG.info("Processing a remote call for adding interface {} to bridge domain {}", input.getVppInterfaceName(),
+                input.getBridgeDomainId());
         InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(input.getVppNodeId());
         return Futures.transform(readInterface(vppNodeIid, input.getVppInterfaceName()),
                 new AsyncFunction<Optional<Interface>, RpcResult<Void>>() {
@@ -262,6 +266,7 @@ public class VppRpcServiceImpl {
     }
 
     public ListenableFuture<RpcResult<Void>> delInterfaceFromBridgeDomain(DelInterfaceFromBridgeDomainInput input) {
+        LOG.info("Processing a remote call for removing interface {} from bridge domain.", input.getVppInterfaceName());
         InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(input.getVppNodeId());
         return Futures.transform(readInterface(vppNodeIid, input.getVppInterfaceName()),
                 new AsyncFunction<Optional<Interface>, RpcResult<Void>>() {
