@@ -28,6 +28,7 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
+import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.bridge.domain.base.attributes.PhysicalLocationRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpBridgeDomain;
@@ -326,10 +327,21 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
     public ListenableFuture<Void> removeBridgeDomainFromVppNode(@Nonnull final String bridgeDomainName,
                                                                 @Nonnull final NodeId vppNode) {
         LOG.info("Removing bridge domain {} from VPP node {}", bridgeDomainName, vppNode);
+        InstanceIdentifier<Topology> topologyIid =
+                VppIidFactory.getTopologyIid(new TopologyKey(new TopologyId(bridgeDomainName)));
+        ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
+        Optional<Topology> topologyOpt =
+                DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, topologyIid, rTx);
         WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
         InstanceIdentifier<Node> nodeIid =
                 VppIidFactory.getNodeIid(new TopologyKey(new TopologyId(bridgeDomainName)), new NodeKey(vppNode));
         wTx.delete(LogicalDatastoreType.CONFIGURATION, nodeIid);
+        if (topologyOpt.isPresent()) {
+            Topology topology = topologyOpt.get();
+            if(topology.getNode() == null || topology.getNode().size() == 1) {
+                wTx.delete(LogicalDatastoreType.CONFIGURATION, topologyIid);
+            }
+        }
         SettableFuture<Void> future = SettableFuture.create();
         Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
 
