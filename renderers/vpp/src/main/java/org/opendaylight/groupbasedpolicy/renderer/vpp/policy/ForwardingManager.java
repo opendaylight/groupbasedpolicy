@@ -24,7 +24,6 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppRendererProcessingException;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.NetworkContainment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.Containment;
@@ -33,8 +32,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L2FloodDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.NetworkDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.fields.Parent;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
@@ -258,10 +259,17 @@ public final class ForwardingManager {
             }
         }
         if (containment instanceof NetworkDomainContainment) {
-            NetworkDomainContainment netDomainCont = (NetworkDomainContainment) containment;
-            RendererNetworkDomain rendererNetworkDomain =
-                    policyCtx.getNetworkDomainTable().get(ep.getTenant(), new RendererNetworkDomainKey(
-                            netDomainCont.getNetworkDomainId(), netDomainCont.getNetworkDomainType()));
+            final NetworkDomainContainment netDomainCont = (NetworkDomainContainment) containment;
+            final TenantId tenantId = ep.getTenant();
+            final NetworkDomainId domainId = netDomainCont.getNetworkDomainId();
+            final Class<? extends NetworkDomain> domainKey = netDomainCont.getNetworkDomainType();
+            final RendererNetworkDomainKey rendererNetworkDomainKey = new RendererNetworkDomainKey(domainId, domainKey);
+            final RendererNetworkDomain rendererNetworkDomain =
+                    policyCtx.getNetworkDomainTable().get(tenantId, rendererNetworkDomainKey);
+            if (rendererNetworkDomain == null) {
+                LOG.debug("Network domain not found. Containment: {}", containment);
+                return java.util.Optional.empty();
+            }
             java.util.Optional<String> optL2Fd = getForwardingCtxForParent(ep.getTenant(),
                     rendererNetworkDomain.getParent(), policyCtx.getForwardingCtxTable())
                         .filter(fwdCtx -> L2FloodDomain.class.equals(fwdCtx.getContextType()))

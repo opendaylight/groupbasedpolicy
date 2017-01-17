@@ -15,7 +15,6 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import com.sun.jndi.cosnaming.IiopUrl;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
@@ -292,6 +291,10 @@ public class NeutronPortAware implements NeutronAware<Port> {
     }
 
     private void changeL3ContextForEpsInSubnet(Uuid subnetUuid, Neutron neutron) {
+        if (neutron == null) {
+            LOG.debug("No new data are written, there is no L3 context in subnet {} to update", subnetUuid);
+            return;
+        }
         Set<Port> portsInSameSubnet = PortUtils.findPortsBySubnet(subnetUuid, neutron.getPorts());
         for (Port portInSameSubnet : portsInSameSubnet) {
             if (PortUtils.isNormalPort(portInSameSubnet) || PortUtils.isDhcpPort(portInSameSubnet)
@@ -566,7 +569,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
             }
             FixedIps portIpWithSubnet = potentialPortIpWithSubnet.get();
             L3ContextId l3Context = new L3ContextId(port.getNetworkId().getValue());
-            // change L3Context for all EPs with same subnet as router port
+            // change L3Context for all new EPs with same subnet as router port
             changeL3ContextForEpsInSubnet(portIpWithSubnet.getSubnetId(), newNeutron);
             // set L3Context as parent for bridge domain which is parent of subnet
             TenantId tenantId = new TenantId(port.getTenantId().getValue());

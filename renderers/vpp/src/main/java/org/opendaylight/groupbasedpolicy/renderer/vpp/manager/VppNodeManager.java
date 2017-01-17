@@ -165,6 +165,7 @@ public class VppNodeManager {
 
     private DataBroker getNodeMountPoint(InstanceIdentifier<Node> mountPointIid) {
         Optional<MountPoint> optionalObject = mountService.getMountPoint(mountPointIid);
+        LOG.debug("Optional mountpoint object: {}", optionalObject);
         MountPoint mountPoint;
         if (optionalObject.isPresent()) {
             mountPoint = optionalObject.get();
