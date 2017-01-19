@@ -7,12 +7,12 @@
  */
 package org.opendaylight.groupbasedpolicy.neutron.mapper;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
@@ -67,7 +67,7 @@ import com.google.common.collect.PeekingIterator;
 
 public class NeutronMapper implements ClusteredDataTreeChangeListener<Neutron>, AutoCloseable {
 
-    public static final String EXC_MSG_UNKNOWN_MODIFICATION_TYPE_WITHIN_DATA = "Unknown modification type within data ";
+    private static final String EXC_MSG_UNKNOWN_MODIFICATION_TYPE_WITHIN_DATA = "Unknown modification type within data ";
 
     private final static SecurityRuleBuilder EIG_INGRESS_IPV4_SEC_RULE_BUILDER = new SecurityRuleBuilder()
         .setUuid(new Uuid("0a629f80-2408-11e6-b67b-9e71128cae77"))
@@ -120,7 +120,7 @@ public class NeutronMapper implements ClusteredDataTreeChangeListener<Neutron>, 
     }
 
     @Override
-    public void onDataTreeChanged(Collection<DataTreeModification<Neutron>> changes) {
+    public void onDataTreeChanged(@Nonnull Collection<DataTreeModification<Neutron>> changes) {
         for (DataTreeModification<Neutron> change : changes) {
             DataObjectModification<Neutron> neutronModif = change.getRootNode();
             resolveAndSetNeutron(neutronModif);
@@ -164,24 +164,19 @@ public class NeutronMapper implements ClusteredDataTreeChangeListener<Neutron>, 
     private <T extends DataObject> void onDataObjectModification(List<DataObjectModification<T>> dataModifs,
             NeutronAware<T> neutronAware) {
         for (DataObjectModification<T> dataModif : dataModifs) {
-            switch (dataModif.getModificationType()) {
-                case DELETE:
-                    neutronAware.onDeleted(dataModif.getDataBefore(), neutronBefore, neutronAfter);
-                    break;
-                case SUBTREE_MODIFIED:
-                    neutronAware.onUpdated(dataModif.getDataBefore(), dataModif.getDataAfter(), neutronBefore,
-                            neutronAfter);
-                    break;
-                case WRITE:
-                    if (dataModif.getDataBefore() == null) {
-                        neutronAware.onCreated(dataModif.getDataAfter(), neutronAfter);
-                    } else {
-                        neutronAware.onUpdated(dataModif.getDataBefore(), dataModif.getDataAfter(), neutronBefore,
-                                neutronAfter);
-                    }
-                    break;
-                default:
-                    throw new IllegalStateException(EXC_MSG_UNKNOWN_MODIFICATION_TYPE_WITHIN_DATA + dataModif);
+            final T dataBefore = dataModif.getDataBefore();
+            final T dataAfter = dataModif.getDataAfter();
+            if (dataBefore == null && dataAfter != null) {
+                neutronAware.onCreated(dataAfter, neutronAfter);
+            }
+            else if (dataBefore != null && dataAfter != null) {
+                neutronAware.onUpdated(dataBefore, dataAfter, neutronBefore, neutronAfter);
+            }
+            else if (dataBefore != null) {
+                neutronAware.onDeleted(dataBefore, neutronBefore, neutronAfter);
+            }
+            else {
+                throw new IllegalStateException(EXC_MSG_UNKNOWN_MODIFICATION_TYPE_WITHIN_DATA + dataModif);
             }
         }
     }
