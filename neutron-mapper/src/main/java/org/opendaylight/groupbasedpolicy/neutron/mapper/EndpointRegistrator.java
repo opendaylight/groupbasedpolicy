@@ -34,6 +34,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3AddressBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.l3.prefix.fields.EndpointL3Gateways;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.l3.prefix.fields.EndpointL3GatewaysBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L3Builder;
 import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -178,4 +179,26 @@ public class EndpointRegistrator {
         return true;
     }
 
+    @Deprecated
+    public boolean unregisterL3EpAsExternalGateway(IpAddress ipAddress, L3ContextId l3Context) {
+        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnregisterEndpointInput unregisterEndpointInput =
+            new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnregisterEndpointInputBuilder()
+                .setL3(ImmutableList.of(new L3Builder().setL3Context(l3Context)
+                    .setIpAddress(ipAddress)
+                    .build()))
+                .build();
+
+        try {
+            RpcResult<Void> rpcResult = epService.unregisterEndpoint(unregisterEndpointInput).get();
+            if (!rpcResult.isSuccessful()) {
+                LOG.warn("Illegal state - unregisterL3EndpointAsExternalGateway was not successful. Input of RPC: {}",
+                    unregisterEndpointInput);
+                return false;
+            }
+        } catch (InterruptedException | ExecutionException e) {
+            LOG.error("unregisterL3EndpointAsExternalGateway failed. {}", unregisterEndpointInput, e);
+            return false;
+        }
+        return true;
+    }
 }

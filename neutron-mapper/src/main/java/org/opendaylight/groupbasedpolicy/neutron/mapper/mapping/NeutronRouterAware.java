@@ -32,6 +32,7 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.NetworkContainmentBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.containment.NetworkDomainContainmentBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.register.endpoint.input.AddressEndpointRegBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.unregister.endpoint.input.AddressEndpointUnregBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
@@ -40,12 +41,16 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubnetId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Key;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3PrefixKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.IpPrefixType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.SubnetAugmentForwarding;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.SubnetAugmentForwardingBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.has.subnet.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.has.subnet.SubnetBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.fields.Parent;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.ForwardingContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.ForwardingContextBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.NetworkDomain;
@@ -206,6 +211,15 @@ public class NeutronRouterAware implements NeutronAware<Router> {
         return epRegistrator.registerEndpoint(addrEpBuilder.build());
     }
 
+    private boolean unregisterExternalGateway(IpPrefix ipPrefix, ContextId routerl3ContextId) {
+        AddressEndpointUnregBuilder addrEpBuilder = new AddressEndpointUnregBuilder();
+        addrEpBuilder.setAddressType(IpPrefixType.class);
+        addrEpBuilder.setAddress(MappingUtils.ipPrefixToStringIpAddress(ipPrefix));
+        addrEpBuilder.setContextId(routerl3ContextId);
+        addrEpBuilder.setContextType(MappingUtils.L3_CONTEXT);
+        return epRegistrator.unregisterEndpoint(addrEpBuilder.build());
+    }
+
     private NetworkDomain createSubnetWithVirtualRouterIp(IpPrefix gatewayIp, NetworkDomainId subnetId) {
         Subnet subnet = new SubnetBuilder().setVirtualRouterIp(MappingUtils.ipPrefixToIpAddress(gatewayIp.getValue())).build();
         return new NetworkDomainBuilder().setKey(new NetworkDomainKey(subnetId, MappingUtils.SUBNET))
@@ -296,7 +310,84 @@ public class NeutronRouterAware implements NeutronAware<Router> {
                  .build();
              rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l2BridgeDomainIid(tenantId, l2BdId),
                      l2BdWithGw);
-         } 
+         }
+    }
+
+    private void deleteTenantForwarding(Neutron newNeutron, Router oldRouter, L3ContextId l3ContextId, TenantId tenantId, ReadWriteTransaction rwTx) {
+        InstanceIdentifier<L3Context> l3ContextIid = IidFactory.l3ContextIid(tenantId, l3ContextId);
+
+        LOG.trace("Deleting router from TenantForwarding {}", l3ContextIid);
+        DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION, l3ContextIid, rwTx);
+
+        if (oldRouter.getGatewayPortId() != null) {
+            // external network is attached to router
+            Uuid gatewayPortId = oldRouter.getGatewayPortId();
+            Optional<Port> potentialGwPort = PortUtils.findPort(gatewayPortId, newNeutron.getPorts());
+            if (!potentialGwPort.isPresent()) {
+                LOG.trace("Gateway port {} is not present. Skipping delete of extGW from TenantForwarding",
+                    gatewayPortId);
+                return;
+            }
+
+            Port gwPort = potentialGwPort.get();
+            List<FixedIps> fixedIpsFromGwPort = gwPort.getFixedIps();
+            if (fixedIpsFromGwPort == null || fixedIpsFromGwPort.isEmpty()) {
+                LOG.trace("Gateway port {} does not contain fixed IPs. Skipping delete of extGW from TenantForwarding",
+                    gatewayPortId);
+                return;
+            }
+
+            // router can have only one external network
+            FixedIps ipWithSubnetFromGwPort = fixedIpsFromGwPort.get(0);
+            Optional<org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet>
+                potentialSubnet =
+                SubnetUtils.findSubnet(ipWithSubnetFromGwPort.getSubnetId(), newNeutron.getSubnets());
+            if (!potentialSubnet.isPresent()) {
+                LOG.trace("Gateway port {} does not contain fixed IPs. Skipping delete of extGW from TenantForwarding",
+                    gatewayPortId);
+                return;
+            }
+            IpAddress gatewayIp = potentialSubnet.get().getGatewayIp();
+            boolean registeredExternalGateway = epRegistrator.unregisterL3EpAsExternalGateway(gatewayIp, l3ContextId);
+            if (!registeredExternalGateway) {
+                LOG.trace("L3 Gateway endpoint {} with IP {} was not unregistered.", l3ContextId, gatewayIp);
+                return;
+            } else {
+                LOG.trace("L3 Gateway endpoint {} with IP {} was unregistered successfully.", l3ContextId, gatewayIp);
+            }
+            EndpointL3Key epL3Key = new EndpointL3Key(gatewayIp, l3ContextId);
+
+            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
+                NeutronGbpIidFactory.externalGatewayAsL3Endpoint(epL3Key.getL3Context(), epL3Key.getIpAddress()), rwTx);
+
+            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL, InstanceIdentifier.builder(Endpoints.class)
+                .child(EndpointL3Prefix.class, new EndpointL3PrefixKey(MappingUtils.DEFAULT_ROUTE, l3ContextId))
+                .build(), rwTx);
+
+            Optional<org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet>
+                subnetOptional = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
+                IidFactory.subnetIid(tenantId, new SubnetId(ipWithSubnetFromGwPort.getSubnetId().getValue())),
+                dataProvider.newReadOnlyTransaction());
+
+            org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet
+                subnet =
+                new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.SubnetBuilder(
+                    subnetOptional.get()).setVirtualRouterIp(null).build();
+            LOG.trace("Removing VirtualRouterIp from subnet {}.", subnetOptional.get());
+            rwTx.put(LogicalDatastoreType.CONFIGURATION,
+                IidFactory.subnetIid(tenantId, new SubnetId(ipWithSubnetFromGwPort.getSubnetId().getValue())), subnet);
+
+            L2BridgeDomainId l2BdId = new L2BridgeDomainId(potentialSubnet.get().getNetworkId().getValue());
+            L3ContextId l3Context = new L3ContextId( potentialSubnet.get().getNetworkId().getValue());
+            Optional<L2BridgeDomain> optBd = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
+                IidFactory.l2BridgeDomainIid(tenantId, l2BdId), rwTx);
+            if (optBd.isPresent()) {
+                L2BridgeDomain l2BdWithGw = new L2BridgeDomainBuilder(optBd.get()).setParent(l3Context).build();
+                LOG.trace("Setting parent for L2BridgeDomain {} back to network {}.", l2BdWithGw, l3Context);
+                rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.l2BridgeDomainIid(tenantId, l2BdId),
+                    l2BdWithGw);
+            }
+        }
     }
 
     private static @Nonnull ForwardingContext createL3ContextFromRouter(
@@ -341,7 +432,90 @@ public class NeutronRouterAware implements NeutronAware<Router> {
 
     @Override
     public void onDeleted(Router router, Neutron oldNeutron, Neutron newNeutron) {
-        LOG.trace("deleted router - {}", router);
+        LOG.debug("deleted router - {}", router);
+        ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
+        ContextId routerl3ContextId = new ContextId(router.getUuid().getValue());
+        TenantId tenantId = new TenantId(router.getTenantId().getValue());
+        deleteExtGw(router, tenantId, newNeutron, rwTx);
+        InstanceIdentifier<ForwardingContext> routerL3CtxIid = L2L3IidFactory.l3ContextIid(tenantId, routerl3ContextId);
+
+        LOG.trace("Removing router from forwardingByTenant. Router: {} Path: {}", router, routerL3CtxIid);
+        DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION, routerL3CtxIid, rwTx);
+
+        InstanceIdentifier<L3Context> l3ContextInstanceIdentifier =
+            IidFactory.l3ContextIid(tenantId, new L3ContextId(routerl3ContextId));
+        LOG.trace("Removing router from Tenant`s forwarding context. Router: {} Path: {}", router,
+            l3ContextInstanceIdentifier);
+        DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION, l3ContextInstanceIdentifier, rwTx);
+
+        DataStoreHelper.submitToDs(rwTx);
+    }
+
+    private void deleteExtGw(Router router, TenantId tenantId, Neutron newNeutron, ReadWriteTransaction rwTx) {
+        ContextId routerL3CtxId = new ContextId(router.getUuid().getValue());
+        if (router.getGatewayPortId() != null) {
+            // external network is attached to router
+            Uuid gatewayPortId = router.getGatewayPortId();
+            Optional<Port> potentialGwPort = PortUtils.findPort(gatewayPortId, newNeutron.getPorts());
+            if (!potentialGwPort.isPresent()) {
+                LOG.trace("Gateway port {} is not present. Skipping delete for external gateway", gatewayPortId);
+                return;
+            }
+
+            Port gwPort = potentialGwPort.get();
+            List<FixedIps> fixedIpsFromGwPort = gwPort.getFixedIps();
+            if (fixedIpsFromGwPort == null || fixedIpsFromGwPort.isEmpty()) {
+                LOG.trace("Gateway port {} with does not contain fixed IPs. Skipping delete for external gateway",
+                    gatewayPortId);
+                return;
+            }
+
+            FixedIps ipWithSubnetFromGwPort = fixedIpsFromGwPort.get(0);
+            Optional<org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet>
+                potentialSubnet = SubnetUtils.findSubnet(ipWithSubnetFromGwPort.getSubnetId(), newNeutron.getSubnets());
+            if (!potentialSubnet.isPresent()) {
+                LOG.trace("Subnet for GW port {} is not present. Skipping delete for external gateway",
+                    gatewayPortId);
+                return;
+            }
+            IpPrefix gatewayIp = MappingUtils.ipAddressToIpPrefix(potentialSubnet.get().getGatewayIp());
+
+            if (!unregisterExternalGateway(gatewayIp, routerL3CtxId)) {
+                LOG.warn("Could not unregister routerL3Prefix as gateway of default route. Gateway port {}", gwPort);
+                return;
+            }
+            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
+                NeutronGbpIidFactory.externalGatewayAsEndpoint(routerL3CtxId, gatewayIp, MappingUtils.L3_CONTEXT),
+                rwTx);
+            NetworkDomainId domainId = new NetworkDomainId(ipWithSubnetFromGwPort.getSubnetId().getValue());
+            Optional<NetworkDomain> domainOptional =
+                DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
+                    L2L3IidFactory.subnetIid(tenantId, domainId), dataProvider.newReadWriteTransaction());
+
+            if (domainOptional.isPresent()) {
+                Subnet originalSubnet = domainOptional.get().getAugmentation(SubnetAugmentForwarding.class).getSubnet();
+                if (originalSubnet != null) {
+                    LOG.trace("Deleting virtual router IP from Subnet {} in gateway {}", originalSubnet, gatewayPortId);
+                    SubnetBuilder subnetBuilder = new SubnetBuilder(originalSubnet).setVirtualRouterIp(null);
+                    rwTx.put(LogicalDatastoreType.CONFIGURATION,
+                        L2L3IidFactory.subnetIid(tenantId, domainId)
+                            .augmentation(SubnetAugmentForwarding.class)
+                            .child(Subnet.class),
+                        subnetBuilder.build());
+                }
+            }
+            ContextId l2BdId = new ContextId(potentialSubnet.get().getNetworkId().getValue());
+            Optional<ForwardingContext> optBd = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
+                L2L3IidFactory.l2BridgeDomainIid(tenantId, l2BdId), rwTx);
+            Parent parent = MappingUtils.createParent(l2BdId, MappingUtils.L3_CONTEXT);
+            if (optBd.isPresent()) {
+                ForwardingContext bridgeDomain = new ForwardingContextBuilder(optBd.get()).setParent(parent).build();
+                LOG.trace("Setting parent for L2BridgeDomain {} back to network {}.", bridgeDomain, parent);
+                rwTx.put(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.l2BridgeDomainIid(tenantId, l2BdId),
+                    bridgeDomain);
+            }
+        }
+        deleteTenantForwarding(newNeutron, router, new L3ContextId(routerL3CtxId), tenantId, rwTx);
     }
 
 }
