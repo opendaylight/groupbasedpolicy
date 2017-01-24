@@ -19,9 +19,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.CheckedFuture;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -43,6 +46,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.SxpNodeI
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.network.topology.topology.node.SxpDomains;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.network.topology.topology.node.SxpDomainsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.network.topology.topology.node.sxp.domains.SxpDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.network.topology.topology.node.sxp.domains.SxpDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.network.topology.topology.node.sxp.domains.SxpDomainKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.sxp.connections.fields.Connections;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.sxp.node.rev160308.sxp.connections.fields.connections.Connection;
@@ -58,10 +62,6 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.CheckedFuture;
-
 public class SxpCapableNodeListenerTest extends CustomDataBrokerTest {
 
     private final String SXP_NODE_ID = "sxp_node";
@@ -71,6 +71,7 @@ public class SxpCapableNodeListenerTest extends CustomDataBrokerTest {
     private final String TOPOLOGY_ID = "topology";
     private final String DOMAIN_ID = TOPOLOGY_ID + "/" + NODE_ID;
     private final PortNumber SXP_PORT = new PortNumber(64999);
+    private static final String SXP_DOMAIN_NAME = "JUNIT_SXP_DOMAIN_NAME";
     private DataBroker dataBroker;
     private SxpCapableNodeListener nodeListener;
 
@@ -91,11 +92,11 @@ public class SxpCapableNodeListenerTest extends CustomDataBrokerTest {
         nodeListener = new SxpCapableNodeListener(dataBroker, SXP_NODE_ID);
         DataTreeIdentifier<SxpConnection> iid = new DataTreeIdentifier<>(LogicalDatastoreType.CONFIGURATION,
                 InstanceIdentifier.builder(NetworkTopology.class)
-                    .child(Topology.class)
-                    .child(Node.class)
-                    .augmentation(SxpConnectionAugmentation.class)
-                    .child(SxpConnection.class)
-                    .build());
+                        .child(Topology.class)
+                        .child(Node.class)
+                        .augmentation(SxpConnectionAugmentation.class)
+                        .child(SxpConnection.class)
+                        .build());
         verify(dataBroker).registerDataTreeChangeListener(iid, nodeListener);
     }
 
@@ -104,7 +105,7 @@ public class SxpCapableNodeListenerTest extends CustomDataBrokerTest {
         dataBroker = mock(DataBroker.class);
         ListenerRegistration<SxpCapableNodeListener> registration = mock(ListenerRegistration.class);
         when(dataBroker.registerDataTreeChangeListener(any(), isA(SxpCapableNodeListener.class)))
-            .thenReturn(registration);
+                .thenReturn(registration);
         nodeListener = new SxpCapableNodeListener(dataBroker, SXP_NODE_ID);
         nodeListener.close();
         verify(registration).close();
@@ -114,37 +115,42 @@ public class SxpCapableNodeListenerTest extends CustomDataBrokerTest {
     public void testOnDataTreeChange_createAndDeleteNode() throws Exception {
         Node sxpNode =
                 new NodeBuilder().setNodeId(new NodeId(SXP_NODE_ID))
-                    .addAugmentation(SxpNodeIdentity.class,
-                            new SxpNodeIdentityBuilder().setSxpDomains(new SxpDomainsBuilder().build()).build())
-                    .build();
+                        .addAugmentation(SxpNodeIdentity.class,
+                                new SxpNodeIdentityBuilder().setSxpDomains(new SxpDomainsBuilder()
+                                        .setSxpDomain(Collections.singletonList(
+                                                new SxpDomainBuilder()
+                                                        .setDomainName(SXP_DOMAIN_NAME)
+                                                        .build()))
+                                        .build()).build())
+                        .build();
         InstanceIdentifier<Node> sxpNodeIid =
                 InstanceIdentifier.builder(NetworkTopology.class)
-                    .child(Topology.class,
-                            new TopologyKey(new TopologyId(IpSgtDistributionServiceImpl.SXP_TOPOLOGY_ID)))
-                    .child(Node.class, new NodeKey(new NodeId(SXP_NODE_ID)))
-                    .build();
+                        .child(Topology.class,
+                                new TopologyKey(new TopologyId(IpSgtDistributionServiceImpl.SXP_TOPOLOGY_ID)))
+                        .child(Node.class, new NodeKey(new NodeId(SXP_NODE_ID)))
+                        .build();
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
         wtx.put(LogicalDatastoreType.CONFIGURATION, sxpNodeIid, sxpNode, true);
         Node node = new NodeBuilder().setNodeId(new NodeId(NODE_ID))
-            .addAugmentation(SxpConnectionAugmentation.class, new SxpConnectionAugmentationBuilder()
-                .setSxpConnection(new SxpConnectionBuilder().setIpAddress(IP_ADDR).setPassword(PASSWD).build()).build())
-            .build();
+                .addAugmentation(SxpConnectionAugmentation.class, new SxpConnectionAugmentationBuilder()
+                        .setSxpConnection(new SxpConnectionBuilder().setIpAddress(IP_ADDR).setPassword(PASSWD).build()).build())
+                .build();
         InstanceIdentifier<Node> nodeIid = InstanceIdentifier.builder(NetworkTopology.class)
-            .child(Topology.class, new TopologyKey(new TopologyId(TOPOLOGY_ID)))
-            .child(Node.class, new NodeKey(new NodeId(NODE_ID)))
-            .build();
+                .child(Topology.class, new TopologyKey(new TopologyId(TOPOLOGY_ID)))
+                .child(Node.class, new NodeKey(new NodeId(NODE_ID)))
+                .build();
         wtx.put(LogicalDatastoreType.CONFIGURATION, nodeIid, node, true);
         wtx.submit().get();
         assertEquals(DOMAIN_ID, nodeListener.getDomainIdForPeer(nodeIid));
         InstanceIdentifier<SxpDomain> domainIid =
                 InstanceIdentifier.builder(NetworkTopology.class)
-                    .child(Topology.class,
-                            new TopologyKey(new TopologyId(IpSgtDistributionServiceImpl.SXP_TOPOLOGY_ID)))
-                    .child(Node.class, new NodeKey(new NodeId(SXP_NODE_ID)))
-                    .augmentation(SxpNodeIdentity.class)
-                    .child(SxpDomains.class)
-                    .child(SxpDomain.class, new SxpDomainKey(DOMAIN_ID))
-                    .build();
+                        .child(Topology.class,
+                                new TopologyKey(new TopologyId(IpSgtDistributionServiceImpl.SXP_TOPOLOGY_ID)))
+                        .child(Node.class, new NodeKey(new NodeId(SXP_NODE_ID)))
+                        .augmentation(SxpNodeIdentity.class)
+                        .child(SxpDomains.class)
+                        .child(SxpDomain.class, new SxpDomainKey(DOMAIN_ID))
+                        .build();
         ReadOnlyTransaction rtx = dataBroker.newReadOnlyTransaction();
         CheckedFuture<Optional<SxpDomain>, ReadFailedException> read =
                 rtx.read(LogicalDatastoreType.CONFIGURATION, domainIid);
