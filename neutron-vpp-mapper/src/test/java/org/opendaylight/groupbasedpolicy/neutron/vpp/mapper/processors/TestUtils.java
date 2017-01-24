@@ -12,6 +12,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Collections;
 import java.util.Iterator;
 
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
@@ -32,6 +33,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_render
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.PortBindingExtension;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.PortBindingExtensionBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.binding.attributes.VifDetailsBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.binding.attributes.VifDetailsKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.Ports;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.PortBuilder;
@@ -41,10 +44,15 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier.PathArgument;
 
 public class TestUtils {
+    public static String TEST_SOCKET = "/tmp/socket_testsocket";
 
     public static Port createValidVppPort() {
         PortBindingExtension portBindingExt = new PortBindingExtensionBuilder().setHostId("devstack-control")
             .setVifType("vhostuser")
+            .setVifDetails(Collections.singletonList(
+                new VifDetailsBuilder().setKey(new VifDetailsKey("vhostuser_socket"))
+                    .setValue(TEST_SOCKET)
+                    .build()))
             .build();
         return new PortBuilder().setUuid(new Uuid("00000000-1111-2222-3333-444444444444"))
             .setDeviceOwner("compute")

@@ -21,7 +21,6 @@ import org.opendaylight.controller.md.sal.common.api.data.AsyncTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionChain;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionChainListener;
-import org.opendaylight.groupbasedpolicy.neutron.vpp.mapper.SocketInfo;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
@@ -64,6 +63,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 
+import javax.annotation.Nonnull;
 public class PortHandler implements TransactionChainListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(PortHandler.class);
@@ -77,14 +77,13 @@ public class PortHandler implements TransactionChainListener {
     private static final String VPP_INTERFACE_NAME_PREFIX = "neutron_port_";
     private static final String TAP_PORT_NAME_PREFIX = "tap";
     private static final String RT_PORT_NAME_PREFIX = "qr-";
+    private static final String VHOST_SOCKET_KEY = "vhostuser_socket";
 
     private BindingTransactionChain transactionChain;
     private DataBroker dataBroker;
-    private SocketInfo socketInfo;
 
-    PortHandler(DataBroker dataBroker, SocketInfo socketInfo) {
+    PortHandler(DataBroker dataBroker) {
         this.dataBroker = dataBroker;
-        this.socketInfo = socketInfo;
         transactionChain = this.dataBroker.createTransactionChain(this);
     }
 
@@ -238,9 +237,10 @@ public class PortHandler implements TransactionChainListener {
             .setAddressType(bebp.getAddressType())
             .setVppInterfaceName(VPP_INTERFACE_NAME_PREFIX + bebp.getPortId().getValue())
             .setVppNodeId(new NodeId(portBinding.getHostId()));
+
         if (port.getDeviceOwner().contains(COMPUTE_OWNER)) {
-            String socket = socketInfo.getSocketPath() + socketInfo.getSocketPrefix() + bebp.getPortId().getValue();
-            vppEpBuilder.setInterfaceTypeChoice(new VhostUserCaseBuilder().setSocket(socket).build());
+            vppEpBuilder.setInterfaceTypeChoice(
+                new VhostUserCaseBuilder().setSocket(getSocketFromPortBinding(portBinding)).build());
         } else if (port.getDeviceOwner().contains(DHCP_OWNER) && port.getMacAddress() != null) {
             TapCase tapCase = new TapCaseBuilder().setPhysicalAddress(new PhysAddress(port.getMacAddress().getValue()))
                 .setName(createPortName(port.getUuid()))
@@ -255,6 +255,17 @@ public class PortHandler implements TransactionChainListener {
             vppEpBuilder.setInterfaceTypeChoice(getLoopbackCase(port));
         }
         return vppEpBuilder.build();
+    }
+
+    private String getSocketFromPortBinding(@Nonnull PortBindingExtension portBindingExtension) {
+        List<VifDetails> vifDetails = nullToEmpty(portBindingExtension.getVifDetails());
+
+        for (VifDetails detail : vifDetails) {
+            if (VHOST_SOCKET_KEY.equalsIgnoreCase(detail.getDetailsKey())) {
+                return detail.getValue();
+            }
+        }
+        return null;
     }
 
     private LoopbackCase getLoopbackCase(Port port) {

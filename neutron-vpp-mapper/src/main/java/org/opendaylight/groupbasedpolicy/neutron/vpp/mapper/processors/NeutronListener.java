@@ -23,7 +23,6 @@ import org.opendaylight.controller.md.sal.binding.api.DataObjectModification.Mod
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.groupbasedpolicy.neutron.vpp.mapper.SocketInfo;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
@@ -43,14 +42,14 @@ public class NeutronListener implements ClusteredDataTreeChangeListener<Neutron>
     private final Set<MappingProvider<? extends DataObject>> dataChangeProviders = new LinkedHashSet<>();
     protected ListenerRegistration<NeutronListener> registeredListener;
 
-    public NeutronListener(DataBroker dataBroker, SocketInfo socketInfo) {
-        registerHandlersAndListeners(dataBroker, socketInfo);
+    public NeutronListener(DataBroker dataBroker) {
+        registerHandlersAndListeners(dataBroker);
         registeredListener = dataBroker.registerDataTreeChangeListener(new DataTreeIdentifier<>(
                 LogicalDatastoreType.CONFIGURATION, InstanceIdentifier.builder(Neutron.class).build()), this);
     }
 
-    private void registerHandlersAndListeners(DataBroker dataBroker, SocketInfo socketInfo) {
-        PortHandler portHandler = new PortHandler(dataBroker, socketInfo);
+    private void registerHandlersAndListeners(DataBroker dataBroker) {
+        PortHandler portHandler = new PortHandler(dataBroker);
         dataChangeProviders.add(new PortAware(portHandler, dataBroker));
         dataChangeProviders.add(new NetworkAware(dataBroker));
     }
