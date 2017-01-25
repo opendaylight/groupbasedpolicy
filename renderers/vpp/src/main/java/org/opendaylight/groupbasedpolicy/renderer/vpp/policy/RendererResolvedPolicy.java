@@ -36,8 +36,13 @@ public class RendererResolvedPolicy implements Comparable<RendererResolvedPolicy
     }
 
     @Override
-    public int compareTo(RendererResolvedPolicy arg0) {
-        return ruleGroup.compareTo(arg0.getRuleGroup());
+    public int compareTo(RendererResolvedPolicy resolvedPolicy) {
+        int comp = ruleGroup.compareTo(resolvedPolicy.getRuleGroup());
+        if (comp == 0 && (rendererEndpointParticipation.getIntValue() != resolvedPolicy
+            .getRendererEndpointParticipation().getIntValue())) {
+            return 1;
+        }
+        return comp;
     }
 
     @Override
