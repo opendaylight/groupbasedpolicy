@@ -35,7 +35,6 @@
     <module>distribution-karaf</module>
     <module>features</module>
     <module>sxp-integration</module>
-    <module>ip-sgt-distribution-service</module>
   </modules>
 
   <build>

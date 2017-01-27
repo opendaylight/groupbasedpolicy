@@ -26,6 +26,7 @@
     <modules>
         <module>sxp-ep-provider</module>
         <module>sxp-ise-adapter</module>
+        <module>ip-sgt-distribution-service</module>
     </modules>
 
     <dependencyManagement>
