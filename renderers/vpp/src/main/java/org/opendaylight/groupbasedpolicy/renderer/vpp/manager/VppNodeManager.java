@@ -11,8 +11,14 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.manager;
 import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus.ConnectionStatus.Connected;
 import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus.ConnectionStatus.Connecting;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -45,6 +51,7 @@ import org.slf4j.LoggerFactory;
 
 public class VppNodeManager {
 
+    private static final short DURATION = 3000;
     private static final TopologyId TOPOLOGY_ID = new TopologyId("topology-netconf");
     private static final Logger LOG = LoggerFactory.getLogger(VppNodeManager.class);
     private static final String V3PO_CAPABILITY = "(urn:opendaylight:params:xml:ns:yang:v3po?revision=2016-12-14)v3po";
@@ -163,24 +170,31 @@ public class VppNodeManager {
         }
     }
 
+    @Nullable
     private DataBroker getNodeMountPoint(InstanceIdentifier<Node> mountPointIid) {
-        Optional<MountPoint> optionalObject = mountService.getMountPoint(mountPointIid);
-        LOG.debug("Optional mountpoint object: {}", optionalObject);
-        MountPoint mountPoint;
-        if (optionalObject.isPresent()) {
-            mountPoint = optionalObject.get();
-            if (mountPoint != null) {
-                Optional<DataBroker> optionalDataBroker = mountPoint.getService(DataBroker.class);
-                if (optionalDataBroker.isPresent()) {
-                    return optionalDataBroker.get();
+        final Future<Optional<MountPoint>> futureOptionalObject = getMountpointFromSal(mountPointIid);
+        try {
+            final Optional<MountPoint> optionalObject = futureOptionalObject.get();
+            LOG.debug("Optional mountpoint object: {}", optionalObject);
+            MountPoint mountPoint;
+            if (optionalObject.isPresent()) {
+                mountPoint = optionalObject.get();
+                if (mountPoint != null) {
+                    Optional<DataBroker> optionalDataBroker = mountPoint.getService(DataBroker.class);
+                    if (optionalDataBroker.isPresent()) {
+                        return optionalDataBroker.get();
+                    } else {
+                        LOG.warn("Cannot obtain data broker from mountpoint {}", mountPoint);
+                    }
                 } else {
-                    LOG.warn("Cannot obtain data broker from mountpoint {}", mountPoint);
+                    LOG.warn("Cannot obtain mountpoint with IID {}", mountPointIid);
                 }
-            } else {
-                LOG.warn("Cannot obtain mountpoint with IID {}", mountPointIid);
             }
+            return null;
+        } catch (ExecutionException | InterruptedException e) {
+            LOG.warn("Unable to obtain mountpoint ... {}", e);
+            return null;
         }
-        return null;
     }
 
     private RendererNode remapNode(InstanceIdentifier<Node> path) {
@@ -243,4 +257,30 @@ public class VppNodeManager {
         return Arrays.asList(capabilityEntries);
     }
 
+    // TODO bug 7699
+    // This works as a workaround for mountpoint registration in cluster. If application is registered on different
+    // node as netconf service, it obtains mountpoint registered by SlaveSalFacade (instead of MasterSalFacade). However
+    // this service registers mountpoint a moment later then connectionStatus is set to "Connected". If NodeManager hits
+    // state where device is connected but mountpoint is not yet available, try to get it again in a while
+    private Future<Optional<MountPoint>> getMountpointFromSal(final InstanceIdentifier<Node> iid) {
+        final ExecutorService executorService = Executors.newSingleThreadExecutor();
+        final Callable<Optional<MountPoint>> task = () -> {
+            byte attempt = 0;
+            do {
+                try {
+                    final Optional<MountPoint> optionalMountpoint = mountService.getMountPoint(iid);
+                    if (optionalMountpoint.isPresent()) {
+                        return optionalMountpoint;
+                    }
+                    LOG.warn("Mountpoint {} is not registered yet", iid);
+                    Thread.sleep(DURATION);
+                } catch (InterruptedException e) {
+                    LOG.warn("Thread interrupted to ", e);
+                }
+                attempt ++;
+            } while (attempt <= 3);
+            return Optional.absent();
+        };
+        return executorService.submit(task);
+    }
 }
