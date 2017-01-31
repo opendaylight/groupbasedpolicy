@@ -22,7 +22,6 @@ import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.binding.test.AbstractDataBrokerTest;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.groupbasedpolicy.neutron.vpp.mapper.SocketInfo;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.Mappings;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.GbpByNeutronMappings;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.BaseEndpointsByPorts;
@@ -30,13 +29,14 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gb
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.PortBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 public class NeutronListenerTest extends AbstractDataBrokerTest {
 
     private DataBroker dataBroker;
 
-    private SocketInfo socketInfo;
+    private NodeId routingNode;
     private Port port;
     private BaseEndpointByPort bebp;
     private NeutronListener neutronListener;
@@ -47,17 +47,17 @@ public class NeutronListenerTest extends AbstractDataBrokerTest {
         port = TestUtils.createValidVppPort();
         bebp = TestUtils.createBaseEndpointByPortForPort();
         dataBroker = getDataBroker();
-        neutronListener = new NeutronListener(dataBroker);
+        neutronListener = new NeutronListener(dataBroker, routingNode);
         neutronListener.clearDataChangeProviders();
         baseEpByPortListener = Mockito.spy(new PortAware(new PortHandler(
-                dataBroker), dataBroker));
+                dataBroker, routingNode), dataBroker));
         neutronListener.addDataChangeProvider(baseEpByPortListener);
     }
 
     @Test
     public void constructorTest() {
         dataBroker = Mockito.spy(dataBroker);
-        NeutronListener neutronListener = new NeutronListener(dataBroker);
+        NeutronListener neutronListener = new NeutronListener(dataBroker, routingNode);
         verify(dataBroker).registerDataTreeChangeListener(
                 eq(new DataTreeIdentifier<>(LogicalDatastoreType.CONFIGURATION,
                         InstanceIdentifier.builder(Neutron.class)

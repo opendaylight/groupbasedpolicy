@@ -15,7 +15,14 @@ import static org.junit.Assert.assertTrue;
 import java.util.Collections;
 import java.util.Iterator;
 
+import javax.annotation.Nonnull;
+
+import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
+import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
+import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.UniqueId;
@@ -35,6 +42,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.P
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.PortBindingExtensionBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.binding.attributes.VifDetailsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.binding.attributes.VifDetailsKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.Routers;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.routers.Router;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.routers.RouterBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.routers.RouterKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.Ports;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.PortBuilder;
@@ -44,24 +55,28 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier.PathArgument;
 
 public class TestUtils {
-    public static String TEST_SOCKET = "/tmp/socket_testsocket";
+    static String TEST_SOCKET = "/tmp/socket_testsocket";
+    static final String NODE_1 = "devstack-control";
+    static final String DUMMY_UUID = "00000000-1111-2222-3333-444444444444";
 
     public static Port createValidVppPort() {
-        PortBindingExtension portBindingExt = new PortBindingExtensionBuilder().setHostId("devstack-control")
+        PortBindingExtension portBindingExt = new PortBindingExtensionBuilder().setHostId(NODE_1)
             .setVifType("vhostuser")
             .setVifDetails(Collections.singletonList(
                 new VifDetailsBuilder().setKey(new VifDetailsKey("vhostuser_socket"))
                     .setValue(TEST_SOCKET)
                     .build()))
             .build();
-        return new PortBuilder().setUuid(new Uuid("00000000-1111-2222-3333-444444444444"))
+        return new PortBuilder().setUuid(new Uuid(DUMMY_UUID))
             .setDeviceOwner("compute")
+            .setDeviceId(DUMMY_UUID)
+            .setMacAddress(new MacAddress("00:11:00:00:11:11"))
             .addAugmentation(PortBindingExtension.class, portBindingExt)
             .build();
     }
 
     public static Port createNonVppPort() {
-        return new PortBuilder().setUuid(new Uuid("00000000-1111-2222-3333-444444444444"))
+        return new PortBuilder().setUuid(new Uuid(DUMMY_UUID))
             .setDeviceOwner("owner1")
             .build();
     }
@@ -69,10 +84,17 @@ public class TestUtils {
     public static BaseEndpointByPort createBaseEndpointByPortForPort() {
         return new BaseEndpointByPortBuilder().setContextId(new ContextId("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"))
             .setAddress("00:11:11:11:11:11")
-            .setPortId(new UniqueId("00000000-1111-2222-3333-444444444444"))
+            .setPortId(new UniqueId(DUMMY_UUID))
             .setContextType(MappingUtils.L2_BRDIGE_DOMAIN)
             .setAddressType(MacAddressType.class)
             .build();
+    }
+
+    static void writeQrouter(@Nonnull DataBroker dataBroker, @Nonnull RouterKey routerKey) {
+        WriteTransaction tx = dataBroker.newWriteOnlyTransaction();
+        tx.put(LogicalDatastoreType.CONFIGURATION, createNeutronRouterIid(routerKey),
+                new RouterBuilder().setKey(routerKey).build(), true);
+        DataStoreHelper.submitToDs(tx);
     }
 
     public static VppEndpointKey createVppEndpointKey(BaseEndpointByPort bebp) {
@@ -102,6 +124,10 @@ public class TestUtils {
             .child(BaseEndpointsByPorts.class)
             .child(BaseEndpointByPort.class, new BaseEndpointByPortKey(uuid))
             .build();
+    }
+
+    public static InstanceIdentifier<Router> createNeutronRouterIid(RouterKey routerKey) {
+        return InstanceIdentifier.builder(Neutron.class).child(Routers.class).child(Router.class, routerKey).build();
     }
 
     public static void assertPathArgumentTypes(Iterable<PathArgument> pathArguments, Class<?>[] expectedTypes) {

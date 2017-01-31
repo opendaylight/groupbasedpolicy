@@ -30,6 +30,7 @@ public class NeutronVppMapperInstance implements ClusterSingletonService, AutoCl
     private final DataBroker dataBroker;
     private final String socketPath;
     private final String socketPrefix;
+    private final String routingNode;
     private final ClusterSingletonServiceProvider clusterSingletonService;
     private ClusterSingletonServiceRegistration singletonServiceRegistration;
     private NeutronVppMapper mapper;
@@ -37,10 +38,12 @@ public class NeutronVppMapperInstance implements ClusterSingletonService, AutoCl
     public NeutronVppMapperInstance(final DataBroker dataBroker,
                                     final String socketPath,
                                     final String socketPrefix,
+                                    final String routingNode,
                                     final ClusterSingletonServiceProvider clusterSingletonService) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.socketPath = Preconditions.checkNotNull(socketPath);
         this.socketPrefix = Preconditions.checkNotNull(socketPrefix);
+        this.routingNode = Preconditions.checkNotNull(routingNode);
         this.clusterSingletonService = Preconditions.checkNotNull(clusterSingletonService);
     }
 
@@ -52,7 +55,7 @@ public class NeutronVppMapperInstance implements ClusterSingletonService, AutoCl
     @Override
     public void instantiateServiceInstance() {
         LOG.info("Instantiating {}", this.getClass().getSimpleName());
-        mapper = new NeutronVppMapper(socketPath, socketPrefix, dataBroker);
+        mapper = new NeutronVppMapper(socketPath, socketPrefix, routingNode, dataBroker);
     }
 
     @Override

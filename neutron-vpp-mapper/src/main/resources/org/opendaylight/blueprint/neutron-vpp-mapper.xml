@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
            xmlns:odl="http://opendaylight.org/xmlns/blueprint/v1.0.0"
+           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
            odl:use-default-for-reference-types="true">
 
     <reference id="dataBroker" interface="org.opendaylight.controller.md.sal.binding.api.DataBroker"/>
@@ -11,6 +12,13 @@
         <argument ref="dataBroker"/>
         <argument value="/tmp/"/>
         <argument value="socket_"/>
+        <argument value="${routing-node}"/> <!-- Tmp workaround for choosing a routing node -->
         <argument ref="clusterSingletonService" />
     </bean>
+
+    <cm:property-placeholder persistent-id="org.opendaylight.groupbasedpolicy.neutron.vpp.mapper" update-strategy="none">
+        <cm:default-properties>
+            <cm:property name="routing-node" value="default"/>
+        </cm:default-properties>
+    </cm:property-placeholder>
 </blueprint>

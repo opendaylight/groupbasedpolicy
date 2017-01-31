@@ -70,7 +70,7 @@ public class PortHandler implements TransactionChainListener {
 
     private static final String COMPUTE_OWNER = "compute";
     private static final String DHCP_OWNER = "dhcp";
-    private static final String ROUTER_OWNER = "network:router_interface";
+    static final String ROUTER_OWNER = "network:router_interface";
     private static final String[] SUPPORTED_DEVICE_OWNERS = {COMPUTE_OWNER, DHCP_OWNER, ROUTER_OWNER};
     private static final String VHOST_USER = "vhostuser";
     private static final String UNBOUND = "unbound";
@@ -78,12 +78,15 @@ public class PortHandler implements TransactionChainListener {
     private static final String TAP_PORT_NAME_PREFIX = "tap";
     private static final String RT_PORT_NAME_PREFIX = "qr-";
     private static final String VHOST_SOCKET_KEY = "vhostuser_socket";
+    static final String DEFAULT_NODE = "default";
 
+    private final NodeId routingNode;
     private BindingTransactionChain transactionChain;
     private DataBroker dataBroker;
 
-    PortHandler(DataBroker dataBroker) {
+    PortHandler(DataBroker dataBroker, NodeId routingNodeId) {
         this.dataBroker = dataBroker;
+        this.routingNode = routingNodeId;
         transactionChain = this.dataBroker.createTransactionChain(this);
     }
 
@@ -237,7 +240,6 @@ public class PortHandler implements TransactionChainListener {
             .setAddressType(bebp.getAddressType())
             .setVppInterfaceName(VPP_INTERFACE_NAME_PREFIX + bebp.getPortId().getValue())
             .setVppNodeId(new NodeId(portBinding.getHostId()));
-
         if (port.getDeviceOwner().contains(COMPUTE_OWNER)) {
             vppEpBuilder.setInterfaceTypeChoice(
                 new VhostUserCaseBuilder().setSocket(getSocketFromPortBinding(portBinding)).build());
@@ -252,6 +254,12 @@ public class PortHandler implements TransactionChainListener {
                     .build();
             vppEpBuilder.setInterfaceTypeChoice(tapCase);
         } else if (isValidVppRouterPort(port)) {
+            if (!DEFAULT_NODE.equals(routingNode.getValue())) {
+                LOG.warn(
+                        "Host-id changed by ODL for port {}. This is a supplementary workaround for choosing a routing node.",
+                        port);
+                vppEpBuilder.setVppNodeId(routingNode);
+            }
             vppEpBuilder.setInterfaceTypeChoice(getLoopbackCase(port));
         }
         return vppEpBuilder.build();

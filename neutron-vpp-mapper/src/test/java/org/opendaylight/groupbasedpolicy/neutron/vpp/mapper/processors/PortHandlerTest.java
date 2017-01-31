@@ -32,14 +32,18 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.binding.test.AbstractDataBrokerTest;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
-import org.opendaylight.groupbasedpolicy.neutron.vpp.mapper.SocketInfo;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.base.endpoints.by.ports.BaseEndpointByPort;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425._interface.attributes._interface.type.choice.LoopbackCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425._interface.attributes._interface.type.choice.VhostUserCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.routers.RouterKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.Ports;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.PortBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.base.Optional;
@@ -63,7 +67,7 @@ public class PortHandlerTest extends AbstractDataBrokerTest {
         dataBroker = Mockito.spy(getDataBroker());
         transactionChain = mock(BindingTransactionChain.class);
         when(dataBroker.createTransactionChain(any(PortHandler.class))).thenReturn(transactionChain);
-        portHandler = new PortHandler(dataBroker);
+        portHandler = new PortHandler(dataBroker, new NodeId("default"));
         when(transactionChain.newReadOnlyTransaction()).thenAnswer(new Answer<ReadTransaction>() {
 
             @Override
@@ -91,6 +95,20 @@ public class PortHandlerTest extends AbstractDataBrokerTest {
         VhostUserCase vhostUserCase = (VhostUserCase) vppEp.getInterfaceTypeChoice();
         assertNotNull(vhostUserCase);
         assertEquals(TestUtils.TEST_SOCKET, vhostUserCase.getSocket());
+    }
+
+    @Test
+    public void testRoutingNodeConfig() {
+        TestUtils.writeQrouter(dataBroker, new RouterKey(new Uuid(TestUtils.DUMMY_UUID)));
+        port = new PortBuilder(port).setDeviceOwner(PortHandler.ROUTER_OWNER).build();
+        VppEndpoint vppEp = portHandler.buildVppEndpoint(port, bebp);
+        assertEquals(vppEp.getVppNodeId().getValue(), TestUtils.NODE_1);
+        assertTrue(vppEp.getInterfaceTypeChoice() instanceof LoopbackCase);
+        NodeId otherNode = new NodeId("devstack-compute-1");
+        portHandler = new PortHandler(dataBroker, otherNode);
+        vppEp = portHandler.buildVppEndpoint(port, bebp);
+        assertTrue(vppEp.getInterfaceTypeChoice() instanceof LoopbackCase);
+        assertEquals(otherNode, vppEp.getVppNodeId());
     }
 
     @Test
