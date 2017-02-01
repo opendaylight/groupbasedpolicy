@@ -19,6 +19,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
+import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
@@ -27,6 +28,10 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.ConfigCommand;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.LoopbackCommand;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceBuilder;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeBuilder;
@@ -35,6 +40,8 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 public class GbpNetconfTransactionTest {
 
+    private final String INTERFACE_KEY = "interface-key";
+    private final String NODE_ID = "node-id";
     private final DataBroker dataBroker = mock(DataBroker.class);
     private final ReadWriteTransaction rwTx = mock(ReadWriteTransaction.class);
     private final ReadOnlyTransaction rTx = mock(ReadOnlyTransaction.class);
@@ -45,22 +52,19 @@ public class GbpNetconfTransactionTest {
     private final CheckedFuture<Void, TransactionCommitFailedException> future = mock(CheckedFuture.class);
     @SuppressWarnings("unchecked")
     private final CheckedFuture<Optional<Node>, ReadFailedException> futureNode = mock(CheckedFuture.class);
-    private final ConfigCommand command = mock(ConfigCommand.class);
+    @SuppressWarnings("unchecked")
+    private final CheckedFuture<Optional<Interface>, ReadFailedException> futureInterface = mock(CheckedFuture.class);
+    private final ConfigCommand command = mock(LoopbackCommand.class);
+    private final InterfaceBuilder interfaceBuilder = new InterfaceBuilder().setKey(new InterfaceKey(INTERFACE_KEY));
 
-    @Test
-    public void writeConfigCommandExceptionTest() {
+    @Before
+    public void init() {
+        when(dataBroker.newReadOnlyTransaction()).thenReturn(rTx);
         when(dataBroker.newReadWriteTransaction()).thenReturn(rwTx);
-        doThrow(new RuntimeException()).when(command).execute(rwTx);
-
-        final boolean result = GbpNetconfTransaction.write(dataBroker, command, (byte)5);
-        verify(dataBroker, times(1)).newReadWriteTransaction();
-        assertFalse(result);
-
     }
 
     @Test
     public void writeConfigCommandReattemptTest() {
-        when(dataBroker.newReadWriteTransaction()).thenReturn(rwTx);
         doThrow(new IllegalStateException()).when(command).execute(rwTx);
 
         final boolean result = GbpNetconfTransaction.write(dataBroker, command, (byte)5);
@@ -70,7 +74,6 @@ public class GbpNetconfTransactionTest {
 
     @Test
     public void writeConfigCommandTest() throws Exception {
-        when(dataBroker.newReadWriteTransaction()).thenReturn(rwTx);
         when(rwTx.submit()).thenReturn(future);
         doNothing().when(command).execute(rwTx);
         when(future.get()).thenReturn(null);
@@ -81,18 +84,7 @@ public class GbpNetconfTransactionTest {
     }
 
     @Test
-    public void writeDataExceptionTest() {
-        when(dataBroker.newReadWriteTransaction()).thenReturn(rwTx);
-        doThrow(new RuntimeException()).when(rwTx).put(LogicalDatastoreType.CONFIGURATION, nodeIid, node, true);
-
-        final boolean result = GbpNetconfTransaction.write(dataBroker, nodeIid, node, (byte)5);
-        verify(dataBroker, times(1)).newReadWriteTransaction();
-        assertFalse(result);
-    }
-
-    @Test
     public void writeDataReattemptTest() {
-        when(dataBroker.newReadWriteTransaction()).thenReturn(rwTx);
         doThrow(new IllegalStateException()).when(rwTx).put(LogicalDatastoreType.CONFIGURATION, nodeIid, node, true);
 
         final boolean result = GbpNetconfTransaction.write(dataBroker, nodeIid, node, (byte)5);
@@ -102,7 +94,6 @@ public class GbpNetconfTransactionTest {
 
     @Test
     public void writeDataTest() throws Exception {
-        when(dataBroker.newReadWriteTransaction()).thenReturn(rwTx);
         when(rwTx.submit()).thenReturn(future);
         doNothing().when(rwTx).put(LogicalDatastoreType.CONFIGURATION, nodeIid, node, true);
         when(future.get()).thenReturn(null);
@@ -113,19 +104,7 @@ public class GbpNetconfTransactionTest {
     }
 
     @Test
-    public void readDataExceptionTest() {
-        when(dataBroker.newReadOnlyTransaction()).thenReturn(rTx);
-        doThrow(new RuntimeException()).when(rTx).read(LogicalDatastoreType.CONFIGURATION, nodeIid);
-
-        final Optional<Node> result = GbpNetconfTransaction.read(dataBroker, LogicalDatastoreType.CONFIGURATION,
-                nodeIid, (byte)5);
-        verify(dataBroker, times(1)).newReadOnlyTransaction();
-        assertFalse(result.isPresent());
-    }
-
-    @Test
     public void readDataReattemptTest() {
-        when(dataBroker.newReadOnlyTransaction()).thenReturn(rTx);
         doThrow(new IllegalStateException()).when(rTx).read(LogicalDatastoreType.CONFIGURATION, nodeIid);
 
         final Optional<Node> result = GbpNetconfTransaction.read(dataBroker, LogicalDatastoreType.CONFIGURATION,
@@ -136,10 +115,9 @@ public class GbpNetconfTransactionTest {
 
     @Test
     public void readDataTest() throws Exception {
-        when(dataBroker.newReadOnlyTransaction()).thenReturn(rTx);
         when(rTx.read(LogicalDatastoreType.CONFIGURATION, nodeIid)).thenReturn(futureNode);
         when(futureNode.get()).thenReturn(Optional.of(new NodeBuilder()
-                .setKey(new NodeKey(new NodeId("node"))).build()));
+                .setKey(new NodeKey(new NodeId(NODE_ID))).build()));
 
         final Optional<Node> result = GbpNetconfTransaction.read(dataBroker, LogicalDatastoreType.CONFIGURATION,
                 nodeIid, (byte)5);
@@ -148,65 +126,81 @@ public class GbpNetconfTransactionTest {
     }
 
     @Test
-    public void deleteConfigCommandExceptionTest() {
-        when(dataBroker.newReadWriteTransaction()).thenReturn(rwTx);
-        doThrow(new RuntimeException()).when(command).execute(rwTx);
+    public void deleteConfigCommandMissingDataTest() throws Exception {
+        final InstanceIdentifier<Interface> iid = VppIidFactory.getInterfaceIID(interfaceBuilder.getKey());
+        when(command.getInterfaceBuilder()).thenReturn(interfaceBuilder);
+        when(rTx.read(LogicalDatastoreType.CONFIGURATION, iid)).thenReturn(futureInterface);
+        when(futureInterface.get()).thenReturn(Optional.absent());
+        doThrow(new IllegalStateException()).when(command).execute(rwTx);
 
-        final boolean result = GbpNetconfTransaction.delete(dataBroker, command, (byte)5);
-        verify(dataBroker, times(1)).newReadWriteTransaction();
-        assertFalse(result);
+        final boolean result = GbpNetconfTransaction.deleteIfExists(dataBroker, command, (byte)5);
+        verify(dataBroker, times(1)).newReadOnlyTransaction();
+        assertTrue(result);
     }
 
     @Test
-    public void deleteConfigCommandReattemptTest() {
-        when(dataBroker.newReadWriteTransaction()).thenReturn(rwTx);
+    public void deleteConfigCommandReattemptTest() throws Exception {
+        final InstanceIdentifier<Interface> iid = VppIidFactory.getInterfaceIID(interfaceBuilder.getKey());
+        when(command.getInterfaceBuilder()).thenReturn(interfaceBuilder);
+        when(rTx.read(LogicalDatastoreType.CONFIGURATION, iid)).thenReturn(futureInterface);
+        when(futureInterface.get()).thenReturn(Optional.of(new InterfaceBuilder()
+                .setKey(new InterfaceKey(INTERFACE_KEY)).build()));
         doThrow(new IllegalStateException()).when(command).execute(rwTx);
 
-        final boolean result = GbpNetconfTransaction.delete(dataBroker, command, (byte)5);
+        final boolean result = GbpNetconfTransaction.deleteIfExists(dataBroker, command, (byte)5);
         verify(dataBroker, times(6)).newReadWriteTransaction();
         assertFalse(result);
     }
 
     @Test
     public void deleteConfigCommandTest() throws Exception {
-        when(dataBroker.newReadWriteTransaction()).thenReturn(rwTx);
+        final InstanceIdentifier<Interface> iid = VppIidFactory.getInterfaceIID(interfaceBuilder.getKey());
+        when(command.getInterfaceBuilder()).thenReturn(interfaceBuilder);
+        when(rTx.read(LogicalDatastoreType.CONFIGURATION, iid)).thenReturn(futureInterface);
+        when(futureInterface.get()).thenReturn(Optional.of(new InterfaceBuilder()
+                .setKey(new InterfaceKey(INTERFACE_KEY)).build()));
         when(rwTx.submit()).thenReturn(future);
         doNothing().when(command).execute(rwTx);
         when(future.get()).thenReturn(null);
 
-        final boolean result = GbpNetconfTransaction.delete(dataBroker, command, (byte)5);
+        final boolean result = GbpNetconfTransaction.deleteIfExists(dataBroker, command, (byte)5);
         verify(dataBroker, times(1)).newReadWriteTransaction();
         assertTrue(result);
     }
 
     @Test
-    public void deleteDataExceptionTest() {
-        when(dataBroker.newReadWriteTransaction()).thenReturn(rwTx);
-        doThrow(new RuntimeException()).when(rwTx).delete(LogicalDatastoreType.CONFIGURATION, nodeIid);
+    public void deleteDataMissingDataTest() throws Exception {
+        when(rTx.read(LogicalDatastoreType.CONFIGURATION, nodeIid)).thenReturn(futureNode);
+        when(futureNode.get()).thenReturn(Optional.absent());
+        doThrow(new IllegalStateException()).when(command).execute(rwTx);
 
-        final boolean result = GbpNetconfTransaction.delete(dataBroker, nodeIid, (byte)5);
-        verify(dataBroker, times(1)).newReadWriteTransaction();
-        assertFalse(result);
+        final boolean result = GbpNetconfTransaction.deleteIfExists(dataBroker, nodeIid, (byte)5);
+        verify(dataBroker, times(1)).newReadOnlyTransaction();
+        assertTrue(result);
     }
 
     @Test
-    public void deleteDataReattemptTest() {
-        when(dataBroker.newReadWriteTransaction()).thenReturn(rwTx);
+    public void deleteDataReattemptTest() throws Exception {
+        when(rTx.read(LogicalDatastoreType.CONFIGURATION, nodeIid)).thenReturn(futureNode);
+        when(futureNode.get()).thenReturn(Optional.of(new NodeBuilder()
+                .setKey(new NodeKey(new NodeId(NODE_ID))).build()));
         doThrow(new IllegalStateException()).when(rwTx).delete(LogicalDatastoreType.CONFIGURATION, nodeIid);
 
-        final boolean result = GbpNetconfTransaction.delete(dataBroker, nodeIid, (byte)5);
+        final boolean result = GbpNetconfTransaction.deleteIfExists(dataBroker, nodeIid, (byte)5);
         verify(dataBroker, times(6)).newReadWriteTransaction();
         assertFalse(result);
     }
 
     @Test
     public void deleteDataTest() throws Exception {
-        when(dataBroker.newReadWriteTransaction()).thenReturn(rwTx);
+        when(rTx.read(LogicalDatastoreType.CONFIGURATION, nodeIid)).thenReturn(futureNode);
+        when(futureNode.get()).thenReturn(Optional.of(new NodeBuilder()
+                .setKey(new NodeKey(new NodeId(NODE_ID))).build()));
         when(rwTx.submit()).thenReturn(future);
         doNothing().when(rwTx).delete(LogicalDatastoreType.CONFIGURATION, nodeIid);
         when(future.get()).thenReturn(null);
 
-        final boolean result = GbpNetconfTransaction.delete(dataBroker, nodeIid, (byte)5);
+        final boolean result = GbpNetconfTransaction.deleteIfExists(dataBroker, nodeIid, (byte)5);
         verify(dataBroker, times(1)).newReadWriteTransaction();
         assertTrue(result);
     }
