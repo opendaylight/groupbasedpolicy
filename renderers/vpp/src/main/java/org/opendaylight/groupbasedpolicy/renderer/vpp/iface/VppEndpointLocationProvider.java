@@ -11,7 +11,10 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.iface;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import javax.annotation.Nonnull;
-
+import com.google.common.base.Function;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.opendaylight.controller.md.sal.binding.api.BindingTransactionChain;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
@@ -36,11 +39,6 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Function;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 
 public class VppEndpointLocationProvider implements AutoCloseable {
 
@@ -74,21 +72,18 @@ public class VppEndpointLocationProvider implements AutoCloseable {
         });
     }
 
-    public ListenableFuture<Void> createLocationForVppEndpoint(VppEndpoint vppEndpoint) {
-        ProviderAddressEndpointLocation providerAddressEndpointLocation = createProviderAddressEndpointLocation(vppEndpoint);
-        WriteTransaction wTx = txChain.newWriteOnlyTransaction();
+    ListenableFuture<Void> createLocationForVppEndpoint(final VppEndpoint vppEndpoint) {
+        final ProviderAddressEndpointLocation providerAddressEndpointLocation =
+                createProviderAddressEndpointLocation(vppEndpoint);
+        final WriteTransaction wTx = txChain.newWriteOnlyTransaction();
         wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.providerAddressEndpointLocationIid(
                 VPP_ENDPOINT_LOCATION_PROVIDER, providerAddressEndpointLocation.getKey()),
                 providerAddressEndpointLocation);
         LOG.debug("Creating location for {}", providerAddressEndpointLocation.getKey());
-        return Futures.transform(wTx.submit(), new Function<Void, Void>() {
-
-            @Override
-            public Void apply(Void input) {
-                LOG.debug("{} provided location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(),
-                        providerAddressEndpointLocation);
-                return null;
-            }
+        return Futures.transform(wTx.submit(), (Function<Void, Void>) input -> {
+            LOG.debug("{} provided location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(),
+                    providerAddressEndpointLocation);
+            return null;
         });
     }
 
@@ -106,19 +101,16 @@ public class VppEndpointLocationProvider implements AutoCloseable {
             .build();
     }
 
-    public ListenableFuture<Void> deleteLocationForVppEndpoint(VppEndpoint vppEndpoint) {
-        ProviderAddressEndpointLocationKey provAddrEpLocKey = createProviderAddressEndpointLocationKey(vppEndpoint);
-        WriteTransaction wTx = txChain.newWriteOnlyTransaction();
+    ListenableFuture<Void> deleteLocationForVppEndpoint(final VppEndpoint vppEndpoint) {
+        final ProviderAddressEndpointLocationKey provAddrEpLocKey =
+                createProviderAddressEndpointLocationKey(vppEndpoint);
+        final WriteTransaction wTx = txChain.newWriteOnlyTransaction();
         wTx.delete(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.providerAddressEndpointLocationIid(VPP_ENDPOINT_LOCATION_PROVIDER, provAddrEpLocKey));
         LOG.debug("Deleting location for {}", provAddrEpLocKey);
-        return Futures.transform(wTx.submit(), new Function<Void, Void>() {
-
-            @Override
-            public Void apply(Void input) {
-                LOG.debug("{} removed location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(), provAddrEpLocKey);
-                return null;
-            }
+        return Futures.transform(wTx.submit(), (Function<Void, Void>) input -> {
+            LOG.debug("{} removed location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(), provAddrEpLocKey);
+            return null;
         });
     }
 

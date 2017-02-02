@@ -10,10 +10,15 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.iface;
 
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
+import com.google.common.eventbus.Subscribe;
+import com.google.common.util.concurrent.AsyncFunction;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
@@ -62,10 +67,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
-import com.google.common.eventbus.Subscribe;
-import com.google.common.util.concurrent.AsyncFunction;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 
 public class InterfaceManager implements AutoCloseable {
 
@@ -82,37 +83,87 @@ public class InterfaceManager implements AutoCloseable {
     @Subscribe
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     public synchronized void vppEndpointChanged(VppEndpointConfEvent event) {
-        try {
-            switch (event.getDtoModificationType()) {
-                case CREATED: {
-                    vppEndpointCreated(event.getAfter().get()).get();
-                    updatePolicyExcludedEndpoints(event.getAfter().get(), true);
-                }
-                break;
-                case UPDATED:
-                    vppEndpointUpdated(event.getBefore().get(), event.getAfter().get()).get();
-                    updatePolicyExcludedEndpoints(event.getBefore().get(), false);
-                    updatePolicyExcludedEndpoints(event.getAfter().get(), true);
-                    break;
-                case DELETED:
-                    vppEndpointDeleted(event.getBefore().get()).get();
-                    updatePolicyExcludedEndpoints(event.getBefore().get(), false);
-                    break;
+        ListenableFuture<Void> modificationFuture;
+        ListenableFuture<Boolean> policyExcludedFuture;
+        String message;
+        final VppEndpoint oldVppEndpoint = event.getBefore().orNull();
+        final VppEndpoint newVppEndpoint = event.getAfter().orNull();
+        switch (event.getDtoModificationType()) {
+            case CREATED: {
+                Preconditions.checkNotNull(newVppEndpoint);
+                modificationFuture = vppEndpointCreated(newVppEndpoint);
+                message = String.format("Vpp endpoint %s on node %s and interface %s created",
+                        newVppEndpoint.getAddress(), newVppEndpoint.getVppNodeId().getValue(),
+                        newVppEndpoint.getVppInterfaceName());
+                policyExcludedFuture = updatePolicyExcludedEndpoints(newVppEndpoint, true);
             }
-        } catch (InterruptedException | ExecutionException e) {
-            LOG.warn("Failed to update Vpp Endpoint. {}", event, e);
+            break;
+            case UPDATED: {
+                Preconditions.checkNotNull(oldVppEndpoint);
+                Preconditions.checkNotNull(newVppEndpoint);
+                modificationFuture = vppEndpointUpdated(oldVppEndpoint, newVppEndpoint);
+                message = String.format("Vpp endpoint %s on node %s and interface %s updated",
+                        newVppEndpoint.getAddress(), newVppEndpoint.getVppNodeId().getValue(),
+                        newVppEndpoint.getVppInterfaceName());
+                final ListenableFuture<Boolean> partialOldPolicyExcludedFuture =
+                        updatePolicyExcludedEndpoints(oldVppEndpoint, false);
+                policyExcludedFuture =
+                        Futures.transform(partialOldPolicyExcludedFuture, (AsyncFunction<Boolean, Boolean>) input ->
+                                updatePolicyExcludedEndpoints(newVppEndpoint, true));
+            }
+            break;
+            case DELETED: {
+                Preconditions.checkNotNull(oldVppEndpoint);
+                modificationFuture = vppEndpointDeleted(oldVppEndpoint);
+                message = String.format("Vpp endpoint %s on node %s and interface %s removed",
+                        oldVppEndpoint.getAddress(), oldVppEndpoint.getVppNodeId().getValue(),
+                        oldVppEndpoint.getVppInterfaceName());
+                policyExcludedFuture = updatePolicyExcludedEndpoints(event.getBefore().get(), false);
+            }
+            break;
+            default: {
+                message = "Unknown event modification type: " + event.getDtoModificationType();
+                modificationFuture = Futures.immediateFailedFuture(new VppRendererProcessingException(message));
+                policyExcludedFuture = Futures.immediateFailedFuture(new VppRendererProcessingException(message));
+            }
         }
+        // Modification
+        Futures.addCallback(modificationFuture, new FutureCallback<Void>() {
+            @Override
+            public void onSuccess(@Nullable Void result) {
+                LOG.info(message);
+            }
+
+            @Override
+            public void onFailure(@Nonnull Throwable t) {
+                LOG.warn("Vpp endpoint change event failed. Old ep: {}, new ep: {}", oldVppEndpoint, newVppEndpoint);
+            }
+        });
+
+        // Excluded policy
+        Futures.addCallback(policyExcludedFuture, new FutureCallback<Boolean>() {
+            @Override
+            public void onSuccess(@Nullable Boolean input) {
+                // NO-OP
+            }
+
+            @Override
+            public void onFailure(@Nonnull Throwable throwable) {
+                LOG.warn("Vpp endpoint exclusion failed. Odl ep: {}, new ep: {}", oldVppEndpoint, newVppEndpoint);
+            }
+        });
     }
 
-    private void updatePolicyExcludedEndpoints(VppEndpoint vppEndpoint, boolean created) {
-        if (vppEndpoint.getAugmentation(ExcludeFromPolicy.class) == null) {
-            return;
+    private ListenableFuture<Boolean> updatePolicyExcludedEndpoints(VppEndpoint vppEndpoint, boolean created) {
+        if (vppEndpoint == null || vppEndpoint.getAugmentation(ExcludeFromPolicy.class) == null) {
+            return Futures.immediateFuture(true);
         }
         if (created) {
             excludedFromPolicy.put(vppEndpoint.getVppNodeId(), vppEndpoint.getVppInterfaceName());
-            return;
+            return Futures.immediateFuture(true);
         }
-        excludedFromPolicy.remove(vppEndpoint.getVppNodeId(), vppEndpoint.getVppInterfaceName());
+        return Futures.immediateFuture(excludedFromPolicy.remove(vppEndpoint.getVppNodeId(),
+                vppEndpoint.getVppInterfaceName()));
     }
 
     private ListenableFuture<Void> vppEndpointCreated(VppEndpoint vppEndpoint) {
@@ -126,7 +177,6 @@ public class InterfaceManager implements AutoCloseable {
         } else if (interfaceTypeChoice instanceof LoopbackCase){
             potentialIfaceCommand = createLoopbackWithoutBdCommand(vppEndpoint, Operations.PUT);
         }
-
         if (!potentialIfaceCommand.isPresent()) {
             LOG.debug("Interface/PUT command was not created for VppEndpoint point {}", vppEndpoint);
             return Futures.immediateFuture(null);
@@ -176,8 +226,7 @@ public class InterfaceManager implements AutoCloseable {
     }
 
     private ListenableFuture<Void> vppEndpointUpdated(@Nonnull final VppEndpoint oldVppEndpoint,
-                                                      @Nonnull final VppEndpoint newVppEndpoint)
-            throws ExecutionException, InterruptedException {
+                                                      @Nonnull final VppEndpoint newVppEndpoint) {
         if(!oldVppEndpoint.equals(newVppEndpoint)) {
             LOG.debug("Updating vpp endpoint, old EP: {} new EP: {}", oldVppEndpoint, newVppEndpoint);
             return Futures.transform(vppEndpointDeleted(oldVppEndpoint),
@@ -253,7 +302,7 @@ public class InterfaceManager implements AutoCloseable {
         }
     }
 
-    public static Optional<ConfigCommand> createInterfaceWithoutBdCommand(@Nonnull VppEndpoint vppEp,
+    private Optional<ConfigCommand> createInterfaceWithoutBdCommand(@Nonnull VppEndpoint vppEp,
             @Nonnull Operations operations) {
         if (!hasNodeAndInterface(vppEp)) {
             LOG.debug("Interface command is not created for {}", vppEp);
@@ -277,7 +326,7 @@ public class InterfaceManager implements AutoCloseable {
         return Optional.of(vhostUserCommand);
     }
 
-    private static Optional<ConfigCommand> createTapInterfaceWithoutBdCommand(@Nonnull VppEndpoint vppEp,
+    private Optional<ConfigCommand> createTapInterfaceWithoutBdCommand(@Nonnull VppEndpoint vppEp,
             @Nonnull Operations operation) {
         if (!hasNodeAndInterface(vppEp)) {
             LOG.debug("Interface command is not created for {}", vppEp);
@@ -303,7 +352,7 @@ public class InterfaceManager implements AutoCloseable {
         return Optional.of(tapPortCommand);
     }
 
-    private static Optional<ConfigCommand> createLoopbackWithoutBdCommand(@Nonnull VppEndpoint vppEp,
+    private Optional<ConfigCommand> createLoopbackWithoutBdCommand(@Nonnull VppEndpoint vppEp,
         @Nonnull Operations operation) {
         if (!hasNodeAndInterface(vppEp)) {
             LOG.debug("Interface command is not created for {}", vppEp);
