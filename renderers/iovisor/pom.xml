@@ -103,7 +103,6 @@
         <configuration>
           <instructions>
           </instructions>
-          <manifestLocation>${project.basedir}/src/main/resources/META-INF</manifestLocation>
           <Import-Package>
             *,
             com.sun.jersey.spi.container.servlet,

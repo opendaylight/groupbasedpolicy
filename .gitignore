@@ -17,7 +17,6 @@ target
 .classpath
 .project
 .settings
-MANIFEST.MF
 .checkstyle
 yang-gen-config/
 yang-gen-sal/
