@@ -8,12 +8,12 @@
 
 package org.opendaylight.controller.config.yang.config.vpp_provider.impl;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.eventbus.EventBus;
+import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
@@ -21,7 +21,6 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareProvider;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.adapter.VppRpcServiceImpl;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
@@ -54,40 +53,32 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.eventbus.EventBus;
-import com.google.common.util.concurrent.CheckedFuture;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 
 public class VppRenderer implements AutoCloseable, BindingAwareProvider {
 
-    private static final Logger LOG = LoggerFactory.getLogger(VppRenderer.class);
-
     public static final RendererName NAME = new RendererName("vpp-renderer");
-
+    private static final Logger LOG = LoggerFactory.getLogger(VppRenderer.class);
     private final List<SupportedActionDefinition> actionDefinitions =
             ImmutableList.of(new SupportedActionDefinitionBuilder().setActionDefinitionId(new AllowAction().getId())
-                .setSupportedParameterValues(new AllowAction().getSupportedParameterValues())
-                .build());
+                    .setSupportedParameterValues(new AllowAction().getSupportedParameterValues())
+                    .build());
     private final List<SupportedClassifierDefinition> classifierDefinitions;
 
     private final DataBroker dataBroker;
-
-    private VppNodeManager vppNodeManager;
+    private final String publicInterfaces;
     private InterfaceManager interfaceManager;
-    private AclManager aclManager;
-    private VppRendererPolicyManager vppRendererPolicyManager;
-
+    private MountedDataBrokerProvider mountDataProvider;
+    private BridgeDomainManager bdManager;
     private VppNodeListener vppNodeListener;
     private VppEndpointListener vppEndpointListener;
     private RendererPolicyListener rendererPolicyListener;
-    private VppRpcServiceImpl vppRpcServiceImpl;
-    private final String publicInterfaces;
 
-    public VppRenderer(@Nonnull DataBroker dataBroker, @Nonnull BindingAwareBroker bindingAwareBroker,
-            @Nullable String publicInterfaces) {
+    VppRenderer(@Nonnull DataBroker dataBroker, @Nonnull BindingAwareBroker bindingAwareBroker,
+                       @Nullable String publicInterfaces) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.publicInterfaces = publicInterfaces;
         bindingAwareBroker.registerProvider(this);
@@ -97,7 +88,7 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
                 buildClassifierDefinitions(etherTypeClassifier, ipProtoClassifier, new L4Classifier(ipProtoClassifier));
     }
 
-    private List<SupportedClassifierDefinition> buildClassifierDefinitions(Classifier ... classifs) {
+    private List<SupportedClassifierDefinition> buildClassifierDefinitions(Classifier... classifs) {
         List<SupportedClassifierDefinition> clDefs = new ArrayList<>();
         SupportedClassifierDefinitionBuilder clDefBuilder = new SupportedClassifierDefinitionBuilder();
         for (Classifier classif : classifs) {
@@ -105,8 +96,8 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
                 clDefBuilder.setParentClassifierDefinitionId(classif.getParent().getId());
             }
             clDefs.add(clDefBuilder.setClassifierDefinitionId(classif.getId())
-                .setSupportedParameterValues(classif.getSupportedParameterValues())
-                .build());
+                    .setSupportedParameterValues(classif.getSupportedParameterValues())
+                    .build());
         }
         return clDefs;
     }
@@ -135,26 +126,25 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
 
         MountPointService mountService =
                 Preconditions.checkNotNull(providerContext.getSALService(MountPointService.class));
-        MountedDataBrokerProvider mountDataProvider = new MountedDataBrokerProvider(mountService, dataBroker);
-        vppNodeManager = new VppNodeManager(dataBroker, providerContext, publicInterfaces);
+        mountDataProvider = new MountedDataBrokerProvider(mountService, dataBroker);
+        VppNodeManager vppNodeManager = new VppNodeManager(dataBroker, providerContext, publicInterfaces);
 
         EventBus dtoEventBus = new EventBus((exception, context) -> LOG.error("Could not dispatch event: {} to {}",
                 context.getSubscriber(), context.getSubscriberMethod(), exception));
         interfaceManager = new InterfaceManager(mountDataProvider, dataBroker);
-        aclManager = new AclManager(mountDataProvider);
+        AclManager aclManager = new AclManager(mountDataProvider);
         NatManager natManager = new NatManager(dataBroker, mountDataProvider);
         dtoEventBus.register(interfaceManager);
         RoutingManager routingManager = new RoutingManager(dataBroker, mountDataProvider);
-        BridgeDomainManager bdManager = new BridgeDomainManagerImpl(dataBroker);
+        bdManager = new BridgeDomainManagerImpl(dataBroker);
         ForwardingManager fwManager =
-            new ForwardingManager(interfaceManager, aclManager, natManager, routingManager, bdManager, dataBroker);
-        vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, aclManager, dataBroker);
+                new ForwardingManager(interfaceManager, aclManager, natManager, routingManager, bdManager, dataBroker);
+        VppRendererPolicyManager vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, aclManager, dataBroker);
         dtoEventBus.register(vppRendererPolicyManager);
 
         vppNodeListener = new VppNodeListener(dataBroker, vppNodeManager, dtoEventBus);
         vppEndpointListener = new VppEndpointListener(dataBroker, dtoEventBus);
         rendererPolicyListener = new RendererPolicyListener(dataBroker, dtoEventBus);
-        vppRpcServiceImpl = new VppRpcServiceImpl(dataBroker, mountDataProvider, bdManager, interfaceManager);
         registerToRendererManager();
     }
 
@@ -162,11 +152,11 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         WriteTransaction writeTransaction = dataBroker.newWriteOnlyTransaction();
 
         Renderer renderer = new RendererBuilder().setName(VppRenderer.NAME)
-            .setRendererNodes(new RendererNodesBuilder().build())
-            .setCapabilities(new CapabilitiesBuilder().setSupportedActionDefinition(actionDefinitions)
-                .setSupportedClassifierDefinition(classifierDefinitions)
-                .build())
-            .build();
+                .setRendererNodes(new RendererNodesBuilder().build())
+                .setCapabilities(new CapabilitiesBuilder().setSupportedActionDefinition(actionDefinitions)
+                        .setSupportedClassifierDefinition(classifierDefinitions)
+                        .build())
+                .build();
 
         writeTransaction.put(LogicalDatastoreType.OPERATIONAL, VppIidFactory.getRendererIID(renderer.getKey()),
                 renderer, true);
@@ -174,7 +164,7 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         Futures.addCallback(future, new FutureCallback<Void>() {
 
             @Override
-            public void onFailure(Throwable throwable) {
+            public void onFailure(@Nonnull Throwable throwable) {
                 LOG.error("Could not register renderer {}: {}", renderer, throwable);
             }
 
@@ -194,7 +184,7 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         Futures.addCallback(future, new FutureCallback<Void>() {
 
             @Override
-            public void onFailure(Throwable throwable) {
+            public void onFailure(@Nonnull Throwable throwable) {
                 LOG.error("Could not unregister renderer {}: {}", VppRenderer.NAME, throwable);
             }
 
@@ -205,7 +195,15 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         });
     }
 
-    VppRpcServiceImpl getVppRpcServiceImpl() {
-        return vppRpcServiceImpl;
+    public MountedDataBrokerProvider getMountedDataBroker() {
+        return mountDataProvider;
+    }
+
+    public InterfaceManager getInterfaceManager() {
+        return interfaceManager;
+    }
+
+    public BridgeDomainManager getBridgeDomainManager() {
+        return bdManager;
     }
 }

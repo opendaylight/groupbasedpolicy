@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 
+import org.opendaylight.controller.config.yang.config.vpp_provider.impl.VppRenderer;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
@@ -38,6 +39,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapte
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.DeleteInterfaceFromNodeInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.DeleteVirtualBridgeDomainFromNodesInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.CloneVirtualBridgeDomainOnNodesInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.VppAdapterService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.bridge.domain.attributes.tunnel.type.Vlan;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.bridge.domain.attributes.tunnel.type.Vxlan;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425._interface.attributes.InterfaceTypeChoice;
@@ -67,7 +69,7 @@ import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 
-public class VppRpcServiceImpl {
+public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(VppRpcServiceImpl.class);
 
@@ -76,15 +78,14 @@ public class VppRpcServiceImpl {
     private final InterfaceManager interfaceManager;
     private final MountedDataBrokerProvider mountDataProvider;
 
-    public VppRpcServiceImpl(@Nonnull DataBroker dataBroker, @Nonnull MountedDataBrokerProvider mountDataProvider,
-            BridgeDomainManager bridgeDomainManager, InterfaceManager interfaceManager) {
+    public VppRpcServiceImpl(@Nonnull DataBroker dataBroker, @Nonnull VppRenderer renderer) {
         this.dataBroker = dataBroker;
-        this.bridgeDomainManager = bridgeDomainManager;
-        this.interfaceManager = interfaceManager;
-        this.mountDataProvider = mountDataProvider;
+        this.bridgeDomainManager = renderer.getBridgeDomainManager();
+        this.interfaceManager = renderer.getInterfaceManager();
+        this.mountDataProvider = renderer.getMountedDataBroker();
     }
 
-    public Future<RpcResult<Void>> createVirtualBridgeDomain(CreateVirtualBridgeDomainOnNodesInput input) {
+    public Future<RpcResult<Void>> createVirtualBridgeDomainOnNodes(CreateVirtualBridgeDomainOnNodesInput input) {
         LOG.info("Processing a remote call for creating bridge domain {}", input.getId());
         if (input.getTunnelType() == null) {
             return Futures.immediateFuture(RpcResultBuilder.<Void>failed()
@@ -114,7 +115,7 @@ public class VppRpcServiceImpl {
         return Futures.transform(Futures.allAsList(futures), voidsToRpcResult());
     }
 
-    public Future<RpcResult<Void>> deleteVirtualBridgeDomain(DeleteVirtualBridgeDomainFromNodesInput input) {
+    public Future<RpcResult<Void>> deleteVirtualBridgeDomainFromNodes(DeleteVirtualBridgeDomainFromNodesInput input) {
         LOG.info("Processing a remote call for removing bridge domain {}", input.getBridgeDomainId());
         List<ListenableFuture<Void>> futures = new ArrayList<>();
         input.getBridgeDomainNode().forEach(nodeId -> {
@@ -123,7 +124,7 @@ public class VppRpcServiceImpl {
         return Futures.transform(Futures.allAsList(futures), voidsToRpcResult());
     }
 
-    public ListenableFuture<RpcResult<Void>> cloneVirtualBridgeDomainOnNode(CloneVirtualBridgeDomainOnNodesInput input) {
+    public ListenableFuture<RpcResult<Void>> cloneVirtualBridgeDomainOnNodes(CloneVirtualBridgeDomainOnNodesInput input) {
         LOG.info("Processing a remote call for clonning  bridge domain {}", input.getBridgeDomainId());
         List<ListenableFuture<Void>> futures = new ArrayList<>();
         ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
@@ -178,7 +179,7 @@ public class VppRpcServiceImpl {
                 });
     }
 
-    public ListenableFuture<RpcResult<Void>> createInterfaceOnNodes(CreateInterfaceOnNodeInput input) {
+    public ListenableFuture<RpcResult<Void>> createInterfaceOnNode(CreateInterfaceOnNodeInput input) {
         LOG.info("Processing a remote call for creating interface {} on node {}", input.getVppInterfaceName(),
                 input.getVppNodeId());
         InterfaceTypeChoice interfaceType = input.getInterfaceTypeChoice();
@@ -214,7 +215,7 @@ public class VppRpcServiceImpl {
                 voidToRpcResult());
     }
 
-    public ListenableFuture<RpcResult<Void>> deleteInterfaceFromNodes(DeleteInterfaceFromNodeInput input) {
+    public ListenableFuture<RpcResult<Void>> deleteInterfaceFromNode(DeleteInterfaceFromNodeInput input) {
         LOG.info("Processing a remote call for removing interface {} from node {}", input.getVppInterfaceName(),
                 input.getVppNodeId());
         InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(input.getVppNodeId());
@@ -323,5 +324,10 @@ public class VppRpcServiceImpl {
                 return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
             }
         };
+    }
+
+    @Override
+    public void close() throws Exception {
+        // NOOP
     }
 }
