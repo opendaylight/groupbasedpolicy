@@ -45,6 +45,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.has.endpoint.group.conditions.EndpointGroupConditionKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L2;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L3;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.unregister.endpoint.input.L3Prefix;
 import org.opendaylight.yangtools.yang.binding.Augmentation;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcError.ErrorType;
@@ -293,7 +294,14 @@ public class EndpointRpcRegistry implements EndpointService, EpRendererAugmentat
                 t.delete(LogicalDatastoreType.OPERATIONAL, iid_l3);
             }
         }
-        // TODO: Implement L3Prefix
+        if (input.getL3Prefix() != null) {
+            for (L3Prefix l3prefix : input.getL3Prefix()) {
+                EndpointL3PrefixKey key = new EndpointL3PrefixKey(l3prefix.getIpPrefix(), l3prefix.getL3Context());
+                InstanceIdentifier<EndpointL3Prefix> iidL3Prefix =
+                        InstanceIdentifier.builder(Endpoints.class).child(EndpointL3Prefix.class, key).build();
+                t.delete(LogicalDatastoreType.OPERATIONAL, iidL3Prefix);
+            }
+        }
 
         ListenableFuture<Void> r = t.submit();
         return Futures.transform(r, futureTrans);

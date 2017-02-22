@@ -207,7 +207,7 @@ public class EndpointRpcRegistryTest {
 
         endpointRpcRegistry.unregisterEndpoint(unregisterEndpointInput);
 
-        verify(wt, times(2)).delete(eq(LogicalDatastoreType.OPERATIONAL), any(InstanceIdentifier.class));
+        verify(wt, times(3)).delete(eq(LogicalDatastoreType.OPERATIONAL), any(InstanceIdentifier.class));
     }
 
     private UnregisterEndpointInput unregisterEndpointInput() {
