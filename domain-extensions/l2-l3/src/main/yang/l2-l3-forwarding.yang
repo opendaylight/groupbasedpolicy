@@ -78,6 +78,21 @@ module l2-l3-forwarding {
                     }
                 }
             }
+            list allocation-pool {
+                description "Allocation pool of assignable addresses.";
+                key "first last";
+                leaf first {
+                    type string;
+                }
+                leaf last {
+                    type string;
+                }
+            }
+            leaf is-tenant {
+                description "Subnet is used as tenant network.";
+                type boolean;
+                default "true";
+            }
         }
     }
 

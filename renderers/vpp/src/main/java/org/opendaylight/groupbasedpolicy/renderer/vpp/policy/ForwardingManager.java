@@ -333,7 +333,7 @@ public final class ForwardingManager {
                 for (RendererForwardingByTenant fwd : cfg.getRendererForwarding().getRendererForwardingByTenant()) {
                     List<InstanceIdentifier<PhysicalInterface>> physIfacesIid =
                         resolvePhysicalInterfacesForNat(fwd.getRendererNetworkDomain());
-                    natManager.submitNatChanges(physIfacesIid, natEntries, true);
+                    natManager.submitNatChanges(physIfacesIid, natEntries, policyCtx, true);
                 }
             }
         }
@@ -352,7 +352,7 @@ public final class ForwardingManager {
                 for (RendererForwardingByTenant fwd : cfg.getRendererForwarding().getRendererForwardingByTenant()) {
                     List<InstanceIdentifier<PhysicalInterface>> physIfacesIid =
                         resolvePhysicalInterfacesForNat(fwd.getRendererNetworkDomain());
-                    natManager.submitNatChanges(physIfacesIid, natEntries, false);
+                    natManager.submitNatChanges(physIfacesIid, natEntries, policyCtx, false);
                 }
             }
         }

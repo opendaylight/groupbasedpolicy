@@ -22,6 +22,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.PolicyContext;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
@@ -38,6 +39,7 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.nat.rev1509
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.nat.rev150908.nat.config.nat.instances.nat.instance.MappingTableBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.nat.rev150908.nat.config.nat.instances.nat.instance.mapping.table.MappingEntry;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.nat.rev150908.nat.config.nat.instances.nat.instance.mapping.table.MappingEntryBuilder;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.nat.rev150908.nat.parameters.ExternalIpAddressPool;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererNodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.VppInterfaceAugmentation;
@@ -117,7 +119,7 @@ public class NatManager {
     }
 
     public ListenableFuture<Void> submitNatChanges(List<InstanceIdentifier<PhysicalInterface>> physIfacesIid,
-            List<MappingEntryBuilder> natEntries, boolean add) {
+            List<MappingEntryBuilder> natEntries, PolicyContext policyCtx, boolean add) {
         List<ListenableFuture<Void>> submitedFutures = new ArrayList<>();
         for (InstanceIdentifier<PhysicalInterface> iidPhysIface : physIfacesIid) {
             InstanceIdentifier<?> nodeIid = iidPhysIface.firstKeyOf(RendererNode.class).getNodePath();
@@ -139,9 +141,9 @@ public class NatManager {
                             }
                             if (add) {
                                 LOG.trace("Setting outbound NAT on interface {}.", iidPhysIface.getPathArguments());
-                                NatUtil.setOutboundInterface(readIface.get(), rwTx);
+                                NatUtil.setOutboundInterface(readIface.get(), rwTx); 
                                 rwTx.put(LogicalDatastoreType.CONFIGURATION, VppIidFactory.getNatInstanceIid(id),
-                                        buildNatInstance(natEntries));
+                                        buildNatInstance(natEntries, NatUtil.resolveDynamicNat(policyCtx)));
                             } else {
                                 LOG.trace("UNsetting outbound NAT on interface {}.", iidPhysIface.getPathArguments());
                                 NatUtil.unsetOutboundInterface(readIface.get(), rwTx);
@@ -164,7 +166,7 @@ public class NatManager {
         return Futures.immediateFuture(null);
     }
 
-    private NatInstance buildNatInstance(List<MappingEntryBuilder> natEntries) {
+    private NatInstance buildNatInstance(List<MappingEntryBuilder> natEntries, List<ExternalIpAddressPool> poolEntries) {
         AtomicInteger ai = new AtomicInteger();
          List<MappingEntry> mappingEntries = natEntries.stream().map(me -> {
             int value = ai.get();
@@ -172,6 +174,6 @@ public class NatManager {
             return me.setIndex((long) value).build();
         }).collect(Collectors.toList());
         MappingTable mappingTable = new MappingTableBuilder().setMappingEntry(mappingEntries).build();
-        return new NatInstanceBuilder().setId(id).setMappingTable(mappingTable).build();
+        return new NatInstanceBuilder().setId(id).setExternalIpAddressPool(poolEntries).setMappingTable(mappingTable).build();
     }
 }

@@ -51,6 +51,10 @@ public class NetworkUtils {
         return Optional.absent();
     }
 
+    public static boolean isTenantNetwork(Network network) {
+        return getPhysicalNetwork(network).isEmpty();
+    }
+
     public static boolean isProviderPhysicalNetwork(Network network) {
         return (!isRouterExternal(network) && !getPhysicalNetwork(network).isEmpty());
     }

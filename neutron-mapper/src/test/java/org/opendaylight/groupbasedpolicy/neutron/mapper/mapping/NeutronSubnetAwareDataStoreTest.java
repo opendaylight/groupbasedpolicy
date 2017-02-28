@@ -15,7 +15,6 @@ import static org.mockito.Mockito.when;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import com.google.common.collect.ImmutableList;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -41,6 +40,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.SubnetBuilder;
 import org.opendaylight.yangtools.yang.common.RpcResult;
+
+import com.google.common.collect.ImmutableList;
 
 public class NeutronSubnetAwareDataStoreTest extends NeutronMapperDataBrokerTest {
 
@@ -122,7 +123,7 @@ public class NeutronSubnetAwareDataStoreTest extends NeutronMapperDataBrokerTest
 
         subnetAware.onCreated(subnet, neutron);
 
-        NeutronMapperAssert.assertNetworkDomainExists(dataBroker, tenantUuid, subnet, ipAddress);
+        NeutronMapperAssert.assertNetworkDomainExists(dataBroker, tenantUuid, subnet, neutron);
     }
 
     @Test
@@ -133,7 +134,7 @@ public class NeutronSubnetAwareDataStoreTest extends NeutronMapperDataBrokerTest
 
         subnetAware.onCreated(subnet, neutron);
 
-        NeutronMapperAssert.assertNetworkDomainNotExists(dataBroker, tenantUuid, subnet, ipAddress);
+        NeutronMapperAssert.assertNetworkDomainNotExists(dataBroker, tenantUuid, subnet, neutron);
     }
 
     @Test
@@ -145,12 +146,12 @@ public class NeutronSubnetAwareDataStoreTest extends NeutronMapperDataBrokerTest
 
         subnetAware.onCreated(subnet, neutron);
 
-        NeutronMapperAssert.assertNetworkDomainExists(dataBroker, tenantUuid, subnet, ipAddress);
-        NeutronMapperAssert.assertNetworkDomainNotExists(dataBroker, tenantUuid, subnet2, ipAddress);
+        NeutronMapperAssert.assertNetworkDomainExists(dataBroker, tenantUuid, subnet, neutron);
+        NeutronMapperAssert.assertNetworkDomainNotExists(dataBroker, tenantUuid, subnet2, neutron);
 
         subnetAware.onUpdated(subnet, subnet2, neutron, neutron);
 
-        NeutronMapperAssert.assertNetworkDomainExists(dataBroker, tenantUuid, subnet2, ipAddress);
+        NeutronMapperAssert.assertNetworkDomainExists(dataBroker, tenantUuid, subnet2, neutron);
     }
 
     @Test
@@ -162,13 +163,12 @@ public class NeutronSubnetAwareDataStoreTest extends NeutronMapperDataBrokerTest
 
         subnetAware.onCreated(subnet, neutron);
 
-        NeutronMapperAssert.assertNetworkDomainExists(dataBroker, tenantUuid, subnet, ipAddress);
+        NeutronMapperAssert.assertNetworkDomainExists(dataBroker, tenantUuid, subnet, neutron);
 
         subnetAware.onDeleted(subnet, neutron, neutron);
 
-        NeutronMapperAssert.assertNetworkDomainNotExists(dataBroker, tenantUuid, subnet, ipAddress);
+        NeutronMapperAssert.assertNetworkDomainNotExists(dataBroker, tenantUuid, subnet, neutron);
     }
-
     @Test
     public void testOnDeleted_wrongSubnet() {
 
@@ -178,11 +178,11 @@ public class NeutronSubnetAwareDataStoreTest extends NeutronMapperDataBrokerTest
 
         subnetAware.onCreated(subnet, neutron);
 
-        NeutronMapperAssert.assertNetworkDomainExists(dataBroker, tenantUuid, subnet, ipAddress);
+        NeutronMapperAssert.assertNetworkDomainExists(dataBroker, tenantUuid, subnet, neutron);
 
         subnetAware.onDeleted(subnet2, neutron, neutron);
 
-        NeutronMapperAssert.assertNetworkDomainExists(dataBroker, tenantUuid, subnet, ipAddress);
+        NeutronMapperAssert.assertNetworkDomainExists(dataBroker, tenantUuid, subnet, neutron);
     }
 
 }

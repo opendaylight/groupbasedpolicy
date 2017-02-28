@@ -175,7 +175,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
             rwTx.merge(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.l2BridgeDomainIid(tenantId, l2BdId), l2Bd, true);
             // set virtual router IP for subnet
             NetworkDomain subnetDomain = NeutronSubnetAware.createSubnet(
-                    routerPortSubnet, portIpWithSubnet.getIpAddress());
+                    routerPortSubnet, neutron);
             rwTx.merge(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.subnetIid(tenantId, subnetDomain.getNetworkDomainId()), subnetDomain);
 
             // does the same for tenant forwarding domains
@@ -589,7 +589,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
                 .build();
             rwTx.merge(LogicalDatastoreType.CONFIGURATION,
                     L2L3IidFactory.l2BridgeDomainIid(tenantId, fwdCtx.getContextId()), fwdCtx);
-            NetworkDomain subnet = NeutronSubnetAware.createSubnet(routerPortSubnet, null);
+            NetworkDomain subnet = NeutronSubnetAware.createSubnet(routerPortSubnet, newNeutron);
             rwTx.put(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.subnetIid(tenantId, subnet.getNetworkDomainId()),
                     subnet);
             unregisterEndpointAndRemoveMapping(createUnregisterEndpointInput(port, oldNeutron), port, rwTx);

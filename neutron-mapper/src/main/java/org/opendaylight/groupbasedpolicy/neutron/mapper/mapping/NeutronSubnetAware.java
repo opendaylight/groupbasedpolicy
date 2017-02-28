@@ -9,6 +9,9 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -29,10 +32,14 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.SubnetAugmentForwarding;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.SubnetAugmentForwardingBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.has.subnet.SubnetBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.has.subnet.subnet.AllocationPool;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.has.subnet.subnet.AllocationPoolBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.NetworkDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.NetworkDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.networks.attributes.networks.Network;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.provider.ext.rev150712.NetworkProviderExtension;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.Subnets;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -80,8 +87,7 @@ public class NeutronSubnetAware implements
 
         NetworkDomain subnetDomain = null;
         if (NetworkUtils.isProviderPhysicalNetwork(networkOfSubnet)) {
-            // add virtual router IP only in case it is provider physical network
-            subnetDomain = createSubnet(neutronSubnet, neutronSubnet.getGatewayIp());
+            subnetDomain = createSubnet(neutronSubnet, neutron);
             IpAddress gatewayIp = neutronSubnet.getGatewayIp();
             boolean registeredDefaultRoute = epRegistrator.registerExternalL3PrefixEndpoint(MappingUtils.DEFAULT_ROUTE,
                     new L3ContextId(neutronSubnet.getNetworkId().getValue()), gatewayIp, tenantId);
@@ -92,9 +98,7 @@ public class NeutronSubnetAware implements
                 return;
             }
         } else {
-            // virtual router IP is not set and it will be set when router gateway port is set
-            // or when a router port is attached to a network
-            subnetDomain = createSubnet(neutronSubnet, null);
+            subnetDomain = createSubnet(neutronSubnet, neutron);
         }
         processTenantSubnet(neutronSubnet, networkOfSubnet, tenantId, rwTx);
         rwTx.put(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.subnetIid(tenantId, subnetDomain.getNetworkDomainId()), subnetDomain, true);
@@ -103,10 +107,54 @@ public class NeutronSubnetAware implements
 
     public static NetworkDomain createSubnet(
             org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet subnet,
-            IpAddress virtualRouterIp) {
+            Neutron neutron) {
         SubnetBuilder sb = new SubnetBuilder();
         sb.setIpPrefix(subnet.getCidr());
-        sb.setVirtualRouterIp(virtualRouterIp);
+        if (neutron.getPorts() != null && neutron.getPorts().getPort() != null) {
+            for (Port port : neutron.getPorts().getPort()) {
+                if (port.getFixedIps() == null || !port.getFixedIps()
+                    .stream()
+                    .filter(fi -> fi.getSubnetId().equals(subnet.getUuid()))
+                    .findFirst()
+                    .isPresent()) {
+                    continue;
+                }
+                if (neutron.getRouters() != null && neutron.getRouters().getRouter() != null && neutron.getRouters()
+                    .getRouter()
+                    .stream()
+                    .filter(r -> !r.getUuid().getValue().equals(port.getDeviceOwner()))
+                    .findFirst()
+                    .isPresent()) {
+                    // virtual router IP is set when a router port is attached to a network
+                    sb.setVirtualRouterIp(subnet.getGatewayIp());
+                } else if (neutron.getNetworks() != null && neutron.getNetworks().getNetwork() != null && neutron
+                    .getNetworks()
+                    .getNetwork()
+                    .stream()
+                    .filter(net -> net.getUuid().equals(port.getNetworkId()))
+                    .filter(net -> net.getAugmentation(NetworkProviderExtension.class) != null)
+                    .filter(net -> net.getAugmentation(NetworkProviderExtension.class).getPhysicalNetwork() != null)
+                    .findFirst()
+                    .isPresent()) {
+                    // add virtual router IP only in case it is provider physical network
+                    sb.setVirtualRouterIp(subnet.getGatewayIp());
+                }
+            }
+        }
+        Optional<Network> potentialNetwork =
+                NetworkUtils.findNetwork(subnet.getNetworkId(), neutron.getNetworks());
+        if (potentialNetwork.isPresent()) {
+            sb.setIsTenant(NetworkUtils.isTenantNetwork(potentialNetwork.get()));
+        }
+        if (subnet.getAllocationPools() != null) {
+            List<AllocationPool> pools = subnet.getAllocationPools()
+                .stream()
+                .map(s -> new AllocationPoolBuilder().setFirst(s.getStart().getIpv4Address().getValue())
+                    .setLast(s.getEnd().getIpv4Address().getValue())
+                    .build())
+                .collect(Collectors.toList());
+            sb.setAllocationPool(pools);
+        }
         NetworkDomainBuilder ndb = new NetworkDomainBuilder();
         if (!Strings.isNullOrEmpty(subnet.getName())) {
             try {

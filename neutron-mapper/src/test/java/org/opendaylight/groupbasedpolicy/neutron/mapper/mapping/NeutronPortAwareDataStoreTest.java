@@ -14,7 +14,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 
-import com.google.common.collect.ImmutableList;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -42,6 +41,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.s
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.SubnetsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.SubnetBuilder;
+
+import com.google.common.collect.ImmutableList;
 
 public class NeutronPortAwareDataStoreTest extends NeutronMapperDataBrokerTest {
 
@@ -188,10 +189,10 @@ public class NeutronPortAwareDataStoreTest extends NeutronMapperDataBrokerTest {
             .setFixedIps(ImmutableList.of(portIpWithSubnet))
             .build();
         portAware.onCreated(port, neutron);
-        NeutronMapperAssert.assertNetworkDomainExists(dataBroker, port, subnet, ipAddress);
+        NeutronMapperAssert.assertNetworkDomainExists(dataBroker, port, subnet, neutron);
 
         portAware.onDeleted(port, neutron, neutron);
-        NeutronMapperAssert.assertNetworkDomainExists(dataBroker, port, subnet, ipAddress);
+        NeutronMapperAssert.assertNetworkDomainExists(dataBroker, port, subnet, neutron);
         NeutronMapperAssert.assertPortNotExists(dataBroker, port.getUuid());
     }
 
@@ -204,7 +205,7 @@ public class NeutronPortAwareDataStoreTest extends NeutronMapperDataBrokerTest {
         Subnet subnet = subnets.getSubnet().get(0);
         Port port = newBasePort().setDeviceOwner(PortUtils.DEVICE_OWNER_ROUTER_IFACE).build();
         portAware.onCreated(port, neutron);
-        NeutronMapperAssert.assertNetworkDomainNotExists(dataBroker, port, subnet, ipAddress);
+        NeutronMapperAssert.assertNetworkDomainNotExists(dataBroker, port, subnet, neutron);
     }
 
     @Test
