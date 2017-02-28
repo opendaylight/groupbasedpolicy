@@ -19,7 +19,7 @@ import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
+import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.ConfigCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.LoopbackCommand;
@@ -423,8 +423,9 @@ public class InterfaceManager implements AutoCloseable {
 
     private L2Builder readL2ForInterface(DataBroker mountpoint, InterfaceKey ifaceKey) {
         InstanceIdentifier<L2> l2Iid = VppIidFactory.getL2ForInterfaceIid(ifaceKey);
-        final ReadWriteTransaction rwTxRead = mountpoint.newReadWriteTransaction();
+        final ReadOnlyTransaction rwTxRead = mountpoint.newReadOnlyTransaction();
         Optional<L2> optL2 = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, l2Iid, rwTxRead);
+        rwTxRead.close();
         return  (optL2.isPresent()) ? new L2Builder(optL2.get()) : new L2Builder();
     }
 
