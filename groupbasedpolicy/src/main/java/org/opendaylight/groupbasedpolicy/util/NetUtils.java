@@ -8,15 +8,24 @@
 
 package org.opendaylight.groupbasedpolicy.util;
 
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.apache.commons.net.util.SubnetUtils;
+import org.apache.commons.net.util.SubnetUtils.SubnetInfo;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv6Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv6Prefix;
 
 import com.google.common.base.Strings;
+import com.google.common.net.InetAddresses;
 import com.googlecode.ipv6.IPv6NetworkMask;
 
 public final class NetUtils {
@@ -113,6 +122,31 @@ public final class NetUtils {
             Ipv6Address hostv6Network = applyMaskOnIpv6Prefix(prefix2.getIpv6Prefix(), ipv6MaskLength1);
             if (ipv6Network.getValue().equals(hostv6Network.getValue())) {
                 return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param prefix subnet prefix
+     * @param ipAddress ip address
+     * @return true if the parameter address is in the range of usable endpoint
+     *         addresses for a given subnet. This excludes the network and broadcast adresses.
+     */
+    public static boolean isInRange(@Nullable IpPrefix prefix, @Nullable String ipAddress) {
+        if (ipAddress != null && !ipAddress.isEmpty()) {
+            try {
+                InetAddress inetAddr = InetAddress.getByName(ipAddress);
+                if (prefix.getIpv4Prefix() != null && inetAddr instanceof Inet4Address) {
+                    SubnetUtils ipv4Subnet = new SubnetUtils(prefix.getIpv4Prefix().getValue());
+                    return ipv4Subnet.getInfo().isInRange(ipAddress);
+                }
+                if (prefix.getIpv6Prefix() != null && inetAddr instanceof Inet6Address) {
+                    SubnetUtils ipv6Subnet = new SubnetUtils(prefix.getIpv6Prefix().getValue());
+                    return ipv6Subnet.getInfo().isInRange(ipAddress);
+                }
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
             }
         }
         return false;

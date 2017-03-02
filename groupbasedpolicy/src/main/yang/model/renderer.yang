@@ -18,6 +18,7 @@ module renderer {
     import base-endpoint { prefix base-endpoint; revision-date 2016-04-27; }
     import forwarding { prefix forwarding; revision-date 2016-04-27; }
     import ietf-inet-types { prefix inet; revision-date 2013-07-15; }
+    import yang-ext { prefix ext; revision-date "2013-07-09"; }
 
     description
         "This module defines renderer capabilities.";
@@ -421,5 +422,10 @@ module renderer {
                 }
             }
         }
+    }
+
+    augment "/renderers/renderer/renderer-policy/configuration/endpoints/address-endpoint-with-location" {
+        ext:augment-identifier "nat-address-renderer";
+        uses base-endpoint:nat-fields;
     }
 }

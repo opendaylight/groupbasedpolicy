@@ -18,6 +18,9 @@ module vpp-renderer {
     import ietf-yang-types { prefix yang-types; revision-date "2013-07-15"; }
     import ietf-inet-types { prefix "inet-types"; }
     import yang-ext {prefix ext; revision-date "2013-07-09";}
+    import v3po { prefix v3po; }
+    import ietf-interfaces { prefix if; }
+    import renderer { prefix rend; }
 
     description
         "This module is a baseline for the group-based policy vpp renderer model.";
@@ -155,6 +158,25 @@ module vpp-renderer {
             leaf vlan {
                 when "type = 'vlan-network'";
                 type l2-types:vlan-id;
+            }
+        }
+    }
+
+    augment "rend:renderers/rend:renderer/rend:renderer-nodes/rend:renderer-node" {
+        description "Augmentation for recognized VPP interfaces";
+        ext:augment-identifier "vpp-interface-augmentation";
+        list physical-interface {
+            key interface-name;
+            leaf interface-name {
+                type string;
+            }
+            leaf type {
+                type identityref {
+                    base if:interface-type;
+                }
+            }
+            leaf-list address {
+                type inet-types:ip-address;
             }
         }
     }

@@ -37,6 +37,10 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.nat.rev150908.NatConfig;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.nat.rev150908.nat.config.NatInstances;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.nat.rev150908.nat.config.nat.instances.NatInstance;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.nat.rev150908.nat.config.nat.instances.NatInstanceKey;
 
 public class VppIidFactory {
 
@@ -111,5 +115,12 @@ public class VppIidFactory {
             .augmentation(VppInterfaceAugmentation.class)
             .child(IetfAcl.class)
             .build();
+    }
+
+    public static InstanceIdentifier<NatInstance> getNatInstanceIid(Long natInstance) {
+        return InstanceIdentifier.builder(NatConfig.class)
+                .child(NatInstances.class)
+                .child(NatInstance.class, new NatInstanceKey(natInstance))
+                .build();
     }
 }

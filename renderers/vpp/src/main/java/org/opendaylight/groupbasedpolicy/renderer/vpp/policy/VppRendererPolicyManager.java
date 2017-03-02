@@ -162,10 +162,12 @@ public class VppRendererPolicyManager {
         LOG.debug("Removed renderer endpoints {}", removedRendEps);
         removedRendEps.forEach(rEpKey -> fwManager.removeForwardingForEndpoint(rEpKey, policyCtxBefore));
 
-        LOG.debug("Removed bridge domains on nodes {}", removedVppNodesByL2Fd);
-        LOG.debug("Created bridge domains on nodes {}", createdVppNodesByL2Fd);
+        LOG.debug("Removing bridge domains on nodes {}", removedVppNodesByL2Fd);
         fwManager.removeBridgeDomainOnNodes(removedVppNodesByL2Fd);
+        LOG.debug("Creating bridge domains on nodes {}", createdVppNodesByL2Fd);
         fwManager.createBridgeDomainOnNodes(createdVppNodesByL2Fd);
+
+        fwManager.syncNatEntries(policyCtxAfter);
 
         SetView<RendererEndpointKey> createdRendEps = Sets.difference(rendEpsAfter, rendEpsBefore);
         LOG.debug("Created renderer endpoints {}", createdRendEps);
@@ -260,7 +262,7 @@ public class VppRendererPolicyManager {
 
         SetMultimap<String, NodeId> vppNodesByL2Fd = resolveVppNodesByL2Fd(rEpKeys, policyCtx);
         fwManager.createBridgeDomainOnNodes(vppNodesByL2Fd);
-
+        fwManager.syncNatEntries(policyCtx);
         rEpKeys.forEach(rEpKey -> fwManager.createForwardingForEndpoint(rEpKey, policyCtx));
     }
 
@@ -271,6 +273,7 @@ public class VppRendererPolicyManager {
         rEpKeys.forEach(rEpKey -> fwManager.removeForwardingForEndpoint(rEpKey, policyCtx));
 
         SetMultimap<String, NodeId> vppNodesByL2Fd = resolveVppNodesByL2Fd(rEpKeys, policyCtx);
+        fwManager.deleteNatEntries(policyCtx);
         fwManager.removeBridgeDomainOnNodes(vppNodesByL2Fd);
     }
 

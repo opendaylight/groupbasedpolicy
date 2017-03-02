@@ -11,14 +11,29 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.util.concurrent.ExecutionException;
 
+import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
+import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.neutron.gbp.util.NeutronGbpIidFactory;
+import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv6Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv6Prefix;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.NatAddress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.NatAddressBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.UniqueId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.base.endpoints.by.ports.BaseEndpointByPort;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.floatingips.attributes.floatingips.Floatingip;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.net.InetAddresses;
@@ -86,4 +101,36 @@ public class Utils {
                 "$1-$2-$3-$4-$5");
     }
 
+    //TODO move to FloatingIpAware when deprecated API is removed
+    public static void syncNat(ReadWriteTransaction rwTx, Floatingip oldFloatingIp, Floatingip newFloatingIp)
+            throws InterruptedException, ExecutionException {
+        IpAddress oldEpIp = oldFloatingIp.getFixedIpAddress();
+        IpAddress newEpIp = newFloatingIp.getFixedIpAddress();
+        IpAddress epNatIp = newFloatingIp.getFloatingIpAddress();
+        if (epNatIp != null && newEpIp != null) {
+            InstanceIdentifier<BaseEndpointByPort> baseEpByPortId = NeutronGbpIidFactory.baseEndpointByPortIid(new UniqueId(
+                    newFloatingIp.getPortId().getValue()));
+            Optional<BaseEndpointByPort> optional = rwTx.read(LogicalDatastoreType.OPERATIONAL, baseEpByPortId).get();
+            if (!optional.isPresent()) {
+                return;
+            }
+            NatAddress nat = new NatAddressBuilder().setNatAddress(epNatIp).build();
+            AddressEndpointKey addrEpKey = new AddressEndpointKey(optional.get().getAddress(), optional.get()
+                .getAddressType(), optional.get().getContextId(), optional.get().getContextType());
+            rwTx.put(LogicalDatastoreType.OPERATIONAL,
+                    IidFactory.addressEndpointIid(addrEpKey).augmentation(NatAddress.class), nat, true);
+        }
+        if (oldEpIp != null) {
+            InstanceIdentifier<BaseEndpointByPort> baseEpByPortId = NeutronGbpIidFactory.baseEndpointByPortIid(new UniqueId(
+                    oldFloatingIp.getPortId().getValue()));
+            Optional<BaseEndpointByPort> optional = rwTx.read(LogicalDatastoreType.OPERATIONAL, baseEpByPortId).get();
+            if (!optional.isPresent()) {
+                return;
+            }
+            AddressEndpointKey addrEpKey = new AddressEndpointKey(optional.get().getAddress(), optional.get()
+                .getAddressType(), optional.get().getContextId(), optional.get().getContextType());
+            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL, IidFactory.addressEndpointIid(addrEpKey)
+                .augmentation(NatAddress.class), rwTx);
+        }
+    }
 }

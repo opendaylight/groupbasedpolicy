@@ -14,6 +14,8 @@ module base-endpoint {
 
     import gbp-common { prefix gbp-common; revision-date 2014-04-21; }
     import forwarding { prefix forwarding; revision-date 2016-04-27; }
+    import ietf-inet-types { prefix inet; revision-date 2013-07-15; }
+    import yang-ext { prefix ext; revision-date "2013-07-09"; }
 
     revision "2016-04-27" {
         description
@@ -184,6 +186,14 @@ module base-endpoint {
         uses has-relative-location;
     }
 
+    grouping nat-fields {
+        description "Support for IP NAT";
+        leaf nat-address {
+            description "Ip address the L3Endpoint translates to.";
+            type inet:ip-address;
+        }
+    }
+
     container endpoints {
         description
                 "Repository for operational state data about endpoints needed
@@ -256,4 +266,13 @@ module base-endpoint {
         }
     }
 
+    augment "/endpoints/address-endpoints/address-endpoint" {
+        ext:augment-identifier "nat-address";
+        uses nat-fields;
+    }
+
+    augment "/register-endpoint/input/address-endpoint-reg" {
+        ext:augment-identifier "nat-address-input";
+        uses nat-fields;
+    }
 }

@@ -10,6 +10,7 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.commands;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General.Operations;
 import org.opendaylight.groupbasedpolicy.util.NetUtils;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
@@ -24,6 +25,11 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev14061
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces._interface.ipv4.AddressBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces._interface.ipv4.address.subnet.PrefixLengthBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.PhysAddress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev161214.NatInterfaceAugmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev161214.NatInterfaceAugmentationBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev161214._interface.nat.attributes.Nat;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev161214._interface.nat.attributes.NatBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev161214._interface.nat.attributes.nat.InboundBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.Loopback;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.VppInterfaceAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.VppInterfaceAugmentationBuilder;
@@ -81,15 +87,15 @@ public class LoopbackCommand extends AbstractInterfaceCommand<LoopbackCommand> {
         return (short) NetUtils.getMaskFromPrefix(this.ipPrefix.getIpv4Prefix().getValue());
     }
 
-    @Override public InterfaceBuilder getInterfaceBuilder() {
-        InterfaceBuilder
-            interfaceBuilder =
-            new InterfaceBuilder().setKey(new InterfaceKey(name))
-                .setEnabled(enabled)
-                .setDescription(description)
-                .setType(Loopback.class)
-                .setName(name)
-                .setLinkUpDownTrapEnable(Interface.LinkUpDownTrapEnable.Enabled);
+    @Override
+    public InterfaceBuilder getInterfaceBuilder() {
+        InterfaceBuilder interfaceBuilder = new InterfaceBuilder().setKey(new InterfaceKey(name))
+            .setEnabled(enabled)
+            .setDescription(description)
+            .setType(Loopback.class)
+            .setName(name)
+            .setLinkUpDownTrapEnable(Interface.LinkUpDownTrapEnable.Enabled)
+            .addAugmentation(NatInterfaceAugmentation.class, buildInboundNatAugmentation());
 
         // Create the Loopback augmentation
         VppInterfaceAugmentationBuilder
@@ -110,6 +116,11 @@ public class LoopbackCommand extends AbstractInterfaceCommand<LoopbackCommand> {
         interfaceBuilder.addAugmentation(Interface1.class, interface1Builder.build());
         interfaceBuilder.addAugmentation(VppInterfaceAugmentation.class, vppAugmentationBuilder.build());
         return interfaceBuilder;
+    }
+
+    private NatInterfaceAugmentation buildInboundNatAugmentation() {
+        return new NatInterfaceAugmentationBuilder().setNat(
+                new NatBuilder().setInbound(new InboundBuilder().build()).build()).build();
     }
 
     @Override public String toString() {

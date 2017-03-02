@@ -9,6 +9,7 @@
 package org.opendaylight.groupbasedpolicy.renderer.vpp.policy;
 
 import javax.annotation.Nonnull;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -23,6 +24,7 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.groupbasedpolicy.test.CustomDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
@@ -100,8 +102,9 @@ public class BridgeDomainManagerImplTest extends CustomDataBrokerTest {
         bridgeDomainManager = new BridgeDomainManagerImpl(dataBroker);
         final InterfaceManager interfaceManager = Mockito.mock(InterfaceManager.class);
         final AclManager aclManager = Mockito.mock(AclManager.class);
+        final NatManager natManager = Mockito.mock(NatManager.class);
         final ForwardingManager fwManager =
-                new ForwardingManager(interfaceManager, aclManager, bridgeDomainManager, dataBroker);
+            new ForwardingManager(interfaceManager, aclManager, natManager, bridgeDomainManager, dataBroker);
         fwManager.setTimer((byte) 1);
     }
 

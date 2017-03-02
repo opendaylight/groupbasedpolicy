@@ -10,9 +10,12 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.concurrent.ExecutionException;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
@@ -53,25 +56,33 @@ public class NeutronFloatingIpAware implements NeutronAware<Floatingip> {
             // floating IP was not moved from one port to the other
             return;
         }
-
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
+        try {
+            Utils.syncNat(rwTx, oldFloatingIp, newFloatingIp);
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
+        syncNatForEndpoint(rwTx, oldFloatingIp, newFloatingIp);
+        boolean isSubmitToDsSuccessful = DataStoreHelper.submitToDs(rwTx);
+        if (!isSubmitToDsSuccessful) {
+            LOG.warn("Nat address {} was not added to endpoint {}", newFloatingIp.getFloatingIpAddress(), newEpIp);
+        }
+    }
+
+    @Deprecated
+    private void syncNatForEndpoint(ReadWriteTransaction rwTx, Floatingip newFloatingIp, Floatingip oldFloatingIp) {
+        IpAddress oldEpIp = oldFloatingIp.getFixedIpAddress();
+        IpAddress newEpIp = newFloatingIp.getFixedIpAddress();
         IpAddress epNatIp = newFloatingIp.getFloatingIpAddress();
         L3ContextId routerL3ContextId = new L3ContextId(newFloatingIp.getRouterId().getValue());
         if (epNatIp != null && newEpIp != null) {
             NatAddress nat = new NatAddressBuilder().setNatAddress(epNatIp).build();
-            rwTx.put(LogicalDatastoreType.OPERATIONAL,
-                    IidFactory.l3EndpointIid(routerL3ContextId, newEpIp).augmentation(NatAddress.class),
-                    nat, true);
+            rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.l3EndpointIid(routerL3ContextId, newEpIp)
+                .augmentation(NatAddress.class), nat, true);
         }
         if (oldEpIp != null) {
             DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
-                    IidFactory.l3EndpointIid(routerL3ContextId, oldEpIp).augmentation(NatAddress.class),
-                    rwTx);
-        }
-
-        boolean isSubmitToDsSuccessful = DataStoreHelper.submitToDs(rwTx);
-        if (!isSubmitToDsSuccessful) {
-            LOG.warn("Nat address {} was not added to endpoint {}", epNatIp, newEpIp);
+                    IidFactory.l3EndpointIid(routerL3ContextId, oldEpIp).augmentation(NatAddress.class), rwTx);
         }
     }
 

@@ -29,6 +29,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.event.VppEndpointConfEvent
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.VppEndpointLocationProvider;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.groupbasedpolicy.test.CustomDataBrokerTest;
@@ -82,6 +83,7 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
     private InterfaceManager ifaceManager;
     private AclManager aclManager;
     private ForwardingManager fwManager;
+    private NatManager natManager;
     private VppRendererPolicyManager vppRendererPolicyManager;
 
     @Override
@@ -99,11 +101,11 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         dataBroker = getDataBroker();
         Mockito.when(mountedDataProviderMock.getDataBrokerForMountPoint(Mockito.any(InstanceIdentifier.class)))
             .thenReturn(Optional.of(mountPointDataBroker));
-        ifaceManager =
-                new InterfaceManager(mountedDataProviderMock, dataBroker);
+        ifaceManager = new InterfaceManager(mountedDataProviderMock, dataBroker);
         aclManager = new AclManager(mountedDataProviderMock);
+        natManager = new NatManager(dataBroker, mountedDataProviderMock);
         bdManager = new BridgeDomainManagerImpl(mountPointDataBroker);
-        fwManager = new ForwardingManager(ifaceManager, aclManager, bdManager, dataBroker);
+        fwManager = new ForwardingManager(ifaceManager, aclManager, natManager, bdManager, dataBroker);
         vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, aclManager, dataBroker);
         fwManager.setTimer((byte) 1);
     }

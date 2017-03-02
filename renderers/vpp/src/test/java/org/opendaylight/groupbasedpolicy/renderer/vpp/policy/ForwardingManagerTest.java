@@ -25,6 +25,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AccessListWrapper;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
 import org.opendaylight.groupbasedpolicy.test.CustomDataBrokerTest;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocation;
@@ -61,12 +62,14 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
     private AclManager aclManager;
     @Mock
     private BridgeDomainManager bdManager;
+    @Mock
+    private NatManager natManager;
 
     private ForwardingManager fwdManager;
 
     @Before
     public void init() {
-        fwdManager = new ForwardingManager(ifaceManager, aclManager, bdManager, getDataBroker());
+        fwdManager = new ForwardingManager(ifaceManager, aclManager,natManager, bdManager, getDataBroker());
     }
 
     @Override

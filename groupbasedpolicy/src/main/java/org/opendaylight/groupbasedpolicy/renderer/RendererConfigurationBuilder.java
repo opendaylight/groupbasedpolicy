@@ -31,6 +31,7 @@ import javax.annotation.Nullable;
 
 import org.opendaylight.groupbasedpolicy.api.EndpointAugmentor;
 import org.opendaylight.groupbasedpolicy.api.NetworkDomainAugmentor;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.NatAddress;
 import org.opendaylight.groupbasedpolicy.renderer.util.AddressEndpointUtils;
 import org.opendaylight.groupbasedpolicy.renderer.util.ContainmentEndpointUtils;
 import org.opendaylight.groupbasedpolicy.renderer.util.EndpointLocationUtils;
@@ -45,6 +46,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.ForwardingContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.NetworkDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.EndpointPolicyParticipation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.NatAddressRenderer;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.NatAddressRendererBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.rule.group.with.renderer.endpoint.participation.RuleGroupWithRendererEndpointParticipation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.rule.group.with.renderer.endpoint.participation.RuleGroupWithRendererEndpointParticipationBuilder;
@@ -336,6 +339,11 @@ public class RendererConfigurationBuilder {
                     augmentor.buildAddressEndpointWithLocationAugmentation(ep);
             if (addrEpWithLocAug != null) {
                 addrEpWithLoc.addAugmentation(addrEpWithLocAug.getKey(), addrEpWithLocAug.getValue());
+            }
+            if (ep.getAugmentation(NatAddress.class) != null) {
+                NatAddress natAddr = ep.getAugmentation(NatAddress.class);
+                    addrEpWithLoc.addAugmentation(NatAddressRenderer.class,
+                            new NatAddressRendererBuilder().setNatAddress(natAddr.getNatAddress()).build());
             }
         }
         return addrEpWithLoc.build();

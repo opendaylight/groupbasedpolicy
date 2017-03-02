@@ -8,7 +8,9 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.policy;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -25,8 +27,11 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AccessListUtil;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.nat.rev150908.nat.config.nat.instances.nat.instance.mapping.table.MappingEntryBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.NetworkContainment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.Containment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.containment.ForwardingContextContainment;
@@ -37,10 +42,15 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L2FloodDomain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.NetworkDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.SubnetAugmentRenderer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.fields.Parent;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.NetworkDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.NatAddressRenderer;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Configuration;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.RendererForwardingByTenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererForwardingContext;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererForwardingContextKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererNetworkDomain;
@@ -53,6 +63,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_render
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpBridgeDomainKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.renderers.renderer.renderer.nodes.renderer.node.PhysicalInterface;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.VlanId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.VxlanVni;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
@@ -77,12 +88,14 @@ public final class ForwardingManager {
     private final InterfaceManager ifaceManager;
     private final AclManager aclManager;
     private final BridgeDomainManager bdManager;
+    private final NatManager natManager;
     private final DataBroker dataBroker;
 
     public ForwardingManager(@Nonnull InterfaceManager ifaceManager, @Nonnull AclManager aclManager,
-            @Nonnull BridgeDomainManager bdManager, @Nonnull DataBroker dataBroker) {
+        @Nonnull NatManager natManager, @Nonnull BridgeDomainManager bdManager, @Nonnull DataBroker dataBroker) {
         this.ifaceManager = Preconditions.checkNotNull(ifaceManager);
         this.bdManager = Preconditions.checkNotNull(bdManager);
+        this.natManager = Preconditions.checkNotNull(natManager);
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.aclManager = Preconditions.checkNotNull(aclManager);
     }
@@ -305,6 +318,88 @@ public final class ForwardingManager {
                     new RendererForwardingContextKey(parent.getContextId(), parent.getContextType())));
         }
         return java.util.Optional.empty();
+    }
+
+    public void syncNatEntries(PolicyContext policyCtx) {
+        Configuration cfg = policyCtx.getPolicy().getConfiguration();
+        if(cfg != null) {
+            List<MappingEntryBuilder> natEntries = resolveNatTableEntries(cfg.getEndpoints());
+            if (natEntries.isEmpty()) {
+                LOG.trace("NAT entries are empty, skipping processing.");
+                return;
+            }
+            LOG.trace("Syncing NAT entries {}", natEntries);
+            if (cfg.getRendererForwarding() != null) {
+                for (RendererForwardingByTenant fwd : cfg.getRendererForwarding().getRendererForwardingByTenant()) {
+                    List<InstanceIdentifier<PhysicalInterface>> physIfacesIid =
+                        resolvePhysicalInterfacesForNat(fwd.getRendererNetworkDomain());
+                    natManager.submitNatChanges(physIfacesIid, natEntries, true);
+                }
+            }
+        }
+    }
+
+    public void deleteNatEntries(PolicyContext policyCtx) {
+        Configuration cfg = policyCtx.getPolicy().getConfiguration();
+        if(cfg != null) {
+            List<MappingEntryBuilder> natEntries = resolveNatTableEntries(cfg.getEndpoints());
+            if (natEntries.isEmpty()) {
+                LOG.trace("NAT entries are empty,nothing to delete, skipping processing.");
+                return;
+            }
+            LOG.trace("Deleting NAT entries {}", natEntries);
+            if (cfg.getRendererForwarding() != null) {
+                for (RendererForwardingByTenant fwd : cfg.getRendererForwarding().getRendererForwardingByTenant()) {
+                    List<InstanceIdentifier<PhysicalInterface>> physIfacesIid =
+                        resolvePhysicalInterfacesForNat(fwd.getRendererNetworkDomain());
+                    natManager.submitNatChanges(physIfacesIid, natEntries, false);
+                }
+            }
+        }
+    }
+
+    public List<InstanceIdentifier<PhysicalInterface>> resolvePhysicalInterfacesForNat(
+            List<RendererNetworkDomain> rendNetDomains) {
+        List<InstanceIdentifier<PhysicalInterface>> physIfaces = new ArrayList<>();
+        for (RendererNetworkDomain rendDomain : rendNetDomains) {
+            Optional<IpPrefix> resolvedIpPrefix = resolveIpPrefix(rendDomain);
+            if (resolvedIpPrefix.isPresent()) {
+                Optional<InstanceIdentifier<PhysicalInterface>> resPhIface = natManager.resolvePhysicalInterface(resolvedIpPrefix.get());
+                if (resPhIface.isPresent()) {
+                    physIfaces.add(resPhIface.get());
+                }
+            }
+        }
+        return physIfaces;
+    }
+
+    private Optional<IpPrefix> resolveIpPrefix(RendererNetworkDomain rendDomain) {
+        SubnetAugmentRenderer subnetAug = rendDomain.getAugmentation(SubnetAugmentRenderer.class);
+        if (subnetAug.getSubnet() != null) {
+            return Optional.of(subnetAug.getSubnet().getIpPrefix());
+        }
+        return Optional.absent();
+    }
+
+    public List<MappingEntryBuilder> resolveNatTableEntries(Endpoints endpoints) {
+        List<MappingEntryBuilder> sNatEntries = new ArrayList<>();
+        for (AddressEndpointWithLocation addrEp : endpoints.getAddressEndpointWithLocation()) {
+            if (addrEp.getAugmentation(NatAddressRenderer.class) == null) {
+                continue;
+            }
+            NatAddressRenderer natAddr = addrEp.getAugmentation(NatAddressRenderer.class);
+            if (natAddr.getNatAddress() == null && natAddr.getNatAddress().getIpv4Address() == null) {
+                LOG.warn("Only Ipv4 SNAT is currently supported. Cannot apply SNAT for [{},{}]", addrEp.getAddress(),
+                        natAddr.getNatAddress());
+                continue;
+            }
+            Optional<MappingEntryBuilder> entry = natManager.resolveSnatEntry(addrEp.getAddress(), natAddr.getNatAddress()
+                .getIpv4Address());
+            if (entry.isPresent()) {
+                sNatEntries.add(entry.get());
+            }
+        }
+        return sNatEntries;
     }
 
     @VisibleForTesting

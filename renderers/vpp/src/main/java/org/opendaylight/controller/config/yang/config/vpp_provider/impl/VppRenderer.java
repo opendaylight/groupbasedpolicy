@@ -26,6 +26,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.RendererPolicyLis
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppEndpointListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppNodeListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.manager.VppNodeManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.BridgeDomainManagerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.ForwardingManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.VppRendererPolicyManager;
@@ -134,9 +135,10 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
                 context.getSubscriber(), context.getSubscriberMethod(), exception));
         interfaceManager = new InterfaceManager(mountDataProvider, dataBroker);
         aclManager = new AclManager(mountDataProvider);
+        NatManager natManager = new NatManager(dataBroker, mountDataProvider);
         dtoEventBus.register(interfaceManager);
         BridgeDomainManager bdManager = new BridgeDomainManagerImpl(dataBroker);
-        ForwardingManager fwManager = new ForwardingManager(interfaceManager, aclManager, bdManager, dataBroker);
+        ForwardingManager fwManager = new ForwardingManager(interfaceManager, aclManager, natManager, bdManager, dataBroker);
         vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, aclManager, dataBroker);
         dtoEventBus.register(vppRendererPolicyManager);
 
