@@ -105,7 +105,7 @@ public class InterfaceManager implements AutoCloseable {
     }
 
     private void updatePolicyExcludedEndpoints(VppEndpoint vppEndpoint, boolean created) {
-        if (vppEndpoint.getAugmentation(ExcludeFromPolicy.class) != null) {
+        if (vppEndpoint.getAugmentation(ExcludeFromPolicy.class) == null) {
             return;
         }
         if (created) {
