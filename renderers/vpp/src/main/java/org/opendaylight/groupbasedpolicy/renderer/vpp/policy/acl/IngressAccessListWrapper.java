@@ -39,7 +39,8 @@ public class IngressAccessListWrapper extends AccessListWrapper {
             .setType(VppAcl.class)
             .build();
         Ingress egressAcl = new IngressBuilder().setVppAcls(ImmutableList.<VppAcls>of(vppAcl)).build();
-        GbpNetconfTransaction.write(mountPoint, ingressRefIid, egressAcl, GbpNetconfTransaction.RETRY_COUNT);
+        GbpNetconfTransaction.netconfSyncedWrite(mountPoint, ingressRefIid, egressAcl,
+            GbpNetconfTransaction.RETRY_COUNT);
     }
 
     private InstanceIdentifier<Ingress> outboundIfaceAclRefIid(InstanceIdentifier<Interface> ifaceIid) {

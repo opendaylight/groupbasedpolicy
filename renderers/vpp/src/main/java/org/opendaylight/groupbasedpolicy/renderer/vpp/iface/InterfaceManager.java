@@ -145,7 +145,7 @@ public class InterfaceManager implements AutoCloseable {
 
     public ListenableFuture<Void> createInterfaceOnVpp(final ConfigCommand createIfaceWithoutBdCommand,
                                                        final DataBroker vppDataBroker) {
-        final boolean transactionState = GbpNetconfTransaction.write(vppDataBroker, createIfaceWithoutBdCommand,
+        final boolean transactionState = GbpNetconfTransaction.netconfSyncedWrite(vppDataBroker, createIfaceWithoutBdCommand,
                 GbpNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
             LOG.trace("Creating Interface on VPP: {}", createIfaceWithoutBdCommand);
@@ -161,7 +161,7 @@ public class InterfaceManager implements AutoCloseable {
                                                                        final DataBroker vppDataBroker,
                                                                        final VppEndpoint vppEndpoint,
                                                                        final InstanceIdentifier<?> vppNodeIid) {
-        final boolean transactionState = GbpNetconfTransaction.write(vppDataBroker, createIfaceWithoutBdCommand,
+        final boolean transactionState = GbpNetconfTransaction.netconfSyncedWrite(vppDataBroker, createIfaceWithoutBdCommand,
                 GbpNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
             LOG.debug("Create interface on VPP command was successful. VPP: {} Command: {}", vppNodeIid,
@@ -217,8 +217,8 @@ public class InterfaceManager implements AutoCloseable {
 
     private ListenableFuture<Void> deleteIfaceOnVpp(ConfigCommand deleteIfaceWithoutBdCommand,
             DataBroker vppDataBroker, VppEndpoint vppEndpoint, InstanceIdentifier<?> vppNodeIid) {
-        final boolean transactionState = GbpNetconfTransaction.deleteIfExists(vppDataBroker, deleteIfaceWithoutBdCommand,
-                GbpNetconfTransaction.RETRY_COUNT);
+        final boolean transactionState = GbpNetconfTransaction.netconfSyncedDelete(vppDataBroker,
+            deleteIfaceWithoutBdCommand, GbpNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
             LOG.debug("Delete interface on VPP command was successful: VPP: {} Command: {}", vppNodeIid,
                     deleteIfaceWithoutBdCommand);
@@ -392,7 +392,7 @@ public class InterfaceManager implements AutoCloseable {
                 .setBridgedVirtualInterface(enableBvi)
                 .build()).build();
         LOG.debug("Adding bridge domain {} to interface {}", bridgeDomainName, interfacePath);
-        final boolean transactionState = GbpNetconfTransaction.write(mountpoint, l2Iid, l2,
+        final boolean transactionState = GbpNetconfTransaction.netconfSyncedWrite(mountpoint, l2Iid, l2,
                 GbpNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
             LOG.debug("Adding bridge domain {} to interface {} successful", bridgeDomainName, interfacePath);
@@ -426,8 +426,8 @@ public class InterfaceManager implements AutoCloseable {
             .setBridgeDomain(bridgeDomainName)
             .setBridgedVirtualInterface(enableBvi)
             .build()).build();
-        final boolean transactionState = GbpNetconfTransaction.write(mountPoint, VppIidFactory.getL2ForInterfaceIid(ifaceKey),
-                l2, GbpNetconfTransaction.RETRY_COUNT);
+        final boolean transactionState = GbpNetconfTransaction.netconfSyncedWrite(mountPoint,
+            VppIidFactory.getL2ForInterfaceIid(ifaceKey), l2, GbpNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
             LOG.debug("Adding bridge domain {} to interface {}", bridgeDomainName, VppIidFactory.getInterfaceIID(ifaceKey));
             return Futures.immediateFuture(null);
@@ -445,7 +445,7 @@ public class InterfaceManager implements AutoCloseable {
             LOG.warn("Interface already not in bridge domain {} ", ifaceKey);
             return Futures.immediateFuture(null);
         }
-        final boolean transactionState = GbpNetconfTransaction.deleteIfExists(mountPoint,
+        final boolean transactionState = GbpNetconfTransaction.netconfSyncedDelete(mountPoint,
                 VppIidFactory.getL2ForInterfaceIid(ifaceKey), GbpNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
             LOG.debug("Removing bridge domain from interface {}", VppIidFactory.getInterfaceIID(ifaceKey));
@@ -523,7 +523,7 @@ public class InterfaceManager implements AutoCloseable {
                 interfaceIid.builder().augmentation(VppInterfaceAugmentation.class).child(L2.class).build();
         LOG.debug("Deleting bridge domain from interface {}", interfacePath);
         final boolean transactionState =
-                GbpNetconfTransaction.deleteIfExists(mountpoint, l2Iid, GbpNetconfTransaction.RETRY_COUNT);
+                GbpNetconfTransaction.netconfSyncedDelete(mountpoint, l2Iid, GbpNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
             AccessListWrapper.removeAclsForInterface(mountpoint, interfaceIid.firstKeyOf(Interface.class));
             AccessListWrapper.removeAclRefFromIface(mountpoint, interfaceIid.firstKeyOf(Interface.class));

@@ -78,8 +78,8 @@ public abstract class AccessListWrapper {
     public void writeAcl(@Nonnull DataBroker mountPoint, @Nonnull InterfaceKey ifaceKey) {
         Acl builtAcl = this.buildVppAcl(ifaceKey);
         LOG.info("Writing access-list {}", builtAcl.getAclName());
-        boolean write = GbpNetconfTransaction.write(mountPoint, VppIidFactory.getVppAcl(resolveAclName(ifaceKey)),
-                builtAcl, GbpNetconfTransaction.RETRY_COUNT);
+        boolean write = GbpNetconfTransaction.netconfSyncedWrite(mountPoint,
+                VppIidFactory.getVppAcl(resolveAclName(ifaceKey)), builtAcl, GbpNetconfTransaction.RETRY_COUNT);
         if (!write) {
             LOG.error("Failed to write rule {}", builtAcl);
         }
@@ -88,14 +88,14 @@ public abstract class AccessListWrapper {
     public static void removeAclsForInterface(@Nonnull DataBroker mountPoint, @Nonnull InterfaceKey ifaceKey) {
         LOG.debug("Removing access-list {}", ifaceKey);
         for (ACE_DIRECTION dir : new ACE_DIRECTION[] {ACE_DIRECTION.INGRESS, ACE_DIRECTION.EGRESS}) {
-        GbpNetconfTransaction.deleteIfExists(mountPoint, VppIidFactory.getVppAcl(ifaceKey.getName() + dir),
-                GbpNetconfTransaction.RETRY_COUNT);
+            GbpNetconfTransaction.netconfSyncedDelete(mountPoint,
+                VppIidFactory.getVppAcl(ifaceKey.getName() + dir), GbpNetconfTransaction.RETRY_COUNT);
         }
     }
 
     public static void removeAclRefFromIface(@Nonnull DataBroker mountPoint, @Nonnull InterfaceKey ifaceKey) {
         LOG.debug("Removing access-lists from interface {}", ifaceKey.getName());
-        GbpNetconfTransaction.deleteIfExists(mountPoint, VppIidFactory.getInterfaceIetfAcl(ifaceKey),
+        GbpNetconfTransaction.netconfSyncedDelete(mountPoint, VppIidFactory.getInterfaceIetfAcl(ifaceKey),
                 GbpNetconfTransaction.RETRY_COUNT);
     }
 }

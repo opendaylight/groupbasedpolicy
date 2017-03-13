@@ -67,7 +67,7 @@ public class GbpNetconfTransactionTest {
     public void writeConfigCommandReattemptTest() {
         doThrow(new IllegalStateException()).when(command).execute(rwTx);
 
-        final boolean result = GbpNetconfTransaction.write(dataBroker, command, (byte)5);
+        final boolean result = GbpNetconfTransaction.netconfSyncedWrite(dataBroker, command, (byte) 5);
         verify(dataBroker, times(6)).newReadWriteTransaction();
         assertFalse(result);
     }
@@ -78,7 +78,7 @@ public class GbpNetconfTransactionTest {
         doNothing().when(command).execute(rwTx);
         when(future.get()).thenReturn(null);
 
-        final boolean result = GbpNetconfTransaction.write(dataBroker, command, (byte)5);
+        final boolean result = GbpNetconfTransaction.netconfSyncedWrite(dataBroker, command, (byte)5);
         verify(dataBroker, times(1)).newReadWriteTransaction();
         assertTrue(result);
     }
@@ -87,7 +87,7 @@ public class GbpNetconfTransactionTest {
     public void writeDataReattemptTest() {
         doThrow(new IllegalStateException()).when(rwTx).put(LogicalDatastoreType.CONFIGURATION, nodeIid, node, true);
 
-        final boolean result = GbpNetconfTransaction.write(dataBroker, nodeIid, node, (byte)5);
+        final boolean result = GbpNetconfTransaction.netconfSyncedWrite(dataBroker, nodeIid, node, (byte) 5);
         verify(dataBroker, times(6)).newReadWriteTransaction();
         assertFalse(result);
     }
@@ -98,7 +98,7 @@ public class GbpNetconfTransactionTest {
         doNothing().when(rwTx).put(LogicalDatastoreType.CONFIGURATION, nodeIid, node, true);
         when(future.get()).thenReturn(null);
 
-        final boolean result = GbpNetconfTransaction.write(dataBroker, nodeIid, node, (byte)5);
+        final boolean result = GbpNetconfTransaction.netconfSyncedWrite(dataBroker, nodeIid, node, (byte) 5);
         verify(dataBroker, times(1)).newReadWriteTransaction();
         assertTrue(result);
     }
@@ -133,7 +133,7 @@ public class GbpNetconfTransactionTest {
         when(futureInterface.get()).thenReturn(Optional.absent());
         doThrow(new IllegalStateException()).when(command).execute(rwTx);
 
-        final boolean result = GbpNetconfTransaction.deleteIfExists(dataBroker, command, (byte)5);
+        final boolean result = GbpNetconfTransaction.netconfSyncedDelete(dataBroker, command, (byte)5);
         verify(dataBroker, times(1)).newReadOnlyTransaction();
         assertTrue(result);
     }
@@ -147,7 +147,7 @@ public class GbpNetconfTransactionTest {
                 .setKey(new InterfaceKey(INTERFACE_KEY)).build()));
         doThrow(new IllegalStateException()).when(command).execute(rwTx);
 
-        final boolean result = GbpNetconfTransaction.deleteIfExists(dataBroker, command, (byte)5);
+        final boolean result = GbpNetconfTransaction.netconfSyncedDelete(dataBroker, command, (byte)5);
         verify(dataBroker, times(6)).newReadWriteTransaction();
         assertFalse(result);
     }
@@ -163,7 +163,7 @@ public class GbpNetconfTransactionTest {
         doNothing().when(command).execute(rwTx);
         when(future.get()).thenReturn(null);
 
-        final boolean result = GbpNetconfTransaction.deleteIfExists(dataBroker, command, (byte)5);
+        final boolean result = GbpNetconfTransaction.netconfSyncedDelete(dataBroker, command, (byte)5);
         verify(dataBroker, times(1)).newReadWriteTransaction();
         assertTrue(result);
     }
@@ -174,7 +174,7 @@ public class GbpNetconfTransactionTest {
         when(futureNode.get()).thenReturn(Optional.absent());
         doThrow(new IllegalStateException()).when(command).execute(rwTx);
 
-        final boolean result = GbpNetconfTransaction.deleteIfExists(dataBroker, nodeIid, (byte)5);
+        final boolean result = GbpNetconfTransaction.netconfSyncedDelete(dataBroker, nodeIid, (byte)5);
         verify(dataBroker, times(1)).newReadOnlyTransaction();
         assertTrue(result);
     }
@@ -186,7 +186,7 @@ public class GbpNetconfTransactionTest {
                 .setKey(new NodeKey(new NodeId(NODE_ID))).build()));
         doThrow(new IllegalStateException()).when(rwTx).delete(LogicalDatastoreType.CONFIGURATION, nodeIid);
 
-        final boolean result = GbpNetconfTransaction.deleteIfExists(dataBroker, nodeIid, (byte)5);
+        final boolean result = GbpNetconfTransaction.netconfSyncedDelete(dataBroker, nodeIid, (byte)5);
         verify(dataBroker, times(6)).newReadWriteTransaction();
         assertFalse(result);
     }
@@ -200,7 +200,7 @@ public class GbpNetconfTransactionTest {
         doNothing().when(rwTx).delete(LogicalDatastoreType.CONFIGURATION, nodeIid);
         when(future.get()).thenReturn(null);
 
-        final boolean result = GbpNetconfTransaction.deleteIfExists(dataBroker, nodeIid, (byte)5);
+        final boolean result = GbpNetconfTransaction.netconfSyncedDelete(dataBroker, nodeIid, (byte)5);
         verify(dataBroker, times(1)).newReadWriteTransaction();
         assertTrue(result);
     }

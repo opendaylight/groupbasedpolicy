@@ -60,6 +60,11 @@
       <version>1.1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
+      <groupId>org.opendaylight.honeycomb.vbd</groupId>
+      <artifactId>vbd-impl</artifactId>
+      <version>1.1.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
       <groupId>org.opendaylight.mdsal.model</groupId>
       <artifactId>opendaylight-l2-types</artifactId>
     </dependency>
@@ -111,13 +116,15 @@
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
-        <extensions>true</extensions>
         <configuration>
           <instructions>
             <Export-Package>
               org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.*,
               org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.*
             </Export-Package>
+            <Import-Package>
+              *
+            </Import-Package>
           </instructions>
         </configuration>
       </plugin>
