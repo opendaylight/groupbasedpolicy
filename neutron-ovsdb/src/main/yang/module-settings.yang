@@ -28,7 +28,7 @@ module neutron-ovsdb-impl {
         leaf openflow-protocol {
             mandatory true;
             type string {
-                pattern "^tcp$|^udp$";
+                pattern "tcp|udp";
            }
         }
     }
