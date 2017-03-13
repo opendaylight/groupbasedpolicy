@@ -264,6 +264,8 @@ public class PortHandler implements TransactionChainListener {
                         port);
                 vppEpBuilder.setVppNodeId(routingNode);
             }
+            vppEpBuilder.addAugmentation(ExcludeFromPolicy.class,
+                    new ExcludeFromPolicyBuilder().setExcludeFromPolicy(true).build());
             vppEpBuilder.setInterfaceTypeChoice(getLoopbackCase(port));
         }
         return vppEpBuilder.build();
