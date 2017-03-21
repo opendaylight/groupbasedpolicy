@@ -64,6 +64,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 
 import javax.annotation.Nonnull;
 public class PortHandler implements TransactionChainListener {
@@ -116,8 +117,15 @@ public class PortHandler implements TransactionChainListener {
 
     @VisibleForTesting
     void processCreatedData(Port port, BaseEndpointByPort bebp) {
-        if (isValidVhostUser(port)) {
+        if (isValidVhostUser(port)
+                // this is a hack for vpp router port
+                // Openstack does not send binding details yet
+                || isValidVppRouterPort(port)) {
             VppEndpoint vppEp = buildVppEndpoint(port, bebp);
+            if (vppEp == null) {
+                LOG.warn("Cannot create vpp-endpoint from neutron port {}", port);
+                return;
+            }
             writeVppEndpoint(createVppEndpointIid(vppEp.getKey()), vppEp);
             LOG.debug("Created vpp-endpoint {}", vppEp);
         }
@@ -263,6 +271,31 @@ public class PortHandler implements TransactionChainListener {
                         "Host-id changed by ODL for port {}. This is a supplementary workaround for choosing a routing node.",
                         port);
                 vppEpBuilder.setVppNodeId(routingNode);
+            } else if (port.getDeviceId() != null) {
+                LOG.debug("Resolving host-id for unbound router port {}", port.getUuid());
+                ReadOnlyTransaction readTx = dataBroker.newReadOnlyTransaction();
+                Optional<Ports> optPorts = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
+                        InstanceIdentifier.builder(Neutron.class).child(Ports.class).build(), readTx);
+                readTx.close();
+                if (optPorts.isPresent() && optPorts.get().getPort() != null) {
+                    java.util.Optional<Port> optPortOnTheSameNode = optPorts.get()
+                        .getPort()
+                        .stream()
+                        .filter(p -> !p.getUuid().equals(port.getUuid()))
+                        .filter(p -> p.getAugmentation(PortBindingExtension.class) != null)
+                        .filter(p -> p.getDeviceOwner().contains(DHCP_OWNER))
+                        .findFirst();
+                    if (optPortOnTheSameNode.isPresent()) {
+                        PortBindingExtension binding =
+                                optPortOnTheSameNode.get().getAugmentation(PortBindingExtension.class);
+                        if (binding != null && binding.getHostId() != null) {
+                            vppEpBuilder.setVppNodeId(new NodeId(binding.getHostId()));
+                        } else {
+                            LOG.warn("Cannot resolve location of router-port {}", port.getUuid());
+                            return null;
+                        }
+                    }
+                }
             }
             vppEpBuilder.addAugmentation(ExcludeFromPolicy.class,
                     new ExcludeFromPolicyBuilder().setExcludeFromPolicy(true).build());
@@ -329,6 +362,9 @@ public class PortHandler implements TransactionChainListener {
     }
 
     private Optional<Router> getRouterOptional(Port port) {
+        if (Strings.isNullOrEmpty(port.getDeviceId())) {
+            return Optional.absent();
+        }
         ReadOnlyTransaction rTx = transactionChain.newReadOnlyTransaction();
         InstanceIdentifier<Router> routerIid = InstanceIdentifier.builder(Neutron.class)
             .child(Routers.class)
