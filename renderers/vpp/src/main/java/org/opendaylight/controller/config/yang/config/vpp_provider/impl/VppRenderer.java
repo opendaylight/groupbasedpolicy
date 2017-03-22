@@ -11,6 +11,9 @@ package org.opendaylight.controller.config.yang.config.vpp_provider.impl;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
@@ -81,9 +84,12 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
     private VppEndpointListener vppEndpointListener;
     private RendererPolicyListener rendererPolicyListener;
     private VppRpcServiceImpl vppRpcServiceImpl;
+    private final String publicInterfaces;
 
-    public VppRenderer(DataBroker dataBroker, BindingAwareBroker bindingAwareBroker) {
+    public VppRenderer(@Nonnull DataBroker dataBroker, @Nonnull BindingAwareBroker bindingAwareBroker,
+            @Nullable String publicInterfaces) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
+        this.publicInterfaces = publicInterfaces;
         bindingAwareBroker.registerProvider(this);
         EtherTypeClassifier etherTypeClassifier = new EtherTypeClassifier(null);
         IpProtoClassifier ipProtoClassifier = new IpProtoClassifier(etherTypeClassifier);
@@ -130,7 +136,7 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         MountPointService mountService =
                 Preconditions.checkNotNull(providerContext.getSALService(MountPointService.class));
         MountedDataBrokerProvider mountDataProvider = new MountedDataBrokerProvider(mountService, dataBroker);
-        vppNodeManager = new VppNodeManager(dataBroker, providerContext);
+        vppNodeManager = new VppNodeManager(dataBroker, providerContext, publicInterfaces);
 
         EventBus dtoEventBus = new EventBus((exception, context) -> LOG.error("Could not dispatch event: {} to {}",
                 context.getSubscriber(), context.getSubscriberMethod(), exception));

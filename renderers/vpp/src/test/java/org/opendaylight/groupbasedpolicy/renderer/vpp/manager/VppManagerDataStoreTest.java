@@ -90,7 +90,7 @@ public class VppManagerDataStoreTest extends VppRendererDataBrokerTest {
             .thenReturn(Optional.of(mountPoint));
         Mockito.when(mountPoint.getService(Matchers.<Class<DataBroker>>any())).thenReturn(Optional.of(dataBroker2));
         dataBroker = getDataBroker();
-        vppNodeManager = new VppNodeManager(dataBroker, providerContext);
+        vppNodeManager = new VppNodeManager(dataBroker, providerContext, null);
         vppNodeListener = new VppNodeListener(dataBroker, vppNodeManager, new EventBus());
     }
 

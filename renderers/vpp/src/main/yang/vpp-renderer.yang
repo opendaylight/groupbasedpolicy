@@ -178,6 +178,10 @@ module vpp-renderer {
             leaf-list address {
                 type inet-types:ip-address;
             }
+            leaf external {
+                type boolean;
+                default  "false";
+            }
         }
     }
 

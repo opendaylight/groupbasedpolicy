@@ -74,7 +74,7 @@ public class VppRendererTest  extends VppRendererDataBrokerTest {
 
     @Test
     public void testCreateVppRenderer() throws Exception {
-        VppRenderer vppRenderer = new VppRenderer(dataBroker, bindingAwareBroker);
+        VppRenderer vppRenderer = new VppRenderer(dataBroker, bindingAwareBroker, null);
 
         vppRenderer.onSessionInitiated(providerContext);
 

@@ -11,14 +11,23 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.manager;
 import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus.ConnectionStatus.Connected;
 import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus.ConnectionStatus.Connecting;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.util.concurrent.CheckedFuture;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPoint;
@@ -29,14 +38,12 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.iana._if.type.rev140508.EthernetCsmacd;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.Interfaces;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.Interface1;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNodeBuilder;
@@ -45,6 +52,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_render
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.VppInterfaceAugmentationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.renderers.renderer.renderer.nodes.renderer.node.PhysicalInterface;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.renderers.renderer.renderer.nodes.renderer.node.PhysicalInterfaceBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.renderers.renderer.renderer.nodes.renderer.node.PhysicalInterfaceKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.netconf.node.connection.status.available.capabilities.AvailableCapability;
@@ -60,6 +68,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 public class VppNodeManager {
 
     private static final short DURATION = 3000;
@@ -68,14 +77,37 @@ public class VppNodeManager {
     private static final String V3PO_CAPABILITY = "(urn:opendaylight:params:xml:ns:yang:v3po?revision=2016-12-14)v3po";
     private static final String INTERFACES_CAPABILITY = "(urn:ietf:params:xml:ns:yang:ietf-interfaces?revision=2014-05-08)ietf-interfaces";
     private static final NodeId CONTROLLER_CONFIG_NODE = new NodeId("controller-config");
+    private static final String NO_PUBLIC_INT_SPECIFIED = "unspecified";
+    private final Map<NodeId, PhysicalInterfaceKey> extInterfaces = new HashMap<>();
     private final DataBroker dataBroker;
     private final List<String> requiredCapabilities;
     private final MountPointService mountService;
 
-    public VppNodeManager(final DataBroker dataBroker, final BindingAwareBroker.ProviderContext session) {
+    public VppNodeManager(@Nonnull final DataBroker dataBroker,
+            @Nonnull final BindingAwareBroker.ProviderContext session, @Nullable String physicalInterfaces) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.mountService = Preconditions.checkNotNull(session.getSALService(MountPointService.class));
         requiredCapabilities = initializeRequiredCapabilities();
+        if (!Strings.isNullOrEmpty(physicalInterfaces) && physicalInterfaces != NO_PUBLIC_INT_SPECIFIED) {
+            loadPhysicalInterfaces(physicalInterfaces);
+        }
+    }
+
+    /**
+     * Caches list of physical interfaces.
+     */
+    public void loadPhysicalInterfaces(@Nonnull String physicalInterfaces) {
+        for (String intfOnNode : Sets.newConcurrentHashSet(Splitter.on(",").split(physicalInterfaces))) {
+            List<String> entries = Lists.newArrayList(Splitter.on(":").split(intfOnNode));
+            if (entries.size() != 2) {
+                LOG.warn("Cannot resolve {} initial configuration for physical interfaces.", intfOnNode);
+                continue;
+            }
+            NodeId nodeId = new NodeId(entries.get(0));
+            PhysicalInterfaceKey infaceKey = new PhysicalInterfaceKey(entries.get(1));
+            LOG.info("Interface " + infaceKey + " on node " + nodeId + "will be considered as external");
+            extInterfaces.put(nodeId, infaceKey);
+        }
     }
 
     /**
@@ -298,7 +330,6 @@ public class VppNodeManager {
 
     private void syncPhysicalInterfacesInLocalDs(DataBroker mountPointDataBroker, InstanceIdentifier<Node> nodeIid) {
         ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
-        InstanceIdentifier.create(Interfaces.class);
         ReadOnlyTransaction rTx = mountPointDataBroker.newReadOnlyTransaction();
         Optional<Interfaces> readIfaces = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
                 InstanceIdentifier.create(Interfaces.class), rTx);
@@ -309,8 +340,10 @@ public class VppNodeManager {
                 .build();
             Optional<RendererNode> optRendNode = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
                     rendererNodeIid, rwTx);
-            RendererNode rendNode = new RendererNodeBuilder(optRendNode.get()).addAugmentation(
-                    VppInterfaceAugmentation.class, resolveTerminationPoints(readIfaces.get())).build();
+            NodeId nodeId = nodeIid.firstKeyOf(Node.class).getNodeId();
+            RendererNode rendNode = new RendererNodeBuilder(optRendNode.get())
+                .addAugmentation(VppInterfaceAugmentation.class, resolveTerminationPoints(nodeId, readIfaces.get()))
+                .build();
             rwTx.put(LogicalDatastoreType.OPERATIONAL, VppIidFactory.getRendererNodeIid(optRendNode.get()), rendNode,
                     true);
         }
@@ -318,18 +351,26 @@ public class VppNodeManager {
         DataStoreHelper.submitToDs(rwTx);
     }
 
-    private VppInterfaceAugmentation resolveTerminationPoints(Interfaces interfaces) {
+    private VppInterfaceAugmentation resolveTerminationPoints(NodeId nodeId, Interfaces interfaces) {
         List<PhysicalInterface> phIfaces = new ArrayList<>();
-        PhysicalInterfaceBuilder phIface = new PhysicalInterfaceBuilder();
         if (interfaces != null && interfaces.getInterface() != null) {
             interfaces.getInterface()
                 .stream()
                 .filter(iface -> iface.getType().equals(EthernetCsmacd.class))
                 .filter(iface -> iface.getAugmentation(Interface1.class) != null)
                 .forEach(iface -> {
+                    PhysicalInterfaceBuilder phIface = new PhysicalInterfaceBuilder();
                     phIface.setInterfaceName(iface.getName());
                     phIface.setType(iface.getType());
                     phIface.setAddress(resolveIpAddress(iface.getAugmentation(Interface1.class)));
+
+                    if (extInterfaces.get(nodeId) != null && extInterfaces.get(nodeId)
+                        .getInterfaceName()
+                        .equals(phIface.getInterfaceName())) {
+                        phIface.setExternal(true);
+                        LOG.trace("Assigning external Interface, interface name: {}, extInterface name: {}",
+                            phIface.getInterfaceName(), extInterfaces.get(nodeId).getInterfaceName());
+                    }
                     phIfaces.add(phIface.build());
                 });
         }

@@ -44,13 +44,16 @@ public class GbpVppProviderInstance implements ClusterSingletonService, VppAdapt
     private final ClusterSingletonServiceProvider clusterSingletonService;
     private ClusterSingletonServiceRegistration singletonServiceRegistration;
     private VppRenderer renderer;
+    private final String publicInterfaces;
 
     public GbpVppProviderInstance(final DataBroker dataBroker,
                                   final BindingAwareBroker bindingAwareBroker,
-                                  final ClusterSingletonServiceProvider clusterSingletonService) {
+                                  final ClusterSingletonServiceProvider clusterSingletonService,
+                                  final String publicInterfaces) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.bindingAwareBroker = Preconditions.checkNotNull(bindingAwareBroker);
         this.clusterSingletonService = Preconditions.checkNotNull(clusterSingletonService);
+        this.publicInterfaces = publicInterfaces;
     }
 
     public void initialize() {
@@ -61,7 +64,7 @@ public class GbpVppProviderInstance implements ClusterSingletonService, VppAdapt
     @Override
     public void instantiateServiceInstance() {
         LOG.info("Instantiating {}", this.getClass().getSimpleName());
-        renderer = new VppRenderer(dataBroker, bindingAwareBroker);
+        renderer = new VppRenderer(dataBroker, bindingAwareBroker, publicInterfaces);
     }
 
     @Override

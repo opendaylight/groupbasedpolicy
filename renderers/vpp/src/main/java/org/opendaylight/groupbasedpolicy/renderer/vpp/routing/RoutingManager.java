@@ -138,8 +138,11 @@ public class RoutingManager {
         for (InstanceIdentifier<PhysicalInterface> identifier : physIntIids) {
             Optional<PhysicalInterface> physicalInterfaceOptional = DataStoreHelper.readFromDs(
                 LogicalDatastoreType.OPERATIONAL, identifier, dataBroker.newReadOnlyTransaction());
-            if (!physicalInterfaceOptional.isPresent()){
+            if (!physicalInterfaceOptional.isPresent()) {
                 continue;
+            }
+            if (physicalInterfaceOptional.get().isExternal()) {
+                return physicalInterfaceOptional.get();
             }
             if (physicalInterfaceOptional.get().getAddress().contains(extIfaceIp)){
                 return physicalInterfaceOptional.get();
@@ -155,6 +158,9 @@ public class RoutingManager {
                 LogicalDatastoreType.OPERATIONAL, identifier, dataBroker.newReadOnlyTransaction());
             if (!physicalInterfaceOptional.isPresent()){
                 continue;
+            }
+            if (physicalInterfaceOptional.get().isExternal()) {
+                return identifier.firstKeyOf(RendererNode.class).getNodePath();
             }
             if (physicalInterfaceOptional.get().getAddress().contains(extIfaceIp)){
                 return identifier.firstKeyOf(RendererNode.class).getNodePath();
