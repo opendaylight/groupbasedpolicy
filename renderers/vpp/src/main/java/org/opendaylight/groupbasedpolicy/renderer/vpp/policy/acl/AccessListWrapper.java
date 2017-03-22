@@ -95,7 +95,8 @@ public abstract class AccessListWrapper {
 
     public static void removeAclRefFromIface(@Nonnull DataBroker mountPoint, @Nonnull InterfaceKey ifaceKey) {
         LOG.debug("Removing access-lists from interface {}", ifaceKey.getName());
-        GbpNetconfTransaction.netconfSyncedDelete(mountPoint, VppIidFactory.getInterfaceIetfAcl(ifaceKey),
+        GbpNetconfTransaction.netconfSyncedDelete(mountPoint,
+                VppIidFactory.getAclInterfaceRef(VppIidFactory.getInterfaceIID(ifaceKey)),
                 GbpNetconfTransaction.RETRY_COUNT);
     }
 }

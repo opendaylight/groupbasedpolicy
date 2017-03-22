@@ -525,8 +525,8 @@ public class InterfaceManager implements AutoCloseable {
         final boolean transactionState =
                 GbpNetconfTransaction.netconfSyncedDelete(mountpoint, l2Iid, GbpNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
-            AccessListWrapper.removeAclsForInterface(mountpoint, interfaceIid.firstKeyOf(Interface.class));
             AccessListWrapper.removeAclRefFromIface(mountpoint, interfaceIid.firstKeyOf(Interface.class));
+            AccessListWrapper.removeAclsForInterface(mountpoint, interfaceIid.firstKeyOf(Interface.class));
             return vppEndpointLocationProvider.replaceLocationForEndpoint(
                     new ExternalLocationCaseBuilder().setExternalNode(null)
                         .setExternalNodeMountPoint(vppNodeIid)
