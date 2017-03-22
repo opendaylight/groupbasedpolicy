@@ -77,7 +77,7 @@ public abstract class AccessListWrapper {
 
     public void writeAcl(@Nonnull DataBroker mountPoint, @Nonnull InterfaceKey ifaceKey) {
         Acl builtAcl = this.buildVppAcl(ifaceKey);
-        LOG.info("Writing access-list {}", builtAcl.getAclName());
+        LOG.trace("Writing access-list {}", builtAcl.getAclName());
         boolean write = GbpNetconfTransaction.netconfSyncedWrite(mountPoint,
                 VppIidFactory.getVppAcl(resolveAclName(ifaceKey)), builtAcl, GbpNetconfTransaction.RETRY_COUNT);
         if (!write) {

@@ -9,6 +9,7 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,6 +35,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.has.subnet.SubnetBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.has.subnet.subnet.AllocationPool;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.has.subnet.subnet.AllocationPoolBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.has.subnet.subnet.GatewaysBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.has.subnet.subnet.gateways.PrefixesBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.NetworkDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.NetworkDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
@@ -85,31 +88,45 @@ public class NeutronSubnetAware implements
 
         Network networkOfSubnet = potentialNetwork.get();
 
-        NetworkDomain subnetDomain = null;
+        NetworkDomain subnetDomain;
+        IpAddress gatewayIp = neutronSubnet.getGatewayIp();
         if (NetworkUtils.isProviderPhysicalNetwork(networkOfSubnet)) {
-            subnetDomain = createSubnet(neutronSubnet, neutron);
-            IpAddress gatewayIp = neutronSubnet.getGatewayIp();
+            // add virtual router IP only in case it is provider physical network
+            subnetDomain = createSubnet(neutronSubnet, neutron, gatewayIp);
             boolean registeredDefaultRoute = epRegistrator.registerExternalL3PrefixEndpoint(MappingUtils.DEFAULT_ROUTE,
                     new L3ContextId(neutronSubnet.getNetworkId().getValue()), gatewayIp, tenantId);
             if (!registeredDefaultRoute) {
                 LOG.warn("Could not add EndpointL3Prefix as default route. Subnet within provider physical network {}",
-                        neutronSubnet);
+                    neutronSubnet);
                 rwTx.cancel();
                 return;
             }
         } else {
-            subnetDomain = createSubnet(neutronSubnet, neutron);
+            // virtual router IP is not set and it will be set when router gateway port is set
+            // or when a router port is attached to a network
+            if (NetworkUtils.isRouterExternal(networkOfSubnet)) {
+                subnetDomain = createSubnet(neutronSubnet, neutron, gatewayIp);
+            } else {
+                subnetDomain = createSubnet(neutronSubnet, neutron, null);
+            }
         }
         processTenantSubnet(neutronSubnet, networkOfSubnet, tenantId, rwTx);
-        rwTx.put(LogicalDatastoreType.CONFIGURATION, L2L3IidFactory.subnetIid(tenantId, subnetDomain.getNetworkDomainId()), subnetDomain, true);
+        rwTx.put(LogicalDatastoreType.CONFIGURATION,
+            L2L3IidFactory.subnetIid(tenantId, subnetDomain.getNetworkDomainId()), subnetDomain, true);
         DataStoreHelper.submitToDs(rwTx);
     }
 
     public static NetworkDomain createSubnet(
             org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet subnet,
-            Neutron neutron) {
+            Neutron neutron, IpAddress gwIpAddress) {
         SubnetBuilder sb = new SubnetBuilder();
         sb.setIpPrefix(subnet.getCidr());
+        if (gwIpAddress != null) {
+            sb.setGateways(Collections.singletonList(new GatewaysBuilder().setGateway(gwIpAddress)
+                .setPrefixes(
+                    Collections.singletonList(new PrefixesBuilder().setPrefix(MappingUtils.DEFAULT_ROUTE).build()))
+                .build()));
+        }
         if (neutron.getPorts() != null && neutron.getPorts().getPort() != null) {
             for (Port port : neutron.getPorts().getPort()) {
                 if (port.getFixedIps() == null || !port.getFixedIps()

@@ -8,12 +8,12 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.policy;
 
-import javax.annotation.Nonnull;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.concurrent.ExecutionException;
+
+import javax.annotation.Nonnull;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -25,6 +25,7 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.routing.RoutingManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.groupbasedpolicy.test.CustomDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
@@ -67,7 +68,8 @@ public class BridgeDomainManagerImplTest extends CustomDataBrokerTest {
     private final static NodeId VPP_NODE_ID = new NodeId("vppNode");
     private final static Topology BASE_TOPOLOGY = new TopologyBuilder().setTopologyId(BASE_TOPOLOGY_ID)
         .setNode(Collections.singletonList(new NodeBuilder().setNodeId(VPP_NODE_ID)
-                .setSupportingNode(Collections.singletonList(new SupportingNodeBuilder().setTopologyRef(SUPPORTING_TOPOLOGY_NETCONF)
+                .setSupportingNode(Collections.singletonList(new SupportingNodeBuilder()
+                        .setTopologyRef(SUPPORTING_TOPOLOGY_NETCONF)
                         .setNodeRef(VPP_NODE_ID)
                         .build()))
                 .build()))
@@ -103,8 +105,10 @@ public class BridgeDomainManagerImplTest extends CustomDataBrokerTest {
         final InterfaceManager interfaceManager = Mockito.mock(InterfaceManager.class);
         final AclManager aclManager = Mockito.mock(AclManager.class);
         final NatManager natManager = Mockito.mock(NatManager.class);
+        final RoutingManager routingManager = Mockito.mock(RoutingManager.class);
         final ForwardingManager fwManager =
-            new ForwardingManager(interfaceManager, aclManager, natManager, bridgeDomainManager, dataBroker);
+            new ForwardingManager(interfaceManager, aclManager, natManager, routingManager, bridgeDomainManager,
+                dataBroker);
         fwManager.setTimer((byte) 1);
     }
 

@@ -19,7 +19,10 @@ import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L3ContextId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.IpPrefixType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddressBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.floatingips.attributes.Floatingips;
@@ -44,7 +47,7 @@ public class NeutronFloatingIpAware implements NeutronAware<Floatingip> {
 
     @Override
     public void onCreated(Floatingip floatingIP, Neutron neutron) {
-        LOG.trace("created floatinIp - {}", floatingIP);
+        LOG.trace("created floatingIp - {}", floatingIP);
     }
 
     @Override
@@ -70,19 +73,31 @@ public class NeutronFloatingIpAware implements NeutronAware<Floatingip> {
     }
 
     @Deprecated
-    private void syncNatForEndpoint(ReadWriteTransaction rwTx, Floatingip newFloatingIp, Floatingip oldFloatingIp) {
+    private void syncNatForEndpoint(ReadWriteTransaction rwTx, Floatingip oldFloatingIp, Floatingip newFloatingIp) {
         IpAddress oldEpIp = oldFloatingIp.getFixedIpAddress();
         IpAddress newEpIp = newFloatingIp.getFixedIpAddress();
         IpAddress epNatIp = newFloatingIp.getFloatingIpAddress();
         L3ContextId routerL3ContextId = new L3ContextId(newFloatingIp.getRouterId().getValue());
-        if (epNatIp != null && newEpIp != null) {
-            NatAddress nat = new NatAddressBuilder().setNatAddress(epNatIp).build();
-            rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.l3EndpointIid(routerL3ContextId, newEpIp)
-                .augmentation(NatAddress.class), nat, true);
-        }
+
         if (oldEpIp != null) {
             DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
-                    IidFactory.l3EndpointIid(routerL3ContextId, oldEpIp).augmentation(NatAddress.class), rwTx);
+                IidFactory.l3EndpointIid(routerL3ContextId, oldEpIp).augmentation(NatAddress.class), rwTx);
+        }
+
+        if (epNatIp != null && newEpIp != null) {
+            NatAddress nat = new NatAddressBuilder().setNatAddress(epNatIp).build();
+            AddressEndpointKey aek =
+                new AddressEndpointKey(newEpIp.getIpv4Address().getValue() + "/32", IpPrefixType.class,
+                    routerL3ContextId, L3Context.class);
+            LOG.info("Adding NAT augmentation {} for base-endpoint {}", epNatIp, aek);
+            rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.addressEndpointIid(aek)
+                    .augmentation(
+                        org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.NatAddress.class),
+                new org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.NatAddressBuilder()
+                    .setNatAddress(epNatIp)
+                    .build(), true);
+            rwTx.put(LogicalDatastoreType.OPERATIONAL, IidFactory.l3EndpointIid(routerL3ContextId, newEpIp)
+                .augmentation(NatAddress.class), nat, true);
         }
     }
 

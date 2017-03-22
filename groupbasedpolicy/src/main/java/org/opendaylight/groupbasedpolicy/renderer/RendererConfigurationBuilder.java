@@ -340,11 +340,11 @@ public class RendererConfigurationBuilder {
             if (addrEpWithLocAug != null) {
                 addrEpWithLoc.addAugmentation(addrEpWithLocAug.getKey(), addrEpWithLocAug.getValue());
             }
-            if (ep.getAugmentation(NatAddress.class) != null) {
-                NatAddress natAddr = ep.getAugmentation(NatAddress.class);
-                    addrEpWithLoc.addAugmentation(NatAddressRenderer.class,
-                            new NatAddressRendererBuilder().setNatAddress(natAddr.getNatAddress()).build());
-            }
+        }
+        if (ep.getAugmentation(NatAddress.class) != null) {
+            NatAddress natAddr = ep.getAugmentation(NatAddress.class);
+            addrEpWithLoc.addAugmentation(NatAddressRenderer.class,
+                new NatAddressRendererBuilder().setNatAddress(natAddr.getNatAddress()).build());
         }
         return addrEpWithLoc.build();
     }

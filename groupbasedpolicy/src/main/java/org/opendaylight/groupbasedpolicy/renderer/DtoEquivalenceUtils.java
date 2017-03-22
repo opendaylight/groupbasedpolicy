@@ -16,6 +16,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.CommonEndpointFields;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.NatAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoint.locations.AddressEndpointLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoint.locations.ContainmentEndpointLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpoint;
@@ -61,6 +62,9 @@ class DtoEquivalenceUtils {
             if (!equalsCommonEndpointFields(a, b)) {
                 return false;
             }
+            if (!equalsAugmentations(a, b)) {
+                return false;
+            }
             return true;
         }
 
@@ -69,7 +73,6 @@ class DtoEquivalenceUtils {
             return t.hashCode();
         }
     };
-
     @VisibleForTesting
     static final Equivalence<ContainmentEndpoint> CONT_EP_EQ = new Equivalence<ContainmentEndpoint>() {
 
@@ -92,7 +95,6 @@ class DtoEquivalenceUtils {
             return t.hashCode();
         }
     };
-
     @VisibleForTesting
     static final Equivalence<AddressEndpointLocation> ADDR_EP_LOC_EQ =
             new Equivalence<AddressEndpointLocation>() {
@@ -116,7 +118,6 @@ class DtoEquivalenceUtils {
                     return t.hashCode();
                 }
             };
-
     @VisibleForTesting
     static final Equivalence<ContainmentEndpointLocation> CONT_EP_LOC_EQ =
             new Equivalence<ContainmentEndpointLocation>() {
@@ -137,7 +138,6 @@ class DtoEquivalenceUtils {
                     return t.hashCode();
                 }
             };
-
     @VisibleForTesting
     static final Equivalence<ForwardingByTenant> FWD_BY_TENANT_EQ = new Equivalence<ForwardingByTenant>() {
 
@@ -162,6 +162,19 @@ class DtoEquivalenceUtils {
     };
 
     private DtoEquivalenceUtils() {}
+
+    private static boolean equalsAugmentations(AddressEndpoint a, AddressEndpoint b) {
+        if (a.getAugmentation(NatAddress.class) != null && b.getAugmentation(NatAddress.class) != null) {
+            if (!a.getAugmentation(NatAddress.class)
+                .getNatAddress()
+                .equals(b.getAugmentation(NatAddress.class).getNatAddress())) {
+                return false;
+            }
+        } else if (a.getAugmentation(NatAddress.class) != null || b.getAugmentation(NatAddress.class) != null) {
+            return false;
+        }
+        return true;
+    }
 
     static boolean equalsAddressEpByKey(@Nullable Map<AddressEndpointKey, AddressEndpoint> o1,
             @Nullable Map<AddressEndpointKey, AddressEndpoint> o2) {

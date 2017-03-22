@@ -130,8 +130,8 @@ public class L4Classifier extends Classifier {
         return ruleBuilder;
     }
 
-    private SourcePortRangeBuilder resolveSourcePortRange(Map<String, ParameterValue> params, String portParam, String portRangeParam) {
-        LOG.info("Updating dest port params:{}", params);
+    private SourcePortRangeBuilder resolveSourcePortRange(Map<String, ParameterValue> params, String portParam,
+        String portRangeParam) {
         SourcePortRangeBuilder srcRange = new SourcePortRangeBuilder();
         if (params.get(portParam) != null) {
             PortNumber portNumber = new PortNumber(params.get(portParam).getIntValue().intValue());
@@ -144,8 +144,8 @@ public class L4Classifier extends Classifier {
         return srcRange;
     }
 
-    private DestinationPortRangeBuilder resolveDestinationPortRange(Map<String, ParameterValue> params, String portParam, String portRangeParam) {
-        LOG.info("Updating source port params:{}", params);
+    private DestinationPortRangeBuilder resolveDestinationPortRange(Map<String, ParameterValue> params,
+        String portParam, String portRangeParam) {
         DestinationPortRangeBuilder dstRange = new DestinationPortRangeBuilder();
         if (params.get(portParam) != null) {
             PortNumber portNumber = new PortNumber(params.get(portParam).getIntValue().intValue());

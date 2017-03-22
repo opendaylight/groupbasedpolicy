@@ -24,8 +24,9 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.DtoFactory;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AccessListWrapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AccessListWrapper;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.routing.RoutingManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
 import org.opendaylight.groupbasedpolicy.test.CustomDataBrokerTest;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocation;
@@ -64,12 +65,15 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
     private BridgeDomainManager bdManager;
     @Mock
     private NatManager natManager;
+    @Mock
+    private RoutingManager routingManager;
 
     private ForwardingManager fwdManager;
 
     @Before
     public void init() {
-        fwdManager = new ForwardingManager(ifaceManager, aclManager,natManager, bdManager, getDataBroker());
+        fwdManager =
+            new ForwardingManager(ifaceManager, aclManager, natManager, routingManager, bdManager, getDataBroker());
     }
 
     @Override
@@ -111,7 +115,8 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
         Mockito.when(bdManager.createVlanBridgeDomainOnVppNode(Mockito.eq(BD_1), Mockito.any(VlanId.class),
                 Mockito.eq(NODE_1)))
             .thenReturn(Futures.immediateFuture(null));
-        GbpBridgeDomain bd = new GbpBridgeDomainBuilder().setId(BD_1).setType(VlanNetwork.class).setVlan(VLAN_1).build();
+        GbpBridgeDomain bd =
+            new GbpBridgeDomainBuilder().setId(BD_1).setType(VlanNetwork.class).setVlan(VLAN_1).build();
         InstanceIdentifier<GbpBridgeDomain> bdIid =
                 InstanceIdentifier.builder(Config.class).child(GbpBridgeDomain.class, bd.getKey()).build();
         WriteTransaction wTx = getDataBroker().newWriteOnlyTransaction();
@@ -164,12 +169,14 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
         String clientIp = "1.1.1.1";
         String clientIfaceName = "client1";
         String bdNameOnVpp = "bdRed";
-        AbsoluteLocation clientLocation = DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, bdNameOnVpp, clientIfaceName);
+        AbsoluteLocation clientLocation =
+            DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, bdNameOnVpp, clientIfaceName);
         AddressEndpointWithLocation clientEp =
                 DtoFactory.createEndpoint(clientIp, DtoFactory.L2FD_CTX.getValue(), clientLocation);
         String webIp = "2.2.2.2";
         String webIfaceName = "web1";
-        AbsoluteLocation webLocation = DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, bdNameOnVpp, webIfaceName);
+        AbsoluteLocation webLocation =
+            DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, bdNameOnVpp, webIfaceName);
         AddressEndpointWithLocation webEp =
                 DtoFactory.createEndpoint(webIp, DtoFactory.L2FD_CTX.getValue(), webLocation);
         Configuration configuration = DtoFactory.createConfiguration(Arrays.asList(clientEp), Arrays.asList(webEp));

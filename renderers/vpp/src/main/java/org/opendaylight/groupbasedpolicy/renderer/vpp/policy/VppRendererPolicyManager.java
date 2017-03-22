@@ -55,6 +55,7 @@ import com.google.common.eventbus.Subscribe;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 
+
 public class VppRendererPolicyManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(VppRendererPolicyManager.class);
@@ -116,6 +117,7 @@ public class VppRendererPolicyManager {
     }
 
     private void rendererPolicyUpdated(RendererPolicy rPolicyBefore, RendererPolicy rPolicyAfter) {
+        LOG.trace("VPP renderer policy updated");
         PolicyContext policyCtxBefore = new PolicyContext(rPolicyBefore);
         PolicyContext policyCtxAfter = new PolicyContext(rPolicyAfter);
         MapDifference<String, Collection<NodeId>> vppNodesByL2FlDiff =
@@ -168,6 +170,9 @@ public class VppRendererPolicyManager {
         fwManager.createBridgeDomainOnNodes(createdVppNodesByL2Fd);
 
         fwManager.syncNatEntries(policyCtxAfter);
+
+        fwManager.deleteRouting(policyCtxBefore);
+        fwManager.syncRouting(policyCtxAfter);
 
         SetView<RendererEndpointKey> createdRendEps = Sets.difference(rendEpsAfter, rendEpsBefore);
         LOG.debug("Created renderer endpoints {}", createdRendEps);
@@ -257,16 +262,19 @@ public class VppRendererPolicyManager {
     }
 
     private void rendererPolicyCreated(RendererPolicy rPolicy) {
+        LOG.trace("VPP renderer policy version {} created", rPolicy.getVersion());
         PolicyContext policyCtx = new PolicyContext(rPolicy);
         ImmutableSet<RendererEndpointKey> rEpKeys = policyCtx.getPolicyTable().rowKeySet();
 
         SetMultimap<String, NodeId> vppNodesByL2Fd = resolveVppNodesByL2Fd(rEpKeys, policyCtx);
         fwManager.createBridgeDomainOnNodes(vppNodesByL2Fd);
         fwManager.syncNatEntries(policyCtx);
+        fwManager.syncRouting(policyCtx);
         rEpKeys.forEach(rEpKey -> fwManager.createForwardingForEndpoint(rEpKey, policyCtx));
     }
 
     private void rendererPolicyDeleted(RendererPolicy rendererPolicy) {
+        LOG.trace("VPP renderer policy version {} deleted", rendererPolicy.getVersion());
         PolicyContext policyCtx = new PolicyContext(rendererPolicy);
         ImmutableSet<RendererEndpointKey> rEpKeys = policyCtx.getPolicyTable().rowKeySet();
 
@@ -274,6 +282,7 @@ public class VppRendererPolicyManager {
 
         SetMultimap<String, NodeId> vppNodesByL2Fd = resolveVppNodesByL2Fd(rEpKeys, policyCtx);
         fwManager.deleteNatEntries(policyCtx);
+        fwManager.deleteRouting(policyCtx);
         fwManager.removeBridgeDomainOnNodes(vppNodesByL2Fd);
     }
 

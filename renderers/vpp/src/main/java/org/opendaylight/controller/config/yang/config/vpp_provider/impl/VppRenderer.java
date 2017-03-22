@@ -18,8 +18,8 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareProvider;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.adapter.VppRpcServiceImpl;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.RendererPolicyListener;
@@ -30,6 +30,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.BridgeDomainManagerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.ForwardingManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.VppRendererPolicyManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.routing.RoutingManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.sf.AllowAction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.sf.Classifier;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.sf.EtherTypeClassifier;
@@ -137,8 +138,10 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         aclManager = new AclManager(mountDataProvider);
         NatManager natManager = new NatManager(dataBroker, mountDataProvider);
         dtoEventBus.register(interfaceManager);
+        RoutingManager routingManager = new RoutingManager(dataBroker, mountDataProvider);
         BridgeDomainManager bdManager = new BridgeDomainManagerImpl(dataBroker);
-        ForwardingManager fwManager = new ForwardingManager(interfaceManager, aclManager, natManager, bdManager, dataBroker);
+        ForwardingManager fwManager =
+            new ForwardingManager(interfaceManager, aclManager, natManager, routingManager, bdManager, dataBroker);
         vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, aclManager, dataBroker);
         dtoEventBus.register(vppRendererPolicyManager);
 

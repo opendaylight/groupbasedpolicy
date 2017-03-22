@@ -55,7 +55,14 @@ public class AclManager {
     public void updateAclsForRendEp(RendererEndpointKey rEpKey, PolicyContext policyCtx) {
         LOG.info("Updating policy for endpoint {}", rEpKey);
         AddressEndpointWithLocation peerAddrEp = policyCtx.getAddrEpByKey().get(KeyFactory.addressEndpointKey(rEpKey));
-        ExternalLocationCase epLoc = InterfaceManager.resolveAndValidateLocation(peerAddrEp);
+        ExternalLocationCase epLoc;
+        try {
+            epLoc = InterfaceManager.resolveAndValidateLocation(peerAddrEp);
+        } catch (NullPointerException | IllegalArgumentException e) {
+            //TODO investigate, don't just move on.
+            LOG.warn("Peer {} has no location. Moving on...", peerAddrEp, e.getMessage());
+            return;
+        }
         InstanceIdentifier<?> vppNodeIid = epLoc.getExternalNodeMountPoint();
         Optional<InstanceIdentifier<Interface>> optInterfaceIid =
                 VppPathMapper.interfaceToInstanceIdentifier(epLoc.getExternalNodeConnector());

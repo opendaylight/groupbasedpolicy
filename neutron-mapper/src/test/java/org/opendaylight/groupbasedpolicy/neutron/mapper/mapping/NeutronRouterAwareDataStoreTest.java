@@ -21,7 +21,6 @@ import java.util.concurrent.Future;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -44,6 +43,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L3Context;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.routers.Router;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.routers.attributes.routers.RouterBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.networks.attributes.NetworksBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.networks.attributes.networks.Network;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.networks.attributes.networks.NetworkBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.port.attributes.FixedIps;
@@ -145,6 +145,7 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
     public void testOnUpdated() {
         Subnets subnets = createSubnets();
         when(neutron.getSubnets()).thenReturn(subnets);
+        when(neutron.getNetworks()).thenReturn(new NetworksBuilder().setNetwork(ImmutableList.of(network)).build());
 
         FixedIps fixedIps = new FixedIpsBuilder().setIpAddress(ipAddress).setSubnetId(subnetUuid).build();
         Port port = new PortBuilder().setUuid(gatewayPortUuid).setFixedIps(ImmutableList.of(fixedIps)).build();
@@ -279,6 +280,7 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
     public void testOnUpdated_noL2BridgeDomain() {
         Subnets subnets = createSubnets();
         when(neutron.getSubnets()).thenReturn(subnets);
+        when(neutron.getNetworks()).thenReturn(new NetworksBuilder().setNetwork(ImmutableList.of(network)).build());
 
         FixedIps fixedIps = new FixedIpsBuilder().setIpAddress(ipAddress).setSubnetId(subnetUuid).build();
         Port port = new PortBuilder().setUuid(gatewayPortUuid).setFixedIps(ImmutableList.of(fixedIps)).build();

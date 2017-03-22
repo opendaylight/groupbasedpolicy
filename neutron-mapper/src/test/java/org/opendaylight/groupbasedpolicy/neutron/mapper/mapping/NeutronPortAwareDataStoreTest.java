@@ -189,23 +189,22 @@ public class NeutronPortAwareDataStoreTest extends NeutronMapperDataBrokerTest {
             .setFixedIps(ImmutableList.of(portIpWithSubnet))
             .build();
         portAware.onCreated(port, neutron);
-        NeutronMapperAssert.assertNetworkDomainExists(dataBroker, port, subnet, neutron);
+        NeutronMapperAssert.assertNetworkDomainExists(dataBroker, port, subnet, neutron, ipAddress);
 
         portAware.onDeleted(port, neutron, neutron);
-        NeutronMapperAssert.assertNetworkDomainExists(dataBroker, port, subnet, neutron);
+        NeutronMapperAssert.assertNetworkDomainExists(dataBroker, port, subnet, neutron, ipAddress);
         NeutronMapperAssert.assertPortNotExists(dataBroker, port.getUuid());
     }
 
     @Test
     public void test_createRouterInterfacePort_noFixedIps() {
-        IpAddress ipAddress = new IpAddress(new Ipv4Address("10.0.0.2"));
         Subnets subnets = createSubnets();
         when(neutron.getSubnets()).thenReturn(subnets);
 
         Subnet subnet = subnets.getSubnet().get(0);
         Port port = newBasePort().setDeviceOwner(PortUtils.DEVICE_OWNER_ROUTER_IFACE).build();
         portAware.onCreated(port, neutron);
-        NeutronMapperAssert.assertNetworkDomainNotExists(dataBroker, port, subnet, neutron);
+        NeutronMapperAssert.assertNetworkDomainNotExists(dataBroker, port, subnet, neutron, null);
     }
 
     @Test

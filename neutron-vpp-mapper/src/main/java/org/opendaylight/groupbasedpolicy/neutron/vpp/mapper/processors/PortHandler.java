@@ -365,10 +365,17 @@ public class PortHandler implements TransactionChainListener {
         if (Strings.isNullOrEmpty(port.getDeviceId())) {
             return Optional.absent();
         }
+        RouterKey routerKey = null;
+        try {
+            routerKey = new RouterKey(new Uuid(port.getDeviceId()));
+        } catch (IllegalArgumentException e) {
+            // port.getDeviceId() may not match Uuid.PATTERN_CONSTANTS
+            return Optional.absent();
+        }
         ReadOnlyTransaction rTx = transactionChain.newReadOnlyTransaction();
         InstanceIdentifier<Router> routerIid = InstanceIdentifier.builder(Neutron.class)
             .child(Routers.class)
-            .child(Router.class, new RouterKey(new Uuid(port.getDeviceId())))
+            .child(Router.class, routerKey)
             .build();
         Optional<Router> optRouter = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, routerIid, rTx);
         rTx.close();

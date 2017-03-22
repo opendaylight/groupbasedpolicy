@@ -24,10 +24,14 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.RoutingCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AccessListUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatUtil;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AccessListUtil;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.routing.RoutingManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
@@ -38,13 +42,18 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.containment.NetworkDomainContainment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.ParentEndpointChoice;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.ParentEndpointCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.parent.endpoint._case.ParentEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.IpPrefixType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L2FloodDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.MacAddressType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.SubnetAugmentRenderer;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.fields.Parent;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.NetworkDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.fields.Parent;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.NatAddressRenderer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Configuration;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.Endpoints;
@@ -89,13 +98,16 @@ public final class ForwardingManager {
     private final AclManager aclManager;
     private final BridgeDomainManager bdManager;
     private final NatManager natManager;
+    private final RoutingManager routingManager;
     private final DataBroker dataBroker;
 
     public ForwardingManager(@Nonnull InterfaceManager ifaceManager, @Nonnull AclManager aclManager,
-        @Nonnull NatManager natManager, @Nonnull BridgeDomainManager bdManager, @Nonnull DataBroker dataBroker) {
+        @Nonnull NatManager natManager, @Nonnull RoutingManager routingManager, @Nonnull BridgeDomainManager bdManager,
+        @Nonnull DataBroker dataBroker) {
         this.ifaceManager = Preconditions.checkNotNull(ifaceManager);
         this.bdManager = Preconditions.checkNotNull(bdManager);
         this.natManager = Preconditions.checkNotNull(natManager);
+        this.routingManager = Preconditions.checkNotNull(routingManager);
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.aclManager = Preconditions.checkNotNull(aclManager);
     }
@@ -364,7 +376,8 @@ public final class ForwardingManager {
         for (RendererNetworkDomain rendDomain : rendNetDomains) {
             Optional<IpPrefix> resolvedIpPrefix = resolveIpPrefix(rendDomain);
             if (resolvedIpPrefix.isPresent()) {
-                Optional<InstanceIdentifier<PhysicalInterface>> resPhIface = natManager.resolvePhysicalInterface(resolvedIpPrefix.get());
+                Optional<InstanceIdentifier<PhysicalInterface>> resPhIface =
+                    NatUtil.resolvePhysicalInterface(resolvedIpPrefix.get(), dataBroker.newReadOnlyTransaction());
                 if (resPhIface.isPresent()) {
                     physIfaces.add(resPhIface.get());
                 }
@@ -387,13 +400,19 @@ public final class ForwardingManager {
             if (addrEp.getAugmentation(NatAddressRenderer.class) == null) {
                 continue;
             }
+            String enpointIP = resolveEpIpAddressForSnat(addrEp);
+
+            if (enpointIP == null) {
+                LOG.warn("Endpoints {} IP cannot be null, skipping processing of SNAT", addrEp);
+            }
+
             NatAddressRenderer natAddr = addrEp.getAugmentation(NatAddressRenderer.class);
             if (natAddr.getNatAddress() == null && natAddr.getNatAddress().getIpv4Address() == null) {
-                LOG.warn("Only Ipv4 SNAT is currently supported. Cannot apply SNAT for [{},{}]", addrEp.getAddress(),
+                LOG.warn("Only Ipv4 SNAT is currently supported. Cannot apply SNAT for [{},{}]", enpointIP,
                         natAddr.getNatAddress());
                 continue;
             }
-            Optional<MappingEntryBuilder> entry = natManager.resolveSnatEntry(addrEp.getAddress(), natAddr.getNatAddress()
+            Optional<MappingEntryBuilder> entry = natManager.resolveSnatEntry(enpointIP, natAddr.getNatAddress()
                 .getIpv4Address());
             if (entry.isPresent()) {
                 sNatEntries.add(entry.get());
@@ -402,8 +421,76 @@ public final class ForwardingManager {
         return sNatEntries;
     }
 
+    private String resolveEpIpAddressForSnat(AddressEndpointWithLocation addrEp) {
+        if (addrEp.getAddressType().equals(MacAddressType.class)) {
+            ParentEndpointChoice parentEndpointChoice = addrEp.getParentEndpointChoice();
+            if (parentEndpointChoice instanceof ParentEndpointCase
+                && !((ParentEndpointCase) parentEndpointChoice).getParentEndpoint().isEmpty()) {
+                ParentEndpoint parentEndpoint = ((ParentEndpointCase) parentEndpointChoice).getParentEndpoint().get(0);
+                if (parentEndpoint.getAddressType().equals(IpPrefixType.class)) {
+                    String[] ipWithPrefix = parentEndpoint.getAddress().split("/");
+                    return ipWithPrefix[0];
+                } else {
+                    LOG.warn("Endpoint {} Does not have a Parent Ep with IP for SNAT. skipping processing of SNAT",
+                        addrEp);
+                    return null;
+                }
+
+            } else {
+                LOG.warn("Endpoint {} Does not contain IP address for SNAT. skipping processing of SNAT", addrEp);
+                return null;
+            }
+        } else if (addrEp.getAddressType().equals(IpPrefixType.class)) {
+            return addrEp.getAddress();
+        }
+        return null;
+    }
+
     @VisibleForTesting
     void setTimer(byte time) {
         WAIT_FOR_BD_PROCESSING = time;
+    }
+
+    public void syncRouting(PolicyContext policyCtx) {
+        Configuration cfg = policyCtx.getPolicy().getConfiguration();
+        if (cfg != null && cfg.getRendererForwarding() != null) {
+            for (RendererForwardingByTenant fwd : cfg.getRendererForwarding().getRendererForwardingByTenant()) {
+                if (fwd == null) {
+                    continue;
+                }
+
+                List<InstanceIdentifier<PhysicalInterface>>
+                    physIfacesIid = resolvePhysicalInterfacesForNat(fwd.getRendererNetworkDomain());
+                Map<InstanceIdentifier<?>, RoutingCommand> routingCommandMap =
+                    routingManager.createRouting(fwd, physIfacesIid, General.Operations.PUT);
+
+                routingCommandMap.forEach((node, command) -> {
+                    if (command != null && routingManager.submitRouting(command, node)) {
+                        LOG.debug("Routing was successfully applied: {}.", command);
+                    }
+                });
+            }
+        }
+    }
+
+    public void deleteRouting(PolicyContext policyCtx) {
+        Configuration cfg = policyCtx.getPolicy().getConfiguration();
+        if (cfg != null && cfg.getRendererForwarding() != null) {
+            for (RendererForwardingByTenant fwd : cfg.getRendererForwarding().getRendererForwardingByTenant()) {
+                if (fwd == null) {
+                    continue;
+                }
+
+                List<InstanceIdentifier<PhysicalInterface>>
+                    physIfacesIid = resolvePhysicalInterfacesForNat(fwd.getRendererNetworkDomain());
+                Map<InstanceIdentifier<?>, RoutingCommand> routingCommandMap =
+                    routingManager.createRouting(fwd, physIfacesIid, General.Operations.DELETE);
+                routingCommandMap.forEach((node, command) -> {
+                    if (command != null && routingManager.submitRouting(command, node)) {
+                        LOG.debug("Routing was successfully removed: {}.", command);
+                    }
+                });
+            }
+        }
     }
 }

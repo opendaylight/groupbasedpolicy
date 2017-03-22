@@ -11,6 +11,8 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp;
 import com.google.common.collect.ImmutableList;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.Interfaces;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ipv4.unicast.routing.rev140524.StaticRoutes1;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.routing.rev140524.Routing;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.LocationProviders;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
@@ -30,7 +32,7 @@ public class VppRendererDataBrokerTest extends CustomDataBrokerTest {
     @Override
     public Collection<Class<?>> getClassesFromModules() {
         return ImmutableList.of(Interfaces.class, Interface.class, VhostUser.class, NetworkTopology.class,
-                Topology.class, Node.class, NetconfNode.class, Renderer.class, LocationProviders.class, Config.class,
-            NatInterfaceAugmentation.class);
+            Topology.class, Node.class, NetconfNode.class, Renderer.class, LocationProviders.class, Config.class,
+            NatInterfaceAugmentation.class, Routing.class, StaticRoutes1.class);
     }
 }

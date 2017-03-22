@@ -25,11 +25,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.UniqueId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.NetworkDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.mappings.gbp.by.neutron.mappings.endpoints.by.ports.EndpointByPort;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.port.attributes.FixedIps;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.SubnetBuilder;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 public class NeutronMapperAssert {
@@ -56,35 +54,36 @@ public class NeutronMapperAssert {
         return portOptional;
     }
 
-    public static void assertNetworkDomainExists(DataBroker dataBroker, Port port, Subnet subnet, Neutron neutron) {
+    public static void assertNetworkDomainExists(DataBroker dataBroker, Port port, Subnet subnet, Neutron neutron,
+        IpAddress ipAddress) {
         Optional<NetworkDomain> opt =
-                getNetworkDomainOptional(dataBroker, port.getTenantId(), neutron, subnet);
+                getNetworkDomainOptional(dataBroker, port.getTenantId(), neutron, ipAddress, subnet);
         assertTrue(opt.isPresent());
     }
 
     public static void assertNetworkDomainNotExists(DataBroker dataBroker, Port port, Subnet subnet,
-            Neutron neutron) {
+            Neutron neutron, IpAddress ipAddress) {
         Optional<NetworkDomain> opt =
-                getNetworkDomainOptional(dataBroker, port.getTenantId(), neutron, subnet);
+                getNetworkDomainOptional(dataBroker, port.getTenantId(), neutron, ipAddress, subnet);
         assertFalse(opt.isPresent());
     }
 
     public static void assertNetworkDomainExists(DataBroker dataBroker, Uuid tenantUuid, Subnet subnet,
-            Neutron neutron) {
-        Optional<NetworkDomain> opt = getNetworkDomainOptional(dataBroker, tenantUuid, neutron, subnet);
+            Neutron neutron, IpAddress ipAddress) {
+        Optional<NetworkDomain> opt = getNetworkDomainOptional(dataBroker, tenantUuid, neutron, ipAddress, subnet);
         assertTrue(opt.isPresent());
     }
 
     public static void assertNetworkDomainNotExists(DataBroker dataBroker, Uuid tenantUuid, Subnet subnet,
-            Neutron neutron) {
-        Optional<NetworkDomain> opt = getNetworkDomainOptional(dataBroker, tenantUuid, neutron, subnet);
+            Neutron neutron, IpAddress ipAddress) {
+        Optional<NetworkDomain> opt = getNetworkDomainOptional(dataBroker, tenantUuid, neutron, ipAddress, subnet);
         assertFalse(opt.isPresent());
     }
 
     private static Optional<NetworkDomain> getNetworkDomainOptional(DataBroker dataBroker, Uuid tenantUuid,
-            Neutron neutron, Subnet subnet) {
+            Neutron neutron, IpAddress ipAddress, Subnet subnet) {
         InstanceIdentifier<NetworkDomain> iid;
-        NetworkDomain subnetDomain = NeutronSubnetAware.createSubnet(subnet, neutron);
+        NetworkDomain subnetDomain = NeutronSubnetAware.createSubnet(subnet, neutron, ipAddress);
         TenantId tenantId = new TenantId(tenantUuid.getValue());
         iid = L2L3IidFactory.subnetIid(tenantId, subnetDomain.getNetworkDomainId());
         Optional<NetworkDomain> optional;
