@@ -10,7 +10,14 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+
+import javax.annotation.Nonnull;
 
 import org.opendaylight.controller.config.yang.config.neutron_mapper.impl.NeutronMapperModule;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -20,6 +27,7 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
 import org.opendaylight.groupbasedpolicy.dto.EpgKeyDto;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronAware;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronSecurityGroupAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.SecurityGroupUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.SecurityRuleUtils;
@@ -48,14 +56,17 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.security.groups.SecurityGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.security.groups.SecurityGroupKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.SecurityRules;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRule;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.rules.attributes.security.rules.SecurityRuleKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multiset;
@@ -70,6 +81,8 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
     private final DataBroker dataProvider;
     private final Multiset<InstanceIdentifier<ClassifierInstance>> createdClassifierInstances;
     private final Multiset<InstanceIdentifier<ActionInstance>> createdActionInstances;
+    private final Map<SecurityRuleKey, SecurityRule> pendingCreatedRules;
+    private final Map<SecurityGroupKey, SecurityGroup> pendingDeletedGroups;
     final static String PROVIDED_BY = "provided_by-";
     final static String POSSIBLE_CONSUMER = "possible_consumer-";
 
@@ -85,11 +98,25 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
         this.dataProvider = checkNotNull(dataProvider);
         this.createdClassifierInstances = checkNotNull(classifierInstanceNames);
         this.createdActionInstances = checkNotNull(createdActionInstances);
+        this.pendingCreatedRules = new HashMap<>();
+        this.pendingDeletedGroups = new HashMap<>();
     }
 
     @Override
     public void onCreated(SecurityRule secRule, Neutron neutron) {
         LOG.trace("created securityRule - {}", secRule);
+        if (neutron.getSecurityGroups() == null || neutron.getSecurityGroups().getSecurityGroup() == null
+                || !neutron.getSecurityGroups()
+                    .getSecurityGroup()
+                    .stream()
+                    .filter(sg -> sg.getKey().getUuid().equals(secRule.getSecurityGroupId()))
+                    .findFirst()
+                    .isPresent()) {
+            pendingCreatedRules.put(secRule.getKey(), secRule);
+            LOG.warn("Security group of security rule {} does not exist yet. The rule will be processed"
+                    + "when the missing security group is created.", secRule.getKey());
+            return;
+        }
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
         boolean isNeutronSecurityRuleAdded = addNeutronSecurityRule(secRule, neutron, rwTx);
         if (isNeutronSecurityRuleAdded) {
@@ -97,6 +124,24 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
         } else {
             rwTx.cancel();
         }
+    }
+
+    public void flushPendingSecurityRulesFor(@Nonnull SecurityGroupKey secGroupKey, Neutron neutron) {
+        List<SecurityRule> rules = pendingCreatedRules.values()
+            .stream()
+            .filter(sr -> sr.getSecurityGroupId().equals(secGroupKey.getUuid()))
+            .collect(Collectors.toList());
+        rules.forEach(sr -> {
+            LOG.trace("Flushing pending security rule {}", sr);
+            ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
+            boolean isNeutronSecurityRuleAdded = addNeutronSecurityRule(sr, neutron, rwTx);
+            if (isNeutronSecurityRuleAdded) {
+                DataStoreHelper.submitToDs(rwTx);
+            } else {
+                rwTx.cancel();
+            }
+            pendingCreatedRules.remove(sr.getKey());
+        });
     }
 
     public boolean addNeutronSecurityRule(SecurityRule secRule, Neutron neutron, ReadWriteTransaction rwTx) {
@@ -265,6 +310,11 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
                 newSecRule);
     }
 
+    public void addPendingDeletedSecGroup(SecurityGroup secGroup) {
+        LOG.trace("Caching pending deleted security group {}", secGroup.getKey());
+        pendingDeletedGroups.put(secGroup.getKey(), secGroup);
+    }
+
     @Override
     public void onDeleted(SecurityRule deletedSecRule, Neutron oldNeutron, Neutron newNeutron) {
         LOG.trace("deleted securityRule - {}", deletedSecRule);
@@ -272,6 +322,24 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
         boolean isNeutronSecurityRuleDeleted = deleteNeutronSecurityRule(deletedSecRule, oldNeutron, rwTx);
         if (isNeutronSecurityRuleDeleted) {
             DataStoreHelper.submitToDs(rwTx);
+            if (newNeutron == null || newNeutron.getSecurityRules() == null
+                || newNeutron.getSecurityRules().getSecurityRule() == null
+                || !newNeutron.getSecurityRules()
+                        .getSecurityRule()
+                        .stream()
+                        .filter(rule -> rule.getSecurityGroupId().equals(deletedSecRule.getSecurityGroupId()))
+                        .findAny()
+                        .isPresent()) {
+                SecurityGroupKey secGroupKey = new SecurityGroupKey(deletedSecRule.getSecurityGroupId());
+                SecurityGroup pendingSg = pendingDeletedGroups.get(secGroupKey);
+                if (pendingSg != null) {
+                    LOG.trace("Processing pending deleted security group {}", secGroupKey);
+                    NeutronSecurityGroupAware.deleteGbpEndpointGroup(dataProvider,
+                            new TenantId(deletedSecRule.getTenantId().getValue()),
+                            new EndpointGroupId(secGroupKey.getUuid().getValue()));
+                    pendingDeletedGroups.remove(secGroupKey);
+                }
+            }
         } else {
             rwTx.cancel();
         }

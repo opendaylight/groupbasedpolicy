@@ -11,6 +11,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -44,6 +45,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.provider.ext.rev150712.NetworkProviderExtension;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnet.attributes.AllocationPools;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.Subnets;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
@@ -164,12 +166,24 @@ public class NeutronSubnetAware implements
             sb.setIsTenant(NetworkUtils.isTenantNetwork(potentialNetwork.get()));
         }
         if (subnet.getAllocationPools() != null) {
-            List<AllocationPool> pools = subnet.getAllocationPools()
-                .stream()
-                .map(s -> new AllocationPoolBuilder().setFirst(s.getStart().getIpv4Address().getValue())
-                    .setLast(s.getEnd().getIpv4Address().getValue())
-                    .build())
-                .collect(Collectors.toList());
+            List<AllocationPool> pools =
+                    subnet.getAllocationPools().stream().map(new Function<AllocationPools, AllocationPool>() {
+
+                        @Override
+                        public AllocationPool apply(AllocationPools ap) {
+                            IpAddress start = ap.getStart();
+                            IpAddress end = ap.getEnd();
+                            AllocationPoolBuilder ab = new AllocationPoolBuilder();
+                            if (start.getIpv4Address() != null || end.getIpv4Address() != null) {
+                                ab.setFirst(start.getIpv4Address().getValue());
+                                ab.setLast(end.getIpv4Address().getValue());
+                            } else {
+                                ab.setFirst(start.getIpv6Address().getValue());
+                                ab.setLast(end.getIpv6Address().getValue());
+                            }
+                            return ab.build();
+                        }
+                    }).collect(Collectors.toList());
             sb.setAllocationPool(pools);
         }
         NetworkDomainBuilder ndb = new NetworkDomainBuilder();

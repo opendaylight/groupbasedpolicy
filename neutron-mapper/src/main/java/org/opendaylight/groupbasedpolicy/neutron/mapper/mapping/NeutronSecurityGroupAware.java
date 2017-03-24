@@ -12,6 +12,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.NeutronSecurityRuleAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
@@ -39,9 +40,11 @@ public class NeutronSecurityGroupAware implements NeutronAware<SecurityGroup> {
     public static final InstanceIdentifier<SecurityGroup> SECURITY_GROUP_WILDCARD_IID =
             InstanceIdentifier.builder(Neutron.class).child(SecurityGroups.class).child(SecurityGroup.class).build();
     private final DataBroker dataProvider;
+    private final NeutronSecurityRuleAware ruleAware;
 
-    public NeutronSecurityGroupAware(DataBroker dataProvider) {
+    public NeutronSecurityGroupAware(DataBroker dataProvider, NeutronSecurityRuleAware ruleAware) {
         this.dataProvider = checkNotNull(dataProvider);
+        this.ruleAware = checkNotNull(ruleAware);
     }
 
     @Override
@@ -54,6 +57,7 @@ public class NeutronSecurityGroupAware implements NeutronAware<SecurityGroup> {
         } else {
             rwTx.cancel();
         }
+        ruleAware.flushPendingSecurityRulesFor(createdSecGroup.getKey(), neutron);
     }
 
     public boolean addNeutronSecurityGroup(SecurityGroup secGroup, ReadWriteTransaction rwTx) {
@@ -88,9 +92,24 @@ public class NeutronSecurityGroupAware implements NeutronAware<SecurityGroup> {
     @Override
     public void onDeleted(SecurityGroup deletedSecGroup, Neutron oldNeutron, Neutron newNeutron) {
         LOG.trace("deleted securityGroup - {}", deletedSecGroup);
-        ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
-        TenantId tenantId = new TenantId(deletedSecGroup.getTenantId().getValue());
-        EndpointGroupId epgId = new EndpointGroupId(deletedSecGroup.getUuid().getValue());
+        if (newNeutron != null && newNeutron.getSecurityRules() != null
+                && newNeutron.getSecurityRules().getSecurityRule() != null
+                && newNeutron.getSecurityRules()
+                    .getSecurityRule()
+                    .stream()
+                    .filter(sr -> sr.getSecurityGroupId().equals(deletedSecGroup.getUuid()))
+                    .findAny()
+                    .isPresent()) {
+            LOG.warn("Cannot remove security group {} before removing last security rule.", deletedSecGroup.getKey());
+            ruleAware.addPendingDeletedSecGroup(deletedSecGroup);
+            return;
+        }
+        deleteGbpEndpointGroup(dataProvider, new TenantId(deletedSecGroup.getTenantId().getValue()),
+                new EndpointGroupId(deletedSecGroup.getUuid().getValue()));
+    }
+
+    public static void deleteGbpEndpointGroup(DataBroker dataBroker, TenantId tenantId, EndpointGroupId epgId) {
+        ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
         Optional<EndpointGroup> potentialEpg = DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.endpointGroupIid(tenantId, epgId), rwTx);
         if (!potentialEpg.isPresent()) {
@@ -98,8 +117,6 @@ public class NeutronSecurityGroupAware implements NeutronAware<SecurityGroup> {
             rwTx.cancel();
             return;
         }
-
         DataStoreHelper.submitToDs(rwTx);
     }
-
 }

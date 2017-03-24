@@ -108,8 +108,8 @@ public class NeutronMapper implements ClusteredDataTreeChangeListener<Neutron>, 
             BaseEndpointService baseEpService) {
         EndpointRegistrator epRegistrator = new EndpointRegistrator(epService, baseEpService);
         networkAware = new NeutronNetworkAware(dataProvider);
-        securityGroupAware = new NeutronSecurityGroupAware(dataProvider);
         securityRuleAware = new NeutronSecurityRuleAware(dataProvider);
+        securityGroupAware = new NeutronSecurityGroupAware(dataProvider, securityRuleAware);
         subnetAware = new NeutronSubnetAware(dataProvider, epRegistrator);
         portAware = new NeutronPortAware(dataProvider, epRegistrator);
         routerAware = new NeutronRouterAware(dataProvider, epRegistrator);

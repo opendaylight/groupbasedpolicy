@@ -31,6 +31,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv6Prefix;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.NetUtils;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
@@ -169,10 +170,12 @@ public class NatUtil {
         if (natEntries != null) {
             for (MappingEntryBuilder natEntry : natEntries) {
                 Ipv4Address externalSrcAddress = natEntry.getExternalSrcAddress();
-                ext.remove(Integer.toUnsignedLong(subnet.getInfo().asInteger(externalSrcAddress.getValue())));
+                long id = Integer.toUnsignedLong(subnet.getInfo().asInteger(externalSrcAddress.getValue()));
+                if (ext.get(id) != null) {
+                    ext.remove(id);
+                }
             }
         }
-
         return ext;
     }
 }

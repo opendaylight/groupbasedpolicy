@@ -15,6 +15,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronMapperDataBrokerTest;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.NeutronSecurityRuleAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronEntityFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.PolicyAssert;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
@@ -37,7 +38,7 @@ public class NeutronSecurityGroupAwareDataStoreTest extends NeutronMapperDataBro
     @Before
     public void init() {
         dataBroker = getDataBroker();
-        groupAware = new NeutronSecurityGroupAware(dataBroker);
+        groupAware = new NeutronSecurityGroupAware(dataBroker, new NeutronSecurityRuleAware(dataBroker));
 
         secGroup1 = NeutronEntityFactory.securityGroup(secGroupId1, tenantId);
         secGroup2 = NeutronEntityFactory.securityGroup(secGroupId2, tenantId);
@@ -98,7 +99,7 @@ public class NeutronSecurityGroupAwareDataStoreTest extends NeutronMapperDataBro
     @Test
     public void testConstructor_invalidArgument() throws NullPointerException {
         thrown.expect(NullPointerException.class);
-        new NeutronSecurityGroupAware(null);
+        new NeutronSecurityGroupAware(null, null);
     }
 
     @Test
