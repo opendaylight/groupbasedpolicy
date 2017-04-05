@@ -332,20 +332,16 @@ public final class ForwardingManager {
         return java.util.Optional.empty();
     }
 
-    public void syncNatEntries(PolicyContext policyCtx) {
+    void syncNatEntries(PolicyContext policyCtx) {
         Configuration cfg = policyCtx.getPolicy().getConfiguration();
         if(cfg != null) {
-            List<MappingEntryBuilder> natEntries = resolveNatTableEntries(cfg.getEndpoints());
-            if (natEntries.isEmpty()) {
-                LOG.trace("NAT entries are empty, skipping processing.");
-                return;
-            }
-            LOG.trace("Syncing NAT entries {}", natEntries);
+            final List<MappingEntryBuilder> sNatEntries = resolveStaticNatTableEntries(cfg.getEndpoints());
+            LOG.trace("Syncing static NAT entries {}", sNatEntries);
             if (cfg.getRendererForwarding() != null) {
                 for (RendererForwardingByTenant fwd : cfg.getRendererForwarding().getRendererForwardingByTenant()) {
                     List<InstanceIdentifier<PhysicalInterface>> physIfacesIid =
                         resolvePhysicalInterfacesForNat(fwd.getRendererNetworkDomain());
-                    natManager.submitNatChanges(physIfacesIid, natEntries, policyCtx, true);
+                    natManager.submitNatChanges(physIfacesIid, sNatEntries, policyCtx, true);
                 }
             }
         }
@@ -354,7 +350,7 @@ public final class ForwardingManager {
     public void deleteNatEntries(PolicyContext policyCtx) {
         Configuration cfg = policyCtx.getPolicy().getConfiguration();
         if(cfg != null) {
-            List<MappingEntryBuilder> natEntries = resolveNatTableEntries(cfg.getEndpoints());
+            List<MappingEntryBuilder> natEntries = resolveStaticNatTableEntries(cfg.getEndpoints());
             if (natEntries.isEmpty()) {
                 LOG.trace("NAT entries are empty,nothing to delete, skipping processing.");
                 return;
@@ -394,25 +390,26 @@ public final class ForwardingManager {
         return Optional.absent();
     }
 
-    public List<MappingEntryBuilder> resolveNatTableEntries(Endpoints endpoints) {
+    private List<MappingEntryBuilder> resolveStaticNatTableEntries(Endpoints endpoints) {
         List<MappingEntryBuilder> sNatEntries = new ArrayList<>();
         for (AddressEndpointWithLocation addrEp : endpoints.getAddressEndpointWithLocation()) {
             if (addrEp.getAugmentation(NatAddressRenderer.class) == null) {
                 continue;
             }
-            String enpointIP = resolveEpIpAddressForSnat(addrEp);
+            String endpointIP = resolveEpIpAddressForSnat(addrEp);
 
-            if (enpointIP == null) {
+            if (endpointIP == null) {
                 LOG.warn("Endpoints {} IP cannot be null, skipping processing of SNAT", addrEp);
+                continue;
             }
 
             NatAddressRenderer natAddr = addrEp.getAugmentation(NatAddressRenderer.class);
             if (natAddr.getNatAddress() == null && natAddr.getNatAddress().getIpv4Address() == null) {
-                LOG.warn("Only Ipv4 SNAT is currently supported. Cannot apply SNAT for [{},{}]", enpointIP,
+                LOG.warn("Only Ipv4 SNAT is currently supported. Cannot apply SNAT for [{},{}]", endpointIP,
                         natAddr.getNatAddress());
                 continue;
             }
-            Optional<MappingEntryBuilder> entry = natManager.resolveSnatEntry(enpointIP, natAddr.getNatAddress()
+            Optional<MappingEntryBuilder> entry = natManager.resolveSnatEntry(endpointIP, natAddr.getNatAddress()
                 .getIpv4Address());
             if (entry.isPresent()) {
                 sNatEntries.add(entry.get());

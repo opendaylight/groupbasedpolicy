@@ -25,7 +25,6 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProv
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv6Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
@@ -43,6 +42,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
+
+import javax.annotation.Nullable;
+
 public class NatManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(NatManager.class);
@@ -83,9 +85,15 @@ public class NatManager {
         return Optional.of(mappingEntryBuilder);
     }
 
-    public void submitNatChanges(List<InstanceIdentifier<PhysicalInterface>> physIfacesIid,
-            List<MappingEntryBuilder> natEntries, PolicyContext policyCtx, boolean add) {
-        LOG.trace("Preparing to submit NAT changes {} on physical interfaces", natEntries.toArray(), physIfacesIid);
+    public void submitNatChanges(final List<InstanceIdentifier<PhysicalInterface>> physIfacesIid,
+                                 final @Nullable List<MappingEntryBuilder> sNatEntries,
+                                 final PolicyContext policyCtx,
+                                 final boolean add) {
+        if (sNatEntries == null) {
+            LOG.trace("No static NAT entries to submit");
+        } else{
+            LOG.trace("Preparing to submit NAT changes {} on physical interfaces", sNatEntries.toArray(), physIfacesIid);
+        }
         for (InstanceIdentifier<PhysicalInterface> iidPhysIface : physIfacesIid) {
             InstanceIdentifier<?> nodeIid = iidPhysIface.firstKeyOf(RendererNode.class).getNodePath();
             Optional<DataBroker> mountPointDataBroker = mountDataProvider.getDataBrokerForMountPoint(nodeIid);
@@ -102,11 +110,11 @@ public class NatManager {
 
             if (!readIface.isPresent()) {
                 LOG.error("Interface {} not found on mount point {}", phInterfaceName, nodeIid);
-                return;
+                continue;
             }
             if (add) {
                 NatInstance natInstance =
-                    buildNatInstance(natEntries, NatUtil.resolveDynamicNat(policyCtx, natEntries));
+                    buildNatInstance(sNatEntries, NatUtil.resolveDynamicNat(policyCtx, sNatEntries));
                 GbpNetconfTransaction.netconfSyncedWrite(mountPointDataBroker.get(),
                     VppIidFactory.getNatInstanceIid(id), natInstance, GbpNetconfTransaction.RETRY_COUNT);
             } else {
@@ -116,7 +124,6 @@ public class NatManager {
                         VppIidFactory.getNatInstanceIid(id), GbpNetconfTransaction.RETRY_COUNT);
                 }
             }
-            return;
         }
     }
 

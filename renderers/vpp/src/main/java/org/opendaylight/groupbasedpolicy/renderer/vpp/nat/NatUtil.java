@@ -37,6 +37,7 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.nat.rev1509
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.nat.rev150908.nat.parameters.ExternalIpAddressPool;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.nat.rev150908.nat.parameters.ExternalIpAddressPoolBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.SubnetAugmentRenderer;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.has.subnet.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.has.subnet.subnet.AllocationPool;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererNodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNode;
@@ -122,27 +123,33 @@ public class NatUtil {
         return Optional.absent();
     }
 
-    public static List<ExternalIpAddressPool> resolveDynamicNat(@Nonnull PolicyContext policyCtx,
-        List<MappingEntryBuilder> natEntries) {
-        List<RendererForwardingByTenant> rendererForwardingByTenant =
+    static List<ExternalIpAddressPool> resolveDynamicNat(@Nonnull PolicyContext policyCtx,
+        @Nullable List<MappingEntryBuilder> sNatEntries) {
+        List<RendererForwardingByTenant> forwardingByTenantList =
                 policyCtx.getPolicy().getConfiguration().getRendererForwarding().getRendererForwardingByTenant();
-        Map<Long, Ipv4Prefix> hm = new HashMap<>();
-        for (RendererForwardingByTenant rft : rendererForwardingByTenant) {
-            for (RendererNetworkDomain rnd : rft.getRendererNetworkDomain()) {
-                SubnetAugmentRenderer subnet = rnd.getAugmentation(SubnetAugmentRenderer.class);
-                if (subnet.getSubnet() != null && !subnet.getSubnet().isIsTenant()
-                        && subnet.getSubnet().getAllocationPool() != null) {
-                    for (AllocationPool pool : subnet.getSubnet().getAllocationPool()) {
-                        if (subnet.getSubnet().getIpPrefix().getIpv4Prefix() != null) {
-                            hm.putAll(resolveIpv4Prefix(subnet.getSubnet().getIpPrefix().getIpv4Prefix(),
-                                    pool.getFirst(), pool.getLast(), natEntries));
+        Map<Long, Ipv4Prefix> extCache = new HashMap<>();
+        // loop through forwarding by tenant
+        for (RendererForwardingByTenant rft : forwardingByTenantList) {
+            // loop through renderer network domain
+            for (RendererNetworkDomain domain : rft.getRendererNetworkDomain()) {
+                final SubnetAugmentRenderer subnetAugmentation = domain.getAugmentation(SubnetAugmentRenderer.class);
+                final Subnet subnet = subnetAugmentation.getSubnet();
+                if (subnet != null && !subnet.isIsTenant() && subnet.getAllocationPool() != null) {
+                    // loop through allocation pool
+                    for (AllocationPool pool : subnet.getAllocationPool()) {
+                        final IpPrefix subnetIpPrefix = subnet.getIpPrefix();
+                        if (subnetIpPrefix.getIpv4Prefix() != null) {
+                            final String firstEntry = pool.getFirst();
+                            final String lastEntry = pool.getLast();
+                            extCache.putAll(resolveDynamicNatPrefix(subnetIpPrefix.getIpv4Prefix(), firstEntry, lastEntry,
+                                    sNatEntries));
                         }
                     }
                 }
             }
         }
-        List<ExternalIpAddressPool> extIps = new ArrayList<>();
-        for (Entry<Long, Ipv4Prefix> entry : hm.entrySet()) {
+        final List<ExternalIpAddressPool> extIps = new ArrayList<>();
+        for (Entry<Long, Ipv4Prefix> entry : extCache.entrySet()) {
             extIps.add(new ExternalIpAddressPoolBuilder().setPoolId(entry.getKey())
                 .setExternalIpPool(entry.getValue())
                 .build());
@@ -151,32 +158,36 @@ public class NatUtil {
     }
 
     @VisibleForTesting
-    private static Map<Long,Ipv4Prefix> resolveIpv4Prefix(@Nonnull Ipv4Prefix prefix, @Nonnull String first,
-            @Nullable String last, @Nullable List<MappingEntryBuilder> natEntries) {
+    private static Map<Long, Ipv4Prefix> resolveDynamicNatPrefix(@Nonnull final Ipv4Prefix prefix,
+                                                                 @Nonnull final String first,
+                                                                 @Nullable final String last,
+                                                                 @Nullable final List<MappingEntryBuilder> natEntries) {
         LOG.trace("Resolving Ipv4Prefix. prefix: {}, first: {}, last: {}", prefix.getValue(), first, last);
-        SubnetUtils subnet = new SubnetUtils(prefix.getValue());
-        Map<Long,Ipv4Prefix> ext = new HashMap<>();
+        final SubnetUtils subnet = new SubnetUtils(prefix.getValue());
+        final Map<Long, Ipv4Prefix> extCache = new HashMap<>();
         int min = subnet.getInfo().asInteger(first);
-        for (String addr : subnet.getInfo().getAllAddresses()) {
-            int asInt = subnet.getInfo().asInteger(addr);
+        // loop through all addresses
+        for (String address : subnet.getInfo().getAllAddresses()) {
+            int asInt = subnet.getInfo().asInteger(address);
             if (asInt < min) {
                 continue;
             }
-            ext.put(Integer.toUnsignedLong(asInt), new Ipv4Prefix(addr + "/32"));
-            if (last == null || subnet.getInfo().asInteger(addr) >= subnet.getInfo().asInteger(last)) {
+            extCache.put(Integer.toUnsignedLong(asInt), new Ipv4Prefix(address + "/32"));
+            if (last == null || subnet.getInfo().asInteger(address) >= subnet.getInfo().asInteger(last)) {
                 break;
             }
         }
         if (natEntries != null) {
+            // remove every static NAT entry from extCache
             for (MappingEntryBuilder natEntry : natEntries) {
-                Ipv4Address externalSrcAddress = natEntry.getExternalSrcAddress();
-                long id = Integer.toUnsignedLong(subnet.getInfo().asInteger(externalSrcAddress.getValue()));
-                if (ext.get(id) != null) {
-                    ext.remove(id);
+                final Ipv4Address externalSrcAddress = natEntry.getExternalSrcAddress();
+                final long id = Integer.toUnsignedLong(subnet.getInfo().asInteger(externalSrcAddress.getValue()));
+                if (extCache.get(id) != null) {
+                    extCache.remove(id);
                 }
             }
         }
-        return ext;
+        return extCache;
     }
 
     public static void resolveOutboundNatInterface(DataBroker mountpoint, InstanceIdentifier<Node> mountPointIid,
