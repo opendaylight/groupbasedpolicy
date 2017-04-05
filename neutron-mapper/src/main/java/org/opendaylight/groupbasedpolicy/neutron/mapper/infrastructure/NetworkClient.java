@@ -16,13 +16,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Name;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup.IntraGroupPolicy;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroupBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ConsumerNamedSelector;
 
 import com.google.common.base.Preconditions;
 
-public class NetworkClient {
+public class NetworkClient extends ServiceUtil {
 
     private static final Name NETWORK_CLIENT_EPG_NAME = new Name("NETWORK_CLIENT");
     private static final Description NETWORK_CLIENT_EPG_DESC = new Description("Represents DHCP and DNS clients.");
@@ -40,11 +38,7 @@ public class NetworkClient {
     }
 
     private static EndpointGroup createNetworkClientEpg() {
-        return new EndpointGroupBuilder().setId(EPG_ID)
-            .setName(NETWORK_CLIENT_EPG_NAME)
-            .setIntraGroupPolicy(IntraGroupPolicy.RequireContract)
-            .setDescription(NETWORK_CLIENT_EPG_DESC)
-            .build();
+        return createEpgBuilder(EPG_ID, NETWORK_CLIENT_EPG_NAME, NETWORK_CLIENT_EPG_DESC).build();
     }
 
     /**

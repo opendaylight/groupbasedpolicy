@@ -105,7 +105,9 @@ public class LocationResolver implements ClusteredDataTreeChangeListener<Locatio
             } else {
                 priority = provider.getPriority();
             }
-            realLocations.get(epKey).remove(priority);
+            if (realLocations.get(epKey) != null) {
+                realLocations.get(epKey).remove(priority);
+            }
             AbsoluteLocation newAbsoluteLocation = getBestAbsoluteLocation(epKey);
             if (newAbsoluteLocation == null) {
                 InstanceIdentifier<AbsoluteLocation> iid = IidFactory.absoluteLocationIid(epKey);

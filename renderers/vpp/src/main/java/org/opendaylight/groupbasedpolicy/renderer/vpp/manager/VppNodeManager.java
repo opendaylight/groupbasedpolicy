@@ -54,6 +54,7 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.Interfaces;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.Interface1;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererNodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNodeBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNodeKey;
@@ -440,5 +441,32 @@ public class VppNodeManager {
                     new IpAddress(new Ipv4Address(ipv6.getIp().getValue()))).collect(Collectors.toList());
         }
         return Lists.newArrayList();
+    }
+
+    public static Map<NodeId, String> resolvePublicInterfaces(DataBroker dataProvider) {
+        Map<NodeId, String> nodes = new HashMap<>();
+        ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
+        Optional<RendererNodes> rendNodes =
+                DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL, VppIidFactory.getRendererNodesIid(), rTx);
+        rTx.close();
+        if (!rendNodes.isPresent()) {
+            return nodes;
+        }
+        rendNodes.get()
+            .getRendererNode()
+            .stream()
+            .filter(rn -> rn.getAugmentation(VppInterfaceAugmentation.class) != null)
+            .filter(rn -> rn.getAugmentation(VppInterfaceAugmentation.class).getPhysicalInterface() != null)
+            .forEach(rn -> {
+                java.util.Optional<PhysicalInterface> pubInt = rn.getAugmentation(VppInterfaceAugmentation.class)
+                    .getPhysicalInterface()
+                    .stream()
+                    .filter(phInt -> phInt.isExternal())
+                    .findFirst();
+                if (pubInt.isPresent()) {
+                    nodes.put(rn.getNodePath().firstKeyOf(Node.class).getNodeId(), pubInt.get().getInterfaceName());
+                }
+            });
+        return nodes;
     }
 }

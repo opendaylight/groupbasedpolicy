@@ -414,5 +414,11 @@
             <type>cfg</type>
             <classifier>config</classifier>
         </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>neutron-mapper</artifactId>
+            <type>cfg</type>
+            <classifier>config</classifier>
+        </dependency>
     </dependencies>
 </project>

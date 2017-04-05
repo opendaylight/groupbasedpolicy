@@ -27,12 +27,13 @@ import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronNetworkAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronMapperDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.BaseEndpointService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
@@ -61,9 +62,10 @@ public class NeutronMapperTest extends NeutronMapperDataBrokerTest {
     private final Uuid tenantUuid = new Uuid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     private final Uuid networkUuid = new Uuid("dddddddd-dddd-dddd-dddd-dddddddddddd");
     private final Uuid networkUuid2 = new Uuid("dddddddd-dddd-dddd-dddd-ddddddddddd2");
+    private static final long METADATA_IPV4_SERVER_PORT = 80;
+    private static final IpPrefix METADATA_IP_PREFIX = new IpPrefix(new Ipv4Prefix("169.254.169.254/32"));
 
     private DataBroker dataBroker;
-    private RpcProviderRegistry rpcProvider;
     private EndpointService epService;
     private BaseEndpointService baseEpService;
 
@@ -84,7 +86,7 @@ public class NeutronMapperTest extends NeutronMapperDataBrokerTest {
         epService = mock(EndpointService.class);
         baseEpService = mock(BaseEndpointService.class);
 
-        mapper = new NeutronMapper(dataBroker, epService, baseEpService);
+        mapper = new NeutronMapper(dataBroker, epService, baseEpService, METADATA_IP_PREFIX, METADATA_IPV4_SERVER_PORT);
 
         networkL3Extension = new NetworkL3ExtensionBuilder().setExternal(true).build();
 
@@ -117,7 +119,8 @@ public class NeutronMapperTest extends NeutronMapperDataBrokerTest {
     @Test
     public void testConstructor() throws IOException {
         DataBroker dataBrokerSpy = spy(dataBroker);
-        NeutronMapper other = new NeutronMapper(dataBrokerSpy, epService, baseEpService);
+        NeutronMapper other = new NeutronMapper(dataBrokerSpy, epService, baseEpService, METADATA_IP_PREFIX,
+            METADATA_IPV4_SERVER_PORT);
 
         verify(dataBrokerSpy).registerDataTreeChangeListener(new DataTreeIdentifier<>(
                 LogicalDatastoreType.CONFIGURATION, InstanceIdentifier.builder(Neutron.class).build()), other);

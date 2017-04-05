@@ -8,6 +8,10 @@
 
 package org.opendaylight.controller.config.yang.config.neutron_mapper.impl;
 
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -19,6 +23,9 @@ import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonService;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceRegistration;
 import org.opendaylight.mdsal.singleton.common.api.ServiceGroupIdentifier;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv6Prefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.BaseEndpointService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService;
 import org.slf4j.Logger;
@@ -33,15 +40,38 @@ public class NeutronMapperInstance implements ClusterSingletonService, AutoClose
     private final DataBroker dataBroker;
     private final ClusterSingletonServiceProvider clusterSingletonService;
     private final RpcProviderRegistry rpcBroker;
+    private IpPrefix metadataIpPrefix;
+    private int metadataPort;
     private ClusterSingletonServiceRegistration singletonServiceRegistration;
     private NeutronMapper mapper;
 
     public NeutronMapperInstance(final DataBroker dataBroker,
                                  final RpcProviderRegistry rpcBroker,
-                                 final ClusterSingletonServiceProvider clusterSingletonService) {
+                                 final ClusterSingletonServiceProvider clusterSingletonService,
+                                 final String metadataIp,
+                                 final String metadataPort) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.rpcBroker = Preconditions.checkNotNull(rpcBroker);
         this.clusterSingletonService = Preconditions.checkNotNull(clusterSingletonService);
+        try {
+            InetAddress inetAddr = InetAddress.getByName(metadataIp);
+            if (inetAddr instanceof Inet4Address) {
+                this.metadataIpPrefix = new IpPrefix(new Ipv4Prefix(Preconditions.checkNotNull(metadataIp) + "/32"));
+            } else if (inetAddr instanceof Inet6Address) {
+                this.metadataIpPrefix = new IpPrefix(new Ipv6Prefix(Preconditions.checkNotNull(metadataIp) + "/128"));
+            }
+            this.metadataPort = Integer.parseInt(Preconditions.checkNotNull(metadataPort));
+            LOG.info("Resolved Metadata CIDR: {} and port {}.", metadataIpPrefix, metadataPort);
+        } catch (Exception ex) {
+            if (ex instanceof NumberFormatException) {
+                LOG.warn("Metadata port cannot be resolved. Provided value: {}. Continue without support for metadata.",
+                    metadataPort);
+            } else {
+                LOG.warn("MetadataIP could not be resolved. Provided value: {}. Continue without support for metadata.",
+                    metadataIp);
+            }
+            this.metadataIpPrefix = null;
+        }
     }
 
     public void instantiate() {
@@ -54,7 +84,7 @@ public class NeutronMapperInstance implements ClusterSingletonService, AutoClose
         LOG.info("Instantiating {}", this.getClass().getSimpleName());
         final EndpointService epService = rpcBroker.getRpcService(EndpointService.class);
         final BaseEndpointService baseEndpointService = rpcBroker.getRpcService(BaseEndpointService.class);
-        mapper = new NeutronMapper(dataBroker, epService, baseEndpointService);
+        mapper = new NeutronMapper(dataBroker, epService, baseEndpointService, metadataIpPrefix, metadataPort);
     }
 
     @Override

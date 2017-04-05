@@ -26,10 +26,10 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.DtoFactory;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.RendererPolicyConfEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.VppEndpointConfEvent;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.VppEndpointLocationProvider;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.routing.RoutingManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
@@ -115,12 +115,12 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
 
     @Test
     public void testRendererPolicyChanged_created_oneEpPerEpg() throws Exception {
-        String clientIp = "1.1.1.1";
+        String clientIp = "1.1.1.1/32";
         String clientIfaceName = "client1";
         AbsoluteLocation clientLocation = DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, null, clientIfaceName);
         AddressEndpointWithLocation clientEp =
                 DtoFactory.createEndpoint(clientIp, DtoFactory.L2FD_CTX.getValue(), clientLocation);
-        String webIp = "2.2.2.2";
+        String webIp = "2.2.2.2/32";
         String webIfaceName = "web1";
         AbsoluteLocation webLocation = DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, null, webIfaceName);
         AddressEndpointWithLocation webEp =
@@ -164,22 +164,22 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         AbsoluteLocation client1LocationNodeNull =
                 DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, null, client1IfaceName);
         AddressEndpointWithLocation client1Ep =
-                DtoFactory.createEndpoint("10.0.0.1", DtoFactory.L2FD_CTX.getValue(), client1LocationNodeNull);
+                DtoFactory.createEndpoint("10.0.0.1/32", DtoFactory.L2FD_CTX.getValue(), client1LocationNodeNull);
         String web1IfaceName = "web1";
         AbsoluteLocation web1LocationNodeNull =
                 DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID, null, web1IfaceName);
         AddressEndpointWithLocation web1Ep =
-                DtoFactory.createEndpoint("20.0.0.1", DtoFactory.L2FD_CTX.getValue(), web1LocationNodeNull);
+                DtoFactory.createEndpoint("20.0.0.1/32", DtoFactory.L2FD_CTX.getValue(), web1LocationNodeNull);
         String client2IfaceName = "client2";
         AbsoluteLocation client2LocationNodeNull =
                 DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, null, client2IfaceName);
         AddressEndpointWithLocation client2Ep =
-                DtoFactory.createEndpoint("10.0.0.2", DtoFactory.L2FD_CTX.getValue(), client2LocationNodeNull);
+                DtoFactory.createEndpoint("10.0.0.2/32", DtoFactory.L2FD_CTX.getValue(), client2LocationNodeNull);
         String web2IfaceName = "web2";
         AbsoluteLocation web2LocationNodeNull =
                 DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID, null, web2IfaceName);
         AddressEndpointWithLocation web2Ep =
-                DtoFactory.createEndpoint("20.0.0.2", DtoFactory.L2FD_CTX.getValue(), web2LocationNodeNull);
+                DtoFactory.createEndpoint("20.0.0.2/32", DtoFactory.L2FD_CTX.getValue(), web2LocationNodeNull);
 
         storeVppEndpoint(client1Ep.getKey(), client1IfaceName, createVppEndpointIid(client1Ep.getKey()));
         storeVppEndpoint(web1Ep.getKey(), web1IfaceName, createVppEndpointIid(web1Ep.getKey()));

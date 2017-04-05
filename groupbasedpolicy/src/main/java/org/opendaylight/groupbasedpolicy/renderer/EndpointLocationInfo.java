@@ -125,8 +125,7 @@ public class EndpointLocationInfo {
         if (relLocations == null) {
             return false;
         }
-        List<InternalLocation> locs = relLocations.getInternalLocation();
-        if (locs == null) {
+        if (relLocations.getInternalLocation() == null && relLocations.getExternalLocation() == null) {
             return false;
         }
         return true;

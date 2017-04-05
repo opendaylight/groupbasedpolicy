@@ -16,8 +16,10 @@ import static org.junit.Assert.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.EndpointRegistrator;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.ConfigDataStoreReader;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronMapperDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronEntityFactory;
@@ -44,6 +46,13 @@ public class NeutronSecurityRuleAwareTest extends NeutronMapperDataBrokerTest {
     private static final String RULE_TENANT_ID = "00000000-0000-0000-0000-000000000002";
     private static final String RULE_GROUP_ID = "00000000-0000-0000-0000-000000000003";
 
+    private EndpointRegistrator epRegistrator;
+
+    @Before
+    public void init() {
+        epRegistrator = getEpRegistrator();
+    }
+
     @Test
     public final void testIsDirectionOpposite_InIn() {
         assertFalse(NeutronSecurityRuleAware.isDirectionOpposite(Direction.In, Direction.In));
@@ -67,7 +76,7 @@ public class NeutronSecurityRuleAwareTest extends NeutronMapperDataBrokerTest {
     @Test
     public void testNeutronSecurityRuleCreatedAndDeleted() throws Exception {
         DataBroker dataProvider = getDataBroker();
-        NeutronSecurityRuleAware neutronSecurityRuleAware = new NeutronSecurityRuleAware(dataProvider);
+        NeutronSecurityRuleAware neutronSecurityRuleAware = new NeutronSecurityRuleAware(dataProvider, epRegistrator);
 
         //create security rule and put to DS
         SecurityRule neutronRule = buildNeutronSecurityRule();

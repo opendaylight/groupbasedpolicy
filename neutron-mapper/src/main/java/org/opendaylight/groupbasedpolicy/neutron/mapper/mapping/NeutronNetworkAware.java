@@ -18,6 +18,7 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.domain_extension.l2_l3.util.L2L3IidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.gbp.util.NeutronGbpIidFactory;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.MetadataService;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.NetworkClient;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.NetworkService;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
@@ -56,10 +57,12 @@ public class NeutronNetworkAware implements NeutronAware<Network> {
     public static final InstanceIdentifier<Network> NETWORK_WILDCARD_IID =
             InstanceIdentifier.builder(Neutron.class).child(Networks.class).child(Network.class).build();
     private final DataBroker dataProvider;
-    private final Set<TenantId> tenantsWithRouterAndNetworkSeviceEntities = new HashSet<>();
+    private final Set<TenantId> tenantsWithRouterAndNetworkServiceEntities = new HashSet<>();
+    private final long metadataTcpPort;
 
-    public NeutronNetworkAware(DataBroker dataProvider) {
+    public NeutronNetworkAware(DataBroker dataProvider, long metadataPort) {
         this.dataProvider = checkNotNull(dataProvider);
+        this.metadataTcpPort = metadataPort;
     }
 
     @Override
@@ -99,8 +102,8 @@ public class NeutronNetworkAware implements NeutronAware<Network> {
 
         createTenantNetworkDomains(network, tenantId, rwTx);
 
-        if (!tenantsWithRouterAndNetworkSeviceEntities.contains(tenantId)) {
-            tenantsWithRouterAndNetworkSeviceEntities.add(tenantId);
+        if (!tenantsWithRouterAndNetworkServiceEntities.contains(tenantId)) {
+            tenantsWithRouterAndNetworkServiceEntities.add(tenantId);
             NetworkService.writeNetworkServiceEntitiesToTenant(tenantId, rwTx);
             NetworkService.writeDhcpClauseWithConsProvEic(tenantId, null, rwTx);
             NetworkService.writeDnsClauseWithConsProvEic(tenantId, null, rwTx);
@@ -109,6 +112,13 @@ public class NeutronNetworkAware implements NeutronAware<Network> {
             NetworkClient.writeConsumerNamedSelector(tenantId, NetworkService.DHCP_CONTRACT_CONSUMER_SELECTOR, rwTx);
             NetworkClient.writeConsumerNamedSelector(tenantId, NetworkService.DNS_CONTRACT_CONSUMER_SELECTOR, rwTx);
             NetworkClient.writeConsumerNamedSelector(tenantId, NetworkService.MGMT_CONTRACT_CONSUMER_SELECTOR, rwTx);
+            MetadataService.writeMetadataClauseWithConsProvEic(tenantId, null, rwTx);
+            if (metadataTcpPort != 0) {
+                MetadataService.writeNetworkServiceEntitiesToTenant(tenantId, rwTx, metadataTcpPort);
+                MetadataService.writeMetadataClauseWithConsProvEic(tenantId, null, rwTx);
+                NetworkClient.writeConsumerNamedSelector(tenantId, MetadataService.METADATA_CONTRACT_CONSUMER_SELECTOR,
+                    rwTx);
+            }
         }
         if (!NetworkUtils.getPhysicalNetwork(network).isEmpty() && !NetworkUtils.getSegmentationId(network).isEmpty()) {
             addProviderPhysicalNetworkMapping(tenantId, ctxId, NetworkUtils.getSegmentationId(network), rwTx);

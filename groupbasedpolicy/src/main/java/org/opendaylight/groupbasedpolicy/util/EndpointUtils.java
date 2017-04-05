@@ -8,19 +8,34 @@
 
 package org.opendaylight.groupbasedpolicy.util;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
+import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.child.endpoints.ChildEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.ParentEndpointChoice;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.ParentContainmentEndpointCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.ParentEndpointCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.parent.containment.endpoint._case.ParentContainmentEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.parent.endpoint._case.ParentEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ExternalImplicitGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
+
+import com.google.common.base.Function;
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 
 public class EndpointUtils {
 
@@ -56,5 +71,37 @@ public class EndpointUtils {
             }
         }
         return Collections.emptyList();
+    }
+
+    public static boolean isExternalEndpoint(@Nonnull DataBroker dataBroker, @Nonnull AddressEndpoint addrEp) {
+        ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
+        List<ListenableFuture<Boolean>> results = new ArrayList<>();
+        for (EndpointGroupId epgId : addrEp.getEndpointGroup()) {
+            results.add(Futures.transform(
+                    rTx.read(LogicalDatastoreType.CONFIGURATION,
+                            IidFactory.externalImplicitGroupIid(addrEp.getTenant(), epgId)),
+                    new Function<Optional<ExternalImplicitGroup>, Boolean>() {
+
+                        @Override
+                        public Boolean apply(Optional<ExternalImplicitGroup> input) {
+                            return input.isPresent();
+                        }
+                    }));
+        }
+        rTx.close();
+        try {
+            List<Boolean> list = Futures.allAsList(results).get();
+            return list.stream().anyMatch(Boolean::booleanValue);
+        } catch (InterruptedException | ExecutionException e) {
+            return false;
+        }
+    }
+
+    public static Optional<ExternalLocationCase> getExternalLocationFrom(AddressEndpointWithLocation input) {
+        if (input.getAbsoluteLocation() != null && input.getAbsoluteLocation().getLocationType() != null
+                && input.getAbsoluteLocation().getLocationType() instanceof ExternalLocationCase) {
+            return Optional.of((ExternalLocationCase) input.getAbsoluteLocation().getLocationType());
+        }
+        return Optional.absent();
     }
 }

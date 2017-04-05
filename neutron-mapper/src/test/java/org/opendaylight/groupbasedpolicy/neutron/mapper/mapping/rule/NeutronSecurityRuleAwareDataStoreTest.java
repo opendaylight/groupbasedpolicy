@@ -13,13 +13,15 @@ import static org.junit.Assert.fail;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.EndpointRegistrator;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.ConfigDataStoreReader;
-import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronMapperDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronEntityFactory;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronMapperDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.PolicyAssert;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
@@ -55,6 +57,13 @@ import com.google.common.collect.ImmutableSet;
  */
 
 public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrokerTest {
+
+    private EndpointRegistrator epRegistrator;
+
+    @Before
+    public void init() {
+        epRegistrator = getEpRegistrator();
+    }
 
     @Test
     public final void testAddNeutronSecurityRule_rulesWithRemoteIpPrefix() throws Exception {
@@ -98,7 +107,7 @@ public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrok
                     ImmutableList.of(goldInIpv4, goldOutIpv4, serverIn80Tcp10_1_1_0, serverInIp20_1_1_0, serverOutIpv4))
                 .build())
             .build();
-        NeutronSecurityRuleAware ruleAware = new NeutronSecurityRuleAware(dataBroker);
+        NeutronSecurityRuleAware ruleAware = new NeutronSecurityRuleAware(dataBroker, epRegistrator);
         ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
         ruleAware.addNeutronSecurityRule(goldInIpv4, neutron, rwTx);
         ruleAware.addNeutronSecurityRule(goldOutIpv4, neutron, rwTx);
@@ -158,7 +167,7 @@ public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrok
     @Test
     public final void testAddAndDeleteNeutronSecurityRule() throws Exception {
         DataBroker dataBroker = getDataBroker();
-        NeutronSecurityRuleAware ruleAware = new NeutronSecurityRuleAware(dataBroker);
+        NeutronSecurityRuleAware ruleAware = new NeutronSecurityRuleAware(dataBroker, epRegistrator);
 
         final String tenantId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
         final String secGroupId1 = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
@@ -282,7 +291,7 @@ public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrok
             .setSecurityRules(new SecurityRulesBuilder()
                     .setSecurityRule(ImmutableList.of(goldInIpv4, goldOutIpv4, serverOutIpv4, serverInIpv4)).build())
             .build();
-        NeutronSecurityRuleAware ruleAware = new NeutronSecurityRuleAware(dataBroker);
+        NeutronSecurityRuleAware ruleAware = new NeutronSecurityRuleAware(dataBroker, epRegistrator);
         ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
         ruleAware.addNeutronSecurityRule(goldInIpv4, neutron, rwTx);
         ruleAware.addNeutronSecurityRule(goldOutIpv4, neutron, rwTx);
@@ -363,7 +372,7 @@ public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrok
             .setSecurityRules(new SecurityRulesBuilder()
                 .setSecurityRule(ImmutableList.of(goldInIpv4, goldOutIpv4, serverOutIpv4, serverIn80TcpIpv4)).build())
             .build();
-        NeutronSecurityRuleAware ruleAware = new NeutronSecurityRuleAware(dataBroker);
+        NeutronSecurityRuleAware ruleAware = new NeutronSecurityRuleAware(dataBroker, epRegistrator);
         ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
         ruleAware.addNeutronSecurityRule(goldInIpv4, neutron, rwTx);
         ruleAware.addNeutronSecurityRule(goldOutIpv4, neutron, rwTx);
@@ -431,7 +440,7 @@ public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrok
         secGroups.add(NeutronEntityFactory.securityGroup(defaultSecGrp, tenant));
         Neutron neutron = new NeutronBuilder()
             .setSecurityGroups(new SecurityGroupsBuilder().setSecurityGroup(secGroups).build()).build();
-        NeutronSecurityRuleAware ruleAware = new NeutronSecurityRuleAware(dataBroker);
+        NeutronSecurityRuleAware ruleAware = new NeutronSecurityRuleAware(dataBroker, epRegistrator);
         ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
         ruleAware.addNeutronSecurityRule(defaultInIpv4Default, neutron, rwTx);
         ruleAware.addNeutronSecurityRule(defaultInIpv6Default, neutron, rwTx);
@@ -463,7 +472,7 @@ public class NeutronSecurityRuleAwareDataStoreTest extends NeutronMapperDataBrok
     @Test
     public void testConstructor_invalidArgument() throws Exception {
         try {
-            new NeutronSecurityRuleAware(null);
+            new NeutronSecurityRuleAware(null, null);
             fail(NullPointerException.class.getName() + " expected");
         } catch (NullPointerException ex) {
             // do nothing

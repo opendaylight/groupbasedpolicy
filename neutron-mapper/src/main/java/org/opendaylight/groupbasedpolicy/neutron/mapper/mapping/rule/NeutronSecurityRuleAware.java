@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
@@ -26,27 +25,36 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
 import org.opendaylight.groupbasedpolicy.dto.EpgKeyDto;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.EndpointRegistrator;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.NeutronSecurityGroupAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NetworkUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.SecurityGroupUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.SecurityRuleUtils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.RegisterEndpointInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.RegisterEndpointInputBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.register.endpoint.input.AddressEndpointRegBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClauseName;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Description;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ParameterName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SelectorName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.IpPrefixType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.change.action.of.security.group.rules.input.action.ActionChoice;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.neutron.gbp.mapper.rev150513.change.action.of.security.group.rules.input.action.action.choice.SfcActionCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.subject.feature.instance.ParameterValueBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.Contract;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroupBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ExternalImplicitGroupBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ConsumerNamedSelector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ConsumerNamedSelectorBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.endpoint.group.ProviderNamedSelector;
@@ -54,6 +62,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstanceBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.networks.attributes.networks.Network;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.security.groups.SecurityGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.security.groups.SecurityGroupKey;
@@ -85,21 +94,23 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
     private final Map<SecurityGroupKey, SecurityGroup> pendingDeletedGroups;
     final static String PROVIDED_BY = "provided_by-";
     final static String POSSIBLE_CONSUMER = "possible_consumer-";
+    private final EndpointRegistrator epRegistrator;
 
-    public NeutronSecurityRuleAware(DataBroker dataProvider) {
+    public NeutronSecurityRuleAware(DataBroker dataProvider, EndpointRegistrator epRegistrator) {
         this(dataProvider, HashMultiset.<InstanceIdentifier<ClassifierInstance>>create(),
-                HashMultiset.<InstanceIdentifier<ActionInstance>>create());
+                HashMultiset.<InstanceIdentifier<ActionInstance>>create(), epRegistrator);
     }
 
     @VisibleForTesting
     NeutronSecurityRuleAware(DataBroker dataProvider,
             Multiset<InstanceIdentifier<ClassifierInstance>> classifierInstanceNames,
-            Multiset<InstanceIdentifier<ActionInstance>> createdActionInstances) {
+            Multiset<InstanceIdentifier<ActionInstance>> createdActionInstances, EndpointRegistrator epRegistrator) {
         this.dataProvider = checkNotNull(dataProvider);
         this.createdClassifierInstances = checkNotNull(classifierInstanceNames);
         this.createdActionInstances = checkNotNull(createdActionInstances);
         this.pendingCreatedRules = new HashMap<>();
         this.pendingDeletedGroups = new HashMap<>();
+        this.epRegistrator = Preconditions.checkNotNull(epRegistrator);
     }
 
     @Override
@@ -155,7 +166,7 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
         EndpointGroupId providerEpgId = new EndpointGroupId(providerSecGroupId.getValue());
 
         Description contractDescription = createContractDescription(secRule, neutron);
-        SingleRuleContract singleRuleContract = createSingleRuleContract(secRule, contractDescription, action);
+        SingleRuleContract singleRuleContract = createSingleRuleContract(secRule, contractDescription, action, neutron);
         Contract contract = singleRuleContract.getContract();
         rwTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.contractIid(tenantId, contract.getId()), contract, true);
         SelectorName providerSelector = getSelectorNameWithConsumer(secRule, neutron);
@@ -196,8 +207,44 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
     }
 
     @VisibleForTesting
-    static SingleRuleContract createSingleRuleContract(SecurityRule secRule, Description contractDescription, ActionChoice action) {
+    SingleRuleContract createSingleRuleContract(SecurityRule secRule, Description contractDescription,
+            ActionChoice action, Neutron neutron) {
         if (secRule.getRemoteIpPrefix() != null) {
+            if (neutron.getNetworks() != null && neutron.getNetworks().getNetwork() != null) {
+                java.util.Optional<Network> publicNet = neutron.getNetworks()
+                    .getNetwork()
+                    .stream()
+                    .filter(net -> NetworkUtils.isRouterExternal(net))
+                    .findAny();
+                if (publicNet.isPresent()) {
+                    WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
+                    wTx.merge(LogicalDatastoreType.CONFIGURATION,
+                            IidFactory.externalImplicitGroupIid(new TenantId(secRule.getTenantId().getValue()),
+                                    MappingUtils.EPG_EXTERNAL_ID),
+                            new ExternalImplicitGroupBuilder().setId(MappingUtils.EPG_EXTERNAL_ID).build(), true);
+                    wTx.merge(LogicalDatastoreType.CONFIGURATION,
+                            IidFactory.endpointGroupIid(new TenantId(secRule.getTenantId().getValue()),
+                                    MappingUtils.EPG_EXTERNAL_ID),
+                            new EndpointGroupBuilder().setId(MappingUtils.EPG_EXTERNAL_ID).build(), true);
+                    DataStoreHelper.submitToDs(wTx);
+                    AddressEndpointRegBuilder addrEpbuilder = new AddressEndpointRegBuilder()
+                        .setAddress(String.valueOf(secRule.getRemoteIpPrefix().getValue()))
+                        .setAddressType(IpPrefixType.class)
+                        .setContextType(MappingUtils.L3_CONTEXT)
+                        .setContextId(new ContextId(publicNet.get().getUuid().getValue()))
+                        .setTenant(new TenantId(secRule.getTenantId().getValue()))
+                        .setTimestamp(System.currentTimeMillis())
+                        .setEndpointGroup(ImmutableList.<EndpointGroupId>of(MappingUtils.EPG_EXTERNAL_ID));
+                    RegisterEndpointInput regEp = new RegisterEndpointInputBuilder()
+                        .setAddressEndpointReg(ImmutableList.of(addrEpbuilder.build())).build();
+                    boolean registered = epRegistrator.registerEndpoint(regEp);
+                    if (registered) {
+                        LOG.info("Registering endpoint representing remote-ip-prefix {}", addrEpbuilder.getKey());
+                    } else {
+                        LOG.error("Failed to register endpoint {}", addrEpbuilder.getKey());
+                    }
+                }
+            }
             return new SingleRuleContract(secRule, 0, contractDescription, action);
         }
         return new SingleRuleContract(secRule, 400, contractDescription, action);
