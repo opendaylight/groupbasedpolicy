@@ -11,6 +11,7 @@ package org.opendaylight.groupbasedpolicy.neutron.vpp.mapper.processors;
 import java.util.Collections;
 import java.util.List;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.opendaylight.controller.md.sal.binding.api.BindingTransactionChain;
@@ -65,8 +66,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
-
-import javax.annotation.Nonnull;
 public class PortHandler implements TransactionChainListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(PortHandler.class);

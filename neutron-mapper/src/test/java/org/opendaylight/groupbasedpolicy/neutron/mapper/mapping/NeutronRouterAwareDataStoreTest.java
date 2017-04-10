@@ -112,7 +112,7 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
                     .thenReturn(futureRpcResult);
         epRegistrator = new EndpointRegistrator(epService, baseEpService);
 
-        networkAware = new NeutronNetworkAware(dataBroker, METADATA_IP_PREFIX, METADATA_IPV4_SERVER_PORT);
+        networkAware = new NeutronNetworkAware(dataBroker, METADATA_IPV4_SERVER_PORT);
         network = new NetworkBuilder().setTenantId(tenantUuid).setUuid(networkUuid).setName("networkName").build();
 
         routerAware = new NeutronRouterAware(dataBroker, epRegistrator);

@@ -10,8 +10,10 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
@@ -22,6 +24,7 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.domain_extension.l2_l3.util.L2L3IidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.gbp.util.NeutronGbpIidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.EndpointRegistrator;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.MetadataService;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.NetworkClient;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.NetworkService;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
@@ -29,6 +32,8 @@ import org.opendaylight.groupbasedpolicy.neutron.mapper.util.PortUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.SubnetUtils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.RegisterEndpointInput;
@@ -76,8 +81,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.L2BridgeDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.PortBindingExtension;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.port.attributes.FixedIps;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.port.attributes.FixedIpsBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.port.attributes.FixedIpsKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.Ports;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.PortBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -86,6 +94,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 public class NeutronPortAware implements NeutronAware<Port> {
 
@@ -94,10 +103,13 @@ public class NeutronPortAware implements NeutronAware<Port> {
             InstanceIdentifier.builder(Neutron.class).child(Ports.class).child(Port.class).build();
     private final DataBroker dataProvider;
     private final EndpointRegistrator epRegistrator;
+    private final IpPrefix metadataIpPrefix;
 
-    public NeutronPortAware(DataBroker dataProvider, EndpointRegistrator epRegistrator) {
+    public NeutronPortAware(DataBroker dataProvider, EndpointRegistrator epRegistrator,
+            @Nullable IpPrefix metadataIpPrefix) {
         this.dataProvider = checkNotNull(dataProvider);
         this.epRegistrator = checkNotNull(epRegistrator);
+        this.metadataIpPrefix = checkNotNull(metadataIpPrefix);
     }
 
     @Override public void onCreated(Port createdItem, Neutron neutron) {
@@ -193,21 +205,26 @@ public class NeutronPortAware implements NeutronAware<Port> {
             NetworkDomainId networkContainment = new NetworkDomainId(ipWithSubnet.getSubnetId().getValue());
             List<EndpointGroupId> epgsFromSecGroups = resolveEpgIdsFromSecGroups(port.getSecurityGroups());
             epgsFromSecGroups.add(NetworkService.EPG_ID);
-
-            // BUILD BASE ENDPOINT
             AddressEndpointRegBuilder l2BaseEp = createBasicMacAddrEpInputBuilder(port, networkContainment,
-                    epgsFromSecGroups);
+                    Collections.emptyList());
             AddressEndpointRegBuilder l3BaseEp = createBasicL3AddrEpInputBuilder(port, networkContainment,
                     epgsFromSecGroups, neutron);
+
             setParentChildRelationshipForEndpoints(l3BaseEp, l2BaseEp);
 
-            // BUILD ENDPOINT
             org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInputBuilder epInBuilder = createEndpointRegFromPort(
                     port, ipWithSubnet, networkContainment, epgsFromSecGroups, neutron);
 
             ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
             registerBaseEndpointAndStoreMapping(
                     ImmutableList.of(l2BaseEp.build(), l3BaseEp.build()), port, rwTx, addBaseEpMapping);
+
+            AddressEndpointRegBuilder metadataEp = createBasicL3AddrEpInputBuilder(cloneMetadataPortFromDhcpPort(port, metadataIpPrefix), networkContainment,
+                    Lists.newArrayList(MetadataService.EPG_ID), neutron);
+            setParentChildRelationshipForEndpoints(metadataEp, l2BaseEp);
+            registerBaseEndpointAndStoreMapping(
+                    ImmutableList.of(metadataEp.build()), port, rwTx, true);
+
             registerEndpointAndStoreMapping(epInBuilder.build(), port, rwTx);
             DataStoreHelper.submitToDs(rwTx);
         } else if (PortUtils.isNormalPort(port)) {
@@ -250,6 +267,15 @@ public class NeutronPortAware implements NeutronAware<Port> {
         } else {
             LOG.warn("Unknown port: {}", port);
         }
+    }
+
+    private Port cloneMetadataPortFromDhcpPort(Port port, IpPrefix metadataPrefix) {
+        IpAddress metadataIp = MappingUtils.ipPrefixToIpAddress(metadataPrefix);
+        List<FixedIps> metadataIps = port.getFixedIps().stream().map(fi -> {
+            FixedIpsKey key = new FixedIpsKey(metadataIp, fi.getKey().getSubnetId());
+            return new FixedIpsBuilder(fi).setKey(key).setIpAddress(metadataIp).build();
+        }).collect(Collectors.toList());
+        return new PortBuilder(port).setFixedIps(metadataIps).build();
     }
 
     private void setParentChildRelationshipForEndpoints(AddressEndpointRegBuilder parentEp,
@@ -456,7 +482,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
             Port port, ReadWriteTransaction rwTx) {
         boolean isRegisteredEndpoint = epRegistrator.registerEndpoint(regEpInput);
         if (!isRegisteredEndpoint) {
-            LOG.error("Failed to register an endpoint: {}", regEpInput);
+            LOG.error("Failed to register endpoint: {}", regEpInput);
             return;
         }
         UniqueId portId = new UniqueId(port.getUuid().getValue());
@@ -497,7 +523,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
 
         boolean isRegisteredBaseEndpoint = epRegistrator.registerEndpoint(regBaseEpInput);
         if (!isRegisteredBaseEndpoint) {
-            LOG.error("Failed to register an address endpoint: {}", addrEpRegs);
+            LOG.error("Failed to register address endpoint: {}", addrEpRegs);
             return;
         }
         for (AddressEndpointReg addrEpReg : addrEpRegs) {

@@ -85,7 +85,7 @@ public class NeutronNetworkAwareDataStoreTest extends NeutronMapperDataBrokerTes
             .addAugmentation(NetworkProviderExtension.class, providerExtension)
             .build();
 
-        networkAware = new NeutronNetworkAware(dataBroker, METADATA_IP_PREFIX, METADATA_IPV4_SERVER_PORT);
+        networkAware = new NeutronNetworkAware(dataBroker, METADATA_IPV4_SERVER_PORT);
     }
 
     @Rule
@@ -94,7 +94,7 @@ public class NeutronNetworkAwareDataStoreTest extends NeutronMapperDataBrokerTes
     @Test
     public void testConstructor_invalidArgument() throws NullPointerException {
         thrown.expect(NullPointerException.class);
-        new NeutronNetworkAware(null, METADATA_IP_PREFIX, METADATA_IPV4_SERVER_PORT);
+        new NeutronNetworkAware(null, METADATA_IPV4_SERVER_PORT);
     }
 
     @Test

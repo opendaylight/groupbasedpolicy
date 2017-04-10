@@ -33,7 +33,6 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv6Prefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.parent.endpoint._case.ParentEndpoint;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L2BridgeDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.SubnetAugmentRenderer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.has.subnet.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
@@ -74,55 +73,26 @@ public class AccessListUtil {
     // hiding default public constructor
     private AccessListUtil() {}
 
-    public static List<AccessListWrapper> resolveAclsOnInterface(RendererEndpointKey rEpKey, PolicyContext ctx) {
-        List<AccessListWrapper> aclWrappers = new ArrayList<>();
-        for (ACE_DIRECTION dir : new ACE_DIRECTION[] {ACE_DIRECTION.INGRESS, ACE_DIRECTION.EGRESS}) {
-            aclWrappers.add(buildAccessListWrappers(dir, ctx, rEpKey));
-        }
-        return aclWrappers;
-    }
-
-    /**
-     * @param policyDirection direction for which policy should be resolved. EP -> VPP = OUTBOUND, EP <- VPP = INBOUND 
-     * @param ctx with cached data
-     * @param rEpKey key of EP for which to create ACLs.
-     * @return synchronization futures, so that INGRESS and EGRESS ACLS can be resolved in parallel.
-     */
-    private static AccessListWrapper buildAccessListWrappers(ACE_DIRECTION policyDirection, PolicyContext ctx,
-            RendererEndpointKey rEpKey) {
-        LOG.trace("Resolving policy for VPP renderer endpoint {} in a separate thread in {} direction.", rEpKey,
-                policyDirection);
-        AccessListWrapper aclWrapper = AccessListUtil.ACE_DIRECTION.INGRESS
-            .equals(policyDirection) ? new IngressAccessListWrapper() : new EgressAccessListWrapper();
+    static void configureLocalRules(PolicyContext ctx, RendererEndpointKey rEpKey, ACE_DIRECTION policyDirection,
+            AccessListWrapper aclWrapper) {
         ctx.getPolicyTable()
             .row(rEpKey)
             .keySet()
             .stream()
             .filter(peerEpKey -> peerHasLocation(ctx, peerEpKey))
             .forEach(peerEpKey -> {
-            ctx.getPolicyTable().get(rEpKey, peerEpKey).forEach(resolvedRules -> {
-                List<GbpAceBuilder> rules = new ArrayList<>();
-                LOG.debug("Resolving policy for {} and peer endpoint {}", rEpKey, peerEpKey);
-                Direction classifDir =
-                        calculateClassifDirection(resolvedRules.getRendererEndpointParticipation(), policyDirection);
-                rules.addAll(resolveAclRulesFromPolicy(resolvedRules, classifDir,
-                        rEpKey.getAddress() + UNDERSCORE + peerEpKey.getAddress()));
-                updateAddressesInRules(rules, rEpKey, peerEpKey, ctx, policyDirection, true);
-                aclWrapper.writeRules(rules);
+                ctx.getPolicyTable().get(rEpKey, peerEpKey).forEach(resolvedRules -> {
+                    List<GbpAceBuilder> rules = new ArrayList<>();
+                    LOG.debug("Resolving policy for {} and peer endpoint {}", rEpKey, peerEpKey);
+                    Direction classifDir = calculateClassifDirection(resolvedRules.getRendererEndpointParticipation(),
+                            policyDirection);
+                    rules.addAll(resolveAclRulesFromPolicy(resolvedRules, classifDir,
+                            rEpKey.getAddress() + UNDERSCORE + peerEpKey.getAddress()));
+                    updateAddressesInRules(rules, rEpKey, peerEpKey, ctx, policyDirection, true);
+                    aclWrapper.writeRules(rules);
+
+                });
             });
-        });
-        // resolve peers with no location
-        aclWrapper.writeRules(denyDomainSubnets(ctx, policyDirection));
-        // TODO currently any traffic heading to/from outside of managed domain is
-        // permitted for demonstration purposes
-        if (rEpKey.getContextType().isAssignableFrom(L2BridgeDomain.class) && findAddrEp(ctx, rEpKey) != null) {
-            Optional<GbpAceBuilder> allowExtAccess =
-                    allowExternalNetworksForEp(findAddrEp(ctx, rEpKey), policyDirection);
-            if (allowExtAccess.isPresent()) {
-                aclWrapper.writeRule(allowExtAccess.get());
-            }
-        }
-        return aclWrapper;
     }
 
     /**
@@ -174,7 +144,7 @@ public class AccessListUtil {
                 AddressEndpointUtils.fromPeerEpKey(peerEpKey)) != null;
     }
 
-    private static AddressEndpointWithLocation findAddrEp(PolicyContext ctx, RendererEndpointKey rEpKey) {
+    static AddressEndpointWithLocation findAddrEp(PolicyContext ctx, RendererEndpointKey rEpKey) {
         return ctx.getAddrEpByKey().get(
                 AddressEndpointUtils.fromRendererEpKey(rEpKey));
     }
@@ -270,7 +240,7 @@ public class AccessListUtil {
      * purposes
      * TODO initial workaround for external networking
      */
-   private static Optional<GbpAceBuilder> allowExternalNetworksForEp(@Nonnull AddressEndpointWithLocation addrEp,
+   static Optional<GbpAceBuilder> allowExternalNetworksForEp(@Nonnull AddressEndpointWithLocation addrEp,
             AccessListUtil.ACE_DIRECTION dir) {
         List<ParentEndpoint> parentEndpoints = EndpointUtils.getParentEndpoints(addrEp.getParentEndpointChoice());
         if (parentEndpoints.isEmpty()) {
@@ -312,7 +282,7 @@ public class AccessListUtil {
         return (address.contains("/") && address.split("/").length > 0) ? address.split("/")[0] : address;
     }
 
-    private static List<GbpAceBuilder> denyDomainSubnets(@Nonnull PolicyContext ctx, @Nonnull ACE_DIRECTION policyDirection) {
+    static List<GbpAceBuilder> denyDomainSubnets(@Nonnull PolicyContext ctx, @Nonnull ACE_DIRECTION policyDirection) {
         List<GbpAceBuilder> aclRuleBuilders = new ArrayList<>();
         for (RendererForwardingByTenant rf : ctx.getPolicy()
             .getConfiguration()
@@ -329,7 +299,7 @@ public class AccessListUtil {
                     if (policyDirection.equals(ACE_DIRECTION.INGRESS) && subnetAug.getSubnet().isIsTenant()) {
                         aclRuleBuilders.add(denyIngressTrafficForPrefix(subnetAug.getSubnet()));
                     }
-                    else if(subnetAug.getSubnet().isIsTenant()) {
+                    else if (subnetAug.getSubnet().isIsTenant()) {
                         aclRuleBuilders.add(denyEgressTrafficForPrefix(subnetAug.getSubnet()));
                     }
                 });

@@ -25,11 +25,10 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.RoutingCommand;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatUtil;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AccessListUtil;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.routing.RoutingManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
@@ -211,7 +210,7 @@ public final class ForwardingManager {
             }
             String l2FloodDomain = optL2FloodDomain.get();
             try {
-                ifaceManager.addBridgeDomainToInterface(l2FloodDomain, rEp, AccessListUtil.resolveAclsOnInterface(
+                ifaceManager.addBridgeDomainToInterface(l2FloodDomain, rEp, aclManager.resolveAclsOnInterface(
                         rEpKey, policyCtx), isBviForEndpoint(rEp)).get();
                 aclManager.updateAclsForPeers(policyCtx, rEpKey);
                 LOG.debug("Interface added to bridge-domain {} for endpoint {}", l2FloodDomain, rEp);

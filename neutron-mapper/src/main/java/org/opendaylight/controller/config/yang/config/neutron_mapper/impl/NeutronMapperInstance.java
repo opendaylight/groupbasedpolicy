@@ -8,7 +8,9 @@
 
 package org.opendaylight.controller.config.yang.config.neutron_mapper.impl;
 
-import java.util.regex.Pattern;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
 
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
@@ -23,6 +25,7 @@ import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceRegist
 import org.opendaylight.mdsal.singleton.common.api.ServiceGroupIdentifier;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv6Prefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.BaseEndpointService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.EndpointService;
 import org.slf4j.Logger;
@@ -51,11 +54,15 @@ public class NeutronMapperInstance implements ClusterSingletonService, AutoClose
         this.rpcBroker = Preconditions.checkNotNull(rpcBroker);
         this.clusterSingletonService = Preconditions.checkNotNull(clusterSingletonService);
         try {
-            this.metadataIpPrefix = new IpPrefix(new Ipv4Prefix(Preconditions.checkNotNull(metadataIp)));
+            InetAddress inetAddr = InetAddress.getByName(metadataIp);
+            if (inetAddr instanceof Inet4Address) {
+                this.metadataIpPrefix = new IpPrefix(new Ipv4Prefix(Preconditions.checkNotNull(metadataIp) + "/32"));
+            } else if (inetAddr instanceof Inet6Address) {
+                this.metadataIpPrefix = new IpPrefix(new Ipv6Prefix(Preconditions.checkNotNull(metadataIp) + "/128"));
+            }
             this.metadataPort = Integer.parseInt(Preconditions.checkNotNull(metadataPort));
-            LOG.trace("Resolved Metadata IP prefix: {}", metadataIpPrefix);
+            LOG.info("Resolved Metadata CIDR: {} and port {}.", metadataIpPrefix, metadataPort);
         } catch (Exception ex) {
-
             if (ex instanceof NumberFormatException) {
                 LOG.warn("Metadata port cannot be resolved. Provided value: {}. Continue without support for metadata.",
                     metadataPort);
@@ -65,7 +72,6 @@ public class NeutronMapperInstance implements ClusterSingletonService, AutoClose
             }
             this.metadataIpPrefix = null;
         }
-
     }
 
     public void instantiate() {

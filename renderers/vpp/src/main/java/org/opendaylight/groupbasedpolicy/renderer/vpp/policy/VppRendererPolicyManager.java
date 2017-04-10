@@ -24,7 +24,7 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.util.AddressEndpointUtils;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.NodeOperEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.RendererPolicyConfEvent;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.AclManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
@@ -120,6 +120,7 @@ public class VppRendererPolicyManager {
         LOG.trace("VPP renderer policy updated");
         PolicyContext policyCtxBefore = new PolicyContext(rPolicyBefore);
         PolicyContext policyCtxAfter = new PolicyContext(rPolicyAfter);
+        aclManager.cacheMultiInterfaces(policyCtxAfter);
         MapDifference<String, Collection<NodeId>> vppNodesByL2FlDiff =
                 createDiffForVppNodesByL2Fd(policyCtxBefore, policyCtxAfter);
         SetMultimap<String, NodeId> removedVppNodesByL2Fd = HashMultimap.create();
@@ -264,6 +265,7 @@ public class VppRendererPolicyManager {
     private void rendererPolicyCreated(RendererPolicy rPolicy) {
         LOG.trace("VPP renderer policy version {} created", rPolicy.getVersion());
         PolicyContext policyCtx = new PolicyContext(rPolicy);
+        aclManager.cacheMultiInterfaces(policyCtx);
         ImmutableSet<RendererEndpointKey> rEpKeys = policyCtx.getPolicyTable().rowKeySet();
 
         SetMultimap<String, NodeId> vppNodesByL2Fd = resolveVppNodesByL2Fd(rEpKeys, policyCtx);
@@ -276,6 +278,7 @@ public class VppRendererPolicyManager {
     private void rendererPolicyDeleted(RendererPolicy rendererPolicy) {
         LOG.trace("VPP renderer policy version {} deleted", rendererPolicy.getVersion());
         PolicyContext policyCtx = new PolicyContext(rendererPolicy);
+        aclManager.cacheMultiInterfaces(policyCtx);
         ImmutableSet<RendererEndpointKey> rEpKeys = policyCtx.getPolicyTable().rowKeySet();
 
         rEpKeys.forEach(rEpKey -> fwManager.removeForwardingForEndpoint(rEpKey, policyCtx));

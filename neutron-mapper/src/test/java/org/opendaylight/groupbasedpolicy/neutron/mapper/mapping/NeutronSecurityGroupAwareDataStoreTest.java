@@ -8,6 +8,10 @@
 
 package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Before;
 import org.junit.Rule;
@@ -15,11 +19,14 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronMapperDataBrokerTest;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.EndpointRegistrator;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.mapping.rule.NeutronSecurityRuleAware;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.NeutronEntityFactory;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.test.PolicyAssert;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.RegisterEndpointInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.UnregisterEndpointInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.EndpointGroup.IntraGroupPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.security.groups.SecurityGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.secgroups.rev150712.security.groups.attributes.security.groups.SecurityGroupBuilder;
@@ -34,14 +41,26 @@ public class NeutronSecurityGroupAwareDataStoreTest extends NeutronMapperDataBro
     private NeutronSecurityGroupAware groupAware;
     private SecurityGroup secGroup1;
     private SecurityGroup secGroup2;
+    private EndpointRegistrator epRegistrator;
 
     @Before
     public void init() {
         dataBroker = getDataBroker();
-        groupAware = new NeutronSecurityGroupAware(dataBroker, new NeutronSecurityRuleAware(dataBroker));
 
         secGroup1 = NeutronEntityFactory.securityGroup(secGroupId1, tenantId);
         secGroup2 = NeutronEntityFactory.securityGroup(secGroupId2, tenantId);
+
+
+        epRegistrator = mock(EndpointRegistrator.class);
+        when(epRegistrator.registerEndpoint(any(RegisterEndpointInput.class))).thenReturn(true);
+        when(epRegistrator.registerEndpoint(
+                any(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInput.class)))
+                    .thenReturn(true);
+        when(epRegistrator.unregisterEndpoint(any(UnregisterEndpointInput.class))).thenReturn(true);
+        when(epRegistrator.unregisterEndpoint(
+                any(org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.UnregisterEndpointInput.class)))
+                    .thenReturn(true);
+        groupAware = new NeutronSecurityGroupAware(dataBroker, new NeutronSecurityRuleAware(dataBroker, epRegistrator));
     }
 
     @Test

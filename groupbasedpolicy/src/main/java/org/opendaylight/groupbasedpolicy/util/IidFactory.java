@@ -115,6 +115,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.statistics
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.statistics.store.rev151215.statistics.store.StatisticRecord;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.statistics.store.rev151215.statistics.store.StatisticRecordKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier.InstanceIdentifierBuilder;
 
 public class IidFactory {
 
@@ -129,96 +130,69 @@ public class IidFactory {
         return InstanceIdentifier.builder(Tenants.class).child(Tenant.class, new TenantKey(id)).build();
     }
 
-    public static InstanceIdentifier<EndpointGroup> endpointGroupIid(TenantId tenantId, EndpointGroupId epgId) {
+    public static InstanceIdentifierBuilder<Policy> policyIid(TenantId tenantId) {
         return InstanceIdentifier.builder(Tenants.class)
             .child(Tenant.class, new TenantKey(tenantId))
-            .child(Policy.class)
-            .child(EndpointGroup.class, new EndpointGroupKey(epgId))
-            .build();
+            .child(Policy.class);
+    }
+
+    public static InstanceIdentifier<EndpointGroup> endpointGroupIid(TenantId tenantId, EndpointGroupId epgId) {
+        return policyIid(tenantId).child(EndpointGroup.class, new EndpointGroupKey(epgId)).build();
     }
 
     public static InstanceIdentifier<Contract> contractIid(TenantId tenantId, ContractId contractId) {
-        return InstanceIdentifier.builder(Tenants.class)
-            .child(Tenant.class, new TenantKey(tenantId))
-            .child(Policy.class)
-            .child(Contract.class, new ContractKey(contractId))
-            .build();
+        return policyIid(tenantId).child(Contract.class, new ContractKey(contractId)).build();
     }
 
     public static InstanceIdentifier<Contract> contractWildcardIid(TenantId tenantId) {
-        return InstanceIdentifier.builder(Tenants.class)
-            .child(Tenant.class, new TenantKey(tenantId))
-            .child(Policy.class)
-            .child(Contract.class)
-            .build();
+        return policyIid(tenantId).child(Contract.class).build();
     }
 
     public static InstanceIdentifier<Subject> subjectIid(TenantId tenantId, ContractId contractId,
             SubjectName subjectName) {
-        return InstanceIdentifier.builder(Tenants.class)
-            .child(Tenant.class, new TenantKey(tenantId))
-            .child(Policy.class)
-            .child(Contract.class, new ContractKey(contractId))
+        return policyIid(tenantId).child(Contract.class, new ContractKey(contractId))
             .child(Subject.class, new SubjectKey(subjectName))
             .build();
     }
 
     public static InstanceIdentifier<ProviderNamedSelector> providerNamedSelectorIid(TenantId tenantId,
             EndpointGroupId epgId, SelectorName providerSelectorName) {
-        return InstanceIdentifier.builder(Tenants.class)
-            .child(Tenant.class, new TenantKey(tenantId))
-            .child(Policy.class)
-            .child(EndpointGroup.class, new EndpointGroupKey(epgId))
+        return policyIid(tenantId).child(EndpointGroup.class, new EndpointGroupKey(epgId))
             .child(ProviderNamedSelector.class, new ProviderNamedSelectorKey(providerSelectorName))
             .build();
     }
 
     public static InstanceIdentifier<ConsumerNamedSelector> consumerNamedSelectorIid(TenantId tenantId,
             EndpointGroupId epgId, SelectorName consumerSelectorName) {
-        return InstanceIdentifier.builder(Tenants.class)
-            .child(Tenant.class, new TenantKey(tenantId))
-            .child(Policy.class)
-            .child(EndpointGroup.class, new EndpointGroupKey(epgId))
+        return policyIid(tenantId).child(EndpointGroup.class, new EndpointGroupKey(epgId))
             .child(ConsumerNamedSelector.class, new ConsumerNamedSelectorKey(consumerSelectorName))
             .build();
     }
 
     public static InstanceIdentifier<Clause> clauseIid(TenantId tenantId, ContractId contractId,
             ClauseName clauseName) {
-        return InstanceIdentifier.builder(Tenants.class)
-            .child(Tenant.class, new TenantKey(tenantId))
-            .child(Policy.class)
-            .child(Contract.class, new ContractKey(contractId))
+        return policyIid(tenantId).child(Contract.class, new ContractKey(contractId))
             .child(Clause.class, new ClauseKey(clauseName))
             .build();
     }
 
     public static InstanceIdentifier<Rule> ruleIid(TenantId tenantId, ContractId contractId, SubjectName subjectName,
             RuleName ruleName) {
-        return InstanceIdentifier.builder(Tenants.class)
-            .child(Tenant.class, new TenantKey(tenantId))
-            .child(Policy.class)
-            .child(Contract.class, new ContractKey(contractId))
+        return policyIid(tenantId).child(Contract.class, new ContractKey(contractId))
             .child(Subject.class, new SubjectKey(subjectName))
             .child(Rule.class, new RuleKey(ruleName))
             .build();
     }
 
     public static InstanceIdentifier<ActionInstance> actionInstanceIid(TenantId tenantId, ActionName actionName) {
-        return InstanceIdentifier.builder(Tenants.class)
-            .child(Tenant.class, new TenantKey(tenantId))
-            .child(Policy.class)
-            .child(SubjectFeatureInstances.class)
+        return policyIid(tenantId).child(SubjectFeatureInstances.class)
             .child(ActionInstance.class, new ActionInstanceKey(actionName))
             .build();
     }
 
     public static InstanceIdentifier<ClassifierInstance> classifierInstanceIid(TenantId tenantId,
             ClassifierName classifierName) {
-        return InstanceIdentifier.builder(Tenants.class)
-            .child(Tenant.class, new TenantKey(tenantId))
-            .child(Policy.class)
-            .child(SubjectFeatureInstances.class)
+        return policyIid(tenantId).child(SubjectFeatureInstances.class)
             .child(ClassifierInstance.class, new ClassifierInstanceKey(classifierName))
             .build();
     }
@@ -238,10 +212,7 @@ public class IidFactory {
 
     public static InstanceIdentifier<ClassifierRef> classifierRefIid(TenantId tenantId, ContractId contractId,
             SubjectName subjectName, RuleName ruleName, ClassifierName classifierRefName) {
-        return InstanceIdentifier.builder(Tenants.class)
-            .child(Tenant.class, new TenantKey(tenantId))
-            .child(Policy.class)
-            .child(Contract.class, new ContractKey(contractId))
+        return policyIid(tenantId).child(Contract.class, new ContractKey(contractId))
             .child(Subject.class, new SubjectKey(subjectName))
             .child(Rule.class, new RuleKey(ruleName))
             .child(ClassifierRef.class, new ClassifierRefKey(classifierRefName))
@@ -384,11 +355,7 @@ public class IidFactory {
 
     public static InstanceIdentifier<ExternalImplicitGroup> externalImplicitGroupIid(TenantId tenantId,
             EndpointGroupId epgId) {
-        return InstanceIdentifier.builder(Tenants.class)
-            .child(Tenant.class, new TenantKey(tenantId))
-            .child(Policy.class)
-            .child(ExternalImplicitGroup.class, new ExternalImplicitGroupKey(epgId))
-            .build();
+        return policyIid(tenantId).child(ExternalImplicitGroup.class, new ExternalImplicitGroupKey(epgId)).build();
     }
 
     public static InstanceIdentifier<ContainmentEndpoint> containmentEndpointIid(ContainmentEndpointKey key) {

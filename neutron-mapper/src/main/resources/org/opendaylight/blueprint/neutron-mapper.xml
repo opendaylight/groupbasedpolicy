@@ -10,7 +10,7 @@
 
     <cm:property-placeholder persistent-id="org.opendaylight.groupbasedpolicy.neutron.mapper.startup" update-strategy="none">
         <cm:default-properties>
-            <cm:property name="metadata-ip" value="169.254.169.254/32"/>
+            <cm:property name="metadata-ip" value="169.254.169.254"/>
             <cm:property name="metadata-port" value="80"/>
         </cm:default-properties>
     </cm:property-placeholder>

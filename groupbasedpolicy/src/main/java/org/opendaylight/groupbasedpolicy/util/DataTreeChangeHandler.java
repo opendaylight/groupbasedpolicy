@@ -108,6 +108,13 @@ public abstract class DataTreeChangeHandler<T extends DataObject> implements Clu
 
     @Override
     public void close() {
+        closeRegisteredListener();
+    }
+
+    /**
+     * For child classes which override close() method.
+     */
+    protected void closeRegisteredListener() {
         registeredListener.close();
     }
 

@@ -12,21 +12,19 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.util.HashSet;
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.domain_extension.l2_l3.util.L2L3IidFactory;
 import org.opendaylight.groupbasedpolicy.neutron.gbp.util.NeutronGbpIidFactory;
+import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.MetadataService;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.NetworkClient;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.infrastructure.NetworkService;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.MappingUtils;
 import org.opendaylight.groupbasedpolicy.neutron.mapper.util.NetworkUtils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2BridgeDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.L2FloodDomainId;
@@ -60,13 +58,11 @@ public class NeutronNetworkAware implements NeutronAware<Network> {
             InstanceIdentifier.builder(Neutron.class).child(Networks.class).child(Network.class).build();
     private final DataBroker dataProvider;
     private final Set<TenantId> tenantsWithRouterAndNetworkServiceEntities = new HashSet<>();
-    private final IpPrefix metadataIpPrefix;
-    private final long metadataPort;
+    private final long metadataTcpPort;
 
-    public NeutronNetworkAware(DataBroker dataProvider, @Nullable IpPrefix metadataIpPrefix, long metadataPort) {
+    public NeutronNetworkAware(DataBroker dataProvider, long metadataPort) {
         this.dataProvider = checkNotNull(dataProvider);
-        this.metadataIpPrefix = metadataIpPrefix;
-        this.metadataPort = metadataPort;
+        this.metadataTcpPort = metadataPort;
     }
 
     @Override
@@ -108,7 +104,7 @@ public class NeutronNetworkAware implements NeutronAware<Network> {
 
         if (!tenantsWithRouterAndNetworkServiceEntities.contains(tenantId)) {
             tenantsWithRouterAndNetworkServiceEntities.add(tenantId);
-            NetworkService.writeNetworkServiceEntitiesToTenant(tenantId, rwTx, metadataPort);
+            NetworkService.writeNetworkServiceEntitiesToTenant(tenantId, rwTx);
             NetworkService.writeDhcpClauseWithConsProvEic(tenantId, null, rwTx);
             NetworkService.writeDnsClauseWithConsProvEic(tenantId, null, rwTx);
             NetworkService.writeMgmtClauseWithConsProvEic(tenantId, null, rwTx);
@@ -116,9 +112,11 @@ public class NeutronNetworkAware implements NeutronAware<Network> {
             NetworkClient.writeConsumerNamedSelector(tenantId, NetworkService.DHCP_CONTRACT_CONSUMER_SELECTOR, rwTx);
             NetworkClient.writeConsumerNamedSelector(tenantId, NetworkService.DNS_CONTRACT_CONSUMER_SELECTOR, rwTx);
             NetworkClient.writeConsumerNamedSelector(tenantId, NetworkService.MGMT_CONTRACT_CONSUMER_SELECTOR, rwTx);
-            if (metadataIpPrefix != null) {
-                NetworkService.writeMetadataClauseWithConsProvEic(tenantId, metadataIpPrefix, rwTx);
-                NetworkClient.writeConsumerNamedSelector(tenantId, NetworkService.METADATA_CONTRACT_CONSUMER_SELECTOR,
+            MetadataService.writeMetadataClauseWithConsProvEic(tenantId, null, rwTx);
+            if (metadataTcpPort != 0) {
+                MetadataService.writeNetworkServiceEntitiesToTenant(tenantId, rwTx, metadataTcpPort);
+                MetadataService.writeMetadataClauseWithConsProvEic(tenantId, null, rwTx);
+                NetworkClient.writeConsumerNamedSelector(tenantId, MetadataService.METADATA_CONTRACT_CONSUMER_SELECTOR,
                     rwTx);
             }
         }

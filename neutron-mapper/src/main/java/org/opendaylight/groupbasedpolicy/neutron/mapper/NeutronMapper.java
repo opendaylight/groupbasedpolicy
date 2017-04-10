@@ -106,13 +106,13 @@ public class NeutronMapper implements ClusteredDataTreeChangeListener<Neutron>, 
     private Neutron neutronAfter;
 
     public NeutronMapper(DataBroker dataProvider, EndpointService epService, BaseEndpointService baseEpService,
-        @Nullable IpPrefix metadataIpPrefix, long metadataPort) {
+        @Nullable IpPrefix metadataIpPrefix, long metadataTcpPort) {
         EndpointRegistrator epRegistrator = new EndpointRegistrator(epService, baseEpService);
-        networkAware = new NeutronNetworkAware(dataProvider, metadataIpPrefix, metadataPort);
-        securityRuleAware = new NeutronSecurityRuleAware(dataProvider);
+        networkAware = new NeutronNetworkAware(dataProvider, metadataTcpPort);
+        securityRuleAware = new NeutronSecurityRuleAware(dataProvider, epRegistrator);
         securityGroupAware = new NeutronSecurityGroupAware(dataProvider, securityRuleAware);
         subnetAware = new NeutronSubnetAware(dataProvider, epRegistrator);
-        portAware = new NeutronPortAware(dataProvider, epRegistrator);
+        portAware = new NeutronPortAware(dataProvider, epRegistrator, metadataIpPrefix);
         routerAware = new NeutronRouterAware(dataProvider, epRegistrator);
         floatingIpAware = new NeutronFloatingIpAware(dataProvider);
         registerDataTreeChangeListener =

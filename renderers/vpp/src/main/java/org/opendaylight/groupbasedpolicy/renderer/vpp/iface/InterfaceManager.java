@@ -589,7 +589,7 @@ public class InterfaceManager implements AutoCloseable {
         }
     }
 
-    static ExternalLocationCase resolveAndValidateLocation(AddressEndpointWithLocation addrEpWithLoc) {
+    public static ExternalLocationCase resolveAndValidateLocation(AddressEndpointWithLocation addrEpWithLoc) {
         LocationType locationType = addrEpWithLoc.getAbsoluteLocation().getLocationType();
         if (!(locationType instanceof ExternalLocationCase)) {
             throw new IllegalArgumentException("Endpoint does not have external location " + addrEpWithLoc);
