@@ -105,15 +105,11 @@ public class NatManager {
                 return;
             }
             if (add) {
-                LOG.trace("Setting outbound NAT on interface {} on node: {}", iidPhysIface.getPathArguments(), nodeIid);
-                NatUtil.setOutboundInterface(readIface.get(), mountPointDataBroker.get());
                 NatInstance natInstance =
                     buildNatInstance(natEntries, NatUtil.resolveDynamicNat(policyCtx, natEntries));
                 GbpNetconfTransaction.netconfSyncedWrite(mountPointDataBroker.get(),
                     VppIidFactory.getNatInstanceIid(id), natInstance, GbpNetconfTransaction.RETRY_COUNT);
             } else {
-                LOG.trace("UNsetting outbound NAT on interface {}.", iidPhysIface.getPathArguments());
-                NatUtil.unsetOutboundInterface(readIface.get(), mountPointDataBroker.get());
                 if (GbpNetconfTransaction.read(mountPointDataBroker.get(), LogicalDatastoreType.CONFIGURATION,
                     VppIidFactory.getNatInstanceIid(id), GbpNetconfTransaction.RETRY_COUNT).isPresent()) {
                     GbpNetconfTransaction.netconfSyncedDelete(mountPointDataBroker.get(),
