@@ -404,9 +404,10 @@
       <classifier>config</classifier>
     </dependency>
     <dependency>
+      <!-- finalname="/etc/org.opendaylight.groupbasedpolicy.neutron.vpp.mapper.startup.cfg" -->
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>neutron-vpp-mapper</artifactId>
-      <type>xml</type>
+      <type>cfg</type>
       <classifier>config</classifier>
     </dependency>
     <dependency>

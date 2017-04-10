@@ -187,6 +187,13 @@
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
+        <artifactId>neutron-vpp-mapper</artifactId>
+        <version>${project.version}</version>
+        <type>cfg</type>
+        <classifier>config</classifier>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
         <artifactId>neutron-ovsdb</artifactId>
         <version>${project.version}</version>
         <type>xml</type>

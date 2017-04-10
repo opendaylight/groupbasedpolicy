@@ -16,7 +16,7 @@
         <argument ref="clusterSingletonService" />
     </bean>
 
-    <cm:property-placeholder persistent-id="org.opendaylight.groupbasedpolicy.neutron.vpp.mapper" update-strategy="none">
+    <cm:property-placeholder persistent-id="org.opendaylight.groupbasedpolicy.neutron.vpp.mapper.startup" update-strategy="none">
         <cm:default-properties>
             <cm:property name="routing-node" value="default"/>
         </cm:default-properties>

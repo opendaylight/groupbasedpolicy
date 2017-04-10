@@ -171,7 +171,7 @@
         <feature version="${project.version}">odl-groupbasedpolicy-neutronmapper</feature>
         <feature version="${project.version}">odl-groupbasedpolicy-vpp</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/neutron-vpp-mapper/{{VERSION}}</bundle>
-        <configfile finalname="${config.configfile.directory}/15-neutron-vpp-mapper.xml">mvn:org.opendaylight.groupbasedpolicy/neutron-vpp-mapper/{{VERSION}}/xml/config</configfile>
+        <configfile finalname="/etc/org.opendaylight.groupbasedpolicy.neutron.vpp.mapper.startup.cfg">mvn:org.opendaylight.groupbasedpolicy/neutron-vpp-mapper/{{VERSION}}/cfg/config</configfile>
     </feature>
 
     <!--
