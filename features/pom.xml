@@ -392,9 +392,10 @@
       <classifier>config</classifier>
     </dependency>
     <dependency>
+      <!-- finalname="/etc/org.opendaylight.groupbasedpolicy.renderer.vpp.startup.cfg" -->
       <groupId>org.opendaylight.groupbasedpolicy</groupId>
       <artifactId>vpp-renderer</artifactId>
-      <type>xml</type>
+      <type>cfg</type>
       <classifier>config</classifier>
     </dependency>
     <dependency>

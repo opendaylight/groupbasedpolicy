@@ -173,6 +173,13 @@
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
+        <artifactId>vpp-renderer</artifactId>
+        <version>${project.version}</version>
+        <type>cfg</type>
+        <classifier>config</classifier>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
         <artifactId>neutron-mapper</artifactId>
         <version>${project.version}</version>
         <type>xml</type>
