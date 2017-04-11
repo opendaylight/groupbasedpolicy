@@ -192,23 +192,23 @@ public class TestResources {
     }
 
     private RendererForwardingByTenant createForwarding() {
-        RendererForwardingContext l2Fd = createRendererForwardingCtx(L2_FD_ID, new Name("l2fd"), L2FloodDomain.class).setParent(
-                createParent(L2_BD_ID, L2BridgeDomain.class))
-            .build();
-        RendererForwardingContext l2Bd = createRendererForwardingCtx(L3_CTX_ID, new Name("l3ctx"), L3Context.class).setParent(
-                createParent(L3_CTX_ID, L3Context.class))
-            .build();
-        RendererForwardingContext l3Ctx = createRendererForwardingCtx(L2_BD_ID, new Name("l2bd"), L2BridgeDomain.class).build();
-        RendererNetworkDomain subnet = new RendererNetworkDomainBuilder().setNetworkDomainId(SUBNET_ID)
-            .setName(new Name("subnet"))
-            .setNetworkDomainType(Subnet.class)
-            .setParent(createParent(L2_FD_ID, L2FloodDomain.class))
-            .addAugmentation(
-                    SubnetAugmentRenderer.class,
-                    new SubnetAugmentRendererBuilder().setSubnet(
-                            new SubnetBuilder().setIpPrefix(SUBNET_PREFIX).setVirtualRouterIp(VIRTUAL_ROUTER_IP).build())
-                        .build())
-            .build();
+        RendererForwardingContext l2Fd = createRendererForwardingCtx(L2_FD_ID, new Name("l2fd"), L2FloodDomain.class)
+            .setParent(createParent(L2_BD_ID, L2BridgeDomain.class)).build();
+        RendererForwardingContext l2Bd = createRendererForwardingCtx(L3_CTX_ID, new Name("l3ctx"), L3Context.class)
+            .setParent(createParent(L3_CTX_ID, L3Context.class)).build();
+        RendererForwardingContext l3Ctx =
+                createRendererForwardingCtx(L2_BD_ID, new Name("l2bd"), L2BridgeDomain.class).build();
+        RendererNetworkDomain subnet =
+                new RendererNetworkDomainBuilder().setNetworkDomainId(SUBNET_ID)
+                    .setName(new Name("subnet"))
+                    .setNetworkDomainType(Subnet.class)
+                    .setParent(createParent(L2_FD_ID, L2FloodDomain.class))
+                    .addAugmentation(SubnetAugmentRenderer.class,
+                            new SubnetAugmentRendererBuilder().setSubnet(new SubnetBuilder().setIsTenant(true)
+                                .setIpPrefix(SUBNET_PREFIX)
+                                .setVirtualRouterIp(VIRTUAL_ROUTER_IP)
+                                .build()).build())
+                    .build();
         return new RendererForwardingByTenantBuilder().setTenantId(TENANT_ID)
             .setRendererForwardingContext(ImmutableList.<RendererForwardingContext>of(l2Fd, l2Bd, l3Ctx))
             .setRendererNetworkDomain(ImmutableList.<RendererNetworkDomain>of(subnet))

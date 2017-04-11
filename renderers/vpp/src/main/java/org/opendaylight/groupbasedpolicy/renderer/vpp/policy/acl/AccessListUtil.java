@@ -326,10 +326,10 @@ public class AccessListUtil {
                     SubnetAugmentRenderer subnetAug = rnd.getAugmentation(SubnetAugmentRenderer.class);
                     // subnetAug should not be null
                     subnetAug.getSubnet();
-                    if (policyDirection.equals(ACE_DIRECTION.INGRESS)) {
+                    if (policyDirection.equals(ACE_DIRECTION.INGRESS) && subnetAug.getSubnet().isIsTenant()) {
                         aclRuleBuilders.add(denyIngressTrafficForPrefix(subnetAug.getSubnet()));
                     }
-                    else {
+                    else if(subnetAug.getSubnet().isIsTenant()) {
                         aclRuleBuilders.add(denyEgressTrafficForPrefix(subnetAug.getSubnet()));
                     }
                 });
