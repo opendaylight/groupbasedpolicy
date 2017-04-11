@@ -186,7 +186,7 @@ public class DtoFactory {
             .addAugmentation(
                     SubnetAugmentRenderer.class,
                     new SubnetAugmentRendererBuilder().setSubnet(
-                            new SubnetBuilder().setIpPrefix(subnetPrefix).setVirtualRouterIp(virtRouterIp).build())
+                            new SubnetBuilder().setIpPrefix(subnetPrefix).setVirtualRouterIp(virtRouterIp).setIsTenant(true).build())
                         .build())
             .build();
         return new RendererForwardingByTenantBuilder().setTenantId(TENANT_ID)
