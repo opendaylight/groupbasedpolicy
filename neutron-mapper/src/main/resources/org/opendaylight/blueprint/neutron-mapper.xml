@@ -1,16 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
            xmlns:odl="http://opendaylight.org/xmlns/blueprint/v1.0.0"
+           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
            odl:use-default-for-reference-types="true">
 
     <reference id="dataBroker" interface="org.opendaylight.controller.md.sal.binding.api.DataBroker"/>
     <reference id="rpcRegistry" interface="org.opendaylight.controller.sal.binding.api.RpcProviderRegistry"/>
     <reference id="clusterSingletonService" interface="org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider"/>
 
+    <cm:property-placeholder persistent-id="org.opendaylight.groupbasedpolicy.neutron.mapper.startup" update-strategy="none">
+        <cm:default-properties>
+            <cm:property name="metadata-ip" value="169.254.169.254/32"/>
+            <cm:property name="metadata-port" value="80"/>
+        </cm:default-properties>
+    </cm:property-placeholder>
+
     <bean id="neutronMapper" class="org.opendaylight.controller.config.yang.config.neutron_mapper.impl.NeutronMapperInstance"
           init-method="instantiate" destroy-method="close">
         <argument ref="dataBroker"/>
         <argument ref="rpcRegistry"/>
         <argument ref="clusterSingletonService"/>
+        <argument value="${metadata-ip}"/>
+        <argument value="${metadata-port}"/>
     </bean>
 </blueprint>

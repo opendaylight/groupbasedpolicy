@@ -77,7 +77,7 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>neutron-mapper</artifactId>
-            <type>xml</type>
+            <type>cfg</type>
             <classifier>config</classifier>
             <scope>runtime</scope>
         </dependency>

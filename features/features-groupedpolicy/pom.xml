@@ -399,7 +399,7 @@
         <dependency>
             <groupId>org.opendaylight.groupbasedpolicy</groupId>
             <artifactId>neutron-mapper</artifactId>
-            <type>xml</type>
+            <type>cfg</type>
             <classifier>config</classifier>
         </dependency>
         <dependency>

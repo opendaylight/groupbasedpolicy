@@ -175,6 +175,30 @@ public class NetworkService {
      */
     public static final ConsumerNamedSelector MGMT_CONTRACT_CONSUMER_SELECTOR;
 
+    // ########### METADATA management
+    private static final ClassifierName METADATA_SERVER_TO_CLIENT_NAME =
+        new ClassifierName("METADATA_FROM_SERVER_TO_CLIENT");
+    private static final ClassifierName METADATA_CLIENT_TO_SERVER_NAME =
+        new ClassifierName("METADATA_FROM_CLIENT_TO_SERVER");
+    private static final SubjectName METADATA_SUBJECT_NAME = new SubjectName("ALLOW_METADATA");
+    private static final Description METADATA_CONTRACT_DESC =
+        new Description("Allow METADATA management communication between server and client.");
+
+    /**
+     * Id of {@link #METADATA_CONTRACT}
+     */
+    public static final ContractId METADATA_CONTRACT_ID = new ContractId("be0675b7-b0d6-46cc-acf1-247ed31cf572");
+    /**
+     * Contains rules with action {@link MappingUtils#ACTION_REF_ALLOW} matching ICMP and SSH
+     * communication
+     * between Client and Server.
+     */
+    public static final Contract METADATA_CONTRACT;
+    /**
+     * {@link ConsumerNamedSelector} pointing to {@link #METADATA_CONTRACT}
+     */
+    public static final ConsumerNamedSelector METADATA_CONTRACT_CONSUMER_SELECTOR;
+
     // ########### NETWORK-SERVICE ENDPOINT-GROUP
     private static final Name NETWORK_SERVICE_EPG_NAME = new Name("NETWORK_SERVICE");
     private static final Description NETWORK_SERVICE_EPG_DESC = new Description("Represents DHCP and DNS servers.");
@@ -194,6 +218,8 @@ public class NetworkService {
         DNS_CONTRACT_CONSUMER_SELECTOR = createConsumerSelector(DNS_CONTRACT);
         MGMT_CONTRACT = createContractMgmt();
         MGMT_CONTRACT_CONSUMER_SELECTOR = createConsumerSelector(MGMT_CONTRACT);
+        METADATA_CONTRACT = createContractMetadata();
+        METADATA_CONTRACT_CONSUMER_SELECTOR = createConsumerSelector(METADATA_CONTRACT);
         EPG = createNetworkServiceEpg();
     }
 
@@ -201,9 +227,11 @@ public class NetworkService {
         ProviderNamedSelector dhcpProviderSelector = createProviderSelector(DHCP_CONTRACT);
         ProviderNamedSelector dnsProviderSelector = createProviderSelector(DNS_CONTRACT);
         ProviderNamedSelector mgmtProviderSelector = createProviderSelector(MGMT_CONTRACT);
+        ProviderNamedSelector metadataProviderSelector = createProviderSelector(METADATA_CONTRACT);
         return new EndpointGroupBuilder().setId(EPG_ID)
             .setName(NETWORK_SERVICE_EPG_NAME)
-            .setProviderNamedSelector(ImmutableList.of(dhcpProviderSelector, dnsProviderSelector, mgmtProviderSelector))
+            .setProviderNamedSelector(ImmutableList.of(dhcpProviderSelector, dnsProviderSelector, mgmtProviderSelector,
+                metadataProviderSelector))
             .setIntraGroupPolicy(IntraGroupPolicy.RequireContract)
             .setDescription(NETWORK_SERVICE_EPG_DESC)
             .build();
@@ -282,6 +310,26 @@ public class NetworkService {
             .build();
     }
 
+    private static Contract createContractMetadata() {
+        Rule serverClientMetadataIpv4Rule = createRuleAllow(METADATA_SERVER_TO_CLIENT_NAME, Direction.Out);
+        Rule clientServerMetadataIpv4Rule = createRuleAllow(METADATA_CLIENT_TO_SERVER_NAME, Direction.In);
+        Rule serverClientIcmpIpv4Rule = createRuleAllow(ICMP_IPV4_BETWEEN_SERVER_CLIENT_NAME, Direction.Out);
+        Rule serverClientIcmpIpv6Rule = createRuleAllow(ICMP_IPV6_BETWEEN_SERVER_CLIENT_NAME, Direction.Out);
+        Rule clientServerIcmpIpv4Rule = createRuleAllow(ICMP_IPV4_BETWEEN_SERVER_CLIENT_NAME, Direction.In);
+        Rule clientServerIcmpIpv6Rule = createRuleAllow(ICMP_IPV6_BETWEEN_SERVER_CLIENT_NAME, Direction.In);
+
+        Subject subject = new SubjectBuilder().setName(METADATA_SUBJECT_NAME)
+            .setOrder(0)
+            .setRule(ImmutableList.of(serverClientMetadataIpv4Rule, clientServerMetadataIpv4Rule,
+                clientServerIcmpIpv4Rule, clientServerIcmpIpv6Rule,
+                serverClientIcmpIpv4Rule, serverClientIcmpIpv6Rule))
+            .build();
+        return new ContractBuilder().setId(METADATA_CONTRACT_ID)
+            .setSubject(ImmutableList.of(subject))
+            .setDescription(METADATA_CONTRACT_DESC)
+            .build();
+    }
+
     private static Rule createRuleAllow(ClassifierName classifierName, Direction direction) {
         ClassifierName name =
                 new ClassifierName(direction.name() + MappingUtils.NAME_DOUBLE_DELIMETER + classifierName.getValue());
@@ -340,6 +388,21 @@ public class NetworkService {
                 clause, true);
     }
 
+    /**
+     * puts clause with {@link L3EndpointIdentificationConstraints} in {@link ConsumerMatchers}
+     * and {@link ProviderMatchers}. This clause points to subject in {@link #METADATA_CONTRACT}.
+     *
+     * @param tenantId location of {@link #METADATA_CONTRACT}
+     * @param ipPrefix used in {@link L3EndpointIdentificationConstraints}
+     * @param wTx transaction where entities are written
+     */
+    public static void writeMetadataClauseWithConsProvEic(TenantId tenantId, @Nullable IpPrefix ipPrefix,
+        WriteTransaction wTx) {
+        Clause clause = createClauseWithConsProvEic(ipPrefix, METADATA_SUBJECT_NAME);
+        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.clauseIid(tenantId, METADATA_CONTRACT_ID, clause.getName()),
+            clause, true);
+    }
+
     private static Clause createClauseWithConsProvEic(@Nullable IpPrefix ipPrefix, SubjectName subjectName) {
         ConsumerMatchers consumerMatchers = null;
         ProviderMatchers providerMatchers = null;
@@ -381,8 +444,8 @@ public class NetworkService {
      * @param tenantId location of network-service entities
      * @param wTx transaction where network-service entities are written
      */
-    public static void writeNetworkServiceEntitiesToTenant(TenantId tenantId, WriteTransaction wTx) {
-        Set<ClassifierInstance> classifierInstances = getAllClassifierInstances();
+    public static void writeNetworkServiceEntitiesToTenant(TenantId tenantId, WriteTransaction wTx, long metadataPort) {
+        Set<ClassifierInstance> classifierInstances = getAllClassifierInstances(metadataPort);
         for (ClassifierInstance ci : classifierInstances) {
             wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.classifierInstanceIid(tenantId, ci.getName()), ci,
                     true);
@@ -396,6 +459,8 @@ public class NetworkService {
                 true);
         wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.contractIid(tenantId, MGMT_CONTRACT_ID), MGMT_CONTRACT,
                 true);
+        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.contractIid(tenantId, METADATA_CONTRACT_ID), METADATA_CONTRACT,
+                true);
         wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.endpointGroupIid(tenantId, EPG_ID), EPG, true);
     }
 
@@ -403,7 +468,7 @@ public class NetworkService {
      * @return All classifier-instances used in {@link #DHCP_CONTRACT}, {@link #DNS_CONTRACT} and
      *         {@link #MGMT_CONTRACT}
      */
-    public static Set<ClassifierInstance> getAllClassifierInstances() {
+    public static Set<ClassifierInstance> getAllClassifierInstances(long metadataPort) {
         HashSet<ClassifierInstance> cis = new HashSet<>();
         cis.add(createDhcpIpv4ClientServer());
         cis.add(createDhcpIpv4ServerClient());
@@ -424,6 +489,9 @@ public class NetworkService {
         cis.add(createSshTcpIpv6ClientServer());
         cis.add(createIcmpIpv4());
         cis.add(createIcmpIpv6());
+        // METADATA
+        cis.add(createMetadataIpv4ClientServer(metadataPort));
+        cis.add(createMetadataIpv4ServerClient(metadataPort));
 
         return cis;
     }
@@ -572,6 +640,25 @@ public class NetworkService {
         return new ClassifierInstanceBuilder().setName(ICMP_IPV6_BETWEEN_SERVER_CLIENT_NAME)
             .setClassifierDefinitionId(IpProtoClassifierDefinition.DEFINITION.getId())
             .setParameterValue(createParams(EtherTypeClassifierDefinition.IPv6_VALUE, IpProtoClassifierDefinition.ICMP_VALUE, null, null))
+            .build();
+    }
+
+    // ###################### METADATA
+    private static ClassifierInstance createMetadataIpv4ClientServer(long dstPort) {
+        return new ClassifierInstanceBuilder().setName(METADATA_CLIENT_TO_SERVER_NAME)
+            .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
+            .setParameterValue(
+                createParams(EtherTypeClassifierDefinition.IPv4_VALUE, IpProtoClassifierDefinition.TCP_VALUE, null,
+                    dstPort))
+            .build();
+    }
+
+    private static ClassifierInstance createMetadataIpv4ServerClient(long srcPort) {
+        return new ClassifierInstanceBuilder().setName(METADATA_SERVER_TO_CLIENT_NAME)
+            .setClassifierDefinitionId(L4ClassifierDefinition.DEFINITION.getId())
+            .setParameterValue(
+                createParams(EtherTypeClassifierDefinition.IPv4_VALUE, IpProtoClassifierDefinition.TCP_VALUE,
+                    srcPort, null))
             .build();
     }
 

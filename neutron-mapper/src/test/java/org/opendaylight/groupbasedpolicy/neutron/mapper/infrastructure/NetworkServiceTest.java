@@ -55,6 +55,13 @@ public class NetworkServiceTest extends NeutronMapperDataBrokerTest {
     private static final String ICMP_IPV4_BETWEEN_SERVER_CLIENT_NAME = "ICMP_IPV4_BETWEEN_SERVER_CLIENT";
     private static final String ICMP_IPV6_BETWEEN_SERVER_CLIENT_NAME = "ICMP_IPV6_BETWEEN_SERVER_CLIENT";
 
+    // metadata
+    private static final SubjectName METADATA_SUBJECT_NAME = new SubjectName("ALLOW_METADATA");
+    private static final String METADATA_SERVER_TO_CLIENT_NAME = "METADATA_FROM_SERVER_TO_CLIENT";
+    private static final String METADATA_CLIENT_TO_SERVER_NAME = "METADATA_FROM_CLIENT_TO_SERVER";
+    private static final long METADATA_IPV4_SERVER_PORT = 80;
+    private final IpPrefix metadataIpv4Prefix = new IpPrefix(new Ipv4Prefix("169.254.169.254/32"));
+
     private final String tenantId = "00000000-0000-0000-0000-000000000001";
     private final IpPrefix ipv4Prefix = new IpPrefix(new Ipv4Prefix("170.0.0.1/8"));
     private final IpPrefix ipv6Prefix = new IpPrefix(new Ipv6Prefix("2001:0db8:85a3:0000:0000:8a2e:0370:7334/128"));
@@ -131,12 +138,64 @@ public class NetworkServiceTest extends NeutronMapperDataBrokerTest {
                 clauseNameIpV6);
     }
 
+
+    @Test
+    public void testWriteMgmtClauseWithConsProvEicIpv4() throws Exception {
+        // ipv4
+        DataBroker dataBroker = getDataBroker();
+        ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
+        NetworkService.writeMgmtClauseWithConsProvEic(new TenantId(tenantId), ipv4Prefix, rwTx);
+        rwTx.submit().get();
+
+        // expected clause name
+        String clauseNameIpV4 = MGMT_SUBJECT_NAME.getValue() + MappingUtils.NAME_DOUBLE_DELIMETER
+            + ipv4Prefix.getIpv4Prefix().getValue();
+        clauseNameIpV4 = clauseNameIpV4.replace('/', '_');
+
+        PolicyAssert.assertClauseExists(dataBroker, tenantId, NetworkService.MGMT_CONTRACT_ID.getValue(),
+            clauseNameIpV4);
+    }
+
+    @Test
+    public void testWriteMgmtClauseWithConsProvEicIpv6() throws Exception {
+        // ipv6
+        DataBroker dataBroker = getDataBroker();
+        ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
+        NetworkService.writeMgmtClauseWithConsProvEic(new TenantId(tenantId), ipv6Prefix, rwTx);
+        rwTx.submit().get();
+
+        // expected clause name
+        String clauseNameIpV6 = MGMT_SUBJECT_NAME.getValue() + MappingUtils.NAME_DOUBLE_DELIMETER
+            + ipv6Prefix.getIpv6Prefix().getValue();
+        clauseNameIpV6 = clauseNameIpV6.replace('/', '_').replace(':', '.');
+
+        PolicyAssert.assertClauseExists(dataBroker, tenantId, NetworkService.MGMT_CONTRACT_ID.getValue(),
+            clauseNameIpV6);
+    }
+
+    @Test
+    public void testWriteMetadataClauseWithConsProvEicIpv4() throws Exception {
+        // ipv4
+        DataBroker dataBroker = getDataBroker();
+        ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
+        NetworkService.writeMetadataClauseWithConsProvEic(new TenantId(tenantId), metadataIpv4Prefix, rwTx);
+        rwTx.submit().get();
+
+        // expected clause name
+        String clauseNameIpV4 = METADATA_SUBJECT_NAME.getValue() + MappingUtils.NAME_DOUBLE_DELIMETER
+            + metadataIpv4Prefix.getIpv4Prefix().getValue();
+        clauseNameIpV4 = clauseNameIpV4.replace('/', '_');
+
+        PolicyAssert.assertClauseExists(dataBroker, tenantId, NetworkService.METADATA_CONTRACT_ID.getValue(),
+            clauseNameIpV4);
+    }
+
     @Test
     public void testWriteNetworkServiceEntitiesToTenant() throws Exception {
         // write everything
         DataBroker dataBroker = getDataBroker();
         ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
-        NetworkService.writeNetworkServiceEntitiesToTenant(new TenantId(tenantId), rwTx);
+        NetworkService.writeNetworkServiceEntitiesToTenant(new TenantId(tenantId), rwTx, METADATA_IPV4_SERVER_PORT);
         rwTx.submit().get();
 
         // read classifier instances
@@ -158,11 +217,14 @@ public class NetworkServiceTest extends NeutronMapperDataBrokerTest {
         PolicyAssert.assertClassifierInstanceExists(dataBroker, tenantId, SSH_IPV6_CLIENT_TO_SERVER_NAME);
         PolicyAssert.assertClassifierInstanceExists(dataBroker, tenantId, ICMP_IPV4_BETWEEN_SERVER_CLIENT_NAME);
         PolicyAssert.assertClassifierInstanceExists(dataBroker, tenantId, ICMP_IPV6_BETWEEN_SERVER_CLIENT_NAME);
+        PolicyAssert.assertClassifierInstanceExists(dataBroker, tenantId, METADATA_CLIENT_TO_SERVER_NAME);
+        PolicyAssert.assertClassifierInstanceExists(dataBroker, tenantId, METADATA_SERVER_TO_CLIENT_NAME);
 
         // read contracts
         PolicyAssert.assertContractExists(dataBroker, tenantId, NetworkService.DHCP_CONTRACT_ID.getValue());
         PolicyAssert.assertContractExists(dataBroker, tenantId, NetworkService.DNS_CONTRACT_ID.getValue());
         PolicyAssert.assertContractExists(dataBroker, tenantId, NetworkService.MGMT_CONTRACT_ID.getValue());
+        PolicyAssert.assertContractExists(dataBroker, tenantId, NetworkService.METADATA_CONTRACT_ID.getValue());
 
         // read group id
         PolicyAssert.assertEndpointGroupExists(dataBroker, tenantId, NetworkService.EPG_ID.getValue());
@@ -170,10 +232,11 @@ public class NetworkServiceTest extends NeutronMapperDataBrokerTest {
 
     @Test
     public void testGetAllClassifierInstances() {
-        Set<ClassifierInstance> classifierInstances = NetworkService.getAllClassifierInstances();
+        Set<ClassifierInstance> classifierInstances =
+            NetworkService.getAllClassifierInstances(METADATA_IPV4_SERVER_PORT);
         assertNotNull(classifierInstances);
         assertFalse(classifierInstances.isEmpty());
-        assertEquals(classifierInstances.size(), 18);
+        assertEquals(20, classifierInstances.size());
     }
 
 }

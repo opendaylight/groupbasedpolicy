@@ -23,6 +23,8 @@ import org.slf4j.LoggerFactory;
 class SourceMapper extends AddressMapper {
 
     private static final Logger LOG = LoggerFactory.getLogger(SourceMapper.class);
+    private static final String METADATA_IP_PREFIX = "169.254.169.254/32";
+    private static final String OUT__METADATA = "Out__METADATA";
 
     SourceMapper(ACE_DIRECTION direction) {
         super(direction);
@@ -41,12 +43,24 @@ class SourceMapper extends AddressMapper {
             // TODO more parents
             ParentEndpoint parentEp = EndpointUtils.getParentEndpoints(addrEp.getParentEndpointChoice()).get(0);
             if (parentEp != null && parentEp.getContextType().isAssignableFrom(L3Context.class)) {
-                LOG.trace("Setting src IP address {} in rule {}", parentEp.getAddress(), aclRuleBuilder);
-                try {
-                    AccessListUtil.setSourceL3Address(aclRuleBuilder, parentEp.getAddress());
-                } catch (UnknownHostException e) {
-                    LOG.error("Failed to parse address {}. Cannot apply ACL entry {}. {}", parentEp.getAddress(),
+                // TODO this is a fix for metadata agent in DHCP namespace, when we will fully support multiple IPs
+                // per interface we shall rework this
+                if (aclRuleBuilder.getName().contains(OUT__METADATA)) {
+                    LOG.trace("Setting src IP address {} in rule {}", METADATA_IP_PREFIX, aclRuleBuilder);
+                    try {
+                        AccessListUtil.setSourceL3Address(aclRuleBuilder, METADATA_IP_PREFIX);
+                    } catch (UnknownHostException e) {
+                        LOG.error("Failed to parse address {}. Cannot apply ACL entry {}. {}", METADATA_IP_PREFIX,
                             aclRuleBuilder, e);
+                    }
+                } else {
+                    LOG.trace("Setting src IP address {} in rule {}", parentEp.getAddress(), aclRuleBuilder);
+                    try {
+                        AccessListUtil.setSourceL3Address(aclRuleBuilder, parentEp.getAddress());
+                    } catch (UnknownHostException e) {
+                        LOG.error("Failed to parse address {}. Cannot apply ACL entry {}. {}", parentEp.getAddress(),
+                            aclRuleBuilder, e);
+                    }
                 }
             }
         }

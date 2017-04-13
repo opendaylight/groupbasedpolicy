@@ -33,7 +33,9 @@ import org.opendaylight.groupbasedpolicy.neutron.mapper.util.Utils;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.BaseEndpointService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
@@ -69,6 +71,8 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
     private final Uuid networkUuid = new Uuid("dddddddd-dddd-dddd-dddd-dddddddddddd");
     private final Uuid gatewayPortUuid = new Uuid("dddddddd-dddd-dddd-dddd-ddddddddddd1");
     private final IpAddress ipAddress = new IpAddress(new Ipv4Address("10.0.0.2"));
+    private static final long METADATA_IPV4_SERVER_PORT = 80;
+    private static final IpPrefix METADATA_IP_PREFIX = new IpPrefix(new Ipv4Prefix("169.254.169.254/32"));
 
     private DataBroker dataBroker;
     private NeutronRouterAware routerAware;
@@ -108,7 +112,7 @@ public class NeutronRouterAwareDataStoreTest extends NeutronMapperDataBrokerTest
                     .thenReturn(futureRpcResult);
         epRegistrator = new EndpointRegistrator(epService, baseEpService);
 
-        networkAware = new NeutronNetworkAware(dataBroker);
+        networkAware = new NeutronNetworkAware(dataBroker, METADATA_IP_PREFIX, METADATA_IPV4_SERVER_PORT);
         network = new NetworkBuilder().setTenantId(tenantUuid).setUuid(networkUuid).setName("networkName").build();
 
         routerAware = new NeutronRouterAware(dataBroker, epRegistrator);
