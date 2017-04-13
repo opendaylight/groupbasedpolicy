@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.opendaylight.odlparent</groupId>
+        <artifactId>single-feature-parent</artifactId>
+        <version>1.8.0-SNAPSHOT</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>org.opendaylight.groupbasedpolicy</groupId>
+    <artifactId>odl-groupbasedpolicy-ios-xe</artifactId>
+    <version>0.5.0-SNAPSHOT</version>
+    <packaging>feature</packaging>
+    <!--
+       IOS-XE renderer
+    -->
+    <name>OpenDaylight :: groupbasedpolicy :: ios-xe renderer</name>
+
+    <properties>
+        <sfc.version>0.5.0-SNAPSHOT</sfc.version>
+        <sxp.version>1.4.0-SNAPSHOT</sxp.version>
+        <netconf.version>1.2.0-SNAPSHOT</netconf.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- ODL-GBP-ARTIFACTS -->
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>groupbasedpolicy-artifacts</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- ODL-NETCONF-ARTIFACTS -->
+            <dependency>
+                <groupId>org.opendaylight.netconf</groupId>
+                <artifactId>netconf-artifacts</artifactId>
+                <version>${netconf.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>l2-l3-domain-extension</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>ios-xe-renderer</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>odl-groupbasedpolicy-base</artifactId>
+            <type>xml</type>
+            <classifier>features</classifier>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>odl-groupbasedpolicy-sxp-ep-provider</artifactId>
+            <type>xml</type>
+            <classifier>features</classifier>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>odl-groupbasedpolicy-ip-sgt-distribution-service</artifactId>
+            <type>xml</type>
+            <classifier>features</classifier>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.opendaylight.sfc</groupId>
+            <artifactId>odl-sfc-provider</artifactId>
+            <version>${sfc.version}</version>
+            <type>xml</type>
+            <classifier>features</classifier>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.opendaylight.sxp</groupId>
+            <artifactId>odl-sxp-core</artifactId>
+            <version>${sxp.version}</version>
+            <type>xml</type>
+            <classifier>features</classifier>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.opendaylight.netconf</groupId>
+            <artifactId>odl-netconf-clustered-topology</artifactId>
+            <type>xml</type>
+            <classifier>features</classifier>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>ios-xe-renderer</artifactId>
+            <type>xml</type>
+            <classifier>config</classifier>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+</project>

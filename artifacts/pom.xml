@@ -168,26 +168,12 @@
         <groupId>${project.groupId}</groupId>
         <artifactId>vpp-renderer</artifactId>
         <version>${project.version}</version>
-        <type>xml</type>
-        <classifier>config</classifier>
-      </dependency>
-      <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>vpp-renderer</artifactId>
-        <version>${project.version}</version>
         <type>cfg</type>
         <classifier>config</classifier>
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>neutron-mapper</artifactId>
-        <version>${project.version}</version>
-        <type>xml</type>
-        <classifier>config</classifier>
-      </dependency>
-      <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>neutron-vpp-mapper</artifactId>
         <version>${project.version}</version>
         <type>xml</type>
         <classifier>config</classifier>
@@ -247,6 +233,125 @@
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>features-groupbasedpolicy</artifactId>
+        <version>${project.version}</version>
+        <classifier>features</classifier>
+        <type>xml</type>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>features4-groupbasedpolicy</artifactId>
+        <version>${project.version}</version>
+        <classifier>features</classifier>
+        <type>xml</type>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>odl-groupbasedpolicy-base</artifactId>
+        <version>${project.version}</version>
+        <classifier>features</classifier>
+        <type>xml</type>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>odl-groupbasedpolicy-ofoverlay</artifactId>
+        <version>${project.version}</version>
+        <classifier>features</classifier>
+        <type>xml</type>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>odl-groupbasedpolicy-ovssfc</artifactId>
+        <version>${project.version}</version>
+        <classifier>features</classifier>
+        <type>xml</type>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>odl-groupbasedpolicy-faas</artifactId>
+        <version>${project.version}</version>
+        <classifier>features</classifier>
+        <type>xml</type>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>odl-groupbasedpolicy-iovisor</artifactId>
+        <version>${project.version}</version>
+        <classifier>features</classifier>
+        <type>xml</type>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>odl-groupbasedpolicy-netconf</artifactId>
+        <version>${project.version}</version>
+        <classifier>features</classifier>
+        <type>xml</type>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>odl-groupbasedpolicy-neutronmapper</artifactId>
+        <version>${project.version}</version>
+        <classifier>features</classifier>
+        <type>xml</type>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>odl-groupbasedpolicy-neutron-and-ofoverlay</artifactId>
+        <version>${project.version}</version>
+        <classifier>features</classifier>
+        <type>xml</type>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>odl-groupbasedpolicy-vpp</artifactId>
+        <version>${project.version}</version>
+        <classifier>features</classifier>
+        <type>xml</type>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>odl-groupbasedpolicy-neutron-vpp-mapper</artifactId>
+        <version>${project.version}</version>
+        <classifier>features</classifier>
+        <type>xml</type>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>odl-groupbasedpolicy-ui</artifactId>
+        <version>${project.version}</version>
+        <classifier>features</classifier>
+        <type>xml</type>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>odl-groupbasedpolicy-ip-sgt-distribution-service</artifactId>
+        <version>${project.version}</version>
+        <classifier>features</classifier>
+        <type>xml</type>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>odl-groupbasedpolicy-ne-location-provider</artifactId>
+        <version>${project.version}</version>
+        <classifier>features</classifier>
+        <type>xml</type>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>odl-groupbasedpolicy-ios-xe</artifactId>
+        <version>${project.version}</version>
+        <classifier>features</classifier>
+        <type>xml</type>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>odl-groupbasedpolicy-sxp-ep-provider</artifactId>
+        <version>${project.version}</version>
+        <classifier>features</classifier>
+        <type>xml</type>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>odl-groupbasedpolicy-sxp-ise-adapter</artifactId>
         <version>${project.version}</version>
         <classifier>features</classifier>
         <type>xml</type>

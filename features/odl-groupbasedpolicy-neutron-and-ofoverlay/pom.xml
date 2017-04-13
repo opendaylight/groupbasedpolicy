@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.opendaylight.odlparent</groupId>
+        <artifactId>single-feature-parent</artifactId>
+        <version>1.8.0-SNAPSHOT</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>org.opendaylight.groupbasedpolicy</groupId>
+    <artifactId>odl-groupbasedpolicy-neutron-and-ofoverlay</artifactId>
+    <version>0.5.0-SNAPSHOT</version>
+    <packaging>feature</packaging>
+    <!--
+         The Neutron provider and OFOVERLAY renderer
+    -->
+    <name>OpenDaylight :: groupbasedpolicy :: Neutron Mapper mapps neutron APIs to GBP APIs</name>
+    <dependencyManagement>
+        <dependencies>
+            <!-- ODL-GBP-ARTIFACTS -->
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>groupbasedpolicy-artifacts</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>neutron-ovsdb</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>odl-groupbasedpolicy-ofoverlay</artifactId>
+            <type>xml</type>
+            <classifier>features</classifier>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>odl-groupbasedpolicy-neutronmapper</artifactId>
+            <type>xml</type>
+            <classifier>features</classifier>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>neutron-ovsdb</artifactId>
+            <type>xml</type>
+            <classifier>config</classifier>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+</project>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.opendaylight.odlparent</groupId>
+        <artifactId>single-feature-parent</artifactId>
+        <version>1.8.0-SNAPSHOT</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>org.opendaylight.groupbasedpolicy</groupId>
+    <artifactId>odl-groupbasedpolicy-ui</artifactId>
+    <version>0.5.0-SNAPSHOT</version>
+    <packaging>feature</packaging>
+    <!--
+         UI
+    -->
+    <name>OpenDaylight :: groupbasedpolicy :: DLUX UI</name>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- ODL-GBP-ARTIFACTS -->
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>groupbasedpolicy-artifacts</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>groupbasedpolicy-ui-bundle</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.opendaylight.dlux</groupId>
+            <artifactId>odl-dlux-core</artifactId>
+            <version>0.5.0-SNAPSHOT</version>
+            <type>xml</type>
+            <classifier>features</classifier>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+</project>
