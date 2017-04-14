@@ -56,7 +56,7 @@
         <dependency>
             <groupId>org.opendaylight.faas</groupId>
             <artifactId>odl-faas-uln-mapper</artifactId>
-            <version>1.3.0-SNAPSHOT</version>
+            <version>${faas.version}</version>
             <type>xml</type>
             <classifier>features</classifier>
             <scope>runtime</scope>
