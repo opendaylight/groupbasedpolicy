@@ -84,7 +84,7 @@ public class VppNodeManager {
     private static final short DURATION = 3000;
     private static final TopologyId TOPOLOGY_ID = new TopologyId("topology-netconf");
     private static final Logger LOG = LoggerFactory.getLogger(VppNodeManager.class);
-    private static final String V3PO_CAPABILITY = "(urn:opendaylight:params:xml:ns:yang:v3po?revision=2016-12-14)v3po";
+    private static final String V3PO_CAPABILITY = "(urn:opendaylight:params:xml:ns:yang:v3po?revision=2017-03-15)v3po";
     private static final String INTERFACES_CAPABILITY = "(urn:ietf:params:xml:ns:yang:ietf-interfaces?revision=2014-05-08)ietf-interfaces";
     private static final NodeId CONTROLLER_CONFIG_NODE = new NodeId("controller-config");
     private static final String NO_PUBLIC_INT_SPECIFIED = "unspecified";
