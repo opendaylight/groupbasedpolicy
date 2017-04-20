@@ -88,6 +88,7 @@ public class VppNodeManager {
     private static final String INTERFACES_CAPABILITY = "(urn:ietf:params:xml:ns:yang:ietf-interfaces?revision=2014-05-08)ietf-interfaces";
     private static final NodeId CONTROLLER_CONFIG_NODE = new NodeId("controller-config");
     private static final String NO_PUBLIC_INT_SPECIFIED = "unspecified";
+    private static final String PUBLIC_INTERFACE = "public-interface";
     private final Map<NodeId, PhysicalInterfaceKey> extInterfaces = new HashMap<>();
     private final DataBroker dataBroker;
     private final List<String> requiredCapabilities;
@@ -252,6 +253,7 @@ public class VppNodeManager {
         final RendererNode rendererNode = remapNode(mountPointIid);
         final WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
         wTx.delete(LogicalDatastoreType.OPERATIONAL, VppIidFactory.getRendererNodeIid(rendererNode));
+        extInterfaces.remove(node.getNodeId());
         final CheckedFuture<Void, TransactionCommitFailedException> checkedFuture = wTx.submit();
         try {
             checkedFuture.checkedGet();
@@ -410,13 +412,18 @@ public class VppNodeManager {
                     phIface.setInterfaceName(iface.getName());
                     phIface.setType(iface.getType());
                     phIface.setAddress(resolveIpAddress(iface.getAugmentation(Interface1.class)));
-
-                    if (extInterfaces.get(nodeId) != null && extInterfaces.get(nodeId)
-                        .getInterfaceName()
-                        .equals(phIface.getInterfaceName())) {
+                    if (extInterfaces.get(nodeId) != null
+                            && extInterfaces.get(nodeId).getInterfaceName().equals(phIface.getInterfaceName())) {
                         phIface.setExternal(true);
-                        LOG.trace("Assigning external Interface, interface name: {}, extInterface name: {}",
-                            phIface.getInterfaceName(), extInterfaces.get(nodeId).getInterfaceName());
+                        extInterfaces.put(nodeId, new PhysicalInterfaceKey(iface.getName()));
+                        LOG.info("Interface {} is marked as public interface based on bundle configuration.",
+                                iface.getName());
+                    }
+                    if (PUBLIC_INTERFACE.equals(iface.getDescription())) {
+                        phIface.setExternal(true);
+                        extInterfaces.put(nodeId, new PhysicalInterfaceKey(iface.getName()));
+                        LOG.info("Interface {} is marked as public interface based on HC configuration.",
+                                iface.getName());
                     }
                     phIfaces.add(phIface.build());
                 });
