@@ -16,6 +16,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.adapter.VppRpcServiceImpl;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigurationService;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonService;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceRegistration;
@@ -50,6 +51,7 @@ public class GbpVppProviderInstance implements ClusterSingletonService, VppAdapt
     private VppRpcServiceImpl vppRpcService;
     private VppRenderer renderer;
     private BindingAwareBroker.RpcRegistration<VppAdapterService> vppRpcServiceRegistration;
+    private ConfigurationService configurationService;
 
     public GbpVppProviderInstance(final DataBroker dataBroker,
                                   final BindingAwareBroker bindingAwareBroker,
@@ -60,6 +62,7 @@ public class GbpVppProviderInstance implements ClusterSingletonService, VppAdapt
         this.clusterSingletonService = Preconditions.checkNotNull(clusterSingletonService);
         this.publicInterfaces = publicInterfaces;
         this.rpcProviderRegistry = Preconditions.checkNotNull(rpcProviderRegistry);
+        configurationService = new ConfigurationService();
     }
 
     public void initialize() {
