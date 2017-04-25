@@ -33,6 +33,25 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNodeKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.acl.rev161214.VppAclInterfaceAugmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.Lisp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.dp.subtable.grouping.LocalMappings;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.dp.subtable.grouping.local.mappings.LocalMapping;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.dp.subtable.grouping.local.mappings.LocalMappingKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.eid.table.grouping.EidTable;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.eid.table.grouping.eid.table.VniTable;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.eid.table.grouping.eid.table.VniTableKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.eid.table.grouping.eid.table.vni.table.VrfSubtable;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.lisp.feature.data.grouping.LispFeatureData;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.locator.sets.grouping.LocatorSets;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.locator.sets.grouping.locator.sets.LocatorSet;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.locator.sets.grouping.locator.sets.LocatorSetKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.map.register.grouping.MapRegister;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.map.resolvers.grouping.MapResolvers;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.map.resolvers.grouping.map.resolvers.MapResolver;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.map.resolvers.grouping.map.resolvers.MapResolverKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.map.servers.grouping.MapServers;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.map.servers.grouping.map.servers.MapServer;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.map.servers.grouping.map.servers.MapServerKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.BridgeDomainsState;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.VppInterfaceAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.L2;
@@ -132,5 +151,56 @@ public class VppIidFactory {
             .child(RoutingProtocols.class)
             .child(RoutingProtocol.class, routingProtocolKey)
             .build();
+    }
+
+    public static InstanceIdentifier<Lisp> getLispStateIid() {
+        return InstanceIdentifier.create(Lisp.class);
+    }
+
+    public static InstanceIdentifier<VniTable> getVniTableIid(VniTableKey vniTableKey) {
+        return InstanceIdentifier.builder(Lisp.class)
+                .child(LispFeatureData.class)
+                .child(EidTable.class)
+                .child(VniTable.class, vniTableKey).build();
+    }
+
+    public static InstanceIdentifier<LocatorSet> getLocatorSetIid(LocatorSetKey locatorSetKey) {
+        return InstanceIdentifier.builder(Lisp.class)
+                .child(LispFeatureData.class)
+                .child(LocatorSets.class)
+                .child(LocatorSet.class, locatorSetKey).build();
+    }
+
+    public static InstanceIdentifier<MapRegister> getMapRegisterIid() {
+        return InstanceIdentifier.builder(Lisp.class)
+                .child(LispFeatureData.class)
+                .child(MapRegister.class).build();
+    }
+
+    public static InstanceIdentifier<MapResolver> getMapResolverIid(MapResolverKey mapResolverKey) {
+        return InstanceIdentifier.builder(Lisp.class)
+                .child(LispFeatureData.class)
+                .child(MapResolvers.class)
+                .child(MapResolver.class, mapResolverKey).build();
+    }
+
+    public static InstanceIdentifier<MapServer> getMapServerIid(MapServerKey mapServerKey) {
+        return InstanceIdentifier.builder(Lisp.class)
+                .child(LispFeatureData.class)
+                .child(MapServers.class)
+                .child(MapServer.class, mapServerKey).build();
+    }
+
+    public static InstanceIdentifier<LocalMapping> getLocalMappingIid(VniTableKey vniTableKey,
+                                                                      LocalMappingKey localMappingKey) {
+        return getVniTableIid(vniTableKey)
+                .child(VrfSubtable.class)
+                .child(LocalMappings.class)
+                .child(LocalMapping.class, localMappingKey);
+    }
+
+    public static InstanceIdentifier<LispFeatureData> getLispFeatureDataIid() {
+        return InstanceIdentifier.builder(Lisp.class)
+                .child(LispFeatureData.class).build();
     }
 }
