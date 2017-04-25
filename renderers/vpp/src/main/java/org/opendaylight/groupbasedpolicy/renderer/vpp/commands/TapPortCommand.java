@@ -23,11 +23,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.TapBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.l2.base.attributes.interconnection.BridgeBasedBuilder;
 
-public class TapPortCommand extends AbstractInterfaceCommand<TapPortCommand> {
+public class TapPortCommand extends AbstractInterfaceCommand {
 
     private String tapName;
     private PhysAddress physAddress;
-    private String bridgeDomain;
     private Long deviceInstance;
 
     private TapPortCommand(TapPortCommandBuilder builder) {
@@ -49,10 +48,6 @@ public class TapPortCommand extends AbstractInterfaceCommand<TapPortCommand> {
         return physAddress;
     }
 
-    public String getBridgeDomain() {
-        return bridgeDomain;
-    }
-
     public Long getDeviceInstance() {
         return deviceInstance;
     }
@@ -64,23 +59,23 @@ public class TapPortCommand extends AbstractInterfaceCommand<TapPortCommand> {
     @Override
     public InterfaceBuilder getInterfaceBuilder() {
         InterfaceBuilder interfaceBuilder = new InterfaceBuilder().setKey(new InterfaceKey(name))
-            .setEnabled(enabled)
-            .setDescription(description)
-            .setType(Tap.class)
-            .setName(name)
-            .setLinkUpDownTrapEnable(Interface.LinkUpDownTrapEnable.Enabled);
+                .setEnabled(enabled)
+                .setDescription(description)
+                .setType(Tap.class)
+                .setName(name)
+                .setLinkUpDownTrapEnable(Interface.LinkUpDownTrapEnable.Enabled);
 
         // Create the Tap augmentation
         VppInterfaceAugmentationBuilder vppAugmentationBuilder =
                 new VppInterfaceAugmentationBuilder().setTap(new TapBuilder().setMac(this.physAddress)
-                    .setTapName(this.tapName)
-                    .setMac(this.physAddress)
-                    .setDeviceInstance(this.deviceInstance)
-                    .build());
+                        .setTapName(this.tapName)
+                        .setMac(this.physAddress)
+                        .setDeviceInstance(this.deviceInstance)
+                        .build());
 
         if (!Strings.isNullOrEmpty(bridgeDomain)) {
             vppAugmentationBuilder.setL2(new L2Builder()
-                .setInterconnection(new BridgeBasedBuilder().setBridgeDomain(bridgeDomain).build()).build());
+                    .setInterconnection(new BridgeBasedBuilder().setBridgeDomain(bridgeDomain).build()).build());
         }
 
         interfaceBuilder.addAugmentation(VppInterfaceAugmentation.class, vppAugmentationBuilder.build());
@@ -105,7 +100,7 @@ public class TapPortCommand extends AbstractInterfaceCommand<TapPortCommand> {
         private Long deviceInstance = null;
         private boolean enabled = true;
 
-        public String getInterfaceName() {
+        String getInterfaceName() {
             return interfaceName;
         }
 
@@ -114,7 +109,7 @@ public class TapPortCommand extends AbstractInterfaceCommand<TapPortCommand> {
             return this;
         }
 
-        public String getTapName() {
+        String getTapName() {
             return tapName;
         }
 
@@ -132,7 +127,7 @@ public class TapPortCommand extends AbstractInterfaceCommand<TapPortCommand> {
             return this;
         }
 
-        public PhysAddress getPhysAddress() {
+        PhysAddress getPhysAddress() {
             return physAddress;
         }
 
@@ -141,11 +136,11 @@ public class TapPortCommand extends AbstractInterfaceCommand<TapPortCommand> {
             return this;
         }
 
-        public String getBridgeDomain() {
+        String getBridgeDomain() {
             return bridgeDomain;
         }
 
-        public TapPortCommandBuilder setBridgeDomain(String bridgeDomain) {
+        TapPortCommandBuilder setBridgeDomain(String bridgeDomain) {
             this.bridgeDomain = bridgeDomain;
             return this;
         }
@@ -159,20 +154,20 @@ public class TapPortCommand extends AbstractInterfaceCommand<TapPortCommand> {
             return this;
         }
 
-        public Long getDeviceInstance() {
+        Long getDeviceInstance() {
             return deviceInstance;
         }
 
-        public TapPortCommandBuilder setDeviceInstance(Long deviceInstance) {
+        TapPortCommandBuilder setDeviceInstance(Long deviceInstance) {
             this.deviceInstance = deviceInstance;
             return this;
         }
 
-        public boolean isEnabled() {
+        boolean isEnabled() {
             return enabled;
         }
 
-        public TapPortCommandBuilder setEnabled(boolean enabled) {
+        TapPortCommandBuilder setEnabled(boolean enabled) {
             this.enabled = enabled;
             return this;
         }

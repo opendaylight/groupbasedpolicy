@@ -86,12 +86,12 @@ public class RoutingManager {
 
             if (!ipv4Routes.isEmpty()) {
                 RoutingCommand command = routingCommands.put(node, new RoutingCommand.RoutingCommandBuilder()
-                        .setOperation(operation)
-                        .setRouterProtocol("learned-protocol-0")
-                        .setRoutes(ipv4Routes)
-                        //todo in multi-tenant environment we need to use different vrfID for each tenant
-                        .setVrfId(DEFAULT_TABLE)
-                        .build());
+                    .setOperation(operation)
+                    .setRouterProtocol(RoutingCommand.DEFAULT_ROUTING_PROTOCOL)
+                    .setRoutes(ipv4Routes)
+                    //todo in multi-tenant environment we need to use different vrfID for each tenant
+                    .setVrfId(DEFAULT_TABLE)
+                    .build());
                 LOG.trace("Creating of routing successful, routing command: {}.", command);
             }
         });
