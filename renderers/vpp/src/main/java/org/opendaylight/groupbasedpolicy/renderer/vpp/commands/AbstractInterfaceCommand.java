@@ -10,25 +10,25 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.commands;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.interfaces.ConfigCommand;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.interfaces.InterfaceCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class AbstractInterfaceCommand<T extends AbstractInterfaceCommand<T>> implements ConfigCommand {
+public abstract class AbstractInterfaceCommand implements ConfigCommand, InterfaceCommand {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractInterfaceCommand.class);
 
     protected General.Operations operation;
     protected String name;
     protected String description;
-    protected Boolean enabled;
-
-    protected enum linkUpDownTrap {
-        ENABLED, DISABLED
-    }
+    String bridgeDomain;
+    Boolean enabled;
 
     public General.Operations getOperation() {
         return operation;
@@ -42,18 +42,13 @@ public abstract class AbstractInterfaceCommand<T extends AbstractInterfaceComman
         return description;
     }
 
-    public AbstractInterfaceCommand<T> setDescription(String description) {
+    public AbstractInterfaceCommand setDescription(String description) {
         this.description = description;
         return this;
     }
 
-    public Boolean getEnabled() {
-        return enabled;
-    }
-
-    public AbstractInterfaceCommand<T> setEnabled(Boolean enabled) {
-        this.enabled = enabled;
-        return this;
+    String getBridgeDomain() {
+        return bridgeDomain;
     }
 
     public void execute(ReadWriteTransaction rwTx) {
@@ -99,4 +94,8 @@ public abstract class AbstractInterfaceCommand<T extends AbstractInterfaceComman
         }
 
     }
+    @Override public InstanceIdentifier getIid() {
+        return VppIidFactory.getInterfaceIID(this.getInterfaceBuilder().getKey());
+    }
+
 }

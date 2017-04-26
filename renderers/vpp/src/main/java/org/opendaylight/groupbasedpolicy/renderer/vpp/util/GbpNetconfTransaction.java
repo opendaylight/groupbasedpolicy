@@ -16,12 +16,11 @@ import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.ConfigCommand;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.RoutingCommand;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.AbstractConfigCommand;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.AbstractInterfaceCommand;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.interfaces.ConfigCommand;
 import org.opendaylight.vbd.impl.transaction.VbdNetconfTransaction;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.routing.rev140524.routing.routing.instance.routing.protocols.RoutingProtocol;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.routing.rev140524.routing.routing.instance.routing.protocols.RoutingProtocolKey;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
@@ -29,7 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.util.concurrent.CheckedFuture;
 
 public class GbpNetconfTransaction {
@@ -70,21 +68,6 @@ public class GbpNetconfTransaction {
     }
 
     /***
-     * Netconf wrapper method for synced requests for write operation on a Netconf Device
-     * @param mountpoint    netconf device
-     * @param command       routing command that needs to be executed
-     * @param retryCounter  retry counter, will repeat the operation for specified amount of times if transaction fails
-     * @return true if transaction is successful, false otherwise
-     */
-    public static boolean netconfSyncedWrite(@Nonnull final DataBroker mountpoint, @Nonnull final RoutingCommand command,
-        byte retryCounter) {
-        VbdNetconfTransaction.REENTRANT_LOCK.lock();
-        boolean result = write(mountpoint, command, retryCounter);
-        VbdNetconfTransaction.REENTRANT_LOCK.unlock();
-        return result;
-    }
-
-    /***
      * Netconf wrapper method for synced requests for delete operation on a Netconf Device
      * @param mountpoint    netconf device
      * @param iid           path for Data to be written to
@@ -108,7 +91,7 @@ public class GbpNetconfTransaction {
      * @return true if transaction is successful, false otherwise
      */
     public static boolean netconfSyncedDelete(@Nonnull final DataBroker mountpoint,
-        @Nonnull final ConfigCommand command, byte retryCounter) {
+                                              @Nonnull final AbstractInterfaceCommand command, byte retryCounter) {
         VbdNetconfTransaction.REENTRANT_LOCK.lock();
         boolean result = deleteIfExists(mountpoint, command, retryCounter);
         VbdNetconfTransaction.REENTRANT_LOCK.unlock();
@@ -123,7 +106,7 @@ public class GbpNetconfTransaction {
      * @return true if transaction is successful, false otherwise
      */
     public static boolean netconfSyncedDelete(@Nonnull final DataBroker mountpoint,
-        @Nonnull final RoutingCommand command, byte retryCounter) {
+        @Nonnull final AbstractConfigCommand command, byte retryCounter) {
         VbdNetconfTransaction.REENTRANT_LOCK.lock();
         boolean result = deleteIfExists(mountpoint, command, retryCounter);
         VbdNetconfTransaction.REENTRANT_LOCK.unlock();
@@ -139,36 +122,6 @@ public class GbpNetconfTransaction {
      * @return true if transaction is successful, false otherwise
      */
     private static boolean write(final DataBroker mountpoint, final ConfigCommand command, byte retryCounter) {
-        LOG.trace("Netconf WRITE transaction started. RetryCounter: {}", retryCounter);
-        Preconditions.checkNotNull(mountpoint);
-        final ReadWriteTransaction rwTx = mountpoint.newReadWriteTransaction();
-        try {
-            command.execute(rwTx);
-            final CheckedFuture<Void, TransactionCommitFailedException> futureTask = rwTx.submit();
-            futureTask.get();
-            LOG.trace("Netconf WRITE transaction done for command {}", command);
-            return true;
-        } catch (Exception e) {
-            // Retry
-            if (retryCounter > 0) {
-                LOG.warn("Netconf WRITE transaction failed to {}. Restarting transaction ... ", e.getMessage());
-                return write(mountpoint, command, --retryCounter);
-            } else {
-                LOG.warn("Netconf WRITE transaction unsuccessful. Maximal number of attempts reached. Trace: {}", e);
-                return false;
-            }
-        }
-    }
-
-    /**
-     * Use {@link RoutingCommand} to put data into netconf transaction and submit. Transaction is restarted if failed
-     *
-     * @param mountpoint   to access remote device
-     * @param command      routing command with data, datastore type and iid
-     * @param retryCounter number of attempts
-     * @return true if transaction is successful, false otherwise
-     */
-    private static boolean write(final DataBroker mountpoint, final RoutingCommand command, byte retryCounter) {
         LOG.trace("Netconf WRITE transaction started. RetryCounter: {}", retryCounter);
         Preconditions.checkNotNull(mountpoint);
         final ReadWriteTransaction rwTx = mountpoint.newReadWriteTransaction();
@@ -266,7 +219,9 @@ public class GbpNetconfTransaction {
      * @param retryCounter number of attempts
      * @return true if transaction is successful, false otherwise
      */
-    private static boolean deleteIfExists(final DataBroker mountpoint, final ConfigCommand command, byte retryCounter) {
+    private static boolean deleteIfExists(final DataBroker mountpoint,
+                                          final AbstractInterfaceCommand command,
+                                          byte retryCounter) {
         Preconditions.checkNotNull(mountpoint);
         InstanceIdentifier<Interface> iid = VppIidFactory.getInterfaceIID(command.getInterfaceBuilder().getKey());
         return deleteIfExists(mountpoint, iid, retryCounter);
@@ -280,16 +235,11 @@ public class GbpNetconfTransaction {
      * @param retryCounter number of attempts
      * @return true if transaction is successful, false otherwise
      */
-    private static boolean deleteIfExists(final DataBroker mountpoint, final RoutingCommand command,
+    private static boolean deleteIfExists(final DataBroker mountpoint, final AbstractConfigCommand command,
         byte retryCounter) {
         Preconditions.checkNotNull(mountpoint);
-        String routerProtocol = command.getRouterProtocol();
-        if (Strings.isNullOrEmpty(routerProtocol)) {
-            routerProtocol = "learned-protocol-0";
-        }
-        InstanceIdentifier<RoutingProtocol> iid =
-            VppIidFactory.getRoutingInstanceIid(new RoutingProtocolKey(routerProtocol));
-        return deleteIfExists(mountpoint, iid, retryCounter);
+
+        return deleteIfExists(mountpoint, command.getIid(), retryCounter);
     }
 
     /**

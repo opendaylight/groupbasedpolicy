@@ -23,11 +23,13 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.ConfigCommand;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.AbstractInterfaceCommand;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.interfaces.ConfigCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.LoopbackCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.TapPortCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.VhostUserCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.VhostUserCommand.VhostUserCommandBuilder;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.interfaces.InterfaceCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.NodeOperEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.VppEndpointConfEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AccessListWrapper;
@@ -169,7 +171,7 @@ public class InterfaceManager implements AutoCloseable {
     private ListenableFuture<Void> vppEndpointCreated(VppEndpoint vppEndpoint) {
         InterfaceTypeChoice interfaceTypeChoice = vppEndpoint.getInterfaceTypeChoice();
         LOG.trace("Creating VPP endpoint {}, type of {}", vppEndpoint, interfaceTypeChoice);
-        Optional<ConfigCommand> potentialIfaceCommand = Optional.absent();
+        Optional<AbstractInterfaceCommand> potentialIfaceCommand = Optional.absent();
         if (interfaceTypeChoice instanceof VhostUserCase) {
             potentialIfaceCommand = createInterfaceWithoutBdCommand(vppEndpoint, Operations.PUT);
         } else if (interfaceTypeChoice instanceof TapCase) {
@@ -239,7 +241,7 @@ public class InterfaceManager implements AutoCloseable {
     private ListenableFuture<Void> vppEndpointDeleted(@Nonnull VppEndpoint vppEndpoint) {
         InterfaceTypeChoice interfaceTypeChoice = vppEndpoint.getInterfaceTypeChoice();
         LOG.trace("Deleting VPP endpoint {}, type of {}", vppEndpoint, interfaceTypeChoice.toString());
-        Optional<ConfigCommand> potentialIfaceCommand = Optional.absent();
+        Optional<AbstractInterfaceCommand> potentialIfaceCommand = Optional.absent();
         if (interfaceTypeChoice instanceof VhostUserCase) {
             potentialIfaceCommand = createInterfaceWithoutBdCommand(vppEndpoint, Operations.DELETE);
         } else if (interfaceTypeChoice instanceof TapCase) {
@@ -252,7 +254,7 @@ public class InterfaceManager implements AutoCloseable {
             LOG.debug("Interface/DELETE command was not created for VppEndpoint point {}", vppEndpoint);
             return Futures.immediateFuture(null);
         }
-        ConfigCommand ifaceWithoutBdCommand = potentialIfaceCommand.get();
+        AbstractInterfaceCommand ifaceWithoutBdCommand = potentialIfaceCommand.get();
         InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(vppEndpoint.getVppNodeId());
         Optional<DataBroker> potentialVppDataProvider = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
         if (!potentialVppDataProvider.isPresent()) {
@@ -264,7 +266,7 @@ public class InterfaceManager implements AutoCloseable {
         return deleteIfaceOnVpp(ifaceWithoutBdCommand, vppDataBroker, vppEndpoint, vppNodeIid);
     }
 
-    private ListenableFuture<Void> deleteIfaceOnVpp(ConfigCommand deleteIfaceWithoutBdCommand,
+    private ListenableFuture<Void> deleteIfaceOnVpp(AbstractInterfaceCommand deleteIfaceWithoutBdCommand,
             DataBroker vppDataBroker, VppEndpoint vppEndpoint, InstanceIdentifier<?> vppNodeIid) {
         final boolean transactionState = GbpNetconfTransaction.netconfSyncedDelete(vppDataBroker,
             deleteIfaceWithoutBdCommand, GbpNetconfTransaction.RETRY_COUNT);
@@ -302,7 +304,7 @@ public class InterfaceManager implements AutoCloseable {
         }
     }
 
-    private Optional<ConfigCommand> createInterfaceWithoutBdCommand(@Nonnull VppEndpoint vppEp,
+    private Optional<AbstractInterfaceCommand> createInterfaceWithoutBdCommand(@Nonnull VppEndpoint vppEp,
             @Nonnull Operations operations) {
         if (!hasNodeAndInterface(vppEp)) {
             LOG.debug("Interface command is not created for {}", vppEp);
@@ -326,7 +328,7 @@ public class InterfaceManager implements AutoCloseable {
         return Optional.of(vhostUserCommand);
     }
 
-    private Optional<ConfigCommand> createTapInterfaceWithoutBdCommand(@Nonnull VppEndpoint vppEp,
+    private Optional<AbstractInterfaceCommand> createTapInterfaceWithoutBdCommand(@Nonnull VppEndpoint vppEp,
             @Nonnull Operations operation) {
         if (!hasNodeAndInterface(vppEp)) {
             LOG.debug("Interface command is not created for {}", vppEp);
@@ -352,7 +354,7 @@ public class InterfaceManager implements AutoCloseable {
         return Optional.of(tapPortCommand);
     }
 
-    private Optional<ConfigCommand> createLoopbackWithoutBdCommand(@Nonnull VppEndpoint vppEp,
+    private Optional<AbstractInterfaceCommand> createLoopbackWithoutBdCommand(@Nonnull VppEndpoint vppEp,
         @Nonnull Operations operation) {
         if (!hasNodeAndInterface(vppEp)) {
             LOG.debug("Interface command is not created for {}", vppEp);

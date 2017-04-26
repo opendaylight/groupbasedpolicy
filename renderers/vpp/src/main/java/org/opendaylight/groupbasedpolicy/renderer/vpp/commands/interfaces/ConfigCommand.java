@@ -6,10 +6,10 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.groupbasedpolicy.renderer.vpp.commands;
+package org.opendaylight.groupbasedpolicy.renderer.vpp.commands.interfaces;
 
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceBuilder;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 public interface ConfigCommand {
 
@@ -18,12 +18,7 @@ public interface ConfigCommand {
      *
      * @param readWriteTransaction Transaction for command execution
      */
-    void execute(ReadWriteTransaction readWriteTransaction);
+    void execute(final ReadWriteTransaction readWriteTransaction);
 
-    /**
-     * Creates Interface Builder with proper augmentations.
-     *
-     * @return InterfaceBuilder for this command with proper augmentations
-     */
-    InterfaceBuilder getInterfaceBuilder();
+    InstanceIdentifier getIid();
 }

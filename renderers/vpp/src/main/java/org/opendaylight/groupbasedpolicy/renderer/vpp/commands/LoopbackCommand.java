@@ -10,7 +10,6 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.commands;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General.Operations;
 import org.opendaylight.groupbasedpolicy.util.NetUtils;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
@@ -27,7 +26,6 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev14061
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.PhysAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev161214.NatInterfaceAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev161214.NatInterfaceAugmentationBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev161214._interface.nat.attributes.Nat;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev161214._interface.nat.attributes.NatBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev161214._interface.nat.attributes.nat.InboundBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.Loopback;
@@ -35,17 +33,18 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.VppInterfaceAugmentationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.L2Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.LoopbackBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.RoutingBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.l2.base.attributes.interconnection.BridgeBasedBuilder;
 
 import java.util.Collections;
 
-public class LoopbackCommand extends AbstractInterfaceCommand<LoopbackCommand> {
+public class LoopbackCommand extends AbstractInterfaceCommand {
 
     private PhysAddress physAddress;
-    private String bridgeDomain;
     private boolean bvi;
     private IpAddress ipAddress;
     private IpPrefix ipPrefix;
+    private Long vrfId;
 
     private LoopbackCommand(LoopbackCommandBuilder builder) {
         this.name = builder.getInterfaceName();
@@ -57,62 +56,63 @@ public class LoopbackCommand extends AbstractInterfaceCommand<LoopbackCommand> {
         this.bvi = builder.isBvi();
         this.ipAddress = builder.getIpAddress();
         this.ipPrefix = builder.getIpPrefix();
+        this.vrfId = builder.getVrfId();
     }
 
     public static LoopbackCommandBuilder builder() {
         return new LoopbackCommandBuilder();
     }
 
-    public PhysAddress getPhysAddress() {
+    PhysAddress getPhysAddress() {
         return physAddress;
-    }
-
-    public String getBridgeDomain() {
-        return bridgeDomain;
     }
 
     public boolean getBvi() {
         return bvi;
     }
 
-    public IpAddress getIpAddress() {
+    IpAddress getIpAddress() {
         return ipAddress;
     }
 
-    public IpPrefix getIpPrefix() {
+    IpPrefix getIpPrefix() {
         return ipPrefix;
     }
 
-    public short getPrefixLength() {
-        return (short) NetUtils.getMaskFromPrefix(this.ipPrefix.getIpv4Prefix().getValue());
+    Long getVrfId() {
+        return vrfId;
     }
 
     @Override
     public InterfaceBuilder getInterfaceBuilder() {
         InterfaceBuilder interfaceBuilder = new InterfaceBuilder().setKey(new InterfaceKey(name))
-            .setEnabled(enabled)
-            .setDescription(description)
-            .setType(Loopback.class)
-            .setName(name)
-            .setLinkUpDownTrapEnable(Interface.LinkUpDownTrapEnable.Enabled)
-            .addAugmentation(NatInterfaceAugmentation.class, buildInboundNatAugmentation());
+                .setEnabled(enabled)
+                .setDescription(description)
+                .setType(Loopback.class)
+                .setName(name)
+                .setLinkUpDownTrapEnable(Interface.LinkUpDownTrapEnable.Enabled)
+                .addAugmentation(NatInterfaceAugmentation.class, buildInboundNatAugmentation());
 
         // Create the Loopback augmentation
         VppInterfaceAugmentationBuilder
-            vppAugmentationBuilder =
-            new VppInterfaceAugmentationBuilder().setLoopback(new LoopbackBuilder().setMac(this.physAddress).build());
+                vppAugmentationBuilder =
+                new VppInterfaceAugmentationBuilder().setLoopback(new LoopbackBuilder().setMac(this.physAddress).build());
+
+        if (getVrfId() != null) {
+            vppAugmentationBuilder.setRouting(new RoutingBuilder().setIpv4VrfId(getVrfId()).build());
+        }
 
         if (!Strings.isNullOrEmpty(bridgeDomain)) {
             vppAugmentationBuilder.setL2(new L2Builder().setInterconnection(
-                new BridgeBasedBuilder().setBridgeDomain(bridgeDomain).setBridgedVirtualInterface(bvi).build())
-                .build());
+                    new BridgeBasedBuilder().setBridgeDomain(bridgeDomain).setBridgedVirtualInterface(bvi).build())
+                    .build());
         }
         Interface1Builder
-            interface1Builder =
-            new Interface1Builder().setIpv4(new Ipv4Builder().setAddress(Collections.singletonList(
-                new AddressBuilder().setIp(new Ipv4AddressNoZone(this.ipAddress.getIpv4Address()))
-                    .setSubnet(new PrefixLengthBuilder().setPrefixLength(this.getPrefixLength()).build())
-                    .build())).build());
+                interface1Builder =
+                new Interface1Builder().setIpv4(new Ipv4Builder().setAddress(Collections.singletonList(
+                        new AddressBuilder().setIp(new Ipv4AddressNoZone(this.ipAddress.getIpv4Address()))
+                                .setSubnet(new PrefixLengthBuilder().setPrefixLength(this.getPrefixLength()).build())
+                                .build())).build());
         interfaceBuilder.addAugmentation(Interface1.class, interface1Builder.build());
         interfaceBuilder.addAugmentation(VppInterfaceAugmentation.class, vppAugmentationBuilder.build());
         return interfaceBuilder;
@@ -123,10 +123,15 @@ public class LoopbackCommand extends AbstractInterfaceCommand<LoopbackCommand> {
                 new NatBuilder().setInbound(new InboundBuilder().build()).build()).build();
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
         return "LoopPortUserCommand [physAddress=" + physAddress + ", IpAddress=" + ipAddress + ", IpPrefix=" + ipPrefix
-            + ", bridgeDomain=" + bridgeDomain + ", operations=" + operation + ", name=" + name + ", description="
-            + description + ", enabled=" + enabled + ", bvi=" + bvi + "]";
+                + ", bridgeDomain=" + bridgeDomain + ", operations=" + operation + ", name=" + name + ", description="
+                + description + ", enabled=" + enabled + ", bvi=" + bvi + "]";
+    }
+
+    private short getPrefixLength() {
+        return (short) NetUtils.getMaskFromPrefix(this.ipPrefix.getIpv4Prefix().getValue());
     }
 
     public static class LoopbackCommandBuilder {
@@ -140,8 +145,9 @@ public class LoopbackCommand extends AbstractInterfaceCommand<LoopbackCommand> {
         private boolean enabled = true;
         private IpAddress ipAddress;
         private IpPrefix ipPrefix;
+        private Long vrfId;
 
-        public String getInterfaceName() {
+        String getInterfaceName() {
             return interfaceName;
         }
 
@@ -159,7 +165,7 @@ public class LoopbackCommand extends AbstractInterfaceCommand<LoopbackCommand> {
             return this;
         }
 
-        public PhysAddress getPhysAddress() {
+        PhysAddress getPhysAddress() {
             return physAddress;
         }
 
@@ -168,11 +174,11 @@ public class LoopbackCommand extends AbstractInterfaceCommand<LoopbackCommand> {
             return this;
         }
 
-        public String getBridgeDomain() {
+        String getBridgeDomain() {
             return bridgeDomain;
         }
 
-        public LoopbackCommandBuilder setBridgeDomain(String bridgeDomain) {
+        LoopbackCommandBuilder setBridgeDomain(String bridgeDomain) {
             this.bridgeDomain = bridgeDomain;
             return this;
         }
@@ -186,16 +192,16 @@ public class LoopbackCommand extends AbstractInterfaceCommand<LoopbackCommand> {
             return this;
         }
 
-        public boolean isEnabled() {
+        boolean isEnabled() {
             return enabled;
         }
 
-        public LoopbackCommandBuilder setEnabled(boolean enabled) {
+        LoopbackCommandBuilder setEnabled(boolean enabled) {
             this.enabled = enabled;
             return this;
         }
 
-        public IpAddress getIpAddress() {
+        IpAddress getIpAddress() {
             return ipAddress;
         }
 
@@ -204,7 +210,7 @@ public class LoopbackCommand extends AbstractInterfaceCommand<LoopbackCommand> {
             return this;
         }
 
-        public IpPrefix getIpPrefix() {
+        IpPrefix getIpPrefix() {
             return ipPrefix;
         }
 
@@ -219,6 +225,15 @@ public class LoopbackCommand extends AbstractInterfaceCommand<LoopbackCommand> {
 
         public LoopbackCommandBuilder setBvi(boolean bvi) {
             this.bvi = bvi;
+            return this;
+        }
+
+        Long getVrfId() {
+            return vrfId;
+        }
+
+        public LoopbackCommandBuilder setVrfId(Long vrfId) {
+            this.vrfId = vrfId;
             return this;
         }
 

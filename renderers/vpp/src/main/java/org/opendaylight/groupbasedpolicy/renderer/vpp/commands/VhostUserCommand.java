@@ -8,6 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.commands;
 
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General.Operations;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
@@ -20,14 +22,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.VhostUserBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.l2.base.attributes.interconnection.BridgeBasedBuilder;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-
-public class VhostUserCommand extends AbstractInterfaceCommand<VhostUserCommand> {
+public class VhostUserCommand extends AbstractInterfaceCommand {
 
     private String socket;
     private VhostUserRole role;
-    private String bridgeDomain;
 
     private VhostUserCommand(VhostUserCommandBuilder builder) {
         this.name = builder.getName();
@@ -52,27 +50,23 @@ public class VhostUserCommand extends AbstractInterfaceCommand<VhostUserCommand>
         return role;
     }
 
-    public String getBridgeDomain() {
-        return bridgeDomain;
-    }
-
     @Override
     public InterfaceBuilder getInterfaceBuilder() {
         InterfaceBuilder interfaceBuilder =
                 new InterfaceBuilder().setKey(new InterfaceKey(name))
-                    .setEnabled(enabled)
-                    .setDescription(description)
-                    .setType(
+                        .setEnabled(enabled)
+                        .setDescription(description)
+                        .setType(
                             org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.VhostUser.class)
-                    .setName(name)
-                    .setLinkUpDownTrapEnable(Interface.LinkUpDownTrapEnable.Enabled);
+                        .setName(name)
+                        .setLinkUpDownTrapEnable(Interface.LinkUpDownTrapEnable.Enabled);
 
         // Create the vhost augmentation
         VppInterfaceAugmentationBuilder vppAugmentationBuilder = new VppInterfaceAugmentationBuilder()
-            .setVhostUser(new VhostUserBuilder().setRole(role).setSocket(socket).build());
+                .setVhostUser(new VhostUserBuilder().setRole(role).setSocket(socket).build());
         if (!Strings.isNullOrEmpty(bridgeDomain)) {
             vppAugmentationBuilder.setL2(new L2Builder()
-                .setInterconnection(new BridgeBasedBuilder().setBridgeDomain(bridgeDomain).build()).build());
+                    .setInterconnection(new BridgeBasedBuilder().setBridgeDomain(bridgeDomain).build()).build());
         }
 
         interfaceBuilder.addAugmentation(VppInterfaceAugmentation.class, vppAugmentationBuilder.build());
@@ -123,7 +117,7 @@ public class VhostUserCommand extends AbstractInterfaceCommand<VhostUserCommand>
             return this;
         }
 
-        public VhostUserRole getRole() {
+        VhostUserRole getRole() {
             return role;
         }
 
@@ -132,11 +126,11 @@ public class VhostUserCommand extends AbstractInterfaceCommand<VhostUserCommand>
             return this;
         }
 
-        public boolean isEnabled() {
+        boolean isEnabled() {
             return enabled;
         }
 
-        public VhostUserCommandBuilder setEnabled(boolean enabled) {
+        VhostUserCommandBuilder setEnabled(boolean enabled) {
             this.enabled = enabled;
             return this;
         }
@@ -150,11 +144,11 @@ public class VhostUserCommand extends AbstractInterfaceCommand<VhostUserCommand>
             return this;
         }
 
-        public String getBridgeDomain() {
+        String getBridgeDomain() {
             return bridgeDomain;
         }
 
-        public VhostUserCommandBuilder setBridgeDomain(String bridgeDomain) {
+        VhostUserCommandBuilder setBridgeDomain(String bridgeDomain) {
             this.bridgeDomain = bridgeDomain;
             return this;
         }

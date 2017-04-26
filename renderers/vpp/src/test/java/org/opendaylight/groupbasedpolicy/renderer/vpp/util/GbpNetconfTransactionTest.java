@@ -27,7 +27,8 @@ import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.ConfigCommand;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.AbstractInterfaceCommand;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.interfaces.ConfigCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.LoopbackCommand;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceBuilder;
@@ -54,7 +55,7 @@ public class GbpNetconfTransactionTest {
     private final CheckedFuture<Optional<Node>, ReadFailedException> futureNode = mock(CheckedFuture.class);
     @SuppressWarnings("unchecked")
     private final CheckedFuture<Optional<Interface>, ReadFailedException> futureInterface = mock(CheckedFuture.class);
-    private final ConfigCommand command = mock(LoopbackCommand.class);
+    private final AbstractInterfaceCommand command = mock(LoopbackCommand.class);
     private final InterfaceBuilder interfaceBuilder = new InterfaceBuilder().setKey(new InterfaceKey(INTERFACE_KEY));
 
     @Before
