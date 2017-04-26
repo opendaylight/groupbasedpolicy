@@ -138,6 +138,31 @@ module vpp-renderer {
         }
     }
 
+    grouping gbp-subnet-base-attributes {
+        leaf id {
+            description "Subnet UUID of neutron subnet call.";
+            type string;
+        }
+        leaf cidr {
+            type inet:ip-prefix;
+            description "cidr representing IP range for this subnet, based on IP version";
+        }
+        leaf gateway-ip {
+            type inet:ip-address;
+            description "default gateway used by devices in this subnet";
+        }
+        list allocation-pools {
+            description "Sub-ranges of cidr available for dynamic allocation to ports";
+            key start;
+            leaf start {
+                type inet:ip-address;
+            }
+            leaf end {
+                type inet:ip-address;
+            }
+        }
+    }
+
     container config {
         list vpp-endpoint {
             description "Renderer creates/removes interface on VPP node based on given parameters.";
@@ -159,6 +184,11 @@ module vpp-renderer {
                 when "type = 'vlan-network'";
                 type l2-types:vlan-id;
             }
+        }
+
+        list gbp-subnet {
+            key "id";
+            uses gbp-subnet-base-attributes;
         }
     }
 

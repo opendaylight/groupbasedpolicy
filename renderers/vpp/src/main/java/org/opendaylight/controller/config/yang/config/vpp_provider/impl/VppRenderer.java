@@ -24,6 +24,7 @@ import org.opendaylight.controller.sal.binding.api.BindingAwareProvider;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.GbpSubnetListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.RendererPolicyListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppEndpointListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppNodeListener;
@@ -76,6 +77,7 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
     private VppNodeListener vppNodeListener;
     private VppEndpointListener vppEndpointListener;
     private RendererPolicyListener rendererPolicyListener;
+    private GbpSubnetListener vppGbpSubnetListener;
 
     VppRenderer(@Nonnull DataBroker dataBroker, @Nonnull BindingAwareBroker bindingAwareBroker,
                        @Nullable String publicInterfaces) {
@@ -145,6 +147,7 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         vppNodeListener = new VppNodeListener(dataBroker, vppNodeManager, dtoEventBus);
         vppEndpointListener = new VppEndpointListener(dataBroker, dtoEventBus);
         rendererPolicyListener = new RendererPolicyListener(dataBroker, dtoEventBus);
+        vppGbpSubnetListener = new GbpSubnetListener(dataBroker, dtoEventBus);
         registerToRendererManager();
     }
 

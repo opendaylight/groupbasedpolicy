@@ -54,6 +54,7 @@ public class NeutronListener implements ClusteredDataTreeChangeListener<Neutron>
         PortHandler portHandler = new PortHandler(dataBroker, routingNode);
         dataChangeProviders.add(new PortAware(portHandler, dataBroker));
         dataChangeProviders.add(new NetworkAware(dataBroker));
+        dataChangeProviders.add(new SubnetAware(dataBroker));
     }
 
     @Override
