@@ -21,14 +21,18 @@ public class ConfigUtil {
 
     private static boolean DEFAULT_LISP_OVERLAY_ENABLED = false;
     private static boolean DEFAULT_LISP_MAPREGISTER_ENABLED = true;
+    private static boolean DEFAULT_L3_FLAT_ENABLED = false;
 
     private IpAddress odlTenantIp;
     private boolean lispOverlayEnabled = DEFAULT_LISP_OVERLAY_ENABLED;
     private boolean lispMapRegisterEnbled = DEFAULT_LISP_MAPREGISTER_ENABLED;
+    private boolean l3FlatEnabled = DEFAULT_L3_FLAT_ENABLED;
+
 
     public static String ODL_TENANT_IP = "odl.ip.tenant";
     public static String LISP_OVERLAY_ENABLED = "gbp.lisp.enabled";
     public static String LISP_MAPREGISTER_ENABLED = "vpp.lisp.mapregister.enabled";
+    public static String L3_FLAT_ENABLED = "vpp.l3.flat.enabled";
 
     private static ConfigUtil INSTANCE = new ConfigUtil();
 
@@ -96,6 +100,22 @@ public class ConfigUtil {
         }
     }
 
+    public void configL3FlatEnabled(String configStr) {
+        if (configStr == null) {
+            l3FlatEnabled = DEFAULT_L3_FLAT_ENABLED;
+            LOG.debug("Configuration variable {} is being unset. Setting the variable to {}",
+                    L3_FLAT_ENABLED, DEFAULT_L3_FLAT_ENABLED);
+        }
+
+        configStr = configStr.trim();
+
+        if (configStr.equalsIgnoreCase("true")) {
+            l3FlatEnabled = true;
+        } else {
+            l3FlatEnabled = false;
+        }
+    }
+
     public IpAddress getOdlTenantIp() {
         return odlTenantIp;
     }
@@ -110,5 +130,9 @@ public class ConfigUtil {
 
     public boolean isLispMapRegisterEnbled() {
         return lispMapRegisterEnbled;
+    }
+
+    public boolean isL3FlatEnabled() {
+        return l3FlatEnabled;
     }
 }

@@ -77,5 +77,7 @@ public class ConfigurationService implements ManagedService{
                 mrConfig -> configUtil.configureMapRegister((String) mrConfig));
         configMethods.put(ConfigUtil.LISP_OVERLAY_ENABLED,
                 overlayConfig -> configUtil.configureLispOverlayEnabled((String) overlayConfig));
+        configMethods.put(ConfigUtil.L3_FLAT_ENABLED,
+                l3FlatConfig -> configUtil.configL3FlatEnabled((String) l3FlatConfig));
     }
 }
