@@ -147,7 +147,7 @@ public class LoopbackCommand extends AbstractInterfaceCommand {
         private IpPrefix ipPrefix;
         private Long vrfId;
 
-        String getInterfaceName() {
+        public String getInterfaceName() {
             return interfaceName;
         }
 
@@ -174,11 +174,11 @@ public class LoopbackCommand extends AbstractInterfaceCommand {
             return this;
         }
 
-        String getBridgeDomain() {
+        public String getBridgeDomain() {
             return bridgeDomain;
         }
 
-        LoopbackCommandBuilder setBridgeDomain(String bridgeDomain) {
+        public LoopbackCommandBuilder setBridgeDomain(String bridgeDomain) {
             this.bridgeDomain = bridgeDomain;
             return this;
         }
@@ -196,7 +196,7 @@ public class LoopbackCommand extends AbstractInterfaceCommand {
             return enabled;
         }
 
-        LoopbackCommandBuilder setEnabled(boolean enabled) {
+        public LoopbackCommandBuilder setEnabled(boolean enabled) {
             this.enabled = enabled;
             return this;
         }

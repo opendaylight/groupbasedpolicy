@@ -29,7 +29,7 @@ public class ConfigUtil {
 
     private IpAddress odlTenantIp;
     private boolean lispOverlayEnabled = DEFAULT_LISP_OVERLAY_ENABLED;
-    private boolean lispMapRegisterEnbled = DEFAULT_LISP_MAPREGISTER_ENABLED;
+    private boolean lispMapRegisterEnabled = DEFAULT_LISP_MAPREGISTER_ENABLED;
     private boolean l3FlatEnabled = DEFAULT_L3_FLAT_ENABLED;
 
     static final String ODL_TENANT_IP = "odl.ip.tenant";
@@ -75,11 +75,11 @@ public class ConfigUtil {
 
     void configureMapRegister(String configStr) {
         if (configStr == null) {
-            lispMapRegisterEnbled = DEFAULT_LISP_MAPREGISTER_ENABLED;
+            lispMapRegisterEnabled = DEFAULT_LISP_MAPREGISTER_ENABLED;
             LOG.debug(CONFIGURATION_VARIABLE_MESSAGE, LISP_MAPREGISTER_ENABLED, DEFAULT_LISP_MAPREGISTER_ENABLED);
             return;
         }
-        lispMapRegisterEnbled = configStr.trim().equalsIgnoreCase(DEFAULT_TRUE_STRING_VALUE);
+        lispMapRegisterEnabled = configStr.trim().equalsIgnoreCase(DEFAULT_TRUE_STRING_VALUE);
     }
 
     void configL3FlatEnabled(String configStr) {
@@ -103,8 +103,8 @@ public class ConfigUtil {
         return lispOverlayEnabled;
     }
 
-    public boolean isLispMapRegisterEnbled() {
-        return lispMapRegisterEnbled;
+    public boolean isLispMapRegisterEnabled() {
+        return lispMapRegisterEnabled;
     }
 
     public boolean isL3FlatEnabled() {

@@ -27,6 +27,8 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.RoutingCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.bvi.BviManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AclManager;
@@ -99,15 +101,20 @@ public final class ForwardingManager {
     private final BridgeDomainManager bdManager;
     private final NatManager natManager;
     private final RoutingManager routingManager;
+    private final LispStateManager lispStateManager;
+    private final BviManager bviManager;
     private final DataBroker dataBroker;
 
     public ForwardingManager(@Nonnull InterfaceManager ifaceManager, @Nonnull AclManager aclManager,
         @Nonnull NatManager natManager, @Nonnull RoutingManager routingManager, @Nonnull BridgeDomainManager bdManager,
+        @Nonnull LispStateManager lispStateManager, @Nonnull BviManager bviManager,
         @Nonnull DataBroker dataBroker) {
         this.ifaceManager = Preconditions.checkNotNull(ifaceManager);
         this.bdManager = Preconditions.checkNotNull(bdManager);
         this.natManager = Preconditions.checkNotNull(natManager);
         this.routingManager = Preconditions.checkNotNull(routingManager);
+        this.lispStateManager = Preconditions.checkNotNull(lispStateManager);
+        this.bviManager = Preconditions.checkNotNull(bviManager);
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.aclManager = Preconditions.checkNotNull(aclManager);
     }
@@ -195,6 +202,11 @@ public final class ForwardingManager {
 
     public void createForwardingForEndpoint(RendererEndpointKey rEpKey, PolicyContext policyCtx) {
         AddressEndpointWithLocation rEp = policyCtx.getAddrEpByKey().get(KeyFactory.addressEndpointKey(rEpKey));
+
+        if (ConfigUtil.getInstance().isLispOverlayEnabled()) {
+            lispStateManager.configureEndPoint(rEp);
+        }
+
         ExternalLocationCase rEpLoc = resolveAndValidateLocation(rEp);
         if (Strings.isNullOrEmpty(rEpLoc.getExternalNodeConnector())) {
             // TODO add it to the status for renderer manager
@@ -213,8 +225,12 @@ public final class ForwardingManager {
                 String l2FloodDomain = optL2FloodDomain.get();
                 try {
                     ifaceManager.addBridgeDomainToInterface(l2FloodDomain, rEp, aclManager.resolveAclsOnInterface(
-                        rEpKey, policyCtx), isBviForEndpoint(rEp)).get();
+                            rEpKey, policyCtx), isBviForEndpoint(rEp)).get();
                     LOG.debug("Interface added to bridge-domain {} for endpoint {}", l2FloodDomain, rEp);
+
+                    if (ConfigUtil.getInstance().isLispOverlayEnabled()) {
+                        bviManager.createBviIfNecessary(rEp, l2FloodDomain);
+                    }
 
                 } catch (InterruptedException | ExecutionException e) {
                     // TODO add it to the status for renderer manager
@@ -257,6 +273,9 @@ public final class ForwardingManager {
         }
         if (!Strings.isNullOrEmpty(rEpLoc.getExternalNode())) {
             try {
+                if (ConfigUtil.getInstance().isLispOverlayEnabled()) {
+                    lispStateManager.deleteLispConfigurationForEndpoint(rEp);
+                }
                 ifaceManager.deleteBridgeDomainFromInterface(rEp).get();
                 LOG.debug("bridge-domain was deleted from interface for endpoint {}", rEp);
             } catch (InterruptedException | ExecutionException e) {

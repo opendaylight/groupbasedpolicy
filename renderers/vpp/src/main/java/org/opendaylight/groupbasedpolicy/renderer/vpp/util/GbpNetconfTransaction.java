@@ -19,6 +19,7 @@ import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFaile
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.AbstractConfigCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.AbstractInterfaceCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.interfaces.ConfigCommand;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.AbstractLispCommand;
 import org.opendaylight.vbd.impl.transaction.VbdNetconfTransaction;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
 import org.opendaylight.yangtools.yang.binding.DataObject;
@@ -61,6 +62,22 @@ public class GbpNetconfTransaction {
      */
     public static boolean netconfSyncedWrite(@Nonnull final DataBroker mountpoint, @Nonnull final ConfigCommand command,
         byte retryCounter) {
+        VbdNetconfTransaction.REENTRANT_LOCK.lock();
+        boolean result = write(mountpoint, command, retryCounter);
+        VbdNetconfTransaction.REENTRANT_LOCK.unlock();
+        return result;
+    }
+
+    /***
+     * Netconf wrapper method for synced requests for write operation on a Netconf Device
+     * @param mountpoint    netconf device
+     * @param command       abstract lisp command that needs to be executed
+     * @param retryCounter  retry counter, will repeat the operation for specified amount of times if transaction fails
+     * @return true if transaction is successful, false otherwise
+     */
+    public static <T extends DataObject> boolean netconfSyncedWrite(@Nonnull final DataBroker mountpoint,
+                                                                    @Nonnull final AbstractLispCommand<T> command,
+                                                                    byte retryCounter) {
         VbdNetconfTransaction.REENTRANT_LOCK.lock();
         boolean result = write(mountpoint, command, retryCounter);
         VbdNetconfTransaction.REENTRANT_LOCK.unlock();
@@ -169,6 +186,39 @@ public class GbpNetconfTransaction {
             if (retryCounter > 0) {
                 LOG.warn("Netconf WRITE transaction failed to {}. Restarting transaction ... ", e.getMessage());
                 return write(mountpoint, iid, data, --retryCounter);
+            } else {
+                LOG.warn("Netconf WRITE transaction unsuccessful. Maximal number of attempts reached. Trace: {}", e);
+                return false;
+            }
+        }
+    }
+
+    /**
+     * Use {@link AbstractLispCommand} to put data into netconf transaction and submit. Transaction is restarted if failed
+     *
+     * @param mountpoint   to access remote device
+     * @param command      abstract lisp command with data, datastore type and iid
+     * @param retryCounter number of attempts
+     * @return true if transaction is successful, false otherwise
+     */
+    private static <T extends DataObject> boolean write(final DataBroker mountpoint,
+                                                        final AbstractLispCommand<T> command,
+                                                        byte retryCounter) {
+        LOG.trace("Netconf WRITE transaction started. RetryCounter: {}", retryCounter);
+        Preconditions.checkNotNull(mountpoint);
+        final ReadWriteTransaction rwTx = mountpoint.newReadWriteTransaction();
+        try {
+            command.execute(rwTx);
+            final CheckedFuture<Void, TransactionCommitFailedException> futureTask = rwTx.submit();
+            futureTask.get();
+            LOG.trace("Netconf WRITE transaction done for command {}", command);
+            return true;
+        } catch (Exception e) {
+            // Retry
+            if (retryCounter > 0) {
+                LOG.warn("Netconf WRITE transaction failed to {}. Restarting transaction ... ", e.getMessage());
+                rwTx.cancel();
+                return write(mountpoint, command, --retryCounter);
             } else {
                 LOG.warn("Netconf WRITE transaction unsuccessful. Maximal number of attempts reached. Trace: {}", e);
                 return false;

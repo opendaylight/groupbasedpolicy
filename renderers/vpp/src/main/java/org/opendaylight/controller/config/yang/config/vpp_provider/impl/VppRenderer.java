@@ -23,6 +23,8 @@ import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareProvider;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.bvi.BviManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.GbpSubnetListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.RendererPolicyListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppEndpointListener;
@@ -119,6 +121,10 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         if (interfaceManager != null) {
             interfaceManager.close();
         }
+
+        if (vppGbpSubnetListener != null) {
+            vppGbpSubnetListener.close();
+        }
         unregisterFromRendererManager();
     }
 
@@ -136,11 +142,15 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         interfaceManager = new InterfaceManager(mountDataProvider, dataBroker);
         AclManager aclManager = new AclManager(mountDataProvider);
         NatManager natManager = new NatManager(dataBroker, mountDataProvider);
+        LispStateManager lispStateManager = new LispStateManager(mountDataProvider);
+        BviManager bviManager = new BviManager(mountDataProvider);
         dtoEventBus.register(interfaceManager);
+        dtoEventBus.register(bviManager);
         RoutingManager routingManager = new RoutingManager(dataBroker, mountDataProvider);
         bdManager = new BridgeDomainManagerImpl(dataBroker);
         ForwardingManager fwManager =
-                new ForwardingManager(interfaceManager, aclManager, natManager, routingManager, bdManager, dataBroker);
+                new ForwardingManager(interfaceManager, aclManager, natManager, routingManager, bdManager,
+                        lispStateManager, bviManager,dataBroker);
         VppRendererPolicyManager vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, aclManager, dataBroker);
         dtoEventBus.register(vppRendererPolicyManager);
 

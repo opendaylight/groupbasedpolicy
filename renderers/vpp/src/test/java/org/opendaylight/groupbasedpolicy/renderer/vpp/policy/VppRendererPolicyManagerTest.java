@@ -28,6 +28,8 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.event.RendererPolicyConfEv
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.VppEndpointConfEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.VppEndpointLocationProvider;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.bvi.BviManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.routing.RoutingManager;
@@ -86,6 +88,8 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
     private ForwardingManager fwManager;
     private NatManager natManager;
     private RoutingManager routingManager;
+    private LispStateManager lispStateManager;
+    private BviManager bviManager;
     private VppRendererPolicyManager vppRendererPolicyManager;
 
     @Override
@@ -108,7 +112,10 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         natManager = new NatManager(dataBroker, mountedDataProviderMock);
         routingManager = new RoutingManager(dataBroker, mountedDataProviderMock);
         bdManager = new BridgeDomainManagerImpl(mountPointDataBroker);
-        fwManager = new ForwardingManager(ifaceManager, aclManager, natManager, routingManager, bdManager, dataBroker);
+        lispStateManager = new LispStateManager(mountedDataProviderMock);
+        bviManager = new BviManager(mountedDataProviderMock);
+        fwManager = new ForwardingManager(ifaceManager, aclManager, natManager, routingManager, bdManager,
+                lispStateManager, bviManager, dataBroker);
         vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, aclManager, dataBroker);
         fwManager.setTimer((byte) 1);
     }

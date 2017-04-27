@@ -240,6 +240,7 @@ public class DtoFactory {
         return new AddressEndpointWithLocationBuilder().setKey(key)
             .setNetworkContainment(networkContainment)
             .setAbsoluteLocation(absoluteLocation)
+            .setTenant(new TenantId(TENANT_ID))
             .build();
     }
 

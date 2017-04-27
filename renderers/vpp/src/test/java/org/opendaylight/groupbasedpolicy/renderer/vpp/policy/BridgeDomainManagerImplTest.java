@@ -23,6 +23,8 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.bvi.BviManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.routing.RoutingManager;
@@ -106,9 +108,11 @@ public class BridgeDomainManagerImplTest extends CustomDataBrokerTest {
         final AclManager aclManager = Mockito.mock(AclManager.class);
         final NatManager natManager = Mockito.mock(NatManager.class);
         final RoutingManager routingManager = Mockito.mock(RoutingManager.class);
+        final LispStateManager lispStateManager = Mockito.mock(LispStateManager.class);
+        final BviManager bviManager = Mockito.mock(BviManager.class);
         final ForwardingManager fwManager =
             new ForwardingManager(interfaceManager, aclManager, natManager, routingManager, bridgeDomainManager,
-                dataBroker);
+                lispStateManager, bviManager, dataBroker);
         fwManager.setTimer((byte) 1);
     }
 
