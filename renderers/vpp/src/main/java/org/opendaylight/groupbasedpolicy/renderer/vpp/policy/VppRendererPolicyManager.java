@@ -22,6 +22,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.util.AddressEndpointUtils;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.NodeOperEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.RendererPolicyConfEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.AclManager;
@@ -164,10 +165,12 @@ public class VppRendererPolicyManager {
         LOG.debug("Removed renderer endpoints {}", removedRendEps);
         removedRendEps.forEach(rEpKey -> fwManager.removeForwardingForEndpoint(rEpKey, policyCtxBefore));
 
-        LOG.debug("Removing bridge domains on nodes {}", removedVppNodesByL2Fd);
-        fwManager.removeBridgeDomainOnNodes(removedVppNodesByL2Fd);
-        LOG.debug("Creating bridge domains on nodes {}", createdVppNodesByL2Fd);
-        fwManager.createBridgeDomainOnNodes(createdVppNodesByL2Fd);
+        if (!ConfigUtil.getInstance().isL3FlatEnabled()) {
+            LOG.debug("Removing bridge domains on nodes {}", removedVppNodesByL2Fd);
+            fwManager.removeBridgeDomainOnNodes(removedVppNodesByL2Fd);
+            LOG.debug("Creating bridge domains on nodes {}", createdVppNodesByL2Fd);
+            fwManager.createBridgeDomainOnNodes(createdVppNodesByL2Fd);
+        }
 
         fwManager.syncNatEntries(policyCtxAfter);
 
@@ -265,9 +268,10 @@ public class VppRendererPolicyManager {
         LOG.trace("VPP renderer policy version {} created", rPolicy.getVersion());
         PolicyContext policyCtx = new PolicyContext(rPolicy);
         ImmutableSet<RendererEndpointKey> rEpKeys = policyCtx.getPolicyTable().rowKeySet();
-
-        SetMultimap<String, NodeId> vppNodesByL2Fd = resolveVppNodesByL2Fd(rEpKeys, policyCtx);
-        fwManager.createBridgeDomainOnNodes(vppNodesByL2Fd);
+        if (!ConfigUtil.getInstance().isL3FlatEnabled()) {
+            SetMultimap<String, NodeId> vppNodesByL2Fd = resolveVppNodesByL2Fd(rEpKeys, policyCtx);
+            fwManager.createBridgeDomainOnNodes(vppNodesByL2Fd);
+        }
         fwManager.syncNatEntries(policyCtx);
         fwManager.syncRouting(policyCtx);
         rEpKeys.forEach(rEpKey -> fwManager.createForwardingForEndpoint(rEpKey, policyCtx));
@@ -279,11 +283,12 @@ public class VppRendererPolicyManager {
         ImmutableSet<RendererEndpointKey> rEpKeys = policyCtx.getPolicyTable().rowKeySet();
 
         rEpKeys.forEach(rEpKey -> fwManager.removeForwardingForEndpoint(rEpKey, policyCtx));
-
-        SetMultimap<String, NodeId> vppNodesByL2Fd = resolveVppNodesByL2Fd(rEpKeys, policyCtx);
+        if (!ConfigUtil.getInstance().isL3FlatEnabled()) {
+            SetMultimap<String, NodeId> vppNodesByL2Fd = resolveVppNodesByL2Fd(rEpKeys, policyCtx);
+            fwManager.removeBridgeDomainOnNodes(vppNodesByL2Fd);
+        }
         fwManager.deleteNatEntries(policyCtx);
         fwManager.deleteRouting(policyCtx);
-        fwManager.removeBridgeDomainOnNodes(vppNodesByL2Fd);
     }
 
     private static SetMultimap<String, NodeId> resolveVppNodesByL2Fd(Set<RendererEndpointKey> rEpKeys,

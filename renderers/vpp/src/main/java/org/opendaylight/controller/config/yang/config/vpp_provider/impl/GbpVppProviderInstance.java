@@ -16,6 +16,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.adapter.VppRpcServiceImpl;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigurationService;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonService;
 import org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider;
@@ -29,7 +30,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapte
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.DeleteInterfaceFromNodeInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.DeleteVirtualBridgeDomainFromNodesInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.VppAdapterService;
+import org.opendaylight.yangtools.yang.common.RpcError;
 import org.opendaylight.yangtools.yang.common.RpcResult;
+import org.opendaylight.yangtools.yang.common.RpcResultBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +45,9 @@ public class GbpVppProviderInstance implements ClusterSingletonService, VppAdapt
 
     private static final ServiceGroupIdentifier IDENTIFIER =
             ServiceGroupIdentifier.create(GroupbasedpolicyInstance.GBP_SERVICE_GROUP_IDENTIFIER);
+    private static final RpcResult<Void> L2_DISABLED_RESULT =
+        RpcResultBuilder.<Void>status(false).withWarning(RpcError.ErrorType.APPLICATION, "L2 disabled",
+            "Bridge domains are disabled because L3Flat mode is enabled. Check VPP startup config.").build();
     private final DataBroker dataBroker;
     private final BindingAwareBroker bindingAwareBroker;
     private final ClusterSingletonServiceProvider clusterSingletonService;
@@ -62,7 +68,7 @@ public class GbpVppProviderInstance implements ClusterSingletonService, VppAdapt
         this.clusterSingletonService = Preconditions.checkNotNull(clusterSingletonService);
         this.publicInterfaces = publicInterfaces;
         this.rpcProviderRegistry = Preconditions.checkNotNull(rpcProviderRegistry);
-        configurationService = new ConfigurationService();
+        this.configurationService = new ConfigurationService();
     }
 
     public void initialize() {
@@ -128,17 +134,26 @@ public class GbpVppProviderInstance implements ClusterSingletonService, VppAdapt
 
     @Override
     public Future<RpcResult<Void>> addInterfaceToBridgeDomain(AddInterfaceToBridgeDomainInput input) {
+        if (!ConfigUtil.getInstance().isL3FlatEnabled()) {
         return vppRpcService.addInterfaceToBridgeDomain(input);
+        }
+        return Futures.immediateFuture(L2_DISABLED_RESULT);
     }
 
     @Override
     public Future<RpcResult<Void>> delInterfaceFromBridgeDomain(DelInterfaceFromBridgeDomainInput input) {
-        return vppRpcService.delInterfaceFromBridgeDomain(input);
+        if (!ConfigUtil.getInstance().isL3FlatEnabled()) {
+            return vppRpcService.delInterfaceFromBridgeDomain(input);
+        }
+        return Futures.immediateFuture(L2_DISABLED_RESULT);
     }
 
     @Override
     public Future<RpcResult<Void>> cloneVirtualBridgeDomainOnNodes(CloneVirtualBridgeDomainOnNodesInput input) {
-        return vppRpcService.cloneVirtualBridgeDomainOnNodes(input);
+        if (!ConfigUtil.getInstance().isL3FlatEnabled()) {
+            return vppRpcService.cloneVirtualBridgeDomainOnNodes(input);
+        }
+        return Futures.immediateFuture(L2_DISABLED_RESULT);
     }
 
     @Override

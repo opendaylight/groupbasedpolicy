@@ -17,103 +17,78 @@ import org.slf4j.LoggerFactory;
  * Created by Shakib Ahmed on 4/13/17.
  */
 public class ConfigUtil {
+
     private static final Logger LOG = LoggerFactory.getLogger(ConfigUtil.class);
 
-    private static boolean DEFAULT_LISP_OVERLAY_ENABLED = false;
-    private static boolean DEFAULT_LISP_MAPREGISTER_ENABLED = true;
-    private static boolean DEFAULT_L3_FLAT_ENABLED = false;
+    private static final boolean DEFAULT_LISP_OVERLAY_ENABLED = false;
+    private static final boolean DEFAULT_LISP_MAPREGISTER_ENABLED = true;
+    private static final boolean DEFAULT_L3_FLAT_ENABLED = false;
+    private static final String DEFAULT_TRUE_STRING_VALUE = "true";
+    private static final String CONFIGURATION_VARIABLE_MESSAGE =
+        "Configuration variable {} is being unset. Setting the variable to {}";
 
     private IpAddress odlTenantIp;
     private boolean lispOverlayEnabled = DEFAULT_LISP_OVERLAY_ENABLED;
     private boolean lispMapRegisterEnbled = DEFAULT_LISP_MAPREGISTER_ENABLED;
     private boolean l3FlatEnabled = DEFAULT_L3_FLAT_ENABLED;
 
+    static final String ODL_TENANT_IP = "odl.ip.tenant";
+    static final String LISP_OVERLAY_ENABLED = "gbp.lisp.enabled";
+    static final String LISP_MAPREGISTER_ENABLED = "vpp.lisp.mapregister.enabled";
+    static final String L3_FLAT_ENABLED = "vpp.l3.flat.enabled";
 
-    public static String ODL_TENANT_IP = "odl.ip.tenant";
-    public static String LISP_OVERLAY_ENABLED = "gbp.lisp.enabled";
-    public static String LISP_MAPREGISTER_ENABLED = "vpp.lisp.mapregister.enabled";
-    public static String L3_FLAT_ENABLED = "vpp.l3.flat.enabled";
-
-    private static ConfigUtil INSTANCE = new ConfigUtil();
+    private static final ConfigUtil INSTANCE = new ConfigUtil();
 
     private ConfigUtil() {
-        configureDefaults();
+        configureOdlTenantIp(null);
+        configureLispOverlayEnabled(null);
+        configureMapRegister(null);
+        configL3FlatEnabled(null);
     }
 
     public static ConfigUtil getInstance() {
         return INSTANCE;
     }
 
-    private void configureDefaults() {
-        configureOdlTenantIp(null);
-        configureLispOverlayEnabled(null);
-        configureMapRegister(null);
-    }
-
-    public void configureLispOverlayEnabled(String configStr) {
+    void configureLispOverlayEnabled(String configStr) {
         if (configStr == null) {
             configStr = System.getProperty(LISP_OVERLAY_ENABLED);
 
             if (configStr == null) {
                 lispOverlayEnabled = DEFAULT_LISP_OVERLAY_ENABLED;
-                LOG.debug("Configuration variable {} is being unset. Setting the variable to {}",
-                        LISP_OVERLAY_ENABLED, DEFAULT_LISP_OVERLAY_ENABLED);
+                LOG.debug(CONFIGURATION_VARIABLE_MESSAGE, LISP_OVERLAY_ENABLED, DEFAULT_LISP_OVERLAY_ENABLED);
                 return;
             }
         }
-
-        configStr = configStr.trim();
-
-        if (configStr.equalsIgnoreCase("true")) {
-            lispOverlayEnabled = true;
-        } else {
-            lispOverlayEnabled = false;
-        }
+        lispOverlayEnabled = configStr.trim().equalsIgnoreCase(DEFAULT_TRUE_STRING_VALUE);
     }
 
-    public void configureOdlTenantIp(String configStr) {
+    void configureOdlTenantIp(String configStr) {
         if (configStr == null) {
             odlTenantIp = null;
             LOG.debug("Configuration variable {} is being unset. Setting the variable to null",
                     ODL_TENANT_IP);
             return;
         }
-
-        configStr = configStr.trim();
-        odlTenantIp = new IpAddress(configStr.toCharArray());
+        odlTenantIp = new IpAddress(configStr.trim().toCharArray());
     }
 
-    public void configureMapRegister(String configStr) {
+    void configureMapRegister(String configStr) {
         if (configStr == null) {
             lispMapRegisterEnbled = DEFAULT_LISP_MAPREGISTER_ENABLED;
-            LOG.debug("Configuration variable {} is being unset. Setting the variable to {}",
-                    LISP_MAPREGISTER_ENABLED, DEFAULT_LISP_MAPREGISTER_ENABLED);
+            LOG.debug(CONFIGURATION_VARIABLE_MESSAGE, LISP_MAPREGISTER_ENABLED, DEFAULT_LISP_MAPREGISTER_ENABLED);
             return;
         }
-
-        configStr = configStr.trim();
-
-        if (configStr.equalsIgnoreCase("true")) {
-            lispMapRegisterEnbled = true;
-        } else {
-            lispOverlayEnabled = false;
-        }
+        lispMapRegisterEnbled = configStr.trim().equalsIgnoreCase(DEFAULT_TRUE_STRING_VALUE);
     }
 
-    public void configL3FlatEnabled(String configStr) {
+    void configL3FlatEnabled(String configStr) {
         if (configStr == null) {
             l3FlatEnabled = DEFAULT_L3_FLAT_ENABLED;
-            LOG.debug("Configuration variable {} is being unset. Setting the variable to {}",
-                    L3_FLAT_ENABLED, DEFAULT_L3_FLAT_ENABLED);
+            LOG.debug(CONFIGURATION_VARIABLE_MESSAGE, L3_FLAT_ENABLED, DEFAULT_L3_FLAT_ENABLED);
+            return;
         }
-
-        configStr = configStr.trim();
-
-        if (configStr.equalsIgnoreCase("true")) {
-            l3FlatEnabled = true;
-        } else {
-            l3FlatEnabled = false;
-        }
+        l3FlatEnabled = configStr.trim().equalsIgnoreCase(DEFAULT_TRUE_STRING_VALUE);
     }
 
     public IpAddress getOdlTenantIp() {
