@@ -27,6 +27,7 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
@@ -104,8 +105,12 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
             Preconditions.checkArgument(!future.isDone());
             this.modificationForFutureSet = Preconditions.checkNotNull(modificationForFutureSet);
             this.iid = Preconditions.checkNotNull(iid);
-            registeredListener = dataProvider.registerDataTreeChangeListener(iid, this);
-            LOG.debug("Registered listener for path {}", iid.getRootIdentifier());
+            if(!ConfigUtil.getInstance().isL3FlatEnabled()) {
+                registeredListener = dataProvider.registerDataTreeChangeListener(iid, this);
+                LOG.debug("Registered listener for path {}", iid.getRootIdentifier());
+            } else {
+                throw new IllegalStateException("L3 flat is enabled, BD manager should not even be registering now!");
+            }
         }
 
         @Override

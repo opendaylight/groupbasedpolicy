@@ -25,6 +25,7 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.RoutingCommand;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
@@ -209,16 +210,20 @@ public final class ForwardingManager {
                 LOG.info("Renderer endpoint does not have l2FloodDomain as network containment {}", rEp);
                 return;
             }
-            String l2FloodDomain = optL2FloodDomain.get();
-            try {
-                ifaceManager.addBridgeDomainToInterface(l2FloodDomain, rEp, AccessListUtil.resolveAclsOnInterface(
+
+            if (!ConfigUtil.getInstance().isL3FlatEnabled()) {
+                String l2FloodDomain = optL2FloodDomain.get();
+                try {
+                    ifaceManager.addBridgeDomainToInterface(l2FloodDomain, rEp, AccessListUtil.resolveAclsOnInterface(
                         rEpKey, policyCtx), isBviForEndpoint(rEp)).get();
-                aclManager.updateAclsForPeers(policyCtx, rEpKey);
-                LOG.debug("Interface added to bridge-domain {} for endpoint {}", l2FloodDomain, rEp);
-            } catch (InterruptedException | ExecutionException e) {
-                // TODO add it to the status for renderer manager
-                LOG.warn("Interface was not added to bridge-domain {} for endpoint {}", l2FloodDomain, rEp, e);
+                    LOG.debug("Interface added to bridge-domain {} for endpoint {}", l2FloodDomain, rEp);
+
+                } catch (InterruptedException | ExecutionException e) {
+                    // TODO add it to the status for renderer manager
+                    LOG.warn("Interface was not added to bridge-domain {} for endpoint {}", l2FloodDomain, rEp, e);
+                }
             }
+            aclManager.updateAclsForPeers(policyCtx, rEpKey);
         } else {
             LOG.debug("Forwarding is not created - Location of renderer endpoint contains "
                     + "external-node therefore VPP renderer assumes that interface for endpoint is "
