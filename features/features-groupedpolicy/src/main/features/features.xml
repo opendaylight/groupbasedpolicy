@@ -38,13 +38,12 @@
     <repository>mvn:org.opendaylight.honeycomb.vbd/vbd-features/${vbd.version}/xml/features</repository>
 
     <!-- The common GBP components -->
-    <feature name='odl-groupbasedpolicy-base' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Base Copmonents'>
+    <feature name='odl-groupbasedpolicy-base' version='${project.version}' description='ODL :: groupbasedpolicy :: Base Copmonents'>
         <feature version="${controller.mdsal.version}">odl-mdsal-broker</feature>
         <feature version='${mdsal.version}'>odl-mdsal-binding-base</feature>
         <feature version='${mdsal.model.version}'>odl-mdsal-models</feature>
         <bundle>mvn:commons-net/commons-net/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy/{{VERSION}}</bundle>
-        <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-base.xml">mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy/{{VERSION}}/xml/config</configfile>
     </feature>
 
     <!--
@@ -53,7 +52,7 @@
         This can be added to the base to enable a
         Network Virtualization behavior using OpenFlow
     -->
-    <feature name='odl-groupbasedpolicy-ofoverlay' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: OpenFlow Overlay Renderer'>
+    <feature name='odl-groupbasedpolicy-ofoverlay' version='${project.version}' description='ODL :: groupbasedpolicy :: OpenFlow Overlay Renderer'>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <feature version="${openflowplugin.version}">odl-openflowplugin-flow-services</feature>
         <feature version='${openflowplugin.version}'>odl-openflowplugin-nxm-extensions</feature>
@@ -65,7 +64,6 @@
         <bundle>mvn:com.sun.jersey/jersey-core/{{VERSION}}</bundle>
         <bundle>mvn:com.sun.jersey/jersey-client/{{VERSION}}</bundle>
         <bundle>mvn:com.google.code.gson/gson/{{VERSION}}</bundle>
-        <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-ofoverlay.xml">mvn:org.opendaylight.groupbasedpolicy/ofoverlay-renderer/{{VERSION}}/xml/config</configfile>
     </feature>
 
     <!--
@@ -74,7 +72,7 @@
         This can be added to the base to enable a
         Network Virtualization behavior using OpenFlow that integrates with the SFC project
     -->
-    <feature name='odl-groupbasedpolicy-ovssfc' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: OpenFlow Overlay SFC Renderer'>
+    <feature name='odl-groupbasedpolicy-ovssfc' version='${project.version}' description='ODL :: groupbasedpolicy :: OpenFlow Overlay SFC Renderer'>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <feature version="${openflowplugin.version}">odl-openflowplugin-flow-services</feature>
         <feature version='${openflowplugin.version}'>odl-openflowplugin-nxm-extensions</feature>
@@ -93,11 +91,10 @@
         of the Fabric As A Service (FAAS). In turns, FAAS maps those abstraction
         models to the physical networks.
     -->
-    <feature name='odl-groupbasedpolicy-faas' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Fabric As A Service Renderer'>
+    <feature name='odl-groupbasedpolicy-faas' version='${project.version}' description='ODL :: groupbasedpolicy :: Fabric As A Service Renderer'>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <feature version='${faas.version}'>odl-faas-uln-mapper</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/faas-renderer/{{VERSION}}</bundle>
-        <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-faas.xml">mvn:org.opendaylight.groupbasedpolicy/faas-renderer/{{VERSION}}/xml/config</configfile>
     </feature>
 
     <!--
@@ -106,7 +103,7 @@
         This renderer maps GBP service model to agents of the IOVisor Linux Foundation project.
     -->
     <feature name='odl-groupbasedpolicy-iovisor' version='${project.version}'
-             description='OpenDaylight :: groupbasedpolicy :: IOVisor Renderer'>
+             description='ODL :: groupbasedpolicy :: IOVisor Renderer'>
         <feature>war</feature>
         <feature version='${aaa.version}'>odl-aaa-shiro</feature>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
@@ -123,7 +120,7 @@
 
         This renderer maps GBP service model to NETCONF based network elements.
     -->
-    <feature name='odl-groupbasedpolicy-netconf' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: NETCONF Renderer'>
+    <feature name='odl-groupbasedpolicy-netconf' version='${project.version}' description='ODL :: groupbasedpolicy :: NETCONF Renderer'>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/netconf-renderer/{{VERSION}}</bundle>
         <configfile finalname="${config.configfile.directory}/15-groupbasedpolicy-netconf.xml">mvn:org.opendaylight.groupbasedpolicy/netconf-renderer/{{VERSION}}/xml/config</configfile>
@@ -132,19 +129,18 @@
     <!--
          The Neutron provider
     -->
-    <feature name='odl-groupbasedpolicy-neutronmapper' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Neutron Mapper mapps neutron APIs to GBP APIs '>
+    <feature name='odl-groupbasedpolicy-neutronmapper' version='${project.version}' description='ODL :: groupbasedpolicy :: Neutron Mapper mapps neutron APIs to GBP APIs '>
         <feature version="${neutron.version}">odl-neutron-service</feature>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/neutron-mapper/{{VERSION}}</bundle>
         <configfile finalname="${config.configfile.directory}/15-l2-l3-domain-extension.xml">mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}/xml/config</configfile>
-        <configfile finalname="${config.configfile.directory}/15-neutron-mapper.xml">mvn:org.opendaylight.groupbasedpolicy/neutron-mapper/{{VERSION}}/xml/config</configfile>
     </feature>
 
     <!--
          The Neutron provider and OFOVERLAY renderer
     -->
-    <feature name='odl-groupbasedpolicy-neutron-and-ofoverlay' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Neutron Mapper mapps neutron APIs to GBP APIs '>
+    <feature name='odl-groupbasedpolicy-neutron-and-ofoverlay' version='${project.version}' description='ODL :: groupbasedpolicy :: Neutron Mapper mapps neutron APIs to GBP APIs '>
         <feature version="${project.version}">odl-groupbasedpolicy-ofoverlay</feature>
         <feature version="${project.version}">odl-groupbasedpolicy-neutronmapper</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/neutron-ovsdb/{{VERSION}}</bundle>
@@ -154,7 +150,7 @@
     <!--
         The VPP renderer
     -->
-    <feature name='odl-groupbasedpolicy-vpp' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: VPP renderer '>
+    <feature name='odl-groupbasedpolicy-vpp' version='${project.version}' description='ODL :: groupbasedpolicy :: VPP renderer '>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <feature version="${netconf.version}">odl-netconf-clustered-topology</feature>
         <feature version="${vbd.version}">odl-vbd</feature>
@@ -167,7 +163,7 @@
     <!--
         The Neutron-VPP provider
     -->
-    <feature name='odl-groupbasedpolicy-neutron-vpp-mapper' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: Neutron Mapper mapps neutron APIs to GBP APIs '>
+    <feature name='odl-groupbasedpolicy-neutron-vpp-mapper' version='${project.version}' description='ODL :: groupbasedpolicy :: Neutron Mapper mapps neutron APIs to GBP APIs '>
         <feature version="${project.version}">odl-groupbasedpolicy-neutronmapper</feature>
         <feature version="${project.version}">odl-groupbasedpolicy-vpp</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/neutron-vpp-mapper/{{VERSION}}</bundle>
@@ -177,7 +173,7 @@
     <!--
          UI
     -->
-    <feature name='odl-groupbasedpolicy-ui' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: DLUX UI '>
+    <feature name='odl-groupbasedpolicy-ui' version='${project.version}' description='ODL :: groupbasedpolicy :: DLUX UI '>
         <feature version="${dlux.version}">odl-dlux-core</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/groupbasedpolicy-ui-bundle/{{VERSION}}</bundle>
     </feature>
@@ -185,7 +181,7 @@
     <!--
         SXP Distribution Service
     -->
-    <feature name='odl-groupbasedpolicy-ip-sgt-distribution-service' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: ip-sgt-distribution-service'>
+    <feature name='odl-groupbasedpolicy-ip-sgt-distribution-service' version='${project.version}' description='ODL :: groupbasedpolicy :: ip-sgt-distribution-service'>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <feature version="${sxp.version}">odl-sxp-core</feature>
         <feature version="${sxp.version}">odl-sxp-controller</feature>
@@ -196,7 +192,7 @@
     <!--
          NE Location Provider
     -->
-    <feature name='odl-groupbasedpolicy-ne-location-provider' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: NE location provider'>
+    <feature name='odl-groupbasedpolicy-ne-location-provider' version='${project.version}' description='ODL :: groupbasedpolicy :: NE location provider'>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}</bundle>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/ne-location-provider/{{VERSION}}</bundle>
@@ -207,7 +203,7 @@
     <!--
        IOS-XE renderer
     -->
-    <feature name='odl-groupbasedpolicy-ios-xe' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: ios-xe renderer'>
+    <feature name='odl-groupbasedpolicy-ios-xe' version='${project.version}' description='ODL :: groupbasedpolicy :: ios-xe renderer'>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <feature version="${project.version}">odl-groupbasedpolicy-sxp-ep-provider</feature>
         <feature version="${project.version}">odl-groupbasedpolicy-ip-sgt-distribution-service</feature>
@@ -222,7 +218,7 @@
     <!--
        GBP-SXP integration : ep-provider
    -->
-    <feature name='odl-groupbasedpolicy-sxp-ep-provider' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: sxp ep provider'>
+    <feature name='odl-groupbasedpolicy-sxp-ep-provider' version='${project.version}' description='ODL :: groupbasedpolicy :: sxp ep provider'>
         <feature version="${sxp.version}">odl-sxp-core</feature>
         <feature version="${project.version}">odl-groupbasedpolicy-base</feature>
         <bundle>mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}</bundle>
@@ -233,7 +229,7 @@
     <!--
        GBP-SXP integration : ise-adapter
    -->
-    <feature name='odl-groupbasedpolicy-sxp-ise-adapter' version='${project.version}' description='OpenDaylight :: groupbasedpolicy :: sxp ise adapter'>
+    <feature name='odl-groupbasedpolicy-sxp-ise-adapter' version='${project.version}' description='ODL :: groupbasedpolicy :: sxp ise adapter'>
         <feature version="${project.version}">odl-groupbasedpolicy-sxp-ep-provider</feature>
         <bundle>mvn:com.sun.jersey/jersey-client/{{VERSION}}</bundle>
         <bundle>mvn:com.sun.jersey/jersey-core/{{VERSION}}</bundle>

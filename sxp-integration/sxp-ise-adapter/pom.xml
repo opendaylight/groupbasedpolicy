@@ -15,7 +15,9 @@
 
     <artifactId>sxp-ise-adapter</artifactId>
     <packaging>bundle</packaging>
-    <name>sxp-integration_sxp-ise-adapter</name>
+    <!-- <name> formatting is used by autorelease to parse and notify projects on
+       build failure. Please do not modify this unless you have a good reason. -->
+    <name>ODL :: groupbasedpolicy :: ${project.artifactId}</name>
 
     <dependencies>
         <!-- model dependencies -->

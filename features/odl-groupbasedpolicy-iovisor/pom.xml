@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.opendaylight.odlparent</groupId>
+        <artifactId>single-feature-parent</artifactId>
+        <version>1.9.0-SNAPSHOT</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>org.opendaylight.groupbasedpolicy</groupId>
+    <artifactId>odl-groupbasedpolicy-iovisor</artifactId>
+    <version>0.6.0-SNAPSHOT</version>
+    <packaging>feature</packaging>
+    <!--
+        The IOVisor renderer.
+
+        This renderer maps GBP service model to agents of the IOVisor Linux Foundation project.
+    -->
+    <!-- <name> formatting is used by autorelease to parse and notify projects on
+       build failure. Please do not modify this unless you have a good reason. -->
+    <name>ODL :: groupbasedpolicy :: ${project.artifactId}</name>
+
+    <properties>
+        <aaa.version>0.6.0-SNAPSHOT</aaa.version>
+        <restconf.version>1.6.0-SNAPSHOT</restconf.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- ODL-GBP-ARTIFACTS -->
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>groupbasedpolicy-artifacts</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- ODL-AAA-ARTIFACTS -->
+            <dependency>
+                <groupId>org.opendaylight.aaa</groupId>
+                <artifactId>features-aaa-shiro</artifactId>
+                <version>${aaa.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- ODL-NETCONF-ARTIFACTS -->
+            <dependency>
+                <groupId>org.opendaylight.netconf</groupId>
+                <artifactId>restconf-artifacts</artifactId>
+                <version>${restconf.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>iovisor-renderer</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.jersey</groupId>
+            <artifactId>jersey-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.jersey</groupId>
+            <artifactId>jersey-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>odl-groupbasedpolicy-base</artifactId>
+            <type>xml</type>
+            <classifier>features</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.opendaylight.aaa</groupId>
+            <artifactId>odl-aaa-shiro</artifactId>
+            <type>xml</type>
+            <classifier>features</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.opendaylight.netconf</groupId>
+            <artifactId>odl-restconf</artifactId>
+            <type>xml</type>
+            <classifier>features</classifier>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>iovisor-renderer</artifactId>
+            <type>xml</type>
+            <classifier>config</classifier>
+        </dependency>
+    </dependencies>
+</project>

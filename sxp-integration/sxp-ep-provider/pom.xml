@@ -15,7 +15,9 @@
 
     <artifactId>sxp-ep-provider</artifactId>
     <packaging>bundle</packaging>
-    <name>sxp-integration_sxp-ep-provider</name>
+    <!-- <name> formatting is used by autorelease to parse and notify projects on
+       build failure. Please do not modify this unless you have a good reason. -->
+    <name>ODL :: groupbasedpolicy :: ${project.artifactId}</name>
 
     <dependencies>
         <!-- model dependencies -->

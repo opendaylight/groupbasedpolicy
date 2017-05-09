@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.opendaylight.odlparent</groupId>
+        <artifactId>single-feature-parent</artifactId>
+        <version>1.9.0-SNAPSHOT</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>org.opendaylight.groupbasedpolicy</groupId>
+    <artifactId>odl-groupbasedpolicy-sxp-ise-adapter</artifactId>
+    <version>0.6.0-SNAPSHOT</version>
+    <packaging>feature</packaging>
+    <!--
+       GBP-SXP integration : ise-adapter
+    -->
+    <!-- <name> formatting is used by autorelease to parse and notify projects on
+       build failure. Please do not modify this unless you have a good reason. -->
+    <name>ODL :: groupbasedpolicy :: ${project.artifactId}</name>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- ODL-GBP-ARTIFACTS -->
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>groupbasedpolicy-artifacts</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sxp-ise-adapter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.jersey</groupId>
+            <artifactId>jersey-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.jersey</groupId>
+            <artifactId>jersey-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>odl-groupbasedpolicy-sxp-ep-provider</artifactId>
+            <type>xml</type>
+            <classifier>features</classifier>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sxp-ise-adapter</artifactId>
+            <type>xml</type>
+            <classifier>config</classifier>
+        </dependency>
+    </dependencies>
+</project>

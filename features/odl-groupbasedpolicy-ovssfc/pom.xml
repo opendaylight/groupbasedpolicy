@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.opendaylight.odlparent</groupId>
+        <artifactId>single-feature-parent</artifactId>
+        <version>1.9.0-SNAPSHOT</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>org.opendaylight.groupbasedpolicy</groupId>
+    <artifactId>odl-groupbasedpolicy-ovssfc</artifactId>
+    <version>0.6.0-SNAPSHOT</version>
+    <packaging>feature</packaging>
+    <!--
+        The OpenFlow Overlay renderer with SFC.
+
+        This can be added to the base to enable a
+        Network Virtualization behavior using OpenFlow that integrates with the SFC project
+    -->
+    <!-- <name> formatting is used by autorelease to parse and notify projects on
+       build failure. Please do not modify this unless you have a good reason. -->
+    <name>ODL :: groupbasedpolicy :: ${project.artifactId}</name>
+
+    <properties>
+        <openflowplugin.version>0.5.0-SNAPSHOT</openflowplugin.version>
+        <ovsdb.southbound.version>1.5.0-SNAPSHOT</ovsdb.southbound.version>
+        <config.configfile.directory>etc/opendaylight/karaf</config.configfile.directory>
+        <sfc.version>0.6.0-SNAPSHOT</sfc.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- ODL-GBP-ARTIFACTS -->
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>groupbasedpolicy-artifacts</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- ODL-OPENFLOWPLUGIN-ARTIFACTS -->
+            <dependency>
+                <groupId>org.opendaylight.openflowplugin</groupId>
+                <artifactId>openflowplugin-artifacts</artifactId>
+                <version>${openflowplugin.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+            <!-- OVSDB-ARTIFACTS -->
+            <dependency>
+                <groupId>org.opendaylight.ovsdb</groupId>
+                <artifactId>southbound-artifacts</artifactId>
+                <version>${ovsdb.southbound.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>commons-net</groupId>
+            <artifactId>commons-net</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>ovssfc-renderer</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>odl-groupbasedpolicy-base</artifactId>
+            <type>xml</type>
+            <classifier>features</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.opendaylight.openflowplugin</groupId>
+            <artifactId>odl-openflowplugin-flow-services</artifactId>
+            <type>xml</type>
+            <classifier>features</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.opendaylight.openflowplugin</groupId>
+            <artifactId>odl-openflowplugin-nxm-extensions</artifactId>
+            <type>xml</type>
+            <classifier>features</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.opendaylight.ovsdb</groupId>
+            <artifactId>odl-ovsdb-southbound-impl</artifactId>
+            <type>xml</type>
+            <classifier>features</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.opendaylight.sfc</groupId>
+            <artifactId>odl-sfc-openflow-renderer</artifactId>
+            <version>${sfc.version}</version>
+            <type>xml</type>
+            <classifier>features</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.opendaylight.sfc</groupId>
+            <artifactId>odl-sfc-ui</artifactId>
+            <version>${sfc.version}</version>
+            <type>xml</type>
+            <classifier>features</classifier>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>ovssfc-renderer</artifactId>
+            <type>xml</type>
+            <classifier>config</classifier>
+        </dependency>
+    </dependencies>
+</project>

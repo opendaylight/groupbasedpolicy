@@ -8,7 +8,9 @@
   </parent>
 
   <artifactId>groupbasedpolicy-ui-bundle</artifactId>
-  <name>groupbasedpolicy-ui-bundle</name>
+  <!-- <name> formatting is used by autorelease to parse and notify projects on
+       build failure. Please do not modify this unless you have a good reason. -->
+  <name>ODL :: groupbasedpolicy :: ${project.artifactId}</name>
   <packaging>bundle</packaging>
 
     <properties>
@@ -28,14 +30,9 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.osgi</groupId>
-      <artifactId>org.osgi.service.http</artifactId>
-      <version>1.2.1</version>
-    </dependency>
-    <dependency>
       <groupId>javax.servlet</groupId>
-      <artifactId>com.springsource.javax.servlet</artifactId>
-      <version>2.5.0</version>
+      <artifactId>javax.servlet-api</artifactId>
+      <version>3.1.0</version>
     </dependency>
   </dependencies>
  <build>
@@ -77,10 +74,11 @@
         <extensions>true</extensions>
         <configuration>
           <instructions>
-            <Import-Package>org.osgi.service.http,
-                            org.osgi.framework;version="1.0.0",
-                            org.opendaylight.dlux.loader,
-                            org.slf4j
+            <Import-Package>
+              org.osgi.service.http,
+              org.osgi.framework;version="1.0.0",
+              org.opendaylight.dlux.loader,
+              org.slf4j
             </Import-Package>
             <Export-Package></Export-Package>
           </instructions>

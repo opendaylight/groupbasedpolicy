@@ -9,7 +9,7 @@
         <property name="directory" value="/gbp/build"/>
         <property name="requireJs" value="app/gbp/main"/>
         <property name="angularJs" value="app.gbp"/>
-		<property name="cssDependencies">
+        <property name="cssDependencies">
             <list>
                 <value>src/app/gbp/common/gbp.css</value>
                 <value>src/app/gbp/vendor/angular-material/angular-material.min.css</value>
