@@ -30,6 +30,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.TapPortCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.VhostUserCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.VhostUserCommand.VhostUserCommandBuilder;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.interfaces.InterfaceCommand;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.NodeOperEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.VppEndpointConfEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AccessListWrapper;
@@ -177,7 +178,12 @@ public class InterfaceManager implements AutoCloseable {
         } else if (interfaceTypeChoice instanceof TapCase) {
             potentialIfaceCommand = createTapInterfaceWithoutBdCommand(vppEndpoint, Operations.PUT);
         } else if (interfaceTypeChoice instanceof LoopbackCase){
-            potentialIfaceCommand = createLoopbackWithoutBdCommand(vppEndpoint, Operations.PUT);
+            if (!ConfigUtil.getInstance().isL3FlatEnabled()) {
+                potentialIfaceCommand = createLoopbackWithoutBdCommand(vppEndpoint, Operations.PUT);
+            }
+            else {
+                LOG.trace("L3 flat enabled: Creating of Loopback BVI disabled in InterfaceManager. LISP in VPP renderer will take care of this.");
+            }
         }
         if (!potentialIfaceCommand.isPresent()) {
             LOG.debug("Interface/PUT command was not created for VppEndpoint point {}", vppEndpoint);
@@ -247,7 +253,12 @@ public class InterfaceManager implements AutoCloseable {
         } else if (interfaceTypeChoice instanceof TapCase) {
             potentialIfaceCommand = createTapInterfaceWithoutBdCommand(vppEndpoint, Operations.DELETE);
         } else if (interfaceTypeChoice instanceof LoopbackCase){
-            potentialIfaceCommand = createLoopbackWithoutBdCommand(vppEndpoint, Operations.DELETE);
+            if (!ConfigUtil.getInstance().isL3FlatEnabled()) {
+                potentialIfaceCommand = createLoopbackWithoutBdCommand(vppEndpoint, Operations.DELETE);
+            }
+            else {
+                LOG.trace("L3 flat enabled: Deleting of Loopback BVI disabled in InterfaceManager. LISP in VPP renderer will take care of this.");
+            }
         }
 
         if (!potentialIfaceCommand.isPresent()) {
