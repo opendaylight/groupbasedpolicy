@@ -232,8 +232,9 @@ public class NeutronRouterAware implements NeutronAware<Router> {
         addrEpBuilder.setContextId(routerl3ContextId);
         addrEpBuilder.setContextType(MappingUtils.L3_CONTEXT);
         addrEpBuilder.setTenant(tenantId);
-        addrEpBuilder.setNetworkContainment(new NetworkContainmentBuilder().setContainment(
-                new NetworkDomainContainmentBuilder().setNetworkDomainId(networkDomainId).build()).build());
+        addrEpBuilder
+            .setNetworkContainment(new NetworkContainmentBuilder().setContainment(new NetworkDomainContainmentBuilder()
+                .setNetworkDomainId(networkDomainId).setNetworkDomainType(MappingUtils.SUBNET).build()).build());
         addrEpBuilder.setEndpointGroup(ImmutableList.of(MappingUtils.EPG_EXTERNAL_ID));
         addrEpBuilder.setTimestamp(System.currentTimeMillis());
         return epRegistrator.registerEndpoint(addrEpBuilder.build());

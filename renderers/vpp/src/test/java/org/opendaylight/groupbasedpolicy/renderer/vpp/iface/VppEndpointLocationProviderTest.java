@@ -25,14 +25,11 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.LocationProvider;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.location.provider.ProviderAddressEndpointLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.IpPrefixType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocationKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpointKey;
@@ -112,36 +109,11 @@ public class VppEndpointLocationProviderTest {
         verify(rwTx, times(1)).submit();
     }
 
-    @Test
-    public void replaceLocationForEndpointTest() {
-        final VppEndpointLocationProvider locationProvider = new VppEndpointLocationProvider(dataProvider);
-        final ListenableFuture<Void> result =
-                locationProvider.replaceLocationForEndpoint(externalLocationCaseBuilder(), getAddressEpKey());
-        Assert.assertNotNull(result);
-        verify(dataProvider, times(1)).createTransactionChain(any());
-        verify(transactionChain, times(2)).newWriteOnlyTransaction();
-        verify(wTx, times(1)).put(eq(LogicalDatastoreType.CONFIGURATION),
-                any(InstanceIdentifier.class), any(LocationProvider.class), eq(true));
-        verify(wTx, times(1)).put(eq(LogicalDatastoreType.CONFIGURATION),
-                any(InstanceIdentifier.class), any(ProviderAddressEndpointLocation.class));
-        verify(wTx, times(2)).submit();
-    }
-
 
     private VppEndpoint vppEndpointBuilder() {
         final VppEndpointBuilder vppEndpointBuilder = new VppEndpointBuilder();
         vppEndpointBuilder.setKey(VPP_EP_KEY).setVppNodeId(nodeId).setVppInterfaceName(INTERFACE_NAME);
         return vppEndpointBuilder.build();
-    }
-
-    private ExternalLocationCase externalLocationCaseBuilder() {
-        final ExternalLocationCaseBuilder externalLocationCaseBuilder = new ExternalLocationCaseBuilder();
-        return externalLocationCaseBuilder.build();
-    }
-
-    private AddressEndpointWithLocationKey getAddressEpKey() {
-        final String ADDRESS_EP_KEY = "address-ep-key";
-        return new AddressEndpointWithLocationKey(ADDRESS_EP_KEY, IpPrefixType.class, contextId, L3Context.class);
     }
 
 }

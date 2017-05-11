@@ -9,6 +9,7 @@
 package org.opendaylight.groupbasedpolicy.renderer.util;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
@@ -17,6 +18,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.InternalLocationCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.relative.location.RelativeLocations;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.base.Optional;
@@ -43,6 +45,15 @@ public class EndpointLocationUtils {
                         resolveAbsoluteExternalNodeMountPointLocation(epLoc);
                 if (potentialAbsExtNodeMpLocation.isPresent()) {
                     resultBuilder.put(potentialAbsExtNodeMpLocation.get(), epLoc);
+                }
+                else {
+                    Optional<List<InstanceIdentifier<?>>> potentialRelExtNodeMpLocation =
+                            resolveRelativeExternalNodeMountPointLocation(epLoc);
+                    if(potentialRelExtNodeMpLocation.isPresent()) {
+                        for(InstanceIdentifier<?> iid : potentialRelExtNodeMpLocation.get()) {
+                            resultBuilder.put(iid,epLoc);
+                        }
+                    }
                 }
             }
         }
@@ -74,6 +85,19 @@ public class EndpointLocationUtils {
                     return Optional.of(realExtLoc.getExternalNodeMountPoint());
                 }
             }
+        }
+        return Optional.absent();
+    }
+
+    public static Optional<List<InstanceIdentifier<?>>> resolveRelativeExternalNodeMountPointLocation(
+            AddressEndpointLocation epLoc) {
+        RelativeLocations relativeLocations = epLoc.getRelativeLocations();
+        if (relativeLocations != null) {
+            List<InstanceIdentifier<?>> collect = relativeLocations.getExternalLocation()
+                .stream()
+                .map(l -> l.getExternalNodeMountPoint())
+                .collect(Collectors.toList());
+            return (collect.isEmpty()) ? Optional.absent() : Optional.of(collect);
         }
         return Optional.absent();
     }
