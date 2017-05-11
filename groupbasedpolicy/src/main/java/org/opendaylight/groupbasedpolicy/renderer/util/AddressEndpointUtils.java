@@ -8,16 +8,25 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.util;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.relative.location.relative.locations.ExternalLocation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.relative.location.relative.locations.ExternalLocationBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.parent.endpoint._case.ParentEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocationKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerExternalEndpointKey;
+
+import com.google.common.base.Function;
 
 public class AddressEndpointUtils {
 
@@ -55,24 +64,62 @@ public class AddressEndpointUtils {
                 peerExtEpKey.getContextId(), peerExtEpKey.getContextType());
     }
 
-    /**
-     * Compares absolute external locations of address end-points in the arguments.
-     */
-    public static boolean sameExternalLocationCase(AddressEndpointWithLocation ae0, AddressEndpointWithLocation ae1) {
-        if (ae0.getAbsoluteLocation() == null || ae1.getAbsoluteLocation() == null) {
+    public static AddressEndpointKey fromParentEndpointKey(ParentEndpointKey key) {
+        return new AddressEndpointKey(key.getAddress(), key.getAddressType(),
+                key.getContextId(), key.getContextType());
+    }
+
+    public static boolean sameExternalLocationCase(AddressEndpointWithLocation ref, AddressEndpointWithLocation addrEp) {
+        if (ref.getRelativeLocations() != null || ref.getAbsoluteLocation() == null) {
             return false;
         }
-        Optional<LocationType> loc0Type = Optional.ofNullable(ae0.getAbsoluteLocation().getLocationType());
-        Optional<LocationType> loc1Type = Optional.ofNullable(ae1.getAbsoluteLocation().getLocationType());
-        if (!(loc0Type.isPresent() && loc0Type.get() instanceof ExternalLocationCase)
-                || !(loc1Type.isPresent() && loc1Type.get() instanceof ExternalLocationCase)) {
+        Function<AbsoluteLocation, Optional<ExternalLocation>> absoluteToExternal =
+                new Function<AbsoluteLocation, Optional<ExternalLocation>>() {
+
+                    @Override
+                    public Optional<ExternalLocation> apply(AbsoluteLocation absoluteLocation) {
+                        if (absoluteLocation == null || absoluteLocation.getLocationType() == null) {
+                            return Optional.empty();
+                        }
+                        Optional<LocationType> locationType = Optional.ofNullable(absoluteLocation.getLocationType());
+                        if (locationType.isPresent() && locationType.get() instanceof ExternalLocationCase) {
+                            ExternalLocationCase extLocCase = (ExternalLocationCase) absoluteLocation.getLocationType();
+                            return Optional.of(new ExternalLocationBuilder()
+                                .setExternalNodeMountPoint(extLocCase.getExternalNodeMountPoint())
+                                .setExternalNodeConnector(extLocCase.getExternalNodeConnector())
+                                .build());
+                        }
+                        return Optional.empty();
+                    }
+                };
+        Optional<ExternalLocation> refLocation = absoluteToExternal.apply(ref.getAbsoluteLocation());
+        if (!refLocation.isPresent()) {
             return false;
         }
-        ExternalLocationCase loc0 = (ExternalLocationCase) loc0Type.get();
-        ExternalLocationCase loc1 = (ExternalLocationCase) loc1Type.get();
-        return (loc0.getExternalNodeMountPoint() == null || loc1.getExternalNodeMountPoint() == null
-                || loc0.getExternalNodeConnector() == null || loc1.getExternalNodeConnector() == null) ? false : loc0
-                    .getExternalNodeMountPoint().toString().equals(loc1.getExternalNodeMountPoint().toString())
-                        && loc0.getExternalNodeConnector().equals(loc1.getExternalNodeConnector());
+        Predicate<ExternalLocation> sameLocation = new Predicate<ExternalLocation>() {
+
+            @Override
+            public boolean test(ExternalLocation addrEpLocation) {
+                boolean valuesMissing = refLocation.get().getExternalNodeMountPoint() == null
+                        || addrEpLocation.getExternalNodeMountPoint() == null
+                        || refLocation.get().getExternalNodeConnector() == null
+                        || addrEpLocation.getExternalNodeConnector() == null;
+                return (valuesMissing) ? false : refLocation.get()
+                    .getExternalNodeMountPoint()
+                    .toString()
+                    .equals(addrEpLocation.getExternalNodeMountPoint().toString())
+                        && refLocation.get().getExternalNodeConnector().equals(addrEpLocation.getExternalNodeConnector());
+            }
+        };
+        List<ExternalLocation> extLocs = new ArrayList<>();
+        if (absoluteToExternal.apply(addrEp.getAbsoluteLocation()).isPresent()) {
+            extLocs.add(absoluteToExternal.apply(addrEp.getAbsoluteLocation()).get());
+        } else if (addrEp.getRelativeLocations() != null && addrEp.getRelativeLocations().getExternalLocation() != null) {
+            extLocs.addAll(addrEp.getRelativeLocations().getExternalLocation());
+        }
+        if (extLocs.stream().filter(sameLocation).findAny().isPresent()) {
+            return true;
+        }
+        return false;
     }
 }

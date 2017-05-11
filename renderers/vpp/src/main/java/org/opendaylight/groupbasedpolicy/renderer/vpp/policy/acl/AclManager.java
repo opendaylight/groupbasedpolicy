@@ -10,6 +10,8 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
@@ -141,24 +143,40 @@ public class AclManager {
         multipleEndpointsOnInterface = resultBuilder.build();
     }
 
-    private void resolveEndpointsOnMultipleInterface(@Nullable ImmutableList<AddressEndpointWithLocation> eps,
+    /**
+     *  Recursively grouping interfaces behind the same port
+     */
+    private void resolveEndpointsOnMultipleInterface(@Nullable List<AddressEndpointWithLocation> eps,
             @Nonnull Builder<NodeId, InterfaceKey, ImmutableSet<AddressEndpointKey>> builder) {
         if (eps == null || eps.isEmpty()) {
             return;
         }
-        eps.get(0);
-        ImmutableSet<AddressEndpointKey> copyOf = ImmutableSet.copyOf(eps.stream()
-            .filter(addrEp -> AddressEndpointUtils.sameExternalLocationCase(eps.get(0), addrEp))
+        // look for any end-point with absolute location as reference end-point in this cycle;
+        java.util.Optional<AddressEndpointWithLocation> refEndpoint =
+                eps.stream().filter(ep -> EndpointUtils.getExternalLocationFrom(ep).isPresent()).findAny();
+        if (!refEndpoint.isPresent()) {
+            return;
+        }
+        Predicate<AddressEndpointWithLocation> sameLocation = new Predicate<AddressEndpointWithLocation>() {
+            @Override
+            public boolean test(AddressEndpointWithLocation addrEp) {
+                return AddressEndpointUtils.sameExternalLocationCase(refEndpoint.get(), addrEp);
+            }
+        };
+        Optional<ExternalLocationCase> extLoc = EndpointUtils.getExternalLocationFrom(refEndpoint.get());
+        Set<AddressEndpointKey> sameLocations = eps.stream()
+            .filter(sameLocation)
             .map(addrEp -> AddressEndpointUtils.fromAddressEndpointWithLocationKey(addrEp.getKey()))
-            .collect(Collectors.toSet()));
-        Optional<ExternalLocationCase> extLoc = EndpointUtils.getExternalLocationFrom(eps.get(0));
+            .collect(Collectors.toSet());
         builder.put(extLoc.get().getExternalNodeMountPoint().firstKeyOf(Node.class).getNodeId(),
-                new InterfaceKey(extLoc.get().getExternalNodeConnector()), copyOf);
-        ImmutableList<AddressEndpointWithLocation> lisst = ImmutableList.copyOf(eps.stream()
-            .filter(addrEp -> !AddressEndpointUtils.sameExternalLocationCase(eps.get(0), addrEp))
-            .collect(Collectors.toList()));
-        if (!lisst.isEmpty()) {
-            resolveEndpointsOnMultipleInterface(lisst, builder);
+                new InterfaceKey(extLoc.get().getExternalNodeConnector()),
+                ImmutableSet.<AddressEndpointKey>copyOf(sameLocations));
+        List<AddressEndpointWithLocation> differentLocations = eps.stream()
+            //  keep end-points with different location and end-points with relative location in loop
+            .filter(sameLocation.negate().or(p -> !EndpointUtils.getExternalLocationFrom(p).isPresent()))
+            .collect(Collectors.toList());
+        if (!differentLocations.isEmpty()) {
+            resolveEndpointsOnMultipleInterface(differentLocations, builder);
         }
     }
 

@@ -10,6 +10,7 @@ package org.opendaylight.groupbasedpolicy.renderer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import java.util.ArrayList;
@@ -326,10 +327,10 @@ public class RendererManager implements AutoCloseable {
             return Collections.emptyMap();
         }
         Map<RendererName, RendererConfigurationBuilder> rendererConfigBuilderByRendererName = new HashMap<>();
-        for (InstanceIdentifier<?> absEpLocation : currentState.epLocInfo.getAllAbsoluteNodeLocations()) {
-            RendererName rendererName = currentState.rendererByNode.get(absEpLocation);
+        for (InstanceIdentifier<?> epLocation : currentState.epLocInfo.getAllExternalNodeLocations()) {
+            RendererName rendererName = currentState.rendererByNode.get(epLocation);
             if (rendererName == null) {
-                LOG.trace("Renderer does not exist for EP with location: {}", absEpLocation);
+                LOG.trace("Renderer does not exist for EP with location: {}", epLocation);
                 continue;
             }
             RendererConfigurationBuilder rendererConfigBuilder = rendererConfigBuilderByRendererName.get(rendererName);
@@ -338,7 +339,7 @@ public class RendererManager implements AutoCloseable {
                 rendererConfigBuilderByRendererName.put(rendererName, rendererConfigBuilder);
             }
             for (AddressEndpointKey rendererAdrEpKey : currentState.epLocInfo
-                    .getAddressEpsWithAbsoluteNodeLocation(absEpLocation)) {
+                    .getAddressEpsWithExternalNodeLocation(epLocation)) {
                 Optional<AddressEndpoint> potentialAddressEp = currentState.epInfo.getEndpoint(rendererAdrEpKey);
                 if (!potentialAddressEp.isPresent()) {
                     LOG.trace("Endpoint does not exist but has location: {}", rendererAdrEpKey);
@@ -386,8 +387,12 @@ public class RendererManager implements AutoCloseable {
     }
 
     @VisibleForTesting
-    void resolveRendererConfigForEndpoint(AddressEndpoint rendererAdrEp,
-                                          RendererConfigurationBuilder rendererPolicyBuilder) {
+    void resolveRendererConfigForEndpoint(@Nonnull AddressEndpoint rendererAdrEp,
+                                          @Nonnull RendererConfigurationBuilder rendererPolicyBuilder) {
+        if (rendererAdrEp.getEndpointGroup() == null
+                || rendererAdrEp.getEndpointGroup().contains(RendererUtils.EPG_EXTERNAL_ID)) {
+            return;
+        }
         Set<EpgKeyDto> rendererEpgs = toEpgKeys(rendererAdrEp.getEndpointGroup(), rendererAdrEp.getTenant());
         RendererEndpointKey rendererEpKey = AddressEndpointUtils.toRendererEpKey(rendererAdrEp.getKey());
         for (EpgKeyDto rendererEpg : rendererEpgs) {
@@ -465,8 +470,8 @@ public class RendererManager implements AutoCloseable {
             if (isSameKeys(rendererEpKey, peerAdrEpKey)) {
                 continue;
             }
-            ExternalImplicitGroup eig = policy.getExternalImplicitGroup();
-            if (eig != null) {
+            // external peers
+            if (policy.getExternalImplicitGroup() != null) {
                 if (!currentState.epLocInfo.hasRelativeLocation(peerAdrEpKey)) {
                     LOG.debug("EIG Peer does not have relative location therefore it is ignored: {}", peerAdrEpKey);
                     continue;
@@ -481,8 +486,11 @@ public class RendererManager implements AutoCloseable {
                     }
                 }
             } else {
-                if (!currentState.epLocInfo.hasAbsoluteLocation(peerAdrEpKey)) {
-                    LOG.debug("Peer does not have absolute location therefore it is ignored: {}", peerAdrEpKey);
+                // peers within virtual domain
+                if (!currentState.epLocInfo.hasAbsoluteLocation(peerAdrEpKey)
+                        && !currentState.epLocInfo.hasRelativeLocation(peerAdrEpKey)) {
+                    LOG.debug("Peer does not have absolute nor relative location therefore it is ignored: {}",
+                            peerAdrEpKey);
                     continue;
                 }
                 PeerEndpointKey peerEpKey = AddressEndpointUtils.toPeerEpKey(peerAdrEpKey);

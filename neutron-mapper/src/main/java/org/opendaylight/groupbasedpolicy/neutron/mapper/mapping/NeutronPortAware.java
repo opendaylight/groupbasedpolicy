@@ -42,6 +42,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.UnregisterEndpointInputBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.NetworkContainmentBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.containment.NetworkDomainContainmentBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.child.endpoints.ChildEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.child.endpoints.ChildEndpointBuilder;
@@ -130,12 +131,10 @@ public class NeutronPortAware implements NeutronAware<Port> {
             FixedIps portIpWithSubnet = potentialPortIpWithSubnet.get();
             ContextId routerL3Context = new ContextId(port.getDeviceId());
             ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
-
             AddressEndpointKey addrEpKey = new AddressEndpointKey(port.getMacAddress().getValue(),
                 MacAddressType.class, new ContextId(port.getNetworkId().getValue()), MappingUtils.L2_BRDIGE_DOMAIN);
             UniqueId portId = new UniqueId(port.getUuid().getValue());
             addBaseEndpointMappings(addrEpKey, portId, rwTx);
-
             // Add Qrouter and VPProuter port as Endpoint
             if (port.getAugmentation(PortBindingExtension.class) != null &&
                 PortUtils.DEVICE_VIF_TYPE.equals(port.getAugmentation(PortBindingExtension.class).getVifType())) {
@@ -145,19 +144,16 @@ public class NeutronPortAware implements NeutronAware<Port> {
                     LOG.warn("QRouter port does not have an IP address. {}", port);
                     return;
                 }
-
                 FixedIps ipWithSubnet = firstFixedIps.get();
                 NetworkDomainId networkContainment = new NetworkDomainId(ipWithSubnet.getSubnetId().getValue());
                 List<EndpointGroupId> epgsFromSecGroups = resolveEpgIdsFromSecGroups(port.getSecurityGroups());
                 epgsFromSecGroups.add(NetworkService.EPG_ID);
-
                 // BUILD BASE ENDPOINT
                 AddressEndpointRegBuilder l2BaseEp = createBasicMacAddrEpInputBuilder(port, networkContainment,
                     epgsFromSecGroups);
                 AddressEndpointRegBuilder l3BaseEp = createBasicL3AddrEpInputBuilder(port, networkContainment,
                     epgsFromSecGroups, neutron);
                 setParentChildRelationshipForEndpoints(l3BaseEp, l2BaseEp);
-
                 // BUILD ENDPOINT
                 org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInputBuilder
                     epInBuilder =
@@ -167,7 +163,6 @@ public class NeutronPortAware implements NeutronAware<Port> {
                     ImmutableList.of(l2BaseEp.build(), l3BaseEp.build()), port, rwTx, addBaseEpMapping);
                 registerEndpointAndStoreMapping(epInBuilder.build(), port, rwTx);
             }
-
             // change L3Context for all EPs with same subnet as router port
             changeL3ContextForEpsInSubnet(portIpWithSubnet.getSubnetId(), neutron);
             // set L3Context as parent for bridge domain which is parent of subnet
@@ -211,20 +206,25 @@ public class NeutronPortAware implements NeutronAware<Port> {
                     epgsFromSecGroups, neutron);
 
             setParentChildRelationshipForEndpoints(l3BaseEp, l2BaseEp);
-
             org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.RegisterEndpointInputBuilder epInBuilder = createEndpointRegFromPort(
                     port, ipWithSubnet, networkContainment, epgsFromSecGroups, neutron);
-
             ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
             registerBaseEndpointAndStoreMapping(
-                    ImmutableList.of(l2BaseEp.build(), l3BaseEp.build()), port, rwTx, addBaseEpMapping);
+                    ImmutableList.of(l3BaseEp.build(), l2BaseEp.build()), port, rwTx, addBaseEpMapping);
 
             AddressEndpointRegBuilder metadataEp = createBasicL3AddrEpInputBuilder(cloneMetadataPortFromDhcpPort(port, metadataIpPrefix), networkContainment,
                     Lists.newArrayList(MetadataService.EPG_ID), neutron);
-            setParentChildRelationshipForEndpoints(metadataEp, l2BaseEp);
+            AddressEndpointKey aek = new AddressEndpointKey(metadataEp.getAddress(), metadataEp.getAddressType(), metadataEp.getContextId(), metadataEp.getContextType());
+            Optional<AddressEndpoint> optMetadataEp = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL, IidFactory.addressEndpointIid(aek), rwTx);
+            if(!optMetadataEp.isPresent()) {
+                setParentChildRelationshipForEndpoints(metadataEp, l2BaseEp);
+            } else {
+                List<ChildEndpoint> childs = optMetadataEp.get().getChildEndpoint();
+                childs.add(createChildEndpoint(l2BaseEp));
+                metadataEp.setChildEndpoint(childs);
+            }
             registerBaseEndpointAndStoreMapping(
                     ImmutableList.of(metadataEp.build()), port, rwTx, true);
-
             registerEndpointAndStoreMapping(epInBuilder.build(), port, rwTx);
             DataStoreHelper.submitToDs(rwTx);
         } else if (PortUtils.isNormalPort(port)) {

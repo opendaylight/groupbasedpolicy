@@ -13,6 +13,7 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.Renderer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNode;
@@ -24,6 +25,8 @@ import com.google.common.collect.ImmutableMultimap.Builder;
 import com.google.common.collect.Maps;
 
 public class RendererUtils {
+
+    public static final EndpointGroupId EPG_EXTERNAL_ID = new EndpointGroupId("eeeaa3a2-e9ba-44e0-a462-bea923d30e38");
 
     public static @Nonnull ImmutableMultimap<InstanceIdentifier<?>, RendererName> resolveRenderersByNodes(
             @Nullable List<Renderer> renderers) {

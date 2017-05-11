@@ -298,23 +298,31 @@ public class RendererConfigurationBuilder {
             Preconditions.checkArgument(potentialEp.isPresent());
             Optional<AddressEndpointLocation> potentionalEpLoc = epLocInfo.getAdressEndpointLocation(epKey);
             Preconditions.checkArgument(potentionalEpLoc.isPresent());
-            RendererName rendererName = resolveRendererName(potentionalEpLoc.get(), rendererByNode);
-            if (rendererName == null) {
+            Optional<RendererName> rendererName = resolveRendererName(potentionalEpLoc.get(), rendererByNode);
+            if (!rendererName.isPresent()) {
                 LOG.debug("Endpoint {} has no location, skipped", epKey);
                 continue;
             }
-            result.add(createEpWithLoc(potentialEp.get(), potentionalEpLoc.get(), rendererName, augmentors));
+            result.add(createEpWithLoc(potentialEp.get(), potentionalEpLoc.get(), rendererName.get(), augmentors));
         }
         return result;
     }
 
-    private static RendererName resolveRendererName(AddressEndpointLocation epLoc,
+    /**
+     * Renderer name can be resolved from absolute node location or any of relative node locations.
+     */
+    private static Optional<RendererName> resolveRendererName(AddressEndpointLocation epLoc,
             Map<InstanceIdentifier<?>, RendererName> rendererByNode) {
         Optional<InstanceIdentifier<?>> potentialAbsNodeLoc = EndpointLocationUtils.resolveAbsoluteNodeLocation(epLoc);
         if (potentialAbsNodeLoc.isPresent()) {
-            return rendererByNode.get(potentialAbsNodeLoc.get());
+            return Optional.of(rendererByNode.get(potentialAbsNodeLoc.get()));
         }
-        return null;
+        Optional<List<InstanceIdentifier<?>>> potentianRelativeLocation =
+                EndpointLocationUtils.resolveRelativeExternalNodeMountPointLocation(epLoc);
+        if (potentianRelativeLocation.isPresent()) {
+            return Optional.of(rendererByNode.get(potentianRelativeLocation.get().stream().findAny().get()));
+        }
+        return Optional.absent();
     }
 
     private static AddressEndpointWithLocation createEpWithLoc(AddressEndpoint ep, AddressEndpointLocation epLoc,

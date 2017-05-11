@@ -40,6 +40,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppRendererProcessingException;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
@@ -278,15 +279,17 @@ public class InterfaceManager implements AutoCloseable {
 
     private ListenableFuture<Void> deleteIfaceOnVpp(AbstractInterfaceCommand deleteIfaceWithoutBdCommand,
             DataBroker vppDataBroker, VppEndpoint vppEndpoint, InstanceIdentifier<?> vppNodeIid) {
+        InterfaceBuilder intfBuilder = deleteIfaceWithoutBdCommand.getInterfaceBuilder();
         final boolean transactionState = GbpNetconfTransaction.netconfSyncedDelete(vppDataBroker,
-            deleteIfaceWithoutBdCommand, GbpNetconfTransaction.RETRY_COUNT);
+                deleteIfaceWithoutBdCommand, GbpNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
             LOG.debug("Delete interface on VPP command was successful: VPP: {} Command: {}", vppNodeIid,
                     deleteIfaceWithoutBdCommand);
+            AccessListWrapper.removeAclsForInterface(vppDataBroker, new InterfaceKey(intfBuilder.getName()));
             return vppEndpointLocationProvider.deleteLocationForVppEndpoint(vppEndpoint);
         } else {
-            final String message = "Delete interface on VPP command was not successful: VPP: " + vppNodeIid +
-                    " Command: " + deleteIfaceWithoutBdCommand;
+            final String message = "Delete interface on VPP command was not successful: VPP: " + vppNodeIid
+                    + " Command: " + deleteIfaceWithoutBdCommand;
             LOG.warn(message);
             return Futures.immediateFailedFuture(new VppRendererProcessingException(message));
         }

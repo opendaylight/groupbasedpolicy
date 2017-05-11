@@ -147,10 +147,10 @@ public class InterfaceManagerTest extends CustomDataBrokerTest {
         Assert.assertFalse(potentialIface.isPresent());
         // assert state on ODL data store
         ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
-        VppEndpointLocationProvider.createProviderAddressEndpointLocationKey(vhostEp);
+        VppLocationUtils.createProviderAddressEndpointLocationKey(vhostEp);
         InstanceIdentifier<ProviderAddressEndpointLocation> providerAddressEndpointLocationIid = IidFactory
             .providerAddressEndpointLocationIid(VppEndpointLocationProvider.VPP_ENDPOINT_LOCATION_PROVIDER,
-                    VppEndpointLocationProvider.createProviderAddressEndpointLocationKey(vhostEp));
+                    VppLocationUtils.createProviderAddressEndpointLocationKey(vhostEp));
         Optional<ProviderAddressEndpointLocation> optProvEpLoc =
                 rTx.read(LogicalDatastoreType.CONFIGURATION, providerAddressEndpointLocationIid).get();
         Assert.assertFalse(optProvEpLoc.isPresent());

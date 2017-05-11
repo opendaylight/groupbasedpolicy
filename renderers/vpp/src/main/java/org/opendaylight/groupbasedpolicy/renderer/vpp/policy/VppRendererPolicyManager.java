@@ -261,10 +261,11 @@ public class VppRendererPolicyManager {
                                     new RuleGroupKey(rg.getContractId(), rg.getSubjectName(), rg.getTenantId()))) {
                                 continue;
                             }
-                            LOG.debug("Updated resolved rule group: {}. Affected endpoints {} and {}.", rg.getKey(), rEp.getKey(), pEp.getKey());
-                            updates.add(rEp.getKey());
-                            AddressEndpointKey k1 = AddressEndpointUtils.fromPeerEpKey(pEp.getKey());
-                            updates.add(AddressEndpointUtils.toRendererEpKey(k1));
+                            if (!policy.equals(policyCtxBefore)) {
+                                updates.add(rEp.getKey());
+                                AddressEndpointKey k1 = AddressEndpointUtils.fromPeerEpKey(pEp.getKey());
+                                updates.add(AddressEndpointUtils.toRendererEpKey(k1));
+                            }
                         }
                     }
                 });
@@ -277,6 +278,12 @@ public class VppRendererPolicyManager {
     private static boolean isLocationChanged(AddressEndpointWithLocation before, AddressEndpointWithLocation after) {
         ExternalLocationCase locationBefore = ForwardingManager.resolveAndValidateLocation(before);
         ExternalLocationCase locationAfter = ForwardingManager.resolveAndValidateLocation(after);
+        if(locationBefore == null && locationAfter == null) {
+            return false;
+        }
+        if(locationBefore == null || locationAfter == null) {
+            return true;
+        }
         return !locationBefore.equals(locationAfter);
     }
 
@@ -336,9 +343,11 @@ public class VppRendererPolicyManager {
                 java.util.Optional<String> optL2Fd = ForwardingManager.resolveL2FloodDomain(addrEpWithLoc, policyCtx);
                 if (optL2Fd.isPresent()) {
                     ExternalLocationCase rEpLoc = ForwardingManager.resolveAndValidateLocation(addrEpWithLoc);
-                    InstanceIdentifier<?> externalNodeMountPoint = rEpLoc.getExternalNodeMountPoint();
-                    NodeId vppNode = externalNodeMountPoint.firstKeyOf(Node.class).getNodeId();
-                    vppNodesByL2Fd.put(optL2Fd.get(), vppNode);
+                    if (rEpLoc != null) {
+                        InstanceIdentifier<?> externalNodeMountPoint = rEpLoc.getExternalNodeMountPoint();
+                        NodeId vppNode = externalNodeMountPoint.firstKeyOf(Node.class).getNodeId();
+                        vppNodesByL2Fd.put(optL2Fd.get(), vppNode);
+                    }
                 }
             });
         return vppNodesByL2Fd;
