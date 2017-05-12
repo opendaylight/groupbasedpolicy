@@ -218,7 +218,7 @@ public class LispStateManager {
     private void addEidInEidTable(DataBroker vppDataBroker,
                                   LispState lispState,
                                   Eid eid) throws LispConfigCommandFailedException {
-        String mappingId = lispStateHelper.constructMappingName(lispState.eidCount());
+        String mappingId = lispStateHelper.constructMappingName(lispState.getInterfaceId());
         AbstractLispCommand<LocalMapping> addLocalMappingInEidTableCommand = LispCommandWrapper
                 .addLocalMappingInEidTable(mappingId,
                         eid,

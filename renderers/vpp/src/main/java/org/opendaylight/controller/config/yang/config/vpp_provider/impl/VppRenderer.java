@@ -24,7 +24,9 @@ import org.opendaylight.controller.sal.binding.api.BindingAwareProvider;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.bvi.BviManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.loopback.LoopbackManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.event.manager.GbpSubnetEventManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay.FlatOverlayManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.GbpSubnetListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.RendererPolicyListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppEndpointListener;
@@ -80,6 +82,7 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
     private VppEndpointListener vppEndpointListener;
     private RendererPolicyListener rendererPolicyListener;
     private GbpSubnetListener vppGbpSubnetListener;
+    private GbpSubnetEventManager subnetEventManager;
 
     VppRenderer(@Nonnull DataBroker dataBroker, @Nonnull BindingAwareBroker bindingAwareBroker,
                        @Nullable String publicInterfaces) {
@@ -143,14 +146,16 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         AclManager aclManager = new AclManager(mountDataProvider);
         NatManager natManager = new NatManager(dataBroker, mountDataProvider);
         LispStateManager lispStateManager = new LispStateManager(mountDataProvider);
-        BviManager bviManager = new BviManager(mountDataProvider);
+        FlatOverlayManager flatOverlayManager = new FlatOverlayManager(mountDataProvider);
+        LoopbackManager loopbackManager = new LoopbackManager(mountDataProvider);
+        subnetEventManager = new GbpSubnetEventManager(loopbackManager);
         dtoEventBus.register(interfaceManager);
-        dtoEventBus.register(bviManager);
+        dtoEventBus.register(subnetEventManager);
         RoutingManager routingManager = new RoutingManager(dataBroker, mountDataProvider);
         bdManager = new BridgeDomainManagerImpl(dataBroker);
         ForwardingManager fwManager =
                 new ForwardingManager(interfaceManager, aclManager, natManager, routingManager, bdManager,
-                        lispStateManager, bviManager,dataBroker);
+                        lispStateManager, loopbackManager, flatOverlayManager, dataBroker);
         VppRendererPolicyManager vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, aclManager, dataBroker);
         dtoEventBus.register(vppRendererPolicyManager);
 

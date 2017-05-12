@@ -28,6 +28,7 @@ public class LispState {
     private Set<Long> vniSet;
     private boolean mapRegisteredEnabled;
     private HashMap<Eid, String> eidToMappingIdMapper;
+    private int interfaceCount;
 
     public LispState(String hostName) {
         this.hostName = hostName;
@@ -38,6 +39,7 @@ public class LispState {
         mapRegisteredEnabled = false;
         vniSet = new HashSet<>();
         eidToMappingIdMapper = new HashMap<>();
+        interfaceCount = 1;
     }
 
     public String getHostName() {
@@ -105,6 +107,7 @@ public class LispState {
     }
 
     public void addInEidSet(Eid eid, String mappingId) {
+        interfaceCount++;
         eidToMappingIdMapper.put(eid, mappingId);
     }
 
@@ -118,5 +121,9 @@ public class LispState {
 
     public String getEidMapping(Eid eid) {
         return eidToMappingIdMapper.get(eid);
+    }
+
+    public int getInterfaceId() {
+        return interfaceCount;
     }
 }

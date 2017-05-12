@@ -20,6 +20,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.VppInterfaceAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.VppInterfaceAugmentationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.L2Builder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.RoutingBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.TapBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.l2.base.attributes.interconnection.BridgeBasedBuilder;
 
@@ -38,6 +39,7 @@ public class TapPortCommand extends AbstractInterfaceCommand {
         this.description = builder.getDescription();
         this.bridgeDomain = builder.getBridgeDomain();
         this.deviceInstance = builder.getDeviceInstance();
+        this.enableProxyArp = builder.getEnableProxyArp();
     }
 
     public static TapPortCommandBuilder builder() {
@@ -73,12 +75,17 @@ public class TapPortCommand extends AbstractInterfaceCommand {
                         .setDeviceInstance(this.deviceInstance)
                         .build());
 
+        if (getVrfId() != null) {
+            vppAugmentationBuilder.setRouting(new RoutingBuilder().setIpv4VrfId(getVrfId()).build());
+        }
+
         if (!Strings.isNullOrEmpty(bridgeDomain)) {
             vppAugmentationBuilder.setL2(new L2Builder()
                     .setInterconnection(new BridgeBasedBuilder().setBridgeDomain(bridgeDomain).build()).build());
         }
 
         interfaceBuilder.addAugmentation(VppInterfaceAugmentation.class, vppAugmentationBuilder.build());
+        addEnableProxyArpAugmentation(interfaceBuilder);
         return interfaceBuilder;
     }
 
@@ -99,6 +106,8 @@ public class TapPortCommand extends AbstractInterfaceCommand {
         private String description;
         private Long deviceInstance = null;
         private boolean enabled = true;
+        private Boolean enableProxyArp;
+        private Long vrfId;
 
         String getInterfaceName() {
             return interfaceName;
@@ -170,6 +179,22 @@ public class TapPortCommand extends AbstractInterfaceCommand {
         TapPortCommandBuilder setEnabled(boolean enabled) {
             this.enabled = enabled;
             return this;
+        }
+
+        public Boolean getEnableProxyArp() {
+            return enableProxyArp;
+        }
+
+        public void setEnableProxyArp(Boolean enableProxyArp) {
+            this.enableProxyArp = enableProxyArp;
+        }
+
+        public Long getVrfId() {
+            return vrfId;
+        }
+
+        public void setVrfId(Long vrfId) {
+            this.vrfId = vrfId;
         }
 
         /**

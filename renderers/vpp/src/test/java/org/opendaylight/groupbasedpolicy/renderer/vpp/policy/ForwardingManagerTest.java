@@ -24,7 +24,8 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.DtoFactory;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.bvi.BviManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.loopback.LoopbackManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay.FlatOverlayManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AccessListWrapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AclManager;
@@ -72,7 +73,9 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
     @Mock
     private LispStateManager lispStateManager;
     @Mock
-    private BviManager bviManager;
+    private FlatOverlayManager flatOverlayManager;
+    @Mock
+    private LoopbackManager loopbackManager;
 
     private ForwardingManager fwdManager;
 
@@ -80,7 +83,7 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
     public void init() {
         fwdManager =
             new ForwardingManager(ifaceManager, aclManager, natManager, routingManager, bdManager, lispStateManager,
-                    bviManager, getDataBroker());
+                    loopbackManager, flatOverlayManager, getDataBroker());
     }
 
     @Override

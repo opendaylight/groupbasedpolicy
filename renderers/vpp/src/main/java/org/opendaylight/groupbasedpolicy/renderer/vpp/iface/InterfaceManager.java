@@ -174,7 +174,7 @@ public class InterfaceManager implements AutoCloseable {
         LOG.trace("Creating VPP endpoint {}, type of {}", vppEndpoint, interfaceTypeChoice);
         Optional<AbstractInterfaceCommand> potentialIfaceCommand = Optional.absent();
         if (interfaceTypeChoice instanceof VhostUserCase) {
-            potentialIfaceCommand = createInterfaceWithoutBdCommand(vppEndpoint, Operations.PUT);
+            potentialIfaceCommand = createVhostInterfaceWithoutBdCommand(vppEndpoint, Operations.PUT);
         } else if (interfaceTypeChoice instanceof TapCase) {
             potentialIfaceCommand = createTapInterfaceWithoutBdCommand(vppEndpoint, Operations.PUT);
         } else if (interfaceTypeChoice instanceof LoopbackCase){
@@ -249,7 +249,7 @@ public class InterfaceManager implements AutoCloseable {
         LOG.trace("Deleting VPP endpoint {}, type of {}", vppEndpoint, interfaceTypeChoice.toString());
         Optional<AbstractInterfaceCommand> potentialIfaceCommand = Optional.absent();
         if (interfaceTypeChoice instanceof VhostUserCase) {
-            potentialIfaceCommand = createInterfaceWithoutBdCommand(vppEndpoint, Operations.DELETE);
+            potentialIfaceCommand = createVhostInterfaceWithoutBdCommand(vppEndpoint, Operations.DELETE);
         } else if (interfaceTypeChoice instanceof TapCase) {
             potentialIfaceCommand = createTapInterfaceWithoutBdCommand(vppEndpoint, Operations.DELETE);
         } else if (interfaceTypeChoice instanceof LoopbackCase){
@@ -315,8 +315,8 @@ public class InterfaceManager implements AutoCloseable {
         }
     }
 
-    private Optional<AbstractInterfaceCommand> createInterfaceWithoutBdCommand(@Nonnull VppEndpoint vppEp,
-            @Nonnull Operations operations) {
+    private Optional<AbstractInterfaceCommand> createVhostInterfaceWithoutBdCommand(@Nonnull VppEndpoint vppEp,
+                                                                                    @Nonnull Operations operations) {
         if (!hasNodeAndInterface(vppEp)) {
             LOG.debug("Interface command is not created for {}", vppEp);
             return Optional.absent();
@@ -334,6 +334,11 @@ public class InterfaceManager implements AutoCloseable {
             builder.setSocket(socket);
             builder.setRole(VhostUserRole.Client);
         }
+
+        if (ConfigUtil.getInstance().isL3FlatEnabled()) {
+            builder.setEnableProxyArp(true);
+        }
+
         VhostUserCommand vhostUserCommand =
                 builder.setOperation(operations).setDescription(vppEp.getDescription()).build();
         return Optional.of(vhostUserCommand);
@@ -355,8 +360,12 @@ public class InterfaceManager implements AutoCloseable {
                 return Optional.absent();
             }
             builder.setTapName(name);
-            builder.setPhysAddress(tapIface.getPhysicalAddress());
         }
+
+        if (ConfigUtil.getInstance().isL3FlatEnabled()) {
+            builder.setEnableProxyArp(true);
+        }
+
         TapPortCommand tapPortCommand = builder
                 .setOperation(operation)
                 .setDescription(vppEp.getDescription())

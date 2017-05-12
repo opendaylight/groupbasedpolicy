@@ -38,7 +38,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.containment.NetworkDomainContainment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.child.endpoints.ChildEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.IpPrefixType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.MacAddressType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.HmacKeyType;
@@ -276,8 +278,29 @@ public class ConfigManagerHelper {
         return locatorSet.iterator().next().getValue();
     }
 
+    public Optional<String> getInterfaceName(AddressEndpointWithLocation addedEp) {
+        ExternalLocationCase epLoc = resolveAndValidateLocation(addedEp);
+        String interfacePath = epLoc.getExternalNodeConnector();
+
+        return VppPathMapper.interfacePathToInterfaceName(interfacePath);
+    }
+
     public HmacKey getDefaultHmacKey() {
         return LispUtil.toHmacKey(HmacKeyType.Sha196Key, LispStateManager.DEFAULT_XTR_KEY);
+    }
+
+    public String getPhysicalAddress(AddressEndpointWithLocation addressEp) {
+        String physicalAddress = null;
+
+        List<ChildEndpoint> childEndpoints = addressEp.getChildEndpoint();
+        for (ChildEndpoint childEndpoint : childEndpoints) {
+            if (childEndpoint.getAddressType().equals(MacAddressType.class)) {
+                physicalAddress = childEndpoint.getAddress();
+                break;
+            }
+        }
+        return Preconditions.checkNotNull(physicalAddress, "Physical address not found " +
+                "in address endpoint: " + addressEp);
     }
 
     public Routing getRouting(long vrf) {

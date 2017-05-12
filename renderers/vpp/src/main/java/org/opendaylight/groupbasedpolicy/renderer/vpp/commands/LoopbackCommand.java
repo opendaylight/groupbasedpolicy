@@ -44,7 +44,6 @@ public class LoopbackCommand extends AbstractInterfaceCommand {
     private boolean bvi;
     private IpAddress ipAddress;
     private IpPrefix ipPrefix;
-    private Long vrfId;
 
     private LoopbackCommand(LoopbackCommandBuilder builder) {
         this.name = builder.getInterfaceName();
@@ -57,6 +56,7 @@ public class LoopbackCommand extends AbstractInterfaceCommand {
         this.ipAddress = builder.getIpAddress();
         this.ipPrefix = builder.getIpPrefix();
         this.vrfId = builder.getVrfId();
+        this.enableProxyArp = builder.getEnableProxyArp();
     }
 
     public static LoopbackCommandBuilder builder() {
@@ -77,10 +77,6 @@ public class LoopbackCommand extends AbstractInterfaceCommand {
 
     IpPrefix getIpPrefix() {
         return ipPrefix;
-    }
-
-    Long getVrfId() {
-        return vrfId;
     }
 
     @Override
@@ -115,6 +111,7 @@ public class LoopbackCommand extends AbstractInterfaceCommand {
                                 .build())).build());
         interfaceBuilder.addAugmentation(Interface1.class, interface1Builder.build());
         interfaceBuilder.addAugmentation(VppInterfaceAugmentation.class, vppAugmentationBuilder.build());
+        addEnableProxyArpAugmentation(interfaceBuilder);
         return interfaceBuilder;
     }
 
@@ -127,7 +124,7 @@ public class LoopbackCommand extends AbstractInterfaceCommand {
     public String toString() {
         return "LoopPortUserCommand [physAddress=" + physAddress + ", IpAddress=" + ipAddress + ", IpPrefix=" + ipPrefix
                 + ", bridgeDomain=" + bridgeDomain + ", operations=" + operation + ", name=" + name + ", description="
-                + description + ", enabled=" + enabled + ", bvi=" + bvi + "]";
+                + description + ", enabled=" + enabled + ", bvi=" + bvi + ", enableProxyArp=" + enableProxyArp + "]";
     }
 
     private short getPrefixLength() {
@@ -146,6 +143,7 @@ public class LoopbackCommand extends AbstractInterfaceCommand {
         private IpAddress ipAddress;
         private IpPrefix ipPrefix;
         private Long vrfId;
+        private Boolean enableProxyArp;
 
         public String getInterfaceName() {
             return interfaceName;
@@ -235,6 +233,14 @@ public class LoopbackCommand extends AbstractInterfaceCommand {
         public LoopbackCommandBuilder setVrfId(Long vrfId) {
             this.vrfId = vrfId;
             return this;
+        }
+
+        public Boolean getEnableProxyArp() {
+            return enableProxyArp;
+        }
+
+        public void setEnableProxyArp(Boolean enableProxyArp) {
+            this.enableProxyArp = enableProxyArp;
         }
 
         /**

@@ -19,6 +19,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.VppInterfaceAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.VppInterfaceAugmentationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.L2Builder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.RoutingBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.VhostUserBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.l2.base.attributes.interconnection.BridgeBasedBuilder;
 
@@ -35,6 +36,7 @@ public class VhostUserCommand extends AbstractInterfaceCommand {
         this.enabled = builder.isEnabled();
         this.description = builder.getDescription();
         this.bridgeDomain = builder.getBridgeDomain();
+        this.enableProxyArp = builder.getEnableProxyArp();
 
     }
 
@@ -64,12 +66,18 @@ public class VhostUserCommand extends AbstractInterfaceCommand {
         // Create the vhost augmentation
         VppInterfaceAugmentationBuilder vppAugmentationBuilder = new VppInterfaceAugmentationBuilder()
                 .setVhostUser(new VhostUserBuilder().setRole(role).setSocket(socket).build());
+
+        if (getVrfId() != null) {
+            vppAugmentationBuilder.setRouting(new RoutingBuilder().setIpv4VrfId(getVrfId()).build());
+        }
+
         if (!Strings.isNullOrEmpty(bridgeDomain)) {
             vppAugmentationBuilder.setL2(new L2Builder()
                     .setInterconnection(new BridgeBasedBuilder().setBridgeDomain(bridgeDomain).build()).build());
         }
 
         interfaceBuilder.addAugmentation(VppInterfaceAugmentation.class, vppAugmentationBuilder.build());
+        addEnableProxyArpAugmentation(interfaceBuilder);
         return interfaceBuilder;
     }
 
@@ -89,6 +97,8 @@ public class VhostUserCommand extends AbstractInterfaceCommand {
         private boolean enabled = true;
         private String description;
         private String bridgeDomain;
+        private Boolean enableProxyArp;
+        private Long vrfId;
 
         public String getName() {
             return name;
@@ -151,6 +161,22 @@ public class VhostUserCommand extends AbstractInterfaceCommand {
         VhostUserCommandBuilder setBridgeDomain(String bridgeDomain) {
             this.bridgeDomain = bridgeDomain;
             return this;
+        }
+
+        public Boolean getEnableProxyArp() {
+            return enableProxyArp;
+        }
+
+        public void setEnableProxyArp(Boolean enableProxyArp) {
+            this.enableProxyArp = enableProxyArp;
+        }
+
+        public Long getVrfId() {
+            return vrfId;
+        }
+
+        public void setVrfId(Long vrfId) {
+            this.vrfId = vrfId;
         }
 
         /**

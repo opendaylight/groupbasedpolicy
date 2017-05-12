@@ -54,6 +54,23 @@ public class GbpNetconfTransaction {
     }
 
     /***
+     * Netconf wrapper for merge operation on a Netconf Device
+     * @param mountpoint    netconf device
+     * @param iid           path for Data to be merged to
+     * @param data          data to be merged
+     * @param retryCounter  retry counter, will repeat the operation for specified amount of times if transaction fails
+     * @param <T>           data type
+     * @return true if transaction is successful, false otherwise
+     */
+    public static <T extends DataObject> boolean netconfSyncedMerge(@Nonnull final DataBroker mountpoint,
+                                                                    @Nonnull final InstanceIdentifier<T> iid, @Nonnull final T data, byte retryCounter) {
+        VbdNetconfTransaction.REENTRANT_LOCK.lock();
+        boolean result = merge(mountpoint, iid, data, retryCounter);
+        VbdNetconfTransaction.REENTRANT_LOCK.unlock();
+        return result;
+    }
+
+    /***
      * Netconf wrapper method for synced requests for write operation on a Netconf Device
      * @param mountpoint    netconf device
      * @param command       config command that needs to be executed
@@ -188,6 +205,39 @@ public class GbpNetconfTransaction {
                 return write(mountpoint, iid, data, --retryCounter);
             } else {
                 LOG.warn("Netconf WRITE transaction unsuccessful. Maximal number of attempts reached. Trace: {}", e);
+                return false;
+            }
+        }
+    }
+
+    /**
+     * Merge data to remote device. Transaction is restarted if failed
+     *
+     * @param mountpoint   to access remote device
+     * @param iid          data identifier
+     * @param data         to merge
+     * @param retryCounter number of attempts
+     * @param <T>          generic data type. Has to be child of {@link DataObject}
+     * @return true if transaction is successful, false otherwise
+     */
+    private static <T extends DataObject> boolean merge(final DataBroker mountpoint, final InstanceIdentifier<T> iid,
+                                                        final T data, byte retryCounter) {
+        LOG.trace("Netconf MERGE transaction started. RetryCounter: {}", retryCounter);
+        Preconditions.checkNotNull(mountpoint);
+        final ReadWriteTransaction rwTx = mountpoint.newReadWriteTransaction();
+        try {
+            rwTx.merge(LogicalDatastoreType.CONFIGURATION, iid, data, true);
+            final CheckedFuture<Void, TransactionCommitFailedException> futureTask = rwTx.submit();
+            futureTask.get();
+            LOG.trace("Netconf MERGE transaction done for {}", iid);
+            return true;
+        } catch (Exception e) {
+            // Retry
+            if (retryCounter > 0) {
+                LOG.warn("Netconf MERGE transaction failed to {}. Restarting transaction ... ", e.getMessage());
+                return write(mountpoint, iid, data, --retryCounter);
+            } else {
+                LOG.warn("Netconf MERGE transaction unsuccessful. Maximal number of attempts reached. Trace: {}", e);
                 return false;
             }
         }

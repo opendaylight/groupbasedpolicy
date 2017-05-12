@@ -28,7 +28,8 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.RoutingCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.bvi.BviManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.loopback.LoopbackManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay.FlatOverlayManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AclManager;
@@ -102,19 +103,21 @@ public final class ForwardingManager {
     private final NatManager natManager;
     private final RoutingManager routingManager;
     private final LispStateManager lispStateManager;
-    private final BviManager bviManager;
+    private final LoopbackManager loopbackManager;
+    private final FlatOverlayManager flatOverlayManager;
     private final DataBroker dataBroker;
 
     public ForwardingManager(@Nonnull InterfaceManager ifaceManager, @Nonnull AclManager aclManager,
-        @Nonnull NatManager natManager, @Nonnull RoutingManager routingManager, @Nonnull BridgeDomainManager bdManager,
-        @Nonnull LispStateManager lispStateManager, @Nonnull BviManager bviManager,
-        @Nonnull DataBroker dataBroker) {
+                             @Nonnull NatManager natManager, @Nonnull RoutingManager routingManager, @Nonnull BridgeDomainManager bdManager,
+                             @Nonnull LispStateManager lispStateManager, @Nonnull LoopbackManager loopbackManager, @Nonnull FlatOverlayManager flatOverlayManager,
+                             @Nonnull DataBroker dataBroker) {
         this.ifaceManager = Preconditions.checkNotNull(ifaceManager);
         this.bdManager = Preconditions.checkNotNull(bdManager);
         this.natManager = Preconditions.checkNotNull(natManager);
         this.routingManager = Preconditions.checkNotNull(routingManager);
         this.lispStateManager = Preconditions.checkNotNull(lispStateManager);
-        this.bviManager = Preconditions.checkNotNull(bviManager);
+        this.loopbackManager = Preconditions.checkNotNull(loopbackManager);
+        this.flatOverlayManager = Preconditions.checkNotNull(flatOverlayManager);
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.aclManager = Preconditions.checkNotNull(aclManager);
     }
@@ -205,6 +208,10 @@ public final class ForwardingManager {
 
         if (ConfigUtil.getInstance().isLispOverlayEnabled()) {
             lispStateManager.configureEndPoint(rEp);
+            if (ConfigUtil.getInstance().isL3FlatEnabled()) {
+                flatOverlayManager.configureEndpointForFlatOverlay(rEp);
+                loopbackManager.createSimpleLoopbackIfNeeded(rEp);
+            }
         }
 
         ExternalLocationCase rEpLoc = resolveAndValidateLocation(rEp);
@@ -229,7 +236,7 @@ public final class ForwardingManager {
                     LOG.debug("Interface added to bridge-domain {} for endpoint {}", l2FloodDomain, rEp);
 
                     if (ConfigUtil.getInstance().isLispOverlayEnabled()) {
-                        bviManager.createBviIfNecessary(rEp, l2FloodDomain);
+                        loopbackManager.createBviLoopbackIfNeeded(rEp, l2FloodDomain);
                     }
 
                 } catch (InterruptedException | ExecutionException e) {
@@ -275,6 +282,12 @@ public final class ForwardingManager {
             try {
                 if (ConfigUtil.getInstance().isLispOverlayEnabled()) {
                     lispStateManager.deleteLispConfigurationForEndpoint(rEp);
+                    loopbackManager.handleEndpointDelete(rEp);
+
+                    if (ConfigUtil.getInstance().isL3FlatEnabled()) {
+                        flatOverlayManager.handleEndpointDeleteForFlatOverlay(rEp);
+                    }
+
                 }
                 ifaceManager.deleteBridgeDomainFromInterface(rEp).get();
                 LOG.debug("bridge-domain was deleted from interface for endpoint {}", rEp);

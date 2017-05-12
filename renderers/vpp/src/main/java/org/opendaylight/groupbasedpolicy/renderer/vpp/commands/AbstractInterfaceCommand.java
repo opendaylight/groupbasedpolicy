@@ -16,6 +16,9 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.proxy.arp.rev170315.ProxyArpInterfaceAugmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.proxy.arp.rev170315.ProxyArpInterfaceAugmentationBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.proxy.arp.rev170315.interfaces._interface.ProxyArpBuilder;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,8 +30,10 @@ public abstract class AbstractInterfaceCommand implements ConfigCommand, Interfa
     protected General.Operations operation;
     protected String name;
     protected String description;
-    String bridgeDomain;
-    Boolean enabled;
+    protected String bridgeDomain;
+    protected Boolean enabled;
+    protected Boolean enableProxyArp;
+    protected Long vrfId;
 
     public General.Operations getOperation() {
         return operation;
@@ -36,6 +41,10 @@ public abstract class AbstractInterfaceCommand implements ConfigCommand, Interfa
 
     public String getName() {
         return name;
+    }
+
+    public Long getVrfId() {
+        return vrfId;
     }
 
     public String getDescription() {
@@ -47,7 +56,7 @@ public abstract class AbstractInterfaceCommand implements ConfigCommand, Interfa
         return this;
     }
 
-    String getBridgeDomain() {
+    public String getBridgeDomain() {
         return bridgeDomain;
     }
 
@@ -96,6 +105,14 @@ public abstract class AbstractInterfaceCommand implements ConfigCommand, Interfa
     }
     @Override public InstanceIdentifier getIid() {
         return VppIidFactory.getInterfaceIID(this.getInterfaceBuilder().getKey());
+    }
+
+    protected void addEnableProxyArpAugmentation(InterfaceBuilder interfaceBuilder) {
+        if (enableProxyArp != null) {
+            ProxyArpInterfaceAugmentationBuilder augmentationBuilder = new ProxyArpInterfaceAugmentationBuilder();
+            augmentationBuilder.setProxyArp((new ProxyArpBuilder()).build());
+            interfaceBuilder.addAugmentation(ProxyArpInterfaceAugmentation.class, augmentationBuilder.build());
+        }
     }
 
 }
