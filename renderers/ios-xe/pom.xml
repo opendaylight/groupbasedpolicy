@@ -10,7 +10,7 @@
     <parent>
         <groupId>org.opendaylight.groupbasedpolicy</groupId>
         <artifactId>groupbasedpolicy-renderers</artifactId>
-        <version>0.5.0-SNAPSHOT</version>
+        <version>0.5.0-Carbon</version>
         <relativePath>../</relativePath>
     </parent>
 
@@ -18,7 +18,7 @@
     <packaging>bundle</packaging>
 
     <properties>
-        <netconf.version>1.2.0-SNAPSHOT</netconf.version>
+        <netconf.version>1.2.0-Carbon</netconf.version>
     </properties>
 
     <dependencyManagement>
@@ -97,7 +97,7 @@
         <dependency>
             <groupId>org.opendaylight.mdsal.model</groupId>
             <artifactId>ietf-inet-types-2013-07-15</artifactId>
-            <version>1.2.0-SNAPSHOT</version>
+            <version>1.2.0-Carbon</version>
         </dependency>
         <dependency>
             <groupId>org.powermock</groupId>

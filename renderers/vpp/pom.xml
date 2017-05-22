@@ -10,7 +10,7 @@
   <parent>
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>groupbasedpolicy-renderers</artifactId>
-    <version>0.5.0-SNAPSHOT</version>
+    <version>0.5.0-Carbon</version>
     <relativePath>../</relativePath>
   </parent>
 
@@ -18,7 +18,7 @@
   <packaging>bundle</packaging>
 
   <properties>
-    <netconf.version>1.2.0-SNAPSHOT</netconf.version>
+    <netconf.version>1.2.0-Carbon</netconf.version>
   </properties>
 
   <dependencyManagement>
@@ -57,12 +57,12 @@
     <dependency>
       <groupId>org.opendaylight.honeycomb.vbd</groupId>
       <artifactId>vbd-api</artifactId>
-      <version>1.1.0-SNAPSHOT</version>
+      <version>1.1.0-Carbon</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.honeycomb.vbd</groupId>
       <artifactId>vbd-impl</artifactId>
-      <version>1.1.0-SNAPSHOT</version>
+      <version>1.1.0-Carbon</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.mdsal.model</groupId>
@@ -101,7 +101,7 @@
     <dependency>
       <groupId>org.opendaylight.openflowplugin.model</groupId>
       <artifactId>model-flow-base</artifactId>
-      <version>0.4.0-SNAPSHOT</version>
+      <version>0.4.0-Carbon</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

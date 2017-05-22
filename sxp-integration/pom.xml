@@ -10,17 +10,17 @@
     <parent>
         <groupId>org.opendaylight.controller</groupId>
         <artifactId>config-parent</artifactId>
-        <version>0.6.0-SNAPSHOT</version>
+        <version>0.6.0-Carbon</version>
         <relativePath/>
     </parent>
 
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>sxp-integration</artifactId>
-    <version>0.5.0-SNAPSHOT</version>
+    <version>0.5.0-Carbon</version>
     <packaging>pom</packaging>
 
     <properties>
-        <sxp.version>1.4.0-SNAPSHOT</sxp.version>
+        <sxp.version>1.4.0-Carbon</sxp.version>
     </properties>
 
     <modules>
