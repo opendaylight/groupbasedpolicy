@@ -71,7 +71,7 @@ public class ConfigurationService implements ManagedService{
     private void mapConfigMethods() {
         configMethods = new HashMap<>();
 
-        configMethods.put(ConfigUtil.ODL_TENANT_IP,
+        configMethods.put(ConfigUtil.ODL_IP,
                 ip -> configUtil.configureOdlTenantIp((String) ip));
         configMethods.put(ConfigUtil.LISP_MAPREGISTER_ENABLED,
                 mrConfig -> configUtil.configureMapRegister((String) mrConfig));

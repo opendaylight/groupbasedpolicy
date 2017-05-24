@@ -32,7 +32,7 @@ public class ConfigUtil {
     private boolean lispMapRegisterEnabled = DEFAULT_LISP_MAPREGISTER_ENABLED;
     private boolean l3FlatEnabled = DEFAULT_L3_FLAT_ENABLED;
 
-    static final String ODL_TENANT_IP = "odl.ip.tenant";
+    static final String ODL_IP = "odl.ip";
     static final String LISP_OVERLAY_ENABLED = "gbp.lisp.enabled";
     static final String LISP_MAPREGISTER_ENABLED = "vpp.lisp.mapregister.enabled";
     static final String L3_FLAT_ENABLED = "vpp.l3.flat.enabled";
@@ -67,7 +67,7 @@ public class ConfigUtil {
         if (configStr == null) {
             odlTenantIp = null;
             LOG.debug("Configuration variable {} is being unset. Setting the variable to null",
-                    ODL_TENANT_IP);
+                    ODL_IP);
             return;
         }
         odlTenantIp = new IpAddress(configStr.trim().toCharArray());
