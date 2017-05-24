@@ -8,6 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.util;
 
+import java.security.InvalidParameterException;
+
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.EidDom;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.HmacKeyDom;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
@@ -25,8 +27,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev1
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.HmacKeyType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.dp.subtable.grouping.local.mappings.local.mapping.Eid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.hmac.key.grouping.HmacKey;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-import java.security.InvalidParameterException;
+import com.google.common.base.Function;
 
 /**
  * Created by Shakib Ahmed on 3/21/17.
@@ -35,6 +40,10 @@ public class LispUtil {
     private LispUtil() {
 
     }
+
+    public static Function<String, InstanceIdentifier<Node>> HOSTNAME_TO_IID = host -> {
+        return VppIidFactory.getNetconfNodeIid(new NodeId(host));
+    };
 
     public static Eid toEid(Address address, long vni, Class<? extends LispAddressFamily> addressType) {
         EidDom eidDom = new EidDom();

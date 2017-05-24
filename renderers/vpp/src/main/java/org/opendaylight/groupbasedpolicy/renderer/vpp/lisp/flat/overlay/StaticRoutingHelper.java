@@ -35,6 +35,8 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.vpp.routing.rev1
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.vpp.routing.rev161214.RoutingProtocolVppAttrBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.vpp.routing.rev161214.VniReference;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.vpp.routing.rev161214.routing.routing.instance.routing.protocols.routing.protocol.VppProtocolAttributesBuilder;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +52,7 @@ public class StaticRoutingHelper {
 
     private HostRelatedInfoContainer hostRelatedInfoContainer = HostRelatedInfoContainer.getInstance();
 
-    public synchronized boolean addRoutingProtocolForVrf(DataBroker vppDataBroker,
+    public synchronized boolean addRoutingProtocolForVrf(InstanceIdentifier<Node> nodeIid,
                                                          long vrfId,
                                                          VrfHolder vrfHolderOfHost) {
         String routingProtocolName = getRoutingProtocolName(vrfId);
@@ -69,8 +71,8 @@ public class StaticRoutingHelper {
 
         InstanceIdentifier<RoutingProtocol> iid = VppIidFactory
                 .getRoutingInstanceIid(builder.getKey());
-        if (GbpNetconfTransaction.netconfSyncedWrite(vppDataBroker,
-                iid, builder.build(), GbpNetconfTransaction.RETRY_COUNT)) {
+        if (GbpNetconfTransaction.netconfSyncedWrite(nodeIid, iid, builder.build(),
+                GbpNetconfTransaction.RETRY_COUNT)) {
             vrfHolderOfHost.initializeVrfState(vrfId, routingProtocolName);
             return true;
         }
@@ -78,8 +80,7 @@ public class StaticRoutingHelper {
         return false;
     }
 
-    public synchronized boolean addSingleStaticRouteInRoutingProtocol(DataBroker vppDataBroker,
-                                                                      String hostName,
+    public synchronized boolean addSingleStaticRouteInRoutingProtocol(String hostName,
                                                                       long portVrfId,
                                                                       String portSubnetUuid,
                                                                       Ipv4Address nextHopAddress,
@@ -116,20 +117,17 @@ public class StaticRoutingHelper {
                 .augmentation(StaticRoutes1.class)
                 .child(Ipv4.class);
 
-        if (GbpNetconfTransaction
-                .netconfSyncedMerge(vppDataBroker, iid, ipv4Route,
-                        GbpNetconfTransaction.RETRY_COUNT)) {
+        if (GbpNetconfTransaction.netconfSyncedMerge(VppIidFactory.getNetconfNodeIid(new NodeId(hostName)), iid,
+                ipv4Route, GbpNetconfTransaction.RETRY_COUNT)) {
             hostVrfStateForPortVrf.addNewPortIpInVrf(portSubnetUuid, nextHopAddress);
-            hostPortInterfaces.addRouteToPortInterface(outgoingInterface, portSubnetUuid,
-                    nextHopAddress, routeId);
+            hostPortInterfaces.addRouteToPortInterface(outgoingInterface, portSubnetUuid, nextHopAddress, routeId);
             return true;
         }
 
         return false;
     }
 
-    public synchronized boolean deleteSingleStaticRouteFromRoutingProtocol(DataBroker vppDataBroker,
-                                                                           String hostName,
+    public synchronized boolean deleteSingleStaticRouteFromRoutingProtocol(String hostName,
                                                                            long vrfId,
                                                                            String outgoingInterfaceName,
                                                                            Long routeId) {
@@ -144,7 +142,8 @@ public class StaticRoutingHelper {
                 .child(Ipv4.class)
                 .child(Route.class, new RouteKey(routeId));
 
-        if (!GbpNetconfTransaction.netconfSyncedDelete(vppDataBroker, iid, GbpNetconfTransaction.RETRY_COUNT)) {
+        if (!GbpNetconfTransaction.netconfSyncedDelete(VppIidFactory.getNetconfNodeIid(new NodeId(hostName)), iid,
+                GbpNetconfTransaction.RETRY_COUNT)) {
             LOG.warn("Route delete failed for interface {} from {}", outgoingInterfaceName, hostName);
             return false;
         }
@@ -168,7 +167,7 @@ public class StaticRoutingHelper {
         for (Ipv4Address ip : ipThroughInterface) {
             long routeId = portRouteState.getRouteIdOfIp(ip);
             String subnetUuidOfIp = portRouteState.getSubnetUuidOfIp(ip);
-            boolean ok = deleteSingleStaticRouteFromRoutingProtocol(vppDataBroker, hostName, vrfId,
+            boolean ok = deleteSingleStaticRouteFromRoutingProtocol(hostName, vrfId,
                     outgoingInterfaceName, routeId);
 
             if (ok) {

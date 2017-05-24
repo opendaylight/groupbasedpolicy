@@ -19,6 +19,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.Rule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.rule.groups.RuleGroup;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.rule.groups.RuleGroupKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.has.resolved.rules.ResolvedRule;
 
 import com.google.common.collect.ComparisonChain;
@@ -90,6 +91,10 @@ public class ResolvedRuleGroup implements Comparable<ResolvedRuleGroup> {
 
     public SubjectName getRelatedSubject() {
         return relatedSubject;
+    }
+
+    public RuleGroupKey getRelatedRuleGroupKey() {
+        return new RuleGroupKey(contractId, relatedSubject, contractTenantId);
     }
 
     @Override

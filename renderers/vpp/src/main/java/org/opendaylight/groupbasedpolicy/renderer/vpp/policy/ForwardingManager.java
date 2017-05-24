@@ -82,6 +82,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_render
 import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.VlanId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607.VxlanVni;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -237,7 +238,7 @@ public final class ForwardingManager {
                 String l2FloodDomain = optL2FloodDomain.get();
                 try {
                     ifaceManager.addBridgeDomainToInterface(l2FloodDomain, rEp, aclManager.resolveAclsOnInterface(
-                            rEpKey, policyCtx), isBviForEndpoint(rEp)).get();
+                            rEpKey, policyCtx).get(), isBviForEndpoint(rEp)).get();
                     LOG.debug("Interface added to bridge-domain {} for endpoint {}", l2FloodDomain, rEp);
 
                     if (ConfigUtil.getInstance().isLispOverlayEnabled()) {
@@ -502,7 +503,7 @@ public final class ForwardingManager {
 
                 List<InstanceIdentifier<PhysicalInterface>>
                     physIfacesIid = resolvePhysicalInterfacesForNat(fwd.getRendererNetworkDomain());
-                Map<InstanceIdentifier<?>, RoutingCommand> routingCommandMap =
+                Map<InstanceIdentifier<Node>, RoutingCommand> routingCommandMap =
                     routingManager.createRouting(fwd, physIfacesIid, General.Operations.PUT);
 
                 routingCommandMap.forEach((node, command) -> {
@@ -524,7 +525,7 @@ public final class ForwardingManager {
 
                 List<InstanceIdentifier<PhysicalInterface>>
                     physIfacesIid = resolvePhysicalInterfacesForNat(fwd.getRendererNetworkDomain());
-                Map<InstanceIdentifier<?>, RoutingCommand> routingCommandMap =
+                Map<InstanceIdentifier<Node>, RoutingCommand> routingCommandMap =
                     routingManager.createRouting(fwd, physIfacesIid, General.Operations.DELETE);
                 routingCommandMap.forEach((node, command) -> {
                     if (command != null && routingManager.submitRouting(command, node)) {

@@ -16,6 +16,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.PolicyContext;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -33,16 +34,16 @@ public class AccessListUtilTest extends TestResources {
         ctx = super.createPolicyContext();
         mountedDataProviderMock = Mockito.mock(MountedDataBrokerProvider.class);
         mountPointDataBroker = Mockito.mock(DataBroker.class);
-        Mockito.when(mountedDataProviderMock.getDataBrokerForMountPoint(Mockito.any(InstanceIdentifier.class)))
+        Mockito.when(mountedDataProviderMock.resolveDataBrokerForMountPoint(Mockito.any(InstanceIdentifier.class)))
             .thenReturn(Optional.of(mountPointDataBroker));
     }
 
     @Test
-    public void resolveAclsOnInterfaceTest() {
+    public void resolveAclsOnInterfaceTest() throws Exception {
         // TODO add more checking
-        AclManager aclManager = new AclManager(mountedDataProviderMock);
+        AclManager aclManager = new AclManager(mountedDataProviderMock, Mockito.mock(InterfaceManager.class));
         List<AccessListWrapper> acls =
-                aclManager.resolveAclsOnInterface(rendererEndpoint(l2AddrEp2).build().getKey(), ctx);
+                aclManager.resolveAclsOnInterface(rendererEndpoint(l2AddrEp2).build().getKey(), ctx).get();
         Assert.assertEquals(2, acls.size());
         Assert.assertEquals(2, acls.stream().map(AccessListWrapper::getDirection).collect(Collectors.toSet()).size());
         acls.stream().forEach(ace -> {

@@ -153,6 +153,10 @@ public class VppIidFactory {
             .build();
     }
 
+    public static InstanceIdentifier<Acl> getVppAcl(AclKey aclKey) {
+        return InstanceIdentifier.builder(AccessLists.class).child(Acl.class, aclKey).build();
+    }
+
     public static InstanceIdentifier<Acl> getVppAcl(String aclName) {
         return InstanceIdentifier.builder(AccessLists.class)
             .child(Acl.class, new AclKey(aclName, VppAcl.class))

@@ -8,8 +8,10 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp;
 
-import com.google.common.base.Preconditions;
-import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import java.util.concurrent.ExecutionException;
+
+import javax.annotation.Nonnull;
+
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.AbstractLispCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.LispCommandWrapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
@@ -25,9 +27,8 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518.gpe.feature.data.grouping.GpeFeatureData;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518.NativeForwardPathsTables;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518._native.forward.paths.tables._native.forward.paths.table.NativeForwardPath;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518.gpe.feature.data.grouping.GpeFeatureData;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.Lisp;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.dp.subtable.grouping.local.mappings.LocalMapping;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.dp.subtable.grouping.local.mappings.local.mapping.Eid;
@@ -41,8 +42,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nonnull;
-import java.util.concurrent.ExecutionException;
+import com.google.common.base.Preconditions;
 
 /**
  * Created by Shakib Ahmed on 3/29/17.
@@ -85,7 +85,7 @@ public class LispStateManager {
             Eid eid = lispStateHelper.getEid(addressEp, vni);
             String eidMappingName = lispStateHelper.constructEidMappingName(addressEp);
 
-            addVniToVrfMappingIfNeeded(endpointHost.getHostDataBroker(), lispStateOfHost, vni, vrf);
+            addVniToVrfMappingIfNeeded(endpointHost, lispStateOfHost, vni, vrf);
 
             if (lispStateHelper.getInterfaceIp(addressEp).getValue().equals(Constants.METADATA_IP)) {
                 return;
@@ -101,7 +101,7 @@ public class LispStateManager {
                                       String eidMappingName)
             throws LispConfigCommandFailedException {
         if(!lispStateOfNode.eidSetContains(eid)) {
-            addEidInEidTable(endpointHost.getHostDataBroker(), lispStateOfNode, eid, eidMappingName);
+            addEidInEidTable(endpointHost, lispStateOfNode, eid, eidMappingName);
         }
     }
 
@@ -145,9 +145,8 @@ public class LispStateManager {
 
     private void enableLispOnHost(EndpointHost endpointHost, LispState lispState)
             throws LispConfigCommandFailedException {
-        AbstractLispCommand<Lisp>
-                lispEnableCommand = LispCommandWrapper.enableLisp();
-        if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostDataBroker(), lispEnableCommand)) {
+        AbstractLispCommand<Lisp> lispEnableCommand = LispCommandWrapper.enableLisp();
+        if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostName(), lispEnableCommand)) {
             lispState.setLispEnabled(true);
         } else {
             throw new LispConfigCommandFailedException("Lisp Enable Command failed execution!");
@@ -156,9 +155,8 @@ public class LispStateManager {
 
     private void enableGpeForHost(EndpointHost endpointHost, LispState lispState)
             throws LispConfigCommandFailedException {
-        AbstractLispCommand<GpeFeatureData>
-                gpeEnableCommand = LispCommandWrapper.enableGpe();
-        if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostDataBroker(), gpeEnableCommand)) {
+        AbstractLispCommand<GpeFeatureData> gpeEnableCommand = LispCommandWrapper.enableGpe();
+        if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostName(), gpeEnableCommand)) {
             lispState.setGpeEnabled(true);
         } else {
             throw new LispConfigCommandFailedException("GPE Enable Command failed execution!");
@@ -170,10 +168,10 @@ public class LispStateManager {
         try {
             String locatorSetName = lispStateHelper.constructLocatorSetName(lispState.getLocatorCount());
             String lispDataInterfaceName = lispStateHelper
-                    .getLispDataRlocInterfaceName(endpointHost.getHostName(), endpointHost.getHostDataBroker()).get();
+                    .getLispDataRlocInterfaceName(endpointHost.getHostName()).get();
             AbstractLispCommand<LocatorSet> addLocatorSetCommand = LispCommandWrapper.addLocatorSet(locatorSetName,
                     lispDataInterfaceName, DEFAULT_PRIORITY, DEFAULT_WEIGHT);
-            if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostDataBroker(), addLocatorSetCommand)) {
+            if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostName(), addLocatorSetCommand)) {
                 lispState.setLocIntfToLocSetNameMapping(lispDataInterfaceName, locatorSetName);
             } else {
                 throw new LispConfigCommandFailedException("Lisp add locator set failed for host "
@@ -188,7 +186,7 @@ public class LispStateManager {
 
     private void addExtraItrRlocLocatorSetIfNeeded(EndpointHost endpointHost, String lispDataInterfaceName)
             throws LispNotFoundException, LispConfigCommandFailedException {
-        String lispCpRlocInterfaceName = lispStateHelper.getLispCpRlocInterfaceName(endpointHost.getHostDataBroker());
+        String lispCpRlocInterfaceName = lispStateHelper.getLispCpRlocInterfaceName(endpointHost);
         if (lispCpRlocInterfaceName == null
                 || lispCpRlocInterfaceName.isEmpty()
                 || lispCpRlocInterfaceName.equals(lispDataInterfaceName)) {
@@ -203,13 +201,13 @@ public class LispStateManager {
         String locatorSetName = lispStateHelper.constructLocatorSetNameForItrRloc();
         AbstractLispCommand<LocatorSet> addLocatorSetCommand = LispCommandWrapper.addLocatorSet(locatorSetName,
                 lispCpInterfaceName, DEFAULT_PRIORITY, DEFAULT_WEIGHT);
-        if (!LispStateCommandExecutor.executePutCommand(endpointHost.getHostDataBroker(), addLocatorSetCommand)) {
+        if (!LispStateCommandExecutor.executePutCommand(endpointHost.getHostName(), addLocatorSetCommand)) {
             throw new LispConfigCommandFailedException("Lisp add locator set failed for host "
                     + endpointHost.getHostName() + " and locator interface " + lispCpInterfaceName);
         }
 
         AbstractLispCommand<ItrRemoteLocatorSet> addItrRlocCommand = LispCommandWrapper.addItrRloc(locatorSetName);
-        if (!LispStateCommandExecutor.executePutCommand(endpointHost.getHostDataBroker(), addItrRlocCommand)) {
+        if (!LispStateCommandExecutor.executePutCommand(endpointHost.getHostName(), addItrRlocCommand)) {
             throw new LispConfigCommandFailedException("Lisp add Itr Rloc command failed for host "
                     + endpointHost.getHostName() + " and locator set " + locatorSetName);
         }
@@ -222,7 +220,7 @@ public class LispStateManager {
 
         AbstractLispCommand<MapResolver> addMapResolverCommand = LispCommandWrapper.
                 addMapResolver(mapResolverIpAddress);
-        if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostDataBroker(), addMapResolverCommand)) {
+        if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostName(), addMapResolverCommand)) {
             lispState.addInMapResolverSet(mapResolverIpAddress);
         } else {
             throw new LispConfigCommandFailedException("Lisp add map resolver for host " + endpointHost.getHostName()
@@ -234,7 +232,7 @@ public class LispStateManager {
             throws LispConfigCommandFailedException {
         AbstractLispCommand<MapRegister> enableMapRegisterCommand = LispCommandWrapper.enableMapRegister();
 
-        if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostDataBroker(), enableMapRegisterCommand)) {
+        if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostName(), enableMapRegisterCommand)) {
         } else {
             throw new LispConfigCommandFailedException("Lisp enable mapregistration for host "
                     + endpointHost.getHostName() + " failed!");
@@ -247,7 +245,7 @@ public class LispStateManager {
         Preconditions.checkNotNull(mapServerIpAddress, "Mapserver ip not properly configured!");
         AbstractLispCommand<MapServer> addMapServerCommand = LispCommandWrapper.addMapServer(mapServerIpAddress);
 
-        if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostDataBroker(), addMapServerCommand)) {
+        if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostName(), addMapServerCommand)) {
             lispState.addInMapServerSet(mapServerIpAddress);
         } else {
             throw new LispConfigCommandFailedException("Lisp add map server for host " + endpointHost.getHostName()
@@ -255,13 +253,13 @@ public class LispStateManager {
         }
     }
 
-    private void addVniToVrfMappingIfNeeded(DataBroker vppDataBroker,
+    private void addVniToVrfMappingIfNeeded(EndpointHost endpointHost,
                                             LispState lispState,
                                             long vni, long vrf) throws LispConfigCommandFailedException {
         if (!lispState.isVniConfigured(vni)) {
             AbstractLispCommand<VniTable> addVniToVrfMapping = LispCommandWrapper.mapVniToVrf(vni, vrf);
             addVniToVrfMapping.setOptions(General.Operations.PUT);
-            if (LispStateCommandExecutor.executePutCommand(vppDataBroker, addVniToVrfMapping)) {
+            if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostName(), addVniToVrfMapping)) {
                 lispState.addInVniSet(vni);
             } else {
                 throw new LispConfigCommandFailedException("Lisp add vrf " + vrf +" for vni " +vni
@@ -270,19 +268,7 @@ public class LispStateManager {
         }
     }
 
-    private void addNativeForwardPath(EndpointHost endpointHost, long vrf, IpAddress nativeForwardIp)
-            throws LispConfigCommandFailedException {
-
-        AbstractLispCommand<NativeForwardPath> lispCommand =
-                LispCommandWrapper.addNativeForwardEntry(vrf, nativeForwardIp);
-        if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostDataBroker(), lispCommand)) {
-            LOG.debug("Added {} as native forwarding IP");
-        } else {
-            throw new LispConfigCommandFailedException("Lisp add Native forward failed for VNI " + vrf);
-        }
-    }
-
-    private void addEidInEidTable(DataBroker vppDataBroker,
+    private void addEidInEidTable(EndpointHost endpointHost,
                                   LispState lispState,
                                   Eid eid,
                                   String eidMappingName) throws LispConfigCommandFailedException {
@@ -291,7 +277,7 @@ public class LispStateManager {
                         eid,
                         lispStateHelper.getFirstLocatorSetName(lispState),
                         lispStateHelper.getDefaultHmacKey());
-        if (LispStateCommandExecutor.executePutCommand(vppDataBroker, addLocalMappingInEidTableCommand)) {
+        if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostName(), addLocalMappingInEidTableCommand)) {
             lispState.addEidInEidSet(eid);
         } else {
             throw new LispConfigCommandFailedException("Lisp add local mapping for eid " + eid + "failed!");
@@ -344,7 +330,7 @@ public class LispStateManager {
                 .deleteLocalMappingFromEidTable(eidMappingName, value);
 
         if (LispStateCommandExecutor
-                .executeDeleteCommand(endpointHost.getHostDataBroker(), deleteLocalMappingCommand)) {
+                .executeDeleteCommand(endpointHost.getHostName(), deleteLocalMappingCommand)) {
             LOG.debug("Successfully deleted eid {} from host {}", eid, endpointHost.getHostName());
             lispState.deleteEid(eid);
         } else {
@@ -356,7 +342,7 @@ public class LispStateManager {
     private void deleteLispStatesFromHost(EndpointHost endpointHost) throws LispConfigCommandFailedException {
         AbstractLispCommand<LispFeatureData> deleteLispFeatureData = LispCommandWrapper.deleteLispFeatureData();
 
-        if (LispStateCommandExecutor.executeDeleteCommand(endpointHost.getHostDataBroker(), deleteLispFeatureData)) {
+        if (LispStateCommandExecutor.executeDeleteCommand(endpointHost.getHostName(), deleteLispFeatureData)) {
             hostRelatedInfoContainer.deleteLispStateOfHost(endpointHost.getHostName());
             LOG.debug("Deleted all lisp data for host {}", endpointHost.getHostName());
         } else {
@@ -369,7 +355,7 @@ public class LispStateManager {
         AbstractLispCommand<NativeForwardPathsTables> deleteNativeForwardPathsTables = LispCommandWrapper
                 .deleteNativeForwardPathsTables();
 
-        if (!LispStateCommandExecutor.executeDeleteCommand(endpointHost.getHostDataBroker(),
+        if (!LispStateCommandExecutor.executeDeleteCommand(endpointHost.getHostName(),
                 deleteNativeForwardPathsTables)) {
             throw new LispConfigCommandFailedException("Delete Native Forward Paths Tables command failed!");
         }

@@ -68,6 +68,7 @@ import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 
 public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
 
@@ -205,14 +206,8 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
             ifaceCommand = tapBuilder.build();
         }
         InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(input.getVppNodeId());
-        Optional<DataBroker> optDataBroker = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
-        if (!optDataBroker.isPresent()) {
-            return Futures.immediateFuture(RpcResultBuilder.<Void>failed()
-                .withError(ErrorType.RPC, "Cannot find data broker for mount point " + vppNodeIid)
-                .build());
-        }
-        return Futures.transformAsync(interfaceManager.createInterfaceOnVpp(ifaceCommand, optDataBroker.get()),
-                voidToRpcResult());
+        return Futures.transformAsync(interfaceManager.createInterfaceOnVpp(ifaceCommand, vppNodeIid),
+                voidToRpcResult(), MoreExecutors.directExecutor());
     }
 
     public ListenableFuture<RpcResult<Void>> deleteInterfaceFromNode(DeleteInterfaceFromNodeInput input) {
@@ -233,12 +228,12 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
                                                 + ". Not found or already deleted.")
                                 .build());
                         }
-                        Optional<DataBroker> dataBroker = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
+                        Optional<DataBroker> dataBroker = mountDataProvider.resolveDataBrokerForMountPoint(vppNodeIid);
                         WriteTransaction wTx = dataBroker.get().newWriteOnlyTransaction();
                         wTx.delete(LogicalDatastoreType.CONFIGURATION, VppIidFactory.getInterfaceIID(iKey));
-                        return Futures.transformAsync(wTx.submit(), voidToRpcResult());
+                        return Futures.transformAsync(wTx.submit(), voidToRpcResult(), MoreExecutors.directExecutor());
                     }
-                });
+                }, MoreExecutors.directExecutor());
     }
 
     public ListenableFuture<RpcResult<Void>> addInterfaceToBridgeDomain(AddInterfaceToBridgeDomainInput input) {
@@ -259,11 +254,10 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
                                                 + vppNodeIid + ". Not found or deleted.")
                                 .build());
                         }
-                        Optional<DataBroker> dataBroker = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
-                        return Futures.transformAsync(interfaceManager.configureInterface(dataBroker.get(), iKey,
-                                input.getBridgeDomainId(), null), voidToRpcResult());
+                        return Futures.transformAsync(interfaceManager.configureInterface(vppNodeIid, iKey,
+                                input.getBridgeDomainId(), null), voidToRpcResult(), MoreExecutors.directExecutor());
                     }
-                });
+                }, MoreExecutors.directExecutor());
     }
 
     public ListenableFuture<RpcResult<Void>> delInterfaceFromBridgeDomain(DelInterfaceFromBridgeDomainInput input) {
@@ -283,16 +277,15 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
                                                 + ". Not found or deleted.")
                                 .build());
                         }
-                        Optional<DataBroker> dataBroker = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
-                        return Futures.transformAsync(interfaceManager.removeInterfaceFromBridgeDomain(dataBroker.get(),
-                                optIface.get().getKey()), voidToRpcResult());
+                        return Futures.transformAsync(interfaceManager.removeInterfaceFromBridgeDomain(vppNodeIid,
+                                optIface.get().getKey()), voidToRpcResult(), MoreExecutors.directExecutor());
                     }
-                });
+                }, MoreExecutors.directExecutor());
     }
 
-    private CheckedFuture<Optional<Interface>, ReadFailedException> readInterface(InstanceIdentifier<?> nodeIid,
+    private CheckedFuture<Optional<Interface>, ReadFailedException> readInterface(InstanceIdentifier<Node> nodeIid,
             String interfaceName) {
-        Optional<DataBroker> optDataBroker = mountDataProvider.getDataBrokerForMountPoint(nodeIid);
+        Optional<DataBroker> optDataBroker = mountDataProvider.resolveDataBrokerForMountPoint(nodeIid);
         if (!optDataBroker.isPresent()) {
             LOG.error("Cannot find data broker for node {}", nodeIid);
             return Futures.immediateCheckedFuture(Optional.absent());

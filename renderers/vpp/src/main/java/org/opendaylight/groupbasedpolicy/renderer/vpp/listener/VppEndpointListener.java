@@ -40,7 +40,7 @@ public class VppEndpointListener extends DataTreeChangeHandler<VppEndpoint> {
             InstanceIdentifier<VppEndpoint> rootIdentifier) {
         VppEndpointConfEvent event =
                 new VppEndpointConfEvent(rootIdentifier, rootNode.getDataBefore(), rootNode.getDataAfter());
-        LOG.trace("Dispatching event on write: {}", event.getClass());
+        LOG.debug("Dispatching event on write: {}", event.getClass());
         eventBus.post(event);
     }
 
@@ -49,7 +49,6 @@ public class VppEndpointListener extends DataTreeChangeHandler<VppEndpoint> {
             InstanceIdentifier<VppEndpoint> rootIdentifier) {
         VppEndpointConfEvent event =
                 new VppEndpointConfEvent(rootIdentifier, rootNode.getDataBefore(), rootNode.getDataAfter());
-        LOG.trace("Dispatching event on delete: {}", event.getClass());
         eventBus.post(event);
     }
 
@@ -58,7 +57,7 @@ public class VppEndpointListener extends DataTreeChangeHandler<VppEndpoint> {
             InstanceIdentifier<VppEndpoint> rootIdentifier) {
         VppEndpointConfEvent event =
                 new VppEndpointConfEvent(rootIdentifier, rootNode.getDataBefore(), rootNode.getDataAfter());
-        LOG.trace("Dispatching event on subtree modified: {}", event.getClass());
+        LOG.debug("Dispatching event on subtree modified: {}", event.getClass());
         eventBus.post(event);
     }
 

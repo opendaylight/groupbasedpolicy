@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
+
 import org.apache.commons.net.util.SubnetUtils;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -37,13 +39,12 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.nat.rev1509
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.nat.rev150908.nat.parameters.ExternalIpAddressPool;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.renderers.renderer.renderer.nodes.renderer.node.PhysicalInterface;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
-
-import javax.annotation.Nullable;
 
 public class NatManager {
 
@@ -95,17 +96,13 @@ public class NatManager {
             LOG.trace("Preparing to submit NAT changes {} on physical interfaces", sNatEntries.toArray(), physIfacesIid);
         }
         for (InstanceIdentifier<PhysicalInterface> iidPhysIface : physIfacesIid) {
-            InstanceIdentifier<?> nodeIid = iidPhysIface.firstKeyOf(RendererNode.class).getNodePath();
-            Optional<DataBroker> mountPointDataBroker = mountDataProvider.getDataBrokerForMountPoint(nodeIid);
-            if (!mountPointDataBroker.isPresent()) {
-                throw new IllegalStateException("Cannot find data broker for mount point " + nodeIid);
-            }
+            InstanceIdentifier<Node> nodeIid = (InstanceIdentifier<Node>) iidPhysIface.firstKeyOf(RendererNode.class).getNodePath();
             String phInterfaceName = iidPhysIface.firstKeyOf(PhysicalInterface.class).getInterfaceName();
             InstanceIdentifier<Interface> interfaceIID =
                 VppIidFactory.getInterfaceIID(new InterfaceKey(phInterfaceName));
 
             Optional<Interface> readIface =
-                GbpNetconfTransaction.read(mountPointDataBroker.get(), LogicalDatastoreType.CONFIGURATION, interfaceIID,
+                GbpNetconfTransaction.read(nodeIid, LogicalDatastoreType.CONFIGURATION, interfaceIID,
                     GbpNetconfTransaction.RETRY_COUNT);
 
             if (!readIface.isPresent()) {
@@ -115,12 +112,12 @@ public class NatManager {
             if (add) {
                 NatInstance natInstance =
                     buildNatInstance(sNatEntries, NatUtil.resolveDynamicNat(policyCtx, sNatEntries));
-                GbpNetconfTransaction.netconfSyncedWrite(mountPointDataBroker.get(),
+                GbpNetconfTransaction.netconfSyncedWrite(nodeIid,
                     VppIidFactory.getNatInstanceIid(id), natInstance, GbpNetconfTransaction.RETRY_COUNT);
             } else {
-                if (GbpNetconfTransaction.read(mountPointDataBroker.get(), LogicalDatastoreType.CONFIGURATION,
+                if (GbpNetconfTransaction.read(nodeIid, LogicalDatastoreType.CONFIGURATION,
                     VppIidFactory.getNatInstanceIid(id), GbpNetconfTransaction.RETRY_COUNT).isPresent()) {
-                    GbpNetconfTransaction.netconfSyncedDelete(mountPointDataBroker.get(),
+                    GbpNetconfTransaction.netconfSyncedDelete(nodeIid,
                         VppIidFactory.getNatInstanceIid(id), GbpNetconfTransaction.RETRY_COUNT);
                 }
             }

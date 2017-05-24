@@ -143,7 +143,7 @@ public class LoopbackCommandTest extends VppRendererDataBrokerTest {
             .setOperation(General.Operations.PUT)
             .setInterfaceName(INTERFACE_NAME)
             .setDescription(DESCRIPTION)
-            .setBvi(IS_BVI)
+            .setBvi(true)
             .setPhysAddress(MAC_ADDRESS)
             .setIpPrefix(IP_PREFIX)
             .setIpAddress(IP_ADDRESS)
@@ -157,7 +157,6 @@ public class LoopbackCommandTest extends VppRendererDataBrokerTest {
 
         Assert.assertTrue(optional.isPresent());
         Assert.assertEquals(BASIC_INTERFACE_WITH_BD, optional.get());
-
     }
 
     private Optional<Interface> executeCommand(ReadWriteTransaction rwTx, LoopbackCommand addCommand)

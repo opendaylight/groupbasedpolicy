@@ -8,27 +8,29 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.annotation.Nonnull;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.VppPathMapper;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispNotFoundException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.EndpointHost;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.HostRelatedInfoContainer;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.LispState;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispNotFoundException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PhysicalInterfaces;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.InterfaceUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.LispUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.iana._if.type.rev140508.EthernetCsmacd;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4AddressNoZone;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.Interfaces;
@@ -46,12 +48,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.child.endpoints.ChildEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.relative.location.relative.locations.ExternalLocation;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.IpPrefixType;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.MacAddressType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.ParentEndpointChoice;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.ParentEndpointCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.parent.endpoint._case.ParentEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.IpPrefixType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.L3Context;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.MacAddressType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.HmacKeyType;
@@ -66,10 +68,10 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nonnull;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 
 
 /**
@@ -92,11 +94,12 @@ public class ConfigManagerHelper {
 
     public Optional<DataBroker> getPotentialExternalDataBroker(AddressEndpointWithLocation addressEpWithLoc) {
         ExternalLocationCase externalLocationCase = resolveAndValidateLocation(addressEpWithLoc);
-        InstanceIdentifier<?> vppNodeIid = externalLocationCase.getExternalNodeMountPoint();
+        InstanceIdentifier<Node> vppNodeIid =
+                (InstanceIdentifier<Node>) externalLocationCase.getExternalNodeMountPoint();
         String interfacePath = externalLocationCase.getExternalNodeConnector();
 
         Optional<DataBroker>
-                potentialVppDataProvider = mountedDataBrokerProvider.getDataBrokerForMountPoint(vppNodeIid);
+                potentialVppDataProvider = mountedDataBrokerProvider.resolveDataBrokerForMountPoint(vppNodeIid);
 
         Preconditions.checkArgument(potentialVppDataProvider.isPresent(),
                 "Cannot resolve data broker for interface path: {}", interfacePath);
@@ -105,10 +108,10 @@ public class ConfigManagerHelper {
     }
 
     public Optional<DataBroker> getPotentialExternalDataBroker(ExternalLocation externalLocation) {
-        InstanceIdentifier<?> vppNodeIid = externalLocation.getExternalNodeMountPoint();
+        InstanceIdentifier<Node> vppNodeIid = (InstanceIdentifier<Node>) externalLocation.getExternalNodeMountPoint();
 
         Optional<DataBroker> potentialVppDataProvider;
-        potentialVppDataProvider = mountedDataBrokerProvider.getDataBrokerForMountPoint(vppNodeIid);
+        potentialVppDataProvider = mountedDataBrokerProvider.resolveDataBrokerForMountPoint(vppNodeIid);
 
         Preconditions.checkState(potentialVppDataProvider.isPresent(), "Data Broker missing");
 
@@ -118,7 +121,7 @@ public class ConfigManagerHelper {
     public Optional<DataBroker> getPotentialExternalDataBroker(VppEndpoint vppEp) {
         InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(vppEp.getVppNodeId());
         Optional<DataBroker> potentialVppDataProvider =
-                mountedDataBrokerProvider.getDataBrokerForMountPoint(vppNodeIid);
+                mountedDataBrokerProvider.resolveDataBrokerForMountPoint(vppNodeIid);
 
         Preconditions.checkArgument(potentialVppDataProvider.isPresent(),
                 "Cannot resolve data broker for Vpp Endpoint: {}", vppEp);
@@ -127,7 +130,8 @@ public class ConfigManagerHelper {
 
     public Optional<DataBroker> getPotentialExternalDataBroker(String hostId) {
         InstanceIdentifier<Node> nodeIid = VppIidFactory.getNetconfNodeIid(new NodeId(hostId));
-        Optional<DataBroker> potentialVppDataProvider = mountedDataBrokerProvider.getDataBrokerForMountPoint(nodeIid);
+        Optional<DataBroker> potentialVppDataProvider =
+                mountedDataBrokerProvider.resolveDataBrokerForMountPoint(nodeIid);
         Preconditions.checkArgument(potentialVppDataProvider.isPresent(),
                 "Data Broker not found for {}", hostId);
         return potentialVppDataProvider;
@@ -149,7 +153,7 @@ public class ConfigManagerHelper {
         return Optional.fromNullable(hostId);
     }
 
-    public ExternalLocationCase resolveAndValidateLocation(AddressEndpointWithLocation addrEpWithLoc) {
+    public static ExternalLocationCase resolveAndValidateLocation(AddressEndpointWithLocation addrEpWithLoc) {
         Preconditions.checkNotNull(addrEpWithLoc.getAbsoluteLocation(), "Absolute location for " +
                 "AddressEndpointWithLocation missing: " + addrEpWithLoc.toString() );
         LocationType locationType = addrEpWithLoc.getAbsoluteLocation().getLocationType();
@@ -165,10 +169,8 @@ public class ConfigManagerHelper {
     }
 
     //This is almost identical to VBD's equivalent method
-    public ListenableFuture<String> getLispDataRlocInterfaceName(@Nonnull String hostName,
-                                                                 @Nonnull DataBroker vppDataBroker) {
+    public ListenableFuture<String> getLispDataRlocInterfaceName(@Nonnull String hostName) {
         Preconditions.checkNotNull(hostName, "Hostname is null!");
-        Preconditions.checkNotNull(vppDataBroker, "Vpp DataBroker is null!");
 
         PhysicalInterfaces physicalInterfaces = HostRelatedInfoContainer.getInstance()
                 .getPhysicalInterfaceState(hostName);
@@ -176,9 +178,9 @@ public class ConfigManagerHelper {
         String publicInterfaceName = physicalInterfaces == null ? "" : physicalInterfaces
                 .getName(PhysicalInterfaces.PhysicalInterfaceType.PUBLIC);
 
-        final Optional<InterfacesState> opInterfaceState = GbpNetconfTransaction.read(vppDataBroker,
-                LogicalDatastoreType.OPERATIONAL, InstanceIdentifier.create(InterfacesState.class),
-                GbpNetconfTransaction.RETRY_COUNT);
+        final Optional<InterfacesState> opInterfaceState =
+                GbpNetconfTransaction.read(LispUtil.HOSTNAME_TO_IID.apply(hostName), LogicalDatastoreType.OPERATIONAL,
+                        InstanceIdentifier.create(InterfacesState.class), GbpNetconfTransaction.RETRY_COUNT);
 
         if (!opInterfaceState.isPresent()) {
             LOG.debug("There appear to be no interfaces on node {}.", hostName);
@@ -194,7 +196,7 @@ public class ConfigManagerHelper {
         }
 
         final Optional<Interfaces> opInterfaces =
-                GbpNetconfTransaction.read(vppDataBroker, LogicalDatastoreType.CONFIGURATION,
+                GbpNetconfTransaction.read(LispUtil.HOSTNAME_TO_IID.apply(hostName), LogicalDatastoreType.CONFIGURATION,
                         InstanceIdentifier.create(Interfaces.class), GbpNetconfTransaction.RETRY_COUNT);
 
 
@@ -310,8 +312,9 @@ public class ConfigManagerHelper {
         return ip != null;
     }
 
-    public String getLispCpRlocInterfaceName(@Nonnull DataBroker vppDataBroker) {
-        List<Interface> operationalInterfaceList = InterfaceUtil.getOperationalInterfaces(vppDataBroker);
+    public String getLispCpRlocInterfaceName(@Nonnull EndpointHost endpointHost) {
+        List<Interface> operationalInterfaceList =
+                InterfaceUtil.getOperationalInterfaces(LispUtil.HOSTNAME_TO_IID.apply(endpointHost.getHostName()));
 
         if (operationalInterfaceList == null) {
             return null;

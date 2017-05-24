@@ -10,7 +10,6 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl;
 
 import javax.annotation.Nonnull;
 
-import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AccessListUtil.ACE_DIRECTION;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
@@ -20,6 +19,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interfa
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.acl.rev161214.vpp.acls.base.attributes.VppAcls;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.acl.rev161214.vpp.acls.base.attributes.VppAclsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.acl.rev170615.VppAcl;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.collect.ImmutableList;
@@ -32,13 +32,13 @@ public class IngressAccessListWrapper extends AccessListWrapper {
     }
 
     @Override
-    public void writeAclRefOnIface(@Nonnull DataBroker mountPoint, @Nonnull InstanceIdentifier<Interface> ifaceIid) {
+    public void writeAclRefOnIface(@Nonnull InstanceIdentifier<Node> vppIid, @Nonnull InstanceIdentifier<Interface> ifaceIid) {
         InstanceIdentifier<Ingress> ingressRefIid = VppIidFactory.getAclInterfaceRef(ifaceIid).child(Ingress.class);
         VppAcls vppAcl = new VppAclsBuilder().setName(resolveAclName(ifaceIid.firstKeyOf(Interface.class)))
             .setType(VppAcl.class)
             .build();
         Ingress egressAcl = new IngressBuilder().setVppAcls(ImmutableList.<VppAcls>of(vppAcl)).build();
-        GbpNetconfTransaction.netconfSyncedWrite(mountPoint, ingressRefIid, egressAcl,
+        GbpNetconfTransaction.netconfSyncedWrite(vppIid, ingressRefIid, egressAcl,
                 GbpNetconfTransaction.RETRY_COUNT);
     }
 }

@@ -8,9 +8,9 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.loopback;
 
-import com.google.common.base.Preconditions;
+import javax.annotation.Nonnull;
+
 import org.apache.commons.lang3.tuple.Pair;
-import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.LoopbackCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.LoopbackCommandWrapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.ProxyRangeCommand;
@@ -39,6 +39,7 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.lisp.address.types.rev151105.Ipv4PrefixAfi;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpSubnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518.gpe.entry.table.grouping.gpe.entry.table.GpeEntry;
@@ -46,11 +47,13 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev1
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.unnumbered.interfaces.rev170510.InterfaceUnnumberedAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.unnumbered.interfaces.rev170510.InterfaceUnnumberedAugmentationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.unnumbered.interfaces.rev170510.unnumbered.config.attributes.UnnumberedBuilder;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nonnull;
+import com.google.common.base.Preconditions;
 
 /**
  * Created by Shakib Ahmed on 4/26/17.
@@ -99,8 +102,7 @@ public class LoopbackManager {
             LoopbackCommand bviLoopbackCommand = LoopbackCommandWrapper
                     .bviLoopbackPutCommand(gwInterfaceName, vni, gbpSubnetInfo.getGatewayIp(), gbpSubnetInfo.getCidr(),
                             bridgeDomainName);
-            createLoopbackInterface(endpointHost.getHostDataBroker(), endpointHost.getHostName(),
-                    subnetState, bviLoopbackCommand);
+            createLoopbackInterface(endpointHost.getHostName(), subnetState, bviLoopbackCommand);
         } catch (LispConfigCommandFailedException e) {
             LOG.warn("LISP couldn't be configured: {}", e.getMessage());
         }
@@ -112,8 +114,6 @@ public class LoopbackManager {
             if (loopbackManagerHelper.isMetadataPort(addressEp)) {
                 return;
             }
-
-            DataBroker vppDataBroker = loopbackManagerHelper.getPotentialExternalDataBroker(addressEp).get();
             String hostName = loopbackManagerHelper.getHostName(addressEp).get();
             long vni = getVni(addressEp.getTenant().getValue());
             long vrfId = vni;
@@ -133,9 +133,9 @@ public class LoopbackManager {
                 LoopbackCommand simpleLoopbackCommand = LoopbackCommandWrapper
                         .simpleLoopbackPutCommand(interfaceName, vrfId, gbpSubnetInfo.getGatewayIp(),
                                 gbpSubnetInfo.getCidr());
-                createLoopbackInterface(vppDataBroker, hostName, stateOfSubnetUuid, simpleLoopbackCommand);
-                addProxyArpRange(vppDataBroker, hostName, vrfId, gbpSubnetInfo);
-                addGpeEntry(vppDataBroker, gbpSubnetInfo, vni);
+                createLoopbackInterface(hostName, stateOfSubnetUuid, simpleLoopbackCommand);
+                addProxyArpRange(hostName, vrfId, gbpSubnetInfo);
+                addGpeEntry(VppIidFactory.getNetconfNodeIid(new NodeId(hostName)), gbpSubnetInfo, vni);
             }
 
             String gwInterfaceName = stateOfSubnetUuid.getGwInterfaceName();
@@ -145,13 +145,12 @@ public class LoopbackManager {
         }
     }
 
-    private void createLoopbackInterface(DataBroker vppDataBroker, String hostName,
+    private void createLoopbackInterface(String hostName,
                                          SubnetState subnetState,
                                          LoopbackCommand loopbackCommand) throws LispConfigCommandFailedException {
 
-        if (GbpNetconfTransaction.netconfSyncedWrite(vppDataBroker,
-                loopbackCommand,
-                GbpNetconfTransaction.RETRY_COUNT)) {
+        if (GbpNetconfTransaction.netconfSyncedWrite(VppIidFactory.getNetconfNodeIid(new NodeId(hostName)),
+                loopbackCommand, GbpNetconfTransaction.RETRY_COUNT)) {
             subnetState.setGwInterfaceName(loopbackCommand.getName());
         } else {
             throw new LispConfigCommandFailedException("BVI could not be created for "
@@ -164,8 +163,6 @@ public class LoopbackManager {
         if (loopbackManagerHelper.isMetadataPort(addressEp)) {
             return;
         }
-
-        DataBroker vppDataBroker = loopbackManagerHelper.getPotentialExternalDataBroker(addressEp).get();
         String hostName = loopbackManagerHelper.getHostName(addressEp).get();
         String portSubnetUuid = loopbackManagerHelper.getSubnet(addressEp);
         long vrfId = getVni(addressEp.getTenant().getValue());
@@ -181,10 +178,11 @@ public class LoopbackManager {
                     "Invalid port!");
             long vni = getVni(addressEp.getTenant().getValue());
             try {
-                deleteSpecificLoopback(vppDataBroker, gwInterfaceName);
-                deleteProxyArpRange(vppDataBroker, hostName, vni, gbpSubnetInfo);
-                deleteGpeEntry(vppDataBroker, Constants.GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_1");
-                deleteGpeEntry(vppDataBroker, Constants.GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_2");
+                InstanceIdentifier<Node> iid = VppIidFactory.getNetconfNodeIid(new NodeId(hostName));
+                deleteSpecificLoopback(iid, gwInterfaceName);
+                deleteProxyArpRange(hostName, vni, gbpSubnetInfo);
+                deleteGpeEntry(iid, Constants.GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_1");
+                deleteGpeEntry(iid, Constants.GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_2");
                 hostRelatedInfoContainer.getVrfStateOfHost(hostName)
                         .getVrfState(vrfId)
                         .getSubnetHolder()
@@ -195,8 +193,8 @@ public class LoopbackManager {
         }
     }
 
-    private void deleteSpecificLoopback(DataBroker vppDataBroker, String interfaceName) throws LispConfigCommandFailedException {
-        if (!GbpNetconfTransaction.netconfSyncedDelete(vppDataBroker,
+    private void deleteSpecificLoopback(InstanceIdentifier<Node> nodeIid, String interfaceName) throws LispConfigCommandFailedException {
+        if (!GbpNetconfTransaction.netconfSyncedDelete(nodeIid,
                 VppIidFactory.getInterfaceIID(new InterfaceKey(interfaceName)), GbpNetconfTransaction.RETRY_COUNT)) {
             throw new LispConfigCommandFailedException("Failed to delete Loopback interface!");
         } else {
@@ -204,8 +202,7 @@ public class LoopbackManager {
         }
     }
 
-    private void addProxyArpRange(DataBroker vppDataBroker,
-                                  String hostName,
+    private void addProxyArpRange(String hostName,
                                   long vrf,
                                   GbpSubnet gbpSubnetInfo) throws LispConfigCommandFailedException {
         Ipv4Prefix subnetPrefix = gbpSubnetInfo.getCidr().getIpv4Prefix();
@@ -215,7 +212,7 @@ public class LoopbackManager {
 
         Pair<Ipv4Address, Ipv4Address> startAndEndAddress = IpAddressUtil.getStartAndEndIp(subnetPrefix);
 
-        if (!putArpRangesCommand(vppDataBroker,
+        if (!putArpRangesCommand(VppIidFactory.getNetconfNodeIid(new NodeId(hostName)),
                 vrf,
                 startAndEndAddress.getLeft(),
                 startAndEndAddress.getRight())) {
@@ -227,8 +224,7 @@ public class LoopbackManager {
         }
     }
 
-    private void deleteProxyArpRange(DataBroker vppDataBroker,
-                                     String hostName,
+    private void deleteProxyArpRange(String hostName,
                                      long vrf,
                                      GbpSubnet gbpSubnetInfo) throws LispConfigCommandFailedException {
         Ipv4Prefix subnetPrefix = gbpSubnetInfo.getCidr().getIpv4Prefix();
@@ -238,7 +234,7 @@ public class LoopbackManager {
 
         Pair<Ipv4Address, Ipv4Address> startAndEndAddress = IpAddressUtil.getStartAndEndIp(subnetPrefix);
 
-        if (!deleteArpRangesCommand(vppDataBroker,
+        if (!deleteArpRangesCommand(VppIidFactory.getNetconfNodeIid(new NodeId(hostName)),
                 vrf,
                 startAndEndAddress.getLeft(),
                 startAndEndAddress.getRight())) {
@@ -250,19 +246,16 @@ public class LoopbackManager {
         }
     }
 
-    private boolean putArpRangesCommand(DataBroker vppDataBroker, long vrf, Ipv4Address start, Ipv4Address end) {
+    private boolean putArpRangesCommand(InstanceIdentifier<Node> iid, long vrf, Ipv4Address start, Ipv4Address end) {
         ProxyRangeCommand.ProxyRangeCommandBuilder builder = new ProxyRangeCommand.ProxyRangeCommandBuilder();
         builder.setOperation(General.Operations.PUT);
         builder.setVrf(vrf);
         builder.setStartAddress(start);
         builder.setEndAddress(end);
-
-        return GbpNetconfTransaction.netconfSyncedWrite(vppDataBroker,
-                builder.build(),
-                GbpNetconfTransaction.RETRY_COUNT);
+        return GbpNetconfTransaction.netconfSyncedWrite(iid, builder.build(), GbpNetconfTransaction.RETRY_COUNT);
     }
 
-    private boolean deleteArpRangesCommand(DataBroker vppDataBroker,
+    private boolean deleteArpRangesCommand(InstanceIdentifier<Node> iid,
                                            long vrf,
                                            Ipv4Address start,
                                            Ipv4Address end) {
@@ -271,17 +264,14 @@ public class LoopbackManager {
         builder.setVrf(vrf);
         builder.setStartAddress(start);
         builder.setEndAddress(end);
-
-        return GbpNetconfTransaction.netconfSyncedDelete(vppDataBroker,
-                builder.build(),
-                GbpNetconfTransaction.RETRY_COUNT);
+        return GbpNetconfTransaction.netconfSyncedDelete(iid, builder.build(), GbpNetconfTransaction.RETRY_COUNT);
     }
 
     private void addUnnumberedInterface(AddressEndpointWithLocation addressEp, String loopbackName) throws LispConfigCommandFailedException {
-        DataBroker vppDataBroker = loopbackManagerHelper.getPotentialExternalDataBroker(addressEp).get();
+        ExternalLocationCase loc = ConfigManagerHelper.resolveAndValidateLocation(addressEp);
+        InstanceIdentifier<Node> nodeIid = (InstanceIdentifier<Node>) loc.getExternalNodeMountPoint();
         String neutronInterfaceName = loopbackManagerHelper.getInterfaceName(addressEp).get();
-
-        if (putUnnumberedInterface(vppDataBroker, neutronInterfaceName, loopbackName)) {
+        if (putUnnumberedInterface(nodeIid, neutronInterfaceName, loopbackName)) {
             LOG.debug("Added Interface {} as unnumberd for {}", loopbackName, neutronInterfaceName);
         } else {
             throw new LispConfigCommandFailedException("Unnumbered configuration failed for " +
@@ -289,7 +279,7 @@ public class LoopbackManager {
         }
     }
 
-    private boolean putUnnumberedInterface(DataBroker vppDataBroker, String interfaceFor, String interfaceWith) {
+    private boolean putUnnumberedInterface(InstanceIdentifier<Node> iid, String interfaceFor, String interfaceWith) {
         UnnumberedBuilder unnumberedBuilder = new UnnumberedBuilder();
         unnumberedBuilder.setUse(interfaceWith);
         InstanceIdentifier<Interface> interfaceIid = VppIidFactory.getInterfaceIID(new InterfaceKey(interfaceFor));
@@ -297,13 +287,11 @@ public class LoopbackManager {
         augBuilder.setUnnumbered(unnumberedBuilder.build());
         InterfaceBuilder interfaceBuilder = new InterfaceBuilder().setKey(new InterfaceKey(interfaceFor));
         interfaceBuilder.addAugmentation(InterfaceUnnumberedAugmentation.class, augBuilder.build());
-        return GbpNetconfTransaction.netconfSyncedMerge(vppDataBroker,
-                interfaceIid,
-                interfaceBuilder.build(),
+        return GbpNetconfTransaction.netconfSyncedMerge(iid, interfaceIid, interfaceBuilder.build(),
                 GbpNetconfTransaction.RETRY_COUNT);
     }
 
-    private void addGpeEntry(DataBroker vppDataBroker, GbpSubnet gbpSubnetInfo, long vni) {
+    private void addGpeEntry(InstanceIdentifier<Node> iid, GbpSubnet gbpSubnetInfo, long vni) {
         try {
             Pair<Ipv4Prefix, Ipv4Prefix> delegatingSubnets = IpAddressUtil
                     .getSmallerSubnet(gbpSubnetInfo.getCidr().getIpv4Prefix());
@@ -311,7 +299,7 @@ public class LoopbackManager {
             RemoteEid firstREid = LispUtil.toRemoteEid(LispUtil.toLispIpv4Prefix(delegatingSubnets.getLeft()),
                     vni,
                     Ipv4PrefixAfi.class);
-            putGpeEntry(vppDataBroker, Constants.GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_1", firstREid, vni, vni);
+            putGpeEntry(iid, Constants.GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_1", firstREid, vni, vni);
 
             if (delegatingSubnets.getLeft().equals(delegatingSubnets.getRight())) {
                 return;
@@ -321,22 +309,22 @@ public class LoopbackManager {
                     vni,
                     Ipv4PrefixAfi.class);
 
-            putGpeEntry(vppDataBroker, Constants.GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_2", secondREid, vni, vni);
+            putGpeEntry(iid, Constants.GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_2", secondREid, vni, vni);
         } catch (LispHelperArgumentException e) {
             e.printStackTrace();
         }
     }
 
-    private boolean putGpeEntry(DataBroker vppDataBroker, String id, RemoteEid rEid, long vni, long vrf) {
+    private boolean putGpeEntry(InstanceIdentifier<Node> iid, String id, RemoteEid rEid, long vni, long vrf) {
         AbstractLispCommand<GpeEntry> gpeEntryCommand = LispCommandWrapper
                 .addGpeSendMapregisterAction(id, rEid, vni, vrf);
-        return LispStateCommandExecutor.executePutCommand(vppDataBroker, gpeEntryCommand);
+        return LispStateCommandExecutor.executePutCommand(iid, gpeEntryCommand);
     }
 
-    private boolean deleteGpeEntry(DataBroker vppDataBroker, String id) {
+    private boolean deleteGpeEntry(InstanceIdentifier<Node> iid, String id) {
         AbstractLispCommand<GpeEntry> gpeEntryDeletionCommand = LispCommandWrapper
                 .deleteGpeEntry(id);
-        return LispStateCommandExecutor.executeDeleteCommand(vppDataBroker, gpeEntryDeletionCommand);
+        return LispStateCommandExecutor.executeDeleteCommand(iid, gpeEntryDeletionCommand);
     }
 
     private long getVni(String tenantUuid) {

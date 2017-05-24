@@ -25,8 +25,8 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.dhcp.DhcpRelayHandler;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.loopback.LoopbackManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay.FlatOverlayManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.loopback.LoopbackManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AccessListWrapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AclManager;
@@ -39,6 +39,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Configuration;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.NetworkTypeBase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.VlanNetwork;
@@ -87,6 +88,9 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
         fwdManager =
             new ForwardingManager(ifaceManager, aclManager, natManager, routingManager, bdManager, lispStateManager,
                     loopbackManager, flatOverlayManager, dhcpRelayHandler, getDataBroker());
+        Mockito.when(aclManager.resolveAclsOnInterface(Mockito.any(RendererEndpointKey.class),
+                Mockito.any(PolicyContext.class)))
+            .thenReturn(Futures.immediateFuture(null));
     }
 
     @Override

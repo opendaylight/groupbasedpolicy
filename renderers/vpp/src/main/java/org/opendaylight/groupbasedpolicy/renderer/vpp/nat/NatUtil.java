@@ -19,7 +19,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.apache.commons.net.util.SubnetUtils;
-import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -28,6 +27,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.NetUtils;
+import org.opendaylight.vbd.impl.transaction.VbdNetconfTransaction;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
@@ -69,16 +69,16 @@ public class NatUtil {
         wTx.put(LogicalDatastoreType.CONFIGURATION, natIid, nat);
     }
 
-    public static void setOutboundInterface(Interface iface, DataBroker dataBroker) {
+    public static void setOutboundInterface(Interface iface, InstanceIdentifier<Node> vppIid) {
         InstanceIdentifier<Nat> natIid = buildNatIid(VppIidFactory.getInterfaceIID(iface.getKey()));
         Nat nat = new NatBuilder().setOutbound(new OutboundBuilder().build()).build();
-        GbpNetconfTransaction.netconfSyncedWrite(dataBroker, natIid, nat, GbpNetconfTransaction.RETRY_COUNT);
+        GbpNetconfTransaction.netconfSyncedWrite(vppIid, natIid, nat, GbpNetconfTransaction.RETRY_COUNT);
 
     }
 
-    public static void unsetOutboundInterface(Interface iface, DataBroker dataBroker) {
+    public static void unsetOutboundInterface(Interface iface, InstanceIdentifier<Node> vppIid) {
         InstanceIdentifier<Nat> natIid = buildNatIid(VppIidFactory.getInterfaceIID(iface.getKey()));
-        GbpNetconfTransaction.netconfSyncedDelete(dataBroker, natIid, GbpNetconfTransaction.RETRY_COUNT);
+        GbpNetconfTransaction.netconfSyncedDelete(vppIid, natIid, GbpNetconfTransaction.RETRY_COUNT);
     }
 
     public static InstanceIdentifier<Nat> buildNatIid(InstanceIdentifier<Interface> ifaceIid) {
@@ -190,17 +190,18 @@ public class NatUtil {
         return extCache;
     }
 
-    public static void resolveOutboundNatInterface(DataBroker mountpoint, InstanceIdentifier<Node> mountPointIid,
+    public static void resolveOutboundNatInterface(InstanceIdentifier<Node> mountPointIid,
         NodeId nodeId, Map<NodeId, PhysicalInterfaceKey> extInterfaces) {
         if (extInterfaces.containsKey(nodeId)){
             PhysicalInterfaceKey physicalInterfaceKey = extInterfaces.get(nodeId);
             Optional<Interfaces> readIfaces = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
-                InstanceIdentifier.create(Interfaces.class), mountpoint.newReadOnlyTransaction());
+                InstanceIdentifier.create(Interfaces.class),
+                VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(mountPointIid).getKey().newReadOnlyTransaction());
             if(readIfaces.isPresent() ) {
                 for (Interface nodeInterface : readIfaces.get().getInterface()) {
                     if (nodeInterface.getName().equals(physicalInterfaceKey.getInterfaceName())) {
                         LOG.trace("Setting outbound NAT on interface {} on node: {}", nodeInterface.getName(), mountPointIid);
-                        NatUtil.setOutboundInterface(nodeInterface, mountpoint);
+                        NatUtil.setOutboundInterface(nodeInterface, mountPointIid);
                     }
                 }
 

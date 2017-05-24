@@ -8,9 +8,11 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.iface;
 
+import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -23,8 +25,10 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.VppEndpointConfEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay.FlatOverlayManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.groupbasedpolicy.test.CustomDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
+import org.opendaylight.vbd.impl.transaction.VbdNetconfTransaction;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.Interfaces;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
@@ -42,10 +46,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_render
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607.BridgeDomains;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607.VhostUser;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607.VhostUserRole;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607.VppInterfaceAugmentation;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607.BridgeDomains;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
@@ -85,7 +89,7 @@ public class InterfaceManagerTest extends CustomDataBrokerTest {
         mountPointDataBroker = getDataBroker();
         setup(); // initialize new data broker for ODL data store
         dataBroker = getDataBroker();
-        Mockito.when(mountedDataProviderMock.getDataBrokerForMountPoint(Mockito.any(InstanceIdentifier.class)))
+        Mockito.when(mountedDataProviderMock.resolveDataBrokerForMountPoint(Mockito.any(InstanceIdentifier.class)))
             .thenReturn(Optional.of(mountPointDataBroker));
         manager = new InterfaceManager(mountedDataProviderMock, dataBroker, flatOverlayManager);
     }
@@ -103,7 +107,8 @@ public class InterfaceManagerTest extends CustomDataBrokerTest {
         wTx.submit().get();
         VppEndpoint vhostEp = vhostVppEpBuilder().build();
         VppEndpointConfEvent event = new VppEndpointConfEvent(BASIC_VPP_EP_IID, null, vhostEp);
-
+        VbdNetconfTransaction.NODE_DATA_BROKER_MAP.put(VppIidFactory.getNetconfNodeIid(vhostEp.getVppNodeId()),
+                new AbstractMap.SimpleEntry(mountPointDataBroker, new ReentrantLock()));
         manager.vppEndpointChanged(event);
         // assert state on data store behind mount point
         ReadOnlyTransaction rTxMount = mountPointDataBroker.newReadOnlyTransaction();
@@ -138,7 +143,8 @@ public class InterfaceManagerTest extends CustomDataBrokerTest {
         VppEndpoint vhostEp = vhostVppEpBuilder().build();
         VppEndpointConfEvent createVppEpEvent = new VppEndpointConfEvent(BASIC_VPP_EP_IID, null, vhostEp);
         VppEndpointConfEvent deleteVppEpEvent = new VppEndpointConfEvent(BASIC_VPP_EP_IID, vhostEp, null);
-
+        VbdNetconfTransaction.NODE_DATA_BROKER_MAP.put(VppIidFactory.getNetconfNodeIid(vhostEp.getVppNodeId()),
+                new AbstractMap.SimpleEntry(mountPointDataBroker, new ReentrantLock()));
         manager.vppEndpointChanged(createVppEpEvent);
         manager.vppEndpointChanged(deleteVppEpEvent);
         // assert state on data store behind mount point

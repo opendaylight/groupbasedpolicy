@@ -58,13 +58,13 @@ public class VppNodeListener implements ClusteredDataTreeChangeListener<Node>, A
 
     @Override
     public void onDataTreeChanged(@Nonnull Collection<DataTreeModification<Node>> changes) {
-        LOG.debug("Netconf topology node change detected, VppNodeListener processing started.");
         for (DataTreeModification<Node> modification : changes) {
+            InstanceIdentifier<Node> iid = modification.getRootPath().getRootIdentifier();
+            LOG.debug("Change detected for network topology node {}.", iid.firstKeyOf(Node.class));
             DataObjectModification<Node> rootNode = modification.getRootNode();
             Node dataAfter = rootNode.getDataAfter();
             Node dataBefore = rootNode.getDataBefore();
-            NodeOperEvent event =
-                    new NodeOperEvent(modification.getRootPath().getRootIdentifier(), dataBefore, dataAfter);
+            NodeOperEvent event = new NodeOperEvent(iid, dataBefore, dataAfter);
             eventBus.post(event);
             nodeManager.syncNodes(dataAfter, dataBefore);
         }

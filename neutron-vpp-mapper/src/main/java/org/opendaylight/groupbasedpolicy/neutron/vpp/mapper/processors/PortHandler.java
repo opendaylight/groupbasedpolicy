@@ -54,6 +54,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.por
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.Ports;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.PortKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.portsecurity.rev150712.PortSecurityExtension;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.Subnets;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet;
@@ -243,6 +244,7 @@ public class PortHandler implements TransactionChainListener {
     @VisibleForTesting
     VppEndpoint buildVppEndpoint(Port port, BaseEndpointByPort bebp) {
         PortBindingExtension portBinding = port.getAugmentation(PortBindingExtension.class);
+        ExcludeFromPolicy excludeFromPolicy = new ExcludeFromPolicyBuilder().setExcludeFromPolicy(true).build();
         VppEndpointBuilder vppEpBuilder = new VppEndpointBuilder().setDescription("neutron port")
             .setContextId(bebp.getContextId())
             .setContextType(bebp.getContextType())
@@ -250,9 +252,16 @@ public class PortHandler implements TransactionChainListener {
             .setAddressType(bebp.getAddressType())
             .setVppInterfaceName(VPP_INTERFACE_NAME_PREFIX + bebp.getPortId().getValue())
             .setVppNodeId(new NodeId(portBinding.getHostId()));
+
         if (port.getDeviceOwner().contains(COMPUTE_OWNER)) {
             vppEpBuilder.setInterfaceTypeChoice(
-                new VhostUserCaseBuilder().setSocket(getSocketFromPortBinding(portBinding)).build());
+                    new VhostUserCaseBuilder().setSocket(getSocketFromPortBinding(portBinding)).build());
+            Optional<PortSecurityExtension> portSecurity =
+                    Optional.fromNullable(port.getAugmentation(PortSecurityExtension.class));
+            if (portSecurity.isPresent() && !portSecurity.get().isPortSecurityEnabled()) {
+                vppEpBuilder.addAugmentation(ExcludeFromPolicy.class, excludeFromPolicy);
+            }
+
         } else if (port.getDeviceOwner().contains(DHCP_OWNER) && port.getMacAddress() != null) {
             IpAddress dhcpServerIpAddress = port.getFixedIps().stream().findFirst().isPresent() ?
                 port.getFixedIps().stream().findFirst().get().getIpAddress() : null;
@@ -261,13 +270,14 @@ public class PortHandler implements TransactionChainListener {
                 .setDhcpServerAddress(dhcpServerIpAddress)
                 .build();
             vppEpBuilder.setInterfaceTypeChoice(tapCase);
+
         } else if (isValidQRouterPort(port)) {
             TapCase tapCase = new TapCaseBuilder().setPhysicalAddress(new PhysAddress(port.getMacAddress().getValue()))
                     .setName(createQRouterPortName(port.getUuid()))
                     .build();
             vppEpBuilder.setInterfaceTypeChoice(tapCase);
-            vppEpBuilder.addAugmentation(ExcludeFromPolicy.class,
-                    new ExcludeFromPolicyBuilder().setExcludeFromPolicy(true).build());
+            vppEpBuilder.addAugmentation(ExcludeFromPolicy.class, excludeFromPolicy);
+
         } else if (isValidVppRouterPort(port)) {
             if (!DEFAULT_NODE.equals(routingNode.getValue())) {
                 LOG.warn(
@@ -300,8 +310,7 @@ public class PortHandler implements TransactionChainListener {
                     }
                 }
             }
-            vppEpBuilder.addAugmentation(ExcludeFromPolicy.class,
-                    new ExcludeFromPolicyBuilder().setExcludeFromPolicy(true).build());
+            vppEpBuilder.addAugmentation(ExcludeFromPolicy.class, excludeFromPolicy);
             vppEpBuilder.setInterfaceTypeChoice(getLoopbackCase(port));
         }
         return vppEpBuilder.build();

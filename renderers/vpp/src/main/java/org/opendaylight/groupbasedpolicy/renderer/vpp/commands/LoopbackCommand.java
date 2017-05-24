@@ -8,8 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.commands;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
+import java.util.Collections;
+
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General.Operations;
 import org.opendaylight.groupbasedpolicy.util.NetUtils;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
@@ -36,7 +36,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607.interfaces._interface.RoutingBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607.l2.config.attributes.interconnection.BridgeBasedBuilder;
 
-import java.util.Collections;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 
 public class LoopbackCommand extends AbstractInterfaceCommand {
 
@@ -102,6 +103,7 @@ public class LoopbackCommand extends AbstractInterfaceCommand {
             vppAugmentationBuilder.setL2(new L2Builder().setInterconnection(
                     new BridgeBasedBuilder().setBridgeDomain(bridgeDomain).setBridgedVirtualInterface(bvi).build())
                     .build());
+
         }
         Interface1Builder
                 interface1Builder =

@@ -50,7 +50,6 @@ class SourceMapper extends AddressMapper {
             }
             address = parentEndpoints.get(0).getAddress();
         }
-        LOG.trace("Setting src IP address {} in rule {}", address, aclRuleBuilder);
         try {
             AccessListUtil.setSourceL3Address(aclRuleBuilder, address);
         } catch (UnknownHostException e) {

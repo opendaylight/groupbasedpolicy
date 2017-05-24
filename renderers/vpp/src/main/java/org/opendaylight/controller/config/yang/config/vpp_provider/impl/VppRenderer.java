@@ -8,12 +8,12 @@
 
 package org.opendaylight.controller.config.yang.config.vpp_provider.impl;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.eventbus.EventBus;
-import com.google.common.util.concurrent.CheckedFuture;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
@@ -25,9 +25,9 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.dhcp.DhcpRelayHandler;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.loopback.LoopbackManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.event.manager.GbpSubnetEventManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay.FlatOverlayManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.loopback.LoopbackManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.GbpSubnetListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.RendererPolicyListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppEndpointListener;
@@ -59,10 +59,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.List;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.eventbus.EventBus;
+import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 
 public class VppRenderer implements AutoCloseable, BindingAwareProvider {
 
@@ -148,7 +150,7 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         LoopbackManager loopbackManager = new LoopbackManager(mountDataProvider);
 
         interfaceManager = new InterfaceManager(mountDataProvider, dataBroker, flatOverlayManager);
-        AclManager aclManager = new AclManager(mountDataProvider);
+        AclManager aclManager = new AclManager(mountDataProvider, interfaceManager);
         NatManager natManager = new NatManager(dataBroker, mountDataProvider);
         subnetEventManager = new GbpSubnetEventManager(loopbackManager);
         dtoEventBus.register(interfaceManager);

@@ -8,8 +8,12 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.dhcp;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.SetMultimap;
+import static org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory.getVppRendererConfig;
+
+import java.util.Collections;
+import java.util.Set;
+import java.util.stream.Stream;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.DhcpRelayCommand;
@@ -20,7 +24,6 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.NetUtils;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425._interface.attributes._interface.type.choice.TapCase;
@@ -32,20 +35,16 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
-import java.util.Set;
-import java.util.stream.Stream;
-
-import static org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory.getVppRendererConfig;
+import com.google.common.base.Optional;
+import com.google.common.collect.SetMultimap;
 
 public class DhcpRelayHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(DhcpRelayHandler.class);
-    private final MountedDataBrokerProvider mountDataProvider;
     private final DataBroker dataBroker;
 
+    // TODO remove argument
     public DhcpRelayHandler(DataBroker dataBroker, MountedDataBrokerProvider mountDataProvider) {
-        this.mountDataProvider = mountDataProvider;
         this.dataBroker = dataBroker;
     }
 
@@ -145,17 +144,11 @@ public class DhcpRelayHandler {
 
     private boolean submitDhcpRelay(DhcpRelayCommand dhcpRelayCommand, NodeId nodeIid) {
         LOG.trace("Submitting DhcpRelay command: {}, nodeId: {}", dhcpRelayCommand, nodeIid);
-
-        Optional<DataBroker> mountPointDataBroker =
-            mountDataProvider.getDataBrokerForMountPoint(VppIidFactory.getNetconfNodeIid(nodeIid));
-        if (!mountPointDataBroker.isPresent()) {
-            throw new IllegalStateException("Cannot find data broker for mount point " + nodeIid);
-        }
         if (dhcpRelayCommand.getOperation() == General.Operations.PUT) {
-            return GbpNetconfTransaction.netconfSyncedWrite(mountPointDataBroker.get(), dhcpRelayCommand,
+            return GbpNetconfTransaction.netconfSyncedWrite(VppIidFactory.getNetconfNodeIid(nodeIid), dhcpRelayCommand,
                 GbpNetconfTransaction.RETRY_COUNT);
         } else if (dhcpRelayCommand.getOperation() == General.Operations.DELETE) {
-            return GbpNetconfTransaction.netconfSyncedDelete(mountPointDataBroker.get(), dhcpRelayCommand,
+            return GbpNetconfTransaction.netconfSyncedDelete(VppIidFactory.getNetconfNodeIid(nodeIid), dhcpRelayCommand,
                 GbpNetconfTransaction.RETRY_COUNT);
         }
         return false;

@@ -17,8 +17,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.CheckedFuture;
+import java.util.AbstractMap;
+import java.util.concurrent.locks.ReentrantLock;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -28,8 +29,8 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.AbstractInterfaceCommand;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.interfaces.ConfigCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.LoopbackCommand;
+import org.opendaylight.vbd.impl.transaction.VbdNetconfTransaction;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
@@ -38,6 +39,9 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeBuilder;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.CheckedFuture;
 
 public class GbpNetconfTransactionTest {
 
@@ -62,13 +66,15 @@ public class GbpNetconfTransactionTest {
     public void init() {
         when(dataBroker.newReadOnlyTransaction()).thenReturn(rTx);
         when(dataBroker.newReadWriteTransaction()).thenReturn(rwTx);
+        VbdNetconfTransaction.NODE_DATA_BROKER_MAP.put(nodeIid,
+                new AbstractMap.SimpleEntry(dataBroker, new ReentrantLock()));
     }
 
     @Test
     public void writeConfigCommandReattemptTest() {
         doThrow(new IllegalStateException()).when(command).execute(rwTx);
 
-        final boolean result = GbpNetconfTransaction.netconfSyncedWrite(dataBroker, command, (byte) 5);
+        final boolean result = GbpNetconfTransaction.netconfSyncedWrite(nodeIid, command, (byte) 5);
         verify(dataBroker, times(6)).newReadWriteTransaction();
         assertFalse(result);
     }
@@ -79,7 +85,7 @@ public class GbpNetconfTransactionTest {
         doNothing().when(command).execute(rwTx);
         when(future.get()).thenReturn(null);
 
-        final boolean result = GbpNetconfTransaction.netconfSyncedWrite(dataBroker, command, (byte)5);
+        final boolean result = GbpNetconfTransaction.netconfSyncedWrite(nodeIid, command, (byte)5);
         verify(dataBroker, times(1)).newReadWriteTransaction();
         assertTrue(result);
     }
@@ -88,7 +94,7 @@ public class GbpNetconfTransactionTest {
     public void writeDataReattemptTest() {
         doThrow(new IllegalStateException()).when(rwTx).put(LogicalDatastoreType.CONFIGURATION, nodeIid, node, true);
 
-        final boolean result = GbpNetconfTransaction.netconfSyncedWrite(dataBroker, nodeIid, node, (byte) 5);
+        final boolean result = GbpNetconfTransaction.netconfSyncedWrite(nodeIid, nodeIid, node, (byte) 5);
         verify(dataBroker, times(6)).newReadWriteTransaction();
         assertFalse(result);
     }
@@ -99,7 +105,7 @@ public class GbpNetconfTransactionTest {
         doNothing().when(rwTx).put(LogicalDatastoreType.CONFIGURATION, nodeIid, node, true);
         when(future.get()).thenReturn(null);
 
-        final boolean result = GbpNetconfTransaction.netconfSyncedWrite(dataBroker, nodeIid, node, (byte) 5);
+        final boolean result = GbpNetconfTransaction.netconfSyncedWrite(nodeIid, nodeIid, node, (byte) 5);
         verify(dataBroker, times(1)).newReadWriteTransaction();
         assertTrue(result);
     }
@@ -108,7 +114,7 @@ public class GbpNetconfTransactionTest {
     public void readDataReattemptTest() {
         doThrow(new IllegalStateException()).when(rTx).read(LogicalDatastoreType.CONFIGURATION, nodeIid);
 
-        final Optional<Node> result = GbpNetconfTransaction.read(dataBroker, LogicalDatastoreType.CONFIGURATION,
+        final Optional<Node> result = GbpNetconfTransaction.read(nodeIid, LogicalDatastoreType.CONFIGURATION,
                 nodeIid, (byte)5);
         verify(dataBroker, times(6)).newReadOnlyTransaction();
         assertFalse(result.isPresent());
@@ -120,7 +126,7 @@ public class GbpNetconfTransactionTest {
         when(futureNode.get()).thenReturn(Optional.of(new NodeBuilder()
                 .setKey(new NodeKey(new NodeId(NODE_ID))).build()));
 
-        final Optional<Node> result = GbpNetconfTransaction.read(dataBroker, LogicalDatastoreType.CONFIGURATION,
+        final Optional<Node> result = GbpNetconfTransaction.read(nodeIid, LogicalDatastoreType.CONFIGURATION,
                 nodeIid, (byte)5);
         verify(dataBroker, times(1)).newReadOnlyTransaction();
         assertTrue(result.isPresent());
@@ -130,11 +136,12 @@ public class GbpNetconfTransactionTest {
     public void deleteConfigCommandMissingDataTest() throws Exception {
         final InstanceIdentifier<Interface> iid = VppIidFactory.getInterfaceIID(interfaceBuilder.getKey());
         when(command.getInterfaceBuilder()).thenReturn(interfaceBuilder);
+        when(command.getIid()).thenReturn(iid);
         when(rTx.read(LogicalDatastoreType.CONFIGURATION, iid)).thenReturn(futureInterface);
         when(futureInterface.get()).thenReturn(Optional.absent());
         doThrow(new IllegalStateException()).when(command).execute(rwTx);
 
-        final boolean result = GbpNetconfTransaction.netconfSyncedDelete(dataBroker, command, (byte)5);
+        final boolean result = GbpNetconfTransaction.netconfSyncedDelete(nodeIid, command, (byte)5);
         verify(dataBroker, times(1)).newReadOnlyTransaction();
         assertTrue(result);
     }
@@ -143,12 +150,12 @@ public class GbpNetconfTransactionTest {
     public void deleteConfigCommandReattemptTest() throws Exception {
         final InstanceIdentifier<Interface> iid = VppIidFactory.getInterfaceIID(interfaceBuilder.getKey());
         when(command.getInterfaceBuilder()).thenReturn(interfaceBuilder);
+        when(command.getIid()).thenReturn(iid);
         when(rTx.read(LogicalDatastoreType.CONFIGURATION, iid)).thenReturn(futureInterface);
         when(futureInterface.get()).thenReturn(Optional.of(new InterfaceBuilder()
                 .setKey(new InterfaceKey(INTERFACE_KEY)).build()));
         doThrow(new IllegalStateException()).when(command).execute(rwTx);
-
-        final boolean result = GbpNetconfTransaction.netconfSyncedDelete(dataBroker, command, (byte)5);
+        final boolean result = GbpNetconfTransaction.netconfSyncedDelete(nodeIid, command, (byte)5);
         verify(dataBroker, times(6)).newReadWriteTransaction();
         assertFalse(result);
     }
@@ -157,6 +164,7 @@ public class GbpNetconfTransactionTest {
     public void deleteConfigCommandTest() throws Exception {
         final InstanceIdentifier<Interface> iid = VppIidFactory.getInterfaceIID(interfaceBuilder.getKey());
         when(command.getInterfaceBuilder()).thenReturn(interfaceBuilder);
+        when(command.getIid()).thenReturn(iid);
         when(rTx.read(LogicalDatastoreType.CONFIGURATION, iid)).thenReturn(futureInterface);
         when(futureInterface.get()).thenReturn(Optional.of(new InterfaceBuilder()
                 .setKey(new InterfaceKey(INTERFACE_KEY)).build()));
@@ -164,7 +172,7 @@ public class GbpNetconfTransactionTest {
         doNothing().when(command).execute(rwTx);
         when(future.get()).thenReturn(null);
 
-        final boolean result = GbpNetconfTransaction.netconfSyncedDelete(dataBroker, command, (byte)5);
+        final boolean result = GbpNetconfTransaction.netconfSyncedDelete(nodeIid, command, (byte)5);
         verify(dataBroker, times(1)).newReadWriteTransaction();
         assertTrue(result);
     }
@@ -175,7 +183,7 @@ public class GbpNetconfTransactionTest {
         when(futureNode.get()).thenReturn(Optional.absent());
         doThrow(new IllegalStateException()).when(command).execute(rwTx);
 
-        final boolean result = GbpNetconfTransaction.netconfSyncedDelete(dataBroker, nodeIid, (byte)5);
+        final boolean result = GbpNetconfTransaction.netconfSyncedDelete(nodeIid, nodeIid, (byte)5);
         verify(dataBroker, times(1)).newReadOnlyTransaction();
         assertTrue(result);
     }
@@ -187,7 +195,7 @@ public class GbpNetconfTransactionTest {
                 .setKey(new NodeKey(new NodeId(NODE_ID))).build()));
         doThrow(new IllegalStateException()).when(rwTx).delete(LogicalDatastoreType.CONFIGURATION, nodeIid);
 
-        final boolean result = GbpNetconfTransaction.netconfSyncedDelete(dataBroker, nodeIid, (byte)5);
+        final boolean result = GbpNetconfTransaction.netconfSyncedDelete(nodeIid, nodeIid, (byte)5);
         verify(dataBroker, times(6)).newReadWriteTransaction();
         assertFalse(result);
     }
@@ -201,7 +209,7 @@ public class GbpNetconfTransactionTest {
         doNothing().when(rwTx).delete(LogicalDatastoreType.CONFIGURATION, nodeIid);
         when(future.get()).thenReturn(null);
 
-        final boolean result = GbpNetconfTransaction.netconfSyncedDelete(dataBroker, nodeIid, (byte)5);
+        final boolean result = GbpNetconfTransaction.netconfSyncedDelete(nodeIid, nodeIid, (byte)5);
         verify(dataBroker, times(1)).newReadWriteTransaction();
         assertTrue(result);
     }
