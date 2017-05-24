@@ -9,6 +9,8 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.manager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -26,11 +28,11 @@ import org.opendaylight.controller.md.sal.binding.api.MountPointService;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.VppRendererDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.listener.VppNodeListener;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
+import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Host;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
@@ -54,7 +56,6 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.base.Optional;
 import com.google.common.eventbus.EventBus;
-import com.google.common.util.concurrent.CheckedFuture;
 
 /**
  * Test for {@link VppNodeManager} and {@link VppNodeListener}.
@@ -115,39 +116,40 @@ public class VppManagerDataStoreTest extends VppRendererDataBrokerTest {
 
     @Test
     public void connectNode() throws Exception {
-        WriteTransaction writeTransaction = dataBroker.newWriteOnlyTransaction();
-        Node testVppNode = createNode(NODE_NAME, NetconfNodeConnectionStatus.ConnectionStatus.Connected);
+        final ExecutorService executorService = Executors.newFixedThreadPool(2);
+        executorService.submit(() -> {
+            WriteTransaction writeTransaction = dataBroker.newWriteOnlyTransaction();
+            Node testVppNode = createNode(NODE_NAME, NetconfNodeConnectionStatus.ConnectionStatus.Connected);
 
-        writeTransaction.put(LogicalDatastoreType.OPERATIONAL, NODE_IID, testVppNode, true);
+            writeTransaction.put(LogicalDatastoreType.OPERATIONAL, NODE_IID, testVppNode, true);
 
-        writeTransaction.submit().get();
+            DataStoreHelper.submitToDs(writeTransaction);
 
-        ReadOnlyTransaction readOnlyTransaction = dataBroker.newReadOnlyTransaction();
-        CheckedFuture<Optional<Renderer>, ReadFailedException> future =
-                readOnlyTransaction.read(LogicalDatastoreType.OPERATIONAL,
-                        VppIidFactory.getRendererIID(new RendererKey(VppRenderer.NAME)));
-        Optional<Renderer> rendererOptional = future.checkedGet();
-
-        Assert.assertTrue(rendererOptional.isPresent());
-        Assert.assertEquals(1, rendererOptional.get().getRendererNodes().getRendererNode().size());
-        Assert.assertEquals(NODE_IID, rendererOptional.get().getRendererNodes().getRendererNode().get(0).getNodePath());
+            ReadOnlyTransaction readOnlyTransaction = dataBroker.newReadOnlyTransaction();
+            Optional<Renderer> rendererOptional = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
+                    VppIidFactory.getRendererIID(new RendererKey(VppRenderer.NAME)), readOnlyTransaction);
+            Assert.assertTrue(rendererOptional.isPresent());
+            Assert.assertEquals(1, rendererOptional.get().getRendererNodes().getRendererNode().size());
+            Assert.assertEquals(NODE_IID,
+                    rendererOptional.get().getRendererNodes().getRendererNode().get(0).getNodePath());
+        });
     }
 
     @Test
     public void disconnectNode() throws Exception {
-        WriteTransaction writeTransaction = dataBroker.newWriteOnlyTransaction();
+        final ExecutorService executorService = Executors.newFixedThreadPool(2);
+        executorService.submit(() -> {
+        WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
         Node testVppNode = createNode(NODE_NAME, NetconfNodeConnectionStatus.ConnectionStatus.Connected);
 
-        writeTransaction.put(LogicalDatastoreType.OPERATIONAL, NODE_IID, testVppNode, true);
+        wTx.put(LogicalDatastoreType.OPERATIONAL, NODE_IID, testVppNode, true);
 
-        writeTransaction.submit().get();
+        DataStoreHelper.submitToDs(wTx);
 
-        ReadOnlyTransaction readOnlyTransaction = dataBroker.newReadOnlyTransaction();
-        CheckedFuture<Optional<Renderer>, ReadFailedException> future =
-                readOnlyTransaction.read(LogicalDatastoreType.OPERATIONAL,
-                        VppIidFactory.getRendererIID(new RendererKey(VppRenderer.NAME)));
-        Optional<Renderer> rendererOptional = future.checkedGet();
-
+        ReadOnlyTransaction tx = dataBroker.newReadOnlyTransaction();
+        Optional<Renderer> rendererOptional = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
+                        VppIidFactory.getRendererIID(new RendererKey(VppRenderer.NAME)), tx);
+        tx.close();
         Assert.assertTrue(rendererOptional.isPresent());
         Assert.assertEquals(1, rendererOptional.get().getRendererNodes().getRendererNode().size());
         Assert.assertEquals(NODE_IID, rendererOptional.get().getRendererNodes().getRendererNode().get(0).getNodePath());
@@ -159,14 +161,13 @@ public class VppManagerDataStoreTest extends VppRendererDataBrokerTest {
 
         writeTransaction2.submit();
 
-        ReadOnlyTransaction readOnlyTransaction2 = dataBroker.newReadOnlyTransaction();
-        CheckedFuture<Optional<Renderer>, ReadFailedException> future2 =
-                readOnlyTransaction2.read(LogicalDatastoreType.OPERATIONAL,
-                        VppIidFactory.getRendererIID(new RendererKey(VppRenderer.NAME)));
-        Optional<Renderer> rendererOptional2 = future2.checkedGet();
-
+        tx = dataBroker.newReadOnlyTransaction();
+        Optional<Renderer> rendererOptional2 = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
+                        VppIidFactory.getRendererIID(new RendererKey(VppRenderer.NAME)), tx);
         Assert.assertTrue(rendererOptional2.isPresent());
+        tx.close();
         Assert.assertEquals(0, rendererOptional2.get().getRendererNodes().getRendererNode().size());
+        });
     }
 
     @After

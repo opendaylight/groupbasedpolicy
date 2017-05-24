@@ -20,15 +20,12 @@ import org.opendaylight.groupbasedpolicy.util.DataTreeChangeHandler;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicy;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 import com.google.common.eventbus.EventBus;
 
 public class RendererPolicyListener extends DataTreeChangeHandler<RendererPolicy> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(RendererPolicyListener.class);
     private EventBus eventBus;
 
     public RendererPolicyListener(@Nonnull DataBroker dataProvider, @Nonnull EventBus eventBus) {
@@ -43,7 +40,6 @@ public class RendererPolicyListener extends DataTreeChangeHandler<RendererPolicy
             InstanceIdentifier<RendererPolicy> rootIdentifier) {
         RendererPolicyConfEvent event =
                 new RendererPolicyConfEvent(rootIdentifier, rootNode.getDataBefore(), rootNode.getDataAfter());
-        LOG.trace("Dispatching event on write: {}", event.getClass());
         eventBus.post(event);
     }
 
@@ -52,7 +48,6 @@ public class RendererPolicyListener extends DataTreeChangeHandler<RendererPolicy
             InstanceIdentifier<RendererPolicy> rootIdentifier) {
         RendererPolicyConfEvent event =
                 new RendererPolicyConfEvent(rootIdentifier, rootNode.getDataBefore(), rootNode.getDataAfter());
-        LOG.trace("Dispatching event on delete: {}", event.getClass());
         eventBus.post(event);
     }
 
@@ -61,7 +56,6 @@ public class RendererPolicyListener extends DataTreeChangeHandler<RendererPolicy
             InstanceIdentifier<RendererPolicy> rootIdentifier) {
         RendererPolicyConfEvent event =
                 new RendererPolicyConfEvent(rootIdentifier, rootNode.getDataBefore(), rootNode.getDataAfter());
-        LOG.trace("Dispatching event on subtree modified: {}", event.getClass());
         eventBus.post(event);
     }
 

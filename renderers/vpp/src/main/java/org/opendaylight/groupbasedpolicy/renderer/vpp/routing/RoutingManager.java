@@ -8,8 +8,12 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.routing;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Strings;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Nonnull;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -31,15 +35,13 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.RendererForwardingByTenant;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.renderer.forwarding.by.tenant.RendererNetworkDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.renderers.renderer.renderer.nodes.renderer.node.PhysicalInterface;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nonnull;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 
 public class RoutingManager {
     private static final Logger LOG = LoggerFactory.getLogger(RoutingManager.class);
@@ -54,18 +56,18 @@ public class RoutingManager {
         this.mountDataProvider = mountDataProvider;
     }
 
-    public Map<InstanceIdentifier<?>, RoutingCommand> createRouting(
+    public Map<InstanceIdentifier<Node>, RoutingCommand> createRouting(
         @Nonnull RendererForwardingByTenant forwardingByTenant, List<InstanceIdentifier<PhysicalInterface>> physIntIids,
         General.Operations operation) {
 
-        Map<InstanceIdentifier<?>, RoutingCommand> routingCommands = new HashMap<>();
+        Map<InstanceIdentifier<Node>, RoutingCommand> routingCommands = new HashMap<>();
 
         getExternalGateways(forwardingByTenant.getRendererNetworkDomain()).forEach((gateways, virtualRouterIp) -> {
             LOG.trace("Creating routing for Tenant {}, gateway {}, virtualRouterIp {}.",
                 forwardingByTenant.getTenantId(), gateways, virtualRouterIp);
             List<Route> ipv4Routes = new ArrayList<>();
             PhysicalInterface outboundInterface = resolveOutboundInterface(virtualRouterIp, physIntIids);
-            InstanceIdentifier<?> node = resolveOutboundNode(virtualRouterIp, physIntIids);
+            InstanceIdentifier<Node> node = resolveOutboundNode(virtualRouterIp, physIntIids);
 
             String outboundIntName = outboundInterface != null ? outboundInterface.getInterfaceName() : null;
 
@@ -151,7 +153,7 @@ public class RoutingManager {
         return null;
     }
 
-    private InstanceIdentifier<?> resolveOutboundNode(@Nonnull IpAddress extIfaceIp,
+    private InstanceIdentifier<Node> resolveOutboundNode(@Nonnull IpAddress extIfaceIp,
         List<InstanceIdentifier<PhysicalInterface>> physIntIids) {
         for (InstanceIdentifier<PhysicalInterface> identifier : physIntIids) {
             Optional<PhysicalInterface> physicalInterfaceOptional = DataStoreHelper.readFromDs(
@@ -160,32 +162,32 @@ public class RoutingManager {
                 continue;
             }
             if (physicalInterfaceOptional.get().isExternal()) {
-                return identifier.firstKeyOf(RendererNode.class).getNodePath();
+                return (InstanceIdentifier<Node>) identifier.firstKeyOf(RendererNode.class).getNodePath();
             }
             if (physicalInterfaceOptional.get().getAddress().contains(extIfaceIp)){
-                return identifier.firstKeyOf(RendererNode.class).getNodePath();
+                return (InstanceIdentifier<Node>) identifier.firstKeyOf(RendererNode.class).getNodePath();
             }
         }
         return null;
     }
 
-    public boolean submitRouting(@Nonnull RoutingCommand routing, InstanceIdentifier<?> nodeIid) {
+    public boolean submitRouting(@Nonnull RoutingCommand routing, InstanceIdentifier<Node> nodeIid) {
         if (nodeIid == null) {
             LOG.info("NodeId is null Cannot create routing. RoutingCommand: {}", routing);
             return false;
         }
         LOG.trace("Submitting routing for routing command: {}, nodeId: {}", routing, nodeIid);
 
-        Optional<DataBroker> mountPointDataBroker = mountDataProvider.getDataBrokerForMountPoint(nodeIid);
-        if (!mountPointDataBroker.isPresent()) {
+        DataBroker mountPointDataBroker = mountDataProvider.resolveDataBrokerForMountPoint(nodeIid);
+        if (mountPointDataBroker == null) {
             throw new IllegalStateException("Cannot find data broker for mount point " + nodeIid);
         }
         LOG.info("Routing was created for forwarding. Routing: {}, for node: {}", routing, nodeIid);
         if (routing.getOperation() == General.Operations.PUT){
-            return GbpNetconfTransaction.netconfSyncedWrite(mountPointDataBroker.get(), routing,
+            return GbpNetconfTransaction.netconfSyncedWrite(nodeIid, routing,
                 GbpNetconfTransaction.RETRY_COUNT);
         } else if (routing.getOperation() == General.Operations.DELETE){
-            return GbpNetconfTransaction.netconfSyncedDelete(mountPointDataBroker.get(), routing,
+            return GbpNetconfTransaction.netconfSyncedDelete(nodeIid, routing,
                 GbpNetconfTransaction.RETRY_COUNT);
         }
         return false;

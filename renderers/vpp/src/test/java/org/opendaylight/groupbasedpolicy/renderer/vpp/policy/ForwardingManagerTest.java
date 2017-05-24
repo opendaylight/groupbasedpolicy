@@ -7,8 +7,10 @@
  */
 package org.opendaylight.groupbasedpolicy.renderer.vpp.policy;
 
+import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -29,12 +31,14 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.routing.RoutingManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
 import org.opendaylight.groupbasedpolicy.test.CustomDataBrokerTest;
+import org.opendaylight.vbd.impl.transaction.VbdNetconfTransaction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicyBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Configuration;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.NetworkTypeBase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.VlanNetwork;
@@ -74,6 +78,9 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
     public void init() {
         fwdManager =
             new ForwardingManager(ifaceManager, aclManager, natManager, routingManager, bdManager, getDataBroker());
+        Mockito.when(aclManager.resolveAclsOnInterface(Mockito.any(RendererEndpointKey.class),
+                Mockito.any(PolicyContext.class)))
+            .thenReturn(Futures.immediateFuture(null));
     }
 
     @Override

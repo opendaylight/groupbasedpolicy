@@ -36,11 +36,14 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.rule.groups.RuleGroupKey;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.ImmutableTable.Builder;
 import com.google.common.collect.Maps;
+import com.google.common.collect.SetMultimap;
 
 public class PolicyContext {
 
@@ -50,6 +53,7 @@ public class PolicyContext {
     private final ImmutableMap<AddressEndpointKey, AddressEndpointWithLocation> addrEpByKey;
     private final ImmutableTable<TenantId, RendererForwardingContextKey, RendererForwardingContext> forwardingCtxTable;
     private final ImmutableTable<TenantId, RendererNetworkDomainKey, RendererNetworkDomain> networkDomainTable;
+    private final ImmutableSetMultimap<RuleGroupKey, RendererEndpointKey> endpointsByRuleGroups;
 
     public PolicyContext(@Nonnull RendererPolicy policy) {
         this.policy = Preconditions.checkNotNull(policy);
@@ -58,7 +62,9 @@ public class PolicyContext {
             Configuration config = optConfig.get();
             this.ruleGroupByKey = resolveRuleGroups(config);
             List<RendererEndpoint> rendererEps = resolveRendererEndpoints(config);
-            this.policyTable = resolvePolicy(rendererEps, ruleGroupByKey);
+            SetMultimap<RuleGroupKey, RendererEndpointKey> epsByRules = HashMultimap.create();
+            this.policyTable = resolvePolicy(rendererEps, ruleGroupByKey, epsByRules);
+            this.endpointsByRuleGroups = ImmutableSetMultimap.<RuleGroupKey, RendererEndpointKey>copyOf(epsByRules);
             addrEpByKey = resolveAddrEpWithLoc(config);
             this.forwardingCtxTable = resolveForwardingCtxTable(config);
             this.networkDomainTable = resolveNetworkDomainTable(config);
@@ -68,6 +74,7 @@ public class PolicyContext {
             this.addrEpByKey = ImmutableMap.of();
             this.forwardingCtxTable = ImmutableTable.of();
             this.networkDomainTable = ImmutableTable.of();
+            this.endpointsByRuleGroups = ImmutableSetMultimap.<RuleGroupKey, RendererEndpointKey>of();
         }
     }
 
@@ -83,7 +90,7 @@ public class PolicyContext {
     }
 
     private static ImmutableTable<RendererEndpointKey, PeerEndpointKey, ImmutableSortedSet<RendererResolvedPolicy>> resolvePolicy(
-            List<RendererEndpoint> rendererEps, Map<RuleGroupKey, ResolvedRuleGroup> ruleGroupInfoByRuleGroupKey) {
+            List<RendererEndpoint> rendererEps, Map<RuleGroupKey, ResolvedRuleGroup> ruleGroupInfoByRuleGroupKey, SetMultimap<RuleGroupKey, RendererEndpointKey> epsByRules) {
         Builder<RendererEndpointKey, PeerEndpointKey, ImmutableSortedSet<RendererResolvedPolicy>> resultBuilder =
                 new Builder<>();
         Supplier<TreeSet<RendererResolvedPolicy>> rendererPolicySupplier = () -> new TreeSet<>();
@@ -100,6 +107,8 @@ public class PolicyContext {
                                     ruleGroupInfoByRuleGroupKey.get(KeyFactory.ruleGroupKey(ruleGroup.getKey()))))
                             .collect(Collectors.collectingAndThen(Collectors.toCollection(rendererPolicySupplier),
                                     ImmutableSortedSet::copyOfSorted));
+                peer.getRuleGroupWithRendererEndpointParticipation()
+                    .forEach(ruleGroup -> epsByRules.put(KeyFactory.ruleGroupKey(ruleGroup.getKey()), rEp.getKey()));
                 resultBuilder.put(rEp.getKey(), KeyFactory.peerEndpointKey(peer.getKey()),
                         ImmutableSortedSet.copyOfSorted(rPolicy));
             });
@@ -188,6 +197,10 @@ public class PolicyContext {
 
     public @Nonnull ImmutableTable<TenantId, RendererNetworkDomainKey, RendererNetworkDomain> getNetworkDomainTable() {
         return networkDomainTable;
+    }
+
+    public @Nonnull ImmutableSetMultimap<RuleGroupKey, RendererEndpointKey> getEndpointsByRuleGroups() {
+        return endpointsByRuleGroups;
     }
 
     @Override

@@ -46,6 +46,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.VppInterfaceAugmentationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.L2Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.LoopbackBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.l2.base.attributes.Interconnection;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.l2.base.attributes.interconnection.BridgeBased;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.l2.base.attributes.interconnection.BridgeBasedBuilder;
 
 import java.util.Collections;
@@ -143,7 +145,7 @@ public class LoopbackCommandTest extends VppRendererDataBrokerTest {
             .setOperation(General.Operations.PUT)
             .setInterfaceName(INTERFACE_NAME)
             .setDescription(DESCRIPTION)
-            .setBvi(IS_BVI)
+            .setBvi(true)
             .setPhysAddress(MAC_ADDRESS)
             .setIpPrefix(IP_PREFIX)
             .setIpAddress(IP_ADDRESS)
@@ -157,7 +159,6 @@ public class LoopbackCommandTest extends VppRendererDataBrokerTest {
 
         Assert.assertTrue(optional.isPresent());
         Assert.assertEquals(BASIC_INTERFACE_WITH_BD, optional.get());
-
     }
 
     private Optional<Interface> executeCommand(ReadWriteTransaction rwTx, LoopbackCommand addCommand)

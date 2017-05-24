@@ -27,19 +27,23 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev14061
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.PhysAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev161214.NatInterfaceAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev161214.NatInterfaceAugmentationBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev161214._interface.nat.attributes.Nat;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev161214._interface.nat.attributes.NatBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev161214._interface.nat.attributes.nat.InboundBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.Loopback;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.VppInterfaceAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.VppInterfaceAugmentationBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.L2;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.L2Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.LoopbackBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.l2.base.attributes.interconnection.BridgeBasedBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 
 public class LoopbackCommand extends AbstractInterfaceCommand<LoopbackCommand> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(LoopbackCommand.class);
 
     private PhysAddress physAddress;
     private String bridgeDomain;
@@ -103,9 +107,13 @@ public class LoopbackCommand extends AbstractInterfaceCommand<LoopbackCommand> {
             new VppInterfaceAugmentationBuilder().setLoopback(new LoopbackBuilder().setMac(this.physAddress).build());
 
         if (!Strings.isNullOrEmpty(bridgeDomain)) {
-            vppAugmentationBuilder.setL2(new L2Builder().setInterconnection(
-                new BridgeBasedBuilder().setBridgeDomain(bridgeDomain).setBridgedVirtualInterface(bvi).build())
-                .build());
+            L2 l2 = new L2Builder()
+                .setInterconnection(
+                        new BridgeBasedBuilder().setBridgedVirtualInterface(bvi).setBridgeDomain(bridgeDomain).build())
+                .build();
+            vppAugmentationBuilder.setL2(l2)
+                .build();
+            LOG.info("Debugging L2: tapInterfaceBuilder={}", l2);
         }
         Interface1Builder
             interface1Builder =

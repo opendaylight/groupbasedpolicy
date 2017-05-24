@@ -33,6 +33,7 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv6Prefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.parent.endpoint._case.ParentEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.RuleName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.SubnetAugmentRenderer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.has.subnet.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.HasDirection.Direction;
@@ -58,7 +59,7 @@ import com.google.common.base.Optional;
 public class AccessListUtil {
 
     private static final Logger LOG = LoggerFactory.getLogger(AccessListUtil.class);
-    private static final String UNDERSCORE = "_";
+    static final String UNDERSCORE = "_";
     private static final String PERMIT_EXTERNAL_INGRESS = "permit_external_ingress";
     private static final String PERMIT_EXTERNAL_EGRESS = "permit_external_egress";
     private static final String DENY_INGRESS_IPV4 = "deny_ingress_ipv4";
@@ -83,11 +84,9 @@ public class AccessListUtil {
             .forEach(peerEpKey -> {
                 ctx.getPolicyTable().get(rEpKey, peerEpKey).forEach(resolvedRules -> {
                     List<GbpAceBuilder> rules = new ArrayList<>();
-                    LOG.debug("Resolving policy for {} and peer endpoint {}", rEpKey, peerEpKey);
                     Direction classifDir = calculateClassifDirection(resolvedRules.getRendererEndpointParticipation(),
                             policyDirection);
-                    rules.addAll(resolveAclRulesFromPolicy(resolvedRules, classifDir,
-                            rEpKey.getAddress() + UNDERSCORE + peerEpKey.getAddress()));
+                    rules.addAll(resolveAclRulesFromPolicy(resolvedRules, classifDir, rEpKey, peerEpKey));
                     updateAddressesInRules(rules, rEpKey, peerEpKey, ctx, policyDirection, true);
                     aclWrapper.writeRules(rules);
 
@@ -116,7 +115,7 @@ public class AccessListUtil {
      * @param direction EGRESS or INGRESS
      * @return Direction that classifiers should match for given policy direction.
      */
-    private static Direction calculateClassifDirection(EndpointPolicyParticipation participation, ACE_DIRECTION direction) {
+     static Direction calculateClassifDirection(EndpointPolicyParticipation participation, ACE_DIRECTION direction) {
         if (EndpointPolicyParticipation.PROVIDER.equals(participation) && ACE_DIRECTION.INGRESS.equals(direction)) {
             return Direction.Out;
         }
@@ -126,7 +125,7 @@ public class AccessListUtil {
         return Direction.In;
     }
 
-    private static void updateAddressesInRules(List<GbpAceBuilder> rules, RendererEndpointKey rEpKey,
+    static void updateAddressesInRules(List<GbpAceBuilder> rules, RendererEndpointKey rEpKey,
             PeerEndpointKey peerEpKey, PolicyContext ctx, ACE_DIRECTION policyDirection,
             boolean resolveForLocationPeers) {
         for (AddressMapper addrMapper : Arrays.asList(new SourceMapper(policyDirection),
@@ -160,31 +159,42 @@ public class AccessListUtil {
      * @param direction rules matching corresponding direction will be collected
      * @return resolved ACE entries
      */
+
+     static @Nonnull String resolveAceName(@Nonnull RuleName ruleName, @Nonnull RendererEndpointKey key,
+            @Nonnull PeerEndpointKey peer) {
+        return ruleName.getValue() + "_" + key.getAddress() + "_" + peer.getAddress();
+    }
+
     private static List<GbpAceBuilder> resolveAclRulesFromPolicy(RendererResolvedPolicy resolvedPolicy,
-            Direction direction, String namePasphrase) {
+            Direction direction, RendererEndpointKey r, PeerEndpointKey p) {
         List<GbpAceBuilder> aclRules = new ArrayList<>();
         for (ResolvedRule resolvedRule : resolvedPolicy.getRuleGroup().getRules()) {
-            Map<String, ParameterValue> params = resolveClassifParamsForDir(direction, resolvedRule.getClassifier());
-            if (params.isEmpty()) {
-                continue;
+            Optional<GbpAceBuilder> resolveAce = resolveAceClassifersAndAction(resolvedRule, direction, resolveAceName(resolvedRule.getName(), r, p));
+            if(resolveAce.isPresent()) {
+                aclRules.add(resolveAce.get());
             }
-            LOG.debug("Processing classifification params {} in resolved rule {}.", params,
-                    resolvedRule.getName() + UNDERSCORE + namePasphrase);
-            org.opendaylight.groupbasedpolicy.renderer.vpp.sf.Classifier classif =
-                    resolveImplementedClassifForDir(direction, resolvedRule.getClassifier());
-            GbpAceBuilder aclRuleBuilder =
-                    new GbpAceBuilder(resolvedRule.getName().getValue() + UNDERSCORE + namePasphrase);
-            boolean updated = classif != null && classif.updateMatch(aclRuleBuilder, params);
-            Optional<Actions> optAction = resolveActions(resolvedRule.getAction());
-            if (!optAction.isPresent() || !updated) {
-                LOG.error("Failed to process rule {}. Resolved parameters {}, resolved classifier. Actions resolved: {}"
-                        + "{}.", resolvedRule.getName().getValue(), params, classif, optAction.isPresent());
-                continue;
-            }
-            aclRuleBuilder.setAction(optAction.get());
-            aclRules.add(aclRuleBuilder);
         }
         return aclRules;
+    }
+
+    public static Optional<GbpAceBuilder> resolveAceClassifersAndAction(ResolvedRule resolvedRule, Direction direction, String ruleName) {
+        Map<String, ParameterValue> params = resolveClassifParamsForDir(direction, resolvedRule.getClassifier());
+        if (params.isEmpty()) {
+            return Optional.absent();
+        }
+        org.opendaylight.groupbasedpolicy.renderer.vpp.sf.Classifier classif =
+                resolveImplementedClassifForDir(direction, resolvedRule.getClassifier());
+        GbpAceBuilder aclRuleBuilder = new GbpAceBuilder(ruleName);
+                //new GbpAceBuilder(resolvedRule.getName().getValue() + UNDERSCORE + namePasphrase);
+        boolean updated = classif != null && classif.updateMatch(aclRuleBuilder, params);
+        Optional<Actions> optAction = resolveActions(resolvedRule.getAction());
+        if (!optAction.isPresent() || !updated) {
+            LOG.error("Failed to process rule {}. Resolved parameters {}, resolved classifier. Actions resolved: {}"
+                    + "{}.", resolvedRule.getName().getValue(), params, classif, optAction.isPresent());
+            return Optional.absent();
+        }
+        aclRuleBuilder.setAction(optAction.get());
+        return Optional.of(aclRuleBuilder);
     }
 
     private static org.opendaylight.groupbasedpolicy.renderer.vpp.sf.Classifier resolveImplementedClassifForDir(
@@ -211,13 +221,11 @@ public class AccessListUtil {
         classifier.stream()
             .filter(classif -> direction.equals(classif.getDirection()) || direction.equals(Direction.Bidirectional))
             .forEach(classif -> {
-                LOG.trace("Resolving parameters for classiifier: {} with direction", classif, direction);
                 classif.getParameterValue()
                     .stream()
                     .filter(v -> params.get(v.getName().getValue()) == null) // not unique
                     .filter(v -> v.getIntValue() != null || v.getStringValue() != null || v.getRangeValue() != null)
                     .forEach(v -> params.put(v.getName().getValue(), v));
-                LOG.trace("Resolved parameters {} for classiifier: {} with direction {}", params, classif, direction);
             });
         return params;
     }
@@ -226,12 +234,10 @@ public class AccessListUtil {
         for (Action action : actions) {
             if (AllowActionDefinition.ID
                 .equals(action.getActionDefinitionId())) {
-                LOG.trace("Applying supported action: {}", action);
                 return Optional
                     .of(new ActionsBuilder().setPacketHandling(new PermitBuilder().setPermit(true).build()).build());
             }
         }
-        LOG.warn("No supported action found among actions: {}", actions);
         return Optional.absent();
     }
 

@@ -8,6 +8,7 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.commands;
 
+import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General.Operations;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
@@ -16,14 +17,19 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.VhostUserRole;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.VppInterfaceAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.VppInterfaceAugmentationBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.L2;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.L2Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.VhostUserBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.l2.base.attributes.interconnection.BridgeBasedBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 
 public class VhostUserCommand extends AbstractInterfaceCommand<VhostUserCommand> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(VhostUserCommand.class);
 
     private String socket;
     private VhostUserRole role;
@@ -71,8 +77,10 @@ public class VhostUserCommand extends AbstractInterfaceCommand<VhostUserCommand>
         VppInterfaceAugmentationBuilder vppAugmentationBuilder = new VppInterfaceAugmentationBuilder()
             .setVhostUser(new VhostUserBuilder().setRole(role).setSocket(socket).build());
         if (!Strings.isNullOrEmpty(bridgeDomain)) {
-            vppAugmentationBuilder.setL2(new L2Builder()
-                .setInterconnection(new BridgeBasedBuilder().setBridgeDomain(bridgeDomain).build()).build());
+            L2 l2 = new L2Builder()
+            .setInterconnection(new BridgeBasedBuilder().setBridgeDomain(bridgeDomain).build()).build();
+            vppAugmentationBuilder.setL2(l2);
+            LOG.info("Debugging L2: vhostInterfaceBuilder={}", l2);
         }
 
         interfaceBuilder.addAugmentation(VppInterfaceAugmentation.class, vppAugmentationBuilder.build());

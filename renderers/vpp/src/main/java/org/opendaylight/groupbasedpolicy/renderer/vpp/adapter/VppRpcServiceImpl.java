@@ -33,12 +33,12 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.AddInterfaceToBridgeDomainInput;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.CloneVirtualBridgeDomainOnNodesInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.CreateInterfaceOnNodeInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.CreateVirtualBridgeDomainOnNodesInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.DelInterfaceFromBridgeDomainInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.DeleteInterfaceFromNodeInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.DeleteVirtualBridgeDomainFromNodesInput;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.CloneVirtualBridgeDomainOnNodesInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.VppAdapterService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.bridge.domain.attributes.tunnel.type.Vlan;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapter.rev161201.bridge.domain.attributes.tunnel.type.Vxlan;
@@ -205,13 +205,13 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
             ifaceCommand = tapBuilder.build();
         }
         InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(input.getVppNodeId());
-        Optional<DataBroker> optDataBroker = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
-        if (!optDataBroker.isPresent()) {
+        DataBroker optDataBroker = mountDataProvider.resolveDataBrokerForMountPoint(vppNodeIid);
+        if (optDataBroker == null) {
             return Futures.immediateFuture(RpcResultBuilder.<Void>failed()
                 .withError(ErrorType.RPC, "Cannot find data broker for mount point " + vppNodeIid)
                 .build());
         }
-        return Futures.transform(interfaceManager.createInterfaceOnVpp(ifaceCommand, optDataBroker.get()),
+        return Futures.transform(interfaceManager.createInterfaceOnVpp(ifaceCommand, vppNodeIid),
                 voidToRpcResult());
     }
 
@@ -233,8 +233,8 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
                                                 + ". Not found or already deleted.")
                                 .build());
                         }
-                        Optional<DataBroker> dataBroker = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
-                        WriteTransaction wTx = dataBroker.get().newWriteOnlyTransaction();
+                        DataBroker dataBroker = mountDataProvider.resolveDataBrokerForMountPoint(vppNodeIid);
+                        WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
                         wTx.delete(LogicalDatastoreType.CONFIGURATION, VppIidFactory.getInterfaceIID(iKey));
                         return Futures.transform(wTx.submit(), voidToRpcResult());
                     }
@@ -259,8 +259,7 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
                                                 + vppNodeIid + ". Not found or deleted.")
                                 .build());
                         }
-                        Optional<DataBroker> dataBroker = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
-                        return Futures.transform(interfaceManager.configureInterface(dataBroker.get(), iKey,
+                        return Futures.transform(interfaceManager.configureInterface(vppNodeIid, iKey,
                                 input.getBridgeDomainId(), null), voidToRpcResult());
                     }
                 });
@@ -283,21 +282,20 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
                                                 + ". Not found or deleted.")
                                 .build());
                         }
-                        Optional<DataBroker> dataBroker = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
-                        return Futures.transform(interfaceManager.removeInterfaceFromBridgeDomain(dataBroker.get(),
+                        return Futures.transform(interfaceManager.removeInterfaceFromBridgeDomain(vppNodeIid,
                                 optIface.get().getKey()), voidToRpcResult());
                     }
                 });
     }
 
-    private CheckedFuture<Optional<Interface>, ReadFailedException> readInterface(InstanceIdentifier<?> nodeIid,
+    private CheckedFuture<Optional<Interface>, ReadFailedException> readInterface(InstanceIdentifier<Node> nodeIid,
             String interfaceName) {
-        Optional<DataBroker> optDataBroker = mountDataProvider.getDataBrokerForMountPoint(nodeIid);
-        if (!optDataBroker.isPresent()) {
+        DataBroker optDataBroker = mountDataProvider.resolveDataBrokerForMountPoint(nodeIid);
+        if (optDataBroker == null) {
             LOG.error("Cannot find data broker for node {}", nodeIid);
             return Futures.immediateCheckedFuture(Optional.absent());
         }
-        ReadOnlyTransaction rwTx = optDataBroker.get().newReadOnlyTransaction();
+        ReadOnlyTransaction rwTx = optDataBroker.newReadOnlyTransaction();
         InterfaceKey iKey = new InterfaceKey(interfaceName);
         InstanceIdentifier<Interface> interfaceIID = VppIidFactory.getInterfaceIID(iKey);
         CheckedFuture<Optional<Interface>, ReadFailedException> readInterface = rwTx.read(

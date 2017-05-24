@@ -49,7 +49,6 @@ class DestinationMapper extends AddressMapper {
             }
             address = parentEndpoints.get(0).getAddress();
         }
-        LOG.trace("Setting dst IP address {} in rule {}", address, aclRuleBuilder);
         try {
             AccessListUtil.setDestinationL3Address(aclRuleBuilder, address);
         } catch (UnknownHostException e) {

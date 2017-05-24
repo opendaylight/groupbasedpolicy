@@ -9,6 +9,7 @@
 package org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl;
 
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import org.junit.Assert;
@@ -16,11 +17,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.PolicyContext;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-
-import com.google.common.base.Optional;
 
 public class AccessListUtilTest extends TestResources {
 
@@ -33,25 +33,32 @@ public class AccessListUtilTest extends TestResources {
         ctx = super.createPolicyContext();
         mountedDataProviderMock = Mockito.mock(MountedDataBrokerProvider.class);
         mountPointDataBroker = Mockito.mock(DataBroker.class);
-        Mockito.when(mountedDataProviderMock.getDataBrokerForMountPoint(Mockito.any(InstanceIdentifier.class)))
-            .thenReturn(Optional.of(mountPointDataBroker));
+        Mockito.when(mountedDataProviderMock.resolveDataBrokerForMountPoint(Mockito.any(InstanceIdentifier.class)))
+            .thenReturn(mountPointDataBroker);
     }
 
     @Test
     public void resolveAclsOnInterfaceTest() {
         // TODO add more checking
-        AclManager aclManager = new AclManager(mountedDataProviderMock);
-        List<AccessListWrapper> acls =
-                aclManager.resolveAclsOnInterface(rendererEndpoint(l2AddrEp2).build().getKey(), ctx);
-        Assert.assertEquals(2, acls.size());
-        Assert.assertEquals(2, acls.stream().map(AccessListWrapper::getDirection).collect(Collectors.toSet()).size());
-        acls.stream().forEach(ace -> {
-            // allow peer + deny rest of tenant net + permit external
-            if (ace instanceof IngressAccessListWrapper) {
-                Assert.assertEquals(3, ace.readRules().size());
-            } else if (ace instanceof EgressAccessListWrapper) {
-                Assert.assertEquals(3, ace.readRules().size());
-            }
-        });
+        AclManager aclManager = new AclManager(mountedDataProviderMock, Mockito.mock(InterfaceManager.class));
+
+        try {
+            List<AccessListWrapper> acls =
+                    aclManager.resolveAclsOnInterface(rendererEndpoint(l2AddrEp2).build().getKey(), ctx).get();
+            Assert.assertEquals(2, acls.size());
+            Assert.assertEquals(2,
+                    acls.stream().map(AccessListWrapper::getDirection).collect(Collectors.toSet()).size());
+            acls.stream().forEach(ace -> {
+                // allow peer + deny rest of tenant net + permit external
+                if (ace instanceof IngressAccessListWrapper) {
+                    Assert.assertEquals(3, ace.readRules().size());
+                } else if (ace instanceof EgressAccessListWrapper) {
+                    Assert.assertEquals(3, ace.readRules().size());
+                }
+            });
+
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
     }
 }

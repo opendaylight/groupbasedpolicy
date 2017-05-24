@@ -10,6 +10,8 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.commands;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+
+import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General.Operations;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
@@ -19,11 +21,16 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.Tap;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.VppInterfaceAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.VppInterfaceAugmentationBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.L2;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.L2Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.TapBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.l2.base.attributes.interconnection.BridgeBasedBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TapPortCommand extends AbstractInterfaceCommand<TapPortCommand> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(TapPortCommand.class);
 
     private String tapName;
     private PhysAddress physAddress;
@@ -79,8 +86,10 @@ public class TapPortCommand extends AbstractInterfaceCommand<TapPortCommand> {
                     .build());
 
         if (!Strings.isNullOrEmpty(bridgeDomain)) {
-            vppAugmentationBuilder.setL2(new L2Builder()
-                .setInterconnection(new BridgeBasedBuilder().setBridgeDomain(bridgeDomain).build()).build());
+            L2 l2 = new L2Builder()
+            .setInterconnection(new BridgeBasedBuilder().setBridgeDomain(bridgeDomain).build()).build();
+            vppAugmentationBuilder.setL2(l2);
+            LOG.info("Debugging L2: tapInterfaceBuilder={}", l2);
         }
 
         interfaceBuilder.addAugmentation(VppInterfaceAugmentation.class, vppAugmentationBuilder.build());
