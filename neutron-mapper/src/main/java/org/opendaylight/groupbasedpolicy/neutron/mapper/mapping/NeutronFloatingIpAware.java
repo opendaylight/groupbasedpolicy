@@ -27,6 +27,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.l3endpoint.rev151217.NatAddressBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.floatingips.attributes.Floatingips;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.floatingips.attributes.floatingips.Floatingip;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.l3.rev150712.floatingips.attributes.floatingips.FloatingipBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
@@ -48,6 +49,13 @@ public class NeutronFloatingIpAware implements NeutronAware<Floatingip> {
     @Override
     public void onCreated(Floatingip floatingIP, Neutron neutron) {
         LOG.trace("created floatingIp - {}", floatingIP);
+        // TODO implement onCreate properly and replace tmp workaround
+        if (floatingIP.getFixedIpAddress() != null && floatingIP.getPortId() != null
+                && floatingIP.getRouterId() != null) {
+            Floatingip unassociatedFloatingIp =
+                    new FloatingipBuilder(floatingIP).setFixedIpAddress(null).setPortId(null).setRouterId(null).build();
+            onUpdated(unassociatedFloatingIp, floatingIP, neutron, neutron);
+        }
     }
 
     @Override
@@ -60,11 +68,7 @@ public class NeutronFloatingIpAware implements NeutronAware<Floatingip> {
             return;
         }
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
-        try {
-            Utils.syncNat(rwTx, oldFloatingIp, newFloatingIp);
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-        }
+        Utils.syncNat(rwTx, oldFloatingIp, newFloatingIp);
         syncNatForEndpoint(rwTx, oldFloatingIp, newFloatingIp);
         boolean isSubmitToDsSuccessful = DataStoreHelper.submitToDs(rwTx);
         if (!isSubmitToDsSuccessful) {
@@ -77,14 +81,13 @@ public class NeutronFloatingIpAware implements NeutronAware<Floatingip> {
         IpAddress oldEpIp = oldFloatingIp.getFixedIpAddress();
         IpAddress newEpIp = newFloatingIp.getFixedIpAddress();
         IpAddress epNatIp = newFloatingIp.getFloatingIpAddress();
-        L3ContextId routerL3ContextId = new L3ContextId(newFloatingIp.getRouterId().getValue());
-
-        if (oldEpIp != null) {
+        if (oldEpIp != null && oldFloatingIp.getRouterId() != null) {
+            L3ContextId routerL3ContextId = new L3ContextId(oldFloatingIp.getRouterId().getValue());
             DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
                 IidFactory.l3EndpointIid(routerL3ContextId, oldEpIp).augmentation(NatAddress.class), rwTx);
         }
-
-        if (epNatIp != null && newEpIp != null) {
+        if (epNatIp != null && newEpIp != null && newFloatingIp.getRouterId() != null) {
+            L3ContextId routerL3ContextId = new L3ContextId(newFloatingIp.getRouterId().getValue());
             NatAddress nat = new NatAddressBuilder().setNatAddress(epNatIp).build();
             AddressEndpointKey aek =
                 new AddressEndpointKey(newEpIp.getIpv4Address().getValue() + "/32", IpPrefixType.class,
@@ -104,5 +107,12 @@ public class NeutronFloatingIpAware implements NeutronAware<Floatingip> {
     @Override
     public void onDeleted(Floatingip floatingIP, Neutron oldNeutron, Neutron newNeutron) {
         LOG.trace("deleted floatingIP - {}", floatingIP);
+        ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
+        Utils.removeNat(rwTx, floatingIP);
+        try {
+            rwTx.submit().get();
+        } catch (InterruptedException | ExecutionException e) {
+            LOG.error("Failed to remove floating IP {}. {}", floatingIP, e);
+        }
     }
 }
