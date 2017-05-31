@@ -102,35 +102,54 @@ public class Utils {
     }
 
     //TODO move to FloatingIpAware when deprecated API is removed
-    public static void syncNat(ReadWriteTransaction rwTx, Floatingip oldFloatingIp, Floatingip newFloatingIp)
-            throws InterruptedException, ExecutionException {
+    public static void syncNat(ReadWriteTransaction rwTx, Floatingip oldFloatingIp, Floatingip newFloatingIp) {
         IpAddress oldEpIp = oldFloatingIp.getFixedIpAddress();
         IpAddress newEpIp = newFloatingIp.getFixedIpAddress();
         IpAddress epNatIp = newFloatingIp.getFloatingIpAddress();
         if (epNatIp != null && newEpIp != null) {
-            InstanceIdentifier<BaseEndpointByPort> baseEpByPortId = NeutronGbpIidFactory.baseEndpointByPortIid(new UniqueId(
-                    newFloatingIp.getPortId().getValue()));
-            Optional<BaseEndpointByPort> optional = rwTx.read(LogicalDatastoreType.OPERATIONAL, baseEpByPortId).get();
+            InstanceIdentifier<BaseEndpointByPort> baseEpByPortId =
+                    NeutronGbpIidFactory.baseEndpointByPortIid(new UniqueId(newFloatingIp.getPortId().getValue()));
+            Optional<BaseEndpointByPort> optional =
+                    DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL, baseEpByPortId, rwTx);
             if (!optional.isPresent()) {
                 return;
             }
             NatAddress nat = new NatAddressBuilder().setNatAddress(epNatIp).build();
-            AddressEndpointKey addrEpKey = new AddressEndpointKey(optional.get().getAddress(), optional.get()
-                .getAddressType(), optional.get().getContextId(), optional.get().getContextType());
+            AddressEndpointKey addrEpKey = new AddressEndpointKey(optional.get().getAddress(),
+                    optional.get().getAddressType(), optional.get().getContextId(), optional.get().getContextType());
             rwTx.put(LogicalDatastoreType.OPERATIONAL,
                     IidFactory.addressEndpointIid(addrEpKey).augmentation(NatAddress.class), nat, true);
         }
         if (oldEpIp != null) {
-            InstanceIdentifier<BaseEndpointByPort> baseEpByPortId = NeutronGbpIidFactory.baseEndpointByPortIid(new UniqueId(
-                    oldFloatingIp.getPortId().getValue()));
-            Optional<BaseEndpointByPort> optional = rwTx.read(LogicalDatastoreType.OPERATIONAL, baseEpByPortId).get();
+            InstanceIdentifier<BaseEndpointByPort> baseEpByPortId =
+                    NeutronGbpIidFactory.baseEndpointByPortIid(new UniqueId(oldFloatingIp.getPortId().getValue()));
+            Optional<BaseEndpointByPort> optional =
+                    DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL, baseEpByPortId, rwTx);
             if (!optional.isPresent()) {
                 return;
             }
-            AddressEndpointKey addrEpKey = new AddressEndpointKey(optional.get().getAddress(), optional.get()
-                .getAddressType(), optional.get().getContextId(), optional.get().getContextType());
-            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL, IidFactory.addressEndpointIid(addrEpKey)
-                .augmentation(NatAddress.class), rwTx);
+            AddressEndpointKey addrEpKey = new AddressEndpointKey(optional.get().getAddress(),
+                    optional.get().getAddressType(), optional.get().getContextId(), optional.get().getContextType());
+            DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
+                    IidFactory.addressEndpointIid(addrEpKey).augmentation(NatAddress.class), rwTx);
         }
+    }
+
+    public static void removeNat(ReadWriteTransaction rwTx, Floatingip removedFloatingIp) {
+        if (removedFloatingIp.getFixedIpAddress() == null) {
+            // NAT augmentation should have been already removed
+            return;
+        }
+        InstanceIdentifier<BaseEndpointByPort> baseEpByPortId =
+                NeutronGbpIidFactory.baseEndpointByPortIid(new UniqueId(removedFloatingIp.getPortId().getValue()));
+        Optional<BaseEndpointByPort> optional =
+                DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL, baseEpByPortId, rwTx);
+        if (!optional.isPresent()) {
+            return;
+        }
+        AddressEndpointKey addrEpKey = new AddressEndpointKey(optional.get().getAddress(),
+                optional.get().getAddressType(), optional.get().getContextId(), optional.get().getContextType());
+        rwTx.delete(LogicalDatastoreType.OPERATIONAL,
+                IidFactory.addressEndpointIid(addrEpKey).augmentation(NatAddress.class));
     }
 }
