@@ -26,9 +26,15 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProv
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpSubnet;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.unnumbered.interfaces.rev170510.InterfaceUnnumberedAugmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.unnumbered.interfaces.rev170510.InterfaceUnnumberedAugmentationBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.unnumbered.interfaces.rev170510.unnumbered.config.attributes.UnnumberedBuilder;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,6 +96,10 @@ public class LoopbackManager {
             String subnetUuid = loopbackManagerHelper.getSubnet(addressEp);
 
             if (subnetHostSpecificInfo.loopbackAlreadyExists(hostName, subnetUuid)) {
+                subnetHostSpecificInfo.addNewPortInHostSubnet(hostName, subnetUuid);
+                String loopbackInterfaceName = subnetHostSpecificInfo
+                        .getInterfaceNameForLoopbackInHost(hostName, subnetUuid);
+                addUnnumberedInterface(addressEp, loopbackInterfaceName);
                 return;
             }
 
@@ -106,6 +116,7 @@ public class LoopbackManager {
 
             createLoopbackInterface(hostName, subnetUuid, vppDataBroker, simpleLoopbackCommand);
             addProxyArpRange(vppDataBroker, vrf, gbpSubnetInfo, hostName);
+            addUnnumberedInterface(addressEp, interfaceName);
         } catch (LispConfigCommandFailedException e) {
             LOG.warn("LISP couldn't be configured: {}", e.getMessage());
         }
@@ -242,6 +253,32 @@ public class LoopbackManager {
         return GbpNetconfTransaction.netconfSyncedDelete(vppDataBroker,
                                                          builder.build(),
                                                          GbpNetconfTransaction.RETRY_COUNT);
+    }
+
+    private void addUnnumberedInterface(AddressEndpointWithLocation addressEp, String loopbackName) throws LispConfigCommandFailedException {
+        DataBroker vppDataBroker = loopbackManagerHelper.getPotentialExternalDataBroker(addressEp).get();
+        String neutronInterfaceName = loopbackManagerHelper.getInterfaceName(addressEp).get();
+
+        if (putUnnumberedInterface(vppDataBroker, neutronInterfaceName, loopbackName)) {
+            LOG.debug("Added Interface {} as unnumberd for {}", loopbackName, neutronInterfaceName);
+        } else {
+            throw new LispConfigCommandFailedException("Unnumbered configuration failed for " +
+                    neutronInterfaceName + " - " + loopbackName);
+        }
+    }
+
+    private boolean putUnnumberedInterface(DataBroker vppDataBroker, String interfaceFor, String interfaceWith) {
+        UnnumberedBuilder unnumberedBuilder = new UnnumberedBuilder();
+        unnumberedBuilder.setUse(interfaceWith);
+        InstanceIdentifier<Interface> interfaceIid = VppIidFactory.getInterfaceIID(new InterfaceKey(interfaceFor));
+        InterfaceUnnumberedAugmentationBuilder augBuilder = new InterfaceUnnumberedAugmentationBuilder();
+        augBuilder.setUnnumbered(unnumberedBuilder.build());
+        InterfaceBuilder interfaceBuilder = new InterfaceBuilder().setKey(new InterfaceKey(interfaceFor));
+        interfaceBuilder.addAugmentation(InterfaceUnnumberedAugmentation.class, augBuilder.build());
+        return GbpNetconfTransaction.netconfSyncedMerge(vppDataBroker,
+                interfaceIid,
+                interfaceBuilder.build(),
+                GbpNetconfTransaction.RETRY_COUNT);
     }
 
     private long getVni(String tenantUuid) {
