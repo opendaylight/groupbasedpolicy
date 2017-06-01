@@ -8,6 +8,8 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp;
 
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.GbpGpeEntryDom;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.GpeEnableDom;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.InterfaceDom;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.LispDom;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.LocalMappingDom;
@@ -18,7 +20,11 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.MapServe
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.VniTableDom;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.VrfSubtableDom;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518.gpe.entry.table.grouping.gpe.entry.table.GpeEntry;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518.gpe.entry.table.grouping.gpe.entry.table.gpe.entry.RemoteEid;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518.gpe.feature.data.grouping.GpeFeatureData;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.Lisp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.MapReplyAction;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.MappingId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.dp.subtable.grouping.local.mappings.LocalMapping;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.dp.subtable.grouping.local.mappings.local.mapping.Eid;
@@ -112,5 +118,33 @@ public class LispCommandWrapper {
 
     public static AbstractLispCommand<LispFeatureData> deleteLispFeatureData() {
         return new DeleteLispFeatureDataCommand();
+    }
+
+    public static AbstractLispCommand<GpeFeatureData> enableGpe() {
+        GpeEnableDom gpeEnableDom = new GpeEnableDom();
+        gpeEnableDom.setEnabled(true);
+
+        return new ConfigureGpeCommand(gpeEnableDom);
+    }
+
+    public static AbstractLispCommand<GpeEntry> addGpeSendMapregisterAction(String entryName,
+                                                                            RemoteEid rEid,
+                                                                            long vni,
+                                                                            long vrf) {
+        GbpGpeEntryDom gpeEntryDom = new GbpGpeEntryDom();
+        gpeEntryDom.setId(entryName);
+        gpeEntryDom.setRemoteEid(rEid);
+        gpeEntryDom.setVni(vni);
+        gpeEntryDom.setVrf(vrf);
+        gpeEntryDom.setAction(MapReplyAction.SendMapRequest);
+
+        return new ConfigureGpeEntryCommand(gpeEntryDom);
+    }
+
+    public static AbstractLispCommand<GpeEntry> deleteGpeEntry(String entryName) {
+        GbpGpeEntryDom gpeEntryDom = new GbpGpeEntryDom();
+        gpeEntryDom.setId(entryName);
+
+        return new ConfigureGpeEntryCommand(gpeEntryDom);
     }
 }

@@ -22,6 +22,7 @@ import java.util.Set;
 public class LispState {
     private String hostName;
     private boolean lispEnabled;
+    private boolean gpeEnabled;
     private HashMap<String, String> locIntfToLocSetNameMapping;
     private Set<IpAddress> mapServerIpAddressSet;
     private Set<IpAddress> mapResolverIpAddressSet;
@@ -52,6 +53,14 @@ public class LispState {
 
     public void setLispEnabled(boolean lispEnabled) {
         this.lispEnabled = lispEnabled;
+    }
+
+    public boolean isGpeEnabled() {
+        return gpeEnabled;
+    }
+
+    public void setGpeEnabled(boolean gpeEnabled) {
+        this.gpeEnabled = gpeEnabled;
     }
 
     public String getLocIntfToLocSetNameMapping(String locatorIntf) {

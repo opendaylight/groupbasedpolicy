@@ -14,7 +14,11 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.LoopbackCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.LoopbackCommandWrapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.ProxyRangeCommand;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.AbstractLispCommand;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.LispCommandWrapper;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateCommandExecutor;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispConfigCommandFailedException;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispHelperArgumentException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.LoopbackHostSpecificInfoMapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.NeutronTenantToVniMapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.SubnetUuidToGbpSubnetMapper;
@@ -22,6 +26,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.ConfigManagerHel
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.IpAddressUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.util.LispUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
@@ -29,8 +34,11 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.lisp.address.types.rev151105.Ipv4PrefixAfi;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpSubnet;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518.gpe.entry.table.grouping.gpe.entry.table.GpeEntry;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518.gpe.entry.table.grouping.gpe.entry.table.gpe.entry.RemoteEid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.unnumbered.interfaces.rev170510.InterfaceUnnumberedAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.unnumbered.interfaces.rev170510.InterfaceUnnumberedAugmentationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.unnumbered.interfaces.rev170510.unnumbered.config.attributes.UnnumberedBuilder;
@@ -54,6 +62,7 @@ public class LoopbackManager {
     private SubnetUuidToGbpSubnetMapper subnetUuidToGbpSubnetMapper;
 
     private static final String LOOP_NAME_PREFIX = "loop-";
+    private static final String GPE_ENTRY_PREFIX = "gpe-entry-";
 
     public LoopbackManager(@Nonnull MountedDataBrokerProvider mountedDataBrokerProvider) {
         this.loopbackManagerHelper = new ConfigManagerHelper(mountedDataBrokerProvider);
@@ -116,6 +125,7 @@ public class LoopbackManager {
 
             createLoopbackInterface(hostName, subnetUuid, vppDataBroker, simpleLoopbackCommand);
             addProxyArpRange(vppDataBroker, vrf, gbpSubnetInfo, hostName);
+            addGpeEntry(vppDataBroker, gbpSubnetInfo, vni);
             addUnnumberedInterface(addressEp, interfaceName);
         } catch (LispConfigCommandFailedException e) {
             LOG.warn("LISP couldn't be configured: {}", e.getMessage());
@@ -167,6 +177,8 @@ public class LoopbackManager {
             try {
                 deleteSpecificLoopback(vppDataBroker, interfaceName);
                 deleteProxyArpRange(vppDataBroker, vni, gbpSubnetInfo, hostId);
+                deleteGpeEntry(vppDataBroker, GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_1");
+                deleteGpeEntry(vppDataBroker, GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_2");
             } catch (LispConfigCommandFailedException e) {
                 LOG.warn("Loopback not deleted properly: {}", e.getMessage());
             }
@@ -279,6 +291,42 @@ public class LoopbackManager {
                 interfaceIid,
                 interfaceBuilder.build(),
                 GbpNetconfTransaction.RETRY_COUNT);
+    }
+
+    private void addGpeEntry(DataBroker vppDataBroker, GbpSubnet gbpSubnetInfo, long vni) {
+        try {
+            Pair<Ipv4Prefix, Ipv4Prefix> delegatingSubnets = IpAddressUtil
+                    .getSmallerSubnet(gbpSubnetInfo.getCidr().getIpv4Prefix());
+
+            RemoteEid firstREid = LispUtil.toRemoteEid(LispUtil.toLispIpv4Prefix(delegatingSubnets.getLeft()),
+                                                       vni,
+                                                       Ipv4PrefixAfi.class);
+            putGpeEntry(vppDataBroker, GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_1", firstREid, vni, vni);
+
+            if (delegatingSubnets.getLeft().equals(delegatingSubnets.getRight())) {
+                return;
+            }
+
+            RemoteEid secondREid = LispUtil.toRemoteEid(LispUtil.toLispIpv4Prefix(delegatingSubnets.getRight()),
+                                                        vni,
+                                                        Ipv4PrefixAfi.class);
+
+            putGpeEntry(vppDataBroker, GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_2", secondREid, vni, vni);
+        } catch (LispHelperArgumentException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private boolean putGpeEntry(DataBroker vppDataBroker, String id, RemoteEid rEid, long vni, long vrf) {
+        AbstractLispCommand<GpeEntry> gpeEntryCommand = LispCommandWrapper
+                .addGpeSendMapregisterAction(id, rEid, vni, vrf);
+        return LispStateCommandExecutor.executePutCommand(vppDataBroker, gpeEntryCommand);
+    }
+
+    private boolean deleteGpeEntry(DataBroker vppDataBroker, String id) {
+        AbstractLispCommand<GpeEntry> gpeEntryDeletionCommand = LispCommandWrapper
+                .deleteGpeEntry(id);
+        return LispStateCommandExecutor.executeDeleteCommand(vppDataBroker, gpeEntryDeletionCommand);
     }
 
     private long getVni(String tenantUuid) {

@@ -21,6 +21,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518.gpe.feature.data.grouping.GpeFeatureData;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.Lisp;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.dp.subtable.grouping.local.mappings.LocalMapping;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.dp.subtable.grouping.local.mappings.local.mapping.Eid;
@@ -92,6 +93,11 @@ public class LispStateManager {
             lispStateOfNode = new LispState(hostName);
             try {
                 enableLispForNode(vppDataBroker, lispStateOfNode);
+
+                if (ConfigUtil.getInstance().isL3FlatEnabled()) {
+                    enableGpeForNode(vppDataBroker, lispStateOfNode);
+                }
+
                 addLocatorSet(vppDataBroker, lispStateOfNode);
                 addMapResolver(vppDataBroker, lispStateOfNode);
                 if (ConfigUtil.getInstance().isLispMapRegisterEnabled()) {
@@ -140,6 +146,16 @@ public class LispStateManager {
             lispState.setLispEnabled(true);
         } else {
             throw new LispConfigCommandFailedException("Lisp Enable Command failed execution!");
+        }
+    }
+
+    private void enableGpeForNode(DataBroker vppDataBroker, LispState lispState) throws LispConfigCommandFailedException {
+        AbstractLispCommand<GpeFeatureData>
+                gpeEnableCommand = LispCommandWrapper.enableGpe();
+        if (LispStateCommandExecutor.executePutCommand(vppDataBroker, gpeEnableCommand)) {
+            lispState.setGpeEnabled(true);
+        } else {
+            throw new LispConfigCommandFailedException("GPE Enable Command failed execution!");
         }
     }
 
