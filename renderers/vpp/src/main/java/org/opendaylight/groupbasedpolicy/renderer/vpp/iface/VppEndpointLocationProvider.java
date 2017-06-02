@@ -10,7 +10,10 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.iface;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -21,9 +24,11 @@ import org.opendaylight.controller.md.sal.binding.api.BindingTransactionChain;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
+import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.renderer.util.AddressEndpointUtils;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.manager.VppNodeManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.CloseOnFailTransactionChain;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
@@ -32,16 +37,19 @@ import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.DataTreeChangeHandler;
 import org.opendaylight.groupbasedpolicy.util.EndpointUtils;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.AddressEndpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.child.endpoints.ChildEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.child.endpoints.ChildEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.relative.location.RelativeLocations;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.relative.location.RelativeLocationsBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.relative.location.relative.locations.ExternalLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.relative.location.relative.locations.ExternalLocationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.parent.endpoint._case.ParentEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.parent.endpoint._case.ParentEndpointKey;
@@ -63,6 +71,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -87,7 +96,6 @@ public class VppEndpointLocationProvider extends DataTreeChangeHandler<AddressEn
         WriteTransaction wTx = txChain.newWriteOnlyTransaction();
         wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.locationProviderIid(VPP_ENDPOINT_LOCATION_PROVIDER),
                 locationProvider, true);
-
         Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
 
             @Override
@@ -167,25 +175,38 @@ public class VppEndpointLocationProvider extends DataTreeChangeHandler<AddressEn
     synchronized ListenableFuture<Void> createAbsoluteAddressEndpointLocation(VppEndpoint vppEndpoint,
             DataObjectModification<AddressEndpoint> rootNode) {
         if (vppEndpoint != null) {
+            LOG.debug("Saving VPP endpoint {}" + vppEndpoint.getKey());
             vppEndpoints.put(vppEndpoint.getKey(), vppEndpoint);
             if (cachedVppEndpoints.get(vppEndpoint.getKey()) != null) {
-                return processAddrEp(cachedVppEndpoints.get(vppEndpoint.getKey()));
+                try {
+                    processAddrEp(cachedVppEndpoints.get(vppEndpoint.getKey())).get();
+                } catch (InterruptedException | ExecutionException e) {
+                    LOG.error("Failed to resolve location for cached endpoint {}. {}", vppEndpoint.getKey(), e);
+                }
+                return Futures.immediateFuture(null);
             }
         } else if (rootNode != null) {
-            return processAddrEp(rootNode);
+            try {
+            processAddrEp(rootNode).get();
+            } catch (InterruptedException | ExecutionException e) {
+                LOG.error("Failed to resolve location for changed endpoint before={} after={}. {}",
+                        rootNode.getDataAfter(), rootNode.getDataAfter(), e);
+            }
+            return Futures.immediateFuture(null);
         }
         return Futures.immediateFuture(null);
     }
 
     private ListenableFuture<Void> processAddrEp(DataObjectModification<AddressEndpoint> rootNode) {
         if (rootNode != null) {
-            AddressEndpointChange aec = new AddressEndpointChange(rootNode, dataProvider);
+            AddressEndpointChange aec = new AddressEndpointChange(rootNode, txChain);
             switch (rootNode.getModificationType()) {
                 case WRITE:
                 case SUBTREE_MODIFIED: {
                     VppEndpoint vpp = vppEndpoints.get(vppEndpointKeyFrom(rootNode.getDataAfter().getKey()));
                     if (vpp == null) {
                         VppEndpointKey key = vppEndpointKeyFrom(rootNode.getDataAfter().getKey());
+                        LOG.debug("Caching VPP endpoint {}" + key);
                         cachedVppEndpoints.put(key, rootNode);
                         return Futures.immediateFuture(null);
                     }
@@ -268,24 +289,44 @@ public class VppEndpointLocationProvider extends DataTreeChangeHandler<AddressEn
     }
 
     public ListenableFuture<Void> replaceLocationForEndpoint(@Nonnull ExternalLocationCase location, @Nonnull AddressEndpointWithLocationKey addrEpWithLocKey) {
+        InstanceIdentifier<ProviderAddressEndpointLocation> iid = IidFactory.providerAddressEndpointLocationIid(
+                VPP_ENDPOINT_LOCATION_PROVIDER, createProviderAddressEndpointLocationKey(addrEpWithLocKey));
+        ReadOnlyTransaction rTx = dataProvider.newReadOnlyTransaction();
+        Optional<ProviderAddressEndpointLocation> optLoc = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, iid, rTx);
+        rTx.close();
         ProviderAddressEndpointLocationKey provAddrEpLocKey =
                 KeyFactory.providerAddressEndpointLocationKey(addrEpWithLocKey);
-        AbsoluteLocation absoluteLocation =
-                new AbsoluteLocationBuilder().setLocationType(location).build();
-        ProviderAddressEndpointLocation providerAddressEndpointLocation = new ProviderAddressEndpointLocationBuilder()
-            .setKey(provAddrEpLocKey).setAbsoluteLocation(absoluteLocation).build();
+        ProviderAddressEndpointLocationBuilder builder = new ProviderAddressEndpointLocationBuilder().setKey(provAddrEpLocKey);
+        if(optLoc.isPresent() && optLoc.get().getAbsoluteLocation() != null) {
+            AbsoluteLocation absoluteLocation = optLoc.get().getAbsoluteLocation();
+            builder.setAbsoluteLocation(new AbsoluteLocationBuilder(absoluteLocation).setLocationType(location).build());
+        } else if (optLoc.isPresent() && optLoc.get().getRelativeLocations() != null) {
+            ExternalLocation extLoc = new ExternalLocationBuilder().setExternalNode(location.getExternalNode())
+            .setExternalNodeConnector(location.getExternalNodeConnector())
+            .setExternalNodeMountPoint(location.getExternalNodeMountPoint())
+            .build();
+            List<ExternalLocation> externalLocation = optLoc.get()
+                .getRelativeLocations()
+                .getExternalLocation();
+            externalLocation.add(extLoc);
+            RelativeLocations relativeLocation = new RelativeLocationsBuilder(optLoc.get().getRelativeLocations()).setExternalLocation(externalLocation).build();
+            builder.setRelativeLocations(relativeLocation);
+        }
+        else {
+            LOG.warn("Cannot replace location for endpoint {}", addrEpWithLocKey);
+            return Futures.immediateFuture(null);
+        }
+        ProviderAddressEndpointLocation providerLocation = builder.build();
         WriteTransaction wTx = txChain.newWriteOnlyTransaction();
-        wTx.put(LogicalDatastoreType.CONFIGURATION,
-                IidFactory.providerAddressEndpointLocationIid(VPP_ENDPOINT_LOCATION_PROVIDER,
-                        providerAddressEndpointLocation.getKey()),
-                providerAddressEndpointLocation);
-        LOG.debug("Updating location for {}", provAddrEpLocKey);
+        wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.providerAddressEndpointLocationIid(
+                VPP_ENDPOINT_LOCATION_PROVIDER, providerLocation.getKey()), providerLocation);
+        LOG.debug("Updating location for {}", builder.build().getKey());
         return Futures.transform(wTx.submit(), new Function<Void, Void>() {
 
             @Override
             public Void apply(Void input) {
                 LOG.debug("{} replaced location: {}", VPP_ENDPOINT_LOCATION_PROVIDER.getValue(),
-                        providerAddressEndpointLocation);
+                        providerLocation.getKey());
                 return null;
             }
         });
@@ -297,6 +338,11 @@ public class VppEndpointLocationProvider extends DataTreeChangeHandler<AddressEn
     }
 
     static ProviderAddressEndpointLocationKey createProviderAddressEndpointLocationKey(AddressEndpointKey key) {
+        return new ProviderAddressEndpointLocationKey(key.getAddress(), key.getAddressType(), key.getContextId(),
+                key.getContextType());
+    }
+
+    static ProviderAddressEndpointLocationKey createProviderAddressEndpointLocationKey(AddressEndpointWithLocationKey key) {
         return new ProviderAddressEndpointLocationKey(key.getAddress(), key.getAddressType(), key.getContextId(),
                 key.getContextType());
     }
@@ -314,6 +360,10 @@ public class VppEndpointLocationProvider extends DataTreeChangeHandler<AddressEn
         return new VppEndpointKey(key.getAddress(), key.getAddressType(), key.getContextId(), key.getContextType());
     }
 
+    private VppEndpointKey vppEndpointKeyFrom(ChildEndpointKey key) {
+        return new VppEndpointKey(key.getAddress(), key.getAddressType(), key.getContextId(), key.getContextType());
+    }
+
     @Override
     public void close() {
         super.closeRegisteredListener();
@@ -326,12 +376,12 @@ public class VppEndpointLocationProvider extends DataTreeChangeHandler<AddressEn
 
         private final AddressEndpoint before;
         private final AddressEndpoint after;
-        private final DataBroker dataBroker;
+        private final BindingTransactionChain transactionChain;
 
-        public AddressEndpointChange(DataObjectModification<AddressEndpoint> addrEp, @Nonnull DataBroker dataBroker) {
+        public AddressEndpointChange(DataObjectModification<AddressEndpoint> addrEp, @Nonnull BindingTransactionChain txChain) {
             this.before = addrEp.getDataBefore();
             this.after = addrEp.getDataAfter();
-            this.dataBroker = dataBroker;
+            this.transactionChain = txChain;
         }
 
         boolean hasMoreParents() {
@@ -340,7 +390,7 @@ public class VppEndpointLocationProvider extends DataTreeChangeHandler<AddressEn
         }
 
         ListenableFuture<Void> syncMultiparents() {
-            ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
+            ReadWriteTransaction rwTx = transactionChain.newReadWriteTransaction();
             if (before != null) {
                 for (ParentEndpoint pe : EndpointUtils.getParentEndpoints(before.getParentEndpointChoice())) {
                     InstanceIdentifier<ProviderAddressEndpointLocation> iid =
@@ -355,17 +405,56 @@ public class VppEndpointLocationProvider extends DataTreeChangeHandler<AddressEn
                     InstanceIdentifier<ProviderAddressEndpointLocation> iid =
                             IidFactory.providerAddressEndpointLocationIid(VPP_ENDPOINT_LOCATION_PROVIDER,
                                     createProviderAddressEndpointLocationKey(pe.getKey()));
-                    ProviderAddressEndpointLocation location = createAbsoluteLocationFromVppEndpoint(
-                            new VppEndpointBuilder(vppEndpoint).setKey(vppEndpointKeyFrom(pe.getKey())).build());
-                    rwTx.put(LogicalDatastoreType.CONFIGURATION, iid, location, true);
+
+                    List<ChildEndpoint> childs = abc(rwTx, pe);
+                        List<VppEndpoint> vppEps = new ArrayList<>();
+                        for (ChildEndpoint che : childs) {
+                            VppEndpoint cheVppEp = vppEndpoints.get(vppEndpointKeyFrom(che.getKey()));
+                            if (cheVppEp != null) {
+                                vppEps.add(cheVppEp);
+                            } else {
+                            }
+                        }
+                        if (vppEps.size() > 1) {
+                        ProviderAddressEndpointLocation location = createRelativeLocationFromVppEndpoint(
+                                createProviderAddressEndpointLocationKey(pe.getKey()), vppEps);
+                        rwTx.put(LogicalDatastoreType.CONFIGURATION, iid, location, true);
+                    } else {
+                        ProviderAddressEndpointLocation location = createAbsoluteLocationFromVppEndpoint(
+                                new VppEndpointBuilder(vppEndpoint).setKey(vppEndpointKeyFrom(pe.getKey())).build());
+                        rwTx.put(LogicalDatastoreType.CONFIGURATION, iid, location, true);
+                    }
+
                 }
             }
             return rwTx.submit();
         }
 
+        private List<ChildEndpoint> abc(ReadWriteTransaction rTx, ParentEndpoint pe) {
+            AddressEndpointKey addrEpKey = new AddressEndpointKey(AddressEndpointUtils.fromParentEndpointKey(pe.getKey()));
+            Optional<AddressEndpoint> optParent = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL, IidFactory.addressEndpointIid(addrEpKey), rTx);
+            return (optParent.isPresent()) ? optParent.get().getChildEndpoint() : Collections.emptyList();
+        }
+
+        private ProviderAddressEndpointLocation createRelativeLocationFromVppEndpoint(
+                ProviderAddressEndpointLocationKey key, List<VppEndpoint> vppEndpoints) {
+            List<ExternalLocation> extLocations = vppEndpoints.stream().map(vppEndpoint -> {
+                InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(vppEndpoint.getVppNodeId());
+                String restIfacePath = VppPathMapper.interfaceToRestPath(vppEndpoint.getVppInterfaceName());
+                return new ExternalLocationBuilder().setExternalNodeMountPoint(vppNodeIid)
+                    .setExternalNodeConnector(restIfacePath)
+                    .build();
+            }).collect(Collectors.toList());
+            RelativeLocations relativeLocations =
+                    new RelativeLocationsBuilder().setExternalLocation(extLocations).build();
+            return new ProviderAddressEndpointLocationBuilder().setRelativeLocations(relativeLocations)
+                .setKey(key)
+                .build();
+        }
+
         ListenableFuture<Void> write() {
             VppEndpoint vpp = vppEndpoints.get(vppEndpointKeyFrom(after.getKey()));
-            WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
+            WriteTransaction wTx = transactionChain.newWriteOnlyTransaction();
             ProviderAddressEndpointLocation location =
                     createAbsoluteLocationFromVppEndpoint(vpp);
             InstanceIdentifier<ProviderAddressEndpointLocation> iid = IidFactory.providerAddressEndpointLocationIid(
@@ -375,7 +464,7 @@ public class VppEndpointLocationProvider extends DataTreeChangeHandler<AddressEn
         }
 
         ListenableFuture<Void> delete() {
-            ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
+            ReadWriteTransaction rwTx = transactionChain.newReadWriteTransaction();
             InstanceIdentifier<ProviderAddressEndpointLocation> iid = IidFactory.providerAddressEndpointLocationIid(
                     VPP_ENDPOINT_LOCATION_PROVIDER, createProviderAddressEndpointLocationKey(before.getKey()));
             DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION, iid, rwTx);

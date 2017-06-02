@@ -314,6 +314,17 @@ public class RendererConfigurationBuilder {
         if (potentialAbsNodeLoc.isPresent()) {
             return rendererByNode.get(potentialAbsNodeLoc.get());
         }
+        else {
+            Optional<List<InstanceIdentifier<?>>> potentianRelativeLocation =
+                    EndpointLocationUtils.resolveRelativeExternalNodeMountPointLocation(epLoc);
+            if (potentianRelativeLocation.isPresent()) {
+                RendererName rn = null;
+                for (InstanceIdentifier<?> iid : potentianRelativeLocation.get()) {
+                    rn = rendererByNode.get(iid);
+                }
+                return rn;
+            }
+        }
         return null;
     }
 

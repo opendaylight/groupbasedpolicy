@@ -88,7 +88,11 @@ public class PolicyContext {
                 new Builder<>();
         Supplier<TreeSet<RendererResolvedPolicy>> rendererPolicySupplier = () -> new TreeSet<>();
         rendererEps.stream().forEach(rEp -> {
-            rEp.getPeerEndpoint().stream().filter(Objects::nonNull).forEach(peer -> {
+            rEp.getPeerEndpoint()
+                .stream()
+                .filter(Objects::nonNull)
+                .filter(peer -> peer.getRuleGroupWithRendererEndpointParticipation() != null)
+                .forEach(peer -> {
                 ImmutableSortedSet<RendererResolvedPolicy> rPolicy =
                         peer.getRuleGroupWithRendererEndpointParticipation()
                             .stream()

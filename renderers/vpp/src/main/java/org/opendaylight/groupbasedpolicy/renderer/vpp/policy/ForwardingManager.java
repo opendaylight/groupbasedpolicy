@@ -195,7 +195,7 @@ public final class ForwardingManager {
     public void createForwardingForEndpoint(RendererEndpointKey rEpKey, PolicyContext policyCtx) {
         AddressEndpointWithLocation rEp = policyCtx.getAddrEpByKey().get(KeyFactory.addressEndpointKey(rEpKey));
         ExternalLocationCase rEpLoc = resolveAndValidateLocation(rEp);
-        if (Strings.isNullOrEmpty(rEpLoc.getExternalNodeConnector())) {
+        if (rEpLoc == null || Strings.isNullOrEmpty(rEpLoc.getExternalNodeConnector())) {
             // TODO add it to the status for renderer manager
             LOG.info("Renderer endpoint does not have external-node-connector therefore it is ignored {}", rEp);
             return;
@@ -247,7 +247,7 @@ public final class ForwardingManager {
     public void removeForwardingForEndpoint(RendererEndpointKey rEpKey, PolicyContext policyCtx) {
         AddressEndpointWithLocation rEp = policyCtx.getAddrEpByKey().get(KeyFactory.addressEndpointKey(rEpKey));
         ExternalLocationCase rEpLoc = resolveAndValidateLocation(rEp);
-        if (Strings.isNullOrEmpty(rEpLoc.getExternalNodeConnector())) {
+        if (rEpLoc == null || Strings.isNullOrEmpty(rEpLoc.getExternalNodeConnector())) {
             // nothing was created for endpoint therefore nothing is removed
             return;
         }
@@ -267,15 +267,19 @@ public final class ForwardingManager {
     }
 
     public static ExternalLocationCase resolveAndValidateLocation(AddressEndpointWithLocation addrEpWithLoc) {
-        LocationType locationType = addrEpWithLoc.getAbsoluteLocation().getLocationType();
-        if (!(locationType instanceof ExternalLocationCase)) {
-            throw new IllegalStateException("Endpoint does not have external location " + addrEpWithLoc);
+        if (addrEpWithLoc.getAbsoluteLocation() != null
+                && addrEpWithLoc.getAbsoluteLocation().getLocationType() != null) {
+            LocationType locationType = addrEpWithLoc.getAbsoluteLocation().getLocationType();
+            if (!(locationType instanceof ExternalLocationCase)) {
+                throw new IllegalStateException("Endpoint does not have external location " + addrEpWithLoc);
+            }
+            ExternalLocationCase result = (ExternalLocationCase) locationType;
+            if (result.getExternalNodeMountPoint() == null) {
+                throw new IllegalStateException("Endpoint does not have external-node-mount-point " + addrEpWithLoc);
+            }
+            return result;
         }
-        ExternalLocationCase result = (ExternalLocationCase) locationType;
-        if (result.getExternalNodeMountPoint() == null) {
-            throw new IllegalStateException("Endpoint does not have external-node-mount-point " + addrEpWithLoc);
-        }
-        return result;
+        return null;
     }
 
     public static java.util.Optional<String> resolveL2FloodDomain(@Nonnull AddressEndpointWithLocation ep,

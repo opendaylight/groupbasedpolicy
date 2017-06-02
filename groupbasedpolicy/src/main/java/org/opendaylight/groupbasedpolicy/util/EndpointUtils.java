@@ -76,6 +76,9 @@ public class EndpointUtils {
     public static boolean isExternalEndpoint(@Nonnull DataBroker dataBroker, @Nonnull AddressEndpoint addrEp) {
         ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
         List<ListenableFuture<Boolean>> results = new ArrayList<>();
+        if(addrEp.getEndpointGroup() == null) {
+            return false;
+        }
         for (EndpointGroupId epgId : addrEp.getEndpointGroup()) {
             results.add(Futures.transform(
                     rTx.read(LogicalDatastoreType.CONFIGURATION,

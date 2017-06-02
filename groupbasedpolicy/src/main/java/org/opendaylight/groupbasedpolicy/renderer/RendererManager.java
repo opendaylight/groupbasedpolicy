@@ -388,6 +388,10 @@ public class RendererManager implements AutoCloseable {
     @VisibleForTesting
     void resolveRendererConfigForEndpoint(AddressEndpoint rendererAdrEp,
                                           RendererConfigurationBuilder rendererPolicyBuilder) {
+        List<EndpointGroupId> epgIds = rendererAdrEp.getEndpointGroup();
+        if (epgIds == null || epgIds.contains(RendererUtils.EPG_EXTERNAL_ID)) {
+            return;
+        }
         Set<EpgKeyDto> rendererEpgs = toEpgKeys(rendererAdrEp.getEndpointGroup(), rendererAdrEp.getTenant());
         RendererEndpointKey rendererEpKey = AddressEndpointUtils.toRendererEpKey(rendererAdrEp.getKey());
         for (EpgKeyDto rendererEpg : rendererEpgs) {
@@ -481,8 +485,10 @@ public class RendererManager implements AutoCloseable {
                     }
                 }
             } else {
-                if (!currentState.epLocInfo.hasAbsoluteLocation(peerAdrEpKey)) {
-                    LOG.debug("Peer does not have absolute location therefore it is ignored: {}", peerAdrEpKey);
+                if (!currentState.epLocInfo.hasAbsoluteLocation(peerAdrEpKey)
+                        && !currentState.epLocInfo.hasRelativeLocation(peerAdrEpKey)) {
+                    LOG.debug("Peer does not have absolute nor relative location therefore it is ignored: {}",
+                            peerAdrEpKey);
                     continue;
                 }
                 PeerEndpointKey peerEpKey = AddressEndpointUtils.toPeerEpKey(peerAdrEpKey);

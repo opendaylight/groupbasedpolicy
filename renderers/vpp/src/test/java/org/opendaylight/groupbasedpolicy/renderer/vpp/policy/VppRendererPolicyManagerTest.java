@@ -11,6 +11,7 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.policy;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import org.junit.Assert;
@@ -22,6 +23,7 @@ import org.mockito.runners.MockitoJUnitRunner;
 import org.opendaylight.controller.config.yang.config.vpp_provider.impl.VppRenderer;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
+import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.DtoFactory;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.RendererPolicyConfEvent;
@@ -35,9 +37,15 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.groupbasedpolicy.test.CustomDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.access.control.list.rev160708.AccessLists;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.Interfaces;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.Endpoints;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.AddressEndpoints;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.LocationProviders;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.LocationProvider;
@@ -60,9 +68,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.L2;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.l2.base.attributes.Interconnection;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.l2.base.attributes.interconnection.BridgeBased;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.acl.rev161214.VppAclInterfaceAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.BridgeDomains;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyVbridgeAugment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev160429.TunnelTypeVxlan;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev170327.network.topology.topology.tunnel.parameters.VxlanTunnelParameters;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.acl.rev161214.access.lists.acl.access.list.entries.ace.matches.ace.type.VppAce;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
@@ -90,9 +101,11 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
 
     @Override
     public Collection<Class<?>> getClassesFromModules() {
+        //org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.acl.rev161214.access.lists.acl.access.list.entries.ace.matches
         return Arrays.asList(Node.class, VppEndpoint.class, Interfaces.class, BridgeDomains.class,
                 LocationProviders.class, L2FloodDomain.class, VxlanVni.class, TopologyVbridgeAugment.class,
-                TunnelTypeVxlan.class, PhysicalLocationRef.class);
+                TunnelTypeVxlan.class, PhysicalLocationRef.class, AccessLists.class, VppAce.class,
+                VppInterfaceAugmentation.class, VppAclInterfaceAugmentation.class, VxlanTunnelParameters.class);
     }
 
     @Before
@@ -147,6 +160,7 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
                 IidFactory.locationProviderIid(VppEndpointLocationProvider.VPP_ENDPOINT_LOCATION_PROVIDER))
             .get();
         Assert.assertTrue(optLocationProvider.isPresent());
+        System.out.println("DEBUGG " + optLocationProvider.get());
         List<ProviderAddressEndpointLocation> epLocs = optLocationProvider.get().getProviderAddressEndpointLocation();
         Assert.assertNotNull(epLocs);
         Assert.assertEquals(2, epLocs.size());
@@ -365,12 +379,26 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         }
     }
 
-    private void storeVppEndpoint(AddressEndpointWithLocationKey epKey, String ifaceName,
+    private void storeVppEndpoint(AddressEndpointWithLocationKey clientEp, String ifaceName,
             InstanceIdentifier<VppEndpoint> vppEpIid) {
-        VppEndpoint vhostEp = new VppEndpointBuilder().setAddress(epKey.getAddress())
-            .setAddressType(epKey.getAddressType())
-            .setContextId(epKey.getContextId())
-            .setContextType(epKey.getContextType())
+        AddressEndpoint addrEp = new AddressEndpointBuilder().setKey(new AddressEndpointKey(clientEp.getAddress(),
+                clientEp.getAddressType(), clientEp.getContextId(), clientEp.getContextType()))
+            .build();
+        InstanceIdentifier<AddressEndpoint> iid = InstanceIdentifier.create(Endpoints.class)
+            .child(AddressEndpoints.class)
+            .child(AddressEndpoint.class, addrEp.getKey());
+        WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
+        wTx.put(LogicalDatastoreType.OPERATIONAL, iid, addrEp);
+        try {
+            wTx.submit().get();
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
+
+        VppEndpoint vhostEp = new VppEndpointBuilder().setAddress(clientEp.getAddress())
+            .setAddressType(clientEp.getAddressType())
+            .setContextId(clientEp.getContextId())
+            .setContextType(clientEp.getContextType())
             .setVppInterfaceName(ifaceName)
             .setVppNodeId(DtoFactory.VPP_NODE_1_IID.firstKeyOf(Node.class).getNodeId())
             .setInterfaceTypeChoice(new VhostUserCaseBuilder().setSocket(SOCKET).build())
