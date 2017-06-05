@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -211,20 +212,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
             ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
             registerBaseEndpointAndStoreMapping(
                     ImmutableList.of(l3BaseEp.build(), l2BaseEp.build()), port, rwTx, addBaseEpMapping);
-
-            AddressEndpointRegBuilder metadataEp = createBasicL3AddrEpInputBuilder(cloneMetadataPortFromDhcpPort(port, metadataIpPrefix), networkContainment,
-                    Lists.newArrayList(MetadataService.EPG_ID), neutron);
-            AddressEndpointKey aek = new AddressEndpointKey(metadataEp.getAddress(), metadataEp.getAddressType(), metadataEp.getContextId(), metadataEp.getContextType());
-            Optional<AddressEndpoint> optMetadataEp = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL, IidFactory.addressEndpointIid(aek), rwTx);
-            if(!optMetadataEp.isPresent()) {
-                setParentChildRelationshipForEndpoints(metadataEp, l2BaseEp);
-            } else {
-                List<ChildEndpoint> childs = optMetadataEp.get().getChildEndpoint();
-                childs.add(createChildEndpoint(l2BaseEp));
-                metadataEp.setChildEndpoint(childs);
-            }
-            registerBaseEndpointAndStoreMapping(
-                    ImmutableList.of(metadataEp.build()), port, rwTx, true);
+            registerMetadataServiceForDhcpPort(port, neutron, l2BaseEp, rwTx, true);
             registerEndpointAndStoreMapping(epInBuilder.build(), port, rwTx);
             DataStoreHelper.submitToDs(rwTx);
         } else if (PortUtils.isNormalPort(port)) {
@@ -278,6 +266,30 @@ public class NeutronPortAware implements NeutronAware<Port> {
         return new PortBuilder(port).setFixedIps(metadataIps).build();
     }
 
+    private void registerMetadataServiceForDhcpPort(Port port, Neutron neutron, AddressEndpointRegBuilder childEpToAdd,
+            ReadWriteTransaction rwTx, boolean registerMapping) {
+        Optional<NetworkDomainId> resolveNetworkContainment = PortUtils.resolveNetworkContainment(port);
+        if (!resolveNetworkContainment.isPresent()) {
+            LOG.warn("DHCP port does not have an IP address. {}", port);
+            return;
+        }
+        AddressEndpointRegBuilder metadataEp =
+                createBasicL3AddrEpInputBuilder(cloneMetadataPortFromDhcpPort(port, metadataIpPrefix),
+                        resolveNetworkContainment.get(), Lists.newArrayList(MetadataService.EPG_ID), neutron);
+        AddressEndpointKey aek = new AddressEndpointKey(metadataEp.getAddress(), metadataEp.getAddressType(),
+                metadataEp.getContextId(), metadataEp.getContextType());
+        Optional<AddressEndpoint> optMetadataEp =
+                DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL, IidFactory.addressEndpointIid(aek), rwTx);
+        if (!optMetadataEp.isPresent()) {
+            setParentChildRelationshipForEndpoints(metadataEp, childEpToAdd);
+        } else {
+            List<ChildEndpoint> childs = optMetadataEp.get().getChildEndpoint();
+            childs.add(createChildEndpoint(childEpToAdd));
+            metadataEp.setChildEndpoint(childs);
+        }
+        registerBaseEndpointAndStoreMapping(ImmutableList.of(metadataEp.build()), port, rwTx, registerMapping);
+    }
+
     private void setParentChildRelationshipForEndpoints(AddressEndpointRegBuilder parentEp,
             AddressEndpointRegBuilder childEp) {
         childEp.setParentEndpointChoice(new ParentEndpointCaseBuilder().setParentEndpoint(
@@ -320,6 +332,22 @@ public class NeutronPortAware implements NeutronAware<Port> {
             LOG.debug("No new data are written, there is no L3 context in subnet {} to update", subnetUuid);
             return;
         }
+        java.util.Optional<Subnet> optSubnet = neutron.getSubnets()
+            .getSubnet()
+            .stream()
+            .filter(subnet -> subnet.getNetworkId() != null && subnet.getUuid().getValue().equals(subnetUuid.getValue()))
+            .findAny();
+        if (!optSubnet.isPresent()) {
+            LOG.error("Failed to update metadata endpoint in subnet {}. Could not resolve Network ID", subnetUuid);
+        } else {
+            AddressEndpointUnreg metadataEpUnreg =
+                    new AddressEndpointUnregBuilder().setAddress(String.valueOf(metadataIpPrefix.getValue()))
+                        .setAddressType(IpPrefixType.class)
+                        .setContextId(new ContextId(optSubnet.get().getNetworkId().getValue()))
+                        .setContextType(MappingUtils.L3_CONTEXT)
+                        .build();
+            epRegistrator.unregisterEndpoint(metadataEpUnreg);
+        }
         Set<Port> portsInSameSubnet = PortUtils.findPortsBySubnet(subnetUuid, neutron.getPorts());
         for (Port portInSameSubnet : portsInSameSubnet) {
             if (PortUtils.isNormalPort(portInSameSubnet) || PortUtils.isDhcpPort(portInSameSubnet)
@@ -350,7 +378,15 @@ public class NeutronPortAware implements NeutronAware<Port> {
                     RegisterEndpointInput regBaseEpInput = new RegisterEndpointInputBuilder()
                         .setAddressEndpointReg(ImmutableList.of(l2BaseEp.build(), l3BaseEp.build())).build();
                     epRegistrator.registerEndpoint(regBaseEpInput);
-
+                    if(PortUtils.isDhcpPort(portInSameSubnet)) {
+                        ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
+                        registerMetadataServiceForDhcpPort(portInSameSubnet, neutron, l2BaseEp, rwTx, false);
+                        try {
+                            rwTx.submit().get();
+                        } catch (InterruptedException | ExecutionException e) {
+                            LOG.error("Failed to update metadata endpoint for DHCP port {}. {}", portInSameSubnet, e);
+                        }
+                    }
                     modifyL3ContextForEndpoints(portInSameSubnet, ipWithSubnet, l3BaseEp.getContextId());
                 }
             }

@@ -16,6 +16,7 @@ import java.util.Set;
 import javax.annotation.Nullable;
 
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.Uuid;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.PortBindingExtension;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.port.attributes.FixedIps;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.Ports;
@@ -78,6 +79,15 @@ public class PortUtils {
         List<FixedIps> fixedIps = port.getFixedIps();
         if (fixedIps != null && !fixedIps.isEmpty()) {
             return Optional.of(fixedIps.get(0));
+        }
+        return Optional.absent();
+    }
+
+    public static Optional<NetworkDomainId> resolveNetworkContainment(Port port) {
+        Optional<FixedIps> firstFixedIps = PortUtils.resolveFirstFixedIps(port);
+        if (firstFixedIps.isPresent() && firstFixedIps.get().getSubnetId() != null) {
+            FixedIps ipWithSubnet = firstFixedIps.get();
+            return Optional.of(new NetworkDomainId(ipWithSubnet.getSubnetId().getValue()));
         }
         return Optional.absent();
     }
