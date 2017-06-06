@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
@@ -28,6 +29,7 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.groupbasedpolicy.renderer.util.AddressEndpointUtils;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.manager.VppNodeManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.CloseOnFailTransactionChain;
@@ -72,6 +74,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -85,6 +88,8 @@ public class VppEndpointLocationProvider extends DataTreeChangeHandler<AddressEn
     private final BindingTransactionChain txChain;
     private final Map<VppEndpointKey, VppEndpoint> vppEndpoints = new HashMap<>();
     private final Map<VppEndpointKey, DataObjectModification<AddressEndpoint>> cachedVppEndpoints = new HashMap<>();
+
+    public static final ReentrantLock REENTRANT_LOCK = new ReentrantLock();
 
     public VppEndpointLocationProvider(DataBroker dataProvider) {
         super(dataProvider);
@@ -259,11 +264,14 @@ public class VppEndpointLocationProvider extends DataTreeChangeHandler<AddressEn
     }
 
     public ListenableFuture<Void> writeLocation(ProviderAddressEndpointLocation location) {
+        REENTRANT_LOCK.lock();
         WriteTransaction wTx = txChain.newWriteOnlyTransaction();
         wTx.put(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.providerAddressEndpointLocationIid(VPP_ENDPOINT_LOCATION_PROVIDER, location.getKey()),
                 location, true);
-        return Futures.transform(wTx.submit(), new Function<Void, Void>() {
+        CheckedFuture<Void, TransactionCommitFailedException> submit = wTx.submit();
+        REENTRANT_LOCK.unlock();
+        return Futures.transform(submit, new Function<Void, Void>() {
 
             @Override
             public Void apply(Void input) {
@@ -274,11 +282,14 @@ public class VppEndpointLocationProvider extends DataTreeChangeHandler<AddressEn
     }
 
     public ListenableFuture<Void> deleteLocation(ProviderAddressEndpointLocationKey key) {
+        REENTRANT_LOCK.lock();
         ReadWriteTransaction rwTx = txChain.newReadWriteTransaction();
         LOG.debug("Deleting location for {}", key);
         DataStoreHelper.removeIfExists(LogicalDatastoreType.CONFIGURATION,
                 IidFactory.providerAddressEndpointLocationIid(VPP_ENDPOINT_LOCATION_PROVIDER, key), rwTx);
-        return Futures.transform(rwTx.submit(), new Function<Void, Void>() {
+        CheckedFuture<Void, TransactionCommitFailedException> submit = rwTx.submit();
+        REENTRANT_LOCK.unlock();
+        return Futures.transform(submit, new Function<Void, Void>() {
 
             @Override
             public Void apply(Void input) {
@@ -317,11 +328,14 @@ public class VppEndpointLocationProvider extends DataTreeChangeHandler<AddressEn
             return Futures.immediateFuture(null);
         }
         ProviderAddressEndpointLocation providerLocation = builder.build();
+        REENTRANT_LOCK.lock();
         WriteTransaction wTx = txChain.newWriteOnlyTransaction();
         wTx.put(LogicalDatastoreType.CONFIGURATION, IidFactory.providerAddressEndpointLocationIid(
                 VPP_ENDPOINT_LOCATION_PROVIDER, providerLocation.getKey()), providerLocation);
         LOG.debug("Updating location for {}", builder.build().getKey());
-        return Futures.transform(wTx.submit(), new Function<Void, Void>() {
+        CheckedFuture<Void, TransactionCommitFailedException> submit = wTx.submit();
+        REENTRANT_LOCK.unlock();
+        return Futures.transform(submit, new Function<Void, Void>() {
 
             @Override
             public Void apply(Void input) {
@@ -390,6 +404,7 @@ public class VppEndpointLocationProvider extends DataTreeChangeHandler<AddressEn
         }
 
         ListenableFuture<Void> syncMultiparents() {
+            REENTRANT_LOCK.lock();
             ReadWriteTransaction rwTx = transactionChain.newReadWriteTransaction();
             if (before != null) {
                 for (ParentEndpoint pe : EndpointUtils.getParentEndpoints(before.getParentEndpointChoice())) {
@@ -427,7 +442,9 @@ public class VppEndpointLocationProvider extends DataTreeChangeHandler<AddressEn
 
                 }
             }
-            return rwTx.submit();
+            CheckedFuture<Void, TransactionCommitFailedException> submit = rwTx.submit();
+            REENTRANT_LOCK.unlock();
+            return submit;
         }
 
         private List<ChildEndpoint> abc(ReadWriteTransaction rTx, ParentEndpoint pe) {
