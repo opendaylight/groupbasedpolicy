@@ -41,12 +41,13 @@ class SourceMapper extends AddressMapper {
         if (addrEp.getContextType().isAssignableFrom(L3Context.class)) {
             address = addrEp.getAddress();
         } else {
-            ParentEndpoint parentEp = EndpointUtils.getParentEndpoints(addrEp.getParentEndpointChoice()).get(0);
-            if (parentEp == null || !parentEp.getContextType().isAssignableFrom(L3Context.class)) {
+            List<ParentEndpoint> parentEndpoints = EndpointUtils.getParentEndpoints(addrEp.getParentEndpointChoice());
+            if (parentEndpoints == null || parentEndpoints.isEmpty()
+                    || !parentEndpoints.get(0).getContextType().isAssignableFrom(L3Context.class)) {
                 LOG.warn("Cannot resolve IP address for endpoint {}", addrEp);
                 return;
             }
-            address = parentEp.getAddress();
+            address = parentEndpoints.get(0).getAddress();
         }
         LOG.trace("Setting src IP address {} in rule {}", address, aclRuleBuilder);
         try {
