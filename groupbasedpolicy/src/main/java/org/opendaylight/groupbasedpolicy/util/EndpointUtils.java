@@ -62,7 +62,7 @@ public class EndpointUtils {
 
     public static @Nonnull List<ParentEndpoint> getParentEndpoints(
             @Nullable ParentEndpointChoice parentEndpointChoice) {
-        if (parentEndpointChoice instanceof ParentEndpointCase) {
+        if (parentEndpointChoice != null && parentEndpointChoice instanceof ParentEndpointCase) {
             ParentEndpointCase parentEpCase = (ParentEndpointCase) parentEndpointChoice;
             List<ParentEndpoint> parentEndpoints = parentEpCase.getParentEndpoint();
             if (parentEndpoints != null) {
