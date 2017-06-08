@@ -34,14 +34,14 @@ import com.google.common.collect.ImmutableSet;
 
 public class EndpointLocationInfo {
 
-    private final ImmutableMultimap<InstanceIdentifier<?>, AddressEndpointLocation> endpointsByAbsNodeLocation;
+    private final ImmutableMultimap<InstanceIdentifier<?>, AddressEndpointLocation> endpointsByExternalNodeLocation;
     private final ImmutableMap<AddressEndpointKey, AddressEndpointLocation> addrEpLocByAddrEpKey;
     private final ImmutableMap<ContainmentEndpointKey, ContainmentEndpointLocation> contEpLocByContEpKey;
 
     public EndpointLocationInfo(EndpointLocations epLocations) {
         List<AddressEndpointLocation> addressEndpointLocations = epLocations.getAddressEndpointLocation();
-        endpointsByAbsNodeLocation =
-                EndpointLocationUtils.resolveEndpointsByAbsoluteNodeLocation(addressEndpointLocations);
+        endpointsByExternalNodeLocation =
+                EndpointLocationUtils.resolveEndpointsByExternalNodeLocation(addressEndpointLocations);
         if (addressEndpointLocations == null) {
             addrEpLocByAddrEpKey = ImmutableMap.of();
         } else {
@@ -82,13 +82,13 @@ public class EndpointLocationInfo {
         return new ContainmentEndpointKey(contEpLocKey.getContextId(), contEpLocKey.getContextType());
     }
 
-    public Set<InstanceIdentifier<?>> getAllAbsoluteNodeLocations() {
-        return endpointsByAbsNodeLocation.keySet();
+    public Set<InstanceIdentifier<?>> getAllExternalNodeLocations() {
+        return endpointsByExternalNodeLocation.keySet();
     }
 
-    public ImmutableSet<AddressEndpointKey> getAddressEpsWithAbsoluteNodeLocation(
+    public ImmutableSet<AddressEndpointKey> getAddressEpsWithExternalNodeLocation(
             InstanceIdentifier<?> realNodeLocation) {
-        return FluentIterable.from(endpointsByAbsNodeLocation.get(realNodeLocation))
+        return FluentIterable.from(endpointsByExternalNodeLocation.get(realNodeLocation))
             .transform(new Function<AddressEndpointLocation, AddressEndpointKey>() {
 
                 @Override

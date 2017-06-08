@@ -69,7 +69,7 @@ public class AddressEndpointUtils {
                 key.getContextId(), key.getContextType());
     }
 
-    public static boolean sameExternalLocationCase(AddressEndpointWithLocation ref, AddressEndpointWithLocation ae1) {
+    public static boolean sameExternalLocationCase(AddressEndpointWithLocation ref, AddressEndpointWithLocation addrEp) {
         if (ref.getRelativeLocations() != null || ref.getAbsoluteLocation() == null) {
             return false;
         }
@@ -92,31 +92,30 @@ public class AddressEndpointUtils {
                         return Optional.empty();
                     }
                 };
-        Optional<ExternalLocation> refLoc0 = absoluteToExternal.apply(ref.getAbsoluteLocation());
-        if (!refLoc0.isPresent()) {
+        Optional<ExternalLocation> refLocation = absoluteToExternal.apply(ref.getAbsoluteLocation());
+        if (!refLocation.isPresent()) {
             return false;
         }
         Predicate<ExternalLocation> sameLocation = new Predicate<ExternalLocation>() {
 
             @Override
-            public boolean test(ExternalLocation loc1) {
-                boolean valuesPresent = refLoc0.get().getExternalNodeMountPoint() == null
-                        || loc1.getExternalNodeMountPoint() == null
-                        || refLoc0.get().getExternalNodeConnector() == null
-                        || loc1.getExternalNodeConnector() == null;
-                return (valuesPresent) ? false : refLoc0.get()
+            public boolean test(ExternalLocation addrEpLocation) {
+                boolean valuesMissing = refLocation.get().getExternalNodeMountPoint() == null
+                        || addrEpLocation.getExternalNodeMountPoint() == null
+                        || refLocation.get().getExternalNodeConnector() == null
+                        || addrEpLocation.getExternalNodeConnector() == null;
+                return (valuesMissing) ? false : refLocation.get()
                     .getExternalNodeMountPoint()
                     .toString()
-                    .equals(loc1.getExternalNodeMountPoint().toString())
-                        && refLoc0.get().getExternalNodeConnector().equals(loc1.getExternalNodeConnector());
+                    .equals(addrEpLocation.getExternalNodeMountPoint().toString())
+                        && refLocation.get().getExternalNodeConnector().equals(addrEpLocation.getExternalNodeConnector());
             }
         };
         List<ExternalLocation> extLocs = new ArrayList<>();
-        Optional<ExternalLocation> refLoc1 = absoluteToExternal.apply(ae1.getAbsoluteLocation());
-        if (refLoc1.isPresent()) {
-            extLocs.add(refLoc1.get());
-        } else if (ae1.getRelativeLocations() != null && ae1.getRelativeLocations().getExternalLocation() != null) {
-            extLocs.addAll(ae1.getRelativeLocations().getExternalLocation());
+        if (absoluteToExternal.apply(addrEp.getAbsoluteLocation()).isPresent()) {
+            extLocs.add(absoluteToExternal.apply(addrEp.getAbsoluteLocation()).get());
+        } else if (addrEp.getRelativeLocations() != null && addrEp.getRelativeLocations().getExternalLocation() != null) {
+            extLocs.addAll(addrEp.getRelativeLocations().getExternalLocation());
         }
         if (extLocs.stream().filter(sameLocation).findAny().isPresent()) {
             return true;

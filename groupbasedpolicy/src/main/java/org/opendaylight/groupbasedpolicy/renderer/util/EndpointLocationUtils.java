@@ -30,7 +30,11 @@ public class EndpointLocationUtils {
     // hiding default public constructor
     private EndpointLocationUtils() {}
 
-    public static ImmutableMultimap<InstanceIdentifier<?>, AddressEndpointLocation> resolveEndpointsByAbsoluteNodeLocation(
+    /**
+     * Resolves address endpoint locations  by nodes. Address endpoint should have either an absolute location or a
+     * relative location which reflects multihome endpoints.
+     */
+    public static ImmutableMultimap<InstanceIdentifier<?>, AddressEndpointLocation> resolveEndpointsByExternalNodeLocation(
             @Nullable List<AddressEndpointLocation> addressEndpointLocations) {
         if (addressEndpointLocations == null) {
             return ImmutableMultimap.of();
@@ -40,20 +44,19 @@ public class EndpointLocationUtils {
             Optional<InstanceIdentifier<?>> potentialAbsIntNodeLocation = resolveAbsoluteInternalNodeLocation(epLoc);
             if (potentialAbsIntNodeLocation.isPresent()) {
                 resultBuilder.put(potentialAbsIntNodeLocation.get(), epLoc);
-            } else {
-                Optional<InstanceIdentifier<?>> potentialAbsExtNodeMpLocation =
-                        resolveAbsoluteExternalNodeMountPointLocation(epLoc);
-                if (potentialAbsExtNodeMpLocation.isPresent()) {
-                    resultBuilder.put(potentialAbsExtNodeMpLocation.get(), epLoc);
-                }
-                else {
-                    Optional<List<InstanceIdentifier<?>>> potentialRelExtNodeMpLocation =
-                            resolveRelativeExternalNodeMountPointLocation(epLoc);
-                    if(potentialRelExtNodeMpLocation.isPresent()) {
-                        for(InstanceIdentifier<?> iid : potentialRelExtNodeMpLocation.get()) {
-                            resultBuilder.put(iid,epLoc);
-                        }
-                    }
+                continue;
+            }
+            Optional<InstanceIdentifier<?>> potentialAbsExtNodeMpLocation =
+                    resolveAbsoluteExternalNodeMountPointLocation(epLoc);
+            if (potentialAbsExtNodeMpLocation.isPresent()) {
+                resultBuilder.put(potentialAbsExtNodeMpLocation.get(), epLoc);
+                continue;
+            }
+            Optional<List<InstanceIdentifier<?>>> potentialRelExtNodeMpLocation =
+                    resolveRelativeExternalNodeMountPointLocation(epLoc);
+            if (potentialRelExtNodeMpLocation.isPresent()) {
+                for (InstanceIdentifier<?> iid : potentialRelExtNodeMpLocation.get()) {
+                    resultBuilder.put(iid, epLoc);
                 }
             }
         }
@@ -93,11 +96,11 @@ public class EndpointLocationUtils {
             AddressEndpointLocation epLoc) {
         RelativeLocations relativeLocations = epLoc.getRelativeLocations();
         if (relativeLocations != null) {
-            List<InstanceIdentifier<?>> collect = relativeLocations.getExternalLocation()
+            List<InstanceIdentifier<?>> mountPoints = relativeLocations.getExternalLocation()
                 .stream()
-                .map(l -> l.getExternalNodeMountPoint())
+                .map(externalLocation -> externalLocation.getExternalNodeMountPoint())
                 .collect(Collectors.toList());
-            return (collect.isEmpty()) ? Optional.absent() : Optional.of(collect);
+            return (mountPoints.isEmpty()) ? Optional.absent() : Optional.of(mountPoints);
         }
         return Optional.absent();
     }

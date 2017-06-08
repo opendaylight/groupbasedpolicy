@@ -16,8 +16,7 @@ import java.util.concurrent.ExecutionException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
+import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
@@ -73,8 +72,7 @@ public class EndpointUtils {
         return Collections.emptyList();
     }
 
-    public static boolean isExternalEndpoint(@Nonnull DataBroker dataBroker, @Nonnull AddressEndpoint addrEp) {
-        ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
+    public static boolean isExternalEndpoint(@Nonnull ReadTransaction rTx, @Nonnull AddressEndpoint addrEp) {
         List<ListenableFuture<Boolean>> results = new ArrayList<>();
         if(addrEp.getEndpointGroup() == null) {
             return false;
@@ -91,7 +89,6 @@ public class EndpointUtils {
                         }
                     }));
         }
-        rTx.close();
         try {
             List<Boolean> list = Futures.allAsList(results).get();
             return list.stream().anyMatch(Boolean::booleanValue);
