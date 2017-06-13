@@ -53,7 +53,11 @@ public class IosXeProviderInstance implements ClusterSingletonService, AutoClose
 
     public void initialize() {
         LOG.info("Clustering session initiated for {}", this.getClass().getSimpleName());
+        try {
         singletonServiceRegistration = clusterSingletonService.registerClusterSingletonService(this);
+        } catch (Exception e) {
+            LOG.warn("Exception thrown while registering cluster singleton service in {}", this.getClass(), e.getMessage());
+        }
     }
 
     @Override

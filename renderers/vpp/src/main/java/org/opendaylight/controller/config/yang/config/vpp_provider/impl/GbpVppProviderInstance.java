@@ -73,7 +73,11 @@ public class GbpVppProviderInstance implements ClusterSingletonService, VppAdapt
 
     public void initialize() {
         LOG.info("Clustering session initiated for {}", this.getClass().getSimpleName());
-        singletonServiceRegistration = clusterSingletonService.registerClusterSingletonService(this);
+        try {
+            singletonServiceRegistration = clusterSingletonService.registerClusterSingletonService(this);
+        } catch (Exception e) {
+            LOG.warn("Exception thrown while registering cluster singleton service in {}", this.getClass(), e.getMessage());
+        }
     }
 
     @Override

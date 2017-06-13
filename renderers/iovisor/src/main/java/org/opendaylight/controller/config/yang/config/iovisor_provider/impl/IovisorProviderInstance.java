@@ -48,7 +48,11 @@ public class IovisorProviderInstance implements ClusterSingletonService, AutoClo
 
     public void initialize() {
         LOG.info("Clustering session initiated for {}", this.getClass().getSimpleName());
+        try {
         singletonServiceRegistration = clusteringServiceProvider.registerClusterSingletonService(this);
+        } catch (Exception e) {
+            LOG.warn("Exception thrown while registering cluster singleton service in {}", this.getClass(), e.getMessage());
+        }
     }
 
     @Override
