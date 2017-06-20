@@ -85,7 +85,7 @@ public class VppNodeManager {
     private static final short DURATION = 3000;
     private static final TopologyId TOPOLOGY_ID = new TopologyId("topology-netconf");
     private static final Logger LOG = LoggerFactory.getLogger(VppNodeManager.class);
-    private static final String V3PO_CAPABILITY = "(urn:opendaylight:params:xml:ns:yang:v3po?revision=2017-03-15)v3po";
+    private static final String V3PO_CAPABILITY = "(urn:opendaylight:params:xml:ns:yang:v3po?revision=2017-06-07)v3po";
     private static final String INTERFACES_CAPABILITY = "(urn:ietf:params:xml:ns:yang:ietf-interfaces?revision=2014-05-08)ietf-interfaces";
     private static final NodeId CONTROLLER_CONFIG_NODE = new NodeId("controller-config");
     private static final String NO_PUBLIC_INT_SPECIFIED = "unspecified";
@@ -117,7 +117,7 @@ public class VppNodeManager {
             }
             NodeId nodeId = new NodeId(entries.get(0));
             PhysicalInterfaceKey infaceKey = new PhysicalInterfaceKey(entries.get(1));
-            LOG.info("Interface " + infaceKey + " on node " + nodeId + "will be considered as external");
+            LOG.info("Interface %s on node %swill be considered as external", infaceKey, nodeId);
             extInterfaces.put(nodeId, infaceKey);
         }
     }
@@ -274,16 +274,14 @@ public class VppNodeManager {
             MountPoint mountPoint;
             if (optionalObject.isPresent()) {
                 mountPoint = optionalObject.get();
-                if (mountPoint != null) {
-                    Optional<DataBroker> optionalDataBroker = mountPoint.getService(DataBroker.class);
-                    if (optionalDataBroker.isPresent()) {
-                        return optionalDataBroker.get();
-                    } else {
-                        LOG.warn("Cannot obtain data broker from mountpoint {}", mountPoint);
-                    }
+                Optional<DataBroker> optionalDataBroker = mountPoint.getService(DataBroker.class);
+                if (optionalDataBroker.isPresent()) {
+                    return optionalDataBroker.get();
                 } else {
-                    LOG.warn("Cannot obtain mountpoint with IID {}", mountPointIid);
+                    LOG.warn("Cannot obtain data broker from mountpoint {}", mountPoint);
                 }
+            } else {
+                LOG.warn("Cannot obtain mountpoint with IID {}", mountPointIid);
             }
             return null;
         } catch (ExecutionException | InterruptedException e) {
