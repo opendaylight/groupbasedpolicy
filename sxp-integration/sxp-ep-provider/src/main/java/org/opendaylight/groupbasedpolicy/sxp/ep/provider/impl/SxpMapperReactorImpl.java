@@ -110,7 +110,7 @@ public class SxpMapperReactorImpl implements SxpMapperReactor {
         CheckedFuture<Optional<AddressEndpoint>, ReadFailedException> existingEndpointFuture =
                 findExistingEndPoint(addressEndpoint.getContextId(), addressEndpoint.getAddress());
 
-        return Futures.transform(existingEndpointFuture, new AsyncFunction<Optional<AddressEndpoint>, RpcResult<Void>>() {
+        return Futures.transformAsync(existingEndpointFuture, new AsyncFunction<Optional<AddressEndpoint>, RpcResult<Void>>() {
             @Override
             public ListenableFuture<RpcResult<Void>> apply(final Optional<AddressEndpoint> input) throws Exception {
                 final ListenableFuture<RpcResult<Void>> nextResult;

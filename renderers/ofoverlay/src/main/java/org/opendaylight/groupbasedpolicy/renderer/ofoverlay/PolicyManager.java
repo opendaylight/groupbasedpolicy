@@ -211,7 +211,7 @@ public class PolicyManager
             }
         }
         ListenableFuture<List<Void>> allAsListFuture = Futures.allAsList(checkList);
-        return Futures.transform(allAsListFuture, new AsyncFunction<List<Void>, Void>() {
+        return Futures.transformAsync(allAsListFuture, new AsyncFunction<List<Void>, Void>() {
 
             @Override
             public ListenableFuture<Void> apply(List<Void> readyToSubmit) {

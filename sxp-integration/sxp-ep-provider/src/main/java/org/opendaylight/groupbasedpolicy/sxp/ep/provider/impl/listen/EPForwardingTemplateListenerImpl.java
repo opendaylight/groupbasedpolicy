@@ -99,11 +99,11 @@ public class EPForwardingTemplateListenerImpl implements EPTemplateListener<Endp
 
         // find all available epForwardingTemplates and pair those to sxpMasterDBBinding
         final ListenableFuture<Optional<Pair<MasterDatabaseBinding, EndpointPolicyTemplateBySgt>>> searchResult =
-                Futures.transform(sxpMasterDbItemRead, createReadAndPairTemplateToBindingFunction(epForwardingTemplate));
+                Futures.transformAsync(sxpMasterDbItemRead, createReadAndPairTemplateToBindingFunction(epForwardingTemplate));
 
         // invoke sxpMapperReactor.process for every valid combination of sxpMasterDBBinding, epPolicyTemplate, epForwardingTemplate
         final ListenableFuture<RpcResult<Void>> rpcResult =
-                Futures.transform(searchResult, createProcessAllFunction(epForwardingTemplate));
+                Futures.transformAsync(searchResult, createProcessAllFunction(epForwardingTemplate));
 
         Futures.addCallback(rpcResult, ANY_RPC_FUTURE_CALLBACK);
     }

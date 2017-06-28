@@ -83,7 +83,7 @@ public class PolicyManagerImpl implements PolicyManager {
             creationResult = syncEndpoints(dataBefore, Delete);
         } else {
             final ListenableFuture<Optional<Status>> deletionResult = syncEndpoints(dataBefore, Delete);
-            creationResult = Futures.transform(deletionResult, new AsyncFunction<Optional<Status>, Optional<Status>>() {
+            creationResult = Futures.transformAsync(deletionResult, new AsyncFunction<Optional<Status>, Optional<Status>>() {
                 @Nonnull
                 @Override
                 public ListenableFuture<Optional<Status>> apply(@Nonnull Optional<Status> deletionResult) throws Exception {
@@ -95,7 +95,7 @@ public class PolicyManagerImpl implements PolicyManager {
                 }
             });
         }
-        return Futures.transform(creationResult, new AsyncFunction<Optional<Status>, Boolean>() {
+        return Futures.transformAsync(creationResult, new AsyncFunction<Optional<Status>, Boolean>() {
             @Override
             public ListenableFuture<Boolean> apply(@Nullable final Optional<Status> statusValue) throws Exception {
                 Preconditions.checkArgument(statusValue != null, "provided status must not be null");

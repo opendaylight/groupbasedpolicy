@@ -206,7 +206,7 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
         CheckedFuture<Optional<GbpBridgeDomain>, ReadFailedException> futureTopology =
                 rTx.read(LogicalDatastoreType.CONFIGURATION, bridgeDomainConfigIid);
         rTx.close();
-        return Futures.transform(futureTopology, new AsyncFunction<Optional<GbpBridgeDomain>, Void>() {
+        return Futures.transformAsync(futureTopology, new AsyncFunction<Optional<GbpBridgeDomain>, Void>() {
 
             @Override
             public ListenableFuture<Void> apply(@Nonnull Optional<GbpBridgeDomain> optBridgeDomainConf) throws Exception {
@@ -259,7 +259,7 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
         final CheckedFuture<Optional<Topology>, ReadFailedException> optTopology =
                 rTx.read(LogicalDatastoreType.CONFIGURATION, topologyIid);
         rTx.close();
-        return Futures.transform(optTopology, new AsyncFunction<Optional<Topology>, Void>() {
+        return Futures.transformAsync(optTopology, new AsyncFunction<Optional<Topology>, Void>() {
             @Override
             public ListenableFuture<Void> apply(@Nonnull final Optional<Topology> optTopology)
                     throws InterruptedException, ExecutionException {
@@ -294,7 +294,7 @@ public class BridgeDomainManagerImpl implements BridgeDomainManager {
                     topologyFuture.set(null);
                     LOG.info("Bridge domain {} already exists", optTopology.get().getTopologyId());
                 }
-                return Futures.transform(topologyFuture, new AsyncFunction<Void, Void>() {
+                return Futures.transformAsync(topologyFuture, new AsyncFunction<Void, Void>() {
                     @Override
                     public ListenableFuture<Void> apply(@Nonnull Void topologyInput) throws Exception {
                         // Bridge member

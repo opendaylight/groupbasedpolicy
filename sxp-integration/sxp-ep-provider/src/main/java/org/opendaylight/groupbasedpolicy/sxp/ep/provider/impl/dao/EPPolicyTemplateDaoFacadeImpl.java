@@ -69,7 +69,7 @@ public class EPPolicyTemplateDaoFacadeImpl implements EPPolicyTemplateDaoFacade 
         final ListenableFuture<Optional<EndpointPolicyTemplateBySgt>> templateFu = epPolicyTemplateDao.read(key);
 
         // involve fallback if template is absent
-        return Futures.transform(templateFu, new AsyncFunction<Optional<EndpointPolicyTemplateBySgt>, Optional<EndpointPolicyTemplateBySgt>>() {
+        return Futures.transformAsync(templateFu, new AsyncFunction<Optional<EndpointPolicyTemplateBySgt>, Optional<EndpointPolicyTemplateBySgt>>() {
             @Override
             public ListenableFuture<Optional<EndpointPolicyTemplateBySgt>> apply(
                     @Nonnull final Optional<EndpointPolicyTemplateBySgt> templateOpt) throws Exception {

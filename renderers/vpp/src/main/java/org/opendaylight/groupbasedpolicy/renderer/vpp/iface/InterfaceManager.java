@@ -110,7 +110,7 @@ public class InterfaceManager implements AutoCloseable {
                 final ListenableFuture<Boolean> partialOldPolicyExcludedFuture =
                         updatePolicyExcludedEndpoints(oldVppEndpoint, false);
                 policyExcludedFuture =
-                        Futures.transform(partialOldPolicyExcludedFuture, (AsyncFunction<Boolean, Boolean>) input ->
+                        Futures.transformAsync(partialOldPolicyExcludedFuture, (AsyncFunction<Boolean, Boolean>) input ->
                                 updatePolicyExcludedEndpoints(newVppEndpoint, true));
             }
             break;
@@ -236,7 +236,7 @@ public class InterfaceManager implements AutoCloseable {
                                                       @Nonnull final VppEndpoint newVppEndpoint) {
         if(!oldVppEndpoint.equals(newVppEndpoint)) {
             LOG.debug("Updating vpp endpoint, old EP: {} new EP: {}", oldVppEndpoint, newVppEndpoint);
-            return Futures.transform(vppEndpointDeleted(oldVppEndpoint),
+            return Futures.transformAsync(vppEndpointDeleted(oldVppEndpoint),
                     (AsyncFunction<Void, Void>) input -> vppEndpointCreated(newVppEndpoint));
         }
         LOG.debug("Update skipped, provided before/after vpp endpoints are equal");

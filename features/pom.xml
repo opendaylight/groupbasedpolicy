@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.opendaylight.odlparent</groupId>
         <artifactId>odlparent-lite</artifactId>
-        <version>1.9.0</version>
+        <version>2.0.0</version>
         <relativePath/>
     </parent>
 
@@ -18,12 +18,10 @@
     <name>ODL :: groupbasedpolicy :: ${project.artifactId}</name>
 
     <modules>
-        <module>features-groupedpolicy</module>
-        <module>features4-groupbasedpolicy</module>
+        <module>features-groupbasedpolicy</module>
         <module>odl-groupbasedpolicy-base</module>
         <module>odl-groupbasedpolicy-ofoverlay</module>
         <module>odl-groupbasedpolicy-ovssfc</module>
-        <module>odl-groupbasedpolicy-faas</module>
         <module>odl-groupbasedpolicy-iovisor</module>
         <module>odl-groupbasedpolicy-netconf</module>
         <module>odl-groupbasedpolicy-neutronmapper</module>

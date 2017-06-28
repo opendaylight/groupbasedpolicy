@@ -120,7 +120,7 @@ public class MasterDatabaseBindingListenerImpl implements MasterDatabaseBindingL
         final ListenableFuture<EPTemplateUtil.OptionalMutablePair<EndpointPolicyTemplateBySgt, EndpointForwardingTemplateBySubnet>> compositeRead
                 = EPTemplateUtil.compositeRead(epPolicyTemplateFuture, epForwardingTemplateFuture);
 
-        final ListenableFuture<RpcResult<Void>> rpcResult = Futures.transform(compositeRead,
+        final ListenableFuture<RpcResult<Void>> rpcResult = Futures.transformAsync(compositeRead,
                 new AsyncFunction<EPTemplateUtil.OptionalMutablePair<EndpointPolicyTemplateBySgt, EndpointForwardingTemplateBySubnet>, RpcResult<Void>>() {
                     @Override
                     public ListenableFuture<RpcResult<Void>> apply(final EPTemplateUtil.OptionalMutablePair<EndpointPolicyTemplateBySgt, EndpointForwardingTemplateBySubnet> input) throws Exception {

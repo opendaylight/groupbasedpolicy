@@ -78,7 +78,7 @@ public class GbpIseSgtHarvesterImpl implements GbpIseSgtHarvester {
 
             ListenableFuture<Void> processingResult = Futures.immediateCheckedFuture(null);
             for (SgtInfoProcessor processor : sgtInfoProcessors) {
-                processingResult = Futures.transform(processingResult, new AsyncFunction<Void, Void>() {
+                processingResult = Futures.transformAsync(processingResult, new AsyncFunction<Void, Void>() {
                     @Override
                     public ListenableFuture<Void> apply(final Void input) throws Exception {
                         LOG.debug("entering stg-info processor {}", processor.getClass().getSimpleName());

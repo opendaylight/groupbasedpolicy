@@ -112,7 +112,7 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
                 futures.add(bridgeDomainManager.createVlanBridgeDomainOnVppNode(input.getId(), vlanId, nodeId));
             });
         }
-        return Futures.transform(Futures.allAsList(futures), voidsToRpcResult());
+        return Futures.transformAsync(Futures.allAsList(futures), voidsToRpcResult());
     }
 
     public Future<RpcResult<Void>> deleteVirtualBridgeDomainFromNodes(DeleteVirtualBridgeDomainFromNodesInput input) {
@@ -121,7 +121,7 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
         input.getBridgeDomainNode().forEach(nodeId -> {
             futures.add(bridgeDomainManager.removeBridgeDomainFromVppNode(input.getBridgeDomainId(), nodeId));
         });
-        return Futures.transform(Futures.allAsList(futures), voidsToRpcResult());
+        return Futures.transformAsync(Futures.allAsList(futures), voidsToRpcResult());
     }
 
     public ListenableFuture<RpcResult<Void>> cloneVirtualBridgeDomainOnNodes(CloneVirtualBridgeDomainOnNodesInput input) {
@@ -130,7 +130,7 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
         ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
         InstanceIdentifier<Topology> topologyIid = VppIidFactory.getTopologyIid(new TopologyKey(new TopologyId(
                 input.getBridgeDomainId())));
-        return Futures.transform(rTx.read(LogicalDatastoreType.CONFIGURATION, topologyIid),
+        return Futures.transformAsync(rTx.read(LogicalDatastoreType.CONFIGURATION, topologyIid),
                 new AsyncFunction<Optional<Topology>, RpcResult<Void>>() {
 
                     @Override
@@ -174,7 +174,7 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
                                                 input.getBridgeDomainId(), vlanId, nodeId));
                                     });
                         }
-                        return Futures.transform(Futures.allAsList(futures), voidsToRpcResult());
+                        return Futures.transformAsync(Futures.allAsList(futures), voidsToRpcResult());
                     }
                 });
     }
@@ -211,7 +211,7 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
                 .withError(ErrorType.RPC, "Cannot find data broker for mount point " + vppNodeIid)
                 .build());
         }
-        return Futures.transform(interfaceManager.createInterfaceOnVpp(ifaceCommand, optDataBroker.get()),
+        return Futures.transformAsync(interfaceManager.createInterfaceOnVpp(ifaceCommand, optDataBroker.get()),
                 voidToRpcResult());
     }
 
@@ -219,7 +219,7 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
         LOG.info("Processing a remote call for removing interface {} from node {}", input.getVppInterfaceName(),
                 input.getVppNodeId());
         InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(input.getVppNodeId());
-        return Futures.transform(readInterface(vppNodeIid, input.getVppInterfaceName()),
+        return Futures.transformAsync(readInterface(vppNodeIid, input.getVppInterfaceName()),
                 new AsyncFunction<Optional<Interface>, RpcResult<Void>>() {
 
                     @Override
@@ -236,7 +236,7 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
                         Optional<DataBroker> dataBroker = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
                         WriteTransaction wTx = dataBroker.get().newWriteOnlyTransaction();
                         wTx.delete(LogicalDatastoreType.CONFIGURATION, VppIidFactory.getInterfaceIID(iKey));
-                        return Futures.transform(wTx.submit(), voidToRpcResult());
+                        return Futures.transformAsync(wTx.submit(), voidToRpcResult());
                     }
                 });
     }
@@ -245,7 +245,7 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
         LOG.info("Processing a remote call for adding interface {} to bridge domain {}", input.getVppInterfaceName(),
                 input.getBridgeDomainId());
         InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(input.getVppNodeId());
-        return Futures.transform(readInterface(vppNodeIid, input.getVppInterfaceName()),
+        return Futures.transformAsync(readInterface(vppNodeIid, input.getVppInterfaceName()),
                 new AsyncFunction<Optional<Interface>, RpcResult<Void>>() {
 
                     @Override
@@ -260,7 +260,7 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
                                 .build());
                         }
                         Optional<DataBroker> dataBroker = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
-                        return Futures.transform(interfaceManager.configureInterface(dataBroker.get(), iKey,
+                        return Futures.transformAsync(interfaceManager.configureInterface(dataBroker.get(), iKey,
                                 input.getBridgeDomainId(), null), voidToRpcResult());
                     }
                 });
@@ -269,7 +269,7 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
     public ListenableFuture<RpcResult<Void>> delInterfaceFromBridgeDomain(DelInterfaceFromBridgeDomainInput input) {
         LOG.info("Processing a remote call for removing interface {} from bridge domain.", input.getVppInterfaceName());
         InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(input.getVppNodeId());
-        return Futures.transform(readInterface(vppNodeIid, input.getVppInterfaceName()),
+        return Futures.transformAsync(readInterface(vppNodeIid, input.getVppInterfaceName()),
                 new AsyncFunction<Optional<Interface>, RpcResult<Void>>() {
 
                     @Override
@@ -284,7 +284,7 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
                                 .build());
                         }
                         Optional<DataBroker> dataBroker = mountDataProvider.getDataBrokerForMountPoint(vppNodeIid);
-                        return Futures.transform(interfaceManager.removeInterfaceFromBridgeDomain(dataBroker.get(),
+                        return Futures.transformAsync(interfaceManager.removeInterfaceFromBridgeDomain(dataBroker.get(),
                                 optIface.get().getKey()), voidToRpcResult());
                     }
                 });
