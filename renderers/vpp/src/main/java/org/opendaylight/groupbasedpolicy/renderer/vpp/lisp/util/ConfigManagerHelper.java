@@ -41,6 +41,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.child.endpoints.ChildEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.IpPrefixType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.MacAddressType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.ParentEndpointChoice;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.ParentEndpointCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.parent.endpoint._case.ParentEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.HmacKeyType;
@@ -190,12 +194,7 @@ public class ConfigManagerHelper {
         }
 
         final Ipv4AddressNoZone ip = addresses.iterator().next().getIp();
-
-        if (ip == null) {
-            return false;
-        }
-
-        return true;
+        return ip != null;
     }
 
     private boolean ipAddressPresent(final org.opendaylight.yang.gen.v1.urn.ietf.
@@ -220,11 +219,7 @@ public class ConfigManagerHelper {
         }
 
         final Ipv4AddressNoZone ip = addresses.iterator().next().getIp();
-        if (ip == null) {
-            return false;
-        }
-
-        return true;
+        return ip != null;
     }
 
     public String constructLocatorSetName(int locatorSetCount) {
@@ -254,9 +249,19 @@ public class ConfigManagerHelper {
         String ipPrefix = null;
         if (addressEp.getAddressType().equals(IpPrefixType.class)) {
             ipPrefix = addressEp.getAddress();
+        } else if (addressEp.getAddressType().equals(MacAddressType.class)) {
+            ParentEndpointChoice parentEndpointChoice = addressEp.getParentEndpointChoice();
+            if (parentEndpointChoice instanceof ParentEndpointCase) {
+                java.util.Optional<ParentEndpoint> endpointOptional =
+                    ((ParentEndpointCase) parentEndpointChoice).getParentEndpoint().stream()
+                        .filter(choice -> choice.getAddressType().equals(IpPrefixType.class))
+                        .filter(choice -> choice.getContextType().equals(L3Context.class)).findFirst();
+                if (endpointOptional.isPresent()) {
+                    ipPrefix = endpointOptional.get().getAddress();
+                }
+            }
         }
-        return Preconditions.checkNotNull(ipPrefix,
-                "No IP address found for Address Endpoint: {}", addressEp);
+        return Preconditions.checkNotNull(ipPrefix, "No IP address found for Address Endpoint: {}", addressEp);
     }
 
     public Ipv4Address getInterfaceIp(AddressEndpointWithLocation addressEp) {
@@ -265,7 +270,12 @@ public class ConfigManagerHelper {
     }
 
     public Ipv4Prefix getInterfaceIpAsPrefix(AddressEndpointWithLocation addressEp) {
-        return new Ipv4Prefix(getInterfaceIp(addressEp).getValue() + "/32");
+        if (getInterfaceIp(addressEp).getValue().contains("/")) {
+            return new Ipv4Prefix(getInterfaceIp(addressEp).getValue());
+        }
+        else {
+            return new Ipv4Prefix(getInterfaceIp(addressEp).getValue() + "/32");
+        }
     }
 
     public String getFirstLocatorSetName(LispState lispState) {
@@ -292,11 +302,15 @@ public class ConfigManagerHelper {
     public String getPhysicalAddress(AddressEndpointWithLocation addressEp) {
         String physicalAddress = null;
 
-        List<ChildEndpoint> childEndpoints = addressEp.getChildEndpoint();
-        for (ChildEndpoint childEndpoint : childEndpoints) {
-            if (childEndpoint.getAddressType().equals(MacAddressType.class)) {
-                physicalAddress = childEndpoint.getAddress();
-                break;
+        if (addressEp.getAddressType().equals(MacAddressType.class)) {
+            physicalAddress = addressEp.getAddress();
+        } else {
+            List<ChildEndpoint> childEndpoints = addressEp.getChildEndpoint();
+            for (ChildEndpoint childEndpoint : childEndpoints) {
+                if (childEndpoint.getAddressType().equals(MacAddressType.class)) {
+                    physicalAddress = childEndpoint.getAddress();
+                    break;
+                }
             }
         }
         return Preconditions.checkNotNull(physicalAddress, "Physical address not found " +
