@@ -65,7 +65,7 @@ public class RoutingCommand extends AbstractConfigCommand {
         return vrfId;
     }
 
-    @Override public InstanceIdentifier getIid() {
+    @Override public InstanceIdentifier<RoutingProtocol> getIid() {
         String routerProtocol = this.routerProtocol;
         if (Strings.isNullOrEmpty(routerProtocol)) {
             routerProtocol = DEFAULT_ROUTING_PROTOCOL;
@@ -74,21 +74,16 @@ public class RoutingCommand extends AbstractConfigCommand {
     }
 
     void put(ReadWriteTransaction rwTx) {
-        InstanceIdentifier<RoutingProtocol> routingInstanceIid =
-                VppIidFactory.getRoutingInstanceIid(new RoutingProtocolKey(routerProtocol));
-        rwTx.put(LogicalDatastoreType.CONFIGURATION, routingInstanceIid, getRoutingProtocolBuilder().build(), true);
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, getIid(), getRoutingProtocolBuilder().build(), true);
     }
 
     void merge(ReadWriteTransaction rwTx) {
-        rwTx.merge(LogicalDatastoreType.CONFIGURATION,
-                VppIidFactory.getRoutingInstanceIid(new RoutingProtocolKey(routerProtocol)),
-                getRoutingProtocolBuilder().build(), true);
+        rwTx.merge(LogicalDatastoreType.CONFIGURATION, getIid(), getRoutingProtocolBuilder().build(), true);
     }
 
     void delete(ReadWriteTransaction rwTx) {
         try {
-            rwTx.delete(LogicalDatastoreType.CONFIGURATION, VppIidFactory.getRoutingInstanceIid(new RoutingProtocolKey(
-                    routerProtocol)));
+            rwTx.delete(LogicalDatastoreType.CONFIGURATION, getIid());
         } catch (IllegalStateException ex) {
             LOG.debug("Routing protocol not deleted from DS {}", this, ex);
         }

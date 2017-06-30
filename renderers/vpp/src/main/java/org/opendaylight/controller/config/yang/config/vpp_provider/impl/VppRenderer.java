@@ -22,6 +22,7 @@ import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFaile
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareProvider;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.dhcp.DhcpRelayHandler;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.loopback.LoopbackManager;
@@ -152,10 +153,11 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         dtoEventBus.register(interfaceManager);
         dtoEventBus.register(subnetEventManager);
         RoutingManager routingManager = new RoutingManager(dataBroker, mountDataProvider);
+        DhcpRelayHandler dhcpRelayHandler = new DhcpRelayHandler(mountDataProvider);
         bdManager = new BridgeDomainManagerImpl(dataBroker);
         ForwardingManager fwManager =
                 new ForwardingManager(interfaceManager, aclManager, natManager, routingManager, bdManager,
-                        lispStateManager, loopbackManager, flatOverlayManager, dataBroker);
+                        lispStateManager, loopbackManager, flatOverlayManager, dhcpRelayHandler, dataBroker);
         VppRendererPolicyManager vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, aclManager, dataBroker);
         dtoEventBus.register(vppRendererPolicyManager);
 

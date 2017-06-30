@@ -24,6 +24,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.DtoFactory;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.dhcp.DhcpRelayHandler;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.RendererPolicyConfEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.VppEndpointConfEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
@@ -45,7 +46,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.LocationProviders;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.LocationProvider;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.location.provider.ProviderAddressEndpointLocation;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L2FloodDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.L2FloodDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicyBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Configuration;
@@ -92,6 +93,7 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
     private LispStateManager lispStateManager;
     private LoopbackManager loopbackManager;
     private FlatOverlayManager flatOverlayManager;
+    private DhcpRelayHandler dhcpRelayHandler;
     private VppRendererPolicyManager vppRendererPolicyManager;
 
     @Override
@@ -117,8 +119,9 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         lispStateManager = new LispStateManager(mountedDataProviderMock);
         loopbackManager = new LoopbackManager(mountedDataProviderMock);
         flatOverlayManager = new FlatOverlayManager(mountedDataProviderMock);
+        dhcpRelayHandler = new DhcpRelayHandler(mountedDataProviderMock);
         fwManager = new ForwardingManager(ifaceManager, aclManager, natManager, routingManager, bdManager,
-                lispStateManager, loopbackManager, flatOverlayManager, dataBroker);
+                lispStateManager, loopbackManager, flatOverlayManager, dhcpRelayHandler, dataBroker);
         vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, aclManager, dataBroker);
         fwManager.setTimer((byte) 1);
     }

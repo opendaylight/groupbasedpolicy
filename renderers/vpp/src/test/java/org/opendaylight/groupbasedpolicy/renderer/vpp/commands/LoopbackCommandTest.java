@@ -188,6 +188,8 @@ public class LoopbackCommandTest extends VppRendererDataBrokerTest {
         LoopbackCommand deleteCommand = LoopbackCommand.builder()
             .setOperation(General.Operations.DELETE)
             .setInterfaceName(INTERFACE_NAME)
+            .setIpPrefix(IP_PREFIX)
+            .setIpAddress(IP_ADDRESS)
             .build();
 
         ReadWriteTransaction rwTxDel = dataBroker.newReadWriteTransaction();

@@ -33,6 +33,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.has.rule.group.with.renderer.endpoint.participation.RuleGroupWithRendererEndpointParticipation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicyBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.RendererForwarding;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpoint;
@@ -171,6 +172,29 @@ public class VppRendererPolicyManager {
             fwManager.removeBridgeDomainOnNodes(removedVppNodesByL2Fd);
             LOG.debug("Creating bridge domains on nodes {}", createdVppNodesByL2Fd);
             fwManager.createBridgeDomainOnNodes(createdVppNodesByL2Fd);
+        } else {
+            if (rPolicyBefore.getConfiguration() != null) {
+                RendererForwarding rendererForwardingBefore = rPolicyBefore.getConfiguration().getRendererForwarding();
+
+                SetMultimap<String, NodeId> vppNodesByL2FdBefore =
+                    resolveVppNodesByL2Fd(policyCtxBefore.getPolicyTable().rowKeySet(), policyCtxBefore);
+                if (!vppNodesByL2FdBefore.isEmpty()) {
+                    LOG.debug("Deleting DhcpRelay for forwarding: {}, on VPP nodes: {}", rendererForwardingBefore,
+                        vppNodesByL2FdBefore);
+                    fwManager.deleteDhcpRelay(rendererForwardingBefore, vppNodesByL2FdBefore);
+                }
+            }
+
+            if (rPolicyAfter.getConfiguration() != null) {
+                RendererForwarding rendererForwardingAfter = rPolicyAfter.getConfiguration().getRendererForwarding();
+                SetMultimap<String, NodeId> vppNodesByL2FdAfter =
+                    resolveVppNodesByL2Fd(policyCtxAfter.getPolicyTable().rowKeySet(), policyCtxAfter);
+                if (!vppNodesByL2FdAfter.isEmpty()) {
+                    LOG.debug("Creating DhcpRelay for forwarding: {}, on VPP nodes: {}", rendererForwardingAfter,
+                        vppNodesByL2FdAfter);
+                    fwManager.createDhcpRelay(rendererForwardingAfter, vppNodesByL2FdAfter);
+                }
+            }
         }
 
         fwManager.syncNatEntries(policyCtxAfter);
@@ -270,10 +294,14 @@ public class VppRendererPolicyManager {
         PolicyContext policyCtx = new PolicyContext(rPolicy);
         aclManager.cacheMultiInterfaces(policyCtx);
         ImmutableSet<RendererEndpointKey> rEpKeys = policyCtx.getPolicyTable().rowKeySet();
+        SetMultimap<String, NodeId> vppNodesByL2Fd = resolveVppNodesByL2Fd(rEpKeys, policyCtx);
         if (!ConfigUtil.getInstance().isL3FlatEnabled()) {
-            SetMultimap<String, NodeId> vppNodesByL2Fd = resolveVppNodesByL2Fd(rEpKeys, policyCtx);
             fwManager.createBridgeDomainOnNodes(vppNodesByL2Fd);
+        } else {
+            RendererForwarding rendererForwarding = rPolicy.getConfiguration().getRendererForwarding();
+            fwManager.createDhcpRelay(rendererForwarding, vppNodesByL2Fd);
         }
+
         fwManager.syncNatEntries(policyCtx);
         fwManager.syncRouting(policyCtx);
         rEpKeys.forEach(rEpKey -> fwManager.createForwardingForEndpoint(rEpKey, policyCtx));
@@ -286,9 +314,12 @@ public class VppRendererPolicyManager {
         ImmutableSet<RendererEndpointKey> rEpKeys = policyCtx.getPolicyTable().rowKeySet();
 
         rEpKeys.forEach(rEpKey -> fwManager.removeForwardingForEndpoint(rEpKey, policyCtx));
+        SetMultimap<String, NodeId> vppNodesByL2Fd = resolveVppNodesByL2Fd(rEpKeys, policyCtx);
         if (!ConfigUtil.getInstance().isL3FlatEnabled()) {
-            SetMultimap<String, NodeId> vppNodesByL2Fd = resolveVppNodesByL2Fd(rEpKeys, policyCtx);
             fwManager.removeBridgeDomainOnNodes(vppNodesByL2Fd);
+        } else {
+            RendererForwarding rendererForwarding = rendererPolicy.getConfiguration().getRendererForwarding();
+            fwManager.deleteDhcpRelay(rendererForwarding, vppNodesByL2Fd);
         }
         fwManager.deleteNatEntries(policyCtx);
         fwManager.deleteRouting(policyCtx);

@@ -73,6 +73,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.acl.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.proxy.arp.rev170315.ProxyRanges;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.proxy.arp.rev170315.proxy.ranges.ProxyRange;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.proxy.arp.rev170315.proxy.ranges.ProxyRangeKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.dhcp.rev170315.Dhcp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.dhcp.rev170315.dhcp.attributes.Relays;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.dhcp.rev170315.dhcp.attributes.relays.Relay;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.dhcp.rev170315.dhcp.attributes.relays.RelayKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
@@ -215,11 +219,17 @@ public class VppIidFactory {
                 .child(LispFeatureData.class).build();
     }
 
-    public static InstanceIdentifier<ProxyRange> getProxyRangeIid(Long vrf,
-                                                                  Ipv4Address startAddress,
+    public static InstanceIdentifier<ProxyRange> getProxyRangeIid(Long vrf, Ipv4Address startAddress,
                                                                   Ipv4Address endAddress) {
         return InstanceIdentifier.builder(ProxyRanges.class)
-                .child(ProxyRange.class, new ProxyRangeKey(endAddress, startAddress, vrf)).build();
+            .child(ProxyRange.class, new ProxyRangeKey(endAddress, startAddress, vrf)).build();
+    }
+
+    public static InstanceIdentifier<Relay> getDhcpRelayIid(RelayKey relayKey) {
+        return InstanceIdentifier.builder(Dhcp.class)
+            .child(Relays.class)
+            .child(Relay.class, relayKey)
+            .build();
     }
 
     public static InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607

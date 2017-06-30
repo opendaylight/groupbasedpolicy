@@ -17,6 +17,11 @@ module l2-l3-forwarding {
     import ietf-inet-types { prefix inet; revision-date 2013-07-15; }
     import yang-ext {prefix ext; revision-date 2013-07-09;}
 
+    revision "2017-05-11" {
+        description
+            "Updated revision, added support for default GW and DHCP server in subnet.";
+    }
+
     revision "2016-04-27" {
         description
                 "Initial revision.";
@@ -63,6 +68,31 @@ module l2-l3-forwarding {
                      for the subnet, if desired.";
                 type inet:ip-address;
             }
+
+            list dhcp-servers {
+                description
+                    "List of DHCP servers on a per node basis.";
+                key "node";
+
+                leaf node {
+                    type string;
+                }
+
+                leaf dhcp-server-ip {
+                    description
+                        "IP address to use for a dhcp server
+                         for the subnet, if desired.";
+                    type inet:ip-address;
+                }
+             }
+
+            leaf default-subnet-gateway-ip {
+                description
+                    "IP address to use for a default gateway
+                     for the subnet, if desired.";
+                type inet:ip-address;
+            }
+
             list gateways {
                 description
                     "External gateways for subnets we serve,

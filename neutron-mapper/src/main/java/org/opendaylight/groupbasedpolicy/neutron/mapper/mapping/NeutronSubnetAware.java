@@ -9,10 +9,12 @@ package org.opendaylight.groupbasedpolicy.neutron.mapper.mapping;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
@@ -30,18 +32,22 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubnetId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L2FloodDomain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.SubnetAugmentForwarding;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.SubnetAugmentForwardingBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.has.subnet.SubnetBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.has.subnet.subnet.AllocationPool;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.has.subnet.subnet.AllocationPoolBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.has.subnet.subnet.GatewaysBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.has.subnet.subnet.gateways.PrefixesBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.L2FloodDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.SubnetAugmentForwarding;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.SubnetAugmentForwardingBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.SubnetBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.subnet.AllocationPool;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.subnet.AllocationPoolBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.subnet.DhcpServers;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.subnet.DhcpServersBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.subnet.GatewaysBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.subnet.gateways.PrefixesBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.NetworkDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.forwarding.by.tenant.NetworkDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.binding.rev150712.PortBindingExtension;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.networks.rev150712.networks.attributes.networks.Network;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.port.attributes.FixedIps;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.ports.rev150712.ports.attributes.ports.Port;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.provider.ext.rev150712.NetworkProviderExtension;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.rev150712.Neutron;
@@ -123,6 +129,8 @@ public class NeutronSubnetAware implements
             Neutron neutron, IpAddress gwIpAddress) {
         SubnetBuilder sb = new SubnetBuilder();
         sb.setIpPrefix(subnet.getCidr());
+        sb.setDhcpServers(resolveDhcpServerIp(neutron, subnet));
+        sb.setDefaultSubnetGatewayIp(subnet.getGatewayIp());
         if (gwIpAddress != null) {
             sb.setGateways(Collections.singletonList(new GatewaysBuilder().setGateway(gwIpAddress)
                 .setPrefixes(
@@ -131,19 +139,14 @@ public class NeutronSubnetAware implements
         }
         if (neutron.getPorts() != null && neutron.getPorts().getPort() != null) {
             for (Port port : neutron.getPorts().getPort()) {
-                if (port.getFixedIps() == null || !port.getFixedIps()
-                    .stream()
-                    .filter(fi -> fi.getSubnetId().equals(subnet.getUuid()))
-                    .findFirst()
-                    .isPresent()) {
+                if (port.getFixedIps() == null || port.getFixedIps().stream()
+                    .noneMatch(fi -> fi.getSubnetId().equals(subnet.getUuid()))) {
                     continue;
                 }
                 if (neutron.getRouters() != null && neutron.getRouters().getRouter() != null && neutron.getRouters()
                     .getRouter()
                     .stream()
-                    .filter(r -> !r.getUuid().getValue().equals(port.getDeviceOwner()))
-                    .findFirst()
-                    .isPresent()) {
+                    .anyMatch(r -> !r.getUuid().getValue().equals(port.getDeviceOwner()))) {
                     // virtual router IP is set when a router port is attached to a network
                     sb.setVirtualRouterIp(subnet.getGatewayIp());
                 } else if (neutron.getNetworks() != null && neutron.getNetworks().getNetwork() != null && neutron
@@ -152,9 +155,7 @@ public class NeutronSubnetAware implements
                     .stream()
                     .filter(net -> net.getUuid().equals(port.getNetworkId()))
                     .filter(net -> net.getAugmentation(NetworkProviderExtension.class) != null)
-                    .filter(net -> net.getAugmentation(NetworkProviderExtension.class).getPhysicalNetwork() != null)
-                    .findFirst()
-                    .isPresent()) {
+                    .anyMatch(net -> net.getAugmentation(NetworkProviderExtension.class).getPhysicalNetwork() != null)) {
                     // add virtual router IP only in case it is provider physical network
                     sb.setVirtualRouterIp(subnet.getGatewayIp());
                 }
@@ -201,6 +202,33 @@ public class NeutronSubnetAware implements
         ndb.addAugmentation(SubnetAugmentForwarding.class, new SubnetAugmentForwardingBuilder().setSubnet(sb.build())
             .build());
         return ndb.build();
+    }
+
+    private static List<DhcpServers> resolveDhcpServerIp(Neutron neutron,
+        org.opendaylight.yang.gen.v1.urn.opendaylight.neutron.subnets.rev150712.subnets.attributes.subnets.Subnet subnet) {
+        if (neutron == null || neutron.getPorts() == null || neutron.getPorts().getPort() == null) {
+            return new ArrayList<>();
+        }
+        final List<DhcpServers> dhcpServers = new ArrayList<>();
+
+        Stream<Port> ports = neutron.getPorts().getPort().stream()
+            .filter(port -> subnet.getNetworkId().equals(port.getNetworkId()))
+            .filter(port -> port.getDeviceId().contains(subnet.getNetworkId().getValue()));
+
+        ports.forEach(port -> {
+            java.util.Optional<FixedIps> optionalDhcpServerIp = port.getFixedIps().stream().findFirst();
+            PortBindingExtension portBindingExtension = port.getAugmentation(PortBindingExtension.class);
+            if (optionalDhcpServerIp.isPresent() && portBindingExtension != null && subnet.getUuid()
+                .equals(optionalDhcpServerIp.get().getSubnetId())) {
+                dhcpServers.add(new DhcpServersBuilder()
+                    .setDhcpServerIp(optionalDhcpServerIp.get().getIpAddress())
+                    .setNode(portBindingExtension.getHostId())
+                    .build());
+                LOG.trace("Found DHCP server IP address: {} for node: {} in subnet: {}",
+                    optionalDhcpServerIp.get().getIpAddress(), portBindingExtension.getHostId(), subnet);
+            }
+        });
+        return dhcpServers;
     }
 
     @Deprecated

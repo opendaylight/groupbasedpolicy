@@ -26,10 +26,12 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.RoutingCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.dhcp.DhcpRelayHandler;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.loopback.LoopbackManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay.FlatOverlayManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.NeutronTenantToVniMapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AclManager;
@@ -51,15 +53,16 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.IpPrefixType;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L2FloodDomain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.MacAddressType;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.SubnetAugmentRenderer;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.IpPrefixType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.L2FloodDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.MacAddressType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.SubnetAugmentRenderer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.NetworkDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.fields.Parent;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.NatAddressRenderer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Configuration;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.Endpoints;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.RendererForwarding;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.forwarding.RendererForwardingByTenant;
@@ -105,12 +108,13 @@ public final class ForwardingManager {
     private final LispStateManager lispStateManager;
     private final LoopbackManager loopbackManager;
     private final FlatOverlayManager flatOverlayManager;
+    private final DhcpRelayHandler dhcpRelayHandler;
     private final DataBroker dataBroker;
 
     public ForwardingManager(@Nonnull InterfaceManager ifaceManager, @Nonnull AclManager aclManager,
                              @Nonnull NatManager natManager, @Nonnull RoutingManager routingManager, @Nonnull BridgeDomainManager bdManager,
                              @Nonnull LispStateManager lispStateManager, @Nonnull LoopbackManager loopbackManager, @Nonnull FlatOverlayManager flatOverlayManager,
-                             @Nonnull DataBroker dataBroker) {
+                             @Nonnull DhcpRelayHandler dhcpRelayHandler, @Nonnull DataBroker dataBroker) {
         this.ifaceManager = Preconditions.checkNotNull(ifaceManager);
         this.bdManager = Preconditions.checkNotNull(bdManager);
         this.natManager = Preconditions.checkNotNull(natManager);
@@ -120,6 +124,7 @@ public final class ForwardingManager {
         this.flatOverlayManager = Preconditions.checkNotNull(flatOverlayManager);
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.aclManager = Preconditions.checkNotNull(aclManager);
+        this.dhcpRelayHandler = Preconditions.checkNotNull(dhcpRelayHandler);
     }
 
     public Optional<GbpBridgeDomain> readGbpBridgeDomainConfig(String name) {
@@ -522,6 +527,31 @@ public final class ForwardingManager {
                         LOG.debug("Routing was successfully removed: {}.", command);
                     }
                 });
+            }
+        }
+    }
+
+    public void createDhcpRelay(RendererForwarding rendererForwarding,
+        SetMultimap<String, NodeId> vppNodesByL2Fd) {
+        for (RendererForwardingByTenant forwardingByTenant : rendererForwarding.getRendererForwardingByTenant()) {
+            long vni_vrfid = NeutronTenantToVniMapper.getInstance().getVni(forwardingByTenant.getTenantId().getValue());
+            for (RendererNetworkDomain networkDomain : forwardingByTenant.getRendererNetworkDomain()) {
+                org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.Subnet
+                    subnet = networkDomain.getAugmentation((SubnetAugmentRenderer.class)).getSubnet();
+                LOG.trace("Creating Dhcp Relay from subnet: {}, vrfid: {}, vppNodesByL2Fd: {}", subnet, vni_vrfid,
+                    vppNodesByL2Fd);
+                dhcpRelayHandler.createIpv4DhcpRelay(vni_vrfid, subnet, vppNodesByL2Fd);
+            }
+        }
+    }
+
+    public void deleteDhcpRelay(RendererForwarding rendererForwarding, SetMultimap<String, NodeId> vppNodesByL2Fd) {
+        for (RendererForwardingByTenant forwardingByTenant : rendererForwarding.getRendererForwardingByTenant()) {
+            long vni_vrfid = NeutronTenantToVniMapper.getInstance().getVni(forwardingByTenant.getTenantId().getValue());
+            for (RendererNetworkDomain networkDomain : forwardingByTenant.getRendererNetworkDomain()) {
+                org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.Subnet
+                    subnet = networkDomain.getAugmentation((SubnetAugmentRenderer.class)).getSubnet();
+                dhcpRelayHandler.deleteIpv4DhcpRelay(vni_vrfid, subnet, vppNodesByL2Fd);
             }
         }
     }

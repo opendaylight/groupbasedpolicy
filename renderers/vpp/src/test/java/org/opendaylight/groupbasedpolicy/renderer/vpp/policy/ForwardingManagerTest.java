@@ -22,6 +22,7 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.DtoFactory;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.dhcp.DhcpRelayHandler;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.InterfaceManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.loopback.LoopbackManager;
@@ -76,6 +77,8 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
     private FlatOverlayManager flatOverlayManager;
     @Mock
     private LoopbackManager loopbackManager;
+    @Mock
+    private DhcpRelayHandler dhcpRelayHandler;
 
     private ForwardingManager fwdManager;
 
@@ -83,7 +86,7 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
     public void init() {
         fwdManager =
             new ForwardingManager(ifaceManager, aclManager, natManager, routingManager, bdManager, lispStateManager,
-                    loopbackManager, flatOverlayManager, getDataBroker());
+                    loopbackManager, flatOverlayManager, dhcpRelayHandler, getDataBroker());
     }
 
     @Override

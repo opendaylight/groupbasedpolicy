@@ -14,6 +14,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.interfaces.Config
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.interfaces.InterfaceCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.proxy.arp.rev170315.ProxyArpInterfaceAugmentation;
@@ -81,29 +82,22 @@ public abstract class AbstractInterfaceCommand implements ConfigCommand, Interfa
     }
 
     private void put(ReadWriteTransaction rwTx) {
-        InterfaceBuilder interfaceBuilder = getInterfaceBuilder();
-
-        rwTx.put(LogicalDatastoreType.CONFIGURATION, VppIidFactory.getInterfaceIID(interfaceBuilder.getKey()),
-                interfaceBuilder.build(), true);
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, getIid(), getInterfaceBuilder().build(), true);
     }
 
     private void merge(ReadWriteTransaction rwTx) {
-        InterfaceBuilder interfaceBuilder = getInterfaceBuilder();
-
-        rwTx.merge(LogicalDatastoreType.CONFIGURATION, VppIidFactory.getInterfaceIID(interfaceBuilder.getKey()),
-                interfaceBuilder.build());
+        rwTx.merge(LogicalDatastoreType.CONFIGURATION, getIid(), getInterfaceBuilder().build());
     }
 
     private void delete(ReadWriteTransaction readWriteTransaction) {
         try {
-            readWriteTransaction.delete(LogicalDatastoreType.CONFIGURATION,
-                    VppIidFactory.getInterfaceIID(new InterfaceKey(name)));
+            readWriteTransaction.delete(LogicalDatastoreType.CONFIGURATION, getIid());
         } catch (IllegalStateException ex) {
             LOG.debug("Interface is not present in DS {}", this, ex);
         }
 
     }
-    @Override public InstanceIdentifier getIid() {
+    @Override public InstanceIdentifier<Interface> getIid() {
         return VppIidFactory.getInterfaceIID(this.getInterfaceBuilder().getKey());
     }
 
