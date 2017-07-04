@@ -37,6 +37,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererNodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.nodes.RendererNodeKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.acl.rev161214.VppAclInterfaceAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518.Gpe;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518.gpe.entry.table.grouping.GpeEntryTable;
@@ -109,6 +111,11 @@ public class VppIidFactory {
         return InstanceIdentifier.builder(Renderers.class)
             .child(Renderer.class, new RendererKey(VppRenderer.NAME))
             .child(RendererNodes.class)
+            .build();
+    }
+
+    public static InstanceIdentifier<Config> getVppRendererConfig() {
+        return InstanceIdentifier.builder(Config.class)
             .build();
     }
 
@@ -265,4 +272,5 @@ public class VppIidFactory {
                 .child(GpeEntry.class, gpeEntryKey)
                 .build();
     }
+
 }

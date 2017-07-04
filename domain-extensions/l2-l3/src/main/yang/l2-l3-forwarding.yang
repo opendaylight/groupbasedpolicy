@@ -69,23 +69,6 @@ module l2-l3-forwarding {
                 type inet:ip-address;
             }
 
-            list dhcp-servers {
-                description
-                    "List of DHCP servers on a per node basis.";
-                key "node";
-
-                leaf node {
-                    type string;
-                }
-
-                leaf dhcp-server-ip {
-                    description
-                        "IP address to use for a dhcp server
-                         for the subnet, if desired.";
-                    type inet:ip-address;
-                }
-             }
-
             leaf default-subnet-gateway-ip {
                 description
                     "IP address to use for a default gateway

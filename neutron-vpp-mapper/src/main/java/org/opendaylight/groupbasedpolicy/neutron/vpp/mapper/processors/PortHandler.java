@@ -23,6 +23,7 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionChain;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionChainListener;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.PhysAddress;
@@ -253,8 +254,11 @@ public class PortHandler implements TransactionChainListener {
             vppEpBuilder.setInterfaceTypeChoice(
                 new VhostUserCaseBuilder().setSocket(getSocketFromPortBinding(portBinding)).build());
         } else if (port.getDeviceOwner().contains(DHCP_OWNER) && port.getMacAddress() != null) {
+            IpAddress dhcpServerIpAddress = port.getFixedIps().stream().findFirst().isPresent() ?
+                port.getFixedIps().stream().findFirst().get().getIpAddress() : null;
             TapCase tapCase = new TapCaseBuilder().setPhysicalAddress(new PhysAddress(port.getMacAddress().getValue()))
                 .setName(createPortName(port.getUuid()))
+                .setDhcpServerAddress(dhcpServerIpAddress)
                 .build();
             vppEpBuilder.setInterfaceTypeChoice(tapCase);
         } else if (isValidQRouterPort(port)) {

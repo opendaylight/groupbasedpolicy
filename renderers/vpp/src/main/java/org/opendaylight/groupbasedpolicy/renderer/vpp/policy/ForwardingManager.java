@@ -211,19 +211,19 @@ public final class ForwardingManager {
     public void createForwardingForEndpoint(RendererEndpointKey rEpKey, PolicyContext policyCtx) {
         AddressEndpointWithLocation rEp = policyCtx.getAddrEpByKey().get(KeyFactory.addressEndpointKey(rEpKey));
 
+        ExternalLocationCase rEpLoc = resolveAndValidateLocation(rEp);
+        if (Strings.isNullOrEmpty(rEpLoc.getExternalNodeConnector())) {
+            // TODO add it to the status for renderer manager
+            LOG.info("Renderer endpoint does not have external-node-connector therefore it is ignored {}", rEp);
+            return;
+        }
+
         if (ConfigUtil.getInstance().isLispOverlayEnabled()) {
             lispStateManager.configureEndPoint(rEp);
             if (ConfigUtil.getInstance().isL3FlatEnabled()) {
                 flatOverlayManager.configureEndpointForFlatOverlay(rEp);
                 loopbackManager.createSimpleLoopbackIfNeeded(rEp);
             }
-        }
-
-        ExternalLocationCase rEpLoc = resolveAndValidateLocation(rEp);
-        if (Strings.isNullOrEmpty(rEpLoc.getExternalNodeConnector())) {
-            // TODO add it to the status for renderer manager
-            LOG.info("Renderer endpoint does not have external-node-connector therefore it is ignored {}", rEp);
-            return;
         }
 
         if (Strings.isNullOrEmpty(rEpLoc.getExternalNode())) {

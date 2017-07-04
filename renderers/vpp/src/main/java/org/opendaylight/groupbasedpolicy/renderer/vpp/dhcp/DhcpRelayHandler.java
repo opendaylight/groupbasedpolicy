@@ -11,14 +11,20 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.dhcp;
 import com.google.common.base.Optional;
 import com.google.common.collect.SetMultimap;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.DhcpRelayCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
+import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.groupbasedpolicy.util.NetUtils;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.Subnet;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.subnet.DhcpServers;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425._interface.attributes._interface.type.choice.TapCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.dhcp.rev170315.Ipv4;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.dhcp.rev170315.relay.attributes.ServerBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.dhcp.rev170315.relay.attributes.ServerKey;
@@ -27,21 +33,25 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
-import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
+
+import static org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory.getVppRendererConfig;
 
 public class DhcpRelayHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(DhcpRelayHandler.class);
     private final MountedDataBrokerProvider mountDataProvider;
+    private final DataBroker dataBroker;
 
-    public DhcpRelayHandler(MountedDataBrokerProvider mountDataProvider) {
+    public DhcpRelayHandler(DataBroker dataBroker, MountedDataBrokerProvider mountDataProvider) {
         this.mountDataProvider = mountDataProvider;
+        this.dataBroker = dataBroker;
     }
 
     public void createIpv4DhcpRelay(long vni_vrfid, Subnet subnet, SetMultimap<String, NodeId> vppNodesByL2Fd) {
-        if (subnet.getDhcpServers() == null) {
-            LOG.trace("Dhcp Server IP is null, skipping processing DhcpRelay for vrfid: {}, subnet: {}, VPP nodes: {}",
+        if (subnet.getDefaultSubnetGatewayIp() == null) {
+            LOG.trace("Subnet GW IP is null, skipping processing DhcpRelay for vrfid: {}, subnet: {}, VPP nodes: {}",
                 vni_vrfid, subnet, vppNodesByL2Fd);
             return;
         }
@@ -49,43 +59,66 @@ public class DhcpRelayHandler {
         for (String bd : vppNodesByL2Fd.keySet()) {
             Set<NodeId> vppNodes = vppNodesByL2Fd.get(bd);
             for (NodeId vppNode : vppNodes) {
-                IpAddress ipAddress = resolveDhcpIpAddress(subnet.getDhcpServers(), vppNode);
+                IpAddress ipAddress = resolveDhcpIpAddress(vppNode, subnet);
                 if (ipAddress != null) {
                     DhcpRelayCommand dhcpRelayCommand =
-                        DhcpRelayCommand.builder()
-                            .setOperation(General.Operations.PUT)
-                            .setRxVrfId(vni_vrfid)
-                            .setAddressType(Ipv4.class)
-                            .setGatewayIpAddress(subnet.getDefaultSubnetGatewayIp())
-                            .setServerIpAddresses(Collections.singletonList(
-                                new ServerBuilder()
-                                    .setAddress(ipAddress)
-                                    .setVrfId(vni_vrfid)
-                                    .setKey(new ServerKey(ipAddress, vni_vrfid))
-                                    .build()))
-                            .build();
+                        getDhcpRelayBuilder(vni_vrfid, subnet, ipAddress, General.Operations.PUT).build();
 
                     if (!submitDhcpRelay(dhcpRelayCommand, vppNode)) {
                         LOG.warn("DHCP Relay was not configured: {}", dhcpRelayCommand);
                     }
                 } else {
-                    LOG.warn("DHCP Relay not configured for node: {}, DHCP server IP addres was not found.", vppNode);
+                    LOG.warn("DHCP server IP address was not found for node: {}. Skipping processing", vppNode);
                 }
             }
 
         }
     }
 
-    private IpAddress resolveDhcpIpAddress(List<DhcpServers> dhcpServers, NodeId vppNode) {
-        java.util.Optional<DhcpServers> dhcpServerOptional = dhcpServers.stream()
-            .filter(dhcpServer -> dhcpServer.getNode().equalsIgnoreCase(vppNode.getValue()))
-            .findFirst();
-        return dhcpServerOptional.map(DhcpServers::getDhcpServerIp).orElse(null);
+    private DhcpRelayCommand.DhcpRelayBuilder getDhcpRelayBuilder(long vni_vrfid, Subnet subnet, IpAddress ipAddress,
+        General.Operations operations) {
+        return DhcpRelayCommand.builder()
+            .setRxVrfId(vni_vrfid)
+            .setOperation(operations)
+            .setAddressType(Ipv4.class)
+            .setGatewayIpAddress(subnet.getDefaultSubnetGatewayIp())
+            .setServerIpAddresses(Collections.singletonList(
+                new ServerBuilder()
+                    .setAddress(ipAddress)
+                    .setVrfId(vni_vrfid)
+                    .setKey(new ServerKey(ipAddress, vni_vrfid))
+                    .build()));
+    }
+
+    private IpAddress resolveDhcpIpAddress(NodeId vppNode, Subnet subnet) {
+        Optional<Config> vppEndpointOptional =
+            DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, getVppRendererConfig(),
+                dataBroker.newReadOnlyTransaction());
+
+        if (vppEndpointOptional.isPresent() && !vppEndpointOptional.get().getVppEndpoint().isEmpty()) {
+            Stream<VppEndpoint> vppEndpointStream = vppEndpointOptional.get().getVppEndpoint().stream()
+                .filter(vppEndpoint -> vppEndpoint.getInterfaceTypeChoice() instanceof TapCase)
+                .filter(vppEndpoint -> vppEndpoint.getVppNodeId().equals(vppNode))
+                .filter(vppEndpoint -> ((TapCase) vppEndpoint.getInterfaceTypeChoice()).getDhcpServerAddress() != null)
+                .filter(vppEndpoint -> NetUtils.isInRange(subnet.getIpPrefix(), ((TapCase) vppEndpoint
+                    .getInterfaceTypeChoice()).getDhcpServerAddress().getIpv4Address().getValue()));
+            java.util.Optional<VppEndpoint> vppEpOptional = vppEndpointStream.findFirst();
+            if (vppEpOptional.isPresent()) {
+                IpAddress dhcpServerAddress =
+                    ((TapCase) vppEpOptional.get().getInterfaceTypeChoice()).getDhcpServerAddress();
+                LOG.trace("Found Dhcp server: {} on VPP node: {}", dhcpServerAddress, vppNode);
+                return dhcpServerAddress;
+            } else {
+                LOG.trace("Dhcp server ip not found in subnet: {}, for node: {},in VPP endpoints: {}",
+                    subnet, vppNode, vppEndpointOptional.get().getVppEndpoint());
+            }
+        }
+        return null;
     }
 
     public void deleteIpv4DhcpRelay(long vni_vrfid, Subnet subnet, SetMultimap<String, NodeId> vppNodesByL2Fd) {
-        if (subnet.getDhcpServers() == null) {
-            LOG.trace("Dhcp Server IP is null, skipping processing DhcpRelay for vrfid: {}, subnet: {}, VPP nodes: {}",
+        if (subnet.getDefaultSubnetGatewayIp() == null) {
+            LOG.trace("Subnet GW IP is null, skipping processing DhcpRelay for vrfid: {}, subnet: {}, VPP nodes: {}",
                 vni_vrfid, subnet, vppNodesByL2Fd);
             return;
         }
@@ -93,27 +126,16 @@ public class DhcpRelayHandler {
         for (String bd : vppNodesByL2Fd.keySet()) {
             Set<NodeId> vppNodes = vppNodesByL2Fd.get(bd);
             for (NodeId vppNode : vppNodes) {
-                IpAddress ipAddress = resolveDhcpIpAddress(subnet.getDhcpServers(), vppNode);
+                IpAddress ipAddress = resolveDhcpIpAddress(vppNode, subnet);
                 if (ipAddress != null) {
                     DhcpRelayCommand dhcpRelayCommand =
-                        DhcpRelayCommand.builder()
-                            .setOperation(General.Operations.DELETE)
-                            .setRxVrfId(vni_vrfid)
-                            .setAddressType(Ipv4.class)
-                            .setGatewayIpAddress(subnet.getDefaultSubnetGatewayIp())
-                            .setServerIpAddresses(Collections.singletonList(
-                                new ServerBuilder()
-                                    .setAddress(ipAddress)
-                                    .setVrfId(vni_vrfid)
-                                    .setKey(new ServerKey(ipAddress, vni_vrfid))
-                                    .build()))
-                            .build();
+                        getDhcpRelayBuilder(vni_vrfid, subnet, ipAddress, General.Operations.DELETE).build();
 
                     if (!submitDhcpRelay(dhcpRelayCommand, vppNode)) {
                         LOG.warn("DHCP Relay was not deleted: {}", dhcpRelayCommand);
                     }
                 } else {
-                    LOG.warn("DHCP Relay not deleted for node: {}, DHCP server IP address was not found.", vppNode);
+                    LOG.trace("DHCP server IP address was not found for node: {}. Skipping processing.", vppNode);
                 }
 
             }

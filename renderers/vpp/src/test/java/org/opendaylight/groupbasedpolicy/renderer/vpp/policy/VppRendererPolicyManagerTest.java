@@ -119,7 +119,7 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         lispStateManager = new LispStateManager(mountedDataProviderMock);
         loopbackManager = new LoopbackManager(mountedDataProviderMock);
         flatOverlayManager = new FlatOverlayManager(mountedDataProviderMock);
-        dhcpRelayHandler = new DhcpRelayHandler(mountedDataProviderMock);
+        dhcpRelayHandler = new DhcpRelayHandler(dataBroker, mountedDataProviderMock);
         fwManager = new ForwardingManager(ifaceManager, aclManager, natManager, routingManager, bdManager,
                 lispStateManager, loopbackManager, flatOverlayManager, dhcpRelayHandler, dataBroker);
         vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, aclManager, dataBroker);

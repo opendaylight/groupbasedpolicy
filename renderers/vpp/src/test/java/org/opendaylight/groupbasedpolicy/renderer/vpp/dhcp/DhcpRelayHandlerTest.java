@@ -28,10 +28,16 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.L2BridgeDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.MacAddressType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.SubnetBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.subnet.DhcpServers;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.subnet.DhcpServersBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.ConfigBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425._interface.attributes._interface.type.choice.TapCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.dhcp.rev170315.Ipv4;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.dhcp.rev170315.dhcp.attributes.relays.Relay;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.dhcp.rev170315.dhcp.attributes.relays.RelayBuilder;
@@ -48,13 +54,13 @@ import java.util.concurrent.ExecutionException;
 public class DhcpRelayHandlerTest extends VppRendererDataBrokerTest {
 
     public static final String TEST_BD = "testBD";
-    public static final NodeId TEST_NODENODE = new NodeId("testNode");
+    public static final NodeId TEST_NODE = new NodeId("testNode");
     private static final long RX_VRF_ID = 0L;
     private static final SetMultimap<String, NodeId> vppNodesByL2Fd = HashMultimap.create();
+    private static final String TEST_L2_CONTEXT_ID = "53064b9c-6dfa-40cd-81aa-02c88289e363";
     private static final IpAddress GATEWAY_IP_ADDRESS = new IpAddress(new Ipv4Address("10.0.0.1"));
     private static final IpAddress SERVER_IP_ADDRESS = new IpAddress(new Ipv4Address("10.0.0.2"));
-    private static final DhcpServers DHCP_SERVERS =
-        new DhcpServersBuilder().setNode(TEST_NODENODE.getValue()).setDhcpServerIp(SERVER_IP_ADDRESS).build();
+    private static final String SERVER_MAC_ADDRESS = "fa:16:3e:a1:c5:c3";
     public static final List<Server> SERVER_LIST_1 =
         Collections.singletonList(new ServerBuilder().setVrfId(RX_VRF_ID).setAddress(SERVER_IP_ADDRESS).build());
     public static final DhcpRelayCommand DHCP_RELAY_COMMAND =
@@ -64,6 +70,16 @@ public class DhcpRelayHandlerTest extends VppRendererDataBrokerTest {
             .setOperation(General.Operations.PUT)
             .setRxVrfId(RX_VRF_ID)
             .build();
+    private static final VppEndpoint VPP_ENDPOINT = new VppEndpointBuilder()
+        .setAddressType(MacAddressType.class)
+        .setAddress(SERVER_MAC_ADDRESS)
+        .setContextType(L2BridgeDomain.class)
+        .setContextId(new ContextId(TEST_L2_CONTEXT_ID))
+        .setInterfaceTypeChoice(new TapCaseBuilder().setDhcpServerAddress(SERVER_IP_ADDRESS).build())
+        .setVppNodeId(TEST_NODE)
+        .build();
+    private static final Config VPP_RENDERER_CONFIG =
+        new ConfigBuilder().setVppEndpoint(Collections.singletonList(VPP_ENDPOINT)).build();
     private static final Relay RELAY = new RelayBuilder()
         .setAddressType(Ipv4.class)
         .setGatewayAddress(GATEWAY_IP_ADDRESS)
@@ -73,24 +89,24 @@ public class DhcpRelayHandlerTest extends VppRendererDataBrokerTest {
     private static final Subnet
         subnet = new SubnetBuilder()
         .setDefaultSubnetGatewayIp(GATEWAY_IP_ADDRESS)
-        .setDhcpServers(Collections.singletonList(DHCP_SERVERS))
         .setIpPrefix(new IpPrefix(Ipv4Prefix.getDefaultInstance("10.0.0.2/24")))
         .build();
     private DataBroker dataBroker;
     private MountedDataBrokerProvider mountedDataProviderMock;
 
     @Before
-    public void init() {
+    public void init() throws ExecutionException, InterruptedException {
         dataBroker = getDataBroker();
         mountedDataProviderMock = Mockito.mock(MountedDataBrokerProvider.class);
-        vppNodesByL2Fd.put(TEST_BD, TEST_NODENODE);
+        vppNodesByL2Fd.put(TEST_BD, TEST_NODE);
         Mockito.when(mountedDataProviderMock.getDataBrokerForMountPoint(Mockito.any(InstanceIdentifier.class)))
             .thenReturn(Optional.of(dataBroker));
+        writeBasicDhcpVppEp();
     }
 
     @Test
     public void createIpv4DhcpRelayTest() throws ExecutionException, InterruptedException {
-        DhcpRelayHandler dhcpRelayHandler = new DhcpRelayHandler(mountedDataProviderMock);
+        DhcpRelayHandler dhcpRelayHandler = new DhcpRelayHandler(dataBroker, mountedDataProviderMock);
 
         dhcpRelayHandler.createIpv4DhcpRelay(RX_VRF_ID, subnet, vppNodesByL2Fd);
         Optional<Relay> relayOptional = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
@@ -102,9 +118,9 @@ public class DhcpRelayHandlerTest extends VppRendererDataBrokerTest {
 
     @Test
     public void createIpv4DhcpRelayTestWithNullServerIp() throws ExecutionException, InterruptedException {
-        DhcpRelayHandler dhcpRelayHandler = new DhcpRelayHandler(mountedDataProviderMock);
+        DhcpRelayHandler dhcpRelayHandler = new DhcpRelayHandler(dataBroker, mountedDataProviderMock);
 
-        Subnet subnet1 = new SubnetBuilder(subnet).setDhcpServers(null).build();
+        Subnet subnet1 = new SubnetBuilder(subnet).setDefaultSubnetGatewayIp(null).build();
 
         dhcpRelayHandler.createIpv4DhcpRelay(RX_VRF_ID, subnet1, vppNodesByL2Fd);
         Optional<Relay> relayOptional = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
@@ -115,7 +131,7 @@ public class DhcpRelayHandlerTest extends VppRendererDataBrokerTest {
 
     @Test
     public void deleteIpv4DhcpRelayTest() throws ExecutionException, InterruptedException {
-        DhcpRelayHandler dhcpRelayHandler = new DhcpRelayHandler(mountedDataProviderMock);
+        DhcpRelayHandler dhcpRelayHandler = new DhcpRelayHandler(dataBroker, mountedDataProviderMock);
         writeBasicRelay();
 
         Optional<Relay> relayOptional = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
@@ -139,6 +155,16 @@ public class DhcpRelayHandlerTest extends VppRendererDataBrokerTest {
 
         return DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
             VppIidFactory.getDhcpRelayIid(new RelayKey(Ipv4.class, RX_VRF_ID)),
+            dataBroker.newReadOnlyTransaction());
+    }
+
+    private Optional<Config> writeBasicDhcpVppEp() throws InterruptedException, ExecutionException {
+        ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
+        rwTx.put(LogicalDatastoreType.CONFIGURATION,
+            VppIidFactory.getVppRendererConfig(), VPP_RENDERER_CONFIG, true);
+        rwTx.submit().get();
+
+        return DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, VppIidFactory.getVppRendererConfig(),
             dataBroker.newReadOnlyTransaction());
     }
 }

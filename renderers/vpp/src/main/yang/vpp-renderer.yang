@@ -103,6 +103,11 @@ module vpp-renderer {
                     description "MAC address of a tap port";
                     type yang-types:phys-address;
                 }
+
+                leaf dhcp-server-address {
+                    description "IP address of a dhcp port";
+                    type inet-types:ip-address;
+                }
             }
             case loopback-case {
                 leaf phys-address {
