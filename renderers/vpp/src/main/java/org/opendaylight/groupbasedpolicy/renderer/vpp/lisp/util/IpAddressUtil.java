@@ -67,6 +67,10 @@ public class IpAddressUtil {
         return new ImmutablePair<>(new Ipv4Prefix(firstSubnet), new Ipv4Prefix(secondSubnet));
     }
 
+    public static Ipv4Prefix toIpV4Prefix(Ipv4Address ipv4Address) {
+        return new Ipv4Prefix(ipv4Address.getValue() + "/32");
+    }
+
     public static boolean ipInRange(Ipv4Address ip, String startIpStr, String endIpStr) {
         String ipStr = ip.getValue();
 

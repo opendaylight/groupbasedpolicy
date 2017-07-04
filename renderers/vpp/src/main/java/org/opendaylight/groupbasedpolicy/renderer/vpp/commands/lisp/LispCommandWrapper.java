@@ -18,9 +18,12 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.LocatorS
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.MapRegisterDom;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.MapResolverDom;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.MapServerDom;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.NativeForwardPathDom;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.VniTableDom;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.VrfSubtableDom;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518.NativeForwardPathsTables;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518._native.forward.paths.tables._native.forward.paths.table.NativeForwardPath;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518.gpe.entry.table.grouping.gpe.entry.table.GpeEntry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518.gpe.entry.table.grouping.gpe.entry.table.gpe.entry.RemoteEid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518.gpe.feature.data.grouping.GpeFeatureData;
@@ -155,5 +158,21 @@ public class LispCommandWrapper {
         itrRemoteLocatorSetDom.setLocatorSetName(locatorSetName);
 
         return new ConfigureItrRemoteLocatorSetCommand(itrRemoteLocatorSetDom);
+    }
+
+    public static AbstractLispCommand<NativeForwardPath> addNativeForwardEntry(long vrf,
+                                                                               IpAddress nextHopIp) {
+        NativeForwardPathDom nativeForwardPathDom = new NativeForwardPathDom();
+        nativeForwardPathDom.setVrfId(vrf);
+        nativeForwardPathDom.setNextHopIp(nextHopIp);
+        return new ConfigureNativeForwardPathCommand(nativeForwardPathDom);
+    }
+
+    public static AbstractLispCommand<GpeFeatureData> deleteGpeFeatureData() {
+        return new DeleteGpeFeatureDataCommand();
+    }
+
+    public static AbstractLispCommand<NativeForwardPathsTables> deleteNativeForwardPathsTables() {
+        return new DeleteNativeForwardPathsTablesDeleteCommand();
     }
 }

@@ -309,9 +309,9 @@ public class VppRendererPolicyManager {
             fwManager.createDhcpRelay(rendererForwarding, vppNodesByL2Fd);
         }
 
+        rEpKeys.forEach(rEpKey -> fwManager.createForwardingForEndpoint(rEpKey, policyCtx));
         fwManager.syncNatEntries(policyCtx);
         fwManager.syncRouting(policyCtx);
-        rEpKeys.forEach(rEpKey -> fwManager.createForwardingForEndpoint(rEpKey, policyCtx));
     }
 
     private void rendererPolicyDeleted(RendererPolicy rendererPolicy) {

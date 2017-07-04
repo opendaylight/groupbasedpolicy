@@ -26,6 +26,8 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProv
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518.gpe.feature.data.grouping.GpeFeatureData;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518.NativeForwardPathsTables;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518._native.forward.paths.tables._native.forward.paths.table.NativeForwardPath;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.Lisp;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.dp.subtable.grouping.local.mappings.LocalMapping;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.dp.subtable.grouping.local.mappings.local.mapping.Eid;
@@ -268,6 +270,18 @@ public class LispStateManager {
         }
     }
 
+    private void addNativeForwardPath(EndpointHost endpointHost, long vrf, IpAddress nativeForwardIp)
+            throws LispConfigCommandFailedException {
+
+        AbstractLispCommand<NativeForwardPath> lispCommand =
+                LispCommandWrapper.addNativeForwardEntry(vrf, nativeForwardIp);
+        if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostDataBroker(), lispCommand)) {
+            LOG.debug("Added {} as native forwarding IP");
+        } else {
+            throw new LispConfigCommandFailedException("Lisp add Native forward failed for VNI " + vrf);
+        }
+    }
+
     private void addEidInEidTable(DataBroker vppDataBroker,
                                   LispState lispState,
                                   Eid eid,
@@ -306,6 +320,7 @@ public class LispStateManager {
 
                 if (lispState.eidCount() == 0) {
                     deleteLispStatesFromHost(endpointHost);
+                    deleteNativeForwardPathsTables(endpointHost);
                 }
             }
         } catch (LispConfigCommandFailedException e) {
@@ -346,6 +361,17 @@ public class LispStateManager {
             LOG.debug("Deleted all lisp data for host {}", endpointHost.getHostName());
         } else {
             throw new LispConfigCommandFailedException("Lisp delete feature data command failed!");
+        }
+    }
+
+    private void deleteNativeForwardPathsTables(EndpointHost endpointHost)
+            throws LispConfigCommandFailedException {
+        AbstractLispCommand<NativeForwardPathsTables> deleteNativeForwardPathsTables = LispCommandWrapper
+                .deleteNativeForwardPathsTables();
+
+        if (!LispStateCommandExecutor.executeDeleteCommand(endpointHost.getHostDataBroker(),
+                deleteNativeForwardPathsTables)) {
+            throw new LispConfigCommandFailedException("Delete Native Forward Paths Tables command failed!");
         }
     }
 

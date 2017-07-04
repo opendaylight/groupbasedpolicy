@@ -16,6 +16,7 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.StaticArpCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.EndpointHost;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.HostRelatedInfoContainer;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PhysicalInterfaces;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PortInterfaces;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PortRouteState;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.SubnetState;
@@ -24,6 +25,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.NeutronTenantToVniMapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.ConfigManagerHelper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.Constants;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.IpAddressUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
@@ -258,6 +260,7 @@ public class FlatOverlayManager {
 
         if (!vrfHolderOfHost.hasVrf(vrfId)) {
             if (!staticRoutingHelper.addRoutingProtocolForVrf(vppDataBroker, vrfId, vrfHolderOfHost)) {
+                addStaticRouteToPublicInterface(vppDataBroker, hostName, vrfId);
                 LOG.warn("Failed to add Routing protocol for host {} and vrf {}!", hostName, vrfId);
             }
         }
@@ -276,6 +279,24 @@ public class FlatOverlayManager {
         } else {
             LOG.debug("Added route ({} via {}) in vrf {} in compute host {}",
                     ipv4Prefix, outgoingInterfaceName, vrfId, hostName);
+        }
+    }
+
+    private void addStaticRouteToPublicInterface(DataBroker vppDataBroker, String hostName, long vrfId) {
+        Ipv4Address physicalInterfaceIp = hostRelatedInfoContainer
+                .getPhysicalInterfaceState(hostName)
+                .getIp(PhysicalInterfaces.PhysicalInterfaceType.PUBLIC).getIpv4Address();
+        String physicalInterfaceName = hostRelatedInfoContainer
+                .getPhysicalInterfaceState(hostName)
+                .getName(PhysicalInterfaces.PhysicalInterfaceType.PUBLIC);
+        if (physicalInterfaceName != null && !physicalInterfaceName.isEmpty()) {
+            if (!staticRoutingHelper.addSingleStaticRouteInRoutingProtocol(vppDataBroker,
+                    hostName, vrfId, Constants.PUBLIC_SUBNET_UUID, physicalInterfaceIp,
+                    IpAddressUtil.toIpV4Prefix(physicalInterfaceIp), physicalInterfaceName)) {
+                LOG.warn("Failed to add route for physical interface in vrf {} compute host {}", vrfId, hostName);
+            } else {
+                LOG.debug("Added route for physical interface {} in vrf {}", physicalInterfaceName, vrfId);
+            }
         }
     }
 
