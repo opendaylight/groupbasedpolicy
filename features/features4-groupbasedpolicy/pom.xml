@@ -7,12 +7,12 @@
     <parent>
         <groupId>org.opendaylight.odlparent</groupId>
         <artifactId>feature-repo-parent</artifactId>
-        <version>1.8.1-SNAPSHOT</version>
+        <version>1.8.1-Carbon</version>
     </parent>
 
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>features4-groupbasedpolicy</artifactId>
-    <version>0.5.1-SNAPSHOT</version>
+    <version>0.5.1-Carbon</version>
     <packaging>feature</packaging>
 
     <dependencyManagement>

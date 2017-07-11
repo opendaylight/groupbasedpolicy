@@ -6,13 +6,13 @@
     <parent>
         <groupId>org.opendaylight.odlparent</groupId>
         <artifactId>single-feature-parent</artifactId>
-        <version>1.8.1-SNAPSHOT</version>
+        <version>1.8.1-Carbon</version>
         <relativePath/>
     </parent>
 
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>odl-groupbasedpolicy-sxp-ise-adapter</artifactId>
-    <version>0.5.1-SNAPSHOT</version>
+    <version>0.5.1-Carbon</version>
     <packaging>feature</packaging>
     <!--
        GBP-SXP integration : ise-adapter

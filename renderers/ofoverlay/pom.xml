@@ -10,7 +10,7 @@
   <parent>
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>groupbasedpolicy-renderers</artifactId>
-    <version>0.5.1-SNAPSHOT</version>
+    <version>0.5.1-Carbon</version>
     <relativePath>../</relativePath>
   </parent>
 
@@ -18,9 +18,9 @@
   <packaging>bundle</packaging>
 
   <properties>
-    <ovsdb.version>1.4.1-SNAPSHOT</ovsdb.version>
-    <openflowplugin.version>0.4.1-SNAPSHOT</openflowplugin.version>
-    <liblldp.version>0.12.1-SNAPSHOT</liblldp.version>
+    <ovsdb.version>1.4.1-Carbon</ovsdb.version>
+    <openflowplugin.version>0.4.1-Carbon</openflowplugin.version>
+    <liblldp.version>0.12.1-Carbon</liblldp.version>
   </properties>
 
   <dependencies>
