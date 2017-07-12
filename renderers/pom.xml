@@ -29,7 +29,6 @@
 
   <modules>
     <module>ofoverlay</module>
-    <module>faas</module>
     <module>iovisor</module>
     <module>ovssfc</module>
     <module>netconf</module>
