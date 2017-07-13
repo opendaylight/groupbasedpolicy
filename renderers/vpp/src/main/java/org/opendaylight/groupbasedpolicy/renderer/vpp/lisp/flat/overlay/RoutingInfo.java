@@ -7,12 +7,22 @@
  */
 package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay;
 
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
+
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Created by Shakib Ahmed on 5/4/17.
  */
 public class RoutingInfo {
     private String ProtocolName;
     private int count = 0;
+    private Set<Ipv4Address> allIpsInVrf;
+
+    public RoutingInfo() {
+        allIpsInVrf = new HashSet<>();
+    }
 
     public String getProtocolName() {
         return ProtocolName;
@@ -26,7 +36,16 @@ public class RoutingInfo {
         return count;
     }
 
-    public void incrementCount() {
+    public void addIpInVrf(Ipv4Address ip) {
+        allIpsInVrf.add(ip);
+        incrementCount();
+    }
+
+    public boolean ipAlreadyExistsinVrf(Ipv4Address ip) {
+        return allIpsInVrf.contains(ip);
+    }
+
+    private void incrementCount() {
         count++;
     }
 }

@@ -9,7 +9,7 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.HostVrfRoutingInformationMapper;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.InterfaceNameToRouteInfoMapper;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.InterfaceNameToStaticInfoMapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
@@ -48,10 +48,10 @@ public class StaticRoutingHelper {
 
     private HostVrfRoutingInformationMapper hostVrfInfo = HostVrfRoutingInformationMapper.getInstance();
 
-    private InterfaceNameToRouteInfoMapper interfaceNameToRouteInfoMapper;
+    private InterfaceNameToStaticInfoMapper interfaceNameToStaticInfoMapper;
 
-    public StaticRoutingHelper() {
-        interfaceNameToRouteInfoMapper = new InterfaceNameToRouteInfoMapper();
+    public StaticRoutingHelper(InterfaceNameToStaticInfoMapper interfaceNameToStaticInfoMapper) {
+        this.interfaceNameToStaticInfoMapper = interfaceNameToStaticInfoMapper;
     }
 
     public synchronized boolean addRoutingProtocolForVrf(DataBroker vppDataBroker,
@@ -85,7 +85,11 @@ public class StaticRoutingHelper {
     }
 
     public boolean endPointRoutingExists(String interfaceName, Ipv4Address ip) {
-        return interfaceNameToRouteInfoMapper.routeAlreadyExists(interfaceName, ip);
+        return interfaceNameToStaticInfoMapper.routeAlreadyExists(interfaceName, ip);
+    }
+
+    public boolean routeAlreadyExistsInHostVrf(String hostId, long vrf, Ipv4Address ip) {
+        return hostVrfInfo.ipAlreadyExistsInHostVrf(hostId, vrf, ip);
     }
 
     public synchronized boolean addSingleStaticRouteInRoutingProtocol(DataBroker vppDataBroker,
@@ -117,8 +121,8 @@ public class StaticRoutingHelper {
                 .child(Ipv4.class);
 
         if (GbpNetconfTransaction.netconfSyncedMerge(vppDataBroker, iid, ipv4Route, GbpNetconfTransaction.RETRY_COUNT)) {
-            interfaceNameToRouteInfoMapper.addRouteForInterface(outgoingInterface, nextHopAddress, routingId);
-            hostVrfInfo.addStaticRoute(hostId, vrf);
+            interfaceNameToStaticInfoMapper.addRouteForInterface(outgoingInterface, nextHopAddress, routingId);
+            hostVrfInfo.addStaticRoute(hostId, vrf, nextHopAddress);
             return true;
         }
 
@@ -129,7 +133,7 @@ public class StaticRoutingHelper {
                                                                         String hostId,
                                                                         long vrf,
                                                                         String outgoingInterface) {
-        List<Long> allRoutingIdsForPort = interfaceNameToRouteInfoMapper.getRoutingIdsAssociatedWithInterface(outgoingInterface);
+        List<Long> allRoutingIdsForPort = interfaceNameToStaticInfoMapper.getRoutingIdsAssociatedWithInterface(outgoingInterface);
 
         boolean allOk = true;
 
@@ -146,7 +150,7 @@ public class StaticRoutingHelper {
             }
         }
 
-        interfaceNameToRouteInfoMapper.clearStaticRoutesForInterface(outgoingInterface);
+        interfaceNameToStaticInfoMapper.clearStaticRoutesForInterface(outgoingInterface);
         return allOk;
     }
 

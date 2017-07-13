@@ -67,6 +67,9 @@ public class LispStateManager {
 
     public synchronized void configureEndPoint(AddressEndpointWithLocation addressEp) {
         try {
+            if (lispStateHelper.isMetadataPort(addressEp)) {
+                return;
+            }
             DataBroker dataBroker = lispStateHelper.getPotentialExternalDataBroker(addressEp).get();
             String hostName = lispStateHelper.getHostName(addressEp).get();
             LispState lispStateOfNode = configureHostIfNeeded(hostName, dataBroker);

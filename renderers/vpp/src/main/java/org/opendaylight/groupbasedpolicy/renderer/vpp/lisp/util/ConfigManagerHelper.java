@@ -39,6 +39,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.child.endpoints.ChildEndpoint;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.relative.location.relative.locations.ExternalLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.IpPrefixType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.MacAddressType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.ParentEndpointChoice;
@@ -91,6 +92,17 @@ public class ConfigManagerHelper {
         return potentialVppDataProvider;
     }
 
+    public Optional<DataBroker> getPotentialExternalDataBroker(ExternalLocation externalLocation) {
+        InstanceIdentifier<?> vppNodeIid = externalLocation.getExternalNodeMountPoint();
+
+        Optional<DataBroker> potentialVppDataProvider;
+        potentialVppDataProvider = mountedDataBrokerProvider.getDataBrokerForMountPoint(vppNodeIid);
+
+        Preconditions.checkState(potentialVppDataProvider.isPresent(), "Data Broker missing");
+
+        return potentialVppDataProvider;
+    }
+
     public Optional<DataBroker> getPotentialExternalDataBroker(VppEndpoint vppEp) {
         InstanceIdentifier<Node> vppNodeIid = VppIidFactory.getNetconfNodeIid(vppEp.getVppNodeId());
         Optional<DataBroker> potentialVppDataProvider =
@@ -117,7 +129,17 @@ public class ConfigManagerHelper {
         return Optional.fromNullable(hostId);
     }
 
+    public Optional<String> getHostName(ExternalLocation externalLocation) {
+        NodeKey nodeKey = externalLocation.getExternalNodeMountPoint().firstKeyOf(Node.class);
+        String hostId = Preconditions.checkNotNull(nodeKey.getNodeId().getValue(),
+                "Host Id extraction failed from address endpoint: {}", externalLocation);
+
+        return Optional.fromNullable(hostId);
+    }
+
     public ExternalLocationCase resolveAndValidateLocation(AddressEndpointWithLocation addrEpWithLoc) {
+        Preconditions.checkNotNull(addrEpWithLoc.getAbsoluteLocation(), "Absolute location for " +
+                "AddressEndpointWithLocation missing: " + addrEpWithLoc.toString() );
         LocationType locationType = addrEpWithLoc.getAbsoluteLocation().getLocationType();
         if (!(locationType instanceof ExternalLocationCase)) {
             throw new IllegalArgumentException("Endpoint does not have external location " + addrEpWithLoc);
@@ -295,6 +317,11 @@ public class ConfigManagerHelper {
         return VppPathMapper.interfacePathToInterfaceName(interfacePath);
     }
 
+    public Optional<String> getInterfaceName(ExternalLocation externalLocation) {
+        String interfacePath = externalLocation.getExternalNodeConnector();
+        return VppPathMapper.interfacePathToInterfaceName(interfacePath);
+    }
+
     public HmacKey getDefaultHmacKey() {
         return LispUtil.toHmacKey(HmacKeyType.Sha196Key, LispStateManager.DEFAULT_XTR_KEY);
     }
@@ -315,6 +342,10 @@ public class ConfigManagerHelper {
         }
         return Preconditions.checkNotNull(physicalAddress, "Physical address not found " +
                 "in address endpoint: " + addressEp);
+    }
+
+    public boolean isMetadataPort(AddressEndpointWithLocation addedEp) {
+        return addedEp.getRelativeLocations() != null && addedEp.getRelativeLocations().getExternalLocation() != null;
     }
 
     public Routing getRouting(long vrf) {

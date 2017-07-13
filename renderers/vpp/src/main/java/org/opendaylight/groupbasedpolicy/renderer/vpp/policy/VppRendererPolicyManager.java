@@ -66,7 +66,7 @@ public class VppRendererPolicyManager {
     private final AclManager aclManager;
 
     public VppRendererPolicyManager(@Nonnull ForwardingManager fwManager, @Nonnull AclManager aclManager,
-            @Nonnull DataBroker dataProvider) {
+                                    @Nonnull DataBroker dataProvider) {
         this.fwManager = Preconditions.checkNotNull(fwManager);
         this.dataProvider = Preconditions.checkNotNull(dataProvider);
         this.aclManager = Preconditions.checkNotNull(aclManager);
@@ -128,7 +128,7 @@ public class VppRendererPolicyManager {
         SetMultimap<String, NodeId> removedVppNodesByL2Fd = HashMultimap.create();
         SetMultimap<String, NodeId> createdVppNodesByL2Fd = HashMultimap.create();
         for (Entry<String, ValueDifference<Collection<NodeId>>> entry : vppNodesByL2FlDiff.entriesDiffering()
-            .entrySet()) {
+                .entrySet()) {
             String bridgeDomain = entry.getKey();
             Collection<NodeId> beforeNodes = entry.getValue().leftValue();
             Collection<NodeId> afterNodes = entry.getValue().rightValue();
@@ -177,10 +177,10 @@ public class VppRendererPolicyManager {
                 RendererForwarding rendererForwardingBefore = rPolicyBefore.getConfiguration().getRendererForwarding();
 
                 SetMultimap<String, NodeId> vppNodesByL2FdBefore =
-                    resolveVppNodesByL2Fd(policyCtxBefore.getPolicyTable().rowKeySet(), policyCtxBefore);
+                        resolveVppNodesByL2Fd(policyCtxBefore.getPolicyTable().rowKeySet(), policyCtxBefore);
                 if (!vppNodesByL2FdBefore.isEmpty()) {
                     LOG.debug("Deleting DhcpRelay for forwarding: {}, on VPP nodes: {}", rendererForwardingBefore,
-                        vppNodesByL2FdBefore);
+                            vppNodesByL2FdBefore);
                     fwManager.deleteDhcpRelay(rendererForwardingBefore, vppNodesByL2FdBefore);
                 }
             }
@@ -188,10 +188,10 @@ public class VppRendererPolicyManager {
             if (rPolicyAfter.getConfiguration() != null) {
                 RendererForwarding rendererForwardingAfter = rPolicyAfter.getConfiguration().getRendererForwarding();
                 SetMultimap<String, NodeId> vppNodesByL2FdAfter =
-                    resolveVppNodesByL2Fd(policyCtxAfter.getPolicyTable().rowKeySet(), policyCtxAfter);
+                        resolveVppNodesByL2Fd(policyCtxAfter.getPolicyTable().rowKeySet(), policyCtxAfter);
                 if (!vppNodesByL2FdAfter.isEmpty()) {
                     LOG.debug("Creating DhcpRelay for forwarding: {}, on VPP nodes: {}", rendererForwardingAfter,
-                        vppNodesByL2FdAfter);
+                            vppNodesByL2FdAfter);
                     fwManager.createDhcpRelay(rendererForwardingAfter, vppNodesByL2FdAfter);
                 }
             }
@@ -248,27 +248,27 @@ public class VppRendererPolicyManager {
                 continue;
             }
             policy.getPolicy()
-                .getConfiguration()
-                .getRendererEndpoints()
-                .getRendererEndpoint()
-                .stream()
-                .filter(rEp -> !updates.contains(rEp.getKey()))
-                .forEach(rEp -> {
-                    for (PeerEndpoint pEp : rEp.getPeerEndpoint()) {
-                        for (RuleGroupWithRendererEndpointParticipation rg : pEp
-                            .getRuleGroupWithRendererEndpointParticipation()) {
-                            if (!diffRuleGroups.contains(
-                                    new RuleGroupKey(rg.getContractId(), rg.getSubjectName(), rg.getTenantId()))) {
-                                continue;
-                            }
-                            if (!policy.equals(policyCtxBefore)) {
-                                updates.add(rEp.getKey());
-                                AddressEndpointKey k1 = AddressEndpointUtils.fromPeerEpKey(pEp.getKey());
-                                updates.add(AddressEndpointUtils.toRendererEpKey(k1));
+                    .getConfiguration()
+                    .getRendererEndpoints()
+                    .getRendererEndpoint()
+                    .stream()
+                    .filter(rEp -> !updates.contains(rEp.getKey()))
+                    .forEach(rEp -> {
+                        for (PeerEndpoint pEp : rEp.getPeerEndpoint()) {
+                            for (RuleGroupWithRendererEndpointParticipation rg : pEp
+                                    .getRuleGroupWithRendererEndpointParticipation()) {
+                                if (!diffRuleGroups.contains(
+                                        new RuleGroupKey(rg.getContractId(), rg.getSubjectName(), rg.getTenantId()))) {
+                                    continue;
+                                }
+                                if (!policy.equals(policyCtxBefore)) {
+                                    updates.add(rEp.getKey());
+                                    AddressEndpointKey k1 = AddressEndpointUtils.fromPeerEpKey(pEp.getKey());
+                                    updates.add(AddressEndpointUtils.toRendererEpKey(k1));
+                                }
                             }
                         }
-                    }
-                });
+                    });
         }
         for (RendererEndpointKey rEpKey : updates) {
             aclManager.updateAclsForRendEp(rEpKey, policyCtxAfter);
@@ -288,7 +288,7 @@ public class VppRendererPolicyManager {
     }
 
     private static MapDifference<String, Collection<NodeId>> createDiffForVppNodesByL2Fd(PolicyContext policyCtxBefore,
-            PolicyContext policyCtxAfter) {
+                                                                                         PolicyContext policyCtxAfter) {
         ImmutableSet<RendererEndpointKey> rendEpsBefore = policyCtxBefore.getPolicyTable().rowKeySet();
         ImmutableSet<RendererEndpointKey> rendEpsAfter = policyCtxAfter.getPolicyTable().rowKeySet();
         SetMultimap<String, NodeId> vppNodesByL2FdBefore = resolveVppNodesByL2Fd(rendEpsBefore, policyCtxBefore);
@@ -333,23 +333,23 @@ public class VppRendererPolicyManager {
     }
 
     private static SetMultimap<String, NodeId> resolveVppNodesByL2Fd(Set<RendererEndpointKey> rEpKeys,
-            PolicyContext policyCtx) {
+                                                                     PolicyContext policyCtx) {
         SetMultimap<String, NodeId> vppNodesByL2Fd = HashMultimap.create();
         rEpKeys.stream()
-            .map(rEpKey -> KeyFactory.addressEndpointKey(rEpKey))
-            .map(addrEpKey -> policyCtx.getAddrEpByKey().get(addrEpKey))
-            .collect(Collectors.toSet())
-            .forEach(addrEpWithLoc -> {
-                java.util.Optional<String> optL2Fd = ForwardingManager.resolveL2FloodDomain(addrEpWithLoc, policyCtx);
-                if (optL2Fd.isPresent()) {
-                    ExternalLocationCase rEpLoc = ForwardingManager.resolveAndValidateLocation(addrEpWithLoc);
-                    if (rEpLoc != null) {
-                        InstanceIdentifier<?> externalNodeMountPoint = rEpLoc.getExternalNodeMountPoint();
-                        NodeId vppNode = externalNodeMountPoint.firstKeyOf(Node.class).getNodeId();
-                        vppNodesByL2Fd.put(optL2Fd.get(), vppNode);
+                .map(rEpKey -> KeyFactory.addressEndpointKey(rEpKey))
+                .map(addrEpKey -> policyCtx.getAddrEpByKey().get(addrEpKey))
+                .collect(Collectors.toSet())
+                .forEach(addrEpWithLoc -> {
+                    java.util.Optional<String> optL2Fd = ForwardingManager.resolveL2FloodDomain(addrEpWithLoc, policyCtx);
+                    if (optL2Fd.isPresent()) {
+                        ExternalLocationCase rEpLoc = ForwardingManager.resolveAndValidateLocation(addrEpWithLoc);
+                        if (rEpLoc != null) {
+                            InstanceIdentifier<?> externalNodeMountPoint = rEpLoc.getExternalNodeMountPoint();
+                            NodeId vppNode = externalNodeMountPoint.firstKeyOf(Node.class).getNodeId();
+                            vppNodesByL2Fd.put(optL2Fd.get(), vppNode);
+                        }
                     }
-                }
-            });
+                });
         return vppNodesByL2Fd;
     }
 

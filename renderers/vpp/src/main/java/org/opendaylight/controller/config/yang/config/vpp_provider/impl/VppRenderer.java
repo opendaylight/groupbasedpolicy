@@ -147,7 +147,7 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         AclManager aclManager = new AclManager(mountDataProvider);
         NatManager natManager = new NatManager(dataBroker, mountDataProvider);
         LispStateManager lispStateManager = new LispStateManager(mountDataProvider);
-        FlatOverlayManager flatOverlayManager = new FlatOverlayManager(mountDataProvider);
+        FlatOverlayManager flatOverlayManager = new FlatOverlayManager(dataBroker, mountDataProvider);
         LoopbackManager loopbackManager = new LoopbackManager(mountDataProvider);
         subnetEventManager = new GbpSubnetEventManager(loopbackManager);
         dtoEventBus.register(interfaceManager);

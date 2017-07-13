@@ -100,6 +100,12 @@ public class LoopbackManager {
 
     public void createSimpleLoopbackIfNeeded(AddressEndpointWithLocation addressEp) {
         try {
+
+            if (loopbackManagerHelper.isMetadataPort(addressEp)) {
+                // if the address endpoint is a metadataport, no proxy arp range needed.
+                return;
+            }
+
             DataBroker vppDataBroker = loopbackManagerHelper.getPotentialExternalDataBroker(addressEp).get();
             String hostName = loopbackManagerHelper.getHostName(addressEp).get();
             String subnetUuid = loopbackManagerHelper.getSubnet(addressEp);
@@ -133,11 +139,11 @@ public class LoopbackManager {
     }
 
     private void createLoopbackInterface(String hostName, String subnetUuid, DataBroker vppDataBroker,
-                                        LoopbackCommand loopbackCommand) throws LispConfigCommandFailedException {
+                                         LoopbackCommand loopbackCommand) throws LispConfigCommandFailedException {
 
         if (GbpNetconfTransaction.netconfSyncedWrite(vppDataBroker,
-                                                     loopbackCommand,
-                                                     GbpNetconfTransaction.RETRY_COUNT)) {
+                loopbackCommand,
+                GbpNetconfTransaction.RETRY_COUNT)) {
             subnetHostSpecificInfo.addLoopbackForHost(hostName, subnetUuid, loopbackCommand.getName(),
                     loopbackCommand.getVrfId());
             subnetHostSpecificInfo.addNewPortInHostSubnet(hostName, subnetUuid);
@@ -201,16 +207,16 @@ public class LoopbackManager {
         Ipv4Prefix subnetPrefix = gbpSubnetInfo.getCidr().getIpv4Prefix();
 
         Preconditions.checkNotNull(subnetPrefix, "Subnet CIDR found to be null for "
-        + "subnet uuid =" +  gbpSubnetInfo.getId() + "!");
+                + "subnet uuid =" +  gbpSubnetInfo.getId() + "!");
 
         Pair<Ipv4Address, Ipv4Address> startAndEndAddress = IpAddressUtil.getStartAndEndIp(subnetPrefix);
 
         if (!putArpRangesCommand(vppDataBroker,
-                                 vrf,
-                                 startAndEndAddress.getLeft(),
-                                 startAndEndAddress.getRight())) {
+                vrf,
+                startAndEndAddress.getLeft(),
+                startAndEndAddress.getRight())) {
             throw new LispConfigCommandFailedException("Proxy arp configuration failed for subnet uuid: " +
-            gbpSubnetInfo.getId() + "!");
+                    gbpSubnetInfo.getId() + "!");
         } else {
             LOG.debug("Configured proxy arp for range {} to {} on node : {}!", startAndEndAddress.getLeft(),
                     startAndEndAddress.getRight(), hostName);
@@ -218,9 +224,9 @@ public class LoopbackManager {
     }
 
     private void deleteProxyArpRange(DataBroker vppDataBroker,
-                                long vrf,
-                                GbpSubnet gbpSubnetInfo,
-                                String hostName) throws LispConfigCommandFailedException {
+                                     long vrf,
+                                     GbpSubnet gbpSubnetInfo,
+                                     String hostName) throws LispConfigCommandFailedException {
         Ipv4Prefix subnetPrefix = gbpSubnetInfo.getCidr().getIpv4Prefix();
 
         Preconditions.checkNotNull(subnetPrefix, "Subnet CIDR found to be null for "
@@ -229,9 +235,9 @@ public class LoopbackManager {
         Pair<Ipv4Address, Ipv4Address> startAndEndAddress = IpAddressUtil.getStartAndEndIp(subnetPrefix);
 
         if (!deleteArpRangesCommand(vppDataBroker,
-                                    vrf,
-                                    startAndEndAddress.getLeft(),
-                                    startAndEndAddress.getRight())) {
+                vrf,
+                startAndEndAddress.getLeft(),
+                startAndEndAddress.getRight())) {
             throw new LispConfigCommandFailedException("Proxy arp configuration failed for subnet uuid: " +
                     gbpSubnetInfo.getId() + "!");
         } else {
@@ -248,8 +254,8 @@ public class LoopbackManager {
         builder.setEndAddress(end);
 
         return GbpNetconfTransaction.netconfSyncedWrite(vppDataBroker,
-                                                        builder.build(),
-                                                        GbpNetconfTransaction.RETRY_COUNT);
+                builder.build(),
+                GbpNetconfTransaction.RETRY_COUNT);
     }
 
     private boolean deleteArpRangesCommand(DataBroker vppDataBroker,
@@ -263,8 +269,8 @@ public class LoopbackManager {
         builder.setEndAddress(end);
 
         return GbpNetconfTransaction.netconfSyncedDelete(vppDataBroker,
-                                                         builder.build(),
-                                                         GbpNetconfTransaction.RETRY_COUNT);
+                builder.build(),
+                GbpNetconfTransaction.RETRY_COUNT);
     }
 
     private void addUnnumberedInterface(AddressEndpointWithLocation addressEp, String loopbackName) throws LispConfigCommandFailedException {
@@ -299,8 +305,8 @@ public class LoopbackManager {
                     .getSmallerSubnet(gbpSubnetInfo.getCidr().getIpv4Prefix());
 
             RemoteEid firstREid = LispUtil.toRemoteEid(LispUtil.toLispIpv4Prefix(delegatingSubnets.getLeft()),
-                                                       vni,
-                                                       Ipv4PrefixAfi.class);
+                    vni,
+                    Ipv4PrefixAfi.class);
             putGpeEntry(vppDataBroker, GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_1", firstREid, vni, vni);
 
             if (delegatingSubnets.getLeft().equals(delegatingSubnets.getRight())) {
@@ -308,8 +314,8 @@ public class LoopbackManager {
             }
 
             RemoteEid secondREid = LispUtil.toRemoteEid(LispUtil.toLispIpv4Prefix(delegatingSubnets.getRight()),
-                                                        vni,
-                                                        Ipv4PrefixAfi.class);
+                    vni,
+                    Ipv4PrefixAfi.class);
 
             putGpeEntry(vppDataBroker, GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_2", secondREid, vni, vni);
         } catch (LispHelperArgumentException e) {

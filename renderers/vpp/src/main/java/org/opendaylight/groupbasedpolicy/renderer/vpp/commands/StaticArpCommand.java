@@ -33,15 +33,15 @@ public class StaticArpCommand extends AbstractConfigCommand{
     private PhysAddress linkLayerAddress;
     private InterfaceKey interfaceKey;
 
-    public StaticArpCommand(NeighborCommandBuilder builder) {
+    public StaticArpCommand(StaticArpCommandBuilder builder) {
         this.operation = builder.getOperation();
         this.ip = builder.getIp();
         this.linkLayerAddress = builder.getLinkLayerAddress();
         this.interfaceKey = builder.getInterfaceKey();
     }
 
-    public static NeighborCommandBuilder builder() {
-        return new NeighborCommandBuilder();
+    public static StaticArpCommandBuilder builder() {
+        return new StaticArpCommandBuilder();
     }
 
     @Override
@@ -78,7 +78,7 @@ public class StaticArpCommand extends AbstractConfigCommand{
                     .setLinkLayerAddress(this.linkLayerAddress);
     }
 
-    public static class NeighborCommandBuilder {
+    public static class StaticArpCommandBuilder {
         private General.Operations operation;
         private Ipv4AddressNoZone ip;
         private PhysAddress linkLayerAddress;

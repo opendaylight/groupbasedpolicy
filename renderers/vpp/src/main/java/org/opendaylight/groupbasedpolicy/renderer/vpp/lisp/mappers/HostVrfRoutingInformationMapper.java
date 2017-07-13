@@ -11,6 +11,7 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers;
 
 import com.google.common.base.Preconditions;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay.RoutingInfo;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 
 import java.util.HashMap;
 
@@ -51,7 +52,7 @@ public class HostVrfRoutingInformationMapper {
         return mapper.get(hostId).get(vrf).getProtocolName();
     }
 
-    public void addStaticRoute(String hostId, long vrf) {
+    public void addStaticRoute(String hostId, long vrf, Ipv4Address ip) {
         HashMap<Long, RoutingInfo> routingInfoMapper = mapper.get(hostId);
 
         Preconditions.checkNotNull(routingInfoMapper, "Routing protocol not created, can't add route entry");
@@ -60,7 +61,7 @@ public class HostVrfRoutingInformationMapper {
 
         Preconditions.checkNotNull(routingInfoMapper, "VRF was not created for this host");
 
-        routingInfo.incrementCount();
+        routingInfo.addIpInVrf(ip);
     }
 
     public Long getEndPointCountInVrf(String hostId, long vrf) {
@@ -70,5 +71,15 @@ public class HostVrfRoutingInformationMapper {
             count = mapper.get(hostId).get(vrf).getCount();
         }
         return (long) (count + 1);
+    }
+
+    public boolean ipAlreadyExistsInHostVrf(String hostId, long vrf, Ipv4Address ip) {
+        HashMap<Long, RoutingInfo> routingInfoMapper = mapper.get(hostId);
+
+        Preconditions.checkNotNull(routingInfoMapper, "Routing protocol not created, can't add route entry");
+
+        RoutingInfo routingInfo = routingInfoMapper.get(vrf);
+
+        return routingInfo.ipAlreadyExistsinVrf(ip);
     }
 }

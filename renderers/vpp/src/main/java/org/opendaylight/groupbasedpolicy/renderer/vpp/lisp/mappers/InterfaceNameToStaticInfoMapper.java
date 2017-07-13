@@ -7,6 +7,7 @@
  */
 package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers;
 
+import com.google.common.base.Preconditions;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 
 import java.util.ArrayList;
@@ -16,11 +17,17 @@ import java.util.List;
 /**
  * Created by Shakib Ahmed on 5/26/17.
  */
-public class InterfaceNameToRouteInfoMapper {
+public class InterfaceNameToStaticInfoMapper {
     HashMap<String, StaticRouteInfoMapper> interfaceNameToStaticRouteMapper;
 
-    public InterfaceNameToRouteInfoMapper() {
+    private static final InterfaceNameToStaticInfoMapper INSTANCE = new InterfaceNameToStaticInfoMapper();
+
+    private InterfaceNameToStaticInfoMapper() {
         interfaceNameToStaticRouteMapper = new HashMap<>();
+    }
+
+    public static InterfaceNameToStaticInfoMapper getInstance() {
+        return INSTANCE;
     }
 
     public boolean routeAlreadyExists(String interfaceName, Ipv4Address ip) {
