@@ -9,18 +9,18 @@
     <parent>
         <groupId>org.opendaylight.controller</groupId>
         <artifactId>config-parent</artifactId>
-        <version>0.6.1-SNAPSHOT</version>
+        <version>0.6.2-SNAPSHOT</version>
         <relativePath/>
     </parent>
 
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>ip-sgt-distribution-service</artifactId>
-    <version>0.5.1-SNAPSHOT</version>
+    <version>0.5.2-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>groupbasedpolicy-ip-sgt-distribution-service</name>
 
     <properties>
-        <sxp.version>1.4.1-SNAPSHOT</sxp.version>
+        <sxp.version>1.4.2-SNAPSHOT</sxp.version>
     </properties>
 
     <dependencyManagement>
