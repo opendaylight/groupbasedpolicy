@@ -65,6 +65,5 @@ public class GbpSubnetEventManager {
 
     private void processSubnetDeleted(String subnetUuid) {
         subnetUuidToGbpSubnetInfoMapper.removeSubnetInfo(subnetUuid);
-        loopbackManager.deleteLoopbackIfExists(subnetUuid);
     }
 }

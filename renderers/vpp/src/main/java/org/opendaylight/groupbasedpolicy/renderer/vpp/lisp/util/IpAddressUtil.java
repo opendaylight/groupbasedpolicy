@@ -27,6 +27,10 @@ import java.net.UnknownHostException;
 public class IpAddressUtil {
     private static final Logger LOG = LoggerFactory.getLogger(IpAddressUtil.class);
 
+    public static boolean isMetadataIp(Ipv4Address ipv4Address) {
+        return ipv4Address.getValue().equals(Constants.METADATA_IP);
+    }
+
     public static Pair<Ipv4Address, Ipv4Address> getStartAndEndIp(Ipv4Prefix ipv4Prefix) {
         SubnetUtils subnetUtils = new SubnetUtils(ipv4Prefix.getValue());
         SubnetUtils.SubnetInfo prefixSubnetInfo = subnetUtils.getInfo();

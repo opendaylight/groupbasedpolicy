@@ -21,6 +21,7 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.VppEndpointConfEvent;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay.FlatOverlayManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.groupbasedpolicy.test.CustomDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
@@ -66,6 +67,7 @@ public class InterfaceManagerTest extends CustomDataBrokerTest {
     private final static String SOCKET = "socket1";
 
     private InterfaceManager manager;
+    private FlatOverlayManager flatOverlayManager;
     private MountedDataBrokerProvider mountedDataProviderMock;
     private DataBroker mountPointDataBroker;
     private DataBroker dataBroker;
@@ -79,12 +81,13 @@ public class InterfaceManagerTest extends CustomDataBrokerTest {
     @Before
     public void init() throws Exception {
         mountedDataProviderMock = Mockito.mock(MountedDataBrokerProvider.class);
+        flatOverlayManager = Mockito.mock(FlatOverlayManager.class);
         mountPointDataBroker = getDataBroker();
         setup(); // initialize new data broker for ODL data store
         dataBroker = getDataBroker();
         Mockito.when(mountedDataProviderMock.getDataBrokerForMountPoint(Mockito.any(InstanceIdentifier.class)))
             .thenReturn(Optional.of(mountPointDataBroker));
-        manager = new InterfaceManager(mountedDataProviderMock, dataBroker);
+        manager = new InterfaceManager(mountedDataProviderMock, dataBroker, flatOverlayManager);
     }
 
     @Test

@@ -7,9 +7,14 @@
  */
 package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay;
 
+import com.google.common.base.Preconditions;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.HostVrfRoutingInformationMapper;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.InterfaceNameToStaticInfoMapper;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.HostRelatedInfoContainer;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PortInterfaces;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PortRouteState;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.VrfHolder;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.VrfState;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.Constants;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
@@ -43,31 +48,22 @@ import java.util.List;
 public class StaticRoutingHelper {
     private static final Logger LOG = LoggerFactory.getLogger(StaticRoutingHelper.class);
 
-    private static final String ROUTING_PROTOCOL_NAME_PREFIX = "static-routing-";
-    private static final String DEFAULT_DESCRIPTION = "Static route added from GBP for flat L3 overlay";
-
-    private HostVrfRoutingInformationMapper hostVrfInfo = HostVrfRoutingInformationMapper.getInstance();
-
-    private InterfaceNameToStaticInfoMapper interfaceNameToStaticInfoMapper;
-
-    public StaticRoutingHelper(InterfaceNameToStaticInfoMapper interfaceNameToStaticInfoMapper) {
-        this.interfaceNameToStaticInfoMapper = interfaceNameToStaticInfoMapper;
-    }
+    private HostRelatedInfoContainer hostRelatedInfoContainer = HostRelatedInfoContainer.getInstance();
 
     public synchronized boolean addRoutingProtocolForVrf(DataBroker vppDataBroker,
-                                         String hostId,
-                                         long vrf) {
-        String routingProtocolName = getRoutingProtocolName(vrf);
+                                                         long vrfId,
+                                                         VrfHolder vrfHolderOfHost) {
+        String routingProtocolName = getRoutingProtocolName(vrfId);
         RoutingProtocolBuilder builder = new RoutingProtocolBuilder();
         builder.setKey(new RoutingProtocolKey(routingProtocolName));
         builder.setName(routingProtocolName);
         builder.setType(Static.class);
-        builder.setDescription(DEFAULT_DESCRIPTION);
+        builder.setDescription(Constants.DEFAULT_ROUTING_DESCRIPTION);
         RoutingProtocolVppAttrBuilder vppAugmentationBuilder = new RoutingProtocolVppAttrBuilder();
 
         vppAugmentationBuilder.
                 setVppProtocolAttributes(new VppProtocolAttributesBuilder()
-                                                .setPrimaryVrf(new VniReference(vrf)).build());
+                                                .setPrimaryVrf(new VniReference(vrfId)).build());
 
         builder.addAugmentation(RoutingProtocolVppAttr.class, vppAugmentationBuilder.build());
 
@@ -75,34 +71,34 @@ public class StaticRoutingHelper {
                 .getRoutingInstanceIid(builder.getKey());
         if (GbpNetconfTransaction.netconfSyncedWrite(vppDataBroker,
                 iid, builder.build(), GbpNetconfTransaction.RETRY_COUNT)) {
-            RoutingInfo info = new RoutingInfo();
-            info.setProtocolName(routingProtocolName);
-            hostVrfInfo.addRoutingVrfToHost(hostId, vrf, info);
+            vrfHolderOfHost.initializeVrfState(vrfId, routingProtocolName);
             return true;
         }
 
         return false;
     }
 
-    public boolean endPointRoutingExists(String interfaceName, Ipv4Address ip) {
-        return interfaceNameToStaticInfoMapper.routeAlreadyExists(interfaceName, ip);
-    }
-
-    public boolean routeAlreadyExistsInHostVrf(String hostId, long vrf, Ipv4Address ip) {
-        return hostVrfInfo.ipAlreadyExistsInHostVrf(hostId, vrf, ip);
-    }
-
     public synchronized boolean addSingleStaticRouteInRoutingProtocol(DataBroker vppDataBroker,
-                                                      String hostId,
-                                                      long vrf,
-                                                      Ipv4Address nextHopAddress,
-                                                      Ipv4Prefix ipPrefix,
-                                                      String outgoingInterface) {
+                                                                      String hostName,
+                                                                      long portVrfId,
+                                                                      String portSubnetUuid,
+                                                                      Ipv4Address nextHopAddress,
+                                                                      Ipv4Prefix ipPrefix,
+                                                                      String outgoingInterface) {
         RouteBuilder builder = new RouteBuilder();
 
-        Long routingId = hostVrfInfo.getEndPointCountInVrf(hostId, vrf);
+        VrfState hostVrfStateForPortVrf = hostRelatedInfoContainer
+                                                    .getVrfStateOfHost(hostName)
+                                                    .getVrfState(portVrfId);
 
-        builder.setId(routingId);
+        PortInterfaces hostPortInterfaces = hostRelatedInfoContainer
+                                                    .getPortInterfaceStateOfHost(hostName);
+
+        Preconditions.checkNotNull(hostVrfStateForPortVrf, "Vrf has not been initialized yet");
+
+        long routeId = hostVrfStateForPortVrf.getNextRouteId();
+
+        builder.setId(routeId);
         builder.setDestinationPrefix(ipPrefix);
         builder.setKey(new RouteKey(builder.getId()));
         builder.setNextHopOptions(new SimpleNextHopBuilder()
@@ -114,15 +110,18 @@ public class StaticRoutingHelper {
 
         Ipv4 ipv4Route = new Ipv4Builder().setRoute(routes).build();
 
-        InstanceIdentifier<Ipv4> iid = VppIidFactory.
-                getRoutingInstanceIid(new RoutingProtocolKey(hostVrfInfo.getProtocolName(hostId, vrf)))
+        InstanceIdentifier<Ipv4> iid = VppIidFactory
+                .getRoutingInstanceIid(new RoutingProtocolKey(hostVrfStateForPortVrf.getProtocolName()))
                 .child(StaticRoutes.class)
                 .augmentation(StaticRoutes1.class)
                 .child(Ipv4.class);
 
-        if (GbpNetconfTransaction.netconfSyncedMerge(vppDataBroker, iid, ipv4Route, GbpNetconfTransaction.RETRY_COUNT)) {
-            interfaceNameToStaticInfoMapper.addRouteForInterface(outgoingInterface, nextHopAddress, routingId);
-            hostVrfInfo.addStaticRoute(hostId, vrf, nextHopAddress);
+        if (GbpNetconfTransaction
+                .netconfSyncedMerge(vppDataBroker, iid, ipv4Route,
+                        GbpNetconfTransaction.RETRY_COUNT)) {
+            hostVrfStateForPortVrf.addNewPortIpInVrf(portSubnetUuid, nextHopAddress);
+            hostPortInterfaces.addRouteToPortInterface(outgoingInterface, portSubnetUuid,
+                    nextHopAddress, routeId);
             return true;
         }
 
@@ -130,31 +129,61 @@ public class StaticRoutingHelper {
     }
 
     public synchronized boolean deleteSingleStaticRouteFromRoutingProtocol(DataBroker vppDataBroker,
-                                                                        String hostId,
-                                                                        long vrf,
-                                                                        String outgoingInterface) {
-        List<Long> allRoutingIdsForPort = interfaceNameToStaticInfoMapper.getRoutingIdsAssociatedWithInterface(outgoingInterface);
+                                                                           String hostName,
+                                                                           long vrfId,
+                                                                           String outgoingInterfaceName,
+                                                                           Long routeId) {
+        VrfState vrfState = hostRelatedInfoContainer.getVrfStateOfHost(hostName).getVrfState(vrfId);
+
+        Preconditions.checkNotNull(vrfState, "Vrf has not been initialized");
+
+        InstanceIdentifier<Route> iid = VppIidFactory
+                .getRoutingInstanceIid(new RoutingProtocolKey(vrfState.getProtocolName()))
+                .child(StaticRoutes.class)
+                .augmentation(StaticRoutes1.class)
+                .child(Ipv4.class)
+                .child(Route.class, new RouteKey(routeId));
+
+        if (!GbpNetconfTransaction.netconfSyncedDelete(vppDataBroker, iid, GbpNetconfTransaction.RETRY_COUNT)) {
+            LOG.warn("Route delete failed for interface {} from {}", outgoingInterfaceName, hostName);
+            return false;
+        }
+        return true;
+    }
+
+    public synchronized boolean deleteAllRoutesThroughInterface(DataBroker vppDataBroker,
+                                                                String hostName,
+                                                                String outgoingInterfaceName) {
+        PortRouteState portRouteState = hostRelatedInfoContainer
+                                            .getPortInterfaceStateOfHost(hostName)
+                                            .getPortRouteState(outgoingInterfaceName);
+
+        long vrfId = hostRelatedInfoContainer.getPortInterfaceStateOfHost(hostName)
+                .getInterfaceVrfId(outgoingInterfaceName);
+
+        List<Ipv4Address> ipThroughInterface = portRouteState.getAllIps();
 
         boolean allOk = true;
 
-        for (Long routingId : allRoutingIdsForPort) {
-            InstanceIdentifier<Route> iid = VppIidFactory.
-                    getRoutingInstanceIid(new RoutingProtocolKey(hostVrfInfo.getProtocolName(hostId, vrf)))
-                    .child(StaticRoutes.class)
-                    .augmentation(StaticRoutes1.class)
-                    .child(Ipv4.class)
-                    .child(Route.class, new RouteKey(routingId));
-            if (!GbpNetconfTransaction.netconfSyncedDelete(vppDataBroker, iid, GbpNetconfTransaction.RETRY_COUNT)) {
-                LOG.warn("Route delete failed for interface {} from {}", outgoingInterface, hostId);
-                allOk = false;
+        for (Ipv4Address ip : ipThroughInterface) {
+            long routeId = portRouteState.getRouteIdOfIp(ip);
+            String subnetUuidOfIp = portRouteState.getSubnetUuidOfIp(ip);
+            boolean ok = deleteSingleStaticRouteFromRoutingProtocol(vppDataBroker, hostName, vrfId,
+                    outgoingInterfaceName, routeId);
+
+            if (ok) {
+                portRouteState.removeIp(ip);
+                hostRelatedInfoContainer
+                        .getVrfStateOfHost(hostName)
+                        .getVrfState(vrfId)
+                        .removePortIpFromVrf(subnetUuidOfIp, ip);
             }
         }
 
-        interfaceNameToStaticInfoMapper.clearStaticRoutesForInterface(outgoingInterface);
         return allOk;
     }
 
     public static String getRoutingProtocolName(long vrf) {
-        return ROUTING_PROTOCOL_NAME_PREFIX + vrf;
+        return Constants.ROUTING_PROTOCOL_NAME_PREFIX + vrf;
     }
 }

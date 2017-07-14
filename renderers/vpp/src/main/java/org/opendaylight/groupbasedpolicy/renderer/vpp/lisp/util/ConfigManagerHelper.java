@@ -15,10 +15,12 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.VppPathMapper;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispState;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.EndpointHost;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.HostRelatedInfoContainer;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.LispState;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispNotFoundException;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.HostIdToInterfaceInfoMapper;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PhysicalInterfaces;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.LispUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
@@ -73,11 +75,16 @@ import java.util.Set;
 public class ConfigManagerHelper {
     private static final Logger LOG = LoggerFactory.getLogger(ConfigManagerHelper.class);
 
-    private static final String TENANT_INTERFACE = "tenant-interface";
     private MountedDataBrokerProvider mountedDataBrokerProvider;
 
     public ConfigManagerHelper(MountedDataBrokerProvider mountedDataBrokerProvider) {
         this.mountedDataBrokerProvider = mountedDataBrokerProvider;
+    }
+
+    public EndpointHost getEndpointHostInformation(AddressEndpointWithLocation addressEpWithLoc) {
+        DataBroker endpointHostDataBroker = getPotentialExternalDataBroker(addressEpWithLoc).get();
+        String hostName = getHostName(addressEpWithLoc).get();
+        return new EndpointHost(endpointHostDataBroker, hostName);
     }
 
     public Optional<DataBroker> getPotentialExternalDataBroker(AddressEndpointWithLocation addressEpWithLoc) {
@@ -85,7 +92,8 @@ public class ConfigManagerHelper {
         InstanceIdentifier<?> vppNodeIid = externalLocationCase.getExternalNodeMountPoint();
         String interfacePath = externalLocationCase.getExternalNodeConnector();
 
-        Optional<DataBroker> potentialVppDataProvider = mountedDataBrokerProvider.getDataBrokerForMountPoint(vppNodeIid);
+        Optional<DataBroker>
+                potentialVppDataProvider = mountedDataBrokerProvider.getDataBrokerForMountPoint(vppNodeIid);
 
         Preconditions.checkArgument(potentialVppDataProvider.isPresent(),
                 "Cannot resolve data broker for interface path: {}", interfacePath);
@@ -158,8 +166,11 @@ public class ConfigManagerHelper {
         Preconditions.checkNotNull(hostName, "Hostname is null!");
         Preconditions.checkNotNull(vppDataBroker, "Vpp DataBroker is null!");
 
-        String publicInterfaceName = HostIdToInterfaceInfoMapper.getInstance()
-                .getInterfaceInfo(hostName, HostIdToInterfaceInfoMapper.InterfaceType.PUBLIC).getInterfaceName();
+        PhysicalInterfaces physicalInterfaces = HostRelatedInfoContainer.getInstance()
+                .getPhysicalInterfaceState(hostName);
+
+        String publicInterfaceName = physicalInterfaces == null ? "" : physicalInterfaces
+                .getName(PhysicalInterfaces.PhysicalInterfaceType.PUBLIC);
 
         final Optional<InterfacesState> opInterfaceState = GbpNetconfTransaction.read(vppDataBroker,
                 LogicalDatastoreType.OPERATIONAL, InstanceIdentifier.create(InterfacesState.class),
@@ -190,7 +201,7 @@ public class ConfigManagerHelper {
 
             for (org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.
                     interfaces.Interface intf : hostInterfaceFromOpDS) {
-                if (TENANT_INTERFACE.equals(intf.getDescription())
+                if (Constants.TENANT_INTERFACE.equals(intf.getDescription())
                         && ipAddressPresent(intf)
                         && intf.getType().equals(EthernetCsmacd.class)) {
                     return Futures.immediateFuture(intf.getName());
@@ -266,8 +277,10 @@ public class ConfigManagerHelper {
         return LispStateManager.DEFAULT_LOCATOR_SET_NAME_PREFIX + (locatorSetCount + 1);
     }
 
-    public String constructMappingName(int presentMappingCount) {
-        return LispStateManager.DEFAULT_MAPPINGRECORD_NAME_PREFIX + (presentMappingCount + 1);
+    public String constructEidMappingName(AddressEndpointWithLocation addressEp) {
+        String interfaceName = getInterfaceName(addressEp).get();
+        String ipAddress = getInterfaceIp(addressEp).getValue();
+        return LispStateManager.DEFAULT_MAPPINGRECORD_NAME_PREFIX + interfaceName + "_" + ipAddress;
     }
 
     public String getSubnet(AddressEndpointWithLocation addressEp) {
@@ -362,8 +375,16 @@ public class ConfigManagerHelper {
                 "in address endpoint: " + addressEp);
     }
 
-    public boolean isMetadataPort(AddressEndpointWithLocation addedEp) {
+    public boolean hasRelativeLocations(AddressEndpointWithLocation addedEp) {
         return addedEp.getRelativeLocations() != null && addedEp.getRelativeLocations().getExternalLocation() != null;
+    }
+
+    public boolean isMetadataPort(AddressEndpointWithLocation addressEp) {
+        return hasRelativeLocations(addressEp) || IpAddressUtil.isMetadataIp(getInterfaceIp(addressEp));
+    }
+
+    public String getGatewayInterfaceName(String gwNamePrefix, String subnetUuid) {
+        return gwNamePrefix + subnetUuid;
     }
 
     public Routing getRouting(long vrf) {

@@ -5,8 +5,7 @@
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
-
-package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp;
+package org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states;
 
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.dp.subtable.grouping.local.mappings.local.mapping.Eid;
@@ -20,31 +19,21 @@ import java.util.Set;
  * Created by Shakib Ahmed on 3/29/17.
  */
 public class LispState {
-    private String hostName;
     private boolean lispEnabled;
     private boolean gpeEnabled;
-    private HashMap<String, String> locIntfToLocSetNameMapping;
+    private HashMap<String, String> interfaceNameToLocatorSetNameMapper;
     private Set<IpAddress> mapServerIpAddressSet;
     private Set<IpAddress> mapResolverIpAddressSet;
     private Set<Long> vniSet;
-    private boolean mapRegisteredEnabled;
-    private HashMap<Eid, String> eidToMappingIdMapper;
-    private int interfaceCount;
+    private Set<Eid> eidSet;
 
-    public LispState(String hostName) {
-        this.hostName = hostName;
+    public LispState() {
         lispEnabled = false;
-        locIntfToLocSetNameMapping = new HashMap<>();
+        interfaceNameToLocatorSetNameMapper = new HashMap<>();
         mapServerIpAddressSet = new HashSet<>();
         mapResolverIpAddressSet = new HashSet<>();
-        mapRegisteredEnabled = false;
         vniSet = new HashSet<>();
-        eidToMappingIdMapper = new HashMap<>();
-        interfaceCount = 1;
-    }
-
-    public String getHostName() {
-        return hostName;
+        eidSet = new HashSet<>();
     }
 
     public boolean isLispEnabled() {
@@ -64,19 +53,19 @@ public class LispState {
     }
 
     public String getLocIntfToLocSetNameMapping(String locatorIntf) {
-        return locIntfToLocSetNameMapping.get(locatorIntf);
+        return interfaceNameToLocatorSetNameMapper.get(locatorIntf);
     }
 
     public void setLocIntfToLocSetNameMapping(String locIntfName, String locSetName) {
-        locIntfToLocSetNameMapping.put(locIntfName, locSetName);
+        interfaceNameToLocatorSetNameMapper.put(locIntfName, locSetName);
     }
 
     public Set<Map.Entry<String, String>> getLocatorSetEntry() {
-        return locIntfToLocSetNameMapping.entrySet();
+        return interfaceNameToLocatorSetNameMapper.entrySet();
     }
 
     public int getLocatorCount() {
-        return locIntfToLocSetNameMapping.size();
+        return interfaceNameToLocatorSetNameMapper.size();
     }
 
     public boolean mapServerSetContains(IpAddress ip) {
@@ -95,7 +84,7 @@ public class LispState {
         mapResolverIpAddressSet.add(ip);
     }
 
-    public boolean vniSetContains(long vni) {
+    public boolean isVniConfigured(long vni) {
         return vniSet.contains(vni);
     }
 
@@ -103,36 +92,18 @@ public class LispState {
         vniSet.add(vni);
     }
 
-    public boolean isMapRegisteredEnabled() {
-        return mapRegisteredEnabled;
-    }
-
-    public void setMapRegisteredEnabled(boolean mapRegisteredEnabled) {
-        this.mapRegisteredEnabled = mapRegisteredEnabled;
-    }
-
     public boolean eidSetContains(Eid eid) {
-        return eidToMappingIdMapper.containsKey(eid);
-    }
-
-    public void addInEidSet(Eid eid, String mappingId) {
-        interfaceCount++;
-        eidToMappingIdMapper.put(eid, mappingId);
+        return eidSet.contains(eid);
     }
 
     public int eidCount() {
-        return eidToMappingIdMapper.size();
+        return eidSet.size();
     }
 
+    public void addEidInEidSet(Eid eid) {
+        eidSet.add(eid);
+    }
     public void deleteEid(Eid eid) {
-        eidToMappingIdMapper.remove(eid);
-    }
-
-    public String getEidMapping(Eid eid) {
-        return eidToMappingIdMapper.get(eid);
-    }
-
-    public int getInterfaceId() {
-        return interfaceCount;
+        eidSet.remove(eid);
     }
 }

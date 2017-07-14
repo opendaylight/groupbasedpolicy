@@ -15,8 +15,12 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.LispCommandW
 import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispConfigCommandFailedException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispNotFoundException;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.EndpointHost;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.HostRelatedInfoContainer;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.LispState;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.NeutronTenantToVniMapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.ConfigManagerHelper;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.Constants;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
@@ -35,7 +39,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
-import java.util.HashMap;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -44,7 +47,7 @@ import java.util.concurrent.ExecutionException;
 public class LispStateManager {
     private static final Logger LOG = LoggerFactory.getLogger(LispStateManager.class);
 
-    private HashMap<String, LispState> lispStateMapper;
+    private HostRelatedInfoContainer hostRelatedInfoContainer;
     private MountedDataBrokerProvider mountedDataBrokerProvider;
     private ConfigManagerHelper lispStateHelper;
 
@@ -54,125 +57,124 @@ public class LispStateManager {
     private static final short DEFAULT_WEIGHT = 1;
     public static final String DEFAULT_XTR_KEY = "admin";
     public static final String DEFAULT_LOCATOR_SET_NAME_PREFIX = "LS";
-    public static final String DEFAULT_MAPPINGRECORD_NAME_PREFIX = "MR";
+    public static final String DEFAULT_MAPPINGRECORD_NAME_PREFIX = "MR_";
 
     public LispStateManager(@Nonnull MountedDataBrokerProvider mountedDataBrokerProvider) {
         Preconditions.checkNotNull(mountedDataBrokerProvider,
                 "MountedDataBrokerProvider found to be null!");
-        lispStateMapper = new HashMap<>();
+        hostRelatedInfoContainer = HostRelatedInfoContainer.getInstance();
         this.mountedDataBrokerProvider= mountedDataBrokerProvider;
         this.lispStateHelper = new ConfigManagerHelper(this.mountedDataBrokerProvider);
         neutronTenantToVniMapper = NeutronTenantToVniMapper.getInstance();
     }
 
-    public synchronized void configureEndPoint(AddressEndpointWithLocation addressEp) {
+    public synchronized void processCreateEndPoint(AddressEndpointWithLocation addressEp) {
         try {
             if (lispStateHelper.isMetadataPort(addressEp)) {
                 return;
             }
-            DataBroker dataBroker = lispStateHelper.getPotentialExternalDataBroker(addressEp).get();
-            String hostName = lispStateHelper.getHostName(addressEp).get();
-            LispState lispStateOfNode = configureHostIfNeeded(hostName, dataBroker);
+            EndpointHost endpointHost = lispStateHelper.getEndpointHostInformation(addressEp);
+            LispState lispStateOfHost = configureHostIfNeeded(endpointHost);
 
             long vni = getVni(addressEp.getTenant().getValue());
             long vrf = vni;
-            addVniToVrfMappingIfNeeded(dataBroker, lispStateOfNode, vni, vrf);
 
             Eid eid = lispStateHelper.getEid(addressEp, vni);
+            String eidMappingName = lispStateHelper.constructEidMappingName(addressEp);
 
-            if(!lispStateOfNode.eidSetContains(eid)) {
-                addEidInEidTable(dataBroker, lispStateOfNode, eid);
+            addVniToVrfMappingIfNeeded(endpointHost.getHostDataBroker(), lispStateOfHost, vni, vrf);
+
+            if (lispStateHelper.getInterfaceIp(addressEp).getValue().equals(Constants.METADATA_IP)) {
+                return;
             }
 
+            addEidOnHostIfNeeded(endpointHost, lispStateOfHost, eid, eidMappingName);
         } catch (LispConfigCommandFailedException e) {
             LOG.warn("Lisp endpoint configuration failed for address endpoint: {}", addressEp);
         }
     }
 
-    public synchronized LispState configureHostIfNeeded(String hostName, DataBroker vppDataBroker) throws LispConfigCommandFailedException {
-        LispState lispStateOfNode = lispStateMapper.get(hostName);
+    private void addEidOnHostIfNeeded(EndpointHost endpointHost, LispState lispStateOfNode, Eid eid,
+                                      String eidMappingName)
+            throws LispConfigCommandFailedException {
+        if(!lispStateOfNode.eidSetContains(eid)) {
+            addEidInEidTable(endpointHost.getHostDataBroker(), lispStateOfNode, eid, eidMappingName);
+        }
+    }
 
-        if (lispStateOfNode == null) {
-            lispStateOfNode = new LispState(hostName);
+    private synchronized LispState configureHostIfNeeded(EndpointHost endpointHost)
+            throws LispConfigCommandFailedException {
+        LispState lispStateOfHost = hostRelatedInfoContainer.getLispStateOfHost(endpointHost.getHostName());
+
+        if (lispStateOfHost == null) {
+            LOG.debug("Configuring host {} for LISP", endpointHost.getHostName());
+            lispStateOfHost = new LispState();
             try {
-                enableLispForNode(vppDataBroker, lispStateOfNode);
+                enableLispOnHost(endpointHost, lispStateOfHost);
+                enableGpeOnHostIfNeeded(endpointHost, lispStateOfHost);
+                addLocatorSetOnHost(endpointHost, lispStateOfHost);
+                addMapResolverOnHost(endpointHost, lispStateOfHost);
+                enableMapRegistrationOnHostIfNeeded(endpointHost, lispStateOfHost);
 
-                if (ConfigUtil.getInstance().isL3FlatEnabled()) {
-                    enableGpeForNode(vppDataBroker, lispStateOfNode);
-                }
-
-                addLocatorSet(vppDataBroker, lispStateOfNode);
-                addMapResolver(vppDataBroker, lispStateOfNode);
-                if (ConfigUtil.getInstance().isLispMapRegisterEnabled()) {
-                    enableMapRegister(vppDataBroker, lispStateOfNode);
-                    addMapServer(vppDataBroker, lispStateOfNode);
-                }
-                lispStateMapper.put(hostName, lispStateOfNode);
+                hostRelatedInfoContainer.setLispStateOfHost(endpointHost.getHostName(), lispStateOfHost);
             } catch (LispNotFoundException e) {
                 LOG.warn("Lisp host configuration failed: ", e.getMessage());
                 throw new LispConfigCommandFailedException("Failed LISP configuration!");
             }
         }
-        return lispStateOfNode;
+        return lispStateOfHost;
     }
 
-    public synchronized void deleteLispConfigurationForEndpoint(AddressEndpointWithLocation addressEp) {
-        try {
-            DataBroker vppDataBroker = lispStateHelper.getPotentialExternalDataBroker(addressEp).get();
-            String hostName = lispStateHelper.getHostName(addressEp).get();
-
-            LispState lispState = lispStateMapper.get(hostName);
-
-            if (lispState == null) {
-                LOG.debug("Endpoint not configured for LISP. EndPoint: {}", addressEp);
-            } else {
-                long vni = getVni(addressEp.getTenant().getValue());
-                Eid eid = lispStateHelper.getEid(addressEp, vni);
-
-                if (lispState.eidSetContains(eid)) {
-                    deleteEidFromEidTable(vppDataBroker, lispState, eid);
-                }
-
-                if (lispState.eidCount() == 0) {
-                    deleteLispStatesInEndPoints(vppDataBroker, lispState);
-                }
-            }
-        } catch (LispConfigCommandFailedException e) {
-            LOG.warn("Lisp command execution failed: {}", e.getMessage());
+    private void enableGpeOnHostIfNeeded(EndpointHost endpointHost, LispState lispStateOfHost)
+            throws LispConfigCommandFailedException {
+        if (ConfigUtil.getInstance().isL3FlatEnabled()) {
+            enableGpeForHost(endpointHost, lispStateOfHost);
         }
     }
 
-    private void enableLispForNode(DataBroker vppDataBroker, LispState lispState) throws LispConfigCommandFailedException {
+    private void enableMapRegistrationOnHostIfNeeded(EndpointHost endpointHost, LispState lispStateOfHost)
+            throws LispConfigCommandFailedException {
+        if (ConfigUtil.getInstance().isLispMapRegisterEnabled()) {
+            enableMapRegister(endpointHost);
+            addMapServer(endpointHost, lispStateOfHost);
+        }
+    }
+
+    private void enableLispOnHost(EndpointHost endpointHost, LispState lispState)
+            throws LispConfigCommandFailedException {
         AbstractLispCommand<Lisp>
                 lispEnableCommand = LispCommandWrapper.enableLisp();
-        if (LispStateCommandExecutor.executePutCommand(vppDataBroker, lispEnableCommand)) {
+        if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostDataBroker(), lispEnableCommand)) {
             lispState.setLispEnabled(true);
         } else {
             throw new LispConfigCommandFailedException("Lisp Enable Command failed execution!");
         }
     }
 
-    private void enableGpeForNode(DataBroker vppDataBroker, LispState lispState) throws LispConfigCommandFailedException {
+    private void enableGpeForHost(EndpointHost endpointHost, LispState lispState)
+            throws LispConfigCommandFailedException {
         AbstractLispCommand<GpeFeatureData>
                 gpeEnableCommand = LispCommandWrapper.enableGpe();
-        if (LispStateCommandExecutor.executePutCommand(vppDataBroker, gpeEnableCommand)) {
+        if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostDataBroker(), gpeEnableCommand)) {
             lispState.setGpeEnabled(true);
         } else {
             throw new LispConfigCommandFailedException("GPE Enable Command failed execution!");
         }
     }
 
-    private void addLocatorSet(DataBroker vppDataBroker, LispState lispState) throws LispNotFoundException, LispConfigCommandFailedException {
+    private void addLocatorSetOnHost(EndpointHost endpointHost, LispState lispState)
+            throws LispNotFoundException, LispConfigCommandFailedException {
         try {
             String locatorSetName = lispStateHelper.constructLocatorSetName(lispState.getLocatorCount());
-            String interfaceName = lispStateHelper.readRlocInterface(lispState.getHostName(), vppDataBroker).get();
+            String interfaceName = lispStateHelper
+                    .readRlocInterface(endpointHost.getHostName(), endpointHost.getHostDataBroker()).get();
             AbstractLispCommand<LocatorSet> addLocatorSetCommand = LispCommandWrapper.addLocatorSet(locatorSetName,
                     interfaceName, DEFAULT_PRIORITY, DEFAULT_WEIGHT);
-            if (LispStateCommandExecutor.executePutCommand(vppDataBroker, addLocatorSetCommand)) {
+            if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostDataBroker(), addLocatorSetCommand)) {
                 lispState.setLocIntfToLocSetNameMapping(interfaceName, locatorSetName);
             } else {
                 throw new LispConfigCommandFailedException("Lisp add locator set failed for host "
-                        + lispState.getHostName() + " and locator interface " + interfaceName);
+                        + endpointHost.getHostName() + " and locator interface " + interfaceName);
             }
         } catch (InterruptedException | ExecutionException e) {
             throw new LispNotFoundException("No interface with Ip Address found!");
@@ -180,49 +182,50 @@ public class LispStateManager {
 
     }
 
-    private void addMapResolver(DataBroker vppDataBroker, LispState lispState) throws LispConfigCommandFailedException {
+    private void addMapResolverOnHost(EndpointHost endpointHost, LispState lispState)
+            throws LispConfigCommandFailedException {
         IpAddress mapResolverIpAddress = ConfigUtil.getInstance().getOdlTenantIp();
         Preconditions.checkNotNull(mapResolverIpAddress, "Map Resolver ip not properly configured!");
 
         AbstractLispCommand<MapResolver> addMapResolverCommand = LispCommandWrapper.
                 addMapResolver(mapResolverIpAddress);
-        if (LispStateCommandExecutor.executePutCommand(vppDataBroker, addMapResolverCommand)) {
+        if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostDataBroker(), addMapResolverCommand)) {
             lispState.addInMapResolverSet(mapResolverIpAddress);
         } else {
-            throw new LispConfigCommandFailedException("Lisp add map resolver for host " + lispState.getHostName()
+            throw new LispConfigCommandFailedException("Lisp add map resolver for host " + endpointHost.getHostName()
                     + " failed for ODL ip " + mapResolverIpAddress);
         }
     }
 
-    private void addMapServer(DataBroker vppDataBroker, LispState lispState) throws LispConfigCommandFailedException {
+    private void enableMapRegister(EndpointHost endpointHost)
+            throws LispConfigCommandFailedException {
+        AbstractLispCommand<MapRegister> enableMapRegisterCommand = LispCommandWrapper.enableMapRegister();
+
+        if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostDataBroker(), enableMapRegisterCommand)) {
+        } else {
+            throw new LispConfigCommandFailedException("Lisp enable mapregistration for host "
+                    + endpointHost.getHostName() + " failed!");
+        }
+
+    }
+
+    private void addMapServer(EndpointHost endpointHost, LispState lispState) throws LispConfigCommandFailedException {
         IpAddress mapServerIpAddress = ConfigUtil.getInstance().getOdlTenantIp();
         Preconditions.checkNotNull(mapServerIpAddress, "Mapserver ip not properly configured!");
         AbstractLispCommand<MapServer> addMapServerCommand = LispCommandWrapper.addMapServer(mapServerIpAddress);
 
-        if (LispStateCommandExecutor.executePutCommand(vppDataBroker, addMapServerCommand)) {
+        if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostDataBroker(), addMapServerCommand)) {
             lispState.addInMapServerSet(mapServerIpAddress);
         } else {
-            throw new LispConfigCommandFailedException("Lisp add map server for host " + lispState.getHostName()
+            throw new LispConfigCommandFailedException("Lisp add map server for host " + endpointHost.getHostName()
                     + " failed for ODL ip " + mapServerIpAddress);
         }
-    }
-
-    private void enableMapRegister(DataBroker vppDataBroker, LispState lispState) throws LispConfigCommandFailedException {
-        AbstractLispCommand<MapRegister> enableMapRegisterCommand = LispCommandWrapper.enableMapRegister();
-
-        if (LispStateCommandExecutor.executePutCommand(vppDataBroker, enableMapRegisterCommand)) {
-            lispState.setMapRegisteredEnabled(true);
-        } else {
-            throw new LispConfigCommandFailedException("Lisp enable mapregistration for host "
-                    + lispState.getHostName() + " failed!");
-        }
-
     }
 
     private void addVniToVrfMappingIfNeeded(DataBroker vppDataBroker,
                                             LispState lispState,
                                             long vni, long vrf) throws LispConfigCommandFailedException {
-        if (!lispState.vniSetContains(vni)) {
+        if (!lispState.isVniConfigured(vni)) {
             AbstractLispCommand<VniTable> addVniToVrfMapping = LispCommandWrapper.mapVniToVrf(vni, vrf);
             addVniToVrfMapping.setOptions(General.Operations.PUT);
             if (LispStateCommandExecutor.executePutCommand(vppDataBroker, addVniToVrfMapping)) {
@@ -236,45 +239,82 @@ public class LispStateManager {
 
     private void addEidInEidTable(DataBroker vppDataBroker,
                                   LispState lispState,
-                                  Eid eid) throws LispConfigCommandFailedException {
-        String mappingId = lispStateHelper.constructMappingName(lispState.getInterfaceId());
+                                  Eid eid,
+                                  String eidMappingName) throws LispConfigCommandFailedException {
         AbstractLispCommand<LocalMapping> addLocalMappingInEidTableCommand = LispCommandWrapper
-                .addLocalMappingInEidTable(mappingId,
+                .addLocalMappingInEidTable(eidMappingName,
                         eid,
                         lispStateHelper.getFirstLocatorSetName(lispState),
                         lispStateHelper.getDefaultHmacKey());
         if (LispStateCommandExecutor.executePutCommand(vppDataBroker, addLocalMappingInEidTableCommand)) {
-            lispState.addInEidSet(eid, mappingId);
+            lispState.addEidInEidSet(eid);
         } else {
             throw new LispConfigCommandFailedException("Lisp add local mapping for eid " + eid + "failed!");
         }
     }
 
-    private void deleteLispStatesInEndPoints(DataBroker vppDataBroker,
-                                             LispState lispState) throws LispConfigCommandFailedException {
-        AbstractLispCommand<LispFeatureData> deleteLispFeatureData = LispCommandWrapper.deleteLispFeatureData();
+    public synchronized void processDeleteEndpoint(AddressEndpointWithLocation addressEp) {
+        try {
 
-        if (LispStateCommandExecutor.executeDeleteCommand(vppDataBroker, deleteLispFeatureData)) {
-            String computeNode = lispState.getHostName();
-            lispStateMapper.remove(computeNode);
-        } else {
-            throw new LispConfigCommandFailedException("Lisp delete feature data command failed!");
+            if (lispStateHelper.isMetadataPort(addressEp)) {
+                return;
+            }
+
+            EndpointHost endpointHost = lispStateHelper.getEndpointHostInformation(addressEp);
+
+            LispState lispState = hostRelatedInfoContainer.getLispStateOfHost(endpointHost.getHostName());
+
+            if (lispState == null) {
+                LOG.debug("Endpoint not configured for LISP. EndPoint: {}", addressEp);
+            } else {
+                long vni = getVni(addressEp.getTenant().getValue());
+                Eid eid = lispStateHelper.getEid(addressEp, vni);
+                String eidMappingName = lispStateHelper.constructEidMappingName(addressEp);
+
+                deleteEidFromLocalEidTableOfHostIfNeeded(endpointHost, lispState, eid, eidMappingName);
+
+                if (lispState.eidCount() == 0) {
+                    deleteLispStatesFromHost(endpointHost);
+                }
+            }
+        } catch (LispConfigCommandFailedException e) {
+            LOG.warn("Lisp command execution failed: {}", e.getMessage());
         }
     }
 
-    private void deleteEidFromEidTable(DataBroker vppDataBroker,
+    private void deleteEidFromLocalEidTableOfHostIfNeeded(EndpointHost endpointHost, LispState lispState, Eid eid, String eidMappingName) throws LispConfigCommandFailedException {
+        if (lispState.eidSetContains(eid)) {
+            deleteEidFromLocalEidTableOfHost(endpointHost, lispState, eid, eidMappingName);
+        }
+    }
+
+    private void deleteEidFromLocalEidTableOfHost(EndpointHost endpointHost,
                                        LispState lispState,
-                                       Eid eid) throws LispConfigCommandFailedException {
-        String mappingId = lispState.getEidMapping(eid);
+                                       Eid eid,
+                                       String eidMappingName) throws LispConfigCommandFailedException {
         long value = eid.getVirtualNetworkId().getValue();
 
         AbstractLispCommand<LocalMapping> deleteLocalMappingCommand = LispCommandWrapper
-                .deleteLocalMappingFromEidTable(mappingId, value);
+                .deleteLocalMappingFromEidTable(eidMappingName, value);
 
-        if (LispStateCommandExecutor.executeDeleteCommand(vppDataBroker, deleteLocalMappingCommand)) {
+        if (LispStateCommandExecutor
+                .executeDeleteCommand(endpointHost.getHostDataBroker(), deleteLocalMappingCommand)) {
+            LOG.debug("Successfully deleted eid {} from host {}", eid, endpointHost.getHostName());
             lispState.deleteEid(eid);
         } else {
             throw new LispConfigCommandFailedException("Lisp delete local mapping command failed!");
+        }
+    }
+
+
+    private void deleteLispStatesFromHost(EndpointHost endpointHost) throws LispConfigCommandFailedException {
+        AbstractLispCommand<LispFeatureData> deleteLispFeatureData = LispCommandWrapper.deleteLispFeatureData();
+
+        if (LispStateCommandExecutor.executeDeleteCommand(endpointHost.getHostDataBroker(), deleteLispFeatureData)) {
+            hostRelatedInfoContainer.deleteLispStateOfHost(endpointHost.getHostName());
+            LOG.debug("Deleted all lisp data for host {}", endpointHost.getHostName());
+        } else {
+            throw new LispConfigCommandFailedException("Lisp delete feature data command failed!");
         }
     }
 
