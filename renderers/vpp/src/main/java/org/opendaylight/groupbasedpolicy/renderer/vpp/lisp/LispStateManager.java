@@ -30,6 +30,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.dp.subtable.grouping.local.mappings.LocalMapping;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.dp.subtable.grouping.local.mappings.local.mapping.Eid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.eid.table.grouping.eid.table.VniTable;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.itr.remote.locator.sets.grouping.ItrRemoteLocatorSet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.lisp.feature.data.grouping.LispFeatureData;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.locator.sets.grouping.locator.sets.LocatorSet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.map.register.grouping.MapRegister;
@@ -166,25 +167,55 @@ public class LispStateManager {
             throws LispNotFoundException, LispConfigCommandFailedException {
         try {
             String locatorSetName = lispStateHelper.constructLocatorSetName(lispState.getLocatorCount());
-            String interfaceName = lispStateHelper
-                    .readRlocInterface(endpointHost.getHostName(), endpointHost.getHostDataBroker()).get();
+            String lispDataInterfaceName = lispStateHelper
+                    .getLispDataRlocInterfaceName(endpointHost.getHostName(), endpointHost.getHostDataBroker()).get();
             AbstractLispCommand<LocatorSet> addLocatorSetCommand = LispCommandWrapper.addLocatorSet(locatorSetName,
-                    interfaceName, DEFAULT_PRIORITY, DEFAULT_WEIGHT);
+                    lispDataInterfaceName, DEFAULT_PRIORITY, DEFAULT_WEIGHT);
             if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostDataBroker(), addLocatorSetCommand)) {
-                lispState.setLocIntfToLocSetNameMapping(interfaceName, locatorSetName);
+                lispState.setLocIntfToLocSetNameMapping(lispDataInterfaceName, locatorSetName);
             } else {
                 throw new LispConfigCommandFailedException("Lisp add locator set failed for host "
-                        + endpointHost.getHostName() + " and locator interface " + interfaceName);
+                        + endpointHost.getHostName() + " and locator interface " + lispDataInterfaceName);
             }
+
+            addExtraItrRlocLocatorSetIfNeeded(endpointHost, lispDataInterfaceName);
         } catch (InterruptedException | ExecutionException e) {
             throw new LispNotFoundException("No interface with Ip Address found!");
         }
+    }
 
+    private void addExtraItrRlocLocatorSetIfNeeded(EndpointHost endpointHost, String lispDataInterfaceName)
+            throws LispNotFoundException, LispConfigCommandFailedException {
+        String lispCpRlocInterfaceName = lispStateHelper.getLispCpRlocInterfaceName(endpointHost.getHostDataBroker());
+        if (lispCpRlocInterfaceName == null
+                || lispCpRlocInterfaceName.isEmpty()
+                || lispCpRlocInterfaceName.equals(lispDataInterfaceName)) {
+            return;
+        }
+
+        addItrLocatorSet(endpointHost, lispCpRlocInterfaceName);
+    }
+
+    private void addItrLocatorSet(EndpointHost endpointHost, String lispCpInterfaceName)
+            throws LispNotFoundException, LispConfigCommandFailedException {
+        String locatorSetName = lispStateHelper.constructLocatorSetNameForItrRloc();
+        AbstractLispCommand<LocatorSet> addLocatorSetCommand = LispCommandWrapper.addLocatorSet(locatorSetName,
+                lispCpInterfaceName, DEFAULT_PRIORITY, DEFAULT_WEIGHT);
+        if (!LispStateCommandExecutor.executePutCommand(endpointHost.getHostDataBroker(), addLocatorSetCommand)) {
+            throw new LispConfigCommandFailedException("Lisp add locator set failed for host "
+                    + endpointHost.getHostName() + " and locator interface " + lispCpInterfaceName);
+        }
+
+        AbstractLispCommand<ItrRemoteLocatorSet> addItrRlocCommand = LispCommandWrapper.addItrRloc(locatorSetName);
+        if (!LispStateCommandExecutor.executePutCommand(endpointHost.getHostDataBroker(), addItrRlocCommand)) {
+            throw new LispConfigCommandFailedException("Lisp add Itr Rloc command failed for host "
+                    + endpointHost.getHostName() + " and locator set " + locatorSetName);
+        }
     }
 
     private void addMapResolverOnHost(EndpointHost endpointHost, LispState lispState)
             throws LispConfigCommandFailedException {
-        IpAddress mapResolverIpAddress = ConfigUtil.getInstance().getOdlTenantIp();
+        IpAddress mapResolverIpAddress = ConfigUtil.getInstance().getOdlIp();
         Preconditions.checkNotNull(mapResolverIpAddress, "Map Resolver ip not properly configured!");
 
         AbstractLispCommand<MapResolver> addMapResolverCommand = LispCommandWrapper.
@@ -210,7 +241,7 @@ public class LispStateManager {
     }
 
     private void addMapServer(EndpointHost endpointHost, LispState lispState) throws LispConfigCommandFailedException {
-        IpAddress mapServerIpAddress = ConfigUtil.getInstance().getOdlTenantIp();
+        IpAddress mapServerIpAddress = ConfigUtil.getInstance().getOdlIp();
         Preconditions.checkNotNull(mapServerIpAddress, "Mapserver ip not properly configured!");
         AbstractLispCommand<MapServer> addMapServerCommand = LispCommandWrapper.addMapServer(mapServerIpAddress);
 

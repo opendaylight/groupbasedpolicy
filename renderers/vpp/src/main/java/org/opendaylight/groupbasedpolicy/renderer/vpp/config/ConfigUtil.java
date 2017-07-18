@@ -25,7 +25,7 @@ public class ConfigUtil {
     private static final boolean DEFAULT_L3_FLAT_ENABLED = false;
     private static final String DEFAULT_TRUE_STRING_VALUE = "true";
     private static final String CONFIGURATION_VARIABLE_MESSAGE =
-        "Configuration variable {} is being unset. Setting the variable to {}";
+            "Configuration variable {} is being unset. Setting the variable to {}";
 
     private IpAddress odlTenantIp;
     private boolean lispOverlayEnabled = DEFAULT_LISP_OVERLAY_ENABLED;
@@ -40,7 +40,7 @@ public class ConfigUtil {
     private static final ConfigUtil INSTANCE = new ConfigUtil();
 
     private ConfigUtil() {
-        configureOdlTenantIp(null);
+        configureOdlIp(null);
         configureLispOverlayEnabled(null);
         configureMapRegister(null);
         configL3FlatEnabled(null);
@@ -63,7 +63,7 @@ public class ConfigUtil {
         lispOverlayEnabled = configStr.trim().equalsIgnoreCase(DEFAULT_TRUE_STRING_VALUE);
     }
 
-    void configureOdlTenantIp(String configStr) {
+    void configureOdlIp(String configStr) {
         if (configStr == null) {
             odlTenantIp = null;
             LOG.debug("Configuration variable {} is being unset. Setting the variable to null",
@@ -91,7 +91,7 @@ public class ConfigUtil {
         l3FlatEnabled = configStr.trim().equalsIgnoreCase(DEFAULT_TRUE_STRING_VALUE);
     }
 
-    public IpAddress getOdlTenantIp() {
+    public IpAddress getOdlIp() {
         return odlTenantIp;
     }
 

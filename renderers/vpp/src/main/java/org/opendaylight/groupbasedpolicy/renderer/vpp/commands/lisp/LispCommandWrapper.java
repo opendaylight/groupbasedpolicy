@@ -11,6 +11,7 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.GbpGpeEntryDom;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.GpeEnableDom;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.InterfaceDom;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.ItrRemoteLocatorSetDom;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.LispDom;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.LocalMappingDom;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.LocatorSetDom;
@@ -30,6 +31,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.dp.subtable.grouping.local.mappings.local.mapping.Eid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.eid.table.grouping.eid.table.VniTable;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.hmac.key.grouping.HmacKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.itr.remote.locator.sets.grouping.ItrRemoteLocatorSet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.lisp.feature.data.grouping.LispFeatureData;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.locator.sets.grouping.locator.sets.LocatorSet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.map.register.grouping.MapRegister;
@@ -146,5 +148,12 @@ public class LispCommandWrapper {
         gpeEntryDom.setId(entryName);
 
         return new ConfigureGpeEntryCommand(gpeEntryDom);
+    }
+
+    public static AbstractLispCommand<ItrRemoteLocatorSet> addItrRloc(String locatorSetName) {
+        ItrRemoteLocatorSetDom itrRemoteLocatorSetDom = new ItrRemoteLocatorSetDom();
+        itrRemoteLocatorSetDom.setLocatorSetName(locatorSetName);
+
+        return new ConfigureItrRemoteLocatorSetCommand(itrRemoteLocatorSetDom);
     }
 }
