@@ -38,6 +38,7 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.HostIdToInterfaceInfoMapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.nat.NatUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppRendererProcessingException;
@@ -412,16 +413,23 @@ public class VppNodeManager {
                     phIface.setInterfaceName(iface.getName());
                     phIface.setType(iface.getType());
                     phIface.setAddress(resolveIpAddress(iface.getAugmentation(Interface1.class)));
+
                     if (extInterfaces.get(nodeId) != null
                             && extInterfaces.get(nodeId).getInterfaceName().equals(phIface.getInterfaceName())) {
                         phIface.setExternal(true);
                         extInterfaces.put(nodeId, new PhysicalInterfaceKey(iface.getName()));
+                        HostIdToInterfaceInfoMapper.getInstance()
+                                .addInterfaceInfo(nodeId.getValue(), HostIdToInterfaceInfoMapper.InterfaceType.PUBLIC,
+                                        phIface.getInterfaceName(), phIface.getAddress().get(0));
                         LOG.info("Interface {} is marked as public interface based on bundle configuration.",
                                 iface.getName());
                     }
                     if (PUBLIC_INTERFACE.equals(iface.getDescription())) {
                         phIface.setExternal(true);
                         extInterfaces.put(nodeId, new PhysicalInterfaceKey(iface.getName()));
+                        HostIdToInterfaceInfoMapper.getInstance()
+                                .addInterfaceInfo(nodeId.getValue(), HostIdToInterfaceInfoMapper.InterfaceType.PUBLIC,
+                                        phIface.getInterfaceName(), phIface.getAddress().get(0));
                         LOG.info("Interface {} is marked as public interface based on HC configuration.",
                                 iface.getName());
                     }

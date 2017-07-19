@@ -18,6 +18,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.VppPathMapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispState;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispNotFoundException;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.HostIdToInterfaceInfoMapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.LispUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
@@ -156,6 +157,10 @@ public class ConfigManagerHelper {
     public ListenableFuture<String> readRlocInterface(@Nonnull String hostName, @Nonnull DataBroker vppDataBroker) {
         Preconditions.checkNotNull(hostName, "Hostname is null!");
         Preconditions.checkNotNull(vppDataBroker, "Vpp DataBroker is null!");
+
+        String publicInterfaceName = HostIdToInterfaceInfoMapper.getInstance()
+                .getInterfaceInfo(hostName, HostIdToInterfaceInfoMapper.InterfaceType.PUBLIC).getInterfaceName();
+
         final Optional<InterfacesState> opInterfaceState = GbpNetconfTransaction.read(vppDataBroker,
                 LogicalDatastoreType.OPERATIONAL, InstanceIdentifier.create(InterfacesState.class),
                 GbpNetconfTransaction.RETRY_COUNT);
@@ -179,11 +184,24 @@ public class ConfigManagerHelper {
 
 
         if (opInterfaces.isPresent()) {
+
+            List<org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.
+                    interfaces.Interface> hostInterfaceFromOpDS = opInterfaces.get().getInterface();
+
             for (org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.
-                    interfaces.Interface intf : opInterfaces.get().getInterface()) {
+                    interfaces.Interface intf : hostInterfaceFromOpDS) {
                 if (TENANT_INTERFACE.equals(intf.getDescription())
                         && ipAddressPresent(intf)
                         && intf.getType().equals(EthernetCsmacd.class)) {
+                    return Futures.immediateFuture(intf.getName());
+                }
+            }
+
+            for (org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.
+                    interfaces.Interface intf : hostInterfaceFromOpDS) {
+                if (ipAddressPresent(intf)
+                        && intf.getType().equals(EthernetCsmacd.class)
+                        && !intf.getName().equalsIgnoreCase(publicInterfaceName)) {
                     return Futures.immediateFuture(intf.getName());
                 }
             }
