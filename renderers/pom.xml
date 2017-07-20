@@ -30,7 +30,6 @@
   <modules>
     <module>ofoverlay</module>
     <module>iovisor</module>
-    <module>netconf</module>
     <module>vpp</module>
     <module>ios-xe</module>
   </modules>

@@ -22,7 +22,6 @@
         <module>odl-groupbasedpolicy-base</module>
         <module>odl-groupbasedpolicy-ofoverlay</module>
         <module>odl-groupbasedpolicy-iovisor</module>
-        <module>odl-groupbasedpolicy-netconf</module>
         <module>odl-groupbasedpolicy-neutronmapper</module>
         <module>odl-groupbasedpolicy-neutron-and-ofoverlay</module>
         <module>odl-groupbasedpolicy-vpp</module>
