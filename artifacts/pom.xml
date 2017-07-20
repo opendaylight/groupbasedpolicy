@@ -51,11 +51,6 @@
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
-        <artifactId>ovssfc-renderer</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>${project.groupId}</groupId>
         <artifactId>ios-xe-renderer</artifactId>
         <version>${project.version}</version>
       </dependency>
