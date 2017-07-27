@@ -216,15 +216,18 @@ public class AclManager {
                         getInterfacesForEndpoint(policyCtx, KeyFactory.addressEndpointKey(endpointKey));
                 interfacesForEndpoint.keySet().forEach(nodeId -> {
                     ImmutableSet<InterfaceKey> intfcsOnNode = interfacesForEndpoint.get(nodeId);
-                    intfcsOnNode.forEach(intf -> {
-                        if (aceTable.get(nodeId, intf) != null) {
+                    intfcsOnNode.forEach(intfKey -> {
+                        Optional<String> intfName =
+                                VppPathMapper.interfacePathToInterfaceName(intfKey.getName());
+                        Preconditions.checkArgument(intfName.isPresent(), "Failed to resolve interface name from " + intfKey);
+                        if (aceTable.get(nodeId, intfKey) != null) {
                             List<Ace> aces = Stream
-                                .concat(aceTable.get(nodeId, intf).stream(),
+                                .concat(aceTable.get(nodeId, intfKey).stream(),
                                         aceBuilders.stream().map(aceBuilder -> aceBuilder.build()))
                                 .collect(Collectors.toList());
-                            aceTable.put(nodeId, new AclKey(intf.getName() + aceDirection, VppAcl.class), aces);
+                            aceTable.put(nodeId, new AclKey(intfName.get() + aceDirection, VppAcl.class), aces);
                         } else {
-                            aceTable.put(nodeId, new AclKey(intf.getName() + aceDirection, VppAcl.class),
+                            aceTable.put(nodeId, new AclKey(intfName.get() + aceDirection, VppAcl.class),
                                     aceBuilders.stream()
                                         .map(aceBuilder -> aceBuilder.build())
                                         .collect(Collectors.toList()));
@@ -243,7 +246,6 @@ public class AclManager {
 
                 @Override
                 public Void call() throws Exception {
-                    LOG.debug("Updating node {}", nodeId);
                     InstanceIdentifier<Node> vppIid = VppIidFactory.getNetconfNodeIid(nodeId);
                     DataBroker dataBroker =
                         mountDataProvider.resolveDataBrokerForMountPoint(vppIid);
@@ -264,7 +266,7 @@ public class AclManager {
                         if (entries.isEmpty()) {
                             return;
                         }
-                        LOG.info("Updating ACL: Action={}, Node={}, ACL={}", write, nodeId.getValue(),
+                        LOG.debug("Updating ACL: Action={}, Node={}, ACL={}", write, nodeId.getValue(),
                                 aclKey.getAclName());
                         boolean result = (write) ? GbpNetconfTransaction.netconfSyncedWrite(vppIid, entries,
                                 GbpNetconfTransaction.RETRY_COUNT) : GbpNetconfTransaction.netconfSyncedDelete(
@@ -340,7 +342,6 @@ public class AclManager {
             LOG.warn("Cannot  find interface for endpoint {}. ACLs for endpoint not updated {}. ", rEpKey);
             return Futures.immediateFuture(null);
         }
-        DataBroker optMountPoint = mountDataProvider.resolveDataBrokerForMountPoint(vppNodeIid);
         if (interfaceManager.isExcludedFromPolicy(vppNodeIid.firstKeyOf(Node.class).getNodeId(),
                 optInterfaceIid.get().firstKeyOf(Interface.class).getName())) {
             return Futures.immediateFuture(null);

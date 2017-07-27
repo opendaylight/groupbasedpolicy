@@ -27,7 +27,6 @@ public class VppPathMapper {
             INTERFACE_PATH_BEFORE_KEY.length() + INTERFACE_PATH_AFTER_KEY.length() + 1;
     private static final String BD_PATH_BEFORE_KEY = "/v3po:vpp/v3po:bridge-domains/v3po:bridge-domain[v3po:name='";
     private static final String BD_PATH_AFTER_KEY = "']";
-    private static final int BD_PATH_MIN_LENGTH = BD_PATH_BEFORE_KEY.length() + BD_PATH_AFTER_KEY.length() + 1;
 
     private VppPathMapper() {}
 
@@ -51,6 +50,24 @@ public class VppPathMapper {
         int endIndexInterfaceName = restPath.length() - INTERFACE_PATH_AFTER_KEY.length();
         String interfaceName = restPath.substring(INTERFACE_PATH_BEFORE_KEY.length(), endIndexInterfaceName);
         return Optional.of(VppIidFactory.getInterfaceIID(new InterfaceKey(interfaceName)));
+    }
+
+    public static Optional<String> interfacePathToInterfaceName(@Nullable String restPath) {
+        if (Strings.isNullOrEmpty(restPath)) {
+            return Optional.absent();
+        }
+        if (restPath.length() < INTERFACE_PATH_MIN_LENGTH) {
+            return Optional.absent();
+        }
+        if (!restPath.startsWith(INTERFACE_PATH_BEFORE_KEY)) {
+            return Optional.absent();
+        }
+        if (!restPath.endsWith(INTERFACE_PATH_AFTER_KEY)) {
+            return Optional.absent();
+        }
+        int endIndexInterfaceName = restPath.length() - INTERFACE_PATH_AFTER_KEY.length();
+        String interfaceName = restPath.substring(INTERFACE_PATH_BEFORE_KEY.length(), endIndexInterfaceName);
+        return Optional.of(interfaceName);
     }
 
     public static String bridgeDomainToRestPath(String bridgeDomainName) {
