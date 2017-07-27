@@ -315,7 +315,11 @@ public class RendererConfigurationBuilder {
             Map<InstanceIdentifier<?>, RendererName> rendererByNode) {
         Optional<InstanceIdentifier<?>> potentialAbsNodeLoc = EndpointLocationUtils.resolveAbsoluteNodeLocation(epLoc);
         if (potentialAbsNodeLoc.isPresent()) {
-            return Optional.of(rendererByNode.get(potentialAbsNodeLoc.get()));
+            if (rendererByNode.get(potentialAbsNodeLoc.get()) != null) {
+                return Optional.of(rendererByNode.get(potentialAbsNodeLoc.get()));
+            } else {
+                return Optional.absent();
+            }
         }
         Optional<List<InstanceIdentifier<?>>> potentianRelativeLocation =
                 EndpointLocationUtils.resolveRelativeExternalNodeMountPointLocation(epLoc);
