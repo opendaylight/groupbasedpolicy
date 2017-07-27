@@ -258,7 +258,6 @@ public class VppNodeManager {
         final RendererNode rendererNode = remapNode(mountPointIid);
         final WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
         wTx.delete(LogicalDatastoreType.OPERATIONAL, VppIidFactory.getRendererNodeIid(rendererNode));
-        extInterfaces.remove(node.getNodeId());
         final CheckedFuture<Void, TransactionCommitFailedException> checkedFuture = wTx.submit();
         try {
             checkedFuture.checkedGet();
