@@ -66,4 +66,30 @@ public class IpAddressUtil {
         }
         return new ImmutablePair<>(new Ipv4Prefix(firstSubnet), new Ipv4Prefix(secondSubnet));
     }
+
+    public static boolean ipInRange(Ipv4Address ip, String startIpStr, String endIpStr) {
+        String ipStr = ip.getValue();
+
+        int startLim = InetAddresses.coerceToInteger(InetAddresses.forString(startIpStr));
+        int endLim = InetAddresses.coerceToInteger(InetAddresses.forString(endIpStr));
+        int ipNum = InetAddresses.coerceToInteger(InetAddresses.forString(ipStr));
+
+        long startUnsigned = Integer.toUnsignedLong(startLim);
+        long endUnsigned = Integer.toUnsignedLong(endLim);
+        long ipNumUnsigned = Integer.toUnsignedLong(ipNum);
+
+        return (startUnsigned <= ipNumUnsigned) && (ipNumUnsigned <= endUnsigned);
+    }
+
+    public static String startIpOfSubnet(String cidrNotion) {
+        return new SubnetUtils(cidrNotion).getInfo().getLowAddress();
+    }
+
+    public static String endIpOfSubnet(String cidrNotion) {
+        return new SubnetUtils(cidrNotion).getInfo().getHighAddress();
+    }
+
+    public static int maskLen(String cidrNotion) {
+        return Integer.valueOf(cidrNotion.split("/")[1]);
+    }
 }

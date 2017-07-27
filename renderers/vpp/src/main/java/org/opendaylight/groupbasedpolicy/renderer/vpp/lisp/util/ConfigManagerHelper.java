@@ -14,6 +14,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.iface.VppPathMapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.EndpointHost;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.HostRelatedInfoContainer;
@@ -22,6 +23,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispNotFoundException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PhysicalInterfaces;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.util.InterfaceUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.LispUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
@@ -36,6 +38,7 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev14061
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.Interface2;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces.state._interface.Ipv4;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces.state._interface.ipv4.Address;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces.state._interface.ipv4.address.subnet.PrefixLength;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.lisp.address.types.rev151105.Ipv4Afi;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.Containment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.containment.NetworkDomainContainment;
@@ -162,7 +165,8 @@ public class ConfigManagerHelper {
     }
 
     //This is almost identical to VBD's equivalent method
-    public ListenableFuture<String> readRlocInterface(@Nonnull String hostName, @Nonnull DataBroker vppDataBroker) {
+    public ListenableFuture<String> getLispDataRlocInterfaceName(@Nonnull String hostName,
+                                                                 @Nonnull DataBroker vppDataBroker) {
         Preconditions.checkNotNull(hostName, "Hostname is null!");
         Preconditions.checkNotNull(vppDataBroker, "Vpp DataBroker is null!");
 
@@ -248,6 +252,39 @@ public class ConfigManagerHelper {
         return ip != null;
     }
 
+    private String ipCidr(Interface intf) {
+        Interface2 augIntf = intf.getAugmentation(Interface2.class);
+
+        if (augIntf == null) {
+            return null;
+        }
+
+        Ipv4 ipv4 = augIntf.getIpv4();
+
+        if (ipv4 == null) {
+            return null;
+        }
+
+        final List<Address> addresses = ipv4.getAddress();
+
+        if (addresses == null || addresses.isEmpty()) {
+            return null;
+        }
+
+        Address firstAddress = addresses.get(0);
+        String ipString = firstAddress.getIp().getValue();
+        String length = "";
+        if (firstAddress.getSubnet().getImplementedInterface().equals(PrefixLength.class)) {
+            length = "" + ((PrefixLength)firstAddress.getSubnet()).getPrefixLength();
+        }
+
+        if (length.isEmpty()) {
+            return null;
+        }
+
+        return ipString + "/" + length;
+    }
+
     private boolean ipAddressPresent(final org.opendaylight.yang.gen.v1.urn.ietf.
             params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface intf) {
         final Interface1 augIntf = intf.getAugmentation(Interface1.class);
@@ -273,8 +310,41 @@ public class ConfigManagerHelper {
         return ip != null;
     }
 
+    public String getLispCpRlocInterfaceName(@Nonnull DataBroker vppDataBroker) {
+        List<Interface> operationalInterfaceList = InterfaceUtil.getOperationalInterfaces(vppDataBroker);
+
+        if (operationalInterfaceList == null) {
+            return null;
+        } else {
+            int maxLen = -1;
+            String outgoingInterface = "";
+
+            for (Interface intf : operationalInterfaceList) {
+                String ipCidr = ipCidr(intf);
+
+                if (ipCidr == null) {
+                    continue;
+                }
+
+                if (IpAddressUtil.ipInRange(ConfigUtil.getInstance().getOdlIp().getIpv4Address(),
+                        IpAddressUtil.startIpOfSubnet(ipCidr), IpAddressUtil.endIpOfSubnet(ipCidr))) {
+                    int tmpLen = IpAddressUtil.maskLen(ipCidr);
+                    if (tmpLen > maxLen) {
+                        maxLen = tmpLen;
+                        outgoingInterface = intf.getName();
+                    }
+                }
+            }
+            return outgoingInterface;
+        }
+    }
+
     public String constructLocatorSetName(int locatorSetCount) {
         return LispStateManager.DEFAULT_LOCATOR_SET_NAME_PREFIX + (locatorSetCount + 1);
+    }
+
+    public String constructLocatorSetNameForItrRloc() {
+        return LispStateManager.DEFAULT_LOCATOR_SET_NAME_PREFIX + "_itr_rloc";
     }
 
     public String constructEidMappingName(AddressEndpointWithLocation addressEp) {

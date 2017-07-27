@@ -72,7 +72,7 @@ public class ConfigurationService implements ManagedService{
         configMethods = new HashMap<>();
 
         configMethods.put(ConfigUtil.ODL_IP,
-                ip -> configUtil.configureOdlTenantIp((String) ip));
+                ip -> configUtil.configureOdlIp((String) ip));
         configMethods.put(ConfigUtil.LISP_MAPREGISTER_ENABLED,
                 mrConfig -> configUtil.configureMapRegister((String) mrConfig));
         configMethods.put(ConfigUtil.LISP_OVERLAY_ENABLED,
