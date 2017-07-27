@@ -14,11 +14,16 @@ import com.google.common.base.Preconditions;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.StaticArpCommand;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.HostIdToMetadataInterfaceMapper;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.HostVrfRoutingInformationMapper;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.InterfaceNameToStaticInfoMapper;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.EndpointHost;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.HostRelatedInfoContainer;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PortInterfaces;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PortRouteState;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.SubnetState;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.VrfHolder;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.VrfState;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.NeutronTenantToVniMapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.ConfigManagerHelper;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.Constants;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
@@ -51,23 +56,19 @@ public class FlatOverlayManager {
     private DataBroker dataBroker;
 
     private NeutronTenantToVniMapper neutronTenantToVniMapper = NeutronTenantToVniMapper.getInstance();
-    private HostVrfRoutingInformationMapper hostVrfInfo = HostVrfRoutingInformationMapper.getInstance();
-    private HostIdToMetadataInterfaceMapper
-            hostIdToMetadataInterfaceMapper = HostIdToMetadataInterfaceMapper.getInstance();
-
-    private InterfaceNameToStaticInfoMapper interfaceNameToStaticInfoMapper;
+    private HostRelatedInfoContainer hostRelatedInfoContainer = HostRelatedInfoContainer.getInstance();
 
     private StaticRoutingHelper staticRoutingHelper;
 
-    public FlatOverlayManager(@Nonnull DataBroker dataBroker, @Nonnull MountedDataBrokerProvider mountedDataBrokerProvider) {
+    public FlatOverlayManager(@Nonnull DataBroker dataBroker,
+                              @Nonnull MountedDataBrokerProvider mountedDataBrokerProvider) {
         this.overlayHelper = new ConfigManagerHelper(mountedDataBrokerProvider);
-        this.interfaceNameToStaticInfoMapper = InterfaceNameToStaticInfoMapper.getInstance();
-        staticRoutingHelper = new StaticRoutingHelper(interfaceNameToStaticInfoMapper);
+        staticRoutingHelper = new StaticRoutingHelper();
         this.dataBroker = dataBroker;
     }
 
     public void configureEndpointForFlatOverlay(AddressEndpointWithLocation addressEp) {
-        if (!overlayHelper.isMetadataPort(addressEp)) {
+        if (!overlayHelper.hasRelativeLocations(addressEp)) {
             configureInterfaceForFlatOverlay(addressEp);
             addStaticArp(addressEp);
             addStaticRoute(addressEp);
@@ -80,13 +81,18 @@ public class FlatOverlayManager {
 
                 long vrf = getVni(addressEp.getTenant().getValue());
 
-                if (!hostIdToMetadataInterfaceMapper.isMetadataInterfaceConfigured(hostName, metadataInterfaceName)) {
+                String metadataSubnetUuid = Constants.METADATA_SUBNET_UUID;
+
+                PortInterfaces portInterfacesOfHost = hostRelatedInfoContainer.getPortInterfaceStateOfHost(hostName);
+
+                if (!portInterfacesOfHost.isInterfaceConfiguredForMetadata(metadataInterfaceName)) {
                     DataBroker vppDataBroker = overlayHelper.getPotentialExternalDataBroker(externalLocation).get();
-                    addInterfaceInVrf(vppDataBroker, metadataInterfaceName, vrf);
+                    addInterfaceInVrf(new EndpointHost(vppDataBroker, hostName), metadataInterfaceName, vrf);
                     String physicalAddress = resolvePhysicalAddress(hostName, metadataInterfaceName);
                     addStaticArp(vppDataBroker, hostName, metadataInterfaceName, physicalAddress, metadataIp);
-                    addStaticRoute(vppDataBroker, hostName, vrf, metadataIp, metadataIpPrefix, metadataInterfaceName);
-                    hostIdToMetadataInterfaceMapper.addMetadataInterfaceInHost(hostName, metadataInterfaceName);
+                    addStaticRoute(vppDataBroker, hostName, vrf, metadataSubnetUuid, metadataIp,
+                            metadataIpPrefix, metadataInterfaceName);
+                    portInterfacesOfHost.addInterfaceInMetadataInterfaceSet(metadataInterfaceName);
                 }
             });
         }
@@ -118,7 +124,22 @@ public class FlatOverlayManager {
     }
 
     public void handleEndpointDeleteForFlatOverlay(AddressEndpointWithLocation addressEp) {
+        if (overlayHelper.hasRelativeLocations(addressEp)) {
+            // okay to ignore
+            // routes will be deleted on interface delete
+            return;
+        }
         deleteStaticRoute(addressEp);
+    }
+
+    public void handleInterfaceDeleteForFlatOverlay(DataBroker vppDataBroker, VppEndpoint vppEndpoint) {
+        String hostName = vppEndpoint.getVppNodeId().getValue();
+        String interfaceName = vppEndpoint.getVppInterfaceName();
+
+        staticRoutingHelper.deleteAllRoutesThroughInterface(vppDataBroker, hostName, interfaceName);
+
+        PortInterfaces portInterfaces = hostRelatedInfoContainer.getPortInterfaceStateOfHost(hostName);
+        portInterfaces.removePortInterface(interfaceName);
     }
 
     private void configureInterfaceForFlatOverlay(AddressEndpointWithLocation addressEp) {
@@ -126,20 +147,28 @@ public class FlatOverlayManager {
     }
 
     private void addInterfaceInVrf(AddressEndpointWithLocation addressEp) {
-        DataBroker vppDataBroker = overlayHelper.getPotentialExternalDataBroker(addressEp).get();
+        EndpointHost endpointHost = overlayHelper.getEndpointHostInformation(addressEp);
         long vni = getVni(addressEp.getTenant().getValue());
         long vrf = vni;
         Optional<String> interfaceNameOptional = overlayHelper.getInterfaceName(addressEp);
 
         Preconditions.checkArgument(interfaceNameOptional.isPresent());
 
-        addInterfaceInVrf(vppDataBroker, interfaceNameOptional.get(), vrf);
+        addInterfaceInVrf(endpointHost, interfaceNameOptional.get(), vrf);
     }
 
-    private void addInterfaceInVrf(DataBroker vppDataBroker, String interfaceName, long vrf) {
-        if (!putVrfInInterface(vppDataBroker, interfaceName, vrf)) {
+    private void addInterfaceInVrf(EndpointHost endpointHost, String interfaceName, long vrf) {
+        if (hostRelatedInfoContainer.getPortInterfaceStateOfHost(endpointHost.getHostName())
+                .isVrfConfiguredForInterface(interfaceName)) {
+            return;
+        }
+
+        if (!putVrfInInterface(endpointHost.getHostDataBroker(), interfaceName, vrf)) {
             LOG.warn("Failed to put interface {} to vrf {}", interfaceName, vrf);
         } else {
+            hostRelatedInfoContainer
+                    .getPortInterfaceStateOfHost(endpointHost.getHostName())
+                    .initializeRoutingContextForInterface(interfaceName, vrf);
             LOG.debug("Added interface {} to vrf {}", interfaceName, vrf);
         }
     }
@@ -207,42 +236,46 @@ public class FlatOverlayManager {
         long vni = getVni(addressEp.getTenant().getValue());
         long vrf = vni;
 
+        String portSubnetUuid = overlayHelper.getSubnet(addressEp);
+
         String outgoingInterfaceName = overlayHelper.getInterfaceName(addressEp).get();
         Ipv4Address ipWithoutPrefix = overlayHelper.getInterfaceIp(addressEp);
+
+        if (overlayHelper.isMetadataPort(addressEp)) {
+            //override original port subnet to handle the Absolute location case of address endpoint
+            portSubnetUuid = Constants.METADATA_SUBNET_UUID;
+        }
+
         Ipv4Prefix ipv4Prefix = overlayHelper.getInterfaceIpAsPrefix(addressEp);
 
-        addStaticRoute(vppDataBroker, hostName, vrf, ipWithoutPrefix, ipv4Prefix, outgoingInterfaceName);
+        addStaticRoute(vppDataBroker, hostName, vrf, portSubnetUuid, ipWithoutPrefix, ipv4Prefix, outgoingInterfaceName);
     }
 
-    private void addStaticRoute(DataBroker vppDataBroker, String hostName, long vrf, Ipv4Address ipWithoutPrefix,
-                                Ipv4Prefix ipv4Prefix, String outgoingInterfaceName) {
+    private void addStaticRoute(DataBroker vppDataBroker, String hostName, long vrfId, String hostIpSubnetUuid,
+                                Ipv4Address ipWithoutPrefix, Ipv4Prefix ipv4Prefix, String outgoingInterfaceName) {
 
-        if (!hostVrfInfo.vrfExists(hostName, vrf)) {
-            if (!staticRoutingHelper.addRoutingProtocolForVrf(vppDataBroker, hostName, vrf)) {
-                LOG.warn("Failed to add Routing protocol for host {} and vrf {}!", hostName, vrf);
+        VrfHolder vrfHolderOfHost = hostRelatedInfoContainer.getVrfStateOfHost(hostName);
+
+        if (!vrfHolderOfHost.hasVrf(vrfId)) {
+            if (!staticRoutingHelper.addRoutingProtocolForVrf(vppDataBroker, vrfId, vrfHolderOfHost)) {
+                LOG.warn("Failed to add Routing protocol for host {} and vrf {}!", hostName, vrfId);
             }
         }
 
-        if (staticRoutingHelper.endPointRoutingExists(outgoingInterfaceName, ipWithoutPrefix)) {
+        VrfState vrfStateOfVrfId = vrfHolderOfHost.getVrfState(vrfId);
+
+        if (vrfStateOfVrfId.getSubnetHolder().getSubnetState(hostIpSubnetUuid).isIpPresent(ipWithoutPrefix)) {
+            LOG.info("Ip already exists in host {} vrf {} ip {}", hostName, vrfId, ipWithoutPrefix);
             return;
         }
 
-        if (staticRoutingHelper.routeAlreadyExistsInHostVrf(hostName, vrf, ipWithoutPrefix)) {
-            LOG.warn("Ip already exists in host {} vrf {} ip {}", hostName, vrf, ipWithoutPrefix);
-            return;
-        }
-
-        if (!staticRoutingHelper.addSingleStaticRouteInRoutingProtocol(vppDataBroker,
-                hostName,
-                vrf,
-                ipWithoutPrefix,
-                ipv4Prefix,
-                outgoingInterfaceName)) {
+        if (!staticRoutingHelper.addSingleStaticRouteInRoutingProtocol(vppDataBroker, hostName, vrfId, hostIpSubnetUuid,
+                ipWithoutPrefix, ipv4Prefix, outgoingInterfaceName)) {
             LOG.warn("Failed to add routing ({} via {}) in vrf {} in compute host {}!",
-                    ipv4Prefix, outgoingInterfaceName, vrf, hostName);
+                    ipv4Prefix, outgoingInterfaceName, vrfId, hostName);
         } else {
             LOG.debug("Added route ({} via {}) in vrf {} in compute host {}",
-                    ipv4Prefix, outgoingInterfaceName, vrf, hostName);
+                    ipv4Prefix, outgoingInterfaceName, vrfId, hostName);
         }
     }
 
@@ -252,20 +285,47 @@ public class FlatOverlayManager {
         String interfaceName = overlayHelper.getInterfaceName(addressEp).get();
 
         long vni = getVni(addressEp.getTenant().getValue());
-        long vrf = vni;
+        long vrfId = vni;
+
+        String ipSubnetUuid = overlayHelper.getSubnet(addressEp);
+
+        if (overlayHelper.isMetadataPort(addressEp)) {
+            //override original port subnet to handle the Absolute location case of address endpoint
+            ipSubnetUuid = Constants.METADATA_SUBNET_UUID;
+        }
 
         Ipv4Address ipWithoutPrefix = overlayHelper.getInterfaceIp(addressEp);
 
+        PortRouteState portRouteState = hostRelatedInfoContainer
+                                            .getPortInterfaceStateOfHost(hostName)
+                                            .getPortRouteState(interfaceName);
+
+        SubnetState subnetState = hostRelatedInfoContainer
+                                    .getVrfStateOfHost(hostName)
+                                    .getVrfState(vrfId)
+                                    .getSubnetHolder()
+                                    .getSubnetState(ipSubnetUuid);
+
+        if (!subnetState.isIpPresent(ipWithoutPrefix)) {
+            LOG.debug("Route {} already deleted from vrf {} of host {}", ipWithoutPrefix, vrfId, hostName);
+            return;
+        }
+
+        long targetRouteId = portRouteState.getRouteIdOfIp(ipWithoutPrefix);
+
         if (!staticRoutingHelper.deleteSingleStaticRouteFromRoutingProtocol(vppDataBroker,
-                                                                       hostName,
-                                                                       vrf,
-                                                                       interfaceName)) {
+                                                                            hostName,
+                                                                            vrfId,
+                                                                            interfaceName,
+                                                                            targetRouteId)) {
             LOG.warn("Failed to delete route ({} via {}) from vrf {} from host{}",
-                    ipWithoutPrefix, interfaceName, vrf, hostName);
+                    ipWithoutPrefix, interfaceName, vrfId, hostName);
 
         } else {
+            portRouteState.removeIp(ipWithoutPrefix);
+            subnetState.removeIp(ipWithoutPrefix);
             LOG.debug("Delete Static Route ({} via {}) from vrf {} from host {}",
-                    ipWithoutPrefix, interfaceName, vrf, hostName);
+                    ipWithoutPrefix, interfaceName, vrfId, hostName);
         }
     }
 

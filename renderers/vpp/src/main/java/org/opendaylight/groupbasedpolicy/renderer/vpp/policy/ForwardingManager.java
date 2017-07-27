@@ -212,7 +212,7 @@ public final class ForwardingManager {
         AddressEndpointWithLocation rEp = policyCtx.getAddrEpByKey().get(KeyFactory.addressEndpointKey(rEpKey));
 
         if (ConfigUtil.getInstance().isLispOverlayEnabled()) {
-            lispStateManager.configureEndPoint(rEp);
+            lispStateManager.processCreateEndPoint(rEp);
             if (ConfigUtil.getInstance().isL3FlatEnabled()) {
                 flatOverlayManager.configureEndpointForFlatOverlay(rEp);
                 loopbackManager.createSimpleLoopbackIfNeeded(rEp);
@@ -279,21 +279,21 @@ public final class ForwardingManager {
     public void removeForwardingForEndpoint(RendererEndpointKey rEpKey, PolicyContext policyCtx) {
         AddressEndpointWithLocation rEp = policyCtx.getAddrEpByKey().get(KeyFactory.addressEndpointKey(rEpKey));
         ExternalLocationCase rEpLoc = resolveAndValidateLocation(rEp);
+
+        if (ConfigUtil.getInstance().isLispOverlayEnabled()) {
+            lispStateManager.processDeleteEndpoint(rEp);
+            if (ConfigUtil.getInstance().isL3FlatEnabled()) {
+                flatOverlayManager.handleEndpointDeleteForFlatOverlay(rEp);
+            }
+            loopbackManager.handleEndpointDelete(rEp);
+        }
+
         if (rEpLoc == null || Strings.isNullOrEmpty(rEpLoc.getExternalNodeConnector())) {
             // nothing was created for endpoint therefore nothing is removed
             return;
         }
         if (!Strings.isNullOrEmpty(rEpLoc.getExternalNode())) {
             try {
-                if (ConfigUtil.getInstance().isLispOverlayEnabled()) {
-                    lispStateManager.deleteLispConfigurationForEndpoint(rEp);
-                    loopbackManager.handleEndpointDelete(rEp);
-
-                    if (ConfigUtil.getInstance().isL3FlatEnabled()) {
-                        flatOverlayManager.handleEndpointDeleteForFlatOverlay(rEp);
-                    }
-
-                }
                 ifaceManager.deleteBridgeDomainFromInterface(rEp).get();
                 LOG.debug("bridge-domain was deleted from interface for endpoint {}", rEp);
             } catch (InterruptedException | ExecutionException e) {

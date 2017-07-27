@@ -122,14 +122,14 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         dataBroker = getDataBroker();
         Mockito.when(mountedDataProviderMock.getDataBrokerForMountPoint(Mockito.any(InstanceIdentifier.class)))
             .thenReturn(Optional.of(mountPointDataBroker));
-        ifaceManager = new InterfaceManager(mountedDataProviderMock, dataBroker);
+        lispStateManager = new LispStateManager(mountedDataProviderMock);
+        loopbackManager = new LoopbackManager(mountedDataProviderMock);
+        flatOverlayManager = new FlatOverlayManager(dataBroker, mountedDataProviderMock);
+        ifaceManager = new InterfaceManager(mountedDataProviderMock, dataBroker, flatOverlayManager);
         aclManager = new AclManager(mountedDataProviderMock);
         natManager = new NatManager(dataBroker, mountedDataProviderMock);
         routingManager = new RoutingManager(dataBroker, mountedDataProviderMock);
         bdManager = new BridgeDomainManagerImpl(mountPointDataBroker);
-        lispStateManager = new LispStateManager(mountedDataProviderMock);
-        loopbackManager = new LoopbackManager(mountedDataProviderMock);
-        flatOverlayManager = new FlatOverlayManager(dataBroker, mountedDataProviderMock);
         dhcpRelayHandler = new DhcpRelayHandler(dataBroker, mountedDataProviderMock);
         fwManager = new ForwardingManager(ifaceManager, aclManager, natManager, routingManager, bdManager,
                 lispStateManager, loopbackManager, flatOverlayManager, dhcpRelayHandler, dataBroker);

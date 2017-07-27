@@ -32,6 +32,7 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.VhostUserCommand.
 import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.NodeOperEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.VppEndpointConfEvent;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.flat.overlay.FlatOverlayManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AccessListWrapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General.Operations;
@@ -77,10 +78,13 @@ public class InterfaceManager implements AutoCloseable {
     private final MountedDataBrokerProvider mountDataProvider;
     private final VppEndpointLocationProvider vppEndpointLocationProvider;
     private final SetMultimap<NodeId, String> excludedFromPolicy = HashMultimap.create();
+    private final FlatOverlayManager flatOverlayManager;
 
-    public InterfaceManager(@Nonnull MountedDataBrokerProvider mountDataProvider, @Nonnull DataBroker dataProvider) {
+    public InterfaceManager(@Nonnull MountedDataBrokerProvider mountDataProvider, @Nonnull DataBroker dataProvider,
+                            FlatOverlayManager flatOverlayManager) {
         this.mountDataProvider = Preconditions.checkNotNull(mountDataProvider);
         this.vppEndpointLocationProvider = new VppEndpointLocationProvider(dataProvider);
+        this.flatOverlayManager = flatOverlayManager;
     }
 
     @Subscribe
@@ -261,6 +265,7 @@ public class InterfaceManager implements AutoCloseable {
             }
         }
 
+
         if (!potentialIfaceCommand.isPresent()) {
             LOG.debug("Interface/DELETE command was not created for VppEndpoint point {}", vppEndpoint);
             return Futures.immediateFuture(null);
@@ -274,6 +279,11 @@ public class InterfaceManager implements AutoCloseable {
             return Futures.immediateFailedFuture(new VppRendererProcessingException(message));
         }
         DataBroker vppDataBroker = potentialVppDataProvider.get();
+
+        if (ConfigUtil.getInstance().isL3FlatEnabled()) {
+            flatOverlayManager.handleInterfaceDeleteForFlatOverlay(vppDataBroker, vppEndpoint);
+        }
+
         return deleteIfaceOnVpp(ifaceWithoutBdCommand, vppDataBroker, vppEndpoint, vppNodeIid);
     }
 

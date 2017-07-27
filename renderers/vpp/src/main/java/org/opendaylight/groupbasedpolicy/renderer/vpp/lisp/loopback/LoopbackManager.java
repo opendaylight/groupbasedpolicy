@@ -19,10 +19,14 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.LispCommandW
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateCommandExecutor;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispConfigCommandFailedException;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispHelperArgumentException;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.LoopbackHostSpecificInfoMapper;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.EndpointHost;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.HostRelatedInfoContainer;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.SubnetState;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.VrfHolder;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.NeutronTenantToVniMapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.SubnetUuidToGbpSubnetMapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.ConfigManagerHelper;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.Constants;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.IpAddressUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
@@ -47,7 +51,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
-import java.util.List;
 
 /**
  * Created by Shakib Ahmed on 4/26/17.
@@ -57,42 +60,47 @@ public class LoopbackManager {
 
     private ConfigManagerHelper loopbackManagerHelper;
 
-    private LoopbackHostSpecificInfoMapper subnetHostSpecificInfo;
-    private NeutronTenantToVniMapper neutronTenantToVniMapper;
-    private SubnetUuidToGbpSubnetMapper subnetUuidToGbpSubnetMapper;
-
-    private static final String LOOP_NAME_PREFIX = "loop-";
-    private static final String GPE_ENTRY_PREFIX = "gpe-entry-";
+    private HostRelatedInfoContainer hostRelatedInfoContainer = HostRelatedInfoContainer.getInstance();
+    private SubnetUuidToGbpSubnetMapper subnetUuidToGbpSubnetMapper = SubnetUuidToGbpSubnetMapper.getInstance();
+    private NeutronTenantToVniMapper neutronTenantToVniMapper = NeutronTenantToVniMapper.getInstance();
 
     public LoopbackManager(@Nonnull MountedDataBrokerProvider mountedDataBrokerProvider) {
         this.loopbackManagerHelper = new ConfigManagerHelper(mountedDataBrokerProvider);
-        this.subnetHostSpecificInfo = new LoopbackHostSpecificInfoMapper();
-        this.neutronTenantToVniMapper = NeutronTenantToVniMapper.getInstance();
-        this.subnetUuidToGbpSubnetMapper = SubnetUuidToGbpSubnetMapper.getInstance();
     }
 
     public void createBviLoopbackIfNeeded(AddressEndpointWithLocation addressEp,
                                           String bridgeDomainName) {
         try {
-            DataBroker vppDataBroker = loopbackManagerHelper.getPotentialExternalDataBroker(addressEp).get();
-            String hostName = loopbackManagerHelper.getHostName(addressEp).get();
+            EndpointHost endpointHost = loopbackManagerHelper.getEndpointHostInformation(addressEp);
+            long vni = getVni(addressEp.getTenant().getValue());
+            long vrfId = vni;
             String subnetUuid = loopbackManagerHelper.getSubnet(addressEp);
 
-            if (subnetHostSpecificInfo.loopbackAlreadyExists(hostName, subnetUuid)) {
-                subnetHostSpecificInfo.addNewPortInHostSubnet(hostName, subnetUuid);
+            VrfHolder hostVrfHolder = hostRelatedInfoContainer.getVrfStateOfHost(endpointHost.getHostName());
+
+            if (!hostVrfHolder.hasVrf(vrfId)) {
+                //dummy init for bridge domain case
+                hostVrfHolder.initializeVrfState(vrfId, Constants.DUMMY_PROTOCOL_BRIDGE_DOMAIN);
+            }
+
+            SubnetState subnetState = hostVrfHolder.getVrfState(vni)
+                                                                            .getSubnetHolder()
+                                                                            .getSubnetState(subnetUuid);
+
+            if (!subnetState.isGwConfigured()) {
                 return;
             }
 
             GbpSubnet gbpSubnetInfo = Preconditions.checkNotNull(getSubnetInfo(subnetUuid),
                     "Subnet UUID {} hasn't been created yet!", subnetUuid);
 
-            String interfaceName = LOOP_NAME_PREFIX + subnetHostSpecificInfo.getLoopbackCount(hostName);
-            long vni = getVni(addressEp.getTenant().getValue());
+            String gwInterfaceName = loopbackManagerHelper.getGatewayInterfaceName(Constants.GW_NAME_PREFIX, subnetUuid);
 
             LoopbackCommand bviLoopbackCommand = LoopbackCommandWrapper
-                    .bviLoopbackPutCommand(interfaceName, vni, gbpSubnetInfo.getGatewayIp(), gbpSubnetInfo.getCidr(),
+                    .bviLoopbackPutCommand(gwInterfaceName, vni, gbpSubnetInfo.getGatewayIp(), gbpSubnetInfo.getCidr(),
                             bridgeDomainName);
-            createLoopbackInterface(hostName, subnetUuid, vppDataBroker, bviLoopbackCommand);
+            createLoopbackInterface(endpointHost.getHostDataBroker(), endpointHost.getHostName(),
+                    subnetState, bviLoopbackCommand);
         } catch (LispConfigCommandFailedException e) {
             LOG.warn("LISP couldn't be configured: {}", e.getMessage());
         }
@@ -102,89 +110,85 @@ public class LoopbackManager {
         try {
 
             if (loopbackManagerHelper.isMetadataPort(addressEp)) {
-                // if the address endpoint is a metadataport, no proxy arp range needed.
                 return;
             }
 
             DataBroker vppDataBroker = loopbackManagerHelper.getPotentialExternalDataBroker(addressEp).get();
             String hostName = loopbackManagerHelper.getHostName(addressEp).get();
+            long vni = getVni(addressEp.getTenant().getValue());
+            long vrfId = vni;
             String subnetUuid = loopbackManagerHelper.getSubnet(addressEp);
 
-            if (subnetHostSpecificInfo.loopbackAlreadyExists(hostName, subnetUuid)) {
-                subnetHostSpecificInfo.addNewPortInHostSubnet(hostName, subnetUuid);
-                String loopbackInterfaceName = subnetHostSpecificInfo
-                        .getInterfaceNameForLoopbackInHost(hostName, subnetUuid);
-                addUnnumberedInterface(addressEp, loopbackInterfaceName);
-                return;
-            }
-
-            String interfaceName = LOOP_NAME_PREFIX + subnetHostSpecificInfo.getLoopbackCount(hostName);
-            long vni = getVni(addressEp.getTenant().getValue());
-            long vrf = vni;
+            SubnetState stateOfSubnetUuid = hostRelatedInfoContainer
+                                                            .getVrfStateOfHost(hostName)
+                                                            .getVrfState(vrfId).getSubnetHolder()
+                                                            .getSubnetState(subnetUuid);
 
             GbpSubnet gbpSubnetInfo = Preconditions.checkNotNull(getSubnetInfo(subnetUuid),
                     "Subnet UUID {} hasn't been created yet!", subnetUuid);
 
-            LoopbackCommand simpleLoopbackCommand = LoopbackCommandWrapper
-                    .simpleLoopbackPutCommand(interfaceName, vrf, gbpSubnetInfo.getGatewayIp(),
-                            gbpSubnetInfo.getCidr());
+            if (!stateOfSubnetUuid.isGwConfigured()) {
+                String interfaceName = loopbackManagerHelper.getGatewayInterfaceName(Constants.GW_NAME_PREFIX,
+                        subnetUuid);
+                LoopbackCommand simpleLoopbackCommand = LoopbackCommandWrapper
+                        .simpleLoopbackPutCommand(interfaceName, vrfId, gbpSubnetInfo.getGatewayIp(),
+                                gbpSubnetInfo.getCidr());
+                createLoopbackInterface(vppDataBroker, hostName, stateOfSubnetUuid, simpleLoopbackCommand);
+                addProxyArpRange(vppDataBroker, hostName, vrfId, gbpSubnetInfo);
+                addGpeEntry(vppDataBroker, gbpSubnetInfo, vni);
+            }
 
-            createLoopbackInterface(hostName, subnetUuid, vppDataBroker, simpleLoopbackCommand);
-            addProxyArpRange(vppDataBroker, vrf, gbpSubnetInfo, hostName);
-            addGpeEntry(vppDataBroker, gbpSubnetInfo, vni);
-            addUnnumberedInterface(addressEp, interfaceName);
+            String gwInterfaceName = stateOfSubnetUuid.getGwInterfaceName();
+            addUnnumberedInterface(addressEp, gwInterfaceName);
         } catch (LispConfigCommandFailedException e) {
             LOG.warn("LISP couldn't be configured: {}", e.getMessage());
         }
     }
 
-    private void createLoopbackInterface(String hostName, String subnetUuid, DataBroker vppDataBroker,
+    private void createLoopbackInterface(DataBroker vppDataBroker, String hostName,
+                                         SubnetState subnetState,
                                          LoopbackCommand loopbackCommand) throws LispConfigCommandFailedException {
 
         if (GbpNetconfTransaction.netconfSyncedWrite(vppDataBroker,
                 loopbackCommand,
                 GbpNetconfTransaction.RETRY_COUNT)) {
-            subnetHostSpecificInfo.addLoopbackForHost(hostName, subnetUuid, loopbackCommand.getName(),
-                    loopbackCommand.getVrfId());
-            subnetHostSpecificInfo.addNewPortInHostSubnet(hostName, subnetUuid);
+            subnetState.setGwInterfaceName(loopbackCommand.getName());
         } else {
             throw new LispConfigCommandFailedException("BVI could not be created for "
                     + hostName + " and bridge domain " + loopbackCommand.getBridgeDomain());
         }
     }
 
-    public void deleteLoopbackIfExists(String subnetUuid) {
-
-        List<String> hostsWithSubnet = subnetHostSpecificInfo.getHostsWithSubnet(subnetUuid);
-
-        hostsWithSubnet.forEach(host -> {
-            DataBroker vppDataBroker = loopbackManagerHelper.getPotentialExternalDataBroker(host).get();
-            String interfaceName = subnetHostSpecificInfo.getInterfaceNameForLoopbackInHost(host, subnetUuid);
-
-            try {
-                deleteSpecificLoopback(vppDataBroker, interfaceName);
-            } catch (LispConfigCommandFailedException e) {
-                e.printStackTrace();
-            }
-        });
-
-        subnetHostSpecificInfo.clearSubnet(subnetUuid);
-    }
-
     public void handleEndpointDelete(AddressEndpointWithLocation addressEp) {
+
+        if (loopbackManagerHelper.isMetadataPort(addressEp)) {
+            return;
+        }
+
         DataBroker vppDataBroker = loopbackManagerHelper.getPotentialExternalDataBroker(addressEp).get();
-        String hostId = loopbackManagerHelper.getHostName(addressEp).get();
+        String hostName = loopbackManagerHelper.getHostName(addressEp).get();
         String portSubnetUuid = loopbackManagerHelper.getSubnet(addressEp);
-        String interfaceName = subnetHostSpecificInfo.getInterfaceNameForLoopbackInHost(hostId, portSubnetUuid);
-        if (subnetHostSpecificInfo.deletePortFromHostSubnetAndTriggerLoopbackDelete(hostId, portSubnetUuid)) {
+        long vrfId = getVni(addressEp.getTenant().getValue());
+        SubnetState subnetStateForSubnetUuid = hostRelatedInfoContainer
+                                                        .getVrfStateOfHost(hostName)
+                                                        .getVrfState(vrfId)
+                                                        .getSubnetHolder()
+                                                        .getSubnetState(portSubnetUuid);
+
+        if (!subnetStateForSubnetUuid.hasIpsInSubnet()) {
+            String gwInterfaceName = subnetStateForSubnetUuid.getGwInterfaceName();
             GbpSubnet gbpSubnetInfo = Preconditions.checkNotNull(subnetUuidToGbpSubnetMapper.getSubnetInfo(portSubnetUuid),
                     "Invalid port!");
             long vni = getVni(addressEp.getTenant().getValue());
             try {
-                deleteSpecificLoopback(vppDataBroker, interfaceName);
-                deleteProxyArpRange(vppDataBroker, vni, gbpSubnetInfo, hostId);
-                deleteGpeEntry(vppDataBroker, GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_1");
-                deleteGpeEntry(vppDataBroker, GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_2");
+                deleteSpecificLoopback(vppDataBroker, gwInterfaceName);
+                deleteProxyArpRange(vppDataBroker, hostName, vni, gbpSubnetInfo);
+                deleteGpeEntry(vppDataBroker, Constants.GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_1");
+                deleteGpeEntry(vppDataBroker, Constants.GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_2");
+                hostRelatedInfoContainer.getVrfStateOfHost(hostName)
+                        .getVrfState(vrfId)
+                        .getSubnetHolder()
+                        .removeSubnetState(portSubnetUuid);
             } catch (LispConfigCommandFailedException e) {
                 LOG.warn("Loopback not deleted properly: {}", e.getMessage());
             }
@@ -201,9 +205,9 @@ public class LoopbackManager {
     }
 
     private void addProxyArpRange(DataBroker vppDataBroker,
+                                  String hostName,
                                   long vrf,
-                                  GbpSubnet gbpSubnetInfo,
-                                  String hostName) throws LispConfigCommandFailedException {
+                                  GbpSubnet gbpSubnetInfo) throws LispConfigCommandFailedException {
         Ipv4Prefix subnetPrefix = gbpSubnetInfo.getCidr().getIpv4Prefix();
 
         Preconditions.checkNotNull(subnetPrefix, "Subnet CIDR found to be null for "
@@ -224,9 +228,9 @@ public class LoopbackManager {
     }
 
     private void deleteProxyArpRange(DataBroker vppDataBroker,
+                                     String hostName,
                                      long vrf,
-                                     GbpSubnet gbpSubnetInfo,
-                                     String hostName) throws LispConfigCommandFailedException {
+                                     GbpSubnet gbpSubnetInfo) throws LispConfigCommandFailedException {
         Ipv4Prefix subnetPrefix = gbpSubnetInfo.getCidr().getIpv4Prefix();
 
         Preconditions.checkNotNull(subnetPrefix, "Subnet CIDR found to be null for "
@@ -307,7 +311,7 @@ public class LoopbackManager {
             RemoteEid firstREid = LispUtil.toRemoteEid(LispUtil.toLispIpv4Prefix(delegatingSubnets.getLeft()),
                     vni,
                     Ipv4PrefixAfi.class);
-            putGpeEntry(vppDataBroker, GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_1", firstREid, vni, vni);
+            putGpeEntry(vppDataBroker, Constants.GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_1", firstREid, vni, vni);
 
             if (delegatingSubnets.getLeft().equals(delegatingSubnets.getRight())) {
                 return;
@@ -317,7 +321,7 @@ public class LoopbackManager {
                     vni,
                     Ipv4PrefixAfi.class);
 
-            putGpeEntry(vppDataBroker, GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_2", secondREid, vni, vni);
+            putGpeEntry(vppDataBroker, Constants.GPE_ENTRY_PREFIX + gbpSubnetInfo.getId() + "_2", secondREid, vni, vni);
         } catch (LispHelperArgumentException e) {
             e.printStackTrace();
         }

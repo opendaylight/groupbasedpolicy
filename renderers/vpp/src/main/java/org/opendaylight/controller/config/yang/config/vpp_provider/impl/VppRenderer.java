@@ -143,12 +143,13 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
 
         EventBus dtoEventBus = new EventBus((exception, context) -> LOG.error("Could not dispatch event: {} to {}",
                 context.getSubscriber(), context.getSubscriberMethod(), exception));
-        interfaceManager = new InterfaceManager(mountDataProvider, dataBroker);
-        AclManager aclManager = new AclManager(mountDataProvider);
-        NatManager natManager = new NatManager(dataBroker, mountDataProvider);
         LispStateManager lispStateManager = new LispStateManager(mountDataProvider);
         FlatOverlayManager flatOverlayManager = new FlatOverlayManager(dataBroker, mountDataProvider);
         LoopbackManager loopbackManager = new LoopbackManager(mountDataProvider);
+
+        interfaceManager = new InterfaceManager(mountDataProvider, dataBroker, flatOverlayManager);
+        AclManager aclManager = new AclManager(mountDataProvider);
+        NatManager natManager = new NatManager(dataBroker, mountDataProvider);
         subnetEventManager = new GbpSubnetEventManager(loopbackManager);
         dtoEventBus.register(interfaceManager);
         dtoEventBus.register(subnetEventManager);
