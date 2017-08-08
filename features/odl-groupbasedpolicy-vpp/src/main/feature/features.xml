@@ -11,6 +11,5 @@
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.2.0 http://karaf.apache.org/xmlns/features/v1.2.0">
     <feature name="odl-groupbasedpolicy-vpp" version="${project.version}">
-        <configfile finalname="${config.configfile.directory}/15-l2-l3-domain-extension.xml">mvn:org.opendaylight.groupbasedpolicy/l2-l3-domain-extension/{{VERSION}}/xml/config</configfile>
     </feature>
 </features>

@@ -4,64 +4,71 @@
   terms of the Eclipse Public License v1.0 which accompanies this distribution,
   and is available at http://www.eclipse.org/legal/epl-v10.html -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
 
- <parent>
-    <groupId>org.opendaylight.controller</groupId>
-    <artifactId>config-parent</artifactId>
-    <version>0.7.0-SNAPSHOT</version>
-    <relativePath/>
-  </parent>
+    <parent>
+        <groupId>org.opendaylight.mdsal</groupId>
+        <artifactId>binding-parent</artifactId>
+        <version>0.11.0-SNAPSHOT</version>
+        <relativePath/>
+    </parent>
 
-  <groupId>org.opendaylight.groupbasedpolicy</groupId>
-  <artifactId>groupbasedpolicy-renderers</artifactId>
-  <version>0.6.0-SNAPSHOT</version>
-  <packaging>pom</packaging>
-  <!-- <name> formatting is used by autorelease to parse and notify projects on
-     build failure. Please do not modify this unless you have a good reason. -->
-  <name>ODL :: groupbasedpolicy :: ${project.artifactId}</name>
+    <groupId>org.opendaylight.groupbasedpolicy</groupId>
+    <artifactId>groupbasedpolicy-renderers</artifactId>
+    <version>0.6.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <!-- <name> formatting is used by autorelease to parse and notify projects on
+       build failure. Please do not modify this unless you have a good reason. -->
+    <name>ODL :: groupbasedpolicy :: ${project.artifactId}</name>
 
-  <properties>
-    <sfc.version>0.6.0-SNAPSHOT</sfc.version>
-  </properties>
+    <properties>
+        <sfc.version>0.6.0-SNAPSHOT</sfc.version>
+    </properties>
 
 
-  <modules>
-    <module>ofoverlay</module>
-    <module>iovisor</module>
-    <module>vpp</module>
-    <module>ios-xe</module>
-  </modules>
+    <modules>
+        <module>ofoverlay</module>
+        <module>iovisor</module>
+        <module>vpp</module>
+        <module>ios-xe</module>
+    </modules>
 
-  <dependencyManagement>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.opendaylight.controller</groupId>
+                <artifactId>mdsal-artifacts</artifactId>
+                <version>1.6.0-SNAPSHOT</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.opendaylight.groupbasedpolicy</groupId>
+                <artifactId>groupbasedpolicy-artifacts</artifactId>
+                <version>${project.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+
+            <!-- sfc -->
+            <dependency>
+                <groupId>org.opendaylight.sfc</groupId>
+                <artifactId>sfc-provider</artifactId>
+                <version>${sfc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.opendaylight.sfc</groupId>
+                <artifactId>sfc-model</artifactId>
+                <version>${sfc.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
-      <dependency>
-        <groupId>org.opendaylight.groupbasedpolicy</groupId>
-        <artifactId>groupbasedpolicy-artifacts</artifactId>
-        <version>${project.version}</version>
-        <scope>import</scope>
-        <type>pom</type>
-      </dependency>
-
-      <!-- sfc -->
-      <dependency>
-        <groupId>org.opendaylight.sfc</groupId>
-        <artifactId>sfc-provider</artifactId>
-        <version>${sfc.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.opendaylight.sfc</groupId>
-        <artifactId>sfc-model</artifactId>
-        <version>${sfc.version}</version>
-      </dependency>
+        <dependency>
+            <groupId>org.opendaylight.groupbasedpolicy</groupId>
+            <artifactId>groupbasedpolicy</artifactId>
+        </dependency>
     </dependencies>
-  </dependencyManagement>
-
-  <dependencies>
-    <dependency>
-      <groupId>org.opendaylight.groupbasedpolicy</groupId>
-      <artifactId>groupbasedpolicy</artifactId>
-    </dependency>
-  </dependencies>
 </project>

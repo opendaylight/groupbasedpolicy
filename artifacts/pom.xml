@@ -102,13 +102,6 @@
 
       <!-- GBP configuration -->
       <dependency>
-        <groupId>org.opendaylight.groupbasedpolicy</groupId>
-        <artifactId>l2-l3-domain-extension</artifactId>
-        <version>${project.version}</version>
-        <type>xml</type>
-        <classifier>config</classifier>
-      </dependency>
-      <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>faas-renderer</artifactId>
         <version>${project.version}</version>

@@ -104,18 +104,6 @@
             <classifier>features</classifier>
         </dependency>
         <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>l2-l3-domain-extension</artifactId>
-            <type>xml</type>
-            <classifier>config</classifier>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>vpp-renderer</artifactId>
-            <type>cfg</type>
-            <classifier>config</classifier>
-        </dependency>
-        <dependency>
             <groupId>org.opendaylight.lispflowmapping</groupId>
             <artifactId>odl-lispflowmapping-msmr</artifactId>
             <version>${lisp.version}</version>

@@ -18,7 +18,6 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 
-import org.opendaylight.controller.config.yang.config.neutron_mapper.impl.NeutronMapperModule;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
@@ -97,8 +96,7 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
     private final EndpointRegistrator epRegistrator;
 
     public NeutronSecurityRuleAware(DataBroker dataProvider, EndpointRegistrator epRegistrator) {
-        this(dataProvider, HashMultiset.<InstanceIdentifier<ClassifierInstance>>create(),
-                HashMultiset.<InstanceIdentifier<ActionInstance>>create(), epRegistrator);
+        this(dataProvider, HashMultiset.create(), HashMultiset.create(), epRegistrator);
     }
 
     @VisibleForTesting
@@ -117,12 +115,10 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
     public void onCreated(SecurityRule secRule, Neutron neutron) {
         LOG.trace("created securityRule - {}", secRule);
         if (neutron.getSecurityGroups() == null || neutron.getSecurityGroups().getSecurityGroup() == null
-                || !neutron.getSecurityGroups()
+                || neutron.getSecurityGroups()
                     .getSecurityGroup()
                     .stream()
-                    .filter(sg -> sg.getKey().getUuid().equals(secRule.getSecurityGroupId()))
-                    .findFirst()
-                    .isPresent()) {
+                    .noneMatch(sg -> sg.getKey().getUuid().equals(secRule.getSecurityGroupId()))) {
             pendingCreatedRules.put(secRule.getKey(), secRule);
             LOG.warn("Security group of security rule {} does not exist yet. The rule will be processed"
                     + "when the missing security group is created.", secRule.getKey());
@@ -191,19 +187,15 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
 
     @VisibleForTesting
     static Description createContractDescription(SecurityRule secRule, Neutron neutron) {
-        if (NeutronMapperModule.isDebugEnabled()) {
-            Optional<SecurityGroup> providerSecGroup =
-                    SecurityGroupUtils.findSecurityGroup(secRule.getSecurityGroupId(), neutron.getSecurityGroups());
-            if (!providerSecGroup.isPresent()) {
-                LOG.error("Neutron Security Group with UUID {} does not exist but it is in {}", secRule.getSecurityGroupId().getValue(),
-                        secRule);
-                throw new IllegalStateException(
-                        "Neutron Security Group with UUID " + secRule.getSecurityGroupId().getValue() + " does not exist.");
-            }
-            return new Description(CONTRACT_PROVIDER + SecurityGroupUtils.getNameOrUuid(providerSecGroup.get()));
+        Optional<SecurityGroup> providerSecGroup =
+            SecurityGroupUtils.findSecurityGroup(secRule.getSecurityGroupId(), neutron.getSecurityGroups());
+        if (!providerSecGroup.isPresent()) {
+            LOG.error("Neutron Security Group with UUID {} does not exist but it is in {}",
+                secRule.getSecurityGroupId().getValue(), secRule);
+            throw new IllegalStateException(
+                "Neutron Security Group with UUID " + secRule.getSecurityGroupId().getValue() + " does not exist.");
         }
-
-        return new Description(CONTRACT_PROVIDER + secRule.getSecurityGroupId());
+        return new Description(CONTRACT_PROVIDER + SecurityGroupUtils.getNameOrUuid(providerSecGroup.get()));
     }
 
     @VisibleForTesting
@@ -371,12 +363,10 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
             DataStoreHelper.submitToDs(rwTx);
             if (newNeutron == null || newNeutron.getSecurityRules() == null
                 || newNeutron.getSecurityRules().getSecurityRule() == null
-                || !newNeutron.getSecurityRules()
+                || newNeutron.getSecurityRules()
                         .getSecurityRule()
                         .stream()
-                        .filter(rule -> rule.getSecurityGroupId().equals(deletedSecRule.getSecurityGroupId()))
-                        .findAny()
-                        .isPresent()) {
+                        .noneMatch(rule -> rule.getSecurityGroupId().equals(deletedSecRule.getSecurityGroupId()))) {
                 SecurityGroupKey secGroupKey = new SecurityGroupKey(deletedSecRule.getSecurityGroupId());
                 SecurityGroup pendingSg = pendingDeletedGroups.get(secGroupKey);
                 if (pendingSg != null) {
@@ -501,25 +491,18 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
 
         // we cannot use name of security group in selector, because name can be changed
         // therefore name is used only in debug mode
-        if (NeutronMapperModule.isDebugEnabled()) {
-            Optional<SecurityGroup> potentialConsumerSecGroup =
-                    SecurityGroupUtils.findSecurityGroup(secRule.getRemoteGroupId(), neutron.getSecurityGroups());
-            if (!potentialConsumerSecGroup.isPresent()) {
-                LOG.error("Neutron Security Group with UUID {} does not exist but it is in {}",
-                        consumerSecGroupId.getValue(), secRule);
-                throw new IllegalStateException(
-                        "Neutron Security Group with UUID " + consumerSecGroupId.getValue() + " does not exist.");
-            }
-
-            selectorNameBuilder.append(MappingUtils.NAME_DOUBLE_DELIMETER)
-                .append(POSSIBLE_CONSUMER)
-                .append(SecurityGroupUtils.getNameOrUuid(potentialConsumerSecGroup.get()));
-            return new SelectorName(selectorNameBuilder.toString());
+        Optional<SecurityGroup> potentialConsumerSecGroup =
+            SecurityGroupUtils.findSecurityGroup(secRule.getRemoteGroupId(), neutron.getSecurityGroups());
+        if (!potentialConsumerSecGroup.isPresent()) {
+            LOG.error("Neutron Security Group with UUID {} does not exist but it is in {}",
+                consumerSecGroupId.getValue(), secRule);
+            throw new IllegalStateException(
+                "Neutron Security Group with UUID " + consumerSecGroupId.getValue() + " does not exist.");
         }
 
         selectorNameBuilder.append(MappingUtils.NAME_DOUBLE_DELIMETER)
             .append(POSSIBLE_CONSUMER)
-            .append(consumerSecGroupId.getValue());
+            .append(SecurityGroupUtils.getNameOrUuid(potentialConsumerSecGroup.get()));
         return new SelectorName(selectorNameBuilder.toString());
     }
 
@@ -529,28 +512,20 @@ public class NeutronSecurityRuleAware implements NeutronAware<SecurityRule> {
 
         // we cannot use name of security group in selector, because name can be changed
         // therefore name is used only in debug mode
-        if (NeutronMapperModule.isDebugEnabled()) {
-            Optional<SecurityGroup> potentialProviderSecGroup =
-                    SecurityGroupUtils.findSecurityGroup(secRule.getSecurityGroupId(), neutron.getSecurityGroups());
-            if (!potentialProviderSecGroup.isPresent()) {
-                LOG.error("Neutron Security Group with UUID {} does not exist but it is in {}",
-                        providerSecGroupId.getValue(), secRule);
-                throw new IllegalStateException(
-                        "Neutron Security Group with UUID " + providerSecGroupId.getValue() + " does not exist.");
-            }
-            String selectorName = new StringBuilder().append(clauseName.getValue())
+        Optional<SecurityGroup> potentialProviderSecGroup =
+            SecurityGroupUtils.findSecurityGroup(secRule.getSecurityGroupId(), neutron.getSecurityGroups());
+        if (!potentialProviderSecGroup.isPresent()) {
+            LOG.error("Neutron Security Group with UUID {} does not exist but it is in {}",
+                providerSecGroupId.getValue(), secRule);
+            throw new IllegalStateException(
+                "Neutron Security Group with UUID " + providerSecGroupId.getValue() + " does not exist.");
+        }
+        String selectorName =
+            new StringBuilder().append(clauseName.getValue())
                 .append(MappingUtils.NAME_DOUBLE_DELIMETER)
                 .append(PROVIDED_BY)
                 .append(SecurityGroupUtils.getNameOrUuid(potentialProviderSecGroup.get()))
                 .toString();
-            return new SelectorName(selectorName);
-        }
-
-        String selectorName = new StringBuilder().append(clauseName.getValue())
-            .append(MappingUtils.NAME_DOUBLE_DELIMETER)
-            .append(PROVIDED_BY)
-            .append(providerSecGroupId.getValue())
-            .toString();
         return new SelectorName(selectorName);
     }
 

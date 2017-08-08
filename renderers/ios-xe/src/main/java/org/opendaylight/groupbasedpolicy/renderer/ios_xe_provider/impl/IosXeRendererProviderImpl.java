@@ -21,7 +21,6 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareProvider;
-import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.IosXeRendererProvider;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.api.manager.PolicyManager;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.listener.IosXeCapableNodeListenerImpl;
 import org.opendaylight.groupbasedpolicy.renderer.ios_xe_provider.impl.listener.RendererConfigurationListenerImpl;
@@ -52,7 +51,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Purpose: bootstrap provider implementation of Ios-xe renderer
  */
-public class IosXeRendererProviderImpl implements IosXeRendererProvider, BindingAwareProvider {
+public class IosXeRendererProviderImpl implements BindingAwareProvider, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(IosXeRendererProviderImpl.class);
 

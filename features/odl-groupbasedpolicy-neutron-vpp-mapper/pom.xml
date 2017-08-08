@@ -51,11 +51,5 @@
             <type>xml</type>
             <classifier>features</classifier>
         </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>neutron-vpp-mapper</artifactId>
-            <type>cfg</type>
-            <classifier>config</classifier>
-        </dependency>
     </dependencies>
 </project>

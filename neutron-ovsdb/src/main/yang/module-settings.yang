@@ -4,7 +4,6 @@ module neutron-ovsdb-impl {
     namespace "urn:opendaylight:groupbasedpolicy:neutron:ovsdb:params";
     prefix "neutron-ovsdb-params";
 
-    import config { prefix config; revision-date 2013-04-05; }
     import opendaylight-md-sal-binding { prefix mdsal; revision-date 2013-10-28; }
 
     description

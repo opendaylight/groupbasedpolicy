@@ -10,10 +10,10 @@
                      interface="org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.BaseEndpointService"/>
 
     <odl:clustered-app-config id="sgtGeneratorConfig"
-                              binding-class="org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.rev160722.SgtGeneratorConfig">
+                              binding-class="org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.controller.config.groupbasedpolicy.sxp.integration.sxp.ep.provider.model.rev160302.SgtGeneratorConfig">
         <odl:default-config><![CDATA[
             <sgt-generator-config
-                xmlns="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy:sxp-integration:sxp-ep-provider">
+                xmlns="urn:opendaylight:params:xml:ns:yang:controller:config:groupbasedpolicy:sxp-integration:sxp-ep-provider:model">
                 <sgt-low>100</sgt-low>
                 <sgt-high>200</sgt-high>
             </sgt-generator-config>

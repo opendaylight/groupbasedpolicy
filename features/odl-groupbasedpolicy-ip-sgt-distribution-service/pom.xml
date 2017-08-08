@@ -63,11 +63,5 @@
             <type>xml</type>
             <classifier>features</classifier>
         </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>ip-sgt-distribution-service</artifactId>
-            <type>xml</type>
-            <classifier>config</classifier>
-        </dependency>
     </dependencies>
 </project>

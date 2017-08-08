@@ -76,7 +76,7 @@ public class GbpVppProviderInstance implements ClusterSingletonService, VppAdapt
         try {
             singletonServiceRegistration = clusterSingletonService.registerClusterSingletonService(this);
         } catch (Exception e) {
-            LOG.warn("Exception thrown while registering cluster singleton service in {}", this.getClass(), e.getMessage());
+            LOG.warn("Exception thrown while registering cluster singleton service in {}. Exception : {}", this.getClass(), e);
         }
     }
 
