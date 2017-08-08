@@ -12,6 +12,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Collection;
 
+import javax.annotation.Nonnull;
+
 import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
@@ -36,16 +38,18 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.MoreExecutors;
 
 public class ClassifierDefinitionListener implements ClusteredDataTreeChangeListener<ClassifierDefinition>, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(ClassifierDefinitionListener.class);
-    private static final InstanceIdentifier<Capabilities> RENDERER_CAPABILITIES_IID = InstanceIdentifier.builder(Renderers.class)
+    private static final InstanceIdentifier<Capabilities> RENDERER_CAPABILITIES_IID = InstanceIdentifier
+        .builder(Renderers.class)
         .child(Renderer.class, new RendererKey(OFOverlayRenderer.RENDERER_NAME))
         .child(Capabilities.class)
         .build();
-    private static String PUT = "stored";
-    private static String DELETED = "removed";
+    private static final String PUT = "stored";
+    private static final String DELETED = "removed";
 
     private final DataBroker dataProvider;
     private final ListenerRegistration<ClassifierDefinitionListener> registration;
@@ -61,7 +65,7 @@ public class ClassifierDefinitionListener implements ClusteredDataTreeChangeList
     }
 
     @Override
-    public void onDataTreeChanged(Collection<DataTreeModification<ClassifierDefinition>> changes) {
+    public void onDataTreeChanged(@Nonnull Collection<DataTreeModification<ClassifierDefinition>> changes) {
         for (DataTreeModification<ClassifierDefinition> change : changes) {
             DataObjectModification<ClassifierDefinition> rootNode = change.getRootNode();
 
@@ -77,7 +81,8 @@ public class ClassifierDefinitionListener implements ClusteredDataTreeChangeList
                         wTx.put(LogicalDatastoreType.OPERATIONAL, RENDERER_CAPABILITIES_IID
                             .child(SupportedClassifierDefinition.class, supportedClassifierDefinition.getKey()),
                                 supportedClassifierDefinition, true);
-                        Futures.addCallback(wTx.submit(), logDebugResult(supportedClassifierDefinition.getKey(), PUT));
+                        Futures.addCallback(wTx.submit(), logDebugResult(supportedClassifierDefinition.getKey(), PUT),
+                            MoreExecutors.directExecutor());
                     }
                     break;
 
@@ -90,11 +95,11 @@ public class ClassifierDefinitionListener implements ClusteredDataTreeChangeList
                         WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
                         wTx.delete(LogicalDatastoreType.OPERATIONAL, RENDERER_CAPABILITIES_IID
                             .child(SupportedClassifierDefinition.class, supportedClassifierDefinitionKey));
-                        Futures.addCallback(wTx.submit(), logDebugResult(supportedClassifierDefinitionKey, DELETED));
+                        Futures.addCallback(wTx.submit(), logDebugResult(supportedClassifierDefinitionKey, DELETED),
+                            MoreExecutors.directExecutor());
                     }
                     break;
             }
-
         }
     }
 
@@ -119,7 +124,7 @@ public class ClassifierDefinitionListener implements ClusteredDataTreeChangeList
             }
 
             @Override
-            public void onFailure(Throwable t) {
+            public void onFailure(@Nonnull Throwable t) {
                 LOG.error("Capability of renderer {} was NOT {}: {}", OFOverlayRenderer.RENDERER_NAME.getValue(),
                         putOrDeleted, supportedClassifierDefinitionKey, t);
             }

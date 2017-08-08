@@ -45,6 +45,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_adapte
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425._interface.attributes.InterfaceTypeChoice;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425._interface.attributes._interface.type.choice.TapCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425._interface.attributes._interface.type.choice.VhostUserCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.bridge.domain.base.attributes.PhysicalLocationRef;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.VlanId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607.VhostUserRole;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607.VxlanVni;
@@ -113,7 +114,7 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
                 futures.add(bridgeDomainManager.createVlanBridgeDomainOnVppNode(input.getId(), vlanId, nodeId));
             });
         }
-        return Futures.transformAsync(Futures.allAsList(futures), voidsToRpcResult());
+        return Futures.transformAsync(Futures.allAsList(futures), voidsToRpcResult(), MoreExecutors.directExecutor());
     }
 
     public Future<RpcResult<Void>> deleteVirtualBridgeDomainFromNodes(DeleteVirtualBridgeDomainFromNodesInput input) {
@@ -122,7 +123,7 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
         input.getBridgeDomainNode().forEach(nodeId -> {
             futures.add(bridgeDomainManager.removeBridgeDomainFromVppNode(input.getBridgeDomainId(), nodeId));
         });
-        return Futures.transformAsync(Futures.allAsList(futures), voidsToRpcResult());
+        return Futures.transformAsync(Futures.allAsList(futures), voidsToRpcResult(), MoreExecutors.directExecutor());
     }
 
     public ListenableFuture<RpcResult<Void>> cloneVirtualBridgeDomainOnNodes(CloneVirtualBridgeDomainOnNodesInput input) {
@@ -175,9 +176,9 @@ public class VppRpcServiceImpl implements VppAdapterService, AutoCloseable {
                                                 input.getBridgeDomainId(), vlanId, nodeId));
                                     });
                         }
-                        return Futures.transformAsync(Futures.allAsList(futures), voidsToRpcResult());
+                        return Futures.transformAsync(Futures.allAsList(futures), voidsToRpcResult(), MoreExecutors.directExecutor());
                     }
-                });
+                }, MoreExecutors.directExecutor());
     }
 
     public ListenableFuture<RpcResult<Void>> createInterfaceOnNode(CreateInterfaceOnNodeInput input) {

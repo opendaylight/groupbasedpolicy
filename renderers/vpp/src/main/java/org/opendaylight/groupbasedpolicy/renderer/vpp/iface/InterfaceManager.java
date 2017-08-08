@@ -68,6 +68,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.common.eventbus.Subscribe;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -217,7 +218,7 @@ public class InterfaceManager implements AutoCloseable {
         if(!oldVppEndpoint.equals(newVppEndpoint)) {
             LOG.debug("Updating vpp endpoint, old EP: {} new EP: {}", oldVppEndpoint, newVppEndpoint);
             return Futures.transformAsync(vppEndpointDeleted(oldVppEndpoint),
-                    (AsyncFunction<Void, Void>) input -> vppEndpointCreated(newVppEndpoint));
+                input -> vppEndpointCreated(newVppEndpoint), MoreExecutors.directExecutor());
         }
         LOG.debug("Update skipped, provided before/after vpp endpoints are equal");
         return Futures.immediateFuture(null);

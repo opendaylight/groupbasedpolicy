@@ -51,7 +51,6 @@ import com.google.common.collect.Sets;
 import com.google.common.collect.Sets.SetView;
 import com.google.common.eventbus.Subscribe;
 
-
 public class VppRendererPolicyManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(VppRendererPolicyManager.class);

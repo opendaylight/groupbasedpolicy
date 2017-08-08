@@ -56,6 +56,7 @@ import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 
 public class NodeManager {
 
@@ -154,7 +155,7 @@ public class NodeManager {
             public void onFailure(@Nullable Throwable throwable) {
                 LOG.warn("Exception thrown when removing node... {}", throwable);
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     /**
@@ -194,7 +195,7 @@ public class NodeManager {
             public void onFailure(@Nullable Throwable throwable) {
                 LOG.warn("Exception thrown when resolving node... {}", throwable);
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     /**

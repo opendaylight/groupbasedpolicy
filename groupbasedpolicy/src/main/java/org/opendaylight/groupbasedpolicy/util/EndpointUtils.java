@@ -28,13 +28,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.parent.containment.endpoint._case.ParentContainmentEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.parent.endpoint._case.ParentEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.ExternalImplicitGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 
 public class EndpointUtils {
 
@@ -78,16 +77,9 @@ public class EndpointUtils {
             return false;
         }
         for (EndpointGroupId epgId : addrEp.getEndpointGroup()) {
-            results.add(Futures.transform(
-                    rTx.read(LogicalDatastoreType.CONFIGURATION,
-                            IidFactory.externalImplicitGroupIid(addrEp.getTenant(), epgId)),
-                    new Function<Optional<ExternalImplicitGroup>, Boolean>() {
-
-                        @Override
-                        public Boolean apply(Optional<ExternalImplicitGroup> input) {
-                            return input.isPresent();
-                        }
-                    }));
+            results.add(Futures.transform( rTx.read(LogicalDatastoreType.CONFIGURATION,
+                        IidFactory.externalImplicitGroupIid(addrEp.getTenant(), epgId)), Optional::isPresent,
+                MoreExecutors.directExecutor()));
         }
         try {
             List<Boolean> list = Futures.allAsList(results).get();

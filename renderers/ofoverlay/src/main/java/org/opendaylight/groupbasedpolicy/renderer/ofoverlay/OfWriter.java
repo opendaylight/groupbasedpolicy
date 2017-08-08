@@ -30,6 +30,8 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -289,7 +291,7 @@ public class OfWriter {
             public void onSuccess(Void result) {
                 LOG.debug("Flow table {} updated.", tableIid);
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     private void updateGroups(DataBroker dataBroker, final NodeId nodeId)
@@ -367,7 +369,7 @@ public class OfWriter {
             public void onSuccess(Void result) {
                 LOG.debug("Group table on node {} updated.", nodeId);
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
 }

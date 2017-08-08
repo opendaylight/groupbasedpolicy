@@ -12,6 +12,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Collection;
 
+import javax.annotation.Nonnull;
+
 import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
@@ -36,6 +38,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.MoreExecutors;
 
 public class ActionDefinitionListener implements ClusteredDataTreeChangeListener<ActionDefinition>, AutoCloseable {
 
@@ -44,8 +47,8 @@ public class ActionDefinitionListener implements ClusteredDataTreeChangeListener
         .child(Renderer.class, new RendererKey(OFOverlayRenderer.RENDERER_NAME))
         .child(Capabilities.class)
         .build();
-    private static String PUT = "stored";
-    private static String DELETED = "removed";
+    private static final String PUT = "stored";
+    private static final String DELETED = "removed";
 
     private final DataBroker dataProvider;
     private final ListenerRegistration<ActionDefinitionListener> registration;
@@ -59,7 +62,7 @@ public class ActionDefinitionListener implements ClusteredDataTreeChangeListener
     }
 
     @Override
-    public void onDataTreeChanged(Collection<DataTreeModification<ActionDefinition>> changes) {
+    public void onDataTreeChanged(@Nonnull Collection<DataTreeModification<ActionDefinition>> changes) {
         for (DataTreeModification<ActionDefinition> change : changes) {
             DataObjectModification<ActionDefinition> rootNode = change.getRootNode();
 
@@ -75,7 +78,8 @@ public class ActionDefinitionListener implements ClusteredDataTreeChangeListener
                         wTx.put(LogicalDatastoreType.OPERATIONAL, CAPABILITIES_IID
                             .child(SupportedActionDefinition.class, supportedActionDefinition.getKey()),
                                 supportedActionDefinition, true);
-                        Futures.addCallback(wTx.submit(), logDebugResult(supportedActionDefinition.getKey(), PUT));
+                        Futures.addCallback(wTx.submit(), logDebugResult(supportedActionDefinition.getKey(), PUT), MoreExecutors
+                            .directExecutor());
                     }
                     break;
 
@@ -88,7 +92,7 @@ public class ActionDefinitionListener implements ClusteredDataTreeChangeListener
                         WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
                         wTx.delete(LogicalDatastoreType.OPERATIONAL,
                                 CAPABILITIES_IID.child(SupportedActionDefinition.class, supportedActionDefinitionKey));
-                        Futures.addCallback(wTx.submit(), logDebugResult(supportedActionDefinitionKey, DELETED));
+                        Futures.addCallback(wTx.submit(), logDebugResult(supportedActionDefinitionKey, DELETED), MoreExecutors.directExecutor());
                     }
                     break;
             }
@@ -113,7 +117,7 @@ public class ActionDefinitionListener implements ClusteredDataTreeChangeListener
             }
 
             @Override
-            public void onFailure(Throwable t) {
+            public void onFailure(@Nonnull Throwable t) {
                 LOG.error("Capability of renderer {} was NOT {}: {}", OFOverlayRenderer.RENDERER_NAME.getValue(),
                         putOrDeleted, supportedActionDefinitionKey, t);
             }

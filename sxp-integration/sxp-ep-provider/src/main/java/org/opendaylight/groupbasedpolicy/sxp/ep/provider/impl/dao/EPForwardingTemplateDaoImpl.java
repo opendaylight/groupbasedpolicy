@@ -12,6 +12,8 @@ import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -56,13 +58,13 @@ public class EPForwardingTemplateDaoImpl implements DSAsyncDao<IpPrefix, Endpoin
             final CheckedFuture<Optional<SxpEpMapper>, ReadFailedException> read =
                     rTx.read(LogicalDatastoreType.CONFIGURATION, buildReadPath(key));
 
-            Futures.addCallback(read, SxpListenerUtil.createTxCloseCallback(rTx));
+            Futures.addCallback(read, SxpListenerUtil.createTxCloseCallback(rTx), MoreExecutors.directExecutor());
 
             readResult = Futures.transform(read, new Function<Optional<SxpEpMapper>, Optional<EndpointForwardingTemplateBySubnet>>() {
                 @Nullable
                 @Override
                 public Optional<EndpointForwardingTemplateBySubnet> apply(@Nullable final Optional<SxpEpMapper> input) {
-                    if (input.isPresent()) {
+                    if (input!=null && input.isPresent()) {
                         // clean cache
                         cachedDao.invalidateCache();
 
@@ -78,7 +80,7 @@ public class EPForwardingTemplateDaoImpl implements DSAsyncDao<IpPrefix, Endpoin
                         return Optional.absent();
                     }
                 }
-            });
+            }, MoreExecutors.directExecutor());
         }
         return readResult;
     }

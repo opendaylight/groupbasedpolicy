@@ -12,6 +12,7 @@ import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
@@ -96,7 +97,7 @@ public class GbpIseConfigListenerImpl implements GbpIseConfigListener {
                             LOG.debug("ise harvest failed", t);
                             storeOutcome(false, 0, t.getMessage());
                         }
-                    });
+                    }, MoreExecutors.directExecutor());
 
                     try {
                         harvestResult.get(30, TimeUnit.SECONDS);

@@ -58,6 +58,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 
 public class BaseEndpointServiceImpl implements BaseEndpointService, AutoCloseable {
 
@@ -65,13 +66,8 @@ public class BaseEndpointServiceImpl implements BaseEndpointService, AutoCloseab
     private final DataBroker dataProvider;
     private final EndpointAugmentorRegistryImpl epAugRegistry;
 
-    private static final Function<Void, RpcResult<Void>> TO_SUCCESS_RPC_RESULT = new Function<Void, RpcResult<Void>>() {
-
-        @Override
-        public RpcResult<Void> apply(Void input) {
-            return RpcResultBuilder.<Void>success().build();
-        }
-    };
+    private static final Function<Void, RpcResult<Void>> TO_SUCCESS_RPC_RESULT =
+        input -> RpcResultBuilder.<Void>success().build();
 
     public BaseEndpointServiceImpl(DataBroker dataProvider, EndpointAugmentorRegistryImpl epAugRegistry) {
         this.epAugRegistry = Preconditions.checkNotNull(epAugRegistry);
@@ -115,7 +111,7 @@ public class BaseEndpointServiceImpl implements BaseEndpointService, AutoCloseab
             addAddressEndpointToParents(t, endpoint);
         }
 
-        return Futures.transform(t.submit(), TO_SUCCESS_RPC_RESULT);
+        return Futures.transform(t.submit(), TO_SUCCESS_RPC_RESULT, MoreExecutors.directExecutor());
     }
 
     private void addContainmentEndpointToChilds(ReadWriteTransaction t, ContainmentEndpoint endpoint) {
@@ -265,7 +261,7 @@ public class BaseEndpointServiceImpl implements BaseEndpointService, AutoCloseab
         }
 
         ListenableFuture<Void> r = t.submit();
-        return Futures.transform(r, TO_SUCCESS_RPC_RESULT);
+        return Futures.transform(r, TO_SUCCESS_RPC_RESULT, MoreExecutors.directExecutor());
     }
 
     private void deleteAddressEndpointFromParents(ReadWriteTransaction t, AddressEndpoint endpoint) {

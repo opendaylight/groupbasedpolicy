@@ -59,6 +59,7 @@ import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * Endpoint registry provides a scalable store for accessing and updating
@@ -66,12 +67,11 @@ import com.google.common.util.concurrent.ListenableFuture;
  */
 public class EndpointRpcRegistry implements EndpointService, EpRendererAugmentationRegistry, AutoCloseable {
 
-    private static final Logger LOG = LoggerFactory.getLogger(EndpointRpcRegistry.class);
-
-    private final DataBroker dataProvider;
-
     final static ConcurrentMap<String, EpRendererAugmentation> registeredRenderers =
             new ConcurrentHashMap<String, EpRendererAugmentation>();
+    private static final Logger LOG = LoggerFactory.getLogger(EndpointRpcRegistry.class);
+    private final DataBroker dataProvider;
+    private Function<Void, RpcResult<Void>> futureTrans = input -> RpcResultBuilder.<Void>success().build();
 
     /**
      * This method registers a renderer for endpoint RPC API. This method
@@ -126,7 +126,7 @@ public class EndpointRpcRegistry implements EndpointService, EpRendererAugmentat
                 public void onSuccess(Void result) {
 
                 }
-            });
+            }, MoreExecutors.directExecutor());
         }
 
         // TODO Be alagalah - age out endpoint data and remove
@@ -234,7 +234,7 @@ public class EndpointRpcRegistry implements EndpointService, EpRendererAugmentat
             }
         }
         ListenableFuture<Void> r = t.submit();
-        return Futures.transform(r, futureTrans);
+        return Futures.transform(r, futureTrans, MoreExecutors.directExecutor());
     }
 
     @Override
@@ -272,7 +272,7 @@ public class EndpointRpcRegistry implements EndpointService, EpRendererAugmentat
         t.put(LogicalDatastoreType.OPERATIONAL, iid_l3prefix, epL3Prefix);
 
         ListenableFuture<Void> r = t.submit();
-        return Futures.transform(r, futureTrans);
+        return Futures.transform(r, futureTrans, MoreExecutors.directExecutor());
     }
 
     @Override
@@ -304,7 +304,7 @@ public class EndpointRpcRegistry implements EndpointService, EpRendererAugmentat
         }
 
         ListenableFuture<Void> r = t.submit();
-        return Futures.transform(r, futureTrans);
+        return Futures.transform(r, futureTrans, MoreExecutors.directExecutor());
     }
 
     @Override
@@ -323,7 +323,7 @@ public class EndpointRpcRegistry implements EndpointService, EpRendererAugmentat
         }
 
         ListenableFuture<Void> r = t.submit();
-        return Futures.transform(r, futureTrans);
+        return Futures.transform(r, futureTrans, MoreExecutors.directExecutor());
     }
 
     @Override
@@ -343,14 +343,6 @@ public class EndpointRpcRegistry implements EndpointService, EpRendererAugmentat
         }
 
         ListenableFuture<Void> r = t.submit();
-        return Futures.transform(r, futureTrans);
+        return Futures.transform(r, futureTrans, MoreExecutors.directExecutor());
     }
-
-    Function<Void, RpcResult<Void>> futureTrans = new Function<Void, RpcResult<Void>>() {
-
-        @Override
-        public RpcResult<Void> apply(Void input) {
-            return RpcResultBuilder.<Void>success().build();
-        }
-    };
 }

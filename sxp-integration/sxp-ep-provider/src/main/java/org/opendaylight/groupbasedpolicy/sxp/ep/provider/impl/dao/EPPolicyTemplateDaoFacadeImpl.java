@@ -13,6 +13,8 @@ import com.google.common.base.Optional;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import java.util.Collection;
 import java.util.Collections;
 import javax.annotation.Nonnull;
@@ -82,7 +84,7 @@ public class EPPolicyTemplateDaoFacadeImpl implements EPPolicyTemplateDaoFacade 
                                 .orElse(Futures.immediateFuture(Optional.absent()))
                         );
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     private <T> ListenableFuture<Optional<T>> rewrapOptionalToGuavaOptional(final ListenableFuture<java.util.Optional<T>> templateFu) {
@@ -94,8 +96,8 @@ public class EPPolicyTemplateDaoFacadeImpl implements EPPolicyTemplateDaoFacade 
                                 .map(origNonnullInput -> Optional.fromNullable(origNonnullInput.orElse(null)))
                                 .orElse(Optional.absent());
                     }
-                }
-        );
+                },
+            MoreExecutors.directExecutor());
     }
 
 
@@ -138,7 +140,8 @@ public class EPPolicyTemplateDaoFacadeImpl implements EPPolicyTemplateDaoFacade 
                 .child(EndpointPolicyTemplateBySgt.class, new EndpointPolicyTemplateBySgtKey(sgt));
         wTx.put(LogicalDatastoreType.CONFIGURATION, epPolicyTemplatePath, template, true);
 
-        return Futures.transform(wTx.submit(), createStoreOutcomeHandlerToCollection(template));
+        return Futures.transform(wTx.submit(), createStoreOutcomeHandlerToCollection(template),
+            MoreExecutors.directExecutor());
     }
 
     private EndpointPolicyTemplateBySgt buildEpPolicyTemplate(final EpPolicyTemplateValueKey templateLookupKey, final Sgt sgt) {

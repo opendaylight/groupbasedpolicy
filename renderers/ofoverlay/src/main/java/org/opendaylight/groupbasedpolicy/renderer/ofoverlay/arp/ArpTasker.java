@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -105,6 +106,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.JdkFutureAdapters;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 
 public class ArpTasker implements PacketProcessingListener {
 
@@ -279,7 +281,6 @@ public class ArpTasker implements PacketProcessingListener {
                         if (!addFlowResult.isSuccessful()) {
                             LOG.warn("An ARP Reply to Controller flow was not created on node {} \nErrors: {}",
                                     node.getId().getValue(), addFlowResult.getErrors());
-                            continue;
                         }
                     }
                     LOG.debug("ARP Reply to Controller flows were created on node {}", node.getId().getValue());
@@ -288,17 +289,17 @@ public class ArpTasker implements PacketProcessingListener {
                                 senderIpAddress);
                         ListenableFuture<RpcResult<Void>> futureSendArpResult = arpSender.sendArp(senderAddress, tpa,
                                 extNcIidAndMac.getLeft());
-                        Futures.addCallback(futureSendArpResult, logResult(tpa, extNcIidAndMac.getLeft()));
+                        Futures.addCallback(futureSendArpResult, logResult(tpa, extNcIidAndMac.getLeft()), MoreExecutors.directExecutor());
                     }
                 }
 
                 @Override
-                public void onFailure(Throwable t) {
+                public void onFailure(@Nonnull Throwable t) {
                     LOG.error(
                             "Illegal state - Installation of ARP flows on node {} failed. Node can contain just some ARP flows.",
                             node.getId(), t);
                 }
-            });
+            }, MoreExecutors.directExecutor());
         }
     }
 

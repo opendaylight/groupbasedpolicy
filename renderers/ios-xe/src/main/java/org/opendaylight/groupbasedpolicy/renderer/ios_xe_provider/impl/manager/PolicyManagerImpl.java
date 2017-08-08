@@ -17,6 +17,8 @@ import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -93,7 +95,7 @@ public class PolicyManagerImpl implements PolicyManager {
                     }
                     return syncEndpoints(dataAfter, Create);
                 }
-            });
+            }, MoreExecutors.directExecutor());
         }
         return Futures.transformAsync(creationResult, new AsyncFunction<Optional<Status>, Boolean>() {
             @Override
@@ -104,9 +106,9 @@ public class PolicyManagerImpl implements PolicyManager {
                     public Boolean apply(@Nullable final Void input) {
                         return Boolean.TRUE;
                     }
-                });
+                }, MoreExecutors.directExecutor());
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     /**
@@ -225,7 +227,7 @@ public class PolicyManagerImpl implements PolicyManager {
 
                 return Optional.of(status);
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     private CheckedFuture<Void, TransactionCommitFailedException> reportPolicy(final long version,

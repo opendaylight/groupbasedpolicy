@@ -13,6 +13,8 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -60,7 +62,7 @@ public final class EPTemplateUtil {
                 compositeResult.setLeft(input);
                 return compositeResult;
             }
-        }));
+        }, MoreExecutors.directExecutor()));
 
         results.add(Futures.transform(rightRead, new Function<Optional<R>, OptionalMutablePair<L, R>>() {
             @Nullable
@@ -69,7 +71,7 @@ public final class EPTemplateUtil {
                 compositeResult.setRight(input);
                 return compositeResult;
             }
-        }));
+        }, MoreExecutors.directExecutor()));
 
         return Futures.transform(Futures.successfulAsList(results),
                 new Function<List<?>, OptionalMutablePair<L, R>>() {
@@ -78,7 +80,7 @@ public final class EPTemplateUtil {
                     public OptionalMutablePair<L, R> apply(@Nullable final List<?> input) {
                         return compositeResult;
                     }
-                });
+                }, MoreExecutors.directExecutor());
     }
 
     public static <K, V> ListenableFuture<Pair<K, V>> wrapToPair(
@@ -90,7 +92,7 @@ public final class EPTemplateUtil {
             public Pair<K, V> apply(@Nullable final Optional<V> input) {
                 return new MutablePair<>(keyItem, input.orNull());
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     public static <V> ListenableFuture<Optional<V>> wrapToOptional(final ListenableFuture<V> value) {
@@ -100,7 +102,7 @@ public final class EPTemplateUtil {
             public Optional<V> apply(@Nullable final V input) {
                 return Optional.fromNullable(input);
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     public static Ordering<EndpointGroupId> createEndpointGroupIdOrdering() {

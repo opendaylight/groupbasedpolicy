@@ -13,6 +13,8 @@ import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import java.util.Collection;
 import javax.annotation.Nonnull;
 import org.apache.commons.lang3.tuple.Pair;
@@ -99,13 +101,14 @@ public class EPForwardingTemplateListenerImpl implements EPTemplateListener<Endp
 
         // find all available epForwardingTemplates and pair those to sxpMasterDBBinding
         final ListenableFuture<Optional<Pair<MasterDatabaseBinding, EndpointPolicyTemplateBySgt>>> searchResult =
-                Futures.transformAsync(sxpMasterDbItemRead, createReadAndPairTemplateToBindingFunction(epForwardingTemplate));
+                Futures.transformAsync(sxpMasterDbItemRead, createReadAndPairTemplateToBindingFunction(epForwardingTemplate), MoreExecutors
+                    .directExecutor());
 
         // invoke sxpMapperReactor.process for every valid combination of sxpMasterDBBinding, epPolicyTemplate, epForwardingTemplate
         final ListenableFuture<RpcResult<Void>> rpcResult =
-                Futures.transformAsync(searchResult, createProcessAllFunction(epForwardingTemplate));
+                Futures.transformAsync(searchResult, createProcessAllFunction(epForwardingTemplate), MoreExecutors.directExecutor());
 
-        Futures.addCallback(rpcResult, ANY_RPC_FUTURE_CALLBACK);
+        Futures.addCallback(rpcResult, ANY_RPC_FUTURE_CALLBACK, MoreExecutors.directExecutor());
     }
 
     private AsyncFunction<Optional<Pair<MasterDatabaseBinding, EndpointPolicyTemplateBySgt>>, RpcResult<Void>>

@@ -13,6 +13,8 @@ import com.google.common.collect.Range;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Optional;
@@ -53,7 +55,7 @@ public class EPPolicyTemplateProviderIseImpl implements EPPolicyTemplateProvider
                 return Optional.ofNullable(input)
                         .flatMap(i -> i.map(sgtName -> buildTemplate(sgt, iseContext.getIseSourceConfig().getTenant(), sgtName)));
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     private EndpointPolicyTemplateBySgt buildTemplate(final @Nonnull Sgt sgt, final @Nonnull TenantId tenantId,
@@ -81,7 +83,7 @@ public class EPPolicyTemplateProviderIseImpl implements EPPolicyTemplateProvider
             public void onFailure(final Throwable t) {
                 LOG.debug("[epPolicyTemplateProvider] harvestAll FAILED: {}", t.getMessage());
             }
-        });
+        }, MoreExecutors.directExecutor());
 
         return Futures.transform(sgtUpdateFu, new Function<Collection<SgtInfo>, Optional<String>>() {
             @Nullable
@@ -93,7 +95,7 @@ public class EPPolicyTemplateProviderIseImpl implements EPPolicyTemplateProvider
                                 .filter(sgtInfo -> sgt.equals(sgtInfo.getSgt())).findFirst()
                                 .map(SgtInfo::getName));
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     private Optional<IseContext> findIseSourceConfigBySgt(final Sgt sgt) {

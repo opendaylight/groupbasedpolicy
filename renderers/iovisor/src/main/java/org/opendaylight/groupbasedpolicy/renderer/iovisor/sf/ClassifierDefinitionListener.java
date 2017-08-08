@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.MoreExecutors;
 
 public class ClassifierDefinitionListener extends DataTreeChangeHandler<ClassifierDefinition> {
 
@@ -97,7 +98,7 @@ public class ClassifierDefinitionListener extends DataTreeChangeHandler<Classifi
 
             wTx.delete(LogicalDatastoreType.OPERATIONAL,
                     CAPABILITIES_IID.child(SupportedClassifierDefinition.class, supportedClassifierDefinitionKey));
-            Futures.addCallback(wTx.submit(), logDebugResult(supportedClassifierDefinitionKey, DELETED));
+            Futures.addCallback(wTx.submit(), logDebugResult(supportedClassifierDefinitionKey, DELETED), MoreExecutors.directExecutor());
         }
     }
 
@@ -113,7 +114,7 @@ public class ClassifierDefinitionListener extends DataTreeChangeHandler<Classifi
             wTx.put(LogicalDatastoreType.OPERATIONAL,
                     CAPABILITIES_IID.child(SupportedClassifierDefinition.class, supportedClassifierDefinition.getKey()),
                     supportedClassifierDefinition, true);
-            Futures.addCallback(wTx.submit(), logDebugResult(supportedClassifierDefinition.getKey(), PUT));
+            Futures.addCallback(wTx.submit(), logDebugResult(supportedClassifierDefinition.getKey(), PUT), MoreExecutors.directExecutor());
         }
     }
 }

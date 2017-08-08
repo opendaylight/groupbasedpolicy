@@ -13,8 +13,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import java.util.List;
 import java.util.Optional;
+
+import javax.annotation.Nonnull;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -145,7 +150,7 @@ public class IosXeRendererProviderImpl implements BindingAwareProvider, AutoClos
         Futures.addCallback(future, new FutureCallback<Void>() {
 
             @Override
-            public void onFailure(Throwable throwable) {
+            public void onFailure(@Nonnull Throwable throwable) {
                 LOG.error("Could not register renderer {}: {}", renderer, throwable);
             }
 
@@ -153,6 +158,6 @@ public class IosXeRendererProviderImpl implements BindingAwareProvider, AutoClos
             public void onSuccess(Void result) {
                 LOG.debug("Renderer {} successfully registered.", renderer);
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 }

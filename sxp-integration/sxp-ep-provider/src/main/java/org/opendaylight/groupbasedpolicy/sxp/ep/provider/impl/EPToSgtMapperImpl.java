@@ -11,6 +11,8 @@ package org.opendaylight.groupbasedpolicy.sxp.ep.provider.impl;
 import com.google.common.base.Function;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import java.util.Collection;
 import java.util.HashSet;
 import javax.annotation.Nullable;
@@ -55,6 +57,7 @@ public class EPToSgtMapperImpl implements EPToSgtMapper {
     public ListenableFuture<Collection<Sgt>> findSgtForEP(final AddressEndpointWithLocation endpointWithLocation) {
         final EpPolicyTemplateValueKey rawKey = new EpPolicyTemplateValueKey(endpointWithLocation);
         final EpPolicyTemplateValueKey key = keyFactory.sortValueKeyLists(rawKey);
-        return Futures.transform(epPolicyTemplateReader.readBy(key), TRANSFORM_TEMPLATE_TO_SGT);
+        return Futures.transform(epPolicyTemplateReader.readBy(key), TRANSFORM_TEMPLATE_TO_SGT,
+            MoreExecutors.directExecutor());
     }
 }

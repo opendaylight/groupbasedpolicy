@@ -14,6 +14,8 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.google.common.util.concurrent.MoreExecutors;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
@@ -195,7 +197,7 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
             public void onSuccess(Void result) {
                 LOG.debug("Renderer {} successfully registered.", renderer);
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     private void unregisterFromRendererManager() {
@@ -215,7 +217,7 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
             public void onSuccess(Void result) {
                 LOG.debug("Renderer {} successfully unregistered.", VppRenderer.NAME);
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     public MountedDataBrokerProvider getMountedDataBroker() {

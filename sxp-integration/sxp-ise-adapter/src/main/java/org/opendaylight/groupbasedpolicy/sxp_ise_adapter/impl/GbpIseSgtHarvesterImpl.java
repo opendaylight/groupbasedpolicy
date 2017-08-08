@@ -12,6 +12,7 @@ import com.google.common.base.Function;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
@@ -84,7 +85,7 @@ public class GbpIseSgtHarvesterImpl implements GbpIseSgtHarvester {
                         LOG.debug("entering stg-info processor {}", processor.getClass().getSimpleName());
                         return processor.processSgtInfo(iseSourceConfig.getTenant(), sgtInfos);
                     }
-                });
+                }, MoreExecutors.directExecutor());
             }
             result = Futures.transform(processingResult, new Function<Void, Collection<SgtInfo>>() {
                 @Nullable
@@ -98,7 +99,7 @@ public class GbpIseSgtHarvesterImpl implements GbpIseSgtHarvester {
                     // always success, otherwise there will be TransactionCommitFailedException thrown
                     return sgtInfos;
                 }
-            });
+            }, MoreExecutors.directExecutor());
         } catch (Exception e) {
             LOG.debug("failed to harvest ise", e);
             result = Futures.immediateFailedFuture(e);

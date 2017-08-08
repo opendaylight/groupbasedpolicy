@@ -77,6 +77,7 @@ import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 
 public class VppNodeManager {
 
@@ -156,7 +157,7 @@ public class VppNodeManager {
             public void onFailure(@Nonnull Throwable t) {
                 LOG.warn("Node synchronization failed. Data before: {} after {}", dataBefore, dataAfter);
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     private boolean isControllerConfigNode(final Node dataAfter, final Node dataBefore) {
@@ -420,7 +421,7 @@ public class VppNodeManager {
                 java.util.Optional<PhysicalInterface> pubInt = rn.getAugmentation(VppInterfaceAugmentation.class)
                     .getPhysicalInterface()
                     .stream()
-                    .filter(phInt -> phInt.isExternal())
+                    .filter(PhysicalInterface::isExternal)
                     .findFirst();
                 if (pubInt.isPresent()) {
                     nodes.put(rn.getNodePath().firstKeyOf(Node.class).getNodeId(), pubInt.get().getInterfaceName());

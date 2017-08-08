@@ -15,6 +15,8 @@ import com.google.common.base.Predicates;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import javax.annotation.Nonnull;
@@ -66,7 +68,7 @@ public class EPPolicyTemplateDaoImpl implements DSAsyncDao<Sgt, EndpointPolicyTe
             final CheckedFuture<Optional<EndpointPolicyTemplateBySgt>, ReadFailedException> read =
                     rTx.read(LogicalDatastoreType.CONFIGURATION, buildReadPath(key));
 
-            Futures.addCallback(read, SxpListenerUtil.createTxCloseCallback(rTx));
+            Futures.addCallback(read, SxpListenerUtil.createTxCloseCallback(rTx), MoreExecutors.directExecutor());
 
             return Futures.transform(read, new Function<Optional<EndpointPolicyTemplateBySgt>, Optional<EndpointPolicyTemplateBySgt>>() {
                 @Nullable
@@ -77,7 +79,7 @@ public class EPPolicyTemplateDaoImpl implements DSAsyncDao<Sgt, EndpointPolicyTe
                     }
                     return input;
                 }
-            });
+            }, MoreExecutors.directExecutor());
         }
     }
 

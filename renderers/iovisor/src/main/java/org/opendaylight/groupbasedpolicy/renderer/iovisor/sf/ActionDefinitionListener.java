@@ -10,6 +10,8 @@ package org.opendaylight.groupbasedpolicy.renderer.iovisor.sf;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import javax.annotation.Nonnull;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
@@ -32,6 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.MoreExecutors;
 
 public class ActionDefinitionListener extends DataTreeChangeHandler<ActionDefinition> {
 
@@ -40,8 +43,8 @@ public class ActionDefinitionListener extends DataTreeChangeHandler<ActionDefini
         .child(Renderer.class, new RendererKey(IovisorRenderer.RENDERER_NAME))
         .child(Capabilities.class)
         .build();
-    private static String PUT = "stored";
-    private static String DELETED = "removed";
+    private static final String PUT = "stored";
+    private static final String DELETED = "removed";
 
     public ActionDefinitionListener(DataBroker dataBroker) {
         super(dataBroker);
@@ -66,7 +69,7 @@ public class ActionDefinitionListener extends DataTreeChangeHandler<ActionDefini
             }
 
             @Override
-            public void onFailure(Throwable t) {
+            public void onFailure(@Nonnull Throwable t) {
                 LOG.error("Capability of renderer {} was NOT {}: {}", IovisorRenderer.RENDERER_NAME.getValue(),
                         putOrDeleted, supportedActionDefinitionKey.getActionDefinitionId().getValue(), t);
             }
@@ -90,7 +93,7 @@ public class ActionDefinitionListener extends DataTreeChangeHandler<ActionDefini
             WriteTransaction wTx = dataProvider.newWriteOnlyTransaction();
             wTx.delete(LogicalDatastoreType.OPERATIONAL,
                     CAPABILITIES_IID.child(SupportedActionDefinition.class, supportedActionDefinitionKey));
-            Futures.addCallback(wTx.submit(), logDebugResult(supportedActionDefinitionKey, DELETED));
+            Futures.addCallback(wTx.submit(), logDebugResult(supportedActionDefinitionKey, DELETED), MoreExecutors.directExecutor());
         }
     }
 
@@ -105,7 +108,7 @@ public class ActionDefinitionListener extends DataTreeChangeHandler<ActionDefini
             wTx.put(LogicalDatastoreType.OPERATIONAL,
                     CAPABILITIES_IID.child(SupportedActionDefinition.class, supportedActionDefinition.getKey()),
                     supportedActionDefinition, true);
-            Futures.addCallback(wTx.submit(), logDebugResult(supportedActionDefinition.getKey(), PUT));
+            Futures.addCallback(wTx.submit(), logDebugResult(supportedActionDefinition.getKey(), PUT), MoreExecutors.directExecutor());
         }
     }
 }

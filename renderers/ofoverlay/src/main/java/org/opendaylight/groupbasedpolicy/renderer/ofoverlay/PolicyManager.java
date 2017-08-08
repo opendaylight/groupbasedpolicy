@@ -71,6 +71,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * Manage policies on switches by subscribing to updates from the
@@ -194,7 +195,7 @@ public class PolicyManager
                 scheduleUpdate();
                 return null;
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     /**
@@ -217,7 +218,7 @@ public class PolicyManager
             public ListenableFuture<Void> apply(List<Void> readyToSubmit) {
                 return rwTx.submit();
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     private List<Short> getTableIDs() {
@@ -244,7 +245,7 @@ public class PolicyManager
                         }
                         return null;
                     }
-                });
+                }, MoreExecutors.directExecutor());
     }
 
     // **************

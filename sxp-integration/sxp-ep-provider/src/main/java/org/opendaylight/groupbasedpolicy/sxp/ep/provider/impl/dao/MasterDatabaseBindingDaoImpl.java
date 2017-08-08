@@ -12,10 +12,13 @@ import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -48,7 +51,8 @@ public class MasterDatabaseBindingDaoImpl implements DSAsyncDao<IpPrefix, Master
         ReadableAsyncByKey<Sgt, MasterDatabaseBinding> {
 
     private static final Logger LOG = LoggerFactory.getLogger(MasterDatabaseBindingDaoImpl.class);
-    private static final ListenableFuture<Optional<MasterDatabaseBinding>> READ_FUTURE_ABSENT = Futures.immediateFuture(Optional.absent());
+    private static final ListenableFuture<Optional<MasterDatabaseBinding>>
+        READ_FUTURE_ABSENT = Futures.immediateFuture(Optional.absent());
 
     private final DataBroker dataBroker;
     private final SimpleCachedDao<IpPrefix, MasterDatabaseBinding> cachedDao;
@@ -75,7 +79,7 @@ public class MasterDatabaseBindingDaoImpl implements DSAsyncDao<IpPrefix, Master
                 public Optional<MasterDatabaseBinding> apply(@Nullable final Void input) {
                     return lookup(cachedDao, key);
                 }
-            });
+            }, MoreExecutors.directExecutor());
         }
     }
 
@@ -84,7 +88,7 @@ public class MasterDatabaseBindingDaoImpl implements DSAsyncDao<IpPrefix, Master
         final CheckedFuture<Optional<Topology>, ReadFailedException> read =
                 rTx.read(LogicalDatastoreType.CONFIGURATION, buildReadPath(null));
 
-        Futures.addCallback(read, SxpListenerUtil.createTxCloseCallback(rTx));
+        Futures.addCallback(read, SxpListenerUtil.createTxCloseCallback(rTx), MoreExecutors.directExecutor());
 
         return Futures.transform(read, new Function<Optional<Topology>, Void>() {
             @Nullable
@@ -130,7 +134,7 @@ public class MasterDatabaseBindingDaoImpl implements DSAsyncDao<IpPrefix, Master
                 }
                 return null;
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     private InstanceIdentifier<Topology> buildReadPath(final Sgt key) {
@@ -163,6 +167,6 @@ public class MasterDatabaseBindingDaoImpl implements DSAsyncDao<IpPrefix, Master
                 }
                 return foundGroups;
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 }

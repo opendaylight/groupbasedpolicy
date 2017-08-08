@@ -14,6 +14,8 @@ import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import java.util.Collection;
 import javax.annotation.Nonnull;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -156,9 +158,9 @@ public class MasterDatabaseBindingListenerImpl implements MasterDatabaseBindingL
                 }
                 return result;
             }
-        });
+        }, MoreExecutors.directExecutor());
 
-        Futures.addCallback(rpcResult, RPC_POLICY_RESULT_FUTURE_CALLBACK);
+        Futures.addCallback(rpcResult, RPC_POLICY_RESULT_FUTURE_CALLBACK, MoreExecutors.directExecutor());
     }
 
     @Override

@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.MoreExecutors;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
@@ -126,7 +127,7 @@ public class OvsdbNodeListener extends DataTreeChangeHandler<Node> {
                         LOG.error("Failed to write bridge {}. Message: {}" + bridge.getNodeId().getValue(),
                                 t.getMessage());
                     }
-                });
+                }, MoreExecutors.directExecutor());
             }
         }
         OvsdbBridgeAugmentation ovsdbBridge = node.getAugmentation(OvsdbBridgeAugmentation.class);

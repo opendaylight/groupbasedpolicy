@@ -14,6 +14,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import java.util.HashMap;
 import java.util.Map;
@@ -131,7 +132,7 @@ public class IpSgtDistributionServiceImpl implements AutoCloseable, IpSgtDistrib
 
             }
 
-        });
+        }, MoreExecutors.directExecutor());
         return future;
     }
 
@@ -219,7 +220,7 @@ public class IpSgtDistributionServiceImpl implements AutoCloseable, IpSgtDistrib
 
             }
 
-        });
+        }, MoreExecutors.directExecutor());
         return future;
     }
 

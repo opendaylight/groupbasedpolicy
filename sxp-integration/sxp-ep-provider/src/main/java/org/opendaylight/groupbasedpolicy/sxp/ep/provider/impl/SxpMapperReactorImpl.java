@@ -15,6 +15,8 @@ import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.JdkFutureAdapters;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import java.util.Collections;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
@@ -101,7 +103,7 @@ public class SxpMapperReactorImpl implements SxpMapperReactor {
         final ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
         final CheckedFuture<Optional<AddressEndpoint>, ReadFailedException> read = rTx.read(
                 LogicalDatastoreType.OPERATIONAL, addressEndpointPath);
-        Futures.addCallback(read, SxpListenerUtil.createTxCloseCallback(rTx));
+        Futures.addCallback(read, SxpListenerUtil.createTxCloseCallback(rTx), MoreExecutors.directExecutor());
         return read;
     }
 
@@ -124,7 +126,7 @@ public class SxpMapperReactorImpl implements SxpMapperReactor {
                 }
                 return nextResult;
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     private boolean isSameEpg(RegisterEndpointInput epInput, AddressEndpoint input) {
