@@ -234,7 +234,7 @@ public class VppNodeManager {
             return Futures.immediateFuture(message);
         }
         final Optional<DataBroker> mountpoint = mountProvider.resolveDataBrokerForMountPoint(mountPointIid);
-        if (mountpoint.isPresent()) {
+        if (!mountpoint.isPresent()) {
             final String message = String.format("Mountpoint not available for node %s", nodeId);
             return Futures.immediateFuture(message);
         }
