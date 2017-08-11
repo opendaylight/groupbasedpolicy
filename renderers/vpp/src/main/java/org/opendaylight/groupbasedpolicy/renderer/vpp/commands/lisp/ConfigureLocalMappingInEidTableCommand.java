@@ -10,9 +10,9 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp;
 
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.LocalMappingDom;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.dp.subtable.grouping.local.mappings.LocalMapping;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.dp.subtable.grouping.local.mappings.LocalMappingKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.eid.table.grouping.eid.table.VniTableKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170803.dp.subtable.grouping.local.mappings.LocalMapping;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170803.dp.subtable.grouping.local.mappings.LocalMappingKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170803.eid.table.grouping.eid.table.VniTableKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 /**

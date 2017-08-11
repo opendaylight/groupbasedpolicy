@@ -9,9 +9,9 @@
 package org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom;
 
 import com.google.common.base.Preconditions;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.locator.sets.grouping.locator.sets.locator.set.Interface;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.locator.sets.grouping.locator.sets.locator.set.InterfaceBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.locator.sets.grouping.locator.sets.locator.set.InterfaceKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170803.locator.sets.grouping.locator.sets.locator.set.Interface;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170803.locator.sets.grouping.locator.sets.locator.set.InterfaceBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170803.locator.sets.grouping.locator.sets.locator.set.InterfaceKey;
 
 /**
  * Created by Shakib Ahmed on 3/20/17.

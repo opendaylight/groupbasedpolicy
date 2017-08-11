@@ -8,7 +8,7 @@
 package org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp;
 
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518.NativeForwardPathsTables;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170801.NativeForwardPathsTables;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

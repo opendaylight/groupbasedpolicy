@@ -9,7 +9,7 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp;
 
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.GpeEnableDom;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170518.gpe.feature.data.grouping.GpeFeatureData;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170801.gpe.feature.data.grouping.GpeFeatureData;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 /**
