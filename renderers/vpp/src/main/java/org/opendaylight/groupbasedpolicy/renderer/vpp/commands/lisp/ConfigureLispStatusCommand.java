@@ -10,7 +10,7 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp;
 
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom.LispDom;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170315.Lisp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170803.Lisp;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 /**
