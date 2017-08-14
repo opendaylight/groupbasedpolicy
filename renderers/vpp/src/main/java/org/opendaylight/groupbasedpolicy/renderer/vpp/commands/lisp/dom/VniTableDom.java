@@ -9,10 +9,10 @@
 package org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom;
 
 import com.google.common.base.Preconditions;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170803.eid.table.grouping.eid.table.VniTable;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170803.eid.table.grouping.eid.table.VniTableBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170803.eid.table.grouping.eid.table.VniTableKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170803.eid.table.grouping.eid.table.vni.table.VrfSubtable;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.eid.table.grouping.eid.table.VniTable;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.eid.table.grouping.eid.table.VniTableBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.eid.table.grouping.eid.table.VniTableKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.eid.table.grouping.eid.table.vni.table.VrfSubtable;
 
 /**
  * Created by Shakib Ahmed on 3/20/17.

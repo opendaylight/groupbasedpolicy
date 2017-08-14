@@ -9,8 +9,8 @@
 package org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom;
 
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170803.map.servers.grouping.map.servers.MapServer;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170803.map.servers.grouping.map.servers.MapServerBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.map.servers.grouping.map.servers.MapServer;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.map.servers.grouping.map.servers.MapServerBuilder;
 
 /**
  * Created by Shakib Ahmed on 3/20/17.
