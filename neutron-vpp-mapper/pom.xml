@@ -9,9 +9,9 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>org.opendaylight.controller</groupId>
-    <artifactId>config-parent</artifactId>
-    <version>0.7.0-SNAPSHOT</version>
+    <groupId>org.opendaylight.mdsal</groupId>
+    <artifactId>binding-parent</artifactId>
+    <version>0.11.0-SNAPSHOT</version>
     <relativePath/>
   </parent>
 
@@ -26,6 +26,18 @@
   <properties>
     <neutron.version>0.9.0-SNAPSHOT</neutron.version>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.opendaylight.controller</groupId>
+        <artifactId>mdsal-artifacts</artifactId>
+        <version>1.6.0-SNAPSHOT</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <!-- project specific dependencies -->
@@ -63,6 +75,11 @@
       <groupId>org.opendaylight.controller</groupId>
       <artifactId>sal-binding-broker-impl</artifactId>
       <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.opendaylight.controller</groupId>
+      <artifactId>sal-binding-broker-impl</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

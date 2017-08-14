@@ -70,5 +70,10 @@
             <groupId>org.opendaylight.groupbasedpolicy</groupId>
             <artifactId>groupbasedpolicy</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.opendaylight.controller</groupId>
+            <artifactId>sal-binding-broker-impl</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>
