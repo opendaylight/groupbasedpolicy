@@ -12,7 +12,7 @@
 
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>odl-groupbasedpolicy-neutronmapper</artifactId>
-    <version>0.6.0-SNAPSHOT</version>
+    <version>0.7.0-SNAPSHOT</version>
     <packaging>feature</packaging>
     <!--
          The Neutron provider
@@ -22,7 +22,7 @@
     <name>ODL :: groupbasedpolicy :: ${project.artifactId}</name>
 
     <properties>
-        <neutron.version>0.9.0-SNAPSHOT</neutron.version>
+        <neutron.version>0.10.0-SNAPSHOT</neutron.version>
     </properties>
 
     <dependencyManagement>

@@ -12,7 +12,7 @@
 
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>odl-groupbasedpolicy-neutron-vpp-mapper</artifactId>
-    <version>0.6.0-SNAPSHOT</version>
+    <version>0.7.0-SNAPSHOT</version>
     <packaging>feature</packaging>
     <!--
         The Neutron-VPP provider
