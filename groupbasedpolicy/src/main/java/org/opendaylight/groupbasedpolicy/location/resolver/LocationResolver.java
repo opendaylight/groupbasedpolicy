@@ -130,7 +130,7 @@ public class LocationResolver implements ClusteredDataTreeChangeListener<Locatio
                     wtx.delete(LogicalDatastoreType.OPERATIONAL, iid);
                 }
             }
-            if (newAbsoluteLocation == null && addressEndpointLocation.getRelativeLocations() == null) {
+            if (newAbsoluteLocation == null) {
                 InstanceIdentifier<AddressEndpointLocation> iid = IidFactory.addressEndpointLocationIid(epKey);
                 wtx.delete(LogicalDatastoreType.OPERATIONAL, iid);
             }
@@ -203,7 +203,7 @@ public class LocationResolver implements ClusteredDataTreeChangeListener<Locatio
         long bestPriority = -1;
         for (long priority : realLocations.get(epKey).keySet()) {
             bestPriority = bestPriority > priority ? bestPriority : priority;
-        };
+        } ;
         if (bestPriority == -1) {
             return null;
         }

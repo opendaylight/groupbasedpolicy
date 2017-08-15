@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AccessListUtil.ACE_DIRECTION;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
@@ -38,13 +39,13 @@ public abstract class AccessListWrapper {
         rules = new ArrayList<>();
     }
 
-    public void writeRule(GbpAceBuilder rule) {
+    public void writeRule(@Nullable GbpAceBuilder rule) {
         if (rule != null) {
             this.rules.add(rule);
         }
     }
 
-    public void writeRules(List<GbpAceBuilder> rules) {
+    public void writeRules(@Nullable List<GbpAceBuilder> rules) {
         if (rules != null) {
             rules.forEach(this::writeRule);
         }
@@ -85,11 +86,12 @@ public abstract class AccessListWrapper {
         }
     }
 
-    public static void removeAclsForInterface(@Nonnull InstanceIdentifier<Node> vppIid, @Nonnull InterfaceKey ifaceKey) {
+    public static void removeAclsForInterface(@Nonnull InstanceIdentifier<Node> vppIid,
+            @Nonnull InterfaceKey ifaceKey) {
         LOG.debug("Removing access-list {}", ifaceKey);
         for (ACE_DIRECTION dir : new ACE_DIRECTION[] {ACE_DIRECTION.INGRESS, ACE_DIRECTION.EGRESS}) {
-            GbpNetconfTransaction.netconfSyncedDelete(vppIid,
-                VppIidFactory.getVppAcl(ifaceKey.getName() + dir), GbpNetconfTransaction.RETRY_COUNT);
+            GbpNetconfTransaction.netconfSyncedDelete(vppIid, VppIidFactory.getVppAcl(ifaceKey.getName() + dir),
+                    GbpNetconfTransaction.RETRY_COUNT);
         }
     }
 

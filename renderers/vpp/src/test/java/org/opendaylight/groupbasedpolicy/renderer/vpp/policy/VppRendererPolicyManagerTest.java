@@ -37,7 +37,6 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.routing.RoutingManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.groupbasedpolicy.test.CustomDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.vbd.impl.transaction.VbdNetconfTransaction;
@@ -51,10 +50,14 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.child.endpoints.ChildEndpointBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.child.endpoints.ChildEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.LocationProviders;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.LocationProvider;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.location.provider.ProviderAddressEndpointLocation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L2BridgeDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L2FloodDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.MacAddressType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicyBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Configuration;
@@ -83,6 +86,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 
 @RunWith(MockitoJUnitRunner.class)
 public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
@@ -90,6 +94,18 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
     private static final InstanceIdentifier<RendererPolicy> RENDERER_POLICY_IID =
             IidFactory.rendererIid(VppRenderer.NAME).child(RendererPolicy.class);
     private final static String SOCKET = "socket";
+    private static final String CLIENT_MAC = "10:00:00:00:00:01";
+    private static final String CLIENT_MAC_2 = "10:00:00:00:00:02";
+    private static final String WEB_MAC = "10:00:00:00:00:01";
+    private static final String WEB_MAC_2 = "10:00:00:00:00:02";
+    private static final String WEB_IP_2 = "20.0.0.2/32";
+    private static final String CLIENT_IP_2 = "10.0.0.2/32";
+    private static final String WEB_IP = "20.0.0.1/32";
+    private static final String CLIENT_IP = "10.0.0.1/32";
+    private static final String CLIENT_1_IFACE_NAME = "client1";
+    private static final String CLIENT_2_IFACE_NAME = "client2";
+    private static final String WEB_2_IFACE_NAME = "web2";
+    private static final String WEB_1_IFACE_NAME = "web1";
 
     private MountedDataBrokerProvider mountedDataProviderMock;
     private DataBroker mountPointDataBroker;
@@ -105,7 +121,6 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
 
     @Override
     public Collection<Class<?>> getClassesFromModules() {
-        //org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.acl.rev161214.access.lists.acl.access.list.entries.ace.matches
         return Arrays.asList(Node.class, VppEndpoint.class, Interfaces.class, BridgeDomains.class,
                 LocationProviders.class, L2FloodDomain.class, VxlanVni.class, TopologyVbridgeAugment.class,
                 TunnelTypeVxlan.class, PhysicalLocationRef.class, AccessLists.class, VppAce.class,
@@ -129,26 +144,23 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, aclManager, dataBroker);
         fwManager.setTimer((byte) 1);
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.put(DtoFactory.VPP_NODE_1_IID,
-                new AbstractMap.SimpleEntry(mountPointDataBroker, new ReentrantLock()));
+                new AbstractMap.SimpleEntry<DataBroker, ReentrantLock>(mountPointDataBroker, new ReentrantLock()));
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.put(DtoFactory.VPP_NODE_2_IID,
-                new AbstractMap.SimpleEntry(mountPointDataBroker, new ReentrantLock()));
+                new AbstractMap.SimpleEntry<DataBroker, ReentrantLock>(mountPointDataBroker, new ReentrantLock()));
     }
 
     @Test
     public void testRendererPolicyChanged_created_oneEpPerEpg() throws Exception {
-        String clientIp = "1.1.1.1/32";
-        String clientIfaceName = "client1";
-        AbsoluteLocation clientLocation = DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, null, clientIfaceName);
+        AbsoluteLocation clientLocation =
+                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, null, CLIENT_1_IFACE_NAME);
         AddressEndpointWithLocation clientEp =
-                DtoFactory.createEndpoint(clientIp, DtoFactory.L2FD_CTX.getValue(), clientLocation);
-        String webIp = "2.2.2.2/32";
-        String webIfaceName = "web1";
-        AbsoluteLocation webLocation = DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, null, webIfaceName);
+                DtoFactory.createEndpoint(CLIENT_IP, CLIENT_MAC, DtoFactory.L2FD_CTX.getValue(), clientLocation);
+        AbsoluteLocation webLocation = DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, null, WEB_1_IFACE_NAME);
         AddressEndpointWithLocation webEp =
-                DtoFactory.createEndpoint(webIp, DtoFactory.L2FD_CTX.getValue(), webLocation);
+                DtoFactory.createEndpoint(WEB_IP, WEB_MAC, DtoFactory.L2FD_CTX.getValue(), webLocation);
 
-        storeVppEndpoint(clientEp.getKey(), clientIfaceName, createVppEndpointIid(clientEp.getKey()));
-        storeVppEndpoint(webEp.getKey(), webIfaceName, createVppEndpointIid(webEp.getKey()));
+        storeVppEndpoint(clientEp.getKey(), CLIENT_MAC, CLIENT_1_IFACE_NAME, createVppEndpointIid(clientEp.getKey()));
+        storeVppEndpoint(webEp.getKey(), WEB_MAC, WEB_1_IFACE_NAME, createVppEndpointIid(webEp.getKey()));
 
         Configuration configuration = DtoFactory.createConfiguration(Arrays.asList(clientEp), Arrays.asList(webEp));
         RendererPolicy rendererPolicy =
@@ -158,9 +170,9 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         vppRendererPolicyManager.rendererPolicyChanged(event);
 
         // assert state on data store behind mount point
-        Interface clientIface = readAndAssertInterface(clientIfaceName);
+        Interface clientIface = readAndAssertInterface(CLIENT_1_IFACE_NAME);
         assertBridgeDomainOnInterface(DtoFactory.L2FD_CTX.getValue(), clientIface);
-        Interface webIface = readAndAssertInterface(webIfaceName);
+        Interface webIface = readAndAssertInterface(WEB_1_IFACE_NAME);
         assertBridgeDomainOnInterface(DtoFactory.L2FD_CTX.getValue(), webIface);
         // assert state on ODL data store
         ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
@@ -168,45 +180,39 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
                 IidFactory.locationProviderIid(VppEndpointLocationProvider.VPP_ENDPOINT_LOCATION_PROVIDER))
             .get();
         Assert.assertTrue(optLocationProvider.isPresent());
-        System.out.println("DEBUGG " + optLocationProvider.get());
         List<ProviderAddressEndpointLocation> epLocs = optLocationProvider.get().getProviderAddressEndpointLocation();
         Assert.assertNotNull(epLocs);
         Assert.assertEquals(2, epLocs.size());
-        assertProviderAddressEndpointLocation(clientEp.getKey(),
-                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, DtoFactory.L2FD_CTX.getValue(), clientIfaceName),
-                epLocs);
-        assertProviderAddressEndpointLocation(webEp.getKey(),
-                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, DtoFactory.L2FD_CTX.getValue(), webIfaceName),
-                epLocs);
+        assertProviderAddressEndpointLocation(clientEp.getKey(), DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID,
+                DtoFactory.L2FD_CTX.getValue(), CLIENT_1_IFACE_NAME), epLocs);
+        assertProviderAddressEndpointLocation(webEp.getKey(), DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID,
+                DtoFactory.L2FD_CTX.getValue(), WEB_1_IFACE_NAME), epLocs);
     }
 
     @Test
     public void testRendererPolicyChanged_update() throws Exception {
-        String client1IfaceName = "client1";
         AbsoluteLocation client1LocationNodeNull =
-                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, null, client1IfaceName);
-        AddressEndpointWithLocation client1Ep =
-                DtoFactory.createEndpoint("10.0.0.1/32", DtoFactory.L2FD_CTX.getValue(), client1LocationNodeNull);
-        String web1IfaceName = "web1";
+                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, null, CLIENT_1_IFACE_NAME);
+        AddressEndpointWithLocation client1Ep = DtoFactory.createEndpoint(CLIENT_IP, CLIENT_MAC,
+                DtoFactory.L2FD_CTX.getValue(), client1LocationNodeNull);
         AbsoluteLocation web1LocationNodeNull =
-                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID, null, web1IfaceName);
+                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID, null, WEB_1_IFACE_NAME);
         AddressEndpointWithLocation web1Ep =
-                DtoFactory.createEndpoint("20.0.0.1/32", DtoFactory.L2FD_CTX.getValue(), web1LocationNodeNull);
-        String client2IfaceName = "client2";
+                DtoFactory.createEndpoint(WEB_IP, WEB_MAC, DtoFactory.L2FD_CTX.getValue(), web1LocationNodeNull);
         AbsoluteLocation client2LocationNodeNull =
-                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, null, client2IfaceName);
-        AddressEndpointWithLocation client2Ep =
-                DtoFactory.createEndpoint("10.0.0.2/32", DtoFactory.L2FD_CTX.getValue(), client2LocationNodeNull);
-        String web2IfaceName = "web2";
+                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, null, CLIENT_2_IFACE_NAME);
+        AddressEndpointWithLocation client2Ep = DtoFactory.createEndpoint(CLIENT_IP_2, CLIENT_MAC_2,
+                DtoFactory.L2FD_CTX.getValue(), client2LocationNodeNull);
         AbsoluteLocation web2LocationNodeNull =
-                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID, null, web2IfaceName);
+                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID, null, WEB_2_IFACE_NAME);
         AddressEndpointWithLocation web2Ep =
-                DtoFactory.createEndpoint("20.0.0.2/32", DtoFactory.L2FD_CTX.getValue(), web2LocationNodeNull);
+                DtoFactory.createEndpoint(WEB_IP_2, WEB_MAC_2, DtoFactory.L2FD_CTX.getValue(), web2LocationNodeNull);
 
-        storeVppEndpoint(client1Ep.getKey(), client1IfaceName, createVppEndpointIid(client1Ep.getKey()));
-        storeVppEndpoint(web1Ep.getKey(), web1IfaceName, createVppEndpointIid(web1Ep.getKey()));
-        storeVppEndpoint(client2Ep.getKey(), client2IfaceName, createVppEndpointIid(client2Ep.getKey()));
-        storeVppEndpoint(web2Ep.getKey(), web2IfaceName, createVppEndpointIid(web2Ep.getKey()));
+        storeVppEndpoint(client1Ep.getKey(), CLIENT_MAC, CLIENT_1_IFACE_NAME, createVppEndpointIid(client1Ep.getKey()));
+        storeVppEndpoint(web1Ep.getKey(), WEB_MAC, WEB_1_IFACE_NAME, createVppEndpointIid(web1Ep.getKey()));
+        storeVppEndpoint(client2Ep.getKey(), CLIENT_MAC_2, CLIENT_2_IFACE_NAME,
+                createVppEndpointIid(client2Ep.getKey()));
+        storeVppEndpoint(web2Ep.getKey(), WEB_MAC_2, WEB_2_IFACE_NAME, createVppEndpointIid(web2Ep.getKey()));
 
         Configuration configuration =
                 DtoFactory.createConfiguration(Arrays.asList(client1Ep, client2Ep), Arrays.asList(web1Ep, web2Ep));
@@ -217,13 +223,13 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         vppRendererPolicyManager.rendererPolicyChanged(event);
 
         // assert state on data store behind mount point ######################################
-        Interface client1Iface = readAndAssertInterface(client1IfaceName);
+        Interface client1Iface = readAndAssertInterface(CLIENT_1_IFACE_NAME);
         assertBridgeDomainOnInterface(DtoFactory.L2FD_CTX.getValue(), client1Iface);
-        Interface web1Iface = readAndAssertInterface(web1IfaceName);
+        Interface web1Iface = readAndAssertInterface(WEB_1_IFACE_NAME);
         assertBridgeDomainOnInterface(DtoFactory.L2FD_CTX.getValue(), web1Iface);
-        Interface client2Iface = readAndAssertInterface(client2IfaceName);
+        Interface client2Iface = readAndAssertInterface(CLIENT_2_IFACE_NAME);
         assertBridgeDomainOnInterface(DtoFactory.L2FD_CTX.getValue(), client2Iface);
-        Interface web2Iface = readAndAssertInterface(web2IfaceName);
+        Interface web2Iface = readAndAssertInterface(WEB_2_IFACE_NAME);
         assertBridgeDomainOnInterface(DtoFactory.L2FD_CTX.getValue(), web2Iface);
         // assert state on ODL data store
         ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
@@ -235,23 +241,21 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         Assert.assertNotNull(epLocs);
         Assert.assertEquals(4, epLocs.size());
         assertProviderAddressEndpointLocation(client1Ep.getKey(), DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID,
-                DtoFactory.L2FD_CTX.getValue(), client1IfaceName), epLocs);
-        assertProviderAddressEndpointLocation(web1Ep.getKey(),
-                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID, DtoFactory.L2FD_CTX.getValue(), web1IfaceName),
-                epLocs);
+                DtoFactory.L2FD_CTX.getValue(), CLIENT_1_IFACE_NAME), epLocs);
+        assertProviderAddressEndpointLocation(web1Ep.getKey(), DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID,
+                DtoFactory.L2FD_CTX.getValue(), WEB_1_IFACE_NAME), epLocs);
         assertProviderAddressEndpointLocation(client2Ep.getKey(), DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID,
-                DtoFactory.L2FD_CTX.getValue(), client2IfaceName), epLocs);
-        assertProviderAddressEndpointLocation(web2Ep.getKey(),
-                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID, DtoFactory.L2FD_CTX.getValue(), web2IfaceName),
-                epLocs);
+                DtoFactory.L2FD_CTX.getValue(), CLIENT_2_IFACE_NAME), epLocs);
+        assertProviderAddressEndpointLocation(web2Ep.getKey(), DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID,
+                DtoFactory.L2FD_CTX.getValue(), WEB_2_IFACE_NAME), epLocs);
         // #####################################################################################
 
         AbsoluteLocation client1Location = DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID,
-                DtoFactory.L2FD_CTX.getValue(), client1IfaceName);
-        AbsoluteLocation web1Location =
-                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID, DtoFactory.L2FD_CTX.getValue(), web1IfaceName);
-        AbsoluteLocation web2Location =
-                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID, DtoFactory.L2FD_CTX.getValue(), web2IfaceName);
+                DtoFactory.L2FD_CTX.getValue(), CLIENT_1_IFACE_NAME);
+        AbsoluteLocation web1Location = DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID,
+                DtoFactory.L2FD_CTX.getValue(), WEB_1_IFACE_NAME);
+        AbsoluteLocation web2Location = DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID,
+                DtoFactory.L2FD_CTX.getValue(), WEB_2_IFACE_NAME);
         configuration = DtoFactory.createConfiguration(
                 Arrays.asList(new AddressEndpointWithLocationBuilder(client1Ep).setAbsoluteLocation(client1Location)
                     .build(),
@@ -267,13 +271,13 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         vppRendererPolicyManager.rendererPolicyChanged(event2);
 
         // assert state on data store behind mount point ######################################
-        client1Iface = readAndAssertInterface(client1IfaceName);
+        client1Iface = readAndAssertInterface(CLIENT_1_IFACE_NAME);
         assertBridgeDomainOnInterface(DtoFactory.L2FD_CTX.getValue(), client1Iface);
-        web1Iface = readAndAssertInterface(web1IfaceName);
+        web1Iface = readAndAssertInterface(WEB_1_IFACE_NAME);
         assertBridgeDomainOnInterface(DtoFactory.L2FD_CTX.getValue(), web1Iface);
-        client2Iface = readAndAssertInterface(client2IfaceName);
+        client2Iface = readAndAssertInterface(CLIENT_2_IFACE_NAME);
         assertBridgeDomainOnInterface(DtoFactory.L2FD_CTX.getValue(), client2Iface);
-        web2Iface = readAndAssertInterface(web2IfaceName);
+        web2Iface = readAndAssertInterface(WEB_2_IFACE_NAME);
         assertBridgeDomainOnInterface(DtoFactory.L2FD_CTX.getValue(), web2Iface);
         // assert state on ODL data store
         rTx = dataBroker.newReadOnlyTransaction();
@@ -285,19 +289,17 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         Assert.assertNotNull(epLocs);
         Assert.assertEquals(4, epLocs.size());
         assertProviderAddressEndpointLocation(client1Ep.getKey(), DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID,
-                DtoFactory.L2FD_CTX.getValue(), client1IfaceName), epLocs);
-        assertProviderAddressEndpointLocation(web1Ep.getKey(),
-                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID, DtoFactory.L2FD_CTX.getValue(), web1IfaceName),
-                epLocs);
+                DtoFactory.L2FD_CTX.getValue(), CLIENT_1_IFACE_NAME), epLocs);
+        assertProviderAddressEndpointLocation(web1Ep.getKey(), DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID,
+                DtoFactory.L2FD_CTX.getValue(), WEB_1_IFACE_NAME), epLocs);
         assertProviderAddressEndpointLocation(client2Ep.getKey(), DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID,
-                DtoFactory.L2FD_CTX.getValue(), client2IfaceName), epLocs);
-        assertProviderAddressEndpointLocation(web2Ep.getKey(),
-                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID, DtoFactory.L2FD_CTX.getValue(), web2IfaceName),
-                epLocs);
+                DtoFactory.L2FD_CTX.getValue(), CLIENT_2_IFACE_NAME), epLocs);
+        assertProviderAddressEndpointLocation(web2Ep.getKey(), DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID,
+                DtoFactory.L2FD_CTX.getValue(), WEB_2_IFACE_NAME), epLocs);
         // #####################################################################################
 
         AbsoluteLocation client2Location = DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID,
-                DtoFactory.L2FD_CTX.getValue(), client2IfaceName);
+                DtoFactory.L2FD_CTX.getValue(), CLIENT_2_IFACE_NAME);
         configuration = DtoFactory.createConfiguration(
                 Arrays.asList(new AddressEndpointWithLocationBuilder(client1Ep).setAbsoluteLocation(client1Location)
                     .build(),
@@ -312,13 +314,13 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         vppRendererPolicyManager.rendererPolicyChanged(event3);
 
         // assert state on data store behind mount point ######################################
-        client1Iface = readAndAssertInterface(client1IfaceName);
+        client1Iface = readAndAssertInterface(CLIENT_1_IFACE_NAME);
         assertBridgeDomainOnInterface(DtoFactory.L2FD_CTX.getValue(), client1Iface);
-        web1Iface = readAndAssertInterface(web1IfaceName);
+        web1Iface = readAndAssertInterface(WEB_1_IFACE_NAME);
         assertBridgeDomainOnInterface(DtoFactory.L2FD_CTX.getValue(), web1Iface);
-        client2Iface = readAndAssertInterface(client2IfaceName);
+        client2Iface = readAndAssertInterface(CLIENT_2_IFACE_NAME);
         assertBridgeDomainOnInterface(DtoFactory.L2FD_CTX.getValue(), client2Iface);
-        web2Iface = readAndAssertInterface(web2IfaceName);
+        web2Iface = readAndAssertInterface(WEB_2_IFACE_NAME);
         assertBridgeDomainOnInterface(DtoFactory.L2FD_CTX.getValue(), web2Iface);
         // assert state on ODL data store
         rTx = dataBroker.newReadOnlyTransaction();
@@ -330,15 +332,13 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         Assert.assertNotNull(epLocs);
         Assert.assertEquals(4, epLocs.size());
         assertProviderAddressEndpointLocation(client1Ep.getKey(), DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID,
-                DtoFactory.L2FD_CTX.getValue(), client1IfaceName), epLocs);
-        assertProviderAddressEndpointLocation(web1Ep.getKey(),
-                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID, DtoFactory.L2FD_CTX.getValue(), web1IfaceName),
-                epLocs);
+                DtoFactory.L2FD_CTX.getValue(), CLIENT_1_IFACE_NAME), epLocs);
+        assertProviderAddressEndpointLocation(web1Ep.getKey(), DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID,
+                DtoFactory.L2FD_CTX.getValue(), WEB_1_IFACE_NAME), epLocs);
         assertProviderAddressEndpointLocation(client2Ep.getKey(), DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID,
-                DtoFactory.L2FD_CTX.getValue(), client2IfaceName), epLocs);
-        assertProviderAddressEndpointLocation(web2Ep.getKey(),
-                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID, DtoFactory.L2FD_CTX.getValue(), web2IfaceName),
-                epLocs);
+                DtoFactory.L2FD_CTX.getValue(), CLIENT_2_IFACE_NAME), epLocs);
+        assertProviderAddressEndpointLocation(web2Ep.getKey(), DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_2_IID,
+                DtoFactory.L2FD_CTX.getValue(), WEB_2_IFACE_NAME), epLocs);
         // #####################################################################################
     }
 
@@ -387,10 +387,14 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         }
     }
 
-    private void storeVppEndpoint(AddressEndpointWithLocationKey clientEp, String ifaceName,
+    private void storeVppEndpoint(AddressEndpointWithLocationKey clientEp, String mac, String ifaceName,
             InstanceIdentifier<VppEndpoint> vppEpIid) {
-        AddressEndpoint addrEp = new AddressEndpointBuilder().setKey(new AddressEndpointKey(clientEp.getAddress(),
-                clientEp.getAddressType(), clientEp.getContextId(), clientEp.getContextType()))
+        AddressEndpoint addrEp = new AddressEndpointBuilder()
+            .setKey(new AddressEndpointKey(clientEp.getAddress(), clientEp.getAddressType(), clientEp.getContextId(),
+                    clientEp.getContextType()))
+            .setChildEndpoint(Lists.newArrayList(new ChildEndpointBuilder()
+                .setKey(new ChildEndpointKey(mac, MacAddressType.class, clientEp.getContextId(), L2BridgeDomain.class))
+                .build()))
             .build();
         InstanceIdentifier<AddressEndpoint> iid = InstanceIdentifier.create(Endpoints.class)
             .child(AddressEndpoints.class)
@@ -403,10 +407,10 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
             e.printStackTrace();
         }
 
-        VppEndpoint vhostEp = new VppEndpointBuilder().setAddress(clientEp.getAddress())
-            .setAddressType(clientEp.getAddressType())
+        VppEndpoint vhostEp = new VppEndpointBuilder().setAddress(mac)
+            .setAddressType(MacAddressType.class)
             .setContextId(clientEp.getContextId())
-            .setContextType(clientEp.getContextType())
+            .setContextType(L2BridgeDomain.class)
             .setVppInterfaceName(ifaceName)
             .setVppNodeId(DtoFactory.VPP_NODE_1_IID.firstKeyOf(Node.class).getNodeId())
             .setInterfaceTypeChoice(new VhostUserCaseBuilder().setSocket(SOCKET).build())

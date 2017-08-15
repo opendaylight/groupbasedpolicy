@@ -10,7 +10,9 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.iface;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
@@ -26,6 +28,9 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.test.CustomDataBrokerTest;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.access.control.list.rev160708.access.lists.acl.access.list.entries.Ace;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.access.control.list.rev160708.access.lists.acl.access.list.entries.AceBuilder;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.access.control.list.rev160708.access.lists.acl.access.list.entries.AceKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.Endpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.AddressEndpoints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpoint;
@@ -110,12 +115,9 @@ public class VppEndpointLocationProviderTest extends CustomDataBrokerTest {
 
     /**
      * Two L3 endpoints use the same L2 endpoint.
-     *
      * L3 <-> L2 <-> L3
-     *
      * This is an Openstack CI use case, when metadata service and DHCP service
      * can be reached via the same port.
-     *
      * This should result in 2 absolute locations which keys are derived from L3
      * endpoints.
      */
@@ -127,7 +129,6 @@ public class VppEndpointLocationProviderTest extends CustomDataBrokerTest {
     /**
      * There are two data sources from which location is resolved:
      * {@link AddressEndpoint} and {@link VppEndpoint}
-     *
      * Here the order of events is swapped, i.e. vpp endpoint is written
      * prior to address endpoint into the datastore.
      */
@@ -162,7 +163,6 @@ public class VppEndpointLocationProviderTest extends CustomDataBrokerTest {
     /**
      * This is a regular use case with one to one mapping between L2 endpoint
      * and L3 endpoint.
-     *
      * As a result one location should be created which key is derived from
      * L2 endpoint.
      */
@@ -190,7 +190,7 @@ public class VppEndpointLocationProviderTest extends CustomDataBrokerTest {
         List<ProviderAddressEndpointLocation> locations = readLocations();
         Assert.assertEquals(locations.size(), 1);
         ProviderAddressEndpointLocation location = locations.get(0);
-        Assert.assertTrue(location.getKey().equals(getLocationKey(MAC_KEY_23_45)));
+        Assert.assertTrue(location.getKey().equals(getLocationKey(IP_KEY_1_22)));
         assertNodeConnector(location.getAbsoluteLocation(), INTF_NAME);
         assertMountPoint(location.getAbsoluteLocation(), NODE_1);
     }
@@ -202,7 +202,7 @@ public class VppEndpointLocationProviderTest extends CustomDataBrokerTest {
      * removed --> no location should be present in datastore
      */
     @Test
-    public void lifecycleTest() {
+    public void testLifecycle() {
         AddressEndpointBuilder child = new AddressEndpointBuilder().setKey(MAC_KEY_23_45);
         setParentEndpoints(child, IP_KEY_1_22);
         AddressEndpointBuilder firstParent = new AddressEndpointBuilder().setKey(IP_KEY_1_22);
@@ -213,7 +213,7 @@ public class VppEndpointLocationProviderTest extends CustomDataBrokerTest {
         List<ProviderAddressEndpointLocation> locations = readLocations();
         Assert.assertEquals(1, locations.size());
         ProviderAddressEndpointLocation location = locations.get(0);
-        Assert.assertTrue(location.getKey().equals(getLocationKey(MAC_KEY_23_45)));
+        Assert.assertTrue(location.getKey().equals(getLocationKey(IP_KEY_1_22)));
         assertNodeConnector(location.getAbsoluteLocation(), INTF_NAME);
         assertMountPoint(location.getAbsoluteLocation(), NODE_1);
         AddressEndpointBuilder secondParent = new AddressEndpointBuilder().setKey(IP_KEY_2_22);
@@ -237,7 +237,7 @@ public class VppEndpointLocationProviderTest extends CustomDataBrokerTest {
         locations = readLocations();
         Assert.assertEquals(1, locations.size());
         locations.forEach(loc -> {
-            Assert.assertTrue(loc.getKey().equals(getLocationKey(MAC_KEY_23_45)));
+            Assert.assertTrue(loc.getKey().equals(getLocationKey(IP_KEY_1_22)));
             assertNodeConnector(loc.getAbsoluteLocation(), INTF_NAME);
             assertMountPoint(loc.getAbsoluteLocation(), NODE_1);
         });
@@ -267,28 +267,21 @@ public class VppEndpointLocationProviderTest extends CustomDataBrokerTest {
         List<ProviderAddressEndpointLocation> locations = readLocations();
         Assert.assertEquals(1, locations.size());
         List<ExternalLocation> extLocs = locations.get(0).getRelativeLocations().getExternalLocation();
-        Assert.assertEquals(1,
-                extLocs.stream().filter(extLoc -> extLoctoNodeId.apply(extLoc).equals(NODE_1)).count());
-        Assert.assertEquals(1,
-                extLocs.stream().filter(extLoc -> extLoctoNodeId.apply(extLoc).equals(NODE_2)).count());
-        Assert.assertEquals(2, extLocs.stream()
-            .filter(extLoc -> extLoc.getExternalNodeConnector().contains(INTF_NAME))
-            .count());
+        Assert.assertEquals(1, extLocs.stream().filter(extLoc -> extLoctoNodeId.apply(extLoc).equals(NODE_1)).count());
+        Assert.assertEquals(1, extLocs.stream().filter(extLoc -> extLoctoNodeId.apply(extLoc).equals(NODE_2)).count());
+        Assert.assertEquals(2,
+                extLocs.stream().filter(extLoc -> extLoc.getExternalNodeConnector().contains(INTF_NAME)).count());
     }
 
     /**
      * Metadata use case in Openstack HA scenarios
-     *
      * A DHCP pot is created on each of three controller nodes. Metadata service can be reached
      * through any of the ports. This results in GBP into following endpoint configuration:
-     *
      * L3(DHCP1) <-> L2(1) <-> L3(METADATA)
      * L3(DHCP2) <-> L2(2) <-> L3(METADATA)
      * L3(DHCP3) <-> L2(3) <-> L3(METADATA)
-     *
      * Notice that Metadata endpoint has three L2 childs. Every L2 endpoint has two parents,
      * Metadata endpoint and L3 endpoint.
-     *
      * Locations created:
      * Metadata -> relative location with three l2 items, key is derived from L3 address
      * DHCP(x) -> absolute location, key is derived from L3 address
@@ -416,7 +409,6 @@ public class VppEndpointLocationProviderTest extends CustomDataBrokerTest {
         return new ChildEndpointKey(key.getAddress(), key.getAddressType(), key.getContextId(), key.getContextType());
     }
 
-
     private static VppEndpoint vppEndpointBuilder(VppEndpointKey vppEpKey, NodeId nodeId, String interfaceName) {
         final VppEndpointBuilder vppEndpointBuilder = new VppEndpointBuilder();
         vppEndpointBuilder.setKey(vppEpKey).setVppNodeId(nodeId).setVppInterfaceName(interfaceName);
@@ -468,7 +460,8 @@ public class VppEndpointLocationProviderTest extends CustomDataBrokerTest {
 
     @Override
     public Collection<Class<?>> getClassesFromModules() {
-        return ImmutableList.<Class<?>>of(Endpoints.class, Config.class, LocationProviders.class, AddressEndpoints.class, MacAddressType.class, IpPrefixType.class);
+        return ImmutableList.<Class<?>>of(Endpoints.class, Config.class, LocationProviders.class,
+                AddressEndpoints.class, MacAddressType.class, IpPrefixType.class);
     }
 
     private void submitEndpointsToDatastore(AddressEndpoint... endpoints) {

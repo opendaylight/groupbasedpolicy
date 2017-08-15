@@ -14,15 +14,14 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import org.opendaylight.controller.md.sal.binding.api.BindingTransactionChain;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionChain;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionChainListener;
-import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
+import org.opendaylight.groupbasedpolicy.util.SyncedChain;
+import org.opendaylight.groupbasedpolicy.util.SyncedChain;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.PhysAddress;
@@ -66,7 +65,9 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+
 public class PortHandler implements TransactionChainListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(PortHandler.class);
@@ -84,20 +85,18 @@ public class PortHandler implements TransactionChainListener {
     static final String DEFAULT_NODE = "default";
 
     private final NodeId routingNode;
-    private BindingTransactionChain transactionChain;
+    private SyncedChain syncedChain;
     private DataBroker dataBroker;
 
     PortHandler(DataBroker dataBroker, NodeId routingNodeId) {
         this.dataBroker = dataBroker;
         this.routingNode = routingNodeId;
-        transactionChain = this.dataBroker.createTransactionChain(this);
+        this.syncedChain = new SyncedChain(Preconditions.checkNotNull(dataBroker.createTransactionChain(this)));
     }
 
     void processCreated(Port port) {
-        ReadOnlyTransaction rTx = transactionChain.newReadOnlyTransaction();
-        Optional<BaseEndpointByPort> optBaseEpByPort = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
-                createBaseEpByPortIid(port.getUuid()), rTx);
-        rTx.close();
+        Optional<BaseEndpointByPort> optBaseEpByPort =
+                syncedChain.readFromDs(LogicalDatastoreType.OPERATIONAL, createBaseEpByPortIid(port.getUuid()));
         if (!optBaseEpByPort.isPresent()) {
             return;
         }
@@ -105,10 +104,8 @@ public class PortHandler implements TransactionChainListener {
     }
 
     void processCreated(BaseEndpointByPort bebp) {
-        ReadOnlyTransaction rTx = transactionChain.newReadOnlyTransaction();
-        Optional<Port> optPort = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
-                createPortIid(bebp.getPortId()), rTx);
-        rTx.close();
+        Optional<Port> optPort =
+                syncedChain.readFromDs(LogicalDatastoreType.CONFIGURATION, createPortIid(bebp.getPortId()));
         if (!optPort.isPresent()) {
             return;
         }
@@ -150,29 +147,27 @@ public class PortHandler implements TransactionChainListener {
     }
 
     void processUpdated(Port original, Port delta) {
-        if (!isUpdateNeeded(original, delta)){
-            LOG.trace("Port update skipped, port didn`t change. before {}, after: {}" , original, delta);
+        if (!isUpdateNeeded(original, delta)) {
+            LOG.trace("Port update skipped, port didn`t change. before {}, after: {}", original, delta);
             return;
         }
 
-        LOG.trace("Updating port before: {}, after: {}" , original, delta);
+        LOG.trace("Updating port before: {}, after: {}", original, delta);
         if (isValidVhostUser(original)) {
-            ReadOnlyTransaction rTx = transactionChain.newReadOnlyTransaction();
-            Optional<BaseEndpointByPort> optBebp = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,
-                    createBaseEpByPortIid(original.getUuid()), rTx);
-            rTx.close();
+            Optional<BaseEndpointByPort> optBebp =
+                    syncedChain.readFromDs(LogicalDatastoreType.OPERATIONAL, createBaseEpByPortIid(original.getUuid()));
             if (!optBebp.isPresent()) {
                 return;
             }
-            LOG.trace("Updating port - deleting old port {}" , optBebp.get().getPortId());
+            LOG.trace("Updating port - deleting old port {}", optBebp.get().getPortId());
             processDeleted(optBebp.get());
         }
-        LOG.trace("Updating port - creating new port {}" , delta.getUuid());
+        LOG.trace("Updating port - creating new port {}", delta.getUuid());
         processCreated(delta);
     }
 
     private boolean isUpdateNeeded(final Port oldPort, final Port newPort) {
-        //TODO fix this to better support update of ports for VPP
+        // TODO fix this to better support update of ports for VPP
         final PortBindingExtension oldPortAugmentation = oldPort.getAugmentation(PortBindingExtension.class);
         final PortBindingExtension newPortAugmentation = newPort.getAugmentation(PortBindingExtension.class);
 
@@ -187,12 +182,15 @@ public class PortHandler implements TransactionChainListener {
         final String newVifType = newPortAugmentation.getVifType();
 
         // TODO potential bug here
-        // Temporary change for Openstack Mitaka: If old neutron-binding:vif-type is vhost, new one is unbound and
-        // device owner is ROUTER_OWNER, skip update. Openstack (or ml2) sometimes sends router update messages in
+        // Temporary change for Openstack Mitaka: If old neutron-binding:vif-type is vhost, new one
+        // is unbound and
+        // device owner is ROUTER_OWNER, skip update. Openstack (or ml2) sometimes sends router
+        // update messages in
         // incorrect order which causes unwanted port removal
-        if (oldVifType.equals(VHOST_USER) && newVifType.equals(UNBOUND) && oldDeviceOwner != null &&
-                ROUTER_OWNER.equals(oldDeviceOwner) && ROUTER_OWNER.equals(newDeviceOwner)) {
-            LOG.warn("Port vif-type was updated from vhost to unbound. This update is currently disabled and will be skipped");
+        if (oldVifType.equals(VHOST_USER) && newVifType.equals(UNBOUND) && oldDeviceOwner != null
+                && ROUTER_OWNER.equals(oldDeviceOwner) && ROUTER_OWNER.equals(newDeviceOwner)) {
+            LOG.warn(
+                    "Port vif-type was updated from vhost to unbound. This update is currently disabled and will be skipped");
             return false;
         }
 
@@ -203,13 +201,13 @@ public class PortHandler implements TransactionChainListener {
 
         final List<VifDetails> vifDetails = oldPortAugmentation.getVifDetails();
 
-        if (!oldPortAugmentation.getHostId().equals(newPortAugmentation.getHostId()) ||
-            nullToEmpty(vifDetails).size() != nullToEmpty(newPortAugmentation.getVifDetails()).size()) {
+        if (!oldPortAugmentation.getHostId().equals(newPortAugmentation.getHostId())
+                || nullToEmpty(vifDetails).size() != nullToEmpty(newPortAugmentation.getVifDetails()).size()) {
             return true;
         }
 
         for (VifDetails vifDetail : nullToEmpty(vifDetails)) {
-            //check if vhostuser_socket, vhostuser_mode and port_filter are changed
+            // check if vhostuser_socket, vhostuser_mode and port_filter are changed
             if (!newPortAugmentation.getVifDetails().contains(vifDetail))
                 return true;
         }
@@ -217,13 +215,11 @@ public class PortHandler implements TransactionChainListener {
     }
 
     void processDeleted(BaseEndpointByPort bebp) {
-        LOG.trace("Deleting vpp-endpoint by BaseEndpointByPort {}" , bebp);
+        LOG.trace("Deleting vpp-endpoint by BaseEndpointByPort {}", bebp);
         VppEndpointKey vppEpKey = new VppEndpointKey(bebp.getAddress(), bebp.getAddressType(), bebp.getContextId(),
                 bebp.getContextType());
         InstanceIdentifier<VppEndpoint> vppEpIid = createVppEndpointIid(vppEpKey);
-        ReadOnlyTransaction rTx = transactionChain.newReadOnlyTransaction();
-        Optional<VppEndpoint> readVppEp = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, vppEpIid, rTx);
-        rTx.close();
+        Optional<VppEndpoint> readVppEp = syncedChain.readFromDs(LogicalDatastoreType.CONFIGURATION, vppEpIid);
         if (readVppEp.isPresent()) {
             writeVppEndpoint(vppEpIid, null);
             LOG.debug("Deleted vpp-endpoint {}", vppEpKey);
@@ -231,13 +227,13 @@ public class PortHandler implements TransactionChainListener {
     }
 
     private synchronized void writeVppEndpoint(InstanceIdentifier<VppEndpoint> vppEpIid, VppEndpoint vppEp) {
-        WriteTransaction wTx = transactionChain.newWriteOnlyTransaction();
+        WriteTransaction wTx = syncedChain.newWriteOnlyTransaction();
         if (vppEp != null) {
             wTx.put(LogicalDatastoreType.CONFIGURATION, vppEpIid, vppEp, true);
         } else {
             wTx.delete(LogicalDatastoreType.CONFIGURATION, vppEpIid);
         }
-        wTx.submit();
+        syncedChain.submitNow(wTx);
     }
 
     @VisibleForTesting
@@ -269,8 +265,8 @@ public class PortHandler implements TransactionChainListener {
 
         } else if (isValidQRouterPort(port)) {
             TapCase tapCase = new TapCaseBuilder().setPhysicalAddress(new PhysAddress(port.getMacAddress().getValue()))
-                    .setName(createQRouterPortName(port.getUuid()))
-                    .build();
+                .setName(createQRouterPortName(port.getUuid()))
+                .build();
             vppEpBuilder.setInterfaceTypeChoice(tapCase);
             vppEpBuilder.addAugmentation(ExcludeFromPolicy.class, excludeFromPolicy);
 
@@ -282,10 +278,8 @@ public class PortHandler implements TransactionChainListener {
                 vppEpBuilder.setVppNodeId(routingNode);
             } else if (port.getDeviceId() != null) {
                 LOG.debug("Resolving host-id for unbound router port {}", port.getUuid());
-                ReadOnlyTransaction readTx = dataBroker.newReadOnlyTransaction();
-                Optional<Ports> optPorts = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
-                        InstanceIdentifier.builder(Neutron.class).child(Ports.class).build(), readTx);
-                readTx.close();
+                Optional<Ports> optPorts = syncedChain.readFromDs(LogicalDatastoreType.CONFIGURATION,
+                        InstanceIdentifier.builder(Neutron.class).child(Ports.class).build());
                 if (optPorts.isPresent() && optPorts.get().getPort() != null) {
                     java.util.Optional<Port> optPortOnTheSameNode = optPorts.get()
                         .getPort()
@@ -324,18 +318,16 @@ public class PortHandler implements TransactionChainListener {
     }
 
     private LoopbackCase getLoopbackCase(Port port) {
-        LoopbackCaseBuilder loopbackCase = new LoopbackCaseBuilder()
-            .setPhysAddress(new PhysAddress(port.getMacAddress().getValue()));
+        LoopbackCaseBuilder loopbackCase =
+                new LoopbackCaseBuilder().setPhysAddress(new PhysAddress(port.getMacAddress().getValue()));
         Optional<FixedIps> fixedIpsOptional = resolveFirstFixedIps(port);
-        if(fixedIpsOptional.isPresent() && fixedIpsOptional.get().getIpAddress() != null){
+        if (fixedIpsOptional.isPresent() && fixedIpsOptional.get().getIpAddress() != null) {
             loopbackCase.setIpAddress(fixedIpsOptional.get().getIpAddress());
-            ReadOnlyTransaction rTx = transactionChain.newReadOnlyTransaction();
-            Optional<Subnet> subnetOptional =
-                DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
+            Optional<Subnet> subnetOptional = syncedChain.readFromDs(LogicalDatastoreType.CONFIGURATION,
                     InstanceIdentifier.builder(Neutron.class)
                         .child(Subnets.class)
                         .child(Subnet.class, new SubnetKey(fixedIpsOptional.get().getSubnetId()))
-                        .build(), rTx);
+                        .build());
             if (subnetOptional.isPresent()) {
                 Ipv4Prefix ipv4Prefix = subnetOptional.get().getCidr().getIpv4Prefix();
                 loopbackCase.setIpPrefix(new IpPrefix(ipv4Prefix));
@@ -359,14 +351,12 @@ public class PortHandler implements TransactionChainListener {
      */
     private boolean isValidQRouterPort(Port port) {
         Optional<Router> optRouter = getRouterOptional(port);
-        return !optRouter.isPresent() && port.getDeviceOwner().contains(ROUTER_OWNER)
-                && port.getMacAddress() != null;
+        return !optRouter.isPresent() && port.getDeviceOwner().contains(ROUTER_OWNER) && port.getMacAddress() != null;
     }
 
     private boolean isValidVppRouterPort(Port port) {
         Optional<Router> optRouter = getRouterOptional(port);
-        return optRouter.isPresent() && port.getDeviceOwner().contains(ROUTER_OWNER)
-            && port.getMacAddress() != null;
+        return optRouter.isPresent() && port.getDeviceOwner().contains(ROUTER_OWNER) && port.getMacAddress() != null;
     }
 
     private Optional<Router> getRouterOptional(Port port) {
@@ -380,13 +370,9 @@ public class PortHandler implements TransactionChainListener {
             // port.getDeviceId() may not match Uuid.PATTERN_CONSTANTS
             return Optional.absent();
         }
-        ReadOnlyTransaction rTx = transactionChain.newReadOnlyTransaction();
-        InstanceIdentifier<Router> routerIid = InstanceIdentifier.builder(Neutron.class)
-            .child(Routers.class)
-            .child(Router.class, routerKey)
-            .build();
-        Optional<Router> optRouter = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, routerIid, rTx);
-        rTx.close();
+        InstanceIdentifier<Router> routerIid =
+                InstanceIdentifier.builder(Neutron.class).child(Routers.class).child(Router.class, routerKey).build();
+        Optional<Router> optRouter = syncedChain.readFromDs(LogicalDatastoreType.CONFIGURATION, routerIid);
         return optRouter;
     }
 
@@ -453,8 +439,8 @@ public class PortHandler implements TransactionChainListener {
             Throwable cause) {
         LOG.error("Transaction chain failed. {} \nTransaction which caused the chain to fail {}", cause.getMessage(),
                 transaction, cause);
-        transactionChain.close();
-        transactionChain = dataBroker.createTransactionChain(this);
+        syncedChain.closeChain();
+        this.syncedChain = new SyncedChain(Preconditions.checkNotNull(dataBroker.createTransactionChain(this)));
     }
 
     @Override

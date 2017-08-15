@@ -34,10 +34,16 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.child.endpoints.ChildEndpointBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.child.endpoints.ChildEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.LocationProviders;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.LocationProvider;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.location.provider.ProviderAddressEndpointLocation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.IpPrefixType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L2BridgeDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.L3Context;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev160427.MacAddressType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.AddressType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.ContextType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
@@ -56,10 +62,12 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 public class InterfaceManagerTest extends CustomDataBrokerTest {
 
     private final static String ADDRESS = "1.1.1.1/32";
+    private final static String MAC_ADDRESS = "00:11:22:33:44:55:66";
     private final static ContextId CONTEXT_ID = new ContextId("ctx1");
     private final static String IFACE_NAME = "ifaceName1";
     private final static VppEndpointKey BASIC_VPP_EP_KEY =
@@ -77,7 +85,7 @@ public class InterfaceManagerTest extends CustomDataBrokerTest {
     @Override
     public Collection<Class<?>> getClassesFromModules() {
         return Arrays.asList(Node.class, VppEndpoint.class, Interfaces.class, BridgeDomains.class,
-                LocationProviders.class);
+                LocationProviders.class, IpPrefixType.class, MacAddressType.class);
     }
 
     @Before
@@ -95,8 +103,11 @@ public class InterfaceManagerTest extends CustomDataBrokerTest {
     public void testVppEndpointChanged_created() throws Exception {
         VppEndpointLocationProvider vppEpLocProvider = new VppEndpointLocationProvider(dataBroker);
         AddressEndpoint addrEp = new AddressEndpointBuilder()
-            .setKey(new AddressEndpointKey(vhostVppEpBuilder().getAddress(), vhostVppEpBuilder().getAddressType(),
-                    vhostVppEpBuilder().getContextId(), vhostVppEpBuilder().getContextType()))
+            .setKey(new AddressEndpointKey("1.1.1.1/32", IpPrefixType.class, CONTEXT_ID, L3Context.class))
+            .setChildEndpoint(Lists.newArrayList(new ChildEndpointBuilder()
+                .setKey(new ChildEndpointKey(vhostVppEpBuilder().getAddress(), vhostVppEpBuilder().getAddressType(),
+                        vhostVppEpBuilder().getContextId(), vhostVppEpBuilder().getContextType()))
+                .build()))
             .setEndpointGroup(ImmutableList.of())
             .build();
         WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
@@ -105,7 +116,7 @@ public class InterfaceManagerTest extends CustomDataBrokerTest {
         VppEndpoint vhostEp = vhostVppEpBuilder().build();
         VppEndpointConfEvent event = new VppEndpointConfEvent(BASIC_VPP_EP_IID, null, vhostEp);
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.put(VppIidFactory.getNetconfNodeIid(vhostEp.getVppNodeId()),
-                new AbstractMap.SimpleEntry(mountPointDataBroker, new ReentrantLock()));
+                new AbstractMap.SimpleEntry<DataBroker, ReentrantLock>(mountPointDataBroker, new ReentrantLock()));
         manager.vppEndpointChanged(event);
         // assert state on data store behind mount point
         ReadOnlyTransaction rTxMount = mountPointDataBroker.newReadOnlyTransaction();
@@ -124,10 +135,12 @@ public class InterfaceManagerTest extends CustomDataBrokerTest {
         Assert.assertNotNull(vhostUserIface);
         Assert.assertEquals(VhostUserRole.Client, vhostUserIface.getRole());
         Assert.assertEquals(SOCKET, vhostUserIface.getSocket());
-        Assert.assertNull(vppIface.getL2()); //TODO test case for adding interface to BD
+        Assert.assertNull(vppIface.getL2()); // TODO test case for adding interface to BD
         // assert state on ODL data store
         ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
-        Optional<LocationProvider> optLocationProvider = rTx.read(LogicalDatastoreType.CONFIGURATION, IidFactory.locationProviderIid(VppEndpointLocationProvider.VPP_ENDPOINT_LOCATION_PROVIDER)).get();
+        Optional<LocationProvider> optLocationProvider = rTx.read(LogicalDatastoreType.CONFIGURATION,
+                IidFactory.locationProviderIid(VppEndpointLocationProvider.VPP_ENDPOINT_LOCATION_PROVIDER))
+            .get();
         Assert.assertTrue(optLocationProvider.isPresent());
         List<ProviderAddressEndpointLocation> epLocs = optLocationProvider.get().getProviderAddressEndpointLocation();
         Assert.assertNotNull(epLocs);
@@ -141,7 +154,7 @@ public class InterfaceManagerTest extends CustomDataBrokerTest {
         VppEndpointConfEvent createVppEpEvent = new VppEndpointConfEvent(BASIC_VPP_EP_IID, null, vhostEp);
         VppEndpointConfEvent deleteVppEpEvent = new VppEndpointConfEvent(BASIC_VPP_EP_IID, vhostEp, null);
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.put(VppIidFactory.getNetconfNodeIid(vhostEp.getVppNodeId()),
-                new AbstractMap.SimpleEntry(mountPointDataBroker, new ReentrantLock()));
+                new AbstractMap.SimpleEntry<DataBroker, ReentrantLock>(mountPointDataBroker, new ReentrantLock()));
         manager.vppEndpointChanged(createVppEpEvent);
         manager.vppEndpointChanged(deleteVppEpEvent);
         // assert state on data store behind mount point
@@ -154,9 +167,9 @@ public class InterfaceManagerTest extends CustomDataBrokerTest {
         // assert state on ODL data store
         ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
         VppLocationUtils.createProviderAddressEndpointLocationKey(vhostEp);
-        InstanceIdentifier<ProviderAddressEndpointLocation> providerAddressEndpointLocationIid = IidFactory
-            .providerAddressEndpointLocationIid(VppEndpointLocationProvider.VPP_ENDPOINT_LOCATION_PROVIDER,
-                    VppLocationUtils.createProviderAddressEndpointLocationKey(vhostEp));
+        InstanceIdentifier<ProviderAddressEndpointLocation> providerAddressEndpointLocationIid =
+                IidFactory.locationProviderIid(VppEndpointLocationProvider.VPP_ENDPOINT_LOCATION_PROVIDER,
+                        VppLocationUtils.createProviderAddressEndpointLocationKey(vhostEp));
         Optional<ProviderAddressEndpointLocation> optProvEpLoc =
                 rTx.read(LogicalDatastoreType.CONFIGURATION, providerAddressEndpointLocationIid).get();
         Assert.assertFalse(optProvEpLoc.isPresent());
@@ -169,9 +182,9 @@ public class InterfaceManagerTest extends CustomDataBrokerTest {
     }
 
     private VppEndpointBuilder basicVppEpBuilder() {
-        return new VppEndpointBuilder().setAddress(ADDRESS)
-            .setAddressType(AddressType.class)
+        return new VppEndpointBuilder().setAddress(MAC_ADDRESS)
+            .setAddressType(MacAddressType.class)
             .setContextId(CONTEXT_ID)
-            .setContextType(ContextType.class);
+            .setContextType(L2BridgeDomain.class);
     }
 }

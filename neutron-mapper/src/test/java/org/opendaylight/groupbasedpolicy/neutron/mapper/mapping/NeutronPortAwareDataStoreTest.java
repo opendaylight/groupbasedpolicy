@@ -12,6 +12,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.junit.Before;
@@ -95,6 +96,8 @@ public class NeutronPortAwareDataStoreTest extends NeutronMapperDataBrokerTest {
         Port port = newBasePort().setDeviceOwner(PortUtils.DEVICE_OWNER_DHCP)
             .setFixedIps(ImmutableList.of(portIpWithSubnet))
             .build();
+        when(neutron.getPorts()).thenReturn(new PortsBuilder().setPort(Collections.singletonList(port)).build());
+
         portAware.onCreated(port, neutron);
         NeutronMapperAssert.assertPortExists(dataBroker, port.getUuid());
 
@@ -122,6 +125,8 @@ public class NeutronPortAwareDataStoreTest extends NeutronMapperDataBrokerTest {
         Port port = newBasePort().setDeviceOwner("owner for normal port")
             .setFixedIps(ImmutableList.of(portIpWithSubnet))
             .build();
+        when(neutron.getPorts()).thenReturn(new PortsBuilder().setPort(Collections.singletonList(port)).build());
+
         portAware.onCreated(port, neutron);
         NeutronMapperAssert.assertPortExists(dataBroker, port.getUuid());
 
@@ -189,7 +194,9 @@ public class NeutronPortAwareDataStoreTest extends NeutronMapperDataBrokerTest {
         Subnet subnet = subnets.getSubnet().get(0);
         Port port = newBasePort().setDeviceOwner(PortUtils.DEVICE_OWNER_ROUTER_IFACE)
             .setFixedIps(ImmutableList.of(portIpWithSubnet))
+            .setDeviceId("37ffd9b3-30c6-4d21-96df-00c04fc9552f")
             .build();
+        when(neutron.getPorts()).thenReturn(new PortsBuilder().setPort(Collections.singletonList(port)).build());
         portAware.onCreated(port, neutron);
         NeutronMapperAssert.assertNetworkDomainExists(dataBroker, port, subnet, neutron, ipAddress);
 

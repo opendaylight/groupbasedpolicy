@@ -161,7 +161,8 @@ public class BaseEndpointServiceImpl implements BaseEndpointService, AutoCloseab
                 t.put(LogicalDatastoreType.OPERATIONAL, childInParentIid, epAsChild, true);
             }
         }
-        for (ParentContainmentEndpoint parent : EndpointUtils.getParentContainmentEndpoints(endpoint.getParentEndpointChoice())) {
+        for (ParentContainmentEndpoint parent : EndpointUtils
+            .getParentContainmentEndpoints(endpoint.getParentEndpointChoice())) {
             InstanceIdentifier<ContainmentEndpoint> parentIid = IidFactory
                 .containmentEndpointIid(new ContainmentEndpointKey(parent.getContextId(), parent.getContextType()));
             Optional<ContainmentEndpoint> parentContEpOptional =
@@ -272,12 +273,13 @@ public class BaseEndpointServiceImpl implements BaseEndpointService, AutoCloseab
         ParentEndpointChoice parentEndpointChoice = endpoint.getParentEndpointChoice();
         for (ParentEndpoint parentEndpoint : EndpointUtils.getParentEndpoints(parentEndpointChoice)) {
             KeyedInstanceIdentifier<ChildEndpoint, ChildEndpointKey> childEp =
-                    IidFactory.addressEndpointIid(EndpointUtils.createAddressEndpointKey(parentEndpoint)).child(ChildEndpoint.class,
-                            new ChildEndpointKey(endpoint.getAddress(), endpoint.getAddressType(),
-                                    endpoint.getContextId(), endpoint.getContextType()));
+                    IidFactory.addressEndpointIid(EndpointUtils.createAddressEndpointKey(parentEndpoint))
+                        .child(ChildEndpoint.class, new ChildEndpointKey(endpoint.getAddress(),
+                                endpoint.getAddressType(), endpoint.getContextId(), endpoint.getContextType()));
             DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL, childEp, t);
         }
-        for (ParentContainmentEndpoint parentContEndpoint : EndpointUtils.getParentContainmentEndpoints(parentEndpointChoice)) {
+        for (ParentContainmentEndpoint parentContEndpoint : EndpointUtils
+            .getParentContainmentEndpoints(parentEndpointChoice)) {
             KeyedInstanceIdentifier<ChildEndpoint, ChildEndpointKey> childEp = IidFactory
                 .containmentEndpointIid(new ContainmentEndpointKey(parentContEndpoint.getContextId(),
                         parentContEndpoint.getContextType()))
@@ -290,9 +292,9 @@ public class BaseEndpointServiceImpl implements BaseEndpointService, AutoCloseab
     private void deleteAddressEndpointFromChilds(ReadWriteTransaction t, AddressEndpoint endpoint) {
         for (ChildEndpoint childEndpoint : nullToEmpty(endpoint.getChildEndpoint())) {
             KeyedInstanceIdentifier<ParentEndpoint, ParentEndpointKey> parentEp =
-                    IidFactory.addressEndpointIid(EndpointUtils.createAddressEndpointKey(childEndpoint)).child(ParentEndpoint.class,
-                            new ParentEndpointKey(endpoint.getAddress(), endpoint.getAddressType(),
-                                    endpoint.getContextId(), endpoint.getContextType()));
+                    IidFactory.addressEndpointIid(EndpointUtils.createAddressEndpointKey(childEndpoint))
+                        .child(ParentEndpoint.class, new ParentEndpointKey(endpoint.getAddress(),
+                                endpoint.getAddressType(), endpoint.getContextId(), endpoint.getContextType()));
             DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL, parentEp, t);
         }
     }
@@ -309,8 +311,7 @@ public class BaseEndpointServiceImpl implements BaseEndpointService, AutoCloseab
     }
 
     @Override
-    public void close() {
-    }
+    public void close() {}
 
     private <T> List<T> nullToEmpty(@Nullable List<T> list) {
         return list == null ? Collections.emptyList() : list;

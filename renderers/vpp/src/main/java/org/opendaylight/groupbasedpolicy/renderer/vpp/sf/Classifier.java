@@ -40,9 +40,8 @@ public abstract class Classifier {
      * @return result, which indicates if all the matching fields were updated successfully
      */
     public final boolean updateMatch(GbpAceBuilder aclRuleBuilder, Map<String, ParameterValue> params) {
-        LOG.debug("Updating ACE entries {} with parameters {}",aclRuleBuilder, params);
         if (params == null) {
-                return false;
+            return false;
         }
         GbpAceBuilder matchBuilders = aclRuleBuilder;
         try {
@@ -69,8 +68,8 @@ public abstract class Classifier {
                 updatedClassifier.checkPrereqs(matchBuilders);
             }
         } catch (IllegalArgumentException e) {
-                LOG.error("Failed to update matches {}", e);
-                return false;
+            LOG.error("Failed to update matches {}", e);
+            return false;
         }
         return true;
     }

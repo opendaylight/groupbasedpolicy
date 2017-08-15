@@ -17,9 +17,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.child.endpoints.ChildEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.relative.location.relative.locations.ExternalLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.relative.location.relative.locations.ExternalLocationBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.parent.endpoint._case.ParentEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocationKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
@@ -33,6 +33,15 @@ public class AddressEndpointUtils {
     public static RendererEndpointKey toRendererEpKey(AddressEndpointKey rendererAdrEpKey) {
         return new RendererEndpointKey(rendererAdrEpKey.getAddress(), rendererAdrEpKey.getAddressType(),
                 rendererAdrEpKey.getContextId(), rendererAdrEpKey.getContextType());
+    }
+
+    public static RendererEndpointKey toRendererEpKey(PeerEndpointKey key) {
+        return new RendererEndpointKey(key.getAddress(), key.getAddressType(), key.getContextId(),
+                key.getContextType());
+    }
+
+    public static PeerEndpointKey toPeerEpKey(RendererEndpointKey key) {
+        return new PeerEndpointKey(key.getAddress(), key.getAddressType(), key.getContextId(), key.getContextType());
     }
 
     public static PeerEndpointKey toPeerEpKey(AddressEndpointKey peerAdrEpKey) {
@@ -50,6 +59,16 @@ public class AddressEndpointUtils {
                 rendererEpKey.getContextId(), rendererEpKey.getContextType());
     }
 
+    public static AddressEndpointWithLocationKey addrEpWithLocationKey(RendererEndpointKey key) {
+        return new AddressEndpointWithLocationKey(key.getAddress(), key.getAddressType(), key.getContextId(),
+                key.getContextType());
+    }
+
+    public static RendererEndpointKey toRendererEpKey(AddressEndpointWithLocationKey key) {
+        return new RendererEndpointKey(key.getAddress(), key.getAddressType(), key.getContextId(),
+                key.getContextType());
+    }
+
     public static AddressEndpointKey fromPeerEpKey(PeerEndpointKey peerEpKey) {
         return new AddressEndpointKey(peerEpKey.getAddress(), peerEpKey.getAddressType(), peerEpKey.getContextId(),
                 peerEpKey.getContextType());
@@ -59,17 +78,17 @@ public class AddressEndpointUtils {
         return new AddressEndpointKey(key.getAddress(), key.getAddressType(), key.getContextId(), key.getContextType());
     }
 
+    public static AddressEndpointKey addressEndpointKey(ChildEndpointKey key) {
+        return new AddressEndpointKey(key.getAddress(), key.getAddressType(), key.getContextId(), key.getContextType());
+    }
+
     public static AddressEndpointKey fromPeerExtEpKey(PeerExternalEndpointKey peerExtEpKey) {
         return new AddressEndpointKey(peerExtEpKey.getAddress(), peerExtEpKey.getAddressType(),
                 peerExtEpKey.getContextId(), peerExtEpKey.getContextType());
     }
 
-    public static AddressEndpointKey fromParentEndpointKey(ParentEndpointKey key) {
-        return new AddressEndpointKey(key.getAddress(), key.getAddressType(),
-                key.getContextId(), key.getContextType());
-    }
-
-    public static boolean sameExternalLocationCase(AddressEndpointWithLocation ref, AddressEndpointWithLocation addrEp) {
+    public static boolean sameExternalLocationCase(AddressEndpointWithLocation ref,
+            AddressEndpointWithLocation addrEp) {
         if (ref.getRelativeLocations() != null || ref.getAbsoluteLocation() == null) {
             return false;
         }
@@ -104,17 +123,18 @@ public class AddressEndpointUtils {
                         || addrEpLocation.getExternalNodeMountPoint() == null
                         || refLocation.get().getExternalNodeConnector() == null
                         || addrEpLocation.getExternalNodeConnector() == null;
-                return (valuesMissing) ? false : refLocation.get()
-                    .getExternalNodeMountPoint()
-                    .toString()
-                    .equals(addrEpLocation.getExternalNodeMountPoint().toString())
-                        && refLocation.get().getExternalNodeConnector().equals(addrEpLocation.getExternalNodeConnector());
+                return (valuesMissing) ? false : refLocation.get().getExternalNodeMountPoint().toString().equals(
+                        addrEpLocation.getExternalNodeMountPoint().toString())
+                        && refLocation.get()
+                            .getExternalNodeConnector()
+                            .equals(addrEpLocation.getExternalNodeConnector());
             }
         };
         List<ExternalLocation> extLocs = new ArrayList<>();
         if (absoluteToExternal.apply(addrEp.getAbsoluteLocation()).isPresent()) {
             extLocs.add(absoluteToExternal.apply(addrEp.getAbsoluteLocation()).get());
-        } else if (addrEp.getRelativeLocations() != null && addrEp.getRelativeLocations().getExternalLocation() != null) {
+        } else if (addrEp.getRelativeLocations() != null
+                && addrEp.getRelativeLocations().getExternalLocation() != null) {
             extLocs.addAll(addrEp.getRelativeLocations().getExternalLocation());
         }
         if (extLocs.stream().filter(sameLocation).findAny().isPresent()) {

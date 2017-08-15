@@ -88,46 +88,48 @@ public class InterfaceManager implements AutoCloseable {
         final VppEndpoint oldVppEndpoint = event.getBefore().orNull();
         final VppEndpoint newVppEndpoint = event.getAfter().orNull();
         try {
-        switch (event.getDtoModificationType()) {
-            case CREATED: {
-                Preconditions.checkNotNull(newVppEndpoint);
+            switch (event.getDtoModificationType()) {
+                case CREATED: {
+                    Preconditions.checkNotNull(newVppEndpoint);
                     vppEndpointCreated(newVppEndpoint).get();
-                message = String.format("Vpp endpoint %s on node %s and interface %s created",
-                        newVppEndpoint.getAddress(), newVppEndpoint.getVppNodeId().getValue(),
-                        newVppEndpoint.getVppInterfaceName());
-                updatePolicyExcludedEndpoints(newVppEndpoint, true).get();
-            }
-            break;
-            case UPDATED: {
-                Preconditions.checkNotNull(oldVppEndpoint);
-                Preconditions.checkNotNull(newVppEndpoint);
-                vppEndpointUpdated(oldVppEndpoint, newVppEndpoint).get();
-                message = String.format("Vpp endpoint %s on node %s and interface %s updated",
-                        newVppEndpoint.getAddress(), newVppEndpoint.getVppNodeId().getValue(),
-                        newVppEndpoint.getVppInterfaceName());
-                final ListenableFuture<Boolean> partialOldPolicyExcludedFuture =
-                        updatePolicyExcludedEndpoints(oldVppEndpoint, false);
-                Futures.transform(partialOldPolicyExcludedFuture, (AsyncFunction<Boolean, Boolean>) input ->
-                                updatePolicyExcludedEndpoints(newVppEndpoint, true)).get();
-            }
-            break;
-            case DELETED: {
-                Preconditions.checkNotNull(oldVppEndpoint);
-                vppEndpointDeleted(oldVppEndpoint).get();
-                message = String.format("Vpp endpoint %s on node %s and interface %s removed",
-                        oldVppEndpoint.getAddress(), oldVppEndpoint.getVppNodeId().getValue(),
-                        oldVppEndpoint.getVppInterfaceName());
-                updatePolicyExcludedEndpoints(event.getBefore().get(), false).get();
-            }
-            break;
+                    message = String.format("Vpp endpoint %s on node %s and interface %s created",
+                            newVppEndpoint.getAddress(), newVppEndpoint.getVppNodeId().getValue(),
+                            newVppEndpoint.getVppInterfaceName());
+                    updatePolicyExcludedEndpoints(newVppEndpoint, true).get();
+                }
+                    break;
+                case UPDATED: {
+                    Preconditions.checkNotNull(oldVppEndpoint);
+                    Preconditions.checkNotNull(newVppEndpoint);
+                    vppEndpointUpdated(oldVppEndpoint, newVppEndpoint).get();
+                    message = String.format("Vpp endpoint %s on node %s and interface %s updated",
+                            newVppEndpoint.getAddress(), newVppEndpoint.getVppNodeId().getValue(),
+                            newVppEndpoint.getVppInterfaceName());
+                    final ListenableFuture<Boolean> partialOldPolicyExcludedFuture =
+                            updatePolicyExcludedEndpoints(oldVppEndpoint, false);
+                    Futures.transform(partialOldPolicyExcludedFuture,
+                            (AsyncFunction<Boolean, Boolean>) input -> updatePolicyExcludedEndpoints(newVppEndpoint,
+                                    true))
+                        .get();
+                }
+                    break;
+                case DELETED: {
+                    Preconditions.checkNotNull(oldVppEndpoint);
+                    vppEndpointDeleted(oldVppEndpoint).get();
+                    message = String.format("Vpp endpoint %s on node %s and interface %s removed",
+                            oldVppEndpoint.getAddress(), oldVppEndpoint.getVppNodeId().getValue(),
+                            oldVppEndpoint.getVppInterfaceName());
+                    updatePolicyExcludedEndpoints(event.getBefore().get(), false).get();
+                }
+                    break;
                 default: {
                     message = "Unknown event modification type: " + event.getDtoModificationType();
                     LOG.error("Failed to process VPP endpoint {}. {}",
                             (oldVppEndpoint != null) ? oldVppEndpoint.getKey() : newVppEndpoint.getKey(),
                             event.getAfter(), new VppRendererProcessingException(message));
                 }
-        }
-        LOG.info(message);
+            }
+            LOG.info(message);
         } catch (InterruptedException | ExecutionException e) {
             // TODO Auto-generated catch block
             LOG.error("Failed to process changed vpp endpoint - before: {}, after {}: ", event.getBefore(),
@@ -140,11 +142,13 @@ public class InterfaceManager implements AutoCloseable {
             return Futures.immediateFuture(true);
         }
         if (created) {
+            LOG.trace("Interface excluded from policy: node:{} interface:{}", vppEndpoint.getVppNodeId(),
+                    vppEndpoint.getVppInterfaceName());
             excludedFromPolicy.put(vppEndpoint.getVppNodeId(), vppEndpoint.getVppInterfaceName());
             return Futures.immediateFuture(true);
         }
-        return Futures.immediateFuture(excludedFromPolicy.remove(vppEndpoint.getVppNodeId(),
-                vppEndpoint.getVppInterfaceName()));
+        return Futures
+            .immediateFuture(excludedFromPolicy.remove(vppEndpoint.getVppNodeId(), vppEndpoint.getVppInterfaceName()));
     }
 
     private ListenableFuture<Void> vppEndpointCreated(VppEndpoint vppEndpoint) {
@@ -155,7 +159,7 @@ public class InterfaceManager implements AutoCloseable {
             potentialIfaceCommand = createInterfaceWithoutBdCommand(vppEndpoint, Operations.PUT);
         } else if (interfaceTypeChoice instanceof TapCase) {
             potentialIfaceCommand = createTapInterfaceWithoutBdCommand(vppEndpoint, Operations.PUT);
-        } else if (interfaceTypeChoice instanceof LoopbackCase){
+        } else if (interfaceTypeChoice instanceof LoopbackCase) {
             potentialIfaceCommand = createLoopbackWithoutBdCommand(vppEndpoint, Operations.PUT);
         }
         if (!potentialIfaceCommand.isPresent()) {
@@ -174,7 +178,7 @@ public class InterfaceManager implements AutoCloseable {
     }
 
     public ListenableFuture<Void> createInterfaceOnVpp(final ConfigCommand createIfaceWithoutBdCommand,
-                                                       final InstanceIdentifier<Node> vppIid) {
+            final InstanceIdentifier<Node> vppIid) {
         final boolean transactionState = GbpNetconfTransaction.netconfSyncedWrite(vppIid, createIfaceWithoutBdCommand,
                 GbpNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
@@ -188,8 +192,7 @@ public class InterfaceManager implements AutoCloseable {
     }
 
     private ListenableFuture<Void> createInterfaceWithEndpointLocation(final ConfigCommand createIfaceWithoutBdCommand,
-                                                                       final InstanceIdentifier<Node> vppIid,
-                                                                       final VppEndpoint vppEndpoint) {
+            final InstanceIdentifier<Node> vppIid, final VppEndpoint vppEndpoint) {
         final boolean transactionState = GbpNetconfTransaction.netconfSyncedWrite(vppIid, createIfaceWithoutBdCommand,
                 GbpNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
@@ -197,16 +200,16 @@ public class InterfaceManager implements AutoCloseable {
                     createIfaceWithoutBdCommand);
             return vppEndpointLocationProvider.createLocationForVppEndpoint(vppEndpoint);
         } else {
-            final String message = "Create interface on VPP command was not successful. VPP: " + vppIid
-            + " Command: " + createIfaceWithoutBdCommand;
+            final String message = "Create interface on VPP command was not successful. VPP: " + vppIid + " Command: "
+                    + createIfaceWithoutBdCommand;
             LOG.warn(message);
             return Futures.immediateFailedFuture(new VppRendererProcessingException(message));
         }
     }
 
     private ListenableFuture<Void> vppEndpointUpdated(@Nonnull final VppEndpoint oldVppEndpoint,
-                                                      @Nonnull final VppEndpoint newVppEndpoint) {
-        if(!oldVppEndpoint.equals(newVppEndpoint)) {
+            @Nonnull final VppEndpoint newVppEndpoint) {
+        if (!oldVppEndpoint.equals(newVppEndpoint)) {
             LOG.debug("Updating vpp endpoint, old EP: {} new EP: {}", oldVppEndpoint, newVppEndpoint);
             return Futures.transform(vppEndpointDeleted(oldVppEndpoint),
                     (AsyncFunction<Void, Void>) input -> vppEndpointCreated(newVppEndpoint));
@@ -223,7 +226,7 @@ public class InterfaceManager implements AutoCloseable {
             potentialIfaceCommand = createInterfaceWithoutBdCommand(vppEndpoint, Operations.DELETE);
         } else if (interfaceTypeChoice instanceof TapCase) {
             potentialIfaceCommand = createTapInterfaceWithoutBdCommand(vppEndpoint, Operations.DELETE);
-        } else if (interfaceTypeChoice instanceof LoopbackCase){
+        } else if (interfaceTypeChoice instanceof LoopbackCase) {
             potentialIfaceCommand = createLoopbackWithoutBdCommand(vppEndpoint, Operations.DELETE);
         }
 
@@ -242,19 +245,19 @@ public class InterfaceManager implements AutoCloseable {
         return deleteIfaceOnVpp(ifaceWithoutBdCommand, vppNodeIid, vppEndpoint);
     }
 
-    private ListenableFuture<Void> deleteIfaceOnVpp(ConfigCommand deleteIfaceWithoutBdCommand, InstanceIdentifier<Node> vppIid,
-            VppEndpoint vppEndpoint) {
+    private ListenableFuture<Void> deleteIfaceOnVpp(ConfigCommand deleteIfaceWithoutBdCommand,
+            InstanceIdentifier<Node> vppIid, VppEndpoint vppEndpoint) {
         InterfaceBuilder intfBuilder = deleteIfaceWithoutBdCommand.getInterfaceBuilder();
-        final boolean transactionState = GbpNetconfTransaction.netconfSyncedDelete(vppIid,
-                deleteIfaceWithoutBdCommand, GbpNetconfTransaction.RETRY_COUNT);
+        final boolean transactionState = GbpNetconfTransaction.netconfSyncedDelete(vppIid, deleteIfaceWithoutBdCommand,
+                GbpNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
             LOG.debug("Delete interface on VPP command was successful: VPP: {} Command: {}", vppIid,
                     deleteIfaceWithoutBdCommand);
             AccessListWrapper.removeAclsForInterface(vppIid, new InterfaceKey(intfBuilder.getName()));
             return vppEndpointLocationProvider.deleteLocationForVppEndpoint(vppEndpoint);
         } else {
-            final String message = "Delete interface on VPP command was not successful: VPP: " + vppIid
-                    + " Command: " + deleteIfaceWithoutBdCommand;
+            final String message = "Delete interface on VPP command was not successful: VPP: " + vppIid + " Command: "
+                    + deleteIfaceWithoutBdCommand;
             LOG.warn(message);
             return Futures.immediateFailedFuture(new VppRendererProcessingException(message));
         }
@@ -324,16 +327,15 @@ public class InterfaceManager implements AutoCloseable {
             builder.setTapName(name);
             builder.setPhysAddress(tapIface.getPhysicalAddress());
         }
-        TapPortCommand tapPortCommand = builder
-                .setOperation(operation)
-                .setDescription(vppEp.getDescription())
-                .setInterfaceName(vppEp.getVppInterfaceName())
-                .build();
+        TapPortCommand tapPortCommand = builder.setOperation(operation)
+            .setDescription(vppEp.getDescription())
+            .setInterfaceName(vppEp.getVppInterfaceName())
+            .build();
         return Optional.of(tapPortCommand);
     }
 
     private Optional<ConfigCommand> createLoopbackWithoutBdCommand(@Nonnull VppEndpoint vppEp,
-        @Nonnull Operations operation) {
+            @Nonnull Operations operation) {
         if (!hasNodeAndInterface(vppEp)) {
             LOG.debug("Interface command is not created for {}", vppEp);
             return Optional.absent();
@@ -346,8 +348,7 @@ public class InterfaceManager implements AutoCloseable {
         builder.setIpAddress(loopIface.getIpAddress());
         builder.setIpPrefix(loopIface.getIpPrefix());
 
-        LoopbackCommand loopbackCommand = builder
-            .setOperation(operation)
+        LoopbackCommand loopbackCommand = builder.setOperation(operation)
             .setDescription(vppEp.getDescription())
             .setInterfaceName(vppEp.getVppInterfaceName())
             .build();
@@ -365,18 +366,17 @@ public class InterfaceManager implements AutoCloseable {
      * containing message in {@link Exception#getMessage()}
      *
      * @param bridgeDomainName bridge domain
-     * @param addrEpWithLoc    {@link AddressEndpointWithLocation} containing
-     *                         {@link ExternalLocationCase} where
-     *                         {@link ExternalLocationCase#getExternalNodeMountPoint()} MUST NOT be {@code null}
-     *                         and {@link ExternalLocationCase#getExternalNodeConnector()} MUST NOT be {@code null}
+     * @param addrEpWithLoc {@link AddressEndpointWithLocation} containing
+     *        {@link ExternalLocationCase} where
+     *        {@link ExternalLocationCase#getExternalNodeMountPoint()} MUST NOT be {@code null}
+     *        and {@link ExternalLocationCase#getExternalNodeConnector()} MUST NOT be {@code null}
      * @param aclWrappers wrappers for ACLs
      * @param enableBvi BVI enabled/disabled
      * @return {@link ListenableFuture}
      */
     public synchronized ListenableFuture<Void> addBridgeDomainToInterface(@Nonnull String bridgeDomainName,
-                                                                          @Nonnull AddressEndpointWithLocation addrEpWithLoc,
-                                                                          @Nonnull List<AccessListWrapper> aclWrappers,
-                                                                          boolean enableBvi) {
+            @Nonnull AddressEndpointWithLocation addrEpWithLoc, @Nonnull List<AccessListWrapper> aclWrappers,
+            boolean enableBvi) {
         ExternalLocationCase epLoc = resolveAndValidateLocation(addrEpWithLoc);
         InstanceIdentifier<Node> vppNodeIid = (InstanceIdentifier<Node>) epLoc.getExternalNodeMountPoint();
         String interfacePath = epLoc.getExternalNodeConnector();
@@ -396,35 +396,35 @@ public class InterfaceManager implements AutoCloseable {
                 interfaceIid, GbpNetconfTransaction.RETRY_COUNT);
 
         if (!optInterface.isPresent()) {
-            return Futures.immediateFailedFuture(new Exception("Interface "
-                    + interfaceIid.firstKeyOf(Interface.class) + " does not exist on node " + vppNodeIid));
+            return Futures.immediateFailedFuture(new Exception(
+                    "Interface " + interfaceIid.firstKeyOf(Interface.class) + " does not exist on node " + vppNodeIid));
         }
         String existingBridgeDomain = resolveBridgeDomain(optInterface.get());
         if (bridgeDomainName.equals(existingBridgeDomain)) {
             LOG.debug("Bridge domain {} already exists on interface {}", bridgeDomainName, interfacePath);
             String bridgeDomainPath = VppPathMapper.bridgeDomainToRestPath(bridgeDomainName);
             if (!bridgeDomainPath.equals(epLoc.getExternalNode())) {
-                return vppEndpointLocationProvider.replaceLocationForEndpoint(new ExternalLocationCaseBuilder()
-                        .setExternalNode(bridgeDomainPath)
-                        .setExternalNodeMountPoint(vppNodeIid)
-                        .setExternalNodeConnector(interfacePath)
-                        .build(), addrEpWithLoc.getKey());
+                return vppEndpointLocationProvider.replaceLocationForEndpoint(
+                        new ExternalLocationCaseBuilder().setExternalNode(bridgeDomainPath)
+                            .setExternalNodeMountPoint(vppNodeIid)
+                            .setExternalNodeConnector(interfacePath)
+                            .build(),
+                        addrEpWithLoc.getKey());
             }
             return Futures.immediateFuture(null);
         }
         InstanceIdentifier<L2> l2Iid =
                 interfaceIid.builder().augmentation(VppInterfaceAugmentation.class).child(L2.class).build();
-        Optional<L2> optL2 = GbpNetconfTransaction.read(vppNodeIid, LogicalDatastoreType.CONFIGURATION,
-                l2Iid, GbpNetconfTransaction.RETRY_COUNT);
+        Optional<L2> optL2 = GbpNetconfTransaction.read(vppNodeIid, LogicalDatastoreType.CONFIGURATION, l2Iid,
+                GbpNetconfTransaction.RETRY_COUNT);
         L2Builder l2Builder = (optL2.isPresent()) ? new L2Builder(optL2.get()) : new L2Builder();
-        L2 l2 = l2Builder.setInterconnection(new BridgeBasedBuilder()
-                .setBridgeDomain(bridgeDomainName)
-                .setBridgedVirtualInterface(enableBvi)
-                .build()).build();
+        L2 l2 = l2Builder.setInterconnection(new BridgeBasedBuilder().setBridgeDomain(bridgeDomainName)
+            .setBridgedVirtualInterface(enableBvi)
+            .build()).build();
         LOG.debug("Adding bridge domain {} to interface {}", bridgeDomainName, interfacePath);
         LOG.info("Debugging L2: iid={}, data={}", l2Iid, l2);
-        final boolean transactionState = GbpNetconfTransaction.netconfSyncedWrite(vppNodeIid, l2Iid, l2,
-                GbpNetconfTransaction.RETRY_COUNT);
+        final boolean transactionState =
+                GbpNetconfTransaction.netconfSyncedWrite(vppNodeIid, l2Iid, l2, GbpNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
             LOG.debug("Adding bridge domain {} to interface {} successful", bridgeDomainName, interfacePath);
             Set<String> excludedIfaces = excludedFromPolicy.get(vppNodeIid.firstKeyOf(Node.class).getNodeId());
@@ -438,37 +438,39 @@ public class InterfaceManager implements AutoCloseable {
                 });
             }
             String bridgeDomainPath = VppPathMapper.bridgeDomainToRestPath(bridgeDomainName);
-            return vppEndpointLocationProvider.replaceLocationForEndpoint(new ExternalLocationCaseBuilder()
-                    .setExternalNode(bridgeDomainPath)
-                    .setExternalNodeMountPoint(vppNodeIid)
-                    .setExternalNodeConnector(interfacePath)
-                    .build(), addrEpWithLoc.getKey());
+            return vppEndpointLocationProvider.replaceLocationForEndpoint(
+                    new ExternalLocationCaseBuilder().setExternalNode(bridgeDomainPath)
+                        .setExternalNodeMountPoint(vppNodeIid)
+                        .setExternalNodeConnector(interfacePath)
+                        .build(),
+                    addrEpWithLoc.getKey());
         } else {
-            final String message = "Adding bridge domain " + bridgeDomainName + " to interface " + interfacePath + " failed";
+            final String message =
+                    "Adding bridge domain " + bridgeDomainName + " to interface " + interfacePath + " failed";
             LOG.warn(message);
             return Futures.immediateFailedFuture(new VppRendererProcessingException(message));
         }
     }
 
-    public boolean isExcludedFromPolicy(@Nonnull NodeId nodeId,@Nonnull String interfaceName) {
+    public boolean isExcludedFromPolicy(@Nonnull NodeId nodeId, @Nonnull String interfaceName) {
         Set<String> excludedIfaces = excludedFromPolicy.get(nodeId);
-        if(excludedIfaces != null && excludedIfaces.contains(interfaceName)) {
+        if (excludedIfaces != null && excludedIfaces.contains(interfaceName)) {
             return true;
         }
         return false;
     }
 
-    public ListenableFuture<Void> configureInterface(InstanceIdentifier<Node> vppIid, InterfaceKey ifaceKey, @Nullable String bridgeDomainName,
-                                                     @Nullable Boolean enableBvi) {
+    public ListenableFuture<Void> configureInterface(InstanceIdentifier<Node> vppIid, InterfaceKey ifaceKey,
+            @Nullable String bridgeDomainName, @Nullable Boolean enableBvi) {
         L2Builder l2Builder = readL2ForInterface(vppIid, ifaceKey);
-        L2 l2 = l2Builder.setInterconnection(new BridgeBasedBuilder()
-            .setBridgeDomain(bridgeDomainName)
+        L2 l2 = l2Builder.setInterconnection(new BridgeBasedBuilder().setBridgeDomain(bridgeDomainName)
             .setBridgedVirtualInterface(enableBvi)
             .build()).build();
         final boolean transactionState = GbpNetconfTransaction.netconfSyncedWrite(vppIid,
-            VppIidFactory.getL2ForInterfaceIid(ifaceKey), l2, GbpNetconfTransaction.RETRY_COUNT);
+                VppIidFactory.getL2ForInterfaceIid(ifaceKey), l2, GbpNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
-            LOG.debug("Adding bridge domain {} to interface {}", bridgeDomainName, VppIidFactory.getInterfaceIID(ifaceKey));
+            LOG.debug("Adding bridge domain {} to interface {}", bridgeDomainName,
+                    VppIidFactory.getInterfaceIID(ifaceKey));
             return Futures.immediateFuture(null);
         } else {
             final String message = "Failed to add bridge domain " + bridgeDomainName + " to interface "
@@ -478,7 +480,8 @@ public class InterfaceManager implements AutoCloseable {
         }
     }
 
-    public ListenableFuture<Void> removeInterfaceFromBridgeDomain(InstanceIdentifier<Node> vppIid, InterfaceKey ifaceKey) {
+    public ListenableFuture<Void> removeInterfaceFromBridgeDomain(InstanceIdentifier<Node> vppIid,
+            InterfaceKey ifaceKey) {
         L2Builder l2Builder = readL2ForInterface(vppIid, ifaceKey);
         if (l2Builder.getInterconnection() == null || !(l2Builder.getInterconnection() instanceof BridgeBased)) {
             LOG.warn("Interface already not in bridge domain {} ", ifaceKey);
@@ -490,8 +493,8 @@ public class InterfaceManager implements AutoCloseable {
             LOG.debug("Removing bridge domain from interface {}", VppIidFactory.getInterfaceIID(ifaceKey));
             return Futures.immediateFuture(null);
         } else {
-            final String message = "Failed to remove bridge domain from interface "
-                    + VppIidFactory.getInterfaceIID(ifaceKey);
+            final String message =
+                    "Failed to remove bridge domain from interface " + VppIidFactory.getInterfaceIID(ifaceKey);
             LOG.warn(message);
             return Futures.immediateFailedFuture(new VppRendererProcessingException(message));
         }
@@ -499,10 +502,11 @@ public class InterfaceManager implements AutoCloseable {
 
     private L2Builder readL2ForInterface(InstanceIdentifier<Node> vppIid, InterfaceKey ifaceKey) {
         InstanceIdentifier<L2> l2Iid = VppIidFactory.getL2ForInterfaceIid(ifaceKey);
-        final ReadOnlyTransaction rwTxRead = VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey().newReadOnlyTransaction();
+        final ReadOnlyTransaction rwTxRead =
+                VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey().newReadOnlyTransaction();
         Optional<L2> optL2 = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION, l2Iid, rwTxRead);
         rwTxRead.close();
-        return  (optL2.isPresent()) ? new L2Builder(optL2.get()) : new L2Builder();
+        return (optL2.isPresent()) ? new L2Builder(optL2.get()) : new L2Builder();
     }
 
     /**
@@ -515,9 +519,9 @@ public class InterfaceManager implements AutoCloseable {
      * containing message in {@link Exception#getMessage()}
      *
      * @param addrEpWithLoc {@link AddressEndpointWithLocation} containing
-     *                      {@link ExternalLocationCase} where
-     *                      {@link ExternalLocationCase#getExternalNodeMountPoint()} MUST NOT be {@code null}
-     *                      and {@link ExternalLocationCase#getExternalNodeConnector()} MUST NOT be {@code null}
+     *        {@link ExternalLocationCase} where
+     *        {@link ExternalLocationCase#getExternalNodeMountPoint()} MUST NOT be {@code null}
+     *        and {@link ExternalLocationCase#getExternalNodeConnector()} MUST NOT be {@code null}
      * @return {@link ListenableFuture}
      */
     public synchronized @Nonnull ListenableFuture<Void> deleteBridgeDomainFromInterface(

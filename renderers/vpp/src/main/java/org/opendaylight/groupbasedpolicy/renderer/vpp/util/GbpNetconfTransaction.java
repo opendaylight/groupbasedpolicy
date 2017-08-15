@@ -8,6 +8,7 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.util;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -44,36 +45,41 @@ public class GbpNetconfTransaction {
 
     /***
      * Netconf wrapper for write and delete operation on a Netconf Device
-     * @param iid           path for Data to be written to
-     * @param data          data to be written
-     * @param retryCounter  retry counter, will repeat the operation for specified amount of times if transaction fails
-     * @param <T>           data type
+     * 
+     * @param iid path for Data to be written to
+     * @param data data to be written
+     * @param retryCounter retry counter, will repeat the operation for specified amount of times if
+     *        transaction fails
+     * @param <T> data type
      * @return true if transaction is successful, false otherwise
      */
     public static <T extends DataObject> boolean netconfSyncedWrite(@Nonnull final InstanceIdentifier<Node> vppIid,
-        @Nonnull final InstanceIdentifier<T> iid, @Nonnull final T data, byte retryCounter) {
+            @Nonnull final InstanceIdentifier<T> iid, @Nonnull final T data, byte retryCounter) {
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().lock();
-        boolean result = write(VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey(), iid, data, retryCounter);
+        boolean result =
+                write(VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey(), iid, data, retryCounter);
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().unlock();
         return result;
     }
 
     public static <T extends DataObject> boolean netconfSyncedWrite(@Nonnull final InstanceIdentifier<Node> vppIid,
-            @Nonnull final Map<InstanceIdentifier<T>,T> data, byte retryCounter) {
-            VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().lock();
-            boolean result = write(VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey(), data, retryCounter);
-            VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().unlock();
-            return result;
-        }
+            @Nonnull final Map<InstanceIdentifier<T>, T> data, byte retryCounter) {
+        VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().lock();
+        boolean result = write(VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey(), data, retryCounter);
+        VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().unlock();
+        return result;
+    }
 
     /***
      * Netconf wrapper method for synced requests for write operation on a Netconf Device
-     * @param command       config command that needs to be executed
-     * @param retryCounter  retry counter, will repeat the operation for specified amount of times if transaction fails
+     * 
+     * @param command config command that needs to be executed
+     * @param retryCounter retry counter, will repeat the operation for specified amount of times if
+     *        transaction fails
      * @return true if transaction is successful, false otherwise
      */
-    public static boolean netconfSyncedWrite(@Nonnull final InstanceIdentifier<Node> vppIid, @Nonnull final ConfigCommand command,
-        byte retryCounter) {
+    public static boolean netconfSyncedWrite(@Nonnull final InstanceIdentifier<Node> vppIid,
+            @Nonnull final ConfigCommand command, byte retryCounter) {
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().lock();
         boolean result = write(VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey(), command, retryCounter);
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().unlock();
@@ -82,12 +88,14 @@ public class GbpNetconfTransaction {
 
     /***
      * Netconf wrapper method for synced requests for write operation on a Netconf Device
-     * @param command       routing command that needs to be executed
-     * @param retryCounter  retry counter, will repeat the operation for specified amount of times if transaction fails
+     * 
+     * @param command routing command that needs to be executed
+     * @param retryCounter retry counter, will repeat the operation for specified amount of times if
+     *        transaction fails
      * @return true if transaction is successful, false otherwise
      */
-    public static boolean netconfSyncedWrite(@Nonnull final InstanceIdentifier<Node> vppIid, @Nonnull final RoutingCommand command,
-        byte retryCounter) {
+    public static boolean netconfSyncedWrite(@Nonnull final InstanceIdentifier<Node> vppIid,
+            @Nonnull final RoutingCommand command, byte retryCounter) {
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().lock();
         boolean result = write(VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey(), command, retryCounter);
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().unlock();
@@ -96,13 +104,15 @@ public class GbpNetconfTransaction {
 
     /***
      * Netconf wrapper method for synced requests for delete operation on a Netconf Device
-     * @param iid           path for Data to be written to
-     * @param retryCounter  retry counter, will repeat the operation for specified amount of times if transaction fails
-     * @param <T>           data type
+     * 
+     * @param iid path for Data to be written to
+     * @param retryCounter retry counter, will repeat the operation for specified amount of times if
+     *        transaction fails
+     * @param <T> data type
      * @return true if transaction is successful, false otherwise
      */
     public static <T extends DataObject> boolean netconfSyncedDelete(@Nonnull final InstanceIdentifier<Node> vppIid,
-        @Nonnull final InstanceIdentifier<T> iid, byte retryCounter) {
+            @Nonnull final InstanceIdentifier<T> iid, byte retryCounter) {
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().lock();
         boolean result = deleteIfExists(vppIid, iid, retryCounter);
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().unlock();
@@ -110,21 +120,23 @@ public class GbpNetconfTransaction {
     }
 
     public static <T extends DataObject> boolean netconfSyncedDelete(@Nonnull final InstanceIdentifier<Node> vppIid,
-            @Nonnull Set<InstanceIdentifier<T>> iids , byte retryCounter) {
-            VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().lock();
-            boolean result = deleteIfExists(vppIid, iids, retryCounter);
-            VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().unlock();
-            return result;
-        }
+            @Nonnull Set<InstanceIdentifier<T>> iids, byte retryCounter) {
+        VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().lock();
+        boolean result = deleteIfExists(vppIid, iids, retryCounter);
+        VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().unlock();
+        return result;
+    }
 
     /***
      * Netconf wrapper method for synced requests for delete operation on a Netconf Device
-     * @param command       config command that needs to be executed
-     * @param retryCounter  retry counter, will repeat the operation for specified amount of times if transaction fails
+     * 
+     * @param command config command that needs to be executed
+     * @param retryCounter retry counter, will repeat the operation for specified amount of times if
+     *        transaction fails
      * @return true if transaction is successful, false otherwise
      */
     public static boolean netconfSyncedDelete(@Nonnull final InstanceIdentifier<Node> vppIid,
-        @Nonnull final ConfigCommand command, byte retryCounter) {
+            @Nonnull final ConfigCommand command, byte retryCounter) {
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().lock();
         boolean result = deleteIfExists(vppIid, command, retryCounter);
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().unlock();
@@ -133,12 +145,14 @@ public class GbpNetconfTransaction {
 
     /***
      * Netconf wrapper method for synced requests for delete operation on a Netconf Device
-     * @param command       routing command that needs to be executed
-     * @param retryCounter  retry counter, will repeat the operation for specified amount of times if transaction fails
+     * 
+     * @param command routing command that needs to be executed
+     * @param retryCounter retry counter, will repeat the operation for specified amount of times if
+     *        transaction fails
      * @return true if transaction is successful, false otherwise
      */
     public static boolean netconfSyncedDelete(@Nonnull final InstanceIdentifier<Node> vppIid,
-        @Nonnull final RoutingCommand command, byte retryCounter) {
+            @Nonnull final RoutingCommand command, byte retryCounter) {
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().lock();
         boolean result = deleteIfExists(vppIid, command, retryCounter);
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().unlock();
@@ -146,10 +160,11 @@ public class GbpNetconfTransaction {
     }
 
     /**
-     * Use {@link ConfigCommand} to put data into netconf transaction and submit. Transaction is restarted if failed
+     * Use {@link ConfigCommand} to put data into netconf transaction and submit. Transaction is
+     * restarted if failed
      *
-     * @param mountpoint   to access remote device
-     * @param command      config command with data, datastore type and iid
+     * @param mountpoint to access remote device
+     * @param command config command with data, datastore type and iid
      * @param retryCounter number of attempts
      * @return true if transaction is successful, false otherwise
      */
@@ -176,10 +191,11 @@ public class GbpNetconfTransaction {
     }
 
     /**
-     * Use {@link RoutingCommand} to put data into netconf transaction and submit. Transaction is restarted if failed
+     * Use {@link RoutingCommand} to put data into netconf transaction and submit. Transaction is
+     * restarted if failed
      *
-     * @param mountpoint   to access remote device
-     * @param command      routing command with data, datastore type and iid
+     * @param mountpoint to access remote device
+     * @param command routing command with data, datastore type and iid
      * @param retryCounter number of attempts
      * @return true if transaction is successful, false otherwise
      */
@@ -208,15 +224,15 @@ public class GbpNetconfTransaction {
     /**
      * Write data to remote device. Transaction is restarted if failed
      *
-     * @param mountpoint   to access remote device
-     * @param iid          data identifier
-     * @param data         to write
+     * @param mountpoint to access remote device
+     * @param iid data identifier
+     * @param data to write
      * @param retryCounter number of attempts
-     * @param <T>          generic data type. Has to be child of {@link DataObject}
+     * @param <T> generic data type. Has to be child of {@link DataObject}
      * @return true if transaction is successful, false otherwise
      */
     private static <T extends DataObject> boolean write(final DataBroker mountpoint, final InstanceIdentifier<T> iid,
-        final T data, byte retryCounter) {
+            final T data, byte retryCounter) {
         LOG.trace("Netconf WRITE transaction started. RetryCounter: {}", retryCounter);
         Preconditions.checkNotNull(mountpoint);
         final ReadWriteTransaction rwTx = mountpoint.newReadWriteTransaction();
@@ -247,7 +263,7 @@ public class GbpNetconfTransaction {
         final ReadWriteTransaction rwTx = mountpoint.newReadWriteTransaction();
         try {
             data.forEach((k, v) -> {
-                rwTx.put(LogicalDatastoreType.CONFIGURATION, k, v);
+                rwTx.put(LogicalDatastoreType.CONFIGURATION, k, v, true);
             });
             final CheckedFuture<Void, TransactionCommitFailedException> futureTask = rwTx.submit();
             futureTask.get();
@@ -270,21 +286,20 @@ public class GbpNetconfTransaction {
      * Read data from remote device. Transaction is restarted if failed.
      *
      * @param datastoreType {@link LogicalDatastoreType}
-     * @param iid           data identifier
-     * @param retryCounter  number of attempts
-     * @param <T>           generic data type. Has to be child of {@link DataObject}
+     * @param iid data identifier
+     * @param retryCounter number of attempts
+     * @param <T> generic data type. Has to be child of {@link DataObject}
      * @return optional data object if successful, {@link Optional#absent()} if failed
      */
     public static synchronized <T extends DataObject> Optional<T> read(final InstanceIdentifier<Node> vppIid,
-        final LogicalDatastoreType datastoreType, final InstanceIdentifier<T> iid, byte retryCounter) {
+            final LogicalDatastoreType datastoreType, final InstanceIdentifier<T> iid, byte retryCounter) {
         LOG.trace("Netconf READ transaction started. RetryCounter: {}", retryCounter);
         Preconditions.checkNotNull(vppIid);
         DataBroker mountpoint = VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey();
         final ReadOnlyTransaction rTx = mountpoint.newReadOnlyTransaction();
         Optional<T> data;
         try {
-            final CheckedFuture<Optional<T>, ReadFailedException> futureData =
-                rTx.read(datastoreType, iid);
+            final CheckedFuture<Optional<T>, ReadFailedException> futureData = rTx.read(datastoreType, iid);
             data = futureData.get();
             LOG.trace("Netconf READ transaction done. Data present: {}", data.isPresent());
             return data;
@@ -304,11 +319,12 @@ public class GbpNetconfTransaction {
     /**
      * Remove data from remote device using {@link ConfigCommand}
      *
-     * @param command      config command with data, datastore type and iid
+     * @param command config command with data, datastore type and iid
      * @param retryCounter number of attempts
      * @return true if transaction is successful, false otherwise
      */
-    private static boolean deleteIfExists(final InstanceIdentifier<Node> vppIid, final ConfigCommand command, byte retryCounter) {
+    private static boolean deleteIfExists(final InstanceIdentifier<Node> vppIid, final ConfigCommand command,
+            byte retryCounter) {
         Preconditions.checkNotNull(vppIid);
         InstanceIdentifier<Interface> iid = VppIidFactory.getInterfaceIID(command.getInterfaceBuilder().getKey());
         return deleteIfExists(vppIid, iid, retryCounter);
@@ -317,39 +333,40 @@ public class GbpNetconfTransaction {
     /**
      * Remove data from remote device using {@link ConfigCommand}
      *
-     * @param command      config command with data, datastore type and iid
+     * @param command config command with data, datastore type and iid
      * @param retryCounter number of attempts
      * @return true if transaction is successful, false otherwise
      */
     private static boolean deleteIfExists(final InstanceIdentifier<Node> vppIid, final RoutingCommand command,
-        byte retryCounter) {
+            byte retryCounter) {
         Preconditions.checkNotNull(vppIid);
         String routerProtocol = command.getRouterProtocol();
         if (Strings.isNullOrEmpty(routerProtocol)) {
             routerProtocol = "learned-protocol-0";
         }
         InstanceIdentifier<RoutingProtocol> iid =
-            VppIidFactory.getRoutingInstanceIid(new RoutingProtocolKey(routerProtocol));
+                VppIidFactory.getRoutingInstanceIid(new RoutingProtocolKey(routerProtocol));
         return deleteIfExists(vppIid, iid, retryCounter);
     }
 
     /**
-     * Remove data from remote device. Data presence is verified before removal. Transaction is restarted if failed.
+     * Remove data from remote device. Data presence is verified before removal. Transaction is
+     * restarted if failed.
      *
-     * @param iid          data identifier
+     * @param iid data identifier
      * @param retryCounter number of attempts
-     * @param <T>          generic data type. Has to be child of {@link DataObject}
+     * @param <T> generic data type. Has to be child of {@link DataObject}
      * @return true if transaction is successful, false otherwise
      */
     private static <T extends DataObject> boolean deleteIfExists(final InstanceIdentifier<Node> vppIid,
-        final InstanceIdentifier<T> iid, byte retryCounter) {
+            final InstanceIdentifier<T> iid, byte retryCounter) {
         LOG.trace("Netconf DELETE transaction started. Data will be read at first. RetryCounter: {}", retryCounter);
         Preconditions.checkNotNull(vppIid);
         DataBroker mountpoint = VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey();
         final Optional<T> optionalObject = read(vppIid, LogicalDatastoreType.CONFIGURATION, iid, RETRY_COUNT);
         if (!optionalObject.isPresent()) {
             LOG.warn("Netconf DELETE transaction aborted. Data to remove are not present or cannot be read. Iid: {}",
-                iid);
+                    iid);
             // Return true, this state is not considered as an error
             return true;
         }
@@ -376,7 +393,9 @@ public class GbpNetconfTransaction {
             final Set<InstanceIdentifier<T>> iids, byte retryCounter) {
         LOG.trace("Netconf DELETE transaction started. Data will be read at first. RetryCounter: {}", retryCounter);
         Preconditions.checkNotNull(vppIid);
-        final ReadWriteTransaction rwTx = VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey().newReadWriteTransaction();
+        final ReadWriteTransaction rwTx =
+                VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey().newReadWriteTransaction();
+        Set<InstanceIdentifier<T>> alreadyRemoved = new HashSet<>();
         for (InstanceIdentifier<T> iid : iids) {
             short microReadRetries = 3;
             while (microReadRetries > 0) {
@@ -385,7 +404,7 @@ public class GbpNetconfTransaction {
                         rwTx.delete(LogicalDatastoreType.CONFIGURATION, iid);
                     } else {
                         LOG.warn("Node {} does not exist. It won't be removed.", iid.getPathArguments());
-                        iids.remove(iid);
+                        alreadyRemoved.add(iid);
                     }
                     break;
                 } catch (InterruptedException | ExecutionException e) {
@@ -394,6 +413,9 @@ public class GbpNetconfTransaction {
                 }
             }
         }
+        alreadyRemoved.forEach(t -> {
+            iids.remove(t);
+        });
         try {
             final CheckedFuture<Void, TransactionCommitFailedException> futureTask = rwTx.submit();
             futureTask.get();
