@@ -108,7 +108,7 @@ public class VppRendererPolicyManager {
         LOG.trace("VPP renderer policy updated");
         PolicyContext policyCtxBefore = new PolicyContext(rPolicyBefore);
         PolicyContext policyCtxAfter = new PolicyContext(rPolicyAfter);
-        aclManager.cacheMultiInterfaces(policyCtxAfter);
+        aclManager.cacheEndpointsByInterfaces(policyCtxAfter);
         MapDifference<String, Collection<NodeId>> vppNodesByL2FlDiff =
                 createDiffForVppNodesByL2Fd(policyCtxBefore, policyCtxAfter);
         SetMultimap<String, NodeId> removedVppNodesByL2Fd = HashMultimap.create();
@@ -150,7 +150,6 @@ public class VppRendererPolicyManager {
         ImmutableSet<RendererEndpointKey> rendEpsAfter = policyCtxAfter.getPolicyTable().rowKeySet();
 
         SetView<RendererEndpointKey> removedRendEps = Sets.difference(rendEpsBefore, rendEpsAfter);
-        LOG.debug("Removed renderer endpoints {}", removedRendEps);
         removedRendEps.forEach(rEpKey -> fwManager.removeForwardingForEndpoint(rEpKey, policyCtxBefore));
 
         if (!ConfigUtil.getInstance().isL3FlatEnabled()) {
@@ -189,11 +188,9 @@ public class VppRendererPolicyManager {
         fwManager.syncRouting(policyCtxAfter);
 
         SetView<RendererEndpointKey> createdRendEps = Sets.difference(rendEpsAfter, rendEpsBefore);
-        LOG.debug("Created renderer endpoints {}", createdRendEps);
         createdRendEps.forEach(rEpKey -> fwManager.createForwardingForEndpoint(rEpKey, policyCtxAfter));
 
         SetView<RendererEndpointKey> updatedRendEps = Sets.intersection(rendEpsBefore, rendEpsAfter);
-        LOG.debug("Updated renderer endpoints {}", updatedRendEps);
         // update forwarding for endpoint
         updatedRendEps.forEach(rEpKey -> {
             AddressEndpointWithLocation addrEpWithLocBefore =
@@ -212,8 +209,12 @@ public class VppRendererPolicyManager {
         ImmutableSet<RuleGroupKey> rulesAfter = policyCtxBefore.getRuleGroupByKey().keySet();
         SetView<RuleGroupKey> removedRules = Sets.difference(rulesAfter, rulesBefore);
         SetView<RuleGroupKey> createdRules = Sets.difference(rulesBefore, rulesAfter);
+        LOG.debug("Updated rules: {}", Sets.intersection(rulesBefore, rulesAfter));
         LOG.debug("Removed rules {}", removedRules);
         LOG.debug("Created rules {}", createdRules);
+        LOG.debug("Updated renderer endpoints {}", updatedRendEps);
+        LOG.debug("Created renderer endpoints {}", createdRendEps);
+        LOG.debug("Updated renderer endpoints {}", updatedRendEps);
         aclManager.resolveRulesToConfigure(policyCtxBefore, removedRendEps, removedRules, false);
         aclManager.resolveRulesToConfigure(policyCtxAfter, createdRendEps, createdRules, true);
     }
@@ -221,10 +222,10 @@ public class VppRendererPolicyManager {
     private static boolean isLocationChanged(AddressEndpointWithLocation before, AddressEndpointWithLocation after) {
         ExternalLocationCase locationBefore = ForwardingManager.resolveAndValidateLocation(before);
         ExternalLocationCase locationAfter = ForwardingManager.resolveAndValidateLocation(after);
-        if(locationBefore == null && locationAfter == null) {
+        if (locationBefore == null && locationAfter == null) {
             return false;
         }
-        if(locationBefore == null || locationAfter == null) {
+        if (locationBefore == null || locationAfter == null) {
             return true;
         }
         return !locationBefore.equals(locationAfter);
@@ -242,7 +243,7 @@ public class VppRendererPolicyManager {
     private void rendererPolicyCreated(RendererPolicy rPolicy) {
         LOG.trace("VPP renderer policy version {} created", rPolicy.getVersion());
         PolicyContext policyCtx = new PolicyContext(rPolicy);
-        aclManager.cacheMultiInterfaces(policyCtx);
+        aclManager.cacheEndpointsByInterfaces(policyCtx);
         ImmutableSet<RendererEndpointKey> rEpKeys = policyCtx.getPolicyTable().rowKeySet();
         SetMultimap<String, NodeId> vppNodesByL2Fd = resolveVppNodesByL2Fd(rEpKeys, policyCtx);
         if (!ConfigUtil.getInstance().isL3FlatEnabled()) {
@@ -260,7 +261,7 @@ public class VppRendererPolicyManager {
     private void rendererPolicyDeleted(RendererPolicy rendererPolicy) {
         LOG.trace("VPP renderer policy version {} deleted", rendererPolicy.getVersion());
         PolicyContext policyCtx = new PolicyContext(rendererPolicy);
-        aclManager.cacheMultiInterfaces(policyCtx);
+        aclManager.cacheEndpointsByInterfaces(policyCtx);
         ImmutableSet<RendererEndpointKey> rEpKeys = policyCtx.getPolicyTable().rowKeySet();
 
         rEpKeys.forEach(rEpKey -> fwManager.removeForwardingForEndpoint(rEpKey, policyCtx));

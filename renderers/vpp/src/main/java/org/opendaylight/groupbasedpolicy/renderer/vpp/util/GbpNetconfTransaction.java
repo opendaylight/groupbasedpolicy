@@ -8,6 +8,7 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.util;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -20,15 +21,11 @@ import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.AbstractConfigCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.AbstractInterfaceCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.RoutingCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.interfaces.ConfigCommand;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.AbstractLispCommand;
 import org.opendaylight.vbd.impl.transaction.VbdNetconfTransaction;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.routing.rev140524.routing.routing.instance.routing.protocols.RoutingProtocol;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.routing.rev140524.routing.routing.instance.routing.protocols.RoutingProtocolKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -275,7 +272,7 @@ public class GbpNetconfTransaction {
         final ReadWriteTransaction rwTx = mountpoint.newReadWriteTransaction();
         try {
             data.forEach((k, v) -> {
-                rwTx.put(LogicalDatastoreType.CONFIGURATION, k, v);
+                rwTx.put(LogicalDatastoreType.CONFIGURATION, k, v, true);
             });
             final CheckedFuture<Void, TransactionCommitFailedException> futureTask = rwTx.submit();
             futureTask.get();
@@ -387,6 +384,7 @@ public class GbpNetconfTransaction {
         LOG.trace("Netconf DELETE transaction started. Data will be read at first. RetryCounter: {}", retryCounter);
         Preconditions.checkNotNull(vppIid);
         final ReadWriteTransaction rwTx = VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey().newReadWriteTransaction();
+        Set<InstanceIdentifier<T>> alreadyRemoved = new HashSet<>();
         for (InstanceIdentifier<T> iid : iids) {
             short microReadRetries = 3;
             while (microReadRetries > 0) {
@@ -395,7 +393,7 @@ public class GbpNetconfTransaction {
                         rwTx.delete(LogicalDatastoreType.CONFIGURATION, iid);
                     } else {
                         LOG.warn("Node {} does not exist. It won't be removed.", iid.getPathArguments());
-                        iids.remove(iid);
+                        alreadyRemoved.add(iid);
                     }
                     break;
                 } catch (InterruptedException | ExecutionException e) {
@@ -404,6 +402,9 @@ public class GbpNetconfTransaction {
                 }
             }
         }
+        alreadyRemoved.forEach(t -> {
+            iids.remove(t);
+        });
         try {
             final CheckedFuture<Void, TransactionCommitFailedException> futureTask = rwTx.submit();
             futureTask.get();

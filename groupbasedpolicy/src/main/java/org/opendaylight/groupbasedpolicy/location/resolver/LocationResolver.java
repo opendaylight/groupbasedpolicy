@@ -130,7 +130,7 @@ public class LocationResolver implements ClusteredDataTreeChangeListener<Locatio
                     wtx.delete(LogicalDatastoreType.OPERATIONAL, iid);
                 }
             }
-            if (newAbsoluteLocation == null && addressEndpointLocation.getRelativeLocations() == null) {
+            if (newAbsoluteLocation == null) {
                 InstanceIdentifier<AddressEndpointLocation> iid = IidFactory.addressEndpointLocationIid(epKey);
                 wtx.delete(LogicalDatastoreType.OPERATIONAL, iid);
             }

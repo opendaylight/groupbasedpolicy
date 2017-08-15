@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2016 Cisco Systems, Inc. and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -85,9 +85,8 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
 
     @Before
     public void init() {
-        fwdManager =
-            new ForwardingManager(ifaceManager, aclManager, natManager, routingManager, bdManager, lispStateManager,
-                    loopbackManager, flatOverlayManager, dhcpRelayHandler, getDataBroker());
+        fwdManager = new ForwardingManager(ifaceManager, aclManager, natManager, routingManager, bdManager,
+                lispStateManager, loopbackManager, flatOverlayManager, dhcpRelayHandler, getDataBroker());
         Mockito.when(aclManager.resolveAclsOnInterface(Mockito.any(RendererEndpointKey.class),
                 Mockito.any(PolicyContext.class)))
             .thenReturn(Futures.immediateFuture(null));
@@ -133,7 +132,7 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
                 Mockito.eq(NODE_1)))
             .thenReturn(Futures.immediateFuture(null));
         GbpBridgeDomain bd =
-            new GbpBridgeDomainBuilder().setId(BD_1).setType(VlanNetwork.class).setVlan(VLAN_1).build();
+                new GbpBridgeDomainBuilder().setId(BD_1).setType(VlanNetwork.class).setVlan(VLAN_1).build();
         InstanceIdentifier<GbpBridgeDomain> bdIid =
                 InstanceIdentifier.builder(Config.class).child(GbpBridgeDomain.class, bd.getKey()).build();
         WriteTransaction wTx = getDataBroker().newWriteOnlyTransaction();
@@ -157,15 +156,17 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
     @Test
     public void testCreateForwardingForEndpoint() throws Exception {
         String clientIp = "1.1.1.1";
+        String clientMac = "10:00:00:00:00:01";
         String clientIfaceName = "client1";
         AbsoluteLocation clientLocation = DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, null, clientIfaceName);
         AddressEndpointWithLocation clientEp =
-                DtoFactory.createEndpoint(clientIp, DtoFactory.L2FD_CTX.getValue(), clientLocation);
+                DtoFactory.createEndpoint(clientIp, clientMac, DtoFactory.L2FD_CTX.getValue(), clientLocation);
         String webIp = "2.2.2.2";
+        String webMac = "20:00:00:00:00:02";
         String webIfaceName = "web1";
         AbsoluteLocation webLocation = DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, null, webIfaceName);
         AddressEndpointWithLocation webEp =
-                DtoFactory.createEndpoint(webIp, DtoFactory.L2FD_CTX.getValue(), webLocation);
+                DtoFactory.createEndpoint(webIp, webMac, DtoFactory.L2FD_CTX.getValue(), webLocation);
         Configuration configuration = DtoFactory.createConfiguration(Arrays.asList(clientEp), Arrays.asList(webEp));
         RendererPolicy rendererPolicy =
                 new RendererPolicyBuilder().setVersion(1L).setConfiguration(configuration).build();
@@ -173,8 +174,9 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
         RendererEndpoint firstRendererEp = configuration.getRendererEndpoints().getRendererEndpoint().get(0);
         AddressEndpointWithLocation firstAddrEpWithLoc =
                 policyCtx.getAddrEpByKey().get(KeyFactory.addressEndpointKey(firstRendererEp.getKey()));
-        Mockito.when(ifaceManager.addBridgeDomainToInterface(Mockito.eq(DtoFactory.L2FD_CTX.getValue()),
-                Mockito.eq(firstAddrEpWithLoc), Mockito.anyListOf(AccessListWrapper.class),Mockito.eq(IS_BVI)))
+        Mockito
+            .when(ifaceManager.addBridgeDomainToInterface(Mockito.eq(DtoFactory.L2FD_CTX.getValue()),
+                    Mockito.eq(firstAddrEpWithLoc), Mockito.anyListOf(AccessListWrapper.class), Mockito.eq(IS_BVI)))
             .thenReturn(Futures.immediateFuture(null));
         fwdManager.createForwardingForEndpoint(firstRendererEp.getKey(), policyCtx);
         Mockito.verify(ifaceManager).addBridgeDomainToInterface(Matchers.eq(DtoFactory.L2FD_CTX.getValue()),
@@ -184,18 +186,20 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
     @Test
     public void testRemoveForwardingForEndpoint() throws Exception {
         String clientIp = "1.1.1.1";
+        String clientMac = "10:00:00:00:00:01";
         String clientIfaceName = "client1";
         String bdNameOnVpp = "bdRed";
         AbsoluteLocation clientLocation =
-            DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, bdNameOnVpp, clientIfaceName);
+                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, bdNameOnVpp, clientIfaceName);
         AddressEndpointWithLocation clientEp =
-                DtoFactory.createEndpoint(clientIp, DtoFactory.L2FD_CTX.getValue(), clientLocation);
+                DtoFactory.createEndpoint(clientIp, clientMac, DtoFactory.L2FD_CTX.getValue(), clientLocation);
         String webIp = "2.2.2.2";
+        String webMac = "20:00:00:00:00:02";
         String webIfaceName = "web1";
         AbsoluteLocation webLocation =
-            DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, bdNameOnVpp, webIfaceName);
+                DtoFactory.absoluteLocation(DtoFactory.VPP_NODE_1_IID, bdNameOnVpp, webIfaceName);
         AddressEndpointWithLocation webEp =
-                DtoFactory.createEndpoint(webIp, DtoFactory.L2FD_CTX.getValue(), webLocation);
+                DtoFactory.createEndpoint(webIp, webMac, DtoFactory.L2FD_CTX.getValue(), webLocation);
         Configuration configuration = DtoFactory.createConfiguration(Arrays.asList(clientEp), Arrays.asList(webEp));
         RendererPolicy rendererPolicy =
                 new RendererPolicyBuilder().setVersion(1L).setConfiguration(configuration).build();
@@ -203,8 +207,7 @@ public class ForwardingManagerTest extends CustomDataBrokerTest {
         RendererEndpoint firstRendererEp = configuration.getRendererEndpoints().getRendererEndpoint().get(0);
         AddressEndpointWithLocation firstAddrEpWithLoc =
                 policyCtx.getAddrEpByKey().get(KeyFactory.addressEndpointKey(firstRendererEp.getKey()));
-        Mockito.when(ifaceManager.deleteBridgeDomainFromInterface(
-                Mockito.eq(firstAddrEpWithLoc)))
+        Mockito.when(ifaceManager.deleteBridgeDomainFromInterface(Mockito.eq(firstAddrEpWithLoc)))
             .thenReturn(Futures.immediateFuture(null));
 
         fwdManager.removeForwardingForEndpoint(firstRendererEp.getKey(), policyCtx);

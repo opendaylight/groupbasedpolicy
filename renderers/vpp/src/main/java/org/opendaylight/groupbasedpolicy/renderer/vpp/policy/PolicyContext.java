@@ -19,12 +19,14 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 
+import org.opendaylight.groupbasedpolicy.renderer.util.AddressEndpointUtils;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicy;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.Configuration;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocationKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.RendererEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.renderer.endpoints.renderer.endpoint.PeerEndpointKey;
@@ -53,7 +55,7 @@ public class PolicyContext {
     private final ImmutableMap<AddressEndpointKey, AddressEndpointWithLocation> addrEpByKey;
     private final ImmutableTable<TenantId, RendererForwardingContextKey, RendererForwardingContext> forwardingCtxTable;
     private final ImmutableTable<TenantId, RendererNetworkDomainKey, RendererNetworkDomain> networkDomainTable;
-    private final ImmutableSetMultimap<RuleGroupKey, RendererEndpointKey> endpointsByRuleGroups;
+    private final ImmutableSetMultimap<RuleGroupKey, AddressEndpointWithLocationKey> endpointsByRuleGroups;
 
     public PolicyContext(@Nonnull RendererPolicy policy) {
         this.policy = Preconditions.checkNotNull(policy);
@@ -62,9 +64,10 @@ public class PolicyContext {
             Configuration config = optConfig.get();
             this.ruleGroupByKey = resolveRuleGroups(config);
             List<RendererEndpoint> rendererEps = resolveRendererEndpoints(config);
-            SetMultimap<RuleGroupKey, RendererEndpointKey> epsByRules = HashMultimap.create();
+            SetMultimap<RuleGroupKey, AddressEndpointWithLocationKey> epsByRules = HashMultimap.create();
             this.policyTable = resolvePolicy(rendererEps, ruleGroupByKey, epsByRules);
-            this.endpointsByRuleGroups = ImmutableSetMultimap.<RuleGroupKey, RendererEndpointKey>copyOf(epsByRules);
+            this.endpointsByRuleGroups =
+                    ImmutableSetMultimap.<RuleGroupKey, AddressEndpointWithLocationKey>copyOf(epsByRules);
             addrEpByKey = resolveAddrEpWithLoc(config);
             this.forwardingCtxTable = resolveForwardingCtxTable(config);
             this.networkDomainTable = resolveNetworkDomainTable(config);
@@ -74,7 +77,7 @@ public class PolicyContext {
             this.addrEpByKey = ImmutableMap.of();
             this.forwardingCtxTable = ImmutableTable.of();
             this.networkDomainTable = ImmutableTable.of();
-            this.endpointsByRuleGroups = ImmutableSetMultimap.<RuleGroupKey, RendererEndpointKey>of();
+            this.endpointsByRuleGroups = ImmutableSetMultimap.<RuleGroupKey, AddressEndpointWithLocationKey>of();
         }
     }
 
@@ -90,7 +93,8 @@ public class PolicyContext {
     }
 
     private static ImmutableTable<RendererEndpointKey, PeerEndpointKey, ImmutableSortedSet<RendererResolvedPolicy>> resolvePolicy(
-            List<RendererEndpoint> rendererEps, Map<RuleGroupKey, ResolvedRuleGroup> ruleGroupInfoByRuleGroupKey, SetMultimap<RuleGroupKey, RendererEndpointKey> epsByRules) {
+            List<RendererEndpoint> rendererEps, Map<RuleGroupKey, ResolvedRuleGroup> ruleGroupInfoByRuleGroupKey,
+            SetMultimap<RuleGroupKey, AddressEndpointWithLocationKey> epsByRules) {
         Builder<RendererEndpointKey, PeerEndpointKey, ImmutableSortedSet<RendererResolvedPolicy>> resultBuilder =
                 new Builder<>();
         Supplier<TreeSet<RendererResolvedPolicy>> rendererPolicySupplier = () -> new TreeSet<>();
@@ -100,18 +104,19 @@ public class PolicyContext {
                 .filter(Objects::nonNull)
                 .filter(peer -> peer.getRuleGroupWithRendererEndpointParticipation() != null)
                 .forEach(peer -> {
-                ImmutableSortedSet<RendererResolvedPolicy> rPolicy =
-                        peer.getRuleGroupWithRendererEndpointParticipation()
-                            .stream()
-                            .map(ruleGroup -> new RendererResolvedPolicy(ruleGroup.getRendererEndpointParticipation(),
-                                    ruleGroupInfoByRuleGroupKey.get(KeyFactory.ruleGroupKey(ruleGroup.getKey()))))
-                            .collect(Collectors.collectingAndThen(Collectors.toCollection(rendererPolicySupplier),
-                                    ImmutableSortedSet::copyOfSorted));
-                peer.getRuleGroupWithRendererEndpointParticipation()
-                    .forEach(ruleGroup -> epsByRules.put(KeyFactory.ruleGroupKey(ruleGroup.getKey()), rEp.getKey()));
-                resultBuilder.put(rEp.getKey(), KeyFactory.peerEndpointKey(peer.getKey()),
-                        ImmutableSortedSet.copyOfSorted(rPolicy));
-            });
+                    ImmutableSortedSet<RendererResolvedPolicy> rPolicy = peer
+                        .getRuleGroupWithRendererEndpointParticipation()
+                        .stream()
+                        .map(ruleGroup -> new RendererResolvedPolicy(ruleGroup.getRendererEndpointParticipation(),
+                                ruleGroupInfoByRuleGroupKey.get(KeyFactory.ruleGroupKey(ruleGroup.getKey()))))
+                        .collect(Collectors.collectingAndThen(Collectors.toCollection(rendererPolicySupplier),
+                                ImmutableSortedSet::copyOfSorted));
+                    peer.getRuleGroupWithRendererEndpointParticipation()
+                        .forEach(ruleGroup -> epsByRules.put(KeyFactory.ruleGroupKey(ruleGroup.getKey()),
+                                AddressEndpointUtils.addrEpWithLocationKey(rEp.getKey())));
+                    resultBuilder.put(rEp.getKey(), KeyFactory.peerEndpointKey(peer.getKey()),
+                            ImmutableSortedSet.copyOfSorted(rPolicy));
+                });
         });
         return resultBuilder.build();
     }
@@ -199,8 +204,17 @@ public class PolicyContext {
         return networkDomainTable;
     }
 
-    public @Nonnull ImmutableSetMultimap<RuleGroupKey, RendererEndpointKey> getEndpointsByRuleGroups() {
+    public @Nonnull ImmutableSetMultimap<RuleGroupKey, AddressEndpointWithLocationKey> getEndpointsByRuleGroups() {
         return endpointsByRuleGroups;
+    }
+
+    public Optional<RendererEndpoint> getRendererEndpoint(RendererEndpointKey key) {
+        return getPolicy().getConfiguration()
+            .getRendererEndpoints()
+            .getRendererEndpoint()
+            .stream()
+            .filter(rendEp -> rendEp.getKey().equals(key))
+            .findAny();
     }
 
     @Override

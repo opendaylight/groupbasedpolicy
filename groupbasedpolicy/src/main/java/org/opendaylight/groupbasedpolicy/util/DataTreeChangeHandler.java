@@ -22,19 +22,21 @@ import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
+import com.google.common.base.Preconditions;
+
 /**
  * The purpose of this class is to eliminate boilerplate code used in most of
  * {@link ClusteredDataTreeChangeListener} implementations.
  *
  * @param <T> target class
  */
-public abstract class DataTreeChangeHandler<T extends DataObject> implements ClusteredDataTreeChangeListener<T>, AutoCloseable {
+public abstract class DataTreeChangeHandler<T extends DataObject>
+        implements ClusteredDataTreeChangeListener<T>, AutoCloseable {
 
     protected final DataBroker dataProvider;
     protected ListenerRegistration<DataTreeChangeHandler<T>> registeredListener;
 
     /**
-     *
      * @param dataProvider cannot be {@code null}
      * @throws NullPointerException if <b>dataProvider</b> is {@code null}
      */
@@ -43,11 +45,11 @@ public abstract class DataTreeChangeHandler<T extends DataObject> implements Clu
     }
 
     /**
-     *
      * @param pointOfInterest identifier of root node
      * @throws NullPointerException if <b>pointOfInterest</b> is {@code null}
      */
     protected void registerDataTreeChangeListener(DataTreeIdentifier<T> pointOfInterest) {
+        Preconditions.checkNotNull(pointOfInterest);
         registeredListener = dataProvider.registerDataTreeChangeListener(checkNotNull(pointOfInterest), this);
     }
 
@@ -117,5 +119,4 @@ public abstract class DataTreeChangeHandler<T extends DataObject> implements Clu
     protected void closeRegisteredListener() {
         registeredListener.close();
     }
-
 }

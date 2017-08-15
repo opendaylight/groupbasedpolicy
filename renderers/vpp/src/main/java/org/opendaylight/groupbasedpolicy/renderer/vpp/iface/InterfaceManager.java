@@ -143,6 +143,8 @@ public class InterfaceManager implements AutoCloseable {
             return Futures.immediateFuture(true);
         }
         if (created) {
+            LOG.trace("Interface excluded from policy: node:{} interface:{}", vppEndpoint.getVppNodeId(),
+                    vppEndpoint.getVppInterfaceName());
             excludedFromPolicy.put(vppEndpoint.getVppNodeId(), vppEndpoint.getVppInterfaceName());
             return Futures.immediateFuture(true);
         }

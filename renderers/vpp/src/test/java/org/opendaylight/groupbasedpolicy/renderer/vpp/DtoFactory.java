@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2016 Cisco Systems, Inc. and others. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -26,6 +26,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCaseBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.child.endpoints.ChildEndpointBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.child.endpoints.ChildEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ActionName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
@@ -36,14 +38,15 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.RuleName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.SubjectName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.IpPrefixType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.L2BridgeDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.L2FloodDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.L3Context;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.MacAddressType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.SubnetAugmentRenderer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.SubnetAugmentRendererBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.SubnetBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.AddressType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.ContextType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.fields.Parent;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.forwarding.fields.ParentBuilder;
@@ -93,6 +96,7 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 public class DtoFactory {
 
@@ -172,23 +176,22 @@ public class DtoFactory {
     }
 
     private static RendererForwardingByTenant createForwarding() {
-        RendererForwardingContext l2Fd = createRendererForwardingCtx(L2FD_CTX, L2_FD_ID, L2FloodDomain.class).setParent(
-                createParent(L2BD_CTX, L2BridgeDomain.class))
-            .build();
-        RendererForwardingContext l2Bd = createRendererForwardingCtx(L3_CTX, L3_CTX_ID, L3Context.class).setParent(
-                createParent(L3_CTX, L3Context.class))
-            .build();
+        RendererForwardingContext l2Fd = createRendererForwardingCtx(L2FD_CTX, L2_FD_ID, L2FloodDomain.class)
+            .setParent(createParent(L2BD_CTX, L2BridgeDomain.class)).build();
+        RendererForwardingContext l2Bd = createRendererForwardingCtx(L3_CTX, L3_CTX_ID, L3Context.class)
+            .setParent(createParent(L3_CTX, L3Context.class)).build();
         RendererForwardingContext l3Ctx = createRendererForwardingCtx(L2BD_CTX, L2_BD_ID, L2BridgeDomain.class).build();
-        RendererNetworkDomain subnet = new RendererNetworkDomainBuilder().setNetworkDomainId(new NetworkDomainId(SUBNET_ID.getValue()))
-            .setName(SUBNET_ID)
-            .setNetworkDomainType(Subnet.class)
-            .setParent(createParent(L2FD_CTX, L2FloodDomain.class))
-            .addAugmentation(
-                    SubnetAugmentRenderer.class,
-                    new SubnetAugmentRendererBuilder().setSubnet(
-                            new SubnetBuilder().setIpPrefix(subnetPrefix).setVirtualRouterIp(virtRouterIp).setIsTenant(true).build())
-                        .build())
-            .build();
+        RendererNetworkDomain subnet =
+                new RendererNetworkDomainBuilder().setNetworkDomainId(new NetworkDomainId(SUBNET_ID.getValue()))
+                    .setName(SUBNET_ID)
+                    .setNetworkDomainType(Subnet.class)
+                    .setParent(createParent(L2FD_CTX, L2FloodDomain.class))
+                    .addAugmentation(SubnetAugmentRenderer.class,
+                            new SubnetAugmentRendererBuilder().setSubnet(new SubnetBuilder().setIpPrefix(subnetPrefix)
+                                .setVirtualRouterIp(virtRouterIp)
+                                .setIsTenant(true)
+                                .build()).build())
+                    .build();
         return new RendererForwardingByTenantBuilder().setTenantId(TENANT_ID)
             .setRendererForwardingContext(ImmutableList.<RendererForwardingContext>of(l2Fd, l2Bd, l3Ctx))
             .setRendererNetworkDomain(ImmutableList.<RendererNetworkDomain>of(subnet))
@@ -230,14 +233,16 @@ public class DtoFactory {
         return new RuleGroupsBuilder().setRuleGroup(ImmutableList.<RuleGroup>of(ruleGroup)).build();
     }
 
-    public static AddressEndpointWithLocation createEndpoint(String ip, String l2FdIdAsNetCont,
+    public static AddressEndpointWithLocation createEndpoint(String ip, String mac, String l2FdIdAsNetCont,
             AbsoluteLocation absoluteLocation) {
         AddressEndpointWithLocationKey key =
-                new AddressEndpointWithLocationKey(ip, AddressType.class, CTX_ID, L3Context.class);
+                new AddressEndpointWithLocationKey(ip, IpPrefixType.class, CTX_ID, L3Context.class);
         NetworkContainment networkContainment =
                 new NetworkContainmentBuilder().setContainment(new ForwardingContextContainmentBuilder()
                     .setContextType(L2FloodDomain.class).setContextId(new ContextId(l2FdIdAsNetCont)).build()).build();
         return new AddressEndpointWithLocationBuilder().setKey(key)
+            .setChildEndpoint(Lists.newArrayList(new ChildEndpointBuilder()
+                .setKey(new ChildEndpointKey(mac, MacAddressType.class, L2BD_CTX, L2BridgeDomain.class)).build()))
             .setNetworkContainment(networkContainment)
             .setAbsoluteLocation(absoluteLocation)
             .setTenant(new TenantId(TENANT_ID))

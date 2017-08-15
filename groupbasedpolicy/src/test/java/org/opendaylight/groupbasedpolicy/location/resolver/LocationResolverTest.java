@@ -10,7 +10,6 @@ package org.opendaylight.groupbasedpolicy.location.resolver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Collection;
@@ -98,13 +97,12 @@ public class LocationResolverTest extends CustomDataBrokerTest {
                 .build()))
             .build();
         LocationProvider provider = new LocationProviderBuilder().setProvider(new ProviderName(PROVIDER_NAME))
-            .setProviderAddressEndpointLocation(
-                    Collections.singletonList(new ProviderAddressEndpointLocationBuilder()
-                        .setKey(new ProviderAddressEndpointLocationKey(ADDRESS, AddressType.class, contextId,
-                                ContextType.class))
-                        .setAbsoluteLocation(absoluteLocation)
-                        .setRelativeLocations(relativeLocations)
-                        .build()))
+            .setProviderAddressEndpointLocation(Collections.singletonList(new ProviderAddressEndpointLocationBuilder()
+                .setKey(new ProviderAddressEndpointLocationKey(ADDRESS, AddressType.class, contextId,
+                        ContextType.class))
+                .setAbsoluteLocation(absoluteLocation)
+                .setRelativeLocations(relativeLocations)
+                .build()))
             .setProviderContainmentEndpointLocation(
                     Collections.singletonList(new ProviderContainmentEndpointLocationBuilder().setContextId(contextId)
                         .setContextType(ContextType.class)
@@ -147,13 +145,12 @@ public class LocationResolverTest extends CustomDataBrokerTest {
                 .build()))
             .build();
         LocationProvider provider = new LocationProviderBuilder().setProvider(new ProviderName(PROVIDER_NAME))
-            .setProviderAddressEndpointLocation(
-                    Collections.singletonList(new ProviderAddressEndpointLocationBuilder()
-                        .setKey(new ProviderAddressEndpointLocationKey(ADDRESS, AddressType.class, contextId,
-                                ContextType.class))
-                        .setAbsoluteLocation(absoluteLocation)
-                        .setRelativeLocations(relativeLocations)
-                        .build()))
+            .setProviderAddressEndpointLocation(Collections.singletonList(new ProviderAddressEndpointLocationBuilder()
+                .setKey(new ProviderAddressEndpointLocationKey(ADDRESS, AddressType.class, contextId,
+                        ContextType.class))
+                .setAbsoluteLocation(absoluteLocation)
+                .setRelativeLocations(relativeLocations)
+                .build()))
             .setProviderContainmentEndpointLocation(
                     Collections.singletonList(new ProviderContainmentEndpointLocationBuilder().setContextId(contextId)
                         .setContextType(ContextType.class)
@@ -199,21 +196,8 @@ public class LocationResolverTest extends CustomDataBrokerTest {
         Optional<EndpointLocations> read = rtx.read(LogicalDatastoreType.OPERATIONAL, readIid).get();
         assertTrue(read.isPresent());
         EndpointLocations readLocations = read.get();
-        assertEquals(1, readLocations.getAddressEndpointLocation().size());
-        assertNull(readLocations.getAddressEndpointLocation().get(0).getAbsoluteLocation());
-        assertTrue(readLocations.getAddressEndpointLocation()
-            .get(0)
-            .getRelativeLocations()
-            .getInternalLocation()
-            .isEmpty());
-        assertNull(readLocations.getAddressEndpointLocation().get(0).getRelativeLocations().getExternalLocation());
+        assertTrue(readLocations.getAddressEndpointLocation().isEmpty());
         assertEquals(1, readLocations.getContainmentEndpointLocation().size());
-        assertTrue(readLocations.getAddressEndpointLocation()
-            .get(0)
-            .getRelativeLocations()
-            .getInternalLocation()
-            .isEmpty());
-        assertNull(readLocations.getAddressEndpointLocation().get(0).getRelativeLocations().getExternalLocation());
     }
 
     @Test
