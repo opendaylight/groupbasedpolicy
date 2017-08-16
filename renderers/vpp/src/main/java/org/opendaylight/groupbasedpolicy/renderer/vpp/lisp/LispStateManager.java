@@ -20,14 +20,15 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.exception.LispNotFoun
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.EndpointHost;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.HostRelatedInfoContainer;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.LispState;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.info.container.states.PhysicalInterfaces;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.mappers.NeutronTenantToVniMapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.ConfigManagerHelper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.util.Constants;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.renderer.policy.configuration.endpoints.AddressEndpointWithLocation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170801.NativeForwardPathsTables;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170801._native.forward.paths.tables._native.forward.paths.table.NativeForwardPath;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170801.gpe.feature.data.grouping.GpeFeatureData;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.Lisp;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.dp.subtable.grouping.local.mappings.LocalMapping;
@@ -85,7 +86,7 @@ public class LispStateManager {
             Eid eid = lispStateHelper.getEid(addressEp, vni);
             String eidMappingName = lispStateHelper.constructEidMappingName(addressEp);
 
-            addVniToVrfMappingIfNeeded(endpointHost, lispStateOfHost, vni, vrf);
+            addVniSpecificConfigurationsIfNeeded(endpointHost, lispStateOfHost, vni, vrf);
 
             if (lispStateHelper.getInterfaceIp(addressEp).getValue().equals(Constants.METADATA_IP)) {
                 return;
@@ -253,18 +254,36 @@ public class LispStateManager {
         }
     }
 
-    private void addVniToVrfMappingIfNeeded(EndpointHost endpointHost,
-                                            LispState lispState,
-                                            long vni, long vrf) throws LispConfigCommandFailedException {
+    private void addVniSpecificConfigurationsIfNeeded(EndpointHost endpointHost,
+                                                      LispState lispState,
+                                                      long vni, long vrf) throws LispConfigCommandFailedException {
         if (!lispState.isVniConfigured(vni)) {
-            AbstractLispCommand<VniTable> addVniToVrfMapping = LispCommandWrapper.mapVniToVrf(vni, vrf);
-            addVniToVrfMapping.setOptions(General.Operations.PUT);
-            if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostName(), addVniToVrfMapping)) {
-                lispState.addInVniSet(vni);
-            } else {
-                throw new LispConfigCommandFailedException("Lisp add vrf " + vrf +" for vni " +vni
-                        + " command failed!");
-            }
+            addVniToVrfMapping(endpointHost, lispState, vni, vrf);
+            addGpeNativeForwardPath(endpointHost, vrf,
+                    hostRelatedInfoContainer.getPhysicalInterfaceState(endpointHost.getHostName())
+                            .getIp(PhysicalInterfaces.PhysicalInterfaceType.PUBLIC));
+        }
+    }
+
+    private void addVniToVrfMapping(EndpointHost endpointHost,
+                                    LispState lispState,
+                                    long vni, long vrf) throws LispConfigCommandFailedException {
+        AbstractLispCommand<VniTable> addVniToVrfMapping = LispCommandWrapper.mapVniToVrf(vni, vrf);
+        if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostName(), addVniToVrfMapping)) {
+            lispState.addInVniSet(vni);
+        } else {
+            throw new LispConfigCommandFailedException("Lisp add vrf " + vrf +" for vni " +vni
+                    + " command failed!");
+        }
+    }
+
+    private void addGpeNativeForwardPath(EndpointHost endpointHost,
+                                         long vrf, IpAddress nativeForwardIp) throws LispConfigCommandFailedException {
+        AbstractLispCommand<NativeForwardPath> addNativeForwardingIp =
+                LispCommandWrapper.addNativeForwardEntry(vrf, nativeForwardIp);
+        if (!LispStateCommandExecutor.executePutCommand(endpointHost.getHostName(), addNativeForwardingIp)) {
+            throw new LispConfigCommandFailedException("Lisp add native forwarding to ip " + addNativeForwardingIp
+                    + " for vrf " + vrf + " command failed!");
         }
     }
 
