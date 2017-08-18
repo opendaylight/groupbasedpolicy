@@ -223,6 +223,7 @@ public class AclManager {
                 });
         });
         // to avoid empty ACL (IllegalStateArgument on HC), rules have to be updated gently
+        LOG.trace("Resolved table of rules: {}. Begin Updating of ACLs on nodes.", aceTable);
         updateRules(ImmutableTable.copyOf(aceTable), write);
         updateRules(ImmutableTable.copyOf(denyTenantTraffic), false);
         updateRules(ImmutableTable.copyOf(denyTenantTraffic), true);
