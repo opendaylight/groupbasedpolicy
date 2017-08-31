@@ -9,28 +9,26 @@
 package org.opendaylight.groupbasedpolicy.neutron.ovsdb;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.UUID;
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
@@ -56,7 +54,6 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.node.TerminationPoint;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
-import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 public class TerminationPointDataChangeListenerTest {
@@ -65,11 +62,10 @@ public class TerminationPointDataChangeListenerTest {
 
     private DataBroker dataBroker;
     private EndpointService epService;
-    private ListenerRegistration<DataChangeListener> registration;
-    private AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change;
+    private ListenerRegistration<?> registration;
 
-    private Map<InstanceIdentifier<?>, DataObject> dataMap;
-    private Set<InstanceIdentifier<?>> dataSet;
+    private DataObjectModification<OvsdbTerminationPointAugmentation> mockModification;
+    private Collection<DataTreeModification<OvsdbTerminationPointAugmentation>> changeEvent;
     private Node node;
 
     private CheckedFuture<Optional<OvsdbBridgeAugmentation>, ReadFailedException> ovsdbBridgeFuture;
@@ -88,10 +84,8 @@ public class TerminationPointDataChangeListenerTest {
         dataBroker = mock(DataBroker.class);
         epService = mock(EndpointService.class);
         registration = mock(ListenerRegistration.class);
-        when(
-                dataBroker.registerDataChangeListener(any(LogicalDatastoreType.class), any(InstanceIdentifier.class),
-                        any(DataChangeListener.class), any(DataChangeScope.class))).thenReturn(registration);
-        change = mock(AsyncDataChangeEvent.class);
+        when(dataBroker.registerDataTreeChangeListener(any(DataTreeIdentifier.class),
+                        any(DataTreeChangeListener.class))).thenReturn(registration);
 
         InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid = InstanceIdentifier.create(
                 NetworkTopology.class)
@@ -105,10 +99,6 @@ public class TerminationPointDataChangeListenerTest {
         when(ovsdbTp.getInterfaceExternalIds()).thenReturn(Collections.singletonList(externalId));
         when(externalId.getExternalIdKey()).thenReturn("iface-id");
         when(externalId.getExternalIdValue()).thenReturn(UUID.randomUUID().toString());
-
-        dataMap = new HashMap<>();
-        dataMap.put(ovsdbTpIid, ovsdbTp);
-        dataSet = new HashSet<InstanceIdentifier<?>>(Collections.singletonList(ovsdbTpIid));
 
         readTransaction = mock(ReadOnlyTransaction.class);
         when(dataBroker.newReadOnlyTransaction()).thenReturn(readTransaction);
@@ -177,6 +167,14 @@ public class TerminationPointDataChangeListenerTest {
         when(ofOverlayNodeConfigOptional.get()).thenReturn(ofOverlayNodeConfig);
 
         listener = new TerminationPointDataChangeListener(dataBroker, epService);
+
+        DataTreeModification<OvsdbTerminationPointAugmentation> mockDataTreeModification =
+                mock(DataTreeModification.class);
+        mockModification = mock(DataObjectModification.class);
+        doReturn(mockModification).when(mockDataTreeModification).getRootNode();
+        doReturn(new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL, ovsdbTpIid))
+                .when(mockDataTreeModification).getRootPath();
+        changeEvent = Collections.singletonList(mockDataTreeModification);
     }
 
     @Test
@@ -188,7 +186,9 @@ public class TerminationPointDataChangeListenerTest {
     @SuppressWarnings("unchecked")
     @Test
     public void testOnDataChanged_Creation() {
-        when(change.getCreatedData()).thenReturn(dataMap);
+        doReturn(DataObjectModification.ModificationType.WRITE).when(mockModification).getModificationType();
+        doReturn(ovsdbTp).when(mockModification).getDataAfter();
+
         when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
                 ovsdbBridgeFuture)
             .thenReturn(endpointFuture)
@@ -197,26 +197,31 @@ public class TerminationPointDataChangeListenerTest {
         when(readWriteTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
                 endpointByPortFuture).thenReturn(ofOverlayNodeConfigFuture);
 
-        listener.onDataChanged(change);
+        listener.onDataTreeChanged(changeEvent);
         verify(readWriteTransaction).submit();
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testOnDataChanged_CreationExternalIdNull() {
-        when(change.getCreatedData()).thenReturn(dataMap);
+        doReturn(DataObjectModification.ModificationType.WRITE).when(mockModification).getModificationType();
+        doReturn(ovsdbTp).when(mockModification).getDataAfter();
+
         when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
                 ovsdbBridgeFuture).thenReturn(nodeFuture);
         when(ovsdbTp.getInterfaceExternalIds()).thenReturn(null);
 
-        listener.onDataChanged(change);
+        listener.onDataTreeChanged(changeEvent);
         verify(readWriteTransaction, never()).submit();
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testOnDataChanged_Update() {
-        when(change.getUpdatedData()).thenReturn(dataMap);
+        doReturn(DataObjectModification.ModificationType.WRITE).when(mockModification).getModificationType();
+        doReturn(ovsdbTp).when(mockModification).getDataBefore();
+        doReturn(ovsdbTp).when(mockModification).getDataAfter();
+
         when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
                 ovsdbBridgeFuture)
             .thenReturn(endpointFuture)
@@ -224,21 +229,22 @@ public class TerminationPointDataChangeListenerTest {
         when(readWriteTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
                 endpointByPortFuture).thenReturn(ofOverlayNodeConfigFuture);
 
-        listener.onDataChanged(change);
+        listener.onDataTreeChanged(changeEvent);
         verify(readWriteTransaction).submit();
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testOnDataChanged_Removal() {
-        when(change.getRemovedPaths()).thenReturn(dataSet);
-        when(change.getOriginalData()).thenReturn(dataMap);
+        doReturn(DataObjectModification.ModificationType.DELETE).when(mockModification).getModificationType();
+        doReturn(ovsdbTp).when(mockModification).getDataBefore();
+
         when(readWriteTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
                 endpointByPortFuture);
         when(readTransaction.read(any(LogicalDatastoreType.class), any(InstanceIdentifier.class))).thenReturn(
                 endpointFuture);
 
-        listener.onDataChanged(change);
+        listener.onDataTreeChanged(changeEvent);
         verify(readWriteTransaction).submit();
     }
 }

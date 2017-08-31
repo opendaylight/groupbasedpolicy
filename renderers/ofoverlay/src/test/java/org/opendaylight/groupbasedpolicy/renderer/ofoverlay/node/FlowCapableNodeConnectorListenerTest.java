@@ -9,24 +9,25 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.CheckedFuture;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNodeConnector;
@@ -43,11 +44,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.node.No
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.NodeKey;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
-import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.CheckedFuture;
 
 public class FlowCapableNodeConnectorListenerTest {
 
@@ -55,8 +52,7 @@ public class FlowCapableNodeConnectorListenerTest {
 
     private DataBroker dataProvider;
     private SwitchManager switchManager;
-    private ListenerRegistration<DataChangeListener> listenerRegistration;
-    private AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> asyncDataChangeEvent;
+    private ListenerRegistration<?> listenerRegistration;
     private FlowCapableNodeConnector entryValue;
     private String portName;
     private NodeId childNodeId;
@@ -68,6 +64,8 @@ public class FlowCapableNodeConnectorListenerTest {
     private OfOverlayContext ofOverlayEp;
     private EndpointKey endpointKey;
     private Name name;
+    private DataObjectModification<FlowCapableNodeConnector> mockModification;
+    private Collection<DataTreeModification<FlowCapableNodeConnector>> changeEvent;
 
     @SuppressWarnings("unchecked")
     @Before
@@ -75,10 +73,8 @@ public class FlowCapableNodeConnectorListenerTest {
         dataProvider = mock(DataBroker.class);
         switchManager = mock(SwitchManager.class);
         listenerRegistration = mock(ListenerRegistration.class);
-        when(
-                dataProvider.registerDataChangeListener(any(LogicalDatastoreType.class), any(InstanceIdentifier.class),
-                        any(DataChangeListener.class), any(DataChangeScope.class))).thenReturn(listenerRegistration);
-        asyncDataChangeEvent = mock(AsyncDataChangeEvent.class);
+        when(dataProvider.registerDataTreeChangeListener(any(DataTreeIdentifier.class),
+                any(DataTreeChangeListener.class))).thenReturn(listenerRegistration);
         entryValue = mock(FlowCapableNodeConnector.class);
         portName = "portName";
         when(entryValue.getName()).thenReturn(portName);
@@ -111,6 +107,13 @@ public class FlowCapableNodeConnectorListenerTest {
         when(ofOverlayEp.getPortName()).thenReturn(name);
 
         listener = new FlowCapableNodeConnectorListener(dataProvider, switchManager);
+
+        DataTreeModification<FlowCapableNodeConnector> mockDataTreeModification = mock(DataTreeModification.class);
+        mockModification = mock(DataObjectModification.class);
+        doReturn(mockModification).when(mockDataTreeModification).getRootNode();
+        doReturn(new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL, entryKey)).when(mockDataTreeModification)
+            .getRootPath();
+        changeEvent = Collections.singletonList(mockDataTreeModification);
     }
 
     @Test
@@ -121,37 +124,30 @@ public class FlowCapableNodeConnectorListenerTest {
 
     @Test
     public void onDataChangeTestCreatedDataSubmit() {
-        Map<InstanceIdentifier<?>, DataObject> entrySet = new HashMap<InstanceIdentifier<?>, DataObject>();
-        entrySet.put(entryKey, entryValue);
-        when(asyncDataChangeEvent.getCreatedData()).thenReturn(entrySet);
+        doReturn(DataObjectModification.ModificationType.WRITE).when(mockModification).getModificationType();
+        doReturn(entryValue).when(mockModification).getDataAfter();
 
-        listener.onDataChanged(asyncDataChangeEvent);
+        listener.onDataTreeChanged(changeEvent);
         verify(rwTx).submit();
     }
 
     @Test
     public void onDataChangeTestUpdatedDataSubmit() {
-        Map<InstanceIdentifier<?>, DataObject> entrySet = new HashMap<InstanceIdentifier<?>, DataObject>();
-        entrySet.put(entryKey, entryValue);
-        when(asyncDataChangeEvent.getUpdatedData()).thenReturn(entrySet);
-        when(asyncDataChangeEvent.getOriginalData()).thenReturn(entrySet);
+        doReturn(DataObjectModification.ModificationType.SUBTREE_MODIFIED).when(mockModification).getModificationType();
+        doReturn(entryValue).when(mockModification).getDataBefore();
+        doReturn(entryValue).when(mockModification).getDataAfter();
 
-        listener.onDataChanged(asyncDataChangeEvent);
+        listener.onDataTreeChanged(changeEvent);
         verify(rwTx).submit();
     }
 
     @Test
     public void onDataChangeTestRemovedPaths() {
-        Set<InstanceIdentifier<?>> removedPaths = new HashSet<InstanceIdentifier<?>>();
-        removedPaths.add(entryKey);
-        when(asyncDataChangeEvent.getRemovedPaths()).thenReturn(removedPaths);
-
-        Map<InstanceIdentifier<?>, DataObject> entrySet = new HashMap<InstanceIdentifier<?>, DataObject>();
-        entrySet.put(entryKey, entryValue);
-        when(asyncDataChangeEvent.getOriginalData()).thenReturn(entrySet);
+        doReturn(DataObjectModification.ModificationType.DELETE).when(mockModification).getModificationType();
+        doReturn(entryValue).when(mockModification).getDataBefore();
         when(ofOverlayEp.getNodeConnectorId()).thenReturn(childNodeConnectorId);
 
-        listener.onDataChanged(asyncDataChangeEvent);
+        listener.onDataTreeChanged(changeEvent);
         verify(rwTx).submit();
     }
 }

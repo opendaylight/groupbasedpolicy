@@ -8,20 +8,24 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.groupbasedpolicy.api.sf.ChainActionDefinition;
@@ -48,16 +52,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.SubjectFeatureInstances;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstance;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
-import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * Manage the state exchanged with SFC
@@ -67,14 +65,14 @@ import com.google.common.util.concurrent.ListenableFuture;
  * are retrieved from SFC.
  *
  */
-public class SfcManager implements AutoCloseable, DataChangeListener {
+public class SfcManager implements AutoCloseable, DataTreeChangeListener<ActionInstance> {
     private static final Logger LOG =
             LoggerFactory.getLogger(SfcManager.class);
 
     private final DataBroker dataBroker;
     private final ExecutorService executor;
     private final InstanceIdentifier<ActionInstance> allActionInstancesIid;
-    private final ListenerRegistration<DataChangeListener> actionListener;
+    private final ListenerRegistration<?> actionListener;
 
     /*
      * local cache of the RSP first hops that we've requested from SFC,
@@ -117,7 +115,7 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
         /*
          * Use thread-safe type only because we use an executor
          */
-        this.rspMap = new ConcurrentHashMap<String, RenderedServicePathFirstHop>();
+        this.rspMap = new ConcurrentHashMap<>();
 
         /*
          * For now, listen to all changes in rules
@@ -129,66 +127,57 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
                     .child(SubjectFeatureInstances.class)
                     .child(ActionInstance.class)
                     .build();
-        actionListener = dataBroker.registerDataChangeListener(LogicalDatastoreType.CONFIGURATION,
-                allActionInstancesIid, this, DataChangeScope.ONE);
+        actionListener = dataBroker.registerDataTreeChangeListener(new DataTreeIdentifier<>(
+                LogicalDatastoreType.CONFIGURATION, allActionInstancesIid), this);
         LOG.debug("SfcManager: Started");
     }
 
     public Set<IpAddress> getSfcSourceIps() {
-        if (rspMap.isEmpty()) return null;
+        if (rspMap.isEmpty()) {
+            return null;
+        }
 
-        Set<IpAddress> ipAddresses = new HashSet<IpAddress>();
+        Set<IpAddress> ipAddresses = new HashSet<>();
         for (RenderedServicePathFirstHop rsp: rspMap.values()) {
             if (rsp.getIp() != null) {
                 ipAddresses.add(IetfModelCodec.ipAddress2010(rsp.getIp()));
             }
         }
-        if (ipAddresses.isEmpty()) return null;
+        if (ipAddresses.isEmpty()) {
+            return null;
+        }
         return ipAddresses;
     }
 
     @Override
-    public void onDataChanged(
-            AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> actionInstanceNotification) {
-
-        for (DataObject dao : actionInstanceNotification.getCreatedData().values()) {
-            if (dao instanceof ActionInstance) {
-                ActionInstance ai = (ActionInstance)dao;
-                LOG.debug("New ActionInstance created");
-                executor.execute(new MatchActionDefTask(ai, null,
-                        ActionState.ADD));
-            }
-        }
-
-        for (InstanceIdentifier<?> iid : actionInstanceNotification.getRemovedPaths()) {
-            DataObject old = actionInstanceNotification.getOriginalData().get(iid);
-            if (old instanceof ActionInstance) {
-                ActionInstance ai = (ActionInstance)old;
-                executor.execute(new MatchActionDefTask(null, ai,
-                        ActionState.DELETE));
-            }
-        }
-
-        for (Entry<InstanceIdentifier<?>, DataObject> entry:
-            actionInstanceNotification.getUpdatedData().entrySet()) {
-            DataObject dao = entry.getValue();
-            if (dao instanceof ActionInstance) {
-                ActionInstance nai = (ActionInstance)dao;
-                ActionInstance oai = null;
-                InstanceIdentifier<?> iid = entry.getKey();
-                DataObject orig = actionInstanceNotification.getOriginalData().get(iid);
-                if (orig != null) {
-                    oai = (ActionInstance)orig;
-                    /*
-                     * We may have some cleanup here.  If the reference to
-                     * the Action Definition changed, or if the Action Instance's
-                     * chain parameter  then we're no longer
-                     * an action, and we may need to remove the RSP.
-                     */
-                }
-
-                executor.execute(new MatchActionDefTask(nai, oai,
-                        ActionState.CHANGE));
+    public void onDataTreeChanged(Collection<DataTreeModification<ActionInstance>> changes) {
+        for (DataTreeModification<ActionInstance> change: changes) {
+            DataObjectModification<ActionInstance> rootNode = change.getRootNode();
+            final ActionInstance dataBefore = rootNode.getDataBefore();
+            final ActionInstance dataAfter = rootNode.getDataAfter();
+            switch (rootNode.getModificationType()) {
+                case SUBTREE_MODIFIED:
+                case WRITE:
+                    if (dataBefore == null) {
+                        LOG.debug("New ActionInstance created");
+                        executor.execute(new MatchActionDefTask(dataAfter, null, ActionState.ADD));
+                    } else {
+                        /*
+                         We may have some cleanup here.  If the reference to
+                         the Action Definition changed, or if the Action Instance's
+                         chain parameter  then we're no longer
+                         an action, and we may need to remove the RSP.
+                        */
+                        LOG.debug("ActionInstance updated");
+                        executor.execute(new MatchActionDefTask(dataAfter, dataBefore, ActionState.CHANGE));
+                    }
+                    break;
+                case DELETE:
+                    LOG.debug("ActionInstance deleted");
+                    executor.execute(new MatchActionDefTask(null, dataBefore, ActionState.DELETE));
+                    break;
+                default:
+                    break;
             }
         }
     }
@@ -258,7 +247,9 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
         @Override
         public void onSuccess(Optional<ActionDefinition> dao) {
             LOG.debug("Found ActionDefinition {}", id.getValue());
-            if (!dao.isPresent()) return;
+            if (!dao.isPresent()) {
+                return;
+            }
 
             ActionDefinition ad = dao.get();
             if (ad.getId().getValue().equals(ChainActionDefinition.ID.getValue())) {
@@ -294,7 +285,9 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
         }
 
         private ParameterValue getChainNameParameter(List<ParameterValue> pvl) {
-            if (pvl == null) return null;
+            if (pvl == null) {
+                return null;
+            }
             for (ParameterValue pv: actionInstance.getParameterValue()) {
                 if (pv.getName().getValue().equals(SFC_CHAIN_NAME)) {
                     return pv;
@@ -326,7 +319,9 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
         private void deleteSfcRsp() {
             ParameterValue pv =
                     getChainNameParameter(originalInstance.getParameterValue());
-            if (pv == null) return;
+            if (pv == null) {
+                return;
+            }
             rspMap.remove(pv.getStringValue());
         }
 
@@ -340,7 +335,9 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
         private void addSfcRsp() {
             ParameterValue pv =
                     getChainNameParameter(actionInstance.getParameterValue());
-            if (pv == null) return;
+            if (pv == null) {
+                return;
+            }
 
             LOG.trace("Invoking RPC for chain {}", pv.getStringValue());
             ReadRenderedServicePathFirstHopInputBuilder builder =
@@ -375,7 +372,9 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
         private void getSfcChain() {
             ParameterValue pv =
                     getChainNameParameter(actionInstance.getParameterValue());
-            if (pv == null) return;
+            if (pv == null) {
+                return;
+            }
 
             LOG.trace("Invoking RPC for chain {}", pv.getStringValue());
             SfcName chainName=new SfcName(pv.getStringValue());
@@ -401,7 +400,9 @@ public class SfcManager implements AutoCloseable, DataChangeListener {
 
     @Override
     public void close() throws Exception {
-        if (actionListener != null) actionListener.close();
+        if (actionListener != null) {
+            actionListener.close();
+        }
 
     }
 }

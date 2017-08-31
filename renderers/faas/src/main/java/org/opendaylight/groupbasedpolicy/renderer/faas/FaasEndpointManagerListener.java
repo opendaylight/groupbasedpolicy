@@ -10,18 +10,19 @@ package org.opendaylight.groupbasedpolicy.renderer.faas;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ScheduledExecutorService;
-
+import java.util.concurrent.Executor;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.faas.uln.datastore.api.UlnDatastoreApi;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
@@ -40,105 +41,84 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoint.fields.L3Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.EndpointL3Prefix;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.faas.rev151009.mapped.tenants.entities.mapped.entity.MappedEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.faas.rev151009.mapped.tenants.entities.mapped.entity.MappedEndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.faas.rev151009.mapped.tenants.entities.mapped.entity.MappedEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.faas.rev151009.mapped.tenants.entities.mapped.entity.MappedSubnet;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
-import org.opendaylight.yangtools.yang.binding.DataObject;
-import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
-
-public class FaasEndpointManagerListener implements DataChangeListener, AutoCloseable {
+public class FaasEndpointManagerListener implements AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(FaasEndpointManagerListener.class);
-    private final ScheduledExecutorService executor;
-    private final ListenerRegistration<DataChangeListener> registerListener;
+    private final List<ListenerRegistration<?>> listenerRegistrations = new ArrayList<>();
     private final FaasPolicyManager policyManager;
     private final DataBroker dataProvider;
 
     public FaasEndpointManagerListener(FaasPolicyManager policyManager, DataBroker dataProvider,
-            ScheduledExecutorService executor) {
-        this.executor = executor;
+            Executor executor) {
         this.policyManager = policyManager;
         this.dataProvider = dataProvider;
-        this.registerListener = checkNotNull(dataProvider).registerDataChangeListener(LogicalDatastoreType.OPERATIONAL,
-                IidFactory.endpointsIidWildcard(), this, AsyncDataBroker.DataChangeScope.SUBTREE);
+
+        checkNotNull(dataProvider);
+        listenerRegistrations.add(dataProvider.registerDataTreeChangeListener(new DataTreeIdentifier<>(
+            LogicalDatastoreType.OPERATIONAL, IidFactory.endpointsIidWildcard().child(Endpoint.class)),
+            changes -> executor.execute(() -> onEndpointChanged(changes))));
+
+        listenerRegistrations.add(dataProvider.registerDataTreeChangeListener(new DataTreeIdentifier<>(
+            LogicalDatastoreType.OPERATIONAL, IidFactory.endpointsIidWildcard().child(EndpointL3.class)),
+            changes -> executor.execute(() -> onEndpointL3Changed(changes))));
     }
 
     @Override
     public void close() throws Exception {
-        if (registerListener != null)
-            registerListener.close();
+        for (ListenerRegistration<?> reg: listenerRegistrations) {
+            reg.close();
+        }
     }
 
-    @Override
-    public void onDataChanged(final AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
-        executor.execute(new Runnable() {
-
-            public void run() {
-                executeEvent(change);
+    private void onEndpointChanged(Collection<DataTreeModification<Endpoint>> changes) {
+        for (DataTreeModification<Endpoint> change: changes) {
+            DataObjectModification<Endpoint> rootNode = change.getRootNode();
+            switch (rootNode.getModificationType()) {
+                case SUBTREE_MODIFIED:
+                case WRITE:
+                    Endpoint updatedEndpoint = rootNode.getDataAfter();
+                    LOG.debug("Updated Endpoint {}", updatedEndpoint);
+                    if (validate(updatedEndpoint)) {
+                        policyManager.registerTenant(updatedEndpoint.getTenant(), updatedEndpoint.getEndpointGroup());
+                        processEndpoint(updatedEndpoint);
+                    }
+                    break;
+                case DELETE:
+                    Endpoint deletedEndpoint = rootNode.getDataBefore();
+                    LOG.debug("Removed Endpoint {}", deletedEndpoint);
+                    removeFaasEndpointLocationIfExist(deletedEndpoint.getTenant(), deletedEndpoint.getL2Context(),
+                            deletedEndpoint.getMacAddress());
+                    break;
+                default:
+                    break;
             }
-        });
+        }
     }
 
-    @VisibleForTesting
-    void executeEvent(final AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
-
-        // Create
-        for (DataObject dao : change.getCreatedData().values()) {
-            if (dao instanceof Endpoint) {
-                Endpoint endpoint = (Endpoint) dao;
-                LOG.debug("Created Endpoint {}", endpoint);
-                if (validate(endpoint)) {
-                    policyManager.registerTenant(endpoint.getTenant(), endpoint.getEndpointGroup());
-                    processEndpoint(endpoint);
-                }
-            } else if (dao instanceof EndpointL3) {
-                LOG.debug("Created EndpointL3 {}", dao);
-            } else if (dao instanceof EndpointL3Prefix) {
-                LOG.warn("Not Handled Event Yet by Faas Renderer. Created EndpointL3Prefix {}", dao);
-            }
-        }
-        // Update
-        Map<InstanceIdentifier<?>, DataObject> dao = change.getUpdatedData();
-        for (Map.Entry<InstanceIdentifier<?>, DataObject> entry : dao.entrySet()) {
-            if (entry.getValue() instanceof Endpoint) {
-                Endpoint endpoint = (Endpoint) entry.getValue();
-                LOG.debug("Updated Endpoint {}", endpoint);
-                if (validate(endpoint)) {
-                    policyManager.registerTenant(endpoint.getTenant(), endpoint.getEndpointGroup());
-                    processEndpoint(endpoint);
-                }
-            } else if (entry.getValue() instanceof EndpointL3) {
-                LOG.debug("Updated EndpointL3 {}", entry.getValue());
-            } else if (entry.getValue() instanceof EndpointL3Prefix) {
-                LOG.warn("Not Handled Event Yet by Faas Renderer. Updated EndpointL3Prefix {}", entry.getValue());
-            }
-        }
-        // Remove
-        for (InstanceIdentifier<?> iid : change.getRemovedPaths()) {
-            DataObject old = change.getOriginalData().get(iid);
-            if (old == null) {
-                continue;
-            }
-            if (old instanceof Endpoint) {
-                Endpoint endpoint = (Endpoint) old;
-                LOG.debug("Removed Endpoint {}", endpoint);
-                removeFaasEndpointLocationIfExist(endpoint.getTenant(), endpoint.getL2Context(),
-                        endpoint.getMacAddress());
-            } else if (old instanceof EndpointL3) {
-                EndpointL3 endpoint = (EndpointL3) old;
-                LOG.debug("Removed EndpointL3 {}", endpoint);
-                removeFaasEndpointLocationIfExist(endpoint.getTenant(), endpoint.getL2Context(),
-                        endpoint.getMacAddress());
-            } else if (old instanceof EndpointL3Prefix) {
-                LOG.warn("Not Handled Event Yet by Faas Renderer. Removed EndpointL3Prefix {}", old);
+    private void onEndpointL3Changed(Collection<DataTreeModification<EndpointL3>> changes) {
+        for (DataTreeModification<EndpointL3> change: changes) {
+            DataObjectModification<EndpointL3> rootNode = change.getRootNode();
+            switch (rootNode.getModificationType()) {
+                case SUBTREE_MODIFIED:
+                case WRITE:
+                    LOG.debug("Updated EndpointL3 {}", rootNode.getDataAfter());
+                    break;
+                case DELETE:
+                    EndpointL3 endpoint = rootNode.getDataBefore();
+                    LOG.debug("Removed EndpointL3 {}", endpoint);
+                    removeFaasEndpointLocationIfExist(endpoint.getTenant(), endpoint.getL2Context(),
+                            endpoint.getMacAddress());
+                    break;
+                default:
+                    break;
             }
         }
     }

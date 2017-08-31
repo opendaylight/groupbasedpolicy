@@ -21,25 +21,22 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.CheckedFuture;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.NotificationService;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
@@ -71,11 +68,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketProcessingService;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
-import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.CheckedFuture;
 
 public class EndpointManagerTest {
 
@@ -86,7 +79,6 @@ public class EndpointManagerTest {
     private NotificationService notificationService;
     private ScheduledExecutorService executor;
     private SwitchManager switchManager;
-    private ListenerRegistration<DataChangeListener> listenerReg;
     private EndpointListener endpointListener;
     private Endpoint endpoint1;
     private Endpoint endpoint2;
@@ -118,11 +110,8 @@ public class EndpointManagerTest {
         when(writeTransaction.submit()).thenReturn(checkedFutureWrite);
         BindingAwareBroker.RpcRegistration<EndpointService> rpcRegistration =
                 mock(BindingAwareBroker.RpcRegistration.class);
-        listenerReg = mock(ListenerRegistration.class);
-        when(dataProvider.registerDataChangeListener(any(LogicalDatastoreType.class), any(InstanceIdentifier.class),
-                any(DataChangeListener.class), any(DataChangeScope.class))).thenReturn(listenerReg);
         when(dataProvider.registerDataTreeChangeListener(any(DataTreeIdentifier.class),
-                any(ClusteredDataTreeChangeListener.class))).thenReturn(listenerReg);
+                any(ClusteredDataTreeChangeListener.class))).thenReturn(mock(ListenerRegistration.class));
 
         manager = spy(new EndpointManager(dataProvider, packetService, flowService, notificationService, executor, switchManager));
         endpointListener = mock(EndpointListener.class);
@@ -152,13 +141,6 @@ public class EndpointManagerTest {
         when(context2.getNodeId()).thenReturn(nodeId2);
         when(nodeId1.getValue()).thenReturn("nodeValue1");
         when(nodeId2.getValue()).thenReturn("nodeValue2");
-
-        // onDataChanged
-        AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change = mock(AsyncDataChangeEvent.class);
-        InstanceIdentifier<DataObject> endpointId = mock(InstanceIdentifier.class);
-        Set<InstanceIdentifier<?>> removedPaths = new HashSet<>();
-        removedPaths.add(endpointId);
-        when(change.getRemovedPaths()).thenReturn(removedPaths);
 
         // updateEndpointL3
         oldL3Ep = mock(EndpointL3.class);
@@ -622,7 +604,6 @@ public class EndpointManagerTest {
     @Test
     public void closeTest() throws Exception {
         manager.close();
-        verify(listenerReg, times(3)).close();
     }
 
     // **************

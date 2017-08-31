@@ -9,18 +9,15 @@
 package org.opendaylight.groupbasedpolicy.renderer.iovisor.endpoint;
 
 import java.util.Collection;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.groupbasedpolicy.renderer.iovisor.utils.IovisorModuleUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
-import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
@@ -33,8 +30,6 @@ public class EndpointListenerTest {
     EndpointListener endpointListner;
     @Mock
     DataBroker dataBroker;
-    @Mock
-    ListenerRegistration<DataChangeListener> registerListener;
 
     @Mock
     Collection<DataTreeModification<Endpoint>> changes;

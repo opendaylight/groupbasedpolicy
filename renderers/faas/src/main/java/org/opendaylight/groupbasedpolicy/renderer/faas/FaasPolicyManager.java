@@ -9,7 +9,10 @@ package org.opendaylight.groupbasedpolicy.renderer.faas;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -17,18 +20,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledExecutorService;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
+import java.util.concurrent.Executor;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.faas.uln.datastore.api.Pair;
 import org.opendaylight.faas.uln.datastore.api.UlnDatastoreApi;
@@ -79,29 +79,28 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.p
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.PolicyRuleGroupWithEndpointConstraints;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.policy.rule.group.with.endpoint.constraints.PolicyRuleGroup;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
-import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
+public class FaasPolicyManager implements DataTreeChangeListener<ResolvedPolicy>, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(FaasPolicyManager.class);
     private static final RendererName rendererName = new RendererName("faas");
-    private final ListenerRegistration<DataChangeListener> registerListener;
-    private final ScheduledExecutorService executor;
+    private final ListenerRegistration<?> registerListener;
+    private final Executor executor;
     private final DataBroker dataProvider;
     final Map<Pair<EndpointGroupId, TenantId>, List<SubnetId>> epgSubnetsMap = new HashMap<>();
     private final ConcurrentHashMap<TenantId, Uuid> mappedTenants = new ConcurrentHashMap<>();
-    final ConcurrentHashMap<TenantId, ArrayList<ListenerRegistration<DataChangeListener>>> registeredTenants =
+    final ConcurrentHashMap<TenantId, ArrayList<ListenerRegistration<?>>> registeredTenants =
             new ConcurrentHashMap<>();
 
-    public FaasPolicyManager(DataBroker dataBroker, ScheduledExecutorService executor) {
+    public FaasPolicyManager(DataBroker dataBroker, Executor executor) {
         this.dataProvider = dataBroker;
         this.executor = executor;
-        this.registerListener = checkNotNull(dataProvider).registerDataChangeListener(LogicalDatastoreType.OPERATIONAL,
-                InstanceIdentifier.builder(ResolvedPolicies.class).child(ResolvedPolicy.class).build(), this,
-                AsyncDataBroker.DataChangeScope.SUBTREE);
+        this.registerListener = checkNotNull(dataProvider).registerDataTreeChangeListener(new DataTreeIdentifier<>(
+                LogicalDatastoreType.OPERATIONAL, InstanceIdentifier.builder(ResolvedPolicies.class)
+                    .child(ResolvedPolicy.class).build()), this);
 
         RendererBuilder rendBuilder = new RendererBuilder();
         rendBuilder.setName(rendererName);
@@ -117,64 +116,48 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
     @Override
     public void close() throws Exception {
         synchronized (registeredTenants) {
-            for (ArrayList<ListenerRegistration<DataChangeListener>> list : registeredTenants.values()) {
+            for (ArrayList<ListenerRegistration<?>> list : registeredTenants.values()) {
                 list.forEach(ListenerRegistration::close);
             }
             registeredTenants.clear();
 
             LOG.debug("Closed All Tenant Registerations");
         }
-        if (registerListener != null)
+        if (registerListener != null) {
             registerListener.close();
+        }
     }
 
     @Override
-    public void onDataChanged(final AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
-        executor.execute(new Runnable() {
-
-            public void run() {
-                executeEvent(change);
-            }
-        });
+    public void onDataTreeChanged(Collection<DataTreeModification<ResolvedPolicy>> changes) {
+        executor.execute(() -> executeEvent(changes));
     }
 
-    private void executeEvent(final AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
-        // Create
-        for (DataObject dao : change.getCreatedData().values()) {
-            if (dao instanceof ResolvedPolicy) {
-                ResolvedPolicy newPolicy = (ResolvedPolicy) dao;
-                if (handledPolicy(newPolicy)) {
-                    LOG.debug("Created Policy: Consumer EPG {}, Provider EPG {}", newPolicy.getConsumerEpgId(),
-                            newPolicy.getProviderEpgId());
-                    updateLogicalNetwork(newPolicy);
-                }
-            }
-        }
-        // Update
-        Map<InstanceIdentifier<?>, DataObject> d = change.getUpdatedData();
-        for (Map.Entry<InstanceIdentifier<?>, DataObject> entry : d.entrySet()) {
-            if (entry.getValue() instanceof ResolvedPolicy) {
-                ResolvedPolicy newPolicy = (ResolvedPolicy) entry.getValue();
-                ResolvedPolicy oldPolicy = (ResolvedPolicy) change.getOriginalData().get(entry.getKey());
-                if (!isEqualService(newPolicy, oldPolicy)) {
-                    removeLogicalNetwork(oldPolicy);
-                }
-                if (handledPolicy(newPolicy)) {
-                    LOG.debug("Updated Policy: Consumer EPG {}, Provider EPG {}", newPolicy.getConsumerEpgId(),
-                            newPolicy.getProviderEpgId());
-                    updateLogicalNetwork(newPolicy);
-                }
-            }
-        }
+    private void executeEvent(final Collection<DataTreeModification<ResolvedPolicy>> changes) {
+        for (DataTreeModification<ResolvedPolicy> change: changes) {
+            DataObjectModification<ResolvedPolicy> rootNode = change.getRootNode();
+            ResolvedPolicy oldPolicy = rootNode.getDataBefore();
+            switch (rootNode.getModificationType()) {
+                case SUBTREE_MODIFIED:
+                case WRITE:
+                    ResolvedPolicy newPolicy = rootNode.getDataAfter();
+                    if (!isEqualService(newPolicy, oldPolicy)) {
+                        removeLogicalNetwork(oldPolicy);
+                    }
 
-        // Remove
-        for (InstanceIdentifier<?> iid : change.getRemovedPaths()) {
-            DataObject old = change.getOriginalData().get(iid);
-            if (old != null && old instanceof ResolvedPolicy) {
-                ResolvedPolicy oldPolicy = (ResolvedPolicy) old;
-                LOG.debug("Removed Policy: Consumer EPG {}, Provider EPG {}", oldPolicy.getConsumerEpgId(),
-                        oldPolicy.getProviderEpgId());
-                removeLogicalNetwork(oldPolicy);
+                    if (handledPolicy(newPolicy)) {
+                        LOG.debug("Updated Policy: Consumer EPG {}, Provider EPG {}", newPolicy.getConsumerEpgId(),
+                                newPolicy.getProviderEpgId());
+                        updateLogicalNetwork(newPolicy);
+                    }
+                    break;
+                case DELETE:
+                    LOG.debug("Removed Policy: Consumer EPG {}, Provider EPG {}", oldPolicy.getConsumerEpgId(),
+                            oldPolicy.getProviderEpgId());
+                    removeLogicalNetwork(oldPolicy);
+                    break;
+                default:
+                    break;
             }
         }
     }
@@ -249,21 +232,23 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
             /*
              * tenant registrations
              */
-            ArrayList<ListenerRegistration<DataChangeListener>> list = new ArrayList<>();
-            ListenerRegistration<DataChangeListener> reg;
+            ArrayList<ListenerRegistration<?>> list = new ArrayList<>();
+            ListenerRegistration<?> reg;
             // contracts
-            reg = dataProvider.registerDataChangeListener(LogicalDatastoreType.CONFIGURATION,
-                    IidFactory.contractWildcardIid(gbpTenantId), faasContractManagerListener, DataChangeScope.SUBTREE);
+            reg = dataProvider.registerDataTreeChangeListener(new DataTreeIdentifier<>(
+                    LogicalDatastoreType.CONFIGURATION, IidFactory.contractWildcardIid(gbpTenantId)),
+                    faasContractManagerListener);
             list.add(reg);
             // subnets
-            reg = dataProvider.registerDataChangeListener(LogicalDatastoreType.CONFIGURATION,
-                    IidFactory.subnetWildcardIid(gbpTenantId), faasSubnetManagerListener, DataChangeScope.SUBTREE);
+            reg = dataProvider.registerDataTreeChangeListener(new DataTreeIdentifier<>(
+                    LogicalDatastoreType.CONFIGURATION, IidFactory.subnetWildcardIid(gbpTenantId)),
+                    faasSubnetManagerListener);
             list.add(reg);
 
             // tenant
-            reg = dataProvider.registerDataChangeListener(LogicalDatastoreType.CONFIGURATION,
-                    IidFactory.tenantIid(gbpTenantId), new FaasTenantManagerListener(this, gbpTenantId, faasTenantId,
-                            executor), DataChangeScope.BASE);
+            reg = dataProvider.registerDataTreeChangeListener(new DataTreeIdentifier<>(
+                    LogicalDatastoreType.CONFIGURATION, IidFactory.tenantIid(gbpTenantId)),
+                    new FaasTenantManagerListener(this, gbpTenantId, faasTenantId, executor));
             list.add(reg);
 
             // Map previously resolved policy for this tenant
@@ -363,16 +348,17 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
     }
 
     public static boolean isUUid(String value) {
-        return (value != null && value.matches("[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"));
+        return value != null && value.matches("[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}");
     }
 
     public void unregisterTenant(TenantId tenantId) {
 
-        ArrayList<ListenerRegistration<DataChangeListener>> list = registeredTenants.remove(tenantId);
+        ArrayList<ListenerRegistration<?>> list = registeredTenants.remove(tenantId);
         if (list != null) {
-            for (ListenerRegistration<DataChangeListener> reg : list) {
-                if (reg != null)
+            for (ListenerRegistration<?> reg : list) {
+                if (reg != null) {
                     reg.close();
+                }
             }
             LOG.debug("Unregistered tenant {}", tenantId);
         }
@@ -788,10 +774,11 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
         LogicalRouterBuilder builder = new LogicalRouterBuilder();
         builder.setAdminStateUp(true);
         builder.setName(new Text(epg.getId().getValue()));
-        if (epg.getDescription() != null)
+        if (epg.getDescription() != null) {
             builder.setDescription(new Text("gbp-epg: " + epg.getDescription().getValue()));
-        else
+        } else {
             builder.setDescription(new Text("gbp-epg"));
+        }
         builder.setPublic(isPublic);
         builder.setTenantId(tenantId);
         builder.setUuid(new Uuid(UUID.randomUUID().toString()));
@@ -802,10 +789,11 @@ public class FaasPolicyManager implements DataChangeListener, AutoCloseable {
         LogicalSwitchBuilder builder = new LogicalSwitchBuilder();
         builder.setAdminStateUp(true);
         builder.setName(new Text(epg.getId().getValue()));
-        if (epg.getDescription() != null)
+        if (epg.getDescription() != null) {
             builder.setDescription(new Text("gbp-epg: " + epg.getDescription().getValue()));
-        else
+        } else {
             builder.setDescription(new Text("gbp-epg"));
+        }
         builder.setTenantId(tenantId);
         builder.setUuid(new Uuid(UUID.randomUUID().toString()));
         return builder;

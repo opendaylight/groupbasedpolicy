@@ -14,22 +14,24 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
@@ -37,7 +39,6 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.faas.uln.datastore.api.UlnDatastoreApi;
-import org.opendaylight.groupbasedpolicy.renderer.faas.test.DataChangeListenerTester;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.common.rev151013.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.security.rules.rev151013.security.rule.groups.attributes.security.rule.groups.container.SecurityRuleGroups;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.security.rules.rev151013.security.rule.groups.attributes.security.rule.groups.container.security.rule.groups.SecurityRuleGroup;
@@ -59,8 +60,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.Rule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.RuleBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstanceBuilder;
-import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -73,12 +72,10 @@ public class FaasContractManagerListenerCovrgTest {
     private static final ClauseName CLAUSE_NAME = new ClauseName("clause-1");
     public static final SubjectName SUBJECT_NAME = new SubjectName("subject-name");
     private InstanceIdentifier<Contract> contractIid;
-    private ContractId contractId = new ContractId("contractId");
+    private final ContractId contractId = new ContractId("contractId");
     private FaasContractManagerListener listener;
-    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-    private TenantId gbpTenantId = new TenantId("b4511aac-ae43-11e5-bf7f-feff819cdc9f");
-    private Uuid faasTenantId = new Uuid("b4511aac-ae43-11e5-bf7f-feff819cdc9f");
-    private DataChangeListenerTester tester;
+    private final TenantId gbpTenantId = new TenantId("b4511aac-ae43-11e5-bf7f-feff819cdc9f");
+    private final Uuid faasTenantId = new Uuid("b4511aac-ae43-11e5-bf7f-feff819cdc9f");
     private DataBroker dataProvider;
 
     @SuppressWarnings("unchecked")
@@ -87,9 +84,8 @@ public class FaasContractManagerListenerCovrgTest {
         contractIid = mock(InstanceIdentifier.class);
         dataProvider = mock(DataBroker.class);
 
-        listener = new FaasContractManagerListener(dataProvider, gbpTenantId, faasTenantId, executor);
-        tester = new DataChangeListenerTester(listener);
-        tester.setRemovedPath(contractIid);
+        listener = new FaasContractManagerListener(dataProvider, gbpTenantId, faasTenantId,
+                MoreExecutors.directExecutor());
     }
 
     @SuppressWarnings("unchecked")
@@ -115,8 +111,14 @@ public class FaasContractManagerListenerCovrgTest {
         when(futureMappedContract.checkedGet()).thenReturn(optMappedContract);
 
         Contract contract = new ContractBuilder().setId(contractId).build();
-        tester.setDataObject(contractIid, contract);
-        listener.executeEvent(tester.getChangeMock());
+
+        DataTreeModification<Contract> mockDataTreeModification = mock(DataTreeModification.class);
+        DataObjectModification<Contract> mockModification = mock(DataObjectModification.class);
+        doReturn(mockModification).when(mockDataTreeModification).getRootNode();
+        doReturn(DataObjectModification.ModificationType.WRITE).when(mockModification).getModificationType();
+        doReturn(contract).when(mockModification).getDataAfter();
+
+        listener.onDataTreeChanged(Collections.singletonList(mockDataTreeModification));
     }
 
     @Test

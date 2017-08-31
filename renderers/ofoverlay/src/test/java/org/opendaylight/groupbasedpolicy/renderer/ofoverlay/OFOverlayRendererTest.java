@@ -9,23 +9,24 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.Futures;
 import java.lang.reflect.Method;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.NotificationService;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
@@ -37,10 +38,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketProcessingService;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.CheckedFuture;
-import com.google.common.util.concurrent.Futures;
 
 public class OFOverlayRendererTest {
 
@@ -55,7 +52,7 @@ public class OFOverlayRendererTest {
     private StatisticsManager statisticsManager;
     private short tableOffset;
     private CheckedFuture<Optional<OfOverlayConfig>, ReadFailedException> future;
-    private ListenerRegistration<DataChangeListener> configReg;
+    private ListenerRegistration<?> configReg;
     private ReadOnlyTransaction readTransaction;
 
     @SuppressWarnings("unchecked")
@@ -70,8 +67,6 @@ public class OFOverlayRendererTest {
         statisticsManager = mock(StatisticsManager.class);
         tableOffset = 5;
         configReg = mock(ListenerRegistration.class);
-        when(dataProvider.registerDataChangeListener(any(LogicalDatastoreType.class), any(InstanceIdentifier.class),
-                any(DataChangeListener.class), any(DataChangeScope.class))).thenReturn(configReg);
         when(dataProvider.registerDataTreeChangeListener(any(DataTreeIdentifier.class),
                 any(ClusteredDataTreeChangeListener.class))).thenReturn(configReg);
 
@@ -91,7 +86,7 @@ public class OFOverlayRendererTest {
     @Test
     public void constructorTest() throws Exception {
         renderer.close();
-        verify(configReg, times(11)).close();
+        verify(configReg, atLeastOnce()).close();
     }
 
     @Test

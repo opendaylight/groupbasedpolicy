@@ -17,24 +17,20 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Executor;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
@@ -87,29 +83,26 @@ import org.powermock.modules.junit4.PowerMockRunner;
 public class FaasPolicyManagerCovrgTest {
 
     private InstanceIdentifier<DataObject> policyId;
-    private AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change;
     DataBroker dataProvider;
-    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(Runtime.getRuntime()
-            .availableProcessors());
-    private EndpointGroupId consumerEpgId = new EndpointGroupId("consumerEpgId");
-    private SubnetId consumerSubnet = new SubnetId("consumerSubnet");
-    private SubnetId providerSubnet = new SubnetId("providerSubnet");
-    private EndpointGroupId providerEpgId = new EndpointGroupId("providerEpgId");
-    private ContractId contractId = new ContractId("contractId");
-    private TenantId tenantId = new TenantId("tenantId");
-    private Uuid faasTenantId = new Uuid("0eb98cf5-086c-4a81-8a4e-0c3b4566108b");
-    private Uuid faasSecRulesId = new Uuid("1eb98cf5-086c-4a81-8a4e-0c3b4566108b");
-    private L3ContextId l3Context = new L3ContextId("l3ContextId");
-    private EndpointGroupId epgId = new EndpointGroupId("epgId");
-    private SubnetId subnetId = new SubnetId("subnetId");
-    private Uuid dummyUuid1 = new Uuid("2eb98cf5-086c-4a81-8a4e-0c3b4566108b");
-    private Uuid dummyUuid2 = new Uuid("3eb98cf5-086c-4a81-8a4e-0c3b4566108b");
+    private final Executor executor = MoreExecutors.directExecutor();
+    private final EndpointGroupId consumerEpgId = new EndpointGroupId("consumerEpgId");
+    private final SubnetId consumerSubnet = new SubnetId("consumerSubnet");
+    private final SubnetId providerSubnet = new SubnetId("providerSubnet");
+    private final EndpointGroupId providerEpgId = new EndpointGroupId("providerEpgId");
+    private final ContractId contractId = new ContractId("contractId");
+    private final TenantId tenantId = new TenantId("tenantId");
+    private final Uuid faasTenantId = new Uuid("0eb98cf5-086c-4a81-8a4e-0c3b4566108b");
+    private final Uuid faasSecRulesId = new Uuid("1eb98cf5-086c-4a81-8a4e-0c3b4566108b");
+    private final L3ContextId l3Context = new L3ContextId("l3ContextId");
+    private final EndpointGroupId epgId = new EndpointGroupId("epgId");
+    private final SubnetId subnetId = new SubnetId("subnetId");
+    private final Uuid dummyUuid1 = new Uuid("2eb98cf5-086c-4a81-8a4e-0c3b4566108b");
+    private final Uuid dummyUuid2 = new Uuid("3eb98cf5-086c-4a81-8a4e-0c3b4566108b");
 
     @SuppressWarnings("unchecked")
     @Before
     public void init() throws Exception {
         policyId = mock(InstanceIdentifier.class);
-        change = mock(AsyncDataChangeEvent.class);
         policyId = mock(InstanceIdentifier.class);
         dataProvider = mock(DataBroker.class);
 
@@ -118,20 +111,14 @@ public class FaasPolicyManagerCovrgTest {
         CheckedFuture<Void, TransactionCommitFailedException> futureVoid =
                 mock(CheckedFuture.class);
         when(writeTransaction.submit()).thenReturn(futureVoid);
-
-        Set<InstanceIdentifier<?>> removedPaths = new HashSet<>();
-        removedPaths.add(policyId);
-        when(change.getRemovedPaths()).thenReturn(removedPaths);
     }
 
     @Test
     public void testConstructor() throws Exception {
         FaasPolicyManager other = new MockFaasPolicyManager(dataProvider, executor);
 
-        verify(dataProvider).registerDataChangeListener(LogicalDatastoreType.OPERATIONAL,
-                InstanceIdentifier.builder(ResolvedPolicies.class)
-                        .child(ResolvedPolicy.class)
-                        .build(), other, AsyncDataBroker.DataChangeScope.SUBTREE);
+        verify(dataProvider).registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
+                InstanceIdentifier.builder(ResolvedPolicies.class).child(ResolvedPolicy.class).build()), other);
         other.close();
     }
 

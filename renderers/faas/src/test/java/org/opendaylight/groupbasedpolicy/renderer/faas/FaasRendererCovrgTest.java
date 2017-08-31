@@ -9,16 +9,20 @@ package org.opendaylight.groupbasedpolicy.renderer.faas;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.CheckedFuture;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry;
+import org.opendaylight.yangtools.concepts.ListenerRegistration;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
@@ -28,6 +32,9 @@ public class FaasRendererCovrgTest {
     @Test
     public void testConstructor() throws Exception {
         DataBroker dataProvider = mock(DataBroker.class);
+        doReturn(mock(ListenerRegistration.class)).when(dataProvider).registerDataTreeChangeListener(
+                any(DataTreeIdentifier.class), any(DataTreeChangeListener.class));
+
         EpRendererAugmentationRegistry epRendererAugmentationRegistry = mock(EpRendererAugmentationRegistry.class);
 
         WriteTransaction wTx = mock(WriteTransaction.class);

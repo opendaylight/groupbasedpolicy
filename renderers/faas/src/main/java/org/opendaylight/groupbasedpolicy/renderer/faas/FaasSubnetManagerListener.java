@@ -7,18 +7,19 @@
  */
 package org.opendaylight.groupbasedpolicy.renderer.faas;
 
+import com.google.common.base.Optional;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledExecutorService;
-
+import java.util.concurrent.Executor;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.faas.uln.datastore.api.UlnDatastoreApi;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
@@ -35,25 +36,20 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.faas.rev15
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.Subnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.subnet.Gateways;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.subnet.gateways.Prefixes;
-import org.opendaylight.yangtools.yang.binding.DataObject;
-import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
-
-public class FaasSubnetManagerListener implements DataChangeListener {
+public class FaasSubnetManagerListener implements DataTreeChangeListener<Subnet> {
 
     private static final Logger LOG = LoggerFactory.getLogger(FaasSubnetManagerListener.class);
-    private ConcurrentHashMap<SubnetId, Uuid> mappedSubnets = new ConcurrentHashMap<>();
-    private final ScheduledExecutorService executor;
+    private final ConcurrentHashMap<SubnetId, Uuid> mappedSubnets = new ConcurrentHashMap<>();
+    private final Executor executor;
     private final DataBroker dataProvider;
     private final TenantId gbpTenantId;
     private final Uuid faasTenantId;
 
     public FaasSubnetManagerListener(DataBroker dataProvider, TenantId gbpTenantId, Uuid faasTenantId,
-            ScheduledExecutorService executor) {
+            Executor executor) {
         this.executor = executor;
         this.faasTenantId = faasTenantId;
         this.gbpTenantId = gbpTenantId;
@@ -61,52 +57,35 @@ public class FaasSubnetManagerListener implements DataChangeListener {
     }
 
     @Override
-    public void onDataChanged(final AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
-        executor.execute(new Runnable() {
-
-            public void run() {
-                executeEvent(change);
-            }
-        });
+    public void onDataTreeChanged(Collection<DataTreeModification<Subnet>> changes) {
+        executor.execute(() -> executeEvent(changes));
     }
 
-    @VisibleForTesting
-    void executeEvent(final AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
-        // Create
-        for (DataObject dao : change.getCreatedData().values()) {
-            if (dao instanceof Subnet) {
-                Subnet subnet = (Subnet) dao;
-                LOG.debug("Subnet {} is Created.", subnet.getId().getValue());
-                UlnDatastoreApi.submitSubnetToDs(initSubnetBuilder(subnet).build());
-            }
-        }
-        // Update
-        Map<InstanceIdentifier<?>, DataObject> dao = change.getUpdatedData();
-        for (Map.Entry<InstanceIdentifier<?>, DataObject> entry : dao.entrySet()) {
-            if (entry.getValue() instanceof Subnet) {
-                Subnet subnet = (Subnet) entry.getValue();
-                LOG.debug("Subnet {} is Updated.", subnet.getId().getValue());
-                UlnDatastoreApi.submitSubnetToDs(initSubnetBuilder(subnet).build());
-            }
-        }
-        // Remove
-        for (InstanceIdentifier<?> iid : change.getRemovedPaths()) {
-            DataObject old = change.getOriginalData().get(iid);
-            if (old == null) {
-                continue;
-            }
-            if (old instanceof Subnet) {
-                Subnet subnet = (Subnet) old;
-                ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
-                Optional<MappedSubnet> op = DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
-                        FaasIidFactory.mappedSubnetIid(gbpTenantId, subnet.getId()), rwTx);
-                if (op.isPresent()) {
-                    DataStoreHelper.submitToDs(rwTx);
-                }
-                Uuid faasSubnetId = mappedSubnets.remove(subnet.getId());
-                if (faasSubnetId != null) {
-                    UlnDatastoreApi.removeSubnetFromDsIfExists(faasTenantId, faasSubnetId);
-                }
+    private void executeEvent(final Collection<DataTreeModification<Subnet>> changes) {
+        for (DataTreeModification<Subnet> change: changes) {
+            DataObjectModification<Subnet> rootNode = change.getRootNode();
+            switch (rootNode.getModificationType()) {
+                case SUBTREE_MODIFIED:
+                case WRITE:
+                    Subnet updatedSubnet = rootNode.getDataAfter();
+                    LOG.debug("Subnet {} is Updated.", updatedSubnet.getId().getValue());
+                    UlnDatastoreApi.submitSubnetToDs(initSubnetBuilder(updatedSubnet).build());
+                    break;
+                case DELETE:
+                    Subnet deletedSubnet = rootNode.getDataBefore();
+                    ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
+                    Optional<MappedSubnet> op = DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
+                            FaasIidFactory.mappedSubnetIid(gbpTenantId, deletedSubnet.getId()), rwTx);
+                    if (op.isPresent()) {
+                        DataStoreHelper.submitToDs(rwTx);
+                    }
+                    Uuid faasSubnetId = mappedSubnets.remove(deletedSubnet.getId());
+                    if (faasSubnetId != null) {
+                        UlnDatastoreApi.removeSubnetFromDsIfExists(faasTenantId, faasSubnetId);
+                    }
+                    break;
+                default:
+                    break;
             }
         }
     }
@@ -147,10 +126,11 @@ public class FaasSubnetManagerListener implements DataChangeListener {
         builder.setIpPrefix(IetfModelCodec.ipPrefix2013(gbpSubnet.getIpPrefix()));
         builder.setUuid(getFaasSubnetId(gbpSubnet.getId()));
         builder.setName(new Text(gbpSubnet.getId().getValue()));
-        if (gbpSubnet.getDescription() != null)
+        if (gbpSubnet.getDescription() != null) {
             builder.setDescription(new Text("gbp-subnet: " + gbpSubnet.getDescription().getValue()));
-        else
+        } else {
             builder.setDescription(new Text("gbp-subnet"));
+        }
         builder.setTenantId(faasTenantId);
         builder.setVirtualRouterIp(IetfModelCodec.ipAddress2013(gbpSubnet.getVirtualRouterIp()));
         // TODO DNS servers
@@ -187,5 +167,4 @@ public class FaasSubnetManagerListener implements DataChangeListener {
         }
         return val;
     }
-
 }

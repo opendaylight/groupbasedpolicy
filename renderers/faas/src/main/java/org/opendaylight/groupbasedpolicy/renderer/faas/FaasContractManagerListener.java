@@ -8,21 +8,21 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.faas;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ScheduledExecutorService;
-
-import com.google.common.annotations.VisibleForTesting;
+import java.util.concurrent.Executor;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.faas.uln.datastore.api.UlnDatastoreApi;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
@@ -64,24 +64,21 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstanceKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstanceKey;
-import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Optional;
-
-public class FaasContractManagerListener implements DataChangeListener {
+public class FaasContractManagerListener implements DataTreeChangeListener<Contract> {
 
     private static final Logger LOG = LoggerFactory.getLogger(FaasContractManagerListener.class);
-    private ConcurrentHashMap<ContractId, Uuid> mappedContracts = new ConcurrentHashMap<>();
-    private final ScheduledExecutorService executor;
+    private final ConcurrentHashMap<ContractId, Uuid> mappedContracts = new ConcurrentHashMap<>();
+    private final Executor executor;
     private final DataBroker dataProvider;
     private final TenantId gbpTenantId;
     private final Uuid faasTenantId;
 
     public FaasContractManagerListener(DataBroker dataProvider, TenantId gbpTenantId, Uuid faasTenantId,
-            ScheduledExecutorService executor) {
+            Executor executor) {
         this.executor = executor;
         this.gbpTenantId = gbpTenantId;
         this.faasTenantId = faasTenantId;
@@ -89,53 +86,36 @@ public class FaasContractManagerListener implements DataChangeListener {
     }
 
     @Override
-    public void onDataChanged(final AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
-        executor.execute(new Runnable() {
-
-            public void run() {
-                executeEvent(change);
-            }
-        });
+    public void onDataTreeChanged(Collection<DataTreeModification<Contract>> changes) {
+        executor.execute(() -> executeEvent(changes));
     }
 
-    @VisibleForTesting
-    void executeEvent(final AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
-        // Create
-        for (DataObject dao : change.getCreatedData().values()) {
-            if (dao instanceof Contract) {
-                Contract contract = (Contract) dao;
-                LOG.debug("Contract {} is Created.", contract.getId().getValue());
-                UlnDatastoreApi.submitSecurityGroupsToDs(initSecurityGroupBuilder(contract).build());
-            }
-        }
-        // Update
-        Map<InstanceIdentifier<?>, DataObject> dao = change.getUpdatedData();
-        for (Map.Entry<InstanceIdentifier<?>, DataObject> entry : dao.entrySet()) {
-            if (entry.getValue() instanceof Contract) {
-                Contract contract = (Contract) entry.getValue();
-                LOG.debug("Contract {} is Updated.", contract.getId().getValue());
-                UlnDatastoreApi.submitSecurityGroupsToDs(initSecurityGroupBuilder(contract).build());
-            }
-        }
-        // Remove
-        for (InstanceIdentifier<?> iid : change.getRemovedPaths()) {
-            DataObject old = change.getOriginalData().get(iid);
-            if (old == null) {
-                continue;
-            }
-            if (old instanceof Contract) {
-                Contract contract = (Contract) old;
-                LOG.debug("Contract {} is removed.", contract.getId().getValue());
-                ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
-                Optional<MappedContract> op = DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
-                        FaasIidFactory.mappedContractIid(gbpTenantId, contract.getId()), rwTx);
-                if (op.isPresent()) {
-                    DataStoreHelper.submitToDs(rwTx);
-                }
-                Uuid val = mappedContracts.remove(contract.getId());
-                if (val != null) {
-                    UlnDatastoreApi.removeSecurityGroupsFromDsIfExists(faasTenantId, val);
-                }
+    private void executeEvent(final Collection<DataTreeModification<Contract>> changes) {
+        for (DataTreeModification<Contract> change: changes) {
+            DataObjectModification<Contract> rootNode = change.getRootNode();
+            switch (rootNode.getModificationType()) {
+                case SUBTREE_MODIFIED:
+                case WRITE:
+                    Contract updatedContract = rootNode.getDataAfter();
+                    LOG.debug("Contract {} is Updated.", updatedContract.getId().getValue());
+                    UlnDatastoreApi.submitSecurityGroupsToDs(initSecurityGroupBuilder(updatedContract).build());
+                    break;
+                case DELETE:
+                    Contract deletedContract = rootNode.getDataBefore();
+                    LOG.debug("Contract {} is removed.", deletedContract.getId().getValue());
+                    ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
+                    Optional<MappedContract> op = DataStoreHelper.removeIfExists(LogicalDatastoreType.OPERATIONAL,
+                            FaasIidFactory.mappedContractIid(gbpTenantId, deletedContract.getId()), rwTx);
+                    if (op.isPresent()) {
+                        DataStoreHelper.submitToDs(rwTx);
+                    }
+                    Uuid val = mappedContracts.remove(deletedContract.getId());
+                    if (val != null) {
+                        UlnDatastoreApi.removeSecurityGroupsFromDsIfExists(faasTenantId, val);
+                    }
+                    break;
+                default:
+                    break;
             }
         }
     }
@@ -159,10 +139,11 @@ public class FaasContractManagerListener implements DataChangeListener {
         SecurityRuleGroupsBuilder builder = new SecurityRuleGroupsBuilder();
         builder.setUuid(getFaasSecurityRulesId(contract.getId()));
         builder.setName(new Text(contract.getId().getValue()));
-        if (contract.getDescription() != null)
+        if (contract.getDescription() != null) {
             builder.setDescription(new Text("gbp-contract: " + contract.getDescription().getValue()));
-        else
+        } else {
             builder.setDescription(new Text("gbp-contract"));
+        }
         builder.setTenantId(faasTenantId);
         builder.setSecurityRuleGroup(buildSecurityRuleGroup(contract));
         LOG.trace("Contract {} is mapped to Faas Security Rules {} ", contract.getId().getValue(), builder.getUuid()

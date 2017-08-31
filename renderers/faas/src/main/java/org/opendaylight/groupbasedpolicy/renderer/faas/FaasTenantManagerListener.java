@@ -7,29 +7,27 @@
  */
 package org.opendaylight.groupbasedpolicy.renderer.faas;
 
-import java.util.concurrent.ScheduledExecutorService;
-
-import com.google.common.annotations.VisibleForTesting;
-import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
+import java.util.Collection;
+import java.util.concurrent.Executor;
+import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.common.rev151013.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.Tenant;
-import org.opendaylight.yangtools.yang.binding.DataObject;
-import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class FaasTenantManagerListener implements DataChangeListener {
+public class FaasTenantManagerListener implements DataTreeChangeListener<Tenant> {
 
     private static final Logger LOG = LoggerFactory.getLogger(FaasTenantManagerListener.class);
-    private final ScheduledExecutorService executor;
+    private final Executor executor;
     private final TenantId gbpTenantId;
     private final Uuid faasTenantId;
     private final FaasPolicyManager policyManager;
 
     public FaasTenantManagerListener(FaasPolicyManager policyManager, TenantId gbpTenantId, Uuid faasTenantId,
-            ScheduledExecutorService executor) {
+            Executor executor) {
         this.executor = executor;
         this.faasTenantId = faasTenantId;
         this.gbpTenantId = gbpTenantId;
@@ -37,30 +35,24 @@ public class FaasTenantManagerListener implements DataChangeListener {
     }
 
     @Override
-    public void onDataChanged(final AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
-        executor.execute(new Runnable() {
-
-            public void run() {
-                executeEvent(change);
-            }
-        });
+    public void onDataTreeChanged(final Collection<DataTreeModification<Tenant>> changes) {
+        executor.execute(() -> executeEvent(changes));
     }
 
-    @VisibleForTesting
-    void executeEvent(final AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
-        // Remove
-        for (InstanceIdentifier<?> iid : change.getRemovedPaths()) {
-            DataObject old = change.getOriginalData().get(iid);
-            if (old == null) {
-                continue;
-            }
-            if (old instanceof Tenant) {
-                Tenant tenant = (Tenant) old;
-                if (tenant.getId().equals(gbpTenantId)) {
-                    LOG.info("Removed gbp Tenant {}  -- faas Tenant {}", gbpTenantId.getValue(),
-                            faasTenantId.getValue());
-                    this.policyManager.removeTenantLogicalNetwork(gbpTenantId, faasTenantId);
-                }
+    private void executeEvent(final Collection<DataTreeModification<Tenant>> changes) {
+        for (DataTreeModification<Tenant> change: changes) {
+            DataObjectModification<Tenant> rootNode = change.getRootNode();
+            switch (rootNode.getModificationType()) {
+                case DELETE:
+                    final Tenant tenant = rootNode.getDataBefore();
+                    if (tenant.getId().equals(gbpTenantId)) {
+                        LOG.info("Removed gbp Tenant {}  -- faas Tenant {}", gbpTenantId.getValue(),
+                                faasTenantId.getValue());
+                        this.policyManager.removeTenantLogicalNetwork(gbpTenantId, faasTenantId);
+                    }
+                    break;
+                default:
+                    break;
             }
         }
     }

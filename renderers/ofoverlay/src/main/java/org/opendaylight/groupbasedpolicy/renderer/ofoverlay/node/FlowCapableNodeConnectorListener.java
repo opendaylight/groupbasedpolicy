@@ -8,16 +8,23 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNodeConnector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.Name;
@@ -36,19 +43,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.node.No
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.NodeKey;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
-import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-
-public class FlowCapableNodeConnectorListener implements DataChangeListener, AutoCloseable {
+public class FlowCapableNodeConnectorListener implements DataTreeChangeListener<FlowCapableNodeConnector>,
+        AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(FlowCapableNodeConnectorListener.class);
 
@@ -62,17 +62,17 @@ public class FlowCapableNodeConnectorListener implements DataChangeListener, Aut
         .build();
     private final DataBroker dataProvider;
     private final SwitchManager switchManager;
-    private final ListenerRegistration<DataChangeListener> listenerRegistration;
+    private final ListenerRegistration<?> listenerRegistration;
 
     public FlowCapableNodeConnectorListener(DataBroker dataProvider, SwitchManager switchManager) {
         this.dataProvider = checkNotNull(dataProvider);
         this.switchManager = checkNotNull(switchManager);
-        listenerRegistration = dataProvider.registerDataChangeListener(LogicalDatastoreType.OPERATIONAL,
-                fcNodeConnectorIid, this, DataChangeScope.BASE);
+        listenerRegistration = dataProvider.registerDataTreeChangeListener(new DataTreeIdentifier<>(
+                LogicalDatastoreType.OPERATIONAL, fcNodeConnectorIid), this);
     }
 
     @Override
-    public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
+    public void onDataTreeChanged(Collection<DataTreeModification<FlowCapableNodeConnector>> changes) {
         ReadWriteTransaction rwTx = dataProvider.newReadWriteTransaction();
 
         //endpoint and endpoint L3 maps
@@ -80,70 +80,60 @@ public class FlowCapableNodeConnectorListener implements DataChangeListener, Aut
         Map<Name, EndpointL3> l3EpWithOfOverlayAugByPortName = readL3EpsWithOfOverlayAugByPortName(rwTx);
 
         boolean isDataPutToTx = false;
-        for (Entry<InstanceIdentifier<?>, DataObject> fcncEntry : change.getCreatedData().entrySet()) {
-            if (FlowCapableNodeConnector.class.equals(fcncEntry.getKey().getTargetType())) {
-                InstanceIdentifier<NodeConnector> ncIid = fcncEntry.getKey().firstIdentifierOf(NodeConnector.class);
-                FlowCapableNodeConnector fcnc = (FlowCapableNodeConnector) fcncEntry.getValue();
-                LOG.trace(
-                        "FlowCapableNodeConnector created: NodeId: {} NodeConnectorId: {} FlowCapableNodeConnector: {}",
-                        ncIid.firstKeyOf(Node.class, NodeKey.class).getId().getValue(),
-                        ncIid.firstKeyOf(NodeConnector.class, NodeConnectorKey.class).getId().getValue(), fcnc);
-                switchManager.updateSwitchNodeConnectorConfig(ncIid, fcnc);
-                Name portName = getPortName(fcnc);
-                boolean updated = updateEpWithNodeConnectorInfo(epWithOfOverlayAugByPortName.get(portName), ncIid, rwTx);
-                boolean l3Updated = updateL3EpWithNodeConnectorInfo(l3EpWithOfOverlayAugByPortName.get(portName), ncIid, rwTx);
-                if (updated || l3Updated) {
-                    isDataPutToTx = true;
-                }
-            }
-        }
-        for (Entry<InstanceIdentifier<?>, DataObject> fcncEntry : change.getUpdatedData().entrySet()) {
-            if (FlowCapableNodeConnector.class.equals(fcncEntry.getKey().getTargetType())) {
-                InstanceIdentifier<NodeConnector> ncIid = fcncEntry.getKey().firstIdentifierOf(NodeConnector.class);
-                FlowCapableNodeConnector fcnc = (FlowCapableNodeConnector) fcncEntry.getValue();
-                LOG.trace(
-                        "FlowCapableNodeConnector updated: NodeId: {} NodeConnectorId: {} FlowCapableNodeConnector: {}",
-                        ncIid.firstKeyOf(Node.class, NodeKey.class).getId().getValue(),
-                        ncIid.firstKeyOf(NodeConnector.class, NodeConnectorKey.class).getId().getValue(), fcnc);
-                switchManager.updateSwitchNodeConnectorConfig(ncIid, fcnc);
-                Name portName = getPortName(fcnc);
-                boolean updated = updateEpWithNodeConnectorInfo(epWithOfOverlayAugByPortName.get(portName), ncIid, rwTx);
-                boolean l3Updated = updateL3EpWithNodeConnectorInfo(l3EpWithOfOverlayAugByPortName.get(portName), ncIid, rwTx);
-                if (updated || l3Updated) {
-                    isDataPutToTx = true;
-                }
-                FlowCapableNodeConnector originalFcnc = (FlowCapableNodeConnector) change.getOriginalData().get(
-                        fcncEntry.getKey());
-                Name portNameFromOriginalFcnc = getPortName(originalFcnc);
-                // port name already existed and then was changed
-                if (portNameFromOriginalFcnc != null && !Objects.equal(portNameFromOriginalFcnc, portName)) {
-                    updated = updateEpWithNodeConnectorInfo(epWithOfOverlayAugByPortName
-                            .get(portNameFromOriginalFcnc), null, rwTx);
-                    l3Updated = updateL3EpWithNodeConnectorInfo(l3EpWithOfOverlayAugByPortName
-                            .get(portNameFromOriginalFcnc), null, rwTx);
+        for (DataTreeModification<FlowCapableNodeConnector> change: changes) {
+            DataObjectModification<FlowCapableNodeConnector> rootNode = change.getRootNode();
+            InstanceIdentifier<NodeConnector> ncIid = change.getRootPath().getRootIdentifier()
+                    .firstIdentifierOf(NodeConnector.class);
+            final FlowCapableNodeConnector originalFcnc = rootNode.getDataBefore();
+            boolean updated;
+            boolean l3Updated;
+            switch (rootNode.getModificationType()) {
+                case SUBTREE_MODIFIED:
+                case WRITE:
+                    FlowCapableNodeConnector fcnc = rootNode.getDataAfter();
+                    LOG.trace(
+                            "FlowCapableNodeConnector updated: NodeId: {} NodeConnectorId: {} FlowCapableNodeConnector: {}",
+                            ncIid.firstKeyOf(Node.class, NodeKey.class).getId().getValue(),
+                            ncIid.firstKeyOf(NodeConnector.class, NodeConnectorKey.class).getId().getValue(), fcnc);
+                    switchManager.updateSwitchNodeConnectorConfig(ncIid, fcnc);
+                    Name portName = getPortName(fcnc);
+                    updated = updateEpWithNodeConnectorInfo(epWithOfOverlayAugByPortName.get(portName), ncIid, rwTx);
+                    l3Updated = updateL3EpWithNodeConnectorInfo(l3EpWithOfOverlayAugByPortName.get(portName), ncIid, rwTx);
                     if (updated || l3Updated) {
                         isDataPutToTx = true;
                     }
-                }
+
+                    if (originalFcnc != null) {
+                        Name portNameFromOriginalFcnc = getPortName(originalFcnc);
+                        // port name already existed and then was changed
+                        if (portNameFromOriginalFcnc != null && !Objects.equal(portNameFromOriginalFcnc, portName)) {
+                            updated = updateEpWithNodeConnectorInfo(epWithOfOverlayAugByPortName
+                                    .get(portNameFromOriginalFcnc), null, rwTx);
+                            l3Updated = updateL3EpWithNodeConnectorInfo(l3EpWithOfOverlayAugByPortName
+                                    .get(portNameFromOriginalFcnc), null, rwTx);
+                            if (updated || l3Updated) {
+                                isDataPutToTx = true;
+                            }
+                        }
+                    }
+                    break;
+                case DELETE:
+                    LOG.trace("FlowCapableNodeConnector removed: NodeId: {} NodeConnectorId: {}",
+                            ncIid.firstKeyOf(Node.class, NodeKey.class).getId().getValue(),
+                            ncIid.firstKeyOf(NodeConnector.class, NodeConnectorKey.class).getId().getValue());
+                    switchManager.updateSwitchNodeConnectorConfig(ncIid, null);
+                    Name portNameFromOriginalFcnc = getPortName(originalFcnc);
+                    updated = updateEpWithNodeConnectorInfo(epWithOfOverlayAugByPortName.get(portNameFromOriginalFcnc), null, rwTx);
+                    l3Updated = updateL3EpWithNodeConnectorInfo(l3EpWithOfOverlayAugByPortName.get(portNameFromOriginalFcnc), null, rwTx);
+                    if (updated || l3Updated) {
+                        isDataPutToTx = true;
+                    }
+                    break;
+                default:
+                    break;
             }
         }
-        for (InstanceIdentifier<?> fcncIid : change.getRemovedPaths()) {
-            if (FlowCapableNodeConnector.class.equals(fcncIid.getTargetType())) {
-                InstanceIdentifier<NodeConnector> ncIid = fcncIid.firstIdentifierOf(NodeConnector.class);
-                FlowCapableNodeConnector originalFcnc = (FlowCapableNodeConnector) change.getOriginalData()
-                    .get(fcncIid);
-                LOG.trace("FlowCapableNodeConnector removed: NodeId: {} NodeConnectorId: {}",
-                        ncIid.firstKeyOf(Node.class, NodeKey.class).getId().getValue(),
-                        ncIid.firstKeyOf(NodeConnector.class, NodeConnectorKey.class).getId().getValue());
-                switchManager.updateSwitchNodeConnectorConfig(ncIid, null);
-                Name portNameFromOriginalFcnc = getPortName(originalFcnc);
-                boolean updated = updateEpWithNodeConnectorInfo(epWithOfOverlayAugByPortName.get(portNameFromOriginalFcnc), null, rwTx);
-                boolean l3Updated = updateL3EpWithNodeConnectorInfo(l3EpWithOfOverlayAugByPortName.get(portNameFromOriginalFcnc), null, rwTx);
-                if (updated || l3Updated) {
-                    isDataPutToTx = true;
-                }
-            }
-        }
+
         if (isDataPutToTx) {
             rwTx.submit();
         } else {
@@ -264,5 +254,4 @@ public class FlowCapableNodeConnectorListener implements DataChangeListener, Aut
             listenerRegistration.close();
         }
     }
-
 }

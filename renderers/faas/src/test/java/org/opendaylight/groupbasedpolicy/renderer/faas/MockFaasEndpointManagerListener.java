@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016 Huawei Technologies and others. All rights reserved.
- * 
+ *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -9,8 +9,7 @@ package org.opendaylight.groupbasedpolicy.renderer.faas;
 
 import static org.junit.Assert.assertTrue;
 
-import java.util.concurrent.ScheduledExecutorService;
-
+import java.util.concurrent.Executor;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.rev140421.endpoints.Endpoint;
 
@@ -19,7 +18,7 @@ public class MockFaasEndpointManagerListener extends FaasEndpointManagerListener
     private Endpoint expectedEndpoint;
 
     public MockFaasEndpointManagerListener(FaasPolicyManager policyManager, DataBroker dataProvider,
-            ScheduledExecutorService executor) {
+            Executor executor) {
         super(policyManager, dataProvider, executor);
     }
 
@@ -28,8 +27,9 @@ public class MockFaasEndpointManagerListener extends FaasEndpointManagerListener
     // *******************************************************
     @Override
     protected void processEndpoint(Endpoint endpoint) {
-        if (expectedEndpoint != null)
+        if (expectedEndpoint != null) {
             assertTrue("FaasEndpointManagerListener.processEndpoint", expectedEndpoint.equals(endpoint));
+        }
     }
 
     // *******************************************************

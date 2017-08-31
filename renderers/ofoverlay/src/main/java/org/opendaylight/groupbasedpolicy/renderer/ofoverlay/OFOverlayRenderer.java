@@ -8,22 +8,25 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-
 import javax.annotation.Nonnull;
-
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.NotificationService;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.api.EpRendererAugmentationRegistry;
 import org.opendaylight.groupbasedpolicy.api.PolicyValidatorRegistry;
@@ -45,20 +48,15 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.RendererName;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketProcessingService;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
-import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * Renderer that uses OpenFlow and OVSDB to implement an overlay network
  * using Open vSwitch.
  */
-public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
+public class OFOverlayRenderer implements AutoCloseable, DataTreeChangeListener<OfOverlayConfig> {
 
     private static final Logger LOG =
             LoggerFactory.getLogger(OFOverlayRenderer.class);
@@ -70,7 +68,7 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     private final PolicyManager policyManager;
     private final ClassifierDefinitionListener classifierDefinitionListener;
     private final SflowClientSettingsListener sflowClientSettingsListener;
-    private ActionDefinitionListener actionDefinitionListener;
+    private final ActionDefinitionListener actionDefinitionListener;
     private final OfOverlayAug ofOverlayAug;
     private final OfOverlayL3NatAug ofOverlayL3NatAug;
 
@@ -79,7 +77,7 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     private static final InstanceIdentifier<OfOverlayConfig> configIid =
             InstanceIdentifier.builder(OfOverlayConfig.class).build();
 
-    ListenerRegistration<DataChangeListener> configReg;
+    ListenerRegistration<?> configReg;
 
     public OFOverlayRenderer(final DataBroker dataProvider,
             PacketProcessingService packetProcessingService,
@@ -139,37 +137,53 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     @Override
     public void close() throws Exception {
         executor.shutdownNow();
-        if (configReg != null) configReg.close();
-        if (switchManager != null) switchManager.close();
-        if (endpointManager != null) endpointManager.close();
-        if (classifierDefinitionListener != null) classifierDefinitionListener.close();
-        if (actionDefinitionListener != null) actionDefinitionListener.close();
-        if (ofOverlayAug != null) ofOverlayAug.close();
-        if (ofOverlayL3NatAug != null) ofOverlayL3NatAug.close();
-        if (policyManager != null) policyManager.close();
-        if (sflowClientSettingsListener != null) sflowClientSettingsListener.close();
+        if (configReg != null) {
+            configReg.close();
+        }
+        if (switchManager != null) {
+            switchManager.close();
+        }
+        if (endpointManager != null) {
+            endpointManager.close();
+        }
+        if (classifierDefinitionListener != null) {
+            classifierDefinitionListener.close();
+        }
+        if (actionDefinitionListener != null) {
+            actionDefinitionListener.close();
+        }
+        if (ofOverlayAug != null) {
+            ofOverlayAug.close();
+        }
+        if (ofOverlayL3NatAug != null) {
+            ofOverlayL3NatAug.close();
+        }
+        if (policyManager != null) {
+            policyManager.close();
+        }
+        if (sflowClientSettingsListener != null) {
+            sflowClientSettingsListener.close();
+        }
     }
 
     // ******************
-    // DataChangeListener
+    // DataTreeChangeListener
     // ******************
 
     @Override
-    public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
-        OfOverlayConfig config;
+    public void onDataTreeChanged(Collection<DataTreeModification<OfOverlayConfig>> changes) {
         try {
-            for (Entry<InstanceIdentifier<?>, DataObject> entry : change.getCreatedData().entrySet()) {
-                if (entry.getValue() instanceof OfOverlayConfig) {
-                    config = (OfOverlayConfig) entry.getValue();
-                    applyConfig(config).get();
-                    LOG.info("OF-Overlay config created: {}", config);
-                }
-            }
-            for (Entry<InstanceIdentifier<?>, DataObject> entry : change.getUpdatedData().entrySet()) {
-                if (entry.getValue() instanceof OfOverlayConfig) {
-                    config = (OfOverlayConfig) entry.getValue();
-                    applyConfig(config).get();
-                    LOG.info("OF-Overlay config updated: {}", config);
+            for (DataTreeModification<OfOverlayConfig> change: changes) {
+                DataObjectModification<OfOverlayConfig> rootNode = change.getRootNode();
+                switch (rootNode.getModificationType()) {
+                    case SUBTREE_MODIFIED:
+                    case WRITE:
+                        final OfOverlayConfig config = rootNode.getDataAfter();
+                        LOG.info("OF-Overlay config updated: {}", config);
+                        applyConfig(config).get();
+                        break;
+                    default:
+                        break;
                 }
             }
         } catch (InterruptedException | ExecutionException e) {
@@ -182,11 +196,8 @@ public class OFOverlayRenderer implements AutoCloseable, DataChangeListener {
     // **************
 
     private void registerConfigListener(DataBroker dataProvider) {
-        configReg =
-                dataProvider.registerDataChangeListener(LogicalDatastoreType.CONFIGURATION,
-                        configIid,
-                        this,
-                        DataChangeScope.SUBTREE);
+        configReg = dataProvider.registerDataTreeChangeListener(new DataTreeIdentifier<>(
+                LogicalDatastoreType.CONFIGURATION, configIid), this);
     }
 
     private Optional<OfOverlayConfig> readConfig() {

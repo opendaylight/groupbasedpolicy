@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016 Huawei Technologies and others. All rights reserved.
- * 
+ *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -13,10 +13,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ScheduledExecutorService;
-
+import java.util.concurrent.Executor;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
 import org.opendaylight.faas.uln.datastore.api.Pair;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.common.rev151013.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
@@ -37,17 +35,17 @@ import org.opendaylight.yangtools.concepts.ListenerRegistration;
 
 public class MockFaasPolicyManager extends FaasPolicyManager {
 
-    private Map<EndpointGroupId, EndpointGroup> testEndpointGroups = new HashMap<>();
-    private Map<SubnetId, Subnet> testSubnets = new HashMap<>();
-    private Map<L2FloodDomainId, L2FloodDomain> testL2FloodDomains = new HashMap<>();
-    private Map<L2BridgeDomainId, L2BridgeDomain> testL2BridgeDomains = new HashMap<>();
-    private Map<L3ContextId, L3Context> testL3Contextes = new HashMap<>();
-    private Map<ContractId, Uuid> testSecIdPerContract = new HashMap<>();
-    private Map<TenantId, Uuid> testFaasTenantId = new HashMap<>();
+    private final Map<EndpointGroupId, EndpointGroup> testEndpointGroups = new HashMap<>();
+    private final Map<SubnetId, Subnet> testSubnets = new HashMap<>();
+    private final Map<L2FloodDomainId, L2FloodDomain> testL2FloodDomains = new HashMap<>();
+    private final Map<L2BridgeDomainId, L2BridgeDomain> testL2BridgeDomains = new HashMap<>();
+    private final Map<L3ContextId, L3Context> testL3Contextes = new HashMap<>();
+    private final Map<ContractId, Uuid> testSecIdPerContract = new HashMap<>();
+    private final Map<TenantId, Uuid> testFaasTenantId = new HashMap<>();
     private ServiceCommunicationLayer comLayer;
     private ExternalImplicitGroup externalImplicitGroup;
 
-    public MockFaasPolicyManager(DataBroker dataBroker, ScheduledExecutorService executor) {
+    public MockFaasPolicyManager(DataBroker dataBroker, Executor executor) {
         super(dataBroker, executor);
     }
 
@@ -62,7 +60,7 @@ public class MockFaasPolicyManager extends FaasPolicyManager {
         assertTrue("FaasPolicyManager.registerTenant: testEndpointGroups.containsKey(epgId)",
                 testEndpointGroups.containsKey(epgId));
 
-        registeredTenants.putIfAbsent(tenantId, new ArrayList<ListenerRegistration<DataChangeListener>>());
+        registeredTenants.putIfAbsent(tenantId, new ArrayList<ListenerRegistration<?>>());
     }
 
     @Override

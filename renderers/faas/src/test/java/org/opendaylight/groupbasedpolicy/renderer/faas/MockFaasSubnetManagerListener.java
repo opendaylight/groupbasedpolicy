@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016 Huawei Technologies and others. All rights reserved.
- * 
+ *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
@@ -9,8 +9,7 @@ package org.opendaylight.groupbasedpolicy.renderer.faas;
 
 import static org.junit.Assert.assertTrue;
 
-import java.util.concurrent.ScheduledExecutorService;
-
+import java.util.concurrent.Executor;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.common.rev151013.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.subnets.rev151013.subnets.container.subnets.SubnetBuilder;
@@ -24,7 +23,7 @@ public class MockFaasSubnetManagerListener extends FaasSubnetManagerListener {
     private Uuid expectedFaasSubnetId;
 
     public MockFaasSubnetManagerListener(DataBroker dataProvider, TenantId gbpTenantId, Uuid faasTenantId,
-            ScheduledExecutorService executor) {
+            Executor executor) {
         super(dataProvider, gbpTenantId, faasTenantId, executor);
     }
 
@@ -33,8 +32,9 @@ public class MockFaasSubnetManagerListener extends FaasSubnetManagerListener {
     // *******************************************************
     @Override
     protected SubnetBuilder initSubnetBuilder(Subnet subnet) {
-        if (expectedGbpSubnet != null)
+        if (expectedGbpSubnet != null) {
             assertTrue("FaasSubnetManagerListener.initSubnetBuilder", expectedGbpSubnet.equals(subnet));
+        }
         SubnetBuilder builder = new SubnetBuilder();
         builder.setUuid(expectedFaasSubnetId);
         return builder;

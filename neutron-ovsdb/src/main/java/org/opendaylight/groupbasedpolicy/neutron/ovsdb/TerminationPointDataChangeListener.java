@@ -22,21 +22,20 @@ import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.c
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getManagerNode;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getOvsdbBridgeFromTerminationPoint;
 import static org.opendaylight.groupbasedpolicy.neutron.ovsdb.util.OvsdbHelper.getTopologyNode;
-import static org.opendaylight.groupbasedpolicy.util.DataStoreHelper.readFromDs;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.ovsdb.southbound.SouthboundConstants;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
@@ -55,17 +54,15 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.node.TerminationPoint;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
-import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Optional;
-
-public class TerminationPointDataChangeListener implements DataChangeListener, AutoCloseable {
+public class TerminationPointDataChangeListener implements DataTreeChangeListener<OvsdbTerminationPointAugmentation>,
+        AutoCloseable {
 
     private static final String NEUTRON_EXTERNAL_ID_KEY = "iface-id";
-    private final ListenerRegistration<DataChangeListener> registration;
+    private final ListenerRegistration<?> registration;
     private final DataBroker dataBroker;
     private final EndpointService epService;
     private static final Logger LOG = LoggerFactory.getLogger(TerminationPointDataChangeListener.class);
@@ -79,13 +76,13 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
             .child(Node.class)
             .child(TerminationPoint.class)
             .augmentation(OvsdbTerminationPointAugmentation.class);
-        registration =
-                dataBroker.registerDataChangeListener(LogicalDatastoreType.OPERATIONAL, iid, this, DataChangeScope.ONE);
+        registration = dataBroker.registerDataTreeChangeListener(new DataTreeIdentifier<>(
+                LogicalDatastoreType.OPERATIONAL, iid), this);
         requiredTunnelTypes = createSupportedTunnelsList();
     }
 
     private List<AbstractTunnelType> createSupportedTunnelsList() {
-        List<AbstractTunnelType> required = new ArrayList<AbstractTunnelType>();
+        List<AbstractTunnelType> required = new ArrayList<>();
         required.add(new VxlanTunnelType());
         required.add(new VxlanGpeTunnelType());
         return Collections.unmodifiableList(required);
@@ -104,50 +101,28 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
             new HashMap<>();
 
     @Override
-    public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
+    public void onDataTreeChanged(Collection<DataTreeModification<OvsdbTerminationPointAugmentation>> changes) {
+        for (DataTreeModification<OvsdbTerminationPointAugmentation> change: changes) {
+            DataObjectModification<OvsdbTerminationPointAugmentation> rootNode = change.getRootNode();
+            InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid = change.getRootPath().getRootIdentifier();
+            OvsdbTerminationPointAugmentation origOvsdbTp = rootNode.getDataBefore();
+            switch (rootNode.getModificationType()) {
+                case SUBTREE_MODIFIED:
+                case WRITE:
+                    OvsdbTerminationPointAugmentation updatedOvsdbTp = rootNode.getDataAfter();
+                    OvsdbBridgeAugmentation ovsdbBridge = getOvsdbBridgeFromTerminationPoint(ovsdbTpIid, dataBroker);
+                    if (origOvsdbTp == null) {
+                        nodeIdByTerminPoint.put(ovsdbTpIid,
+                                new NodeId(getInventoryNodeIdString(ovsdbBridge, ovsdbTpIid, dataBroker)));
+                    }
 
-        /*
-         * TerminationPoint notifications with OVSDB augmentations
-         * vSwitch ports. Iterate through the list of new ports.
-         */
-        for (Entry<InstanceIdentifier<?>, DataObject> entry : change.getCreatedData().entrySet()) {
-            if (entry.getValue() instanceof OvsdbTerminationPointAugmentation) {
-                OvsdbTerminationPointAugmentation ovsdbTp = (OvsdbTerminationPointAugmentation) entry.getValue();
-                @SuppressWarnings("unchecked")
-                InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid =
-                        (InstanceIdentifier<OvsdbTerminationPointAugmentation>) entry.getKey();
-                OvsdbBridgeAugmentation ovsdbBridge = getOvsdbBridgeFromTerminationPoint(ovsdbTpIid, dataBroker);
-                nodeIdByTerminPoint.put(ovsdbTpIid,
-                        new NodeId(getInventoryNodeIdString(ovsdbBridge, ovsdbTpIid, dataBroker)));
-                processOvsdbBridge(ovsdbBridge, ovsdbTp, ovsdbTpIid);
-            }
-        }
-
-        /*
-         * Updates
-         */
-        for (Entry<InstanceIdentifier<?>, DataObject> entry : change.getUpdatedData().entrySet()) {
-            if (entry.getValue() instanceof OvsdbTerminationPointAugmentation) {
-                OvsdbTerminationPointAugmentation ovsdbTp = (OvsdbTerminationPointAugmentation) entry.getValue();
-                @SuppressWarnings("unchecked")
-                InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid =
-                        (InstanceIdentifier<OvsdbTerminationPointAugmentation>) entry.getKey();
-                OvsdbBridgeAugmentation ovsdbBridge = getOvsdbBridgeFromTerminationPoint(ovsdbTpIid, dataBroker);
-                processOvsdbBridge(ovsdbBridge, ovsdbTp, ovsdbTpIid);
-            }
-        }
-
-        /*
-         * Deletions
-         */
-        for (InstanceIdentifier<?> iid : change.getRemovedPaths()) {
-            DataObject old = change.getOriginalData().get(iid);
-            if (old instanceof OvsdbTerminationPointAugmentation) {
-                OvsdbTerminationPointAugmentation ovsdbTp = (OvsdbTerminationPointAugmentation) old;
-                @SuppressWarnings("unchecked")
-                InstanceIdentifier<OvsdbTerminationPointAugmentation> ovsdbTpIid =
-                        (InstanceIdentifier<OvsdbTerminationPointAugmentation>) iid;
-                processRemovedTp(nodeIdByTerminPoint.get(ovsdbTpIid), ovsdbTp, ovsdbTpIid);
+                    processOvsdbBridge(ovsdbBridge, updatedOvsdbTp, ovsdbTpIid);
+                    break;
+                case DELETE:
+                    processRemovedTp(nodeIdByTerminPoint.get(ovsdbTpIid), origOvsdbTp, ovsdbTpIid);
+                    break;
+                default:
+                    break;
             }
         }
     }
@@ -399,8 +374,9 @@ public class TerminationPointDataChangeListener implements DataChangeListener, A
          */
         OvsdbNodeAugmentation managerNode = getManagerNode(ovsdbBridge, dataBroker);
 
-        if (managerNode == null)
+        if (managerNode == null) {
             return null;
+        }
 
         if (managerNode.getConnectionInfo() != null) {
             return managerNode.getConnectionInfo().getRemoteIp();

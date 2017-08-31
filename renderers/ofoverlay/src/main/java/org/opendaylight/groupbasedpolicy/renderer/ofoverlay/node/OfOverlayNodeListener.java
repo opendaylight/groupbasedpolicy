@@ -10,12 +10,12 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.Map.Entry;
-
+import java.util.Collection;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
+import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.ofoverlay.rev140528.OfOverlayNodeConfig;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
@@ -23,12 +23,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.NodeKey;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
-import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class OfOverlayNodeListener implements DataChangeListener, AutoCloseable {
+public class OfOverlayNodeListener implements DataTreeChangeListener<OfOverlayNodeConfig>, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(OfOverlayNodeListener.class);
 
@@ -38,39 +37,33 @@ public class OfOverlayNodeListener implements DataChangeListener, AutoCloseable 
         .augmentation(OfOverlayNodeConfig.class)
         .build();
     private final SwitchManager switchManager;
-    private final ListenerRegistration<DataChangeListener> listenerRegistration;
+    private final ListenerRegistration<?> listenerRegistration;
 
     public OfOverlayNodeListener(DataBroker dataProvider, SwitchManager switchManager) {
         this.switchManager = checkNotNull(switchManager);
-        listenerRegistration = checkNotNull(dataProvider).registerDataChangeListener(
-                LogicalDatastoreType.CONFIGURATION, ofOverlayNodeIid, this, DataChangeScope.ONE);
+        listenerRegistration = checkNotNull(dataProvider).registerDataTreeChangeListener(new DataTreeIdentifier<>(
+                LogicalDatastoreType.CONFIGURATION, ofOverlayNodeIid), this);
     }
 
     @Override
-    public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
-        for (Entry<InstanceIdentifier<?>, DataObject> nodeConfigEntry : change.getCreatedData().entrySet()) {
-            if (OfOverlayNodeConfig.class.equals(nodeConfigEntry.getKey().getTargetType())) {
-                NodeId nodeId = nodeConfigEntry.getKey().firstKeyOf(Node.class, NodeKey.class).getId();
-                OfOverlayNodeConfig nodeConfig = (OfOverlayNodeConfig) nodeConfigEntry.getValue();
-                LOG.trace("OfOverlayNodeConfig created. NodeId: {} OfOverlayNodeConfig: {}", nodeId.getValue(),
-                        nodeConfig);
-                switchManager.updateSwitchConfig(nodeId, nodeConfig);
-            }
-        }
-        for (Entry<InstanceIdentifier<?>, DataObject> nodeConfigEntry : change.getUpdatedData().entrySet()) {
-            if (OfOverlayNodeConfig.class.equals(nodeConfigEntry.getKey().getTargetType())) {
-                NodeId nodeId = nodeConfigEntry.getKey().firstKeyOf(Node.class, NodeKey.class).getId();
-                OfOverlayNodeConfig nodeConfig = (OfOverlayNodeConfig) nodeConfigEntry.getValue();
-                LOG.trace("OfOverlayNodeConfig updated. NodeId: {} OfOverlayNodeConfig: {}", nodeId.getValue(),
-                        nodeConfig);
-                switchManager.updateSwitchConfig(nodeId, nodeConfig);
-            }
-        }
-        for (InstanceIdentifier<?> removedNodeConfigIid : change.getRemovedPaths()) {
-            if (OfOverlayNodeConfig.class.equals(removedNodeConfigIid.getTargetType())) {
-                NodeId nodeId = removedNodeConfigIid.firstKeyOf(Node.class, NodeKey.class).getId();
-                LOG.trace("OfOverlayNodeConfig removed. NodeId: {}", nodeId.getValue());
-                switchManager.updateSwitchConfig(nodeId, null);
+    public void onDataTreeChanged(Collection<DataTreeModification<OfOverlayNodeConfig>> changes) {
+        for (DataTreeModification<OfOverlayNodeConfig> change: changes) {
+            DataObjectModification<OfOverlayNodeConfig> rootNode = change.getRootNode();
+            NodeId nodeId = change.getRootPath().getRootIdentifier().firstKeyOf(Node.class, NodeKey.class).getId();
+            switch (rootNode.getModificationType()) {
+                case SUBTREE_MODIFIED:
+                case WRITE:
+                    OfOverlayNodeConfig nodeConfig = rootNode.getDataAfter();
+                    LOG.trace("OfOverlayNodeConfig updated. NodeId: {} OfOverlayNodeConfig: {}", nodeId.getValue(),
+                            nodeConfig);
+                    switchManager.updateSwitchConfig(nodeId, nodeConfig);
+                    break;
+                case DELETE:
+                    LOG.trace("OfOverlayNodeConfig removed. NodeId: {}", nodeId.getValue());
+                    switchManager.updateSwitchConfig(nodeId, null);
+                    break;
+                default:
+                    break;
             }
         }
     }
@@ -81,5 +74,4 @@ public class OfOverlayNodeListener implements DataChangeListener, AutoCloseable 
             listenerRegistration.close();
         }
     }
-
 }

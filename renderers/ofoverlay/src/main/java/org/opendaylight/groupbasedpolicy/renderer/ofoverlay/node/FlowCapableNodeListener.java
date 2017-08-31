@@ -10,12 +10,12 @@ package org.opendaylight.groupbasedpolicy.renderer.ofoverlay.node;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.Map.Entry;
-
+import java.util.Collection;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
+import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.flow.inventory.rev130819.FlowCapableNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
@@ -23,12 +23,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.NodeKey;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
-import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class FlowCapableNodeListener implements DataChangeListener, AutoCloseable {
+public class FlowCapableNodeListener implements DataTreeChangeListener<FlowCapableNode>, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(FlowCapableNodeListener.class);
 
@@ -37,37 +36,32 @@ public class FlowCapableNodeListener implements DataChangeListener, AutoCloseabl
         .augmentation(FlowCapableNode.class)
         .build();
     private final SwitchManager switchManager;
-    private final ListenerRegistration<DataChangeListener> listenerRegistration;
+    private final ListenerRegistration<?> listenerRegistration;
 
     public FlowCapableNodeListener(DataBroker dataProvider, SwitchManager switchManager) {
         this.switchManager = checkNotNull(switchManager);
-        listenerRegistration = checkNotNull(dataProvider).registerDataChangeListener(LogicalDatastoreType.OPERATIONAL,
-                fcNodeIid, this, DataChangeScope.BASE);
+        listenerRegistration = checkNotNull(dataProvider).registerDataTreeChangeListener(new DataTreeIdentifier<>(
+                LogicalDatastoreType.OPERATIONAL, fcNodeIid), this);
     }
 
     @Override
-    public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change) {
-        for (Entry<InstanceIdentifier<?>, DataObject> fcNodeEntry : change.getCreatedData().entrySet()) {
-            if (FlowCapableNode.class.equals(fcNodeEntry.getKey().getTargetType())) {
-                NodeId nodeId = fcNodeEntry.getKey().firstKeyOf(Node.class, NodeKey.class).getId();
-                FlowCapableNode fcNode = (FlowCapableNode) fcNodeEntry.getValue();
-                LOG.trace("FlowCapableNode created. NodeId: {} FlowCapableNode: {}", nodeId.getValue(), fcNode);
-                switchManager.updateSwitch(nodeId, fcNode);
-            }
-        }
-        for (Entry<InstanceIdentifier<?>, DataObject> fcNodeEntry : change.getUpdatedData().entrySet()) {
-            if (FlowCapableNode.class.equals(fcNodeEntry.getKey().getTargetType())) {
-                NodeId nodeId = fcNodeEntry.getKey().firstKeyOf(Node.class, NodeKey.class).getId();
-                FlowCapableNode fcNode = (FlowCapableNode) fcNodeEntry.getValue();
-                LOG.trace("FlowCapableNode updated. NodeId: {} FlowCapableNode: {}", nodeId.getValue(), fcNode);
-                switchManager.updateSwitch(nodeId, fcNode);
-            }
-        }
-        for (InstanceIdentifier<?> removedFcNodeIid : change.getRemovedPaths()) {
-            if (FlowCapableNode.class.equals(removedFcNodeIid.getTargetType())) {
-                NodeId nodeId = removedFcNodeIid.firstKeyOf(Node.class, NodeKey.class).getId();
-                LOG.trace("FlowCapableNode removed. NodeId: {}", nodeId.getValue());
-                switchManager.updateSwitch(nodeId, null);
+    public void onDataTreeChanged(Collection<DataTreeModification<FlowCapableNode>> changes) {
+        for (DataTreeModification<FlowCapableNode> change: changes) {
+            DataObjectModification<FlowCapableNode> rootNode = change.getRootNode();
+            NodeId nodeId = change.getRootPath().getRootIdentifier().firstKeyOf(Node.class, NodeKey.class).getId();
+            switch (rootNode.getModificationType()) {
+                case SUBTREE_MODIFIED:
+                case WRITE:
+                    FlowCapableNode fcNode = rootNode.getDataAfter();
+                    LOG.trace("FlowCapableNode updated. NodeId: {} FlowCapableNode: {}", nodeId.getValue(), fcNode);
+                    switchManager.updateSwitch(nodeId, fcNode);
+                    break;
+                case DELETE:
+                    LOG.trace("FlowCapableNode removed. NodeId: {}", nodeId.getValue());
+                    switchManager.updateSwitch(nodeId, null);
+                    break;
+                default:
+                    break;
             }
         }
     }

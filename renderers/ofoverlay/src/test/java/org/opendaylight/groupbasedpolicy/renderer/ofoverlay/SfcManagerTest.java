@@ -9,28 +9,23 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.concurrent.ExecutorService;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.DataChangeListener;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
-import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ActionInstance;
 import org.opendaylight.yangtools.concepts.ListenerRegistration;
-import org.opendaylight.yangtools.yang.binding.DataObject;
-import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
 public class SfcManagerTest {
 
@@ -39,13 +34,11 @@ public class SfcManagerTest {
     private DataBroker dataBroker;
     private RpcProviderRegistry rpcRegistry;
     private ExecutorService executor;
-    private ListenerRegistration<DataChangeListener> actionListener;
+    private ListenerRegistration<?> actionListener;
 
-    private AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> actionInstanceNotification;
-    private InstanceIdentifier<DataObject> pathIdentifier;
+    private DataObjectModification<ActionInstance> mockModification;
+    private Collection<DataTreeModification<ActionInstance>> changeEvent;
     private ActionInstance dataObject;
-    private HashMap<InstanceIdentifier<?>, DataObject> dataMap;
-    private Set<InstanceIdentifier<?>> dataSet;
 
     @SuppressWarnings("unchecked")
     @Before
@@ -54,18 +47,17 @@ public class SfcManagerTest {
         rpcRegistry = mock(RpcProviderRegistry.class);
         executor = mock(ExecutorService.class);
         actionListener = mock(ListenerRegistration.class);
-        actionInstanceNotification = mock(AsyncDataChangeEvent.class);
-        pathIdentifier = mock(InstanceIdentifier.class);
         dataObject = mock(ActionInstance.class);
 
-        when(
-                dataBroker.registerDataChangeListener(any(LogicalDatastoreType.class), any(InstanceIdentifier.class),
-                        any(DataChangeListener.class), any(DataChangeScope.class))).thenReturn(actionListener);
-        dataMap = new HashMap<InstanceIdentifier<?>, DataObject>();
-        dataMap.put(pathIdentifier, dataObject);
-        dataSet = new HashSet<InstanceIdentifier<?>>(Arrays.asList(pathIdentifier));
+        doReturn(actionListener).when(dataBroker).registerDataTreeChangeListener(
+                any(DataTreeIdentifier.class), any(DataTreeChangeListener.class));
 
         manager = new SfcManager(dataBroker, rpcRegistry, executor);
+
+        DataTreeModification<ActionInstance> mockDataTreeModification = mock(DataTreeModification.class);
+        mockModification = mock(DataObjectModification.class);
+        doReturn(mockModification).when(mockDataTreeModification).getRootNode();
+        changeEvent = Collections.singletonList(mockDataTreeModification);
     }
 
     @Test
@@ -76,24 +68,29 @@ public class SfcManagerTest {
 
     @Test
     public void onDataChangedTestAdd() {
-        when(actionInstanceNotification.getCreatedData()).thenReturn(dataMap);
-        manager.onDataChanged(actionInstanceNotification);
+        doReturn(DataObjectModification.ModificationType.WRITE).when(mockModification).getModificationType();
+        doReturn(dataObject).when(mockModification).getDataAfter();
+
+        manager.onDataTreeChanged(changeEvent);
         verify(executor).execute(any(Runnable.class));
     }
 
     @Test
     public void onDataChangedTestDelete() {
-        when(actionInstanceNotification.getRemovedPaths()).thenReturn(dataSet);
-        when(actionInstanceNotification.getOriginalData()).thenReturn(dataMap);
-        manager.onDataChanged(actionInstanceNotification);
+        doReturn(DataObjectModification.ModificationType.DELETE).when(mockModification).getModificationType();
+        doReturn(dataObject).when(mockModification).getDataBefore();
+
+        manager.onDataTreeChanged(changeEvent);
         verify(executor).execute(any(Runnable.class));
     }
 
     @Test
     public void onDataChangedTestChange() {
-        when(actionInstanceNotification.getOriginalData()).thenReturn(dataMap);
-        when(actionInstanceNotification.getUpdatedData()).thenReturn(dataMap);
-        manager.onDataChanged(actionInstanceNotification);
+        doReturn(DataObjectModification.ModificationType.SUBTREE_MODIFIED).when(mockModification).getModificationType();
+        doReturn(dataObject).when(mockModification).getDataBefore();
+        doReturn(dataObject).when(mockModification).getDataAfter();
+
+        manager.onDataTreeChanged(changeEvent);
         verify(executor).execute(any(Runnable.class));
     }
 }

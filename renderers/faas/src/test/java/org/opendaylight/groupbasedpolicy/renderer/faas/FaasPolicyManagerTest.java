@@ -8,28 +8,22 @@
 package org.opendaylight.groupbasedpolicy.renderer.faas;
 
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.AsyncDataChangeEvent;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
-import org.opendaylight.faas.uln.datastore.api.UlnDatastoreApi;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.common.rev151013.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
@@ -58,19 +52,11 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.p
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.policy.rule.group.with.endpoint.constraints.PolicyRuleGroupBuilder;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
-
-import com.google.common.util.concurrent.CheckedFuture;
 
 public class FaasPolicyManagerTest {
 
     private InstanceIdentifier<DataObject> policyId;
-    private AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> change;
     DataBroker dataProvider;
-    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(Runtime.getRuntime()
-        .availableProcessors());
     EndpointGroupId consumerEpgId = new EndpointGroupId("consumerEpgId");
     SubnetId consumerSubnet = new SubnetId("consumerSubnet");
     SubnetId providerSubnet = new SubnetId("providerSubnet");
@@ -85,24 +71,19 @@ public class FaasPolicyManagerTest {
     @Before
     public void init() {
         policyId = mock(InstanceIdentifier.class);
-        change = mock(AsyncDataChangeEvent.class);
         policyId = mock(InstanceIdentifier.class);
         dataProvider = mock(DataBroker.class);
         WriteTransaction writeTransaction = mock(WriteTransaction.class);
         when(dataProvider.newWriteOnlyTransaction()).thenReturn(writeTransaction);
         CheckedFuture<Void, TransactionCommitFailedException> checkedFuture = mock(CheckedFuture.class);
         when(writeTransaction.submit()).thenReturn(checkedFuture);
-
-        Set<InstanceIdentifier<?>> removedPaths = new HashSet<>();
-        removedPaths.add(policyId);
-        when(change.getRemovedPaths()).thenReturn(removedPaths);
     }
 
     @SuppressWarnings("resource")
     @Test
     public void testLayer2ResolvedPolicyWithImpExternalEpg() {
         // prepare input test data
-        MockFaasPolicyManager policyManager = new MockFaasPolicyManager(dataProvider, executor);
+        MockFaasPolicyManager policyManager = new MockFaasPolicyManager(dataProvider, MoreExecutors.directExecutor());
 
         // mock input test policy
         policyManager.storeTestEpg(makeTestEndpointGroup(consumerEpgId));
@@ -127,21 +108,15 @@ public class FaasPolicyManagerTest {
 
         // input test resolved policy
         DataObject testPolicy = makeTestResolvedPolicyWithImpExternalEpg();
-        Map<InstanceIdentifier<?>, DataObject> testData = new HashMap<>();
-        testData.put(policyId, testPolicy);
-        when(change.getCreatedData()).thenReturn(testData);
-        when(change.getOriginalData()).thenReturn(testData);
-        when(change.getUpdatedData()).thenReturn(testData);
-        // invoke event -- expected data is verified in mocked classes
-        policyManager.onDataChanged(change);
 
-        // make sure internal threads have completed
-        try {
-            executor.shutdown();
-            executor.awaitTermination(10, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            fail("FaasPolicyManagerTest: Exception = " + e.toString());
-        }
+        DataTreeModification<ResolvedPolicy> mockDataTreeModification = mock(DataTreeModification.class);
+        DataObjectModification<ResolvedPolicy> mockModification = mock(DataObjectModification.class);
+        doReturn(mockModification).when(mockDataTreeModification).getRootNode();
+        doReturn(DataObjectModification.ModificationType.WRITE).when(mockModification).getModificationType();
+        doReturn(testPolicy).when(mockModification).getDataAfter();
+
+        // invoke event -- expected data is verified in mocked classes
+        policyManager.onDataTreeChanged(Collections.singletonList(mockDataTreeModification));
 
         // verify
         assertTrue("FaasPolicyManagerTest", policyManager.getComLayer().equals(ServiceCommunicationLayer.Layer2));
@@ -152,7 +127,7 @@ public class FaasPolicyManagerTest {
     @Test
     public void testLayer3ResolvedPolicy() {
         // prepare input test data
-        MockFaasPolicyManager policyManager = new MockFaasPolicyManager(dataProvider, executor);
+        MockFaasPolicyManager policyManager = new MockFaasPolicyManager(dataProvider, MoreExecutors.directExecutor());
 
         // mock input test policy
         policyManager.storeTestL3Contextes(makeTestL3Context());
@@ -180,21 +155,15 @@ public class FaasPolicyManagerTest {
 
         // input test resolved policy
         DataObject testPolicy = makeTestResolvedPolicy();
-        Map<InstanceIdentifier<?>, DataObject> testData = new HashMap<>();
-        testData.put(policyId, testPolicy);
-        when(change.getCreatedData()).thenReturn(testData);
-        when(change.getOriginalData()).thenReturn(testData);
-        when(change.getUpdatedData()).thenReturn(testData);
-        // invoke event -- expected data is verified in mocked classes
-        policyManager.onDataChanged(change);
 
-        // make sure internal threads have completed
-        try {
-            executor.shutdown();
-            executor.awaitTermination(10, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            fail("FaasPolicyManagerTest: Exception = " + e.toString());
-        }
+        DataTreeModification<ResolvedPolicy> mockDataTreeModification = mock(DataTreeModification.class);
+        DataObjectModification<ResolvedPolicy> mockModification = mock(DataObjectModification.class);
+        doReturn(mockModification).when(mockDataTreeModification).getRootNode();
+        doReturn(DataObjectModification.ModificationType.WRITE).when(mockModification).getModificationType();
+        doReturn(testPolicy).when(mockModification).getDataAfter();
+
+        // invoke event -- expected data is verified in mocked classes
+        policyManager.onDataTreeChanged(Collections.singletonList(mockDataTreeModification));
 
         // verify
         assertTrue("FaasPolicyManagerTest", policyManager.getComLayer().equals(ServiceCommunicationLayer.Layer3));

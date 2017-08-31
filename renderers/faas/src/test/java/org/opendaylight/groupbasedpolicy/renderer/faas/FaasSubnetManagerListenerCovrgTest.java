@@ -10,27 +10,28 @@ package org.opendaylight.groupbasedpolicy.renderer.faas;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.faas.uln.datastore.api.UlnDatastoreApi;
-import org.opendaylight.groupbasedpolicy.renderer.faas.test.DataChangeListenerTester;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
@@ -58,12 +59,10 @@ public class FaasSubnetManagerListenerCovrgTest {
 
     private InstanceIdentifier<Subnet> subnetIid;
     private FaasSubnetManagerListener listener;
-    private TenantId gbpTenantId = new TenantId("gbpTenantId");
-    private SubnetId subnetId = new SubnetId("subnetId");
-    private Uuid faasTenantId = new Uuid("b4511aac-ae43-11e5-bf7f-feff819cdc9f");
-    private Uuid faasSubnetId = new Uuid("c4511aac-ae43-11e5-bf7f-feff819cdc9f");
-    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-    private DataChangeListenerTester tester;
+    private final TenantId gbpTenantId = new TenantId("gbpTenantId");
+    private final SubnetId subnetId = new SubnetId("subnetId");
+    private final Uuid faasTenantId = new Uuid("b4511aac-ae43-11e5-bf7f-feff819cdc9f");
+    private final Uuid faasSubnetId = new Uuid("c4511aac-ae43-11e5-bf7f-feff819cdc9f");
     private DataBroker dataProvider;
 
     @SuppressWarnings("unchecked")
@@ -71,9 +70,8 @@ public class FaasSubnetManagerListenerCovrgTest {
     public void init() {
         dataProvider = mock(DataBroker.class);
         subnetIid = mock(InstanceIdentifier.class);
-        listener = new FaasSubnetManagerListener(dataProvider, gbpTenantId, faasTenantId, executor);
-        tester = new DataChangeListenerTester(listener);
-        tester.setRemovedPath(subnetIid);
+        listener = new FaasSubnetManagerListener(dataProvider, gbpTenantId, faasTenantId,
+                MoreExecutors.directExecutor());
     }
 
     @SuppressWarnings("unchecked")
@@ -105,9 +103,14 @@ public class FaasSubnetManagerListenerCovrgTest {
         when(dataProvider.newWriteOnlyTransaction()).thenReturn(woTx);
 
         Subnet subnet = new SubnetBuilder().setId(subnetId).build();
-        tester.setDataObject(subnetIid, subnet);
-        tester.callOnDataChanged();
-        listener.executeEvent(tester.getChangeMock());
+
+        DataTreeModification<Subnet> mockDataTreeModification = mock(DataTreeModification.class);
+        DataObjectModification<Subnet> mockModification = mock(DataObjectModification.class);
+        doReturn(mockModification).when(mockDataTreeModification).getRootNode();
+        doReturn(DataObjectModification.ModificationType.WRITE).when(mockModification).getModificationType();
+        doReturn(subnet).when(mockModification).getDataAfter();
+
+        listener.onDataTreeChanged(Collections.singletonList(mockDataTreeModification));
     }
 
     @Test
