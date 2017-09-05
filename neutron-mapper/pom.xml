@@ -45,7 +45,6 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>l2-l3-domain-extension</artifactId>
       <version>${project.version}</version>
-      <type>bundle</type>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.neutron</groupId>
