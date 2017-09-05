@@ -543,9 +543,11 @@ public final class ForwardingManager {
             for (RendererNetworkDomain networkDomain : forwardingByTenant.getRendererNetworkDomain()) {
                 org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.Subnet
                     subnet = networkDomain.getAugmentation((SubnetAugmentRenderer.class)).getSubnet();
-                LOG.trace("Creating Dhcp Relay from subnet: {}, vrfid: {}, vppNodesByL2Fd: {}", subnet, vni_vrfid,
-                    vppNodesByL2Fd);
-                dhcpRelayHandler.createIpv4DhcpRelay(vni_vrfid, subnet, vppNodesByL2Fd);
+                if (subnet.isIsTenant()) {
+                    LOG.trace("Creating Dhcp Relay from subnet: {}, vrfid: {}, vppNodesByL2Fd: {}", subnet, vni_vrfid,
+                        vppNodesByL2Fd);
+                    dhcpRelayHandler.createIpv4DhcpRelay(vni_vrfid, subnet, vppNodesByL2Fd);
+                }
             }
         }
     }
@@ -556,7 +558,9 @@ public final class ForwardingManager {
             for (RendererNetworkDomain networkDomain : forwardingByTenant.getRendererNetworkDomain()) {
                 org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.Subnet
                     subnet = networkDomain.getAugmentation((SubnetAugmentRenderer.class)).getSubnet();
-                dhcpRelayHandler.deleteIpv4DhcpRelay(vni_vrfid, subnet, vppNodesByL2Fd);
+                if (subnet.isIsTenant()) {
+                    dhcpRelayHandler.deleteIpv4DhcpRelay(vni_vrfid, subnet, vppNodesByL2Fd);
+                }
             }
         }
     }

@@ -67,7 +67,7 @@ public class DhcpRelayHandler {
                         LOG.warn("DHCP Relay was not configured: {}", dhcpRelayCommand);
                     }
                 } else {
-                    LOG.warn("DHCP server IP address was not found for node: {}. Skipping processing", vppNode);
+                    LOG.trace("DHCP server IP address was not found for node: {}. Skipping processing", vppNode);
                 }
             }
 
