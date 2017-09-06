@@ -27,8 +27,10 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.DhcpRelayCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.NodeOperEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.RendererPolicyConfEvent;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AccessListWrapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.policy.acl.AclManager;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.KeyFactory;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.rev151103.renderers.renderer.RendererPolicy;
@@ -153,7 +155,7 @@ public class VppRendererPolicyManager {
         ImmutableSet<RendererEndpointKey> rendEpsAfter = policyCtxAfter.getPolicyTable().rowKeySet();
 
         SetView<RendererEndpointKey> removedRendEps = Sets.difference(rendEpsBefore, rendEpsAfter);
-        removedRendEps.forEach(rEpKey -> fwManager.removeForwardingForEndpoint(rEpKey, policyCtxBefore));
+        removedRendEps.forEach(rEpKey -> fwManager.removeForwardingForEndpoint(rEpKey, policyCtxBefore));//TODO
 
         if (!ConfigUtil.getInstance().isL3FlatEnabled()) {
             LOG.debug("Removing bridge domains on nodes {}", removedVppNodesByL2Fd);
@@ -190,7 +192,7 @@ public class VppRendererPolicyManager {
         fwManager.syncRouting(policyCtxAfter);
 
         SetView<RendererEndpointKey> createdRendEps = Sets.difference(rendEpsAfter, rendEpsBefore);
-        createdRendEps.forEach(rEpKey -> fwManager.createForwardingForEndpoint(rEpKey, policyCtxAfter));
+        createdRendEps.forEach(rEpKey -> fwManager.createForwardingForEndpoint(rEpKey, policyCtxAfter));//TODO
 
         SetView<RendererEndpointKey> updatedRendEps = Sets.intersection(rendEpsBefore, rendEpsAfter);
         // update forwarding for endpoint
@@ -259,6 +261,14 @@ public class VppRendererPolicyManager {
         rEpKeys.forEach(rEpKey -> fwManager.createForwardingForEndpoint(rEpKey, policyCtx));
         fwManager.createNatEntries(policyCtx);
         fwManager.syncRouting(policyCtx);
+
+        ImmutableSet<RendererEndpointKey> rendEpsAfter = policyCtx.getPolicyTable().rowKeySet();
+        ImmutableSet<RuleGroupKey> rulesAfter = policyCtx.getRuleGroupByKey().keySet();
+        LOG.info("rendererPolicyCreated Created rules {}", rulesAfter);
+        LOG.info("rendererPolicyCreated Created renderer endpoints {}", rendEpsAfter);
+        aclManager.resolveRulesToConfigure(policyCtx, Sets.difference(rendEpsAfter, Sets.newHashSet()),
+                Sets.difference(rulesAfter, Sets.newHashSet()), true);
+
     }
 
     private void rendererPolicyDeleted(RendererPolicy rendererPolicy) {
@@ -278,6 +288,14 @@ public class VppRendererPolicyManager {
         }
         fwManager.deleteNatEntries(policyCtx);
         fwManager.deleteRouting(policyCtx);
+
+        ImmutableSet<RendererEndpointKey> rendEpsBefore = policyCtx.getPolicyTable().rowKeySet();
+        ImmutableSet<RuleGroupKey> rulesBefore = policyCtx.getRuleGroupByKey().keySet();
+        LOG.debug("rendererPolicyDeleted. Removed rules {}", rulesBefore);
+        LOG.debug("rendererPolicyDeleted. Endpoints deleted {}", rendEpsBefore);
+        aclManager.resolveRulesToConfigure(policyCtx, Sets.difference(rendEpsBefore, Sets.newHashSet()),
+                Sets.difference(rulesBefore, Sets.newHashSet()), false);
+
     }
 
     private static SetMultimap<String, NodeId> resolveVppNodesByL2Fd(Set<RendererEndpointKey> rEpKeys,

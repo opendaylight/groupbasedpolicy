@@ -197,38 +197,58 @@ public class AclManager {
         };
         beans.forEach(bean -> {
             List<GbpAceBuilder> aceBuilders = bean.resolveAces(resolveUpdates(policyCtx, bean.epKey, bean.ruleGroups));
-            getInterfacesForEndpoint(policyCtx, KeyFactory.addressEndpointKey(bean.epKey)).asMap()
+            resolveInterfaces(KeyFactory.addressEndpointKey(bean.epKey), policyCtx).asMap()
                 .forEach((nodeId, intfcs) -> {
-                    intfcs.stream()
-                        .filter(intf -> !interfaceManager.isExcludedFromPolicy(nodeId, getIntfName.apply(intf)))
-                        .forEach(intf -> {
-                            AclKey aclKey = new AclKey(getIntfName.apply(intf) + bean.aceDirection, VppAcl.class);
-                            denyTenantTraffic.put(nodeId, aclKey,
-                                    getWorkaroundFlows(policyCtx, bean.epKey, bean.aceDirection));
-                            AccessListUtil.allowExternalNetworksForEp(bean.epKey, bean.aceDirection).build();
-                            denyTenantTraffic.put(nodeId, aclKey,
-                                    AccessListUtil.denyDomainSubnets(policyCtx, bean.aceDirection)
-                                        .stream()
-                                        .map(GbpAceBuilder::build)
-                                        .collect(Collectors.toList()));
-                            permitExternal.put(nodeId, aclKey, Lists.newArrayList(
-                                    AccessListUtil.allowExternalNetworksForEp(bean.epKey, bean.aceDirection).build()));
-                            Optional<List<Ace>> entries = Optional.fromNullable(aceTable.get(nodeId, aclKey));
-                            aceTable.put(nodeId, aclKey,
-                                    Stream
-                                        .concat((entries.isPresent()) ? entries.get().stream() : Stream.empty(),
-                                                aceBuilders.stream().map(aceBuilder -> aceBuilder.build()))
-                                        .collect(Collectors.toList()));
-                        });
+                    intfcs.stream().forEach(intf -> {
+                        if (!write && changedEndpoints.contains(bean.epKey)) {
+                            AccessListWrapper.removeAclsForInterface(VppIidFactory.getNetconfNodeIid(nodeId), intf);
+                            return;
+                        }
+                        AclKey aclKey = new AclKey(getIntfName.apply(intf) + bean.aceDirection, VppAcl.class);
+                        denyTenantTraffic.put(nodeId, aclKey,
+                                getWorkaroundFlows(policyCtx, bean.epKey, bean.aceDirection));
+                        AccessListUtil.allowExternalNetworksForEp(bean.epKey, bean.aceDirection).build();
+                        denyTenantTraffic.put(nodeId, aclKey,
+                                AccessListUtil.denyDomainSubnets(policyCtx, bean.aceDirection)
+                                    .stream()
+                                    .map(GbpAceBuilder::build)
+                                    .collect(Collectors.toList()));
+                        permitExternal.put(nodeId, aclKey, Lists.newArrayList(
+                                AccessListUtil.allowExternalNetworksForEp(bean.epKey, bean.aceDirection).build()));
+                        Optional<List<Ace>> entries = Optional.fromNullable(aceTable.get(nodeId, aclKey));
+                        aceTable.put(nodeId, aclKey,
+                                Stream
+                                    .concat((entries.isPresent()) ? entries.get().stream() : Stream.empty(),
+                                            aceBuilders.stream().map(aceBuilder -> aceBuilder.build()))
+                                    .collect(Collectors.toList()));
+                    });
                 });
         });
-        // to avoid empty ACL (IllegalStateArgument on HC), rules have to be updated gently
         updateRules(ImmutableTable.copyOf(aceTable), write);
-        updateRules(ImmutableTable.copyOf(denyTenantTraffic), false);
-        updateRules(ImmutableTable.copyOf(denyTenantTraffic), true);
-        updateRules(ImmutableTable.copyOf(permitExternal), false);
-        updateRules(ImmutableTable.copyOf(permitExternal), true);
+        if (write) {
+            // to avoid empty ACL (IllegalStateArgument on HC), rules have to be updated gently
+            updateRules(ImmutableTable.copyOf(denyTenantTraffic), false);
+            updateRules(ImmutableTable.copyOf(denyTenantTraffic), true);
+            updateRules(ImmutableTable.copyOf(permitExternal), false);
+            updateRules(ImmutableTable.copyOf(permitExternal), true);
+        }
 
+    }
+
+    public ImmutableSetMultimap<NodeId, InterfaceKey> resolveInterfaces(AddressEndpointKey key,
+            PolicyContext policyCtx) {
+        Function<InterfaceKey, String> getIntfName = (intf) -> {
+            Optional<String> intfName = VppPathMapper.interfacePathToInterfaceName(intf.getName());
+            Preconditions.checkArgument(intfName.isPresent(), "Failed to resolve interface name from " + intf);
+            return intfName.get();
+        };
+        SetMultimap<NodeId, InterfaceKey> result = HashMultimap.create();
+        getInterfacesForEndpoint(policyCtx, key).forEach((nodeId, intf) -> {
+            if (!interfaceManager.isExcludedFromPolicy(nodeId, getIntfName.apply(intf))) {
+                result.put(nodeId, intf);
+            }
+        });
+        return ImmutableSetMultimap.copyOf(result);
     }
 
     private List<Ace> getWorkaroundFlows(PolicyContext policyCtx, RendererEndpointKey key, ACE_DIRECTION dir) {
@@ -248,8 +268,8 @@ public class AclManager {
         rendEp.get()
             .getPeerEndpoint()
             .stream()
-            // TODO see UT
             .filter(peerEp -> policyCtx.getPolicyTable().get(rendEpKey, peerEp.getKey()) != null)
+            .filter(peerEp -> !endpointIsExcludedFromPolicy(policyCtx, KeyFactory.addressEndpointKey(peerEp.getKey())))
             .forEach(peerEp -> {
                 updateTreeBuilder.put(rendEpKey, peerEp.getKey(),
                         policyCtx.getPolicyTable()
@@ -261,6 +281,13 @@ public class AclManager {
         return updateTreeBuilder.build();
     }
 
+    private boolean endpointIsExcludedFromPolicy(PolicyContext policyCtx, AddressEndpointKey key) {
+        return getInterfacesForEndpoint(policyCtx, key).entries().stream().anyMatch(entry -> {
+            Optional<String> intfName = VppPathMapper.interfacePathToInterfaceName(entry.getValue().getName());
+            return intfName.isPresent() ? interfaceManager.isExcludedFromPolicy(entry.getKey(), intfName.get()) : false;
+        });
+    }
+
     private void updateRules(ImmutableTable<NodeId, AclKey, List<Ace>> rulesToUpdate, boolean write) {
         List<ListenableFuture<Void>> sync = new ArrayList<>();
         rulesToUpdate.rowKeySet().forEach(nodeId -> {
@@ -269,8 +296,7 @@ public class AclManager {
                 @Override
                 public Void call() throws Exception {
                     InstanceIdentifier<Node> vppIid = VppIidFactory.getNetconfNodeIid(nodeId);
-                    Optional<DataBroker> dataBroker =
-                        mountDataProvider.resolveDataBrokerForMountPoint(vppIid);
+                    Optional<DataBroker> dataBroker = mountDataProvider.resolveDataBrokerForMountPoint(vppIid);
                     if (!dataBroker.isPresent()) {
                         LOG.error("Failed to update ACLs for endpoints on node {}. Mount point does not exist.",
                                 nodeId);
@@ -285,6 +311,7 @@ public class AclManager {
                                 .child(Ace.class, ace.getKey())
                                 .build(), ace);
                         });
+                        LOG.debug("Writing ACE changes - Node: {} Entries: {}", nodeId, entries);
                         if (entries.isEmpty()) {
                             return;
                         }
@@ -310,39 +337,22 @@ public class AclManager {
     }
 
     private List<GbpAceBuilder> generateRulesForEndpointPair(PolicyContext ctx, RendererEndpointKey r,
-            PeerEndpointKey p, RendererResolvedPolicy rrp, ACE_DIRECTION aceDirection) {
+            PeerEndpointKey p, List<RendererResolvedPolicy> rrps, ACE_DIRECTION aceDirection) {
         List<GbpAceBuilder> rules = new ArrayList<>();
-        Direction direction =
-                AccessListUtil.calculateClassifDirection(rrp.getRendererEndpointParticipation(), aceDirection);
-        ResolvedRuleGroup resolvedRuleGroup = ctx.getRuleGroupByKey().get(rrp.getRuleGroup().getRelatedRuleGroupKey());
-        resolvedRuleGroup.getRules().forEach(rule -> {
-            Optional<GbpAceBuilder> ace = AccessListUtil.resolveAceClassifersAndAction(rule, direction,
-                    AccessListUtil.resolveAceName(rule.getName(), r, p));
-            if (ace.isPresent()) {
-                rules.add(ace.get());
-            }
-        });
-        AccessListUtil.updateAddressesInRules(rules, r, p, ctx, aceDirection, true);
+        for (RendererResolvedPolicy rrp : rrps) {
+            Direction direction =
+                    AccessListUtil.calculateClassifDirection(rrp.getRendererEndpointParticipation(), aceDirection);
+            ResolvedRuleGroup resolvedRuleGroup =
+                    ctx.getRuleGroupByKey().get(rrp.getRuleGroup().getRelatedRuleGroupKey());
+            resolvedRuleGroup.getRules().forEach(rule -> {
+                Optional<GbpAceBuilder> ace = AccessListUtil.resolveAceClassifersAndAction(rule, direction,
+                        AccessListUtil.resolveAceName(rule.getName(), r, p));
+                if (ace.isPresent()) {
+                    rules.add(ace.get());
+                }
+            });
+        }
         return rules;
-    }
-
-    // TODO remove
-    public void updateAclsForPeers(PolicyContext policyCtx, RendererEndpointKey rEpKey) {
-        ImmutableSet<PeerEndpointKey> peers = policyCtx.getPolicyTable().row(rEpKey).keySet();
-        List<ListenableFuture<Void>> sync = new ArrayList<>();
-        for (RendererEndpointKey peerRendEp : peers.stream()
-            .map(AddressEndpointUtils::fromPeerEpKey)
-            .collect(Collectors.toList())
-            .stream()
-            .map(AddressEndpointUtils::toRendererEpKey)
-            .collect(Collectors.toList())) {
-            sync.add(updateAclsForRendEp(peerRendEp, policyCtx));
-        }
-        try {
-            Futures.allAsList(sync).get();
-        } catch (InterruptedException | ExecutionException e) {
-            LOG.error("Failed to update ACLs for peers of {}. {}", rEpKey, e);
-        }
     }
 
     public ListenableFuture<Void> updateAclsForRendEp(RendererEndpointKey rEpKey, PolicyContext policyCtx) {
@@ -486,19 +496,34 @@ public class AclManager {
 
         List<GbpAceBuilder> resolveAces(
                 ImmutableTable<RendererEndpointKey, PeerEndpointKey, List<RendererResolvedPolicy>> updateTree) {
+            return (write) ? resolveCreatedAces(updateTree) : resolveRemovedAces(updateTree);
+        }
+
+        List<GbpAceBuilder> resolveCreatedAces(
+                ImmutableTable<RendererEndpointKey, PeerEndpointKey, List<RendererResolvedPolicy>> updateTree) {
             List<GbpAceBuilder> result = new ArrayList<>();
             updateTree.columnKeySet().stream().filter(peer -> updateTree.get(epKey, peer) != null).forEach(peer -> {
+                List<GbpAceBuilder> deltaRules =
+                        generateRulesForEndpointPair(policyCtx, epKey, peer, updateTree.get(epKey, peer), aceDirection);
+                if (AccessListUtil.validateAndUpdateAddressesInRules(deltaRules, epKey, peer, policyCtx, aceDirection,
+                        true)) {
+                    result.addAll(deltaRules);
+                }
+            });
+            return result;
+        }
+
+        List<GbpAceBuilder> resolveRemovedAces(
+                ImmutableTable<RendererEndpointKey, PeerEndpointKey, List<RendererResolvedPolicy>> updateTree) {
+            List<GbpAceBuilder> result = new ArrayList<>();
+            updateTree.columnKeySet().stream().filter(peer -> updateTree.get(epKey, peer) != null).forEach(peer -> {
+                // we only need to resolve rule names when removing ACE
                 updateTree.get(epKey, peer).stream().forEach(rrp -> {
-                    if (write) {
-                        result.addAll(generateRulesForEndpointPair(policyCtx, epKey, peer, rrp, aceDirection));
-                    } else {
-                        // we only need to resolve rule names when removing ACE
-                        result.addAll(rrp.getRuleGroup()
-                            .getRules()
-                            .stream()
-                            .map(rule -> new GbpAceBuilder(AccessListUtil.resolveAceName(rule.getName(), epKey, peer)))
-                            .collect(Collectors.toList()));
-                    }
+                    result.addAll(rrp.getRuleGroup()
+                        .getRules()
+                        .stream()
+                        .map(rule -> new GbpAceBuilder(AccessListUtil.resolveAceName(rule.getName(), epKey, peer)))
+                        .collect(Collectors.toList()));
                 });
             });
             return result;

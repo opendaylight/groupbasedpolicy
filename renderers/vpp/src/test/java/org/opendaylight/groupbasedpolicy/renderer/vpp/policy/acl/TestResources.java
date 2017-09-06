@@ -278,7 +278,7 @@ public class TestResources extends CustomDataBrokerTest {
         return new RuleGroupsBuilder().setRuleGroup(ImmutableList.<RuleGroup>of(rg1, rg2)).build();
     }
 
-    public RuleGroups createRuleGroups_DhcpTest() {
+    public RuleGroups createRuleGroupsDhcpTest() {
         ParameterValue ipv4Param = new ParameterValueBuilder().setIntValue(EtherTypeClassifierDefinition.IPv4_VALUE)
             .setName(new ParameterName(EtherTypeClassifierDefinition.ETHERTYPE_PARAM))
             .build();
@@ -288,9 +288,15 @@ public class TestResources extends CustomDataBrokerTest {
         ParameterValue udpParam = new ParameterValueBuilder().setIntValue(IpProtoClassifierDefinition.UDP_VALUE)
             .setName(new ParameterName(IpProtoClassifierDefinition.PROTO_PARAM))
             .build();
+        ParameterValue srcDhcp = new ParameterValueBuilder().setIntValue(Long.valueOf(68))
+                .setName(new ParameterName(L4ClassifierDefinition.SRC_PORT_PARAM))
+                .build();
+        ParameterValue dstDhcp = new ParameterValueBuilder().setIntValue(Long.valueOf(67))
+                .setName(new ParameterName(L4ClassifierDefinition.DST_PORT_PARAM))
+                .build();
         RuleGroup rg1 = createSimpleRuleGroups(ImmutableList.of(ipv4Param, tcpParam), IpProtoClassifierDefinition.ID,
                 SUBJECT_NAME);
-        RuleGroup rg2 = createSimpleRuleGroups(ImmutableList.of(ipv4Param, udpParam), IpProtoClassifierDefinition.ID,
+        RuleGroup rg2 = createSimpleRuleGroups(ImmutableList.of(ipv4Param, udpParam, srcDhcp, dstDhcp), L4ClassifierDefinition.ID,
                 SUBJECT_NAME2);
         return new RuleGroupsBuilder().setRuleGroup(ImmutableList.<RuleGroup>of(rg1, rg2)).build();
     }
@@ -298,12 +304,12 @@ public class TestResources extends CustomDataBrokerTest {
     private RuleGroup createSimpleRuleGroups(List<ParameterValue> pv, ClassifierDefinitionId id,
             SubjectName subjectName) {
         final ClassifierName classifierName = new ClassifierName("cl-name");
-        Classifier classifIn = new ClassifierBuilder().setClassifierDefinitionId(IpProtoClassifierDefinition.ID)
+        Classifier classifIn = new ClassifierBuilder().setClassifierDefinitionId(id)
             .setDirection(Direction.In)
             .setName(classifierName)
             .setParameterValue(pv)
             .build();
-        Classifier classifOut = new ClassifierBuilder().setClassifierDefinitionId(IpProtoClassifierDefinition.ID)
+        Classifier classifOut = new ClassifierBuilder().setClassifierDefinitionId(id)
             .setDirection(Direction.Out)
             .setName(classifierName)
             .setParameterValue(pv)

@@ -71,8 +71,22 @@ public class EtherTypeClassifier extends Classifier {
 
     @Override
     GbpAceBuilder update(GbpAceBuilder ruleBuilder, Map<String, ParameterValue> params) {
-        // ETHER_TYPE matching not supported yet
+        Long etherType = getEtherTypeValue(params);
+        if (!ruleBuilder.getEtherType().isPresent() && etherType != null) {
+            if (EtherTypeClassifierDefinition.IPv4_VALUE.equals(etherType)) {
+                ruleBuilder.setIpv4EtherType();
+            } else if (EtherTypeClassifierDefinition.IPv6_VALUE.equals(etherType)) {
+                ruleBuilder.setIpv6EtherType();
+            }
+        }
         return ruleBuilder;
+    }
+
+    private static Long getEtherTypeValue(Map<String, ParameterValue> params) {
+        if (params == null || params.get(EtherTypeClassifierDefinition.ETHERTYPE_PARAM) == null) {
+            return null;
+        }
+        return params.get(EtherTypeClassifierDefinition.ETHERTYPE_PARAM).getIntValue();
     }
 
     @Override

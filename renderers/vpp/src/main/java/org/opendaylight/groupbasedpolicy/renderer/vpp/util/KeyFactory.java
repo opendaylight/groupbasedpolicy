@@ -39,6 +39,11 @@ public class KeyFactory {
                 fromKey.getContextType());
     }
 
+    public static AddressEndpointKey addressEndpointKey(PeerEndpointKey fromKey) {
+        return new AddressEndpointKey(fromKey.getAddress(), fromKey.getAddressType(), fromKey.getContextId(),
+                fromKey.getContextType());
+    }
+
     public static ProviderAddressEndpointLocationKey providerAddressEndpointLocationKey(
             AddressEndpointWithLocationKey fromKey) {
         return new ProviderAddressEndpointLocationKey(fromKey.getAddress(), fromKey.getAddressType(),

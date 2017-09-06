@@ -46,6 +46,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.acl.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.acl.rev170615.acl.ip.protocol.header.fields.ip.protocol.udp.UdpNodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.acl.rev170615.acl.ip.protocol.header.fields.ip.protocol.udp.UdpNodesBuilder;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 
 public class GbpAceBuilder {
@@ -93,6 +94,10 @@ public class GbpAceBuilder {
         return action;
     }
 
+    public Optional<AceIpVersion> getEtherType() {
+        return (aceIpVersion != null) ? Optional.of(aceIpVersion) : Optional.absent();
+    }
+
     public GbpAceBuilder setProtocol(short protocol) {
         this.protocol = protocol;
         return this;
@@ -109,6 +114,16 @@ public class GbpAceBuilder {
         if (destPortRangeBuilder != null) {
             this.destinationPortRangeBuilder = destPortRangeBuilder;
         }
+        return this;
+    }
+
+    public GbpAceBuilder setIpv4EtherType() {
+        this.aceIpVersion = new AceIpv4Builder().build();
+        return this;
+    }
+
+    public GbpAceBuilder setIpv6EtherType() {
+        this.aceIpVersion = new AceIpv6Builder().build();
         return this;
     }
 

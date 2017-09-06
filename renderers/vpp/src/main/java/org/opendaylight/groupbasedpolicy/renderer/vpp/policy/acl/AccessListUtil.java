@@ -80,15 +80,16 @@ public class AccessListUtil {
             .stream()
             .filter(peerEpKey -> peerHasLocation(ctx, peerEpKey))
             .forEach(peerEpKey -> {
+                List<GbpAceBuilder> rules = new ArrayList<>();
                 ctx.getPolicyTable().get(rEpKey, peerEpKey).forEach(resolvedRules -> {
-                    List<GbpAceBuilder> rules = new ArrayList<>();
                     Direction classifDir = calculateClassifDirection(resolvedRules.getRendererEndpointParticipation(),
                             policyDirection);
                     rules.addAll(resolveAclRulesFromPolicy(resolvedRules, classifDir, rEpKey, peerEpKey));
-                    updateAddressesInRules(rules, rEpKey, peerEpKey, ctx, policyDirection, true);
-                    aclWrapper.writeRules(rules);
 
                 });
+                if (validateAndUpdateAddressesInRules(rules, rEpKey, peerEpKey, ctx, policyDirection, true)) {
+                    aclWrapper.writeRules(rules);
+                }
             });
     }
 
@@ -126,16 +127,20 @@ public class AccessListUtil {
         return Direction.In;
     }
 
-    static void updateAddressesInRules(List<GbpAceBuilder> rules, RendererEndpointKey rEpKey, PeerEndpointKey peerEpKey,
-            PolicyContext ctx, ACE_DIRECTION policyDirection, boolean resolveForLocationPeers) {
+    static boolean validateAndUpdateAddressesInRules(List<GbpAceBuilder> rules, RendererEndpointKey rEpKey,
+            PeerEndpointKey peerEpKey, PolicyContext ctx, ACE_DIRECTION policyDirection,
+            boolean resolveForLocationPeers) {
         for (AddressMapper addrMapper : Arrays.asList(new SourceMapper(policyDirection),
                 new DestinationMapper(policyDirection))) {
             if (peerHasLocation(ctx, peerEpKey) && resolveForLocationPeers) {
-                addrMapper.updateRules(rules, findAddrEp(ctx, rEpKey), findAddrEp(ctx, peerEpKey));
+                if (!addrMapper.updateRules(rules, findAddrEp(ctx, rEpKey), findAddrEp(ctx, peerEpKey))) {
+                    return false;
+                }
             } else if (!peerHasLocation(ctx, peerEpKey) && !resolveForLocationPeers) {
                 addrMapper.updateExtRules(rules, findAddrEp(ctx, rEpKey), null);
             }
         }
+        return true;
     }
 
     private static boolean peerHasLocation(PolicyContext ctx, PeerEndpointKey peerEpKey) {
@@ -318,8 +323,7 @@ public class AccessListUtil {
     }
 
     static void setSourceL3Address(GbpAceBuilder rule, String address) throws UnknownHostException {
-        InetAddress addr = InetAddress.getByName(substringBeforeSlash(address));
-        if (addr instanceof Inet6Address) {
+        if (isIpv6Address(address)) {
             rule.setIpAddresses(new Ipv6Prefix(address), null);
         } else {
             rule.setIpAddresses(new Ipv4Prefix(address), null);
@@ -327,12 +331,21 @@ public class AccessListUtil {
     }
 
     static void setDestinationL3Address(GbpAceBuilder rule, String address) throws UnknownHostException {
-        InetAddress addr = InetAddress.getByName(substringBeforeSlash(address));
-        if (addr instanceof Inet6Address) {
+        if (isIpv6Address(address)) {
             rule.setIpAddresses(null, new Ipv6Prefix(address));
         } else {
             rule.setIpAddresses(null, new Ipv4Prefix(address));
         }
+    }
+
+    public static boolean isIpv4Address(String address) throws UnknownHostException {
+        InetAddress addr = InetAddress.getByName(substringBeforeSlash(address));
+        return addr instanceof Inet4Address;
+    }
+
+    public static boolean isIpv6Address(String address) throws UnknownHostException {
+        InetAddress addr = InetAddress.getByName(substringBeforeSlash(address));
+        return addr instanceof Inet6Address;
     }
 
     static GbpAceBuilder denyIngressTrafficForPrefix(Subnet subnet) {

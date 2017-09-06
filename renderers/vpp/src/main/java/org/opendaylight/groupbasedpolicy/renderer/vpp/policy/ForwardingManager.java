@@ -259,7 +259,6 @@ public final class ForwardingManager {
                     LOG.warn("Interface was not added to bridge-domain {} for endpoint {}", l2FloodDomain, rEp, e);
                 }
             }
-            aclManager.updateAclsForPeers(policyCtx, rEpKey);
         } else {
             LOG.debug("Forwarding is not created - Location of renderer endpoint contains "
                     + "external-node therefore VPP renderer assumes that interface for endpoint is "
