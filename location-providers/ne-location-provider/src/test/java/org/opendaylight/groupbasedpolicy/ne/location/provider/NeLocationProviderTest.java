@@ -46,7 +46,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.network.elements.rev160407.NetworkElements;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.network.elements.rev160407.NetworkElementsBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint.network.elements.rev160407.network.elements.NetworkElement;
@@ -83,6 +85,9 @@ import com.google.common.util.concurrent.CheckedFuture;
 
 public class NeLocationProviderTest extends CustomDataBrokerTest {
 
+    private static final TenantId TENANT = new TenantId("Tenant");
+    private static final List<EndpointGroupId> DEFAULT_EPG =
+        Collections.singletonList(new EndpointGroupId("defaultEPG"));
     private DataBroker dataBroker;
     private NeLocationProvider neProvider;
     private String L3_CONTEXT_ID = "l3Context";
@@ -97,7 +102,8 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
 
     @Override
     public Collection<Class<?>> getClassesFromModules() {
-        return ImmutableList.<Class<?>>of(NetworkElements.class, LocationProviders.class, Endpoints.class, L3Context.class, Nodes.class);
+        return ImmutableList.<Class<?>>of(NetworkElements.class, LocationProviders.class, Endpoints.class,
+            L3Context.class, Nodes.class);
     }
 
     @Before
@@ -151,13 +157,12 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
     @Test
     public void test_AddressEndpointWrite_NoNE_Overwrite() throws Exception {
         writeBaseAddrEndpoint();
-        NetworkContainment nc = new NetworkContainmentBuilder()
-                .setContainment(new NetworkDomainContainmentBuilder().setNetworkDomainId(new NetworkDomainId(L3_CONTEXT_ID)).build())
-                        .build();
+        NetworkContainment nc = new NetworkContainmentBuilder().setContainment(
+            new NetworkDomainContainmentBuilder().setNetworkDomainId(new NetworkDomainId(L3_CONTEXT_ID)).build())
+            .build();
         AddressEndpoint endpoint = new AddressEndpointBuilder().setKey(
-                new AddressEndpointKey(IPv4_HOST_ADDRESS_1, IpPrefixType.class, new ContextId(L3_CONTEXT_ID), L3Context.class))
-                .setNetworkContainment(nc)
-                .build();
+                new AddressEndpointKey(IPv4_HOST_ADDRESS_1, IpPrefixType.class, new ContextId(L3_CONTEXT_ID),
+                    L3Context.class)).setNetworkContainment(nc).setTenant(TENANT).setEndpointGroup(DEFAULT_EPG).build();
         InstanceIdentifier<AddressEndpoint> iid = IidFactory.addressEndpointIid(endpoint.getKey());
         WriteTransaction wtx = dataBroker.newWriteOnlyTransaction();
         wtx.put(LogicalDatastoreType.OPERATIONAL, iid, endpoint, true);
@@ -171,8 +176,9 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
     @Test
     public void test_AddressEndpointModified_NoNE() throws Exception {
         writeBaseAddrEndpoint();
-        NetworkContainment nc = new NetworkContainmentBuilder()
-        .setContainment(new NetworkDomainContainmentBuilder().setNetworkDomainId(new NetworkDomainId(L3_CONTEXT_ID)).build())
+        NetworkContainment nc =
+            new NetworkContainmentBuilder().setContainment(
+                new NetworkDomainContainmentBuilder().setNetworkDomainId(new NetworkDomainId(L3_CONTEXT_ID)).build())
                 .build();
         InstanceIdentifier<NetworkContainment> iid = InstanceIdentifier
                 .builder(Endpoints.class)
@@ -502,8 +508,12 @@ public class NeLocationProviderTest extends CustomDataBrokerTest {
 
     private AddressEndpoint createAddressEndpoint(String ipAddr, Class<? extends AddressType> addrType,
             String context, Class<? extends ContextType> cType) {
-        return new AddressEndpointBuilder().setAddress(ipAddr).setAddressType(addrType)
-                .setContextId(new ContextId(context)).setContextType(cType).build();
+        return new AddressEndpointBuilder()
+            .setAddress(ipAddr)
+            .setAddressType(addrType)
+            .setContextId(new ContextId(context))
+            .setContextType(cType).setTenant(TENANT)
+            .setEndpointGroup(DEFAULT_EPG).build();
     }
 
     private NetworkElements createNetworkElements(String node, String iface, String l3c, String prefix) {

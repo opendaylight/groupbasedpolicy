@@ -11,6 +11,7 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.policy;
 import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.ReentrantLock;
@@ -54,6 +55,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.AbsoluteLocation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.LocationProviders;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.LocationProvider;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.location.provider.ProviderAddressEndpointLocation;
@@ -92,6 +95,11 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
     private static final InstanceIdentifier<RendererPolicy> RENDERER_POLICY_IID =
             IidFactory.rendererIid(VppRenderer.NAME).child(RendererPolicy.class);
     private final static String SOCKET = "socket";
+
+    public static final TenantId TENANT = new TenantId("tenant");
+    public static final List<EndpointGroupId>
+        ENDPOINT_GROUP =
+        Collections.singletonList(new EndpointGroupId("default"));
 
     private MountedDataBrokerProvider mountedDataProviderMock;
     private DataBroker mountPointDataBroker;
@@ -401,6 +409,8 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
             InstanceIdentifier<VppEndpoint> vppEpIid) {
         AddressEndpoint addrEp = new AddressEndpointBuilder().setKey(new AddressEndpointKey(clientEp.getAddress(),
                 clientEp.getAddressType(), clientEp.getContextId(), clientEp.getContextType()))
+            .setTenant(TENANT)
+            .setEndpointGroup(ENDPOINT_GROUP)
             .build();
         InstanceIdentifier<AddressEndpoint> iid = InstanceIdentifier.create(Endpoints.class)
             .child(AddressEndpoints.class)

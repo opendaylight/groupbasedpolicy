@@ -146,6 +146,7 @@ public class LispStateManager {
 
     private void enableLispOnHost(EndpointHost endpointHost, LispState lispState)
             throws LispConfigCommandFailedException {
+        LOG.debug("Enabling LISP on host {}", endpointHost.getHostName());
         AbstractLispCommand<Lisp> lispEnableCommand = LispCommandWrapper.enableLisp();
         if (LispStateCommandExecutor.executePutCommand(endpointHost.getHostName(), lispEnableCommand)) {
             lispState.setLispEnabled(true);

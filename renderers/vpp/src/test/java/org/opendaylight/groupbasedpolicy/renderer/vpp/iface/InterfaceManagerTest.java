@@ -36,6 +36,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.endpoints.address.endpoints.AddressEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.LocationProviders;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.LocationProvider;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.location.provider.ProviderAddressEndpointLocation;
@@ -69,6 +70,7 @@ public class InterfaceManagerTest extends CustomDataBrokerTest {
             InstanceIdentifier.builder(Config.class).child(VppEndpoint.class, BASIC_VPP_EP_KEY).build();
     private final static NodeKey NODE_KEY = new NodeKey(new NodeId("node1"));
     private final static String SOCKET = "socket1";
+    private final static String TENANT = "tenant";
 
     private InterfaceManager manager;
     private FlatOverlayManager flatOverlayManager;
@@ -100,6 +102,7 @@ public class InterfaceManagerTest extends CustomDataBrokerTest {
             .setKey(new AddressEndpointKey(vhostVppEpBuilder().getAddress(), vhostVppEpBuilder().getAddressType(),
                     vhostVppEpBuilder().getContextId(), vhostVppEpBuilder().getContextType()))
             .setEndpointGroup(ImmutableList.of())
+            .setTenant(new TenantId(TENANT))
             .build();
         VppEndpointLocationProvider vppEpLocProvider = new VppEndpointLocationProvider(dataBroker);
         WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();

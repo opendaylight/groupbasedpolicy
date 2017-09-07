@@ -27,8 +27,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.ContextType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.Forwarding;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425._interface.attributes._interface.type.choice.VhostUserCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.VppEndpointBuilder;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
@@ -40,6 +42,9 @@ public class VppEndpointListenerTest extends CustomDataBrokerTest {
     private final static String ADDRESS = "1.1.1.1/32";
     private final static ContextId CONTEXT_ID = new ContextId("ctx1");
     private final static String IFACE_NAME = "ifaceName";
+    public static final NodeId TEST_NODE = new NodeId("testNode");
+    private static final String DEFAULT_IFACE_NAME = "defaultIfaceName";
+    private static final String TEST_SOCKET = "/tmp/test_socket";
 
     private DataBroker dataBroker;
     private VppEndpointListener listener;
@@ -60,11 +65,7 @@ public class VppEndpointListenerTest extends CustomDataBrokerTest {
     @Test
     public void testOnWrite() throws Exception {
         ArgumentCaptor<VppEndpointConfEvent> argVppEpEvent = ArgumentCaptor.forClass(VppEndpointConfEvent.class);
-        VppEndpoint vppEndpoint = new VppEndpointBuilder().setAddress(ADDRESS)
-            .setAddressType(AddressType.class)
-            .setContextId(CONTEXT_ID)
-            .setContextType(ContextType.class)
-            .build();
+        VppEndpoint vppEndpoint = getBaseVppEndpointBuilder().build();
         InstanceIdentifier<VppEndpoint> vppEpIid =
                 InstanceIdentifier.builder(Config.class).child(VppEndpoint.class, vppEndpoint.getKey()).build();
         WriteTransaction wTx = getDataBroker().newWriteOnlyTransaction();
@@ -75,16 +76,14 @@ public class VppEndpointListenerTest extends CustomDataBrokerTest {
         VppEndpointConfEvent capturedVppEpEvent = argVppEpEvent.getValue();
         Assert.assertEquals(vppEpIid, capturedVppEpEvent.getIid());
         assertEqualsOptional(null, capturedVppEpEvent.getBefore());
+        Optional<VppEndpoint> after = capturedVppEpEvent.getAfter();
         assertEqualsOptional(vppEndpoint, capturedVppEpEvent.getAfter());
     }
 
     @Test
     public void testOnDelete() throws Exception {
         ArgumentCaptor<VppEndpointConfEvent> argVppEpEvent = ArgumentCaptor.forClass(VppEndpointConfEvent.class);
-        VppEndpoint vppEndpoint = new VppEndpointBuilder().setAddress(ADDRESS)
-            .setAddressType(AddressType.class)
-            .setContextId(CONTEXT_ID)
-            .setContextType(ContextType.class)
+        VppEndpoint vppEndpoint = getBaseVppEndpointBuilder()
             .build();
         InstanceIdentifier<VppEndpoint> vppEpIid =
                 InstanceIdentifier.builder(Config.class).child(VppEndpoint.class, vppEndpoint.getKey()).build();
@@ -105,17 +104,15 @@ public class VppEndpointListenerTest extends CustomDataBrokerTest {
     @Test
     public void testOnSubtreeModified() throws Exception {
         ArgumentCaptor<VppEndpointConfEvent> argVppEpEvent = ArgumentCaptor.forClass(VppEndpointConfEvent.class);
-        VppEndpointBuilder vppEndpointBuilder = new VppEndpointBuilder().setAddress(ADDRESS)
-            .setAddressType(AddressType.class)
-            .setContextId(CONTEXT_ID)
-            .setContextType(ContextType.class);
+        VppEndpointBuilder vppEndpointBuilder = getBaseVppEndpointBuilder();
         VppEndpoint vppEndpoint = vppEndpointBuilder.build();
         InstanceIdentifier<VppEndpoint> vppEpIid =
                 InstanceIdentifier.builder(Config.class).child(VppEndpoint.class, vppEndpoint.getKey()).build();
         WriteTransaction wTx = getDataBroker().newWriteOnlyTransaction();
         wTx.put(LogicalDatastoreType.CONFIGURATION, vppEpIid, vppEndpoint);
         wTx.submit().get();
-        VppEndpoint modifiedVppEndpoint = vppEndpointBuilder.setVppInterfaceName(IFACE_NAME).build();
+        VppEndpoint modifiedVppEndpoint =
+            vppEndpointBuilder.setVppInterfaceName(IFACE_NAME).build();
         wTx = getDataBroker().newWriteOnlyTransaction();
         wTx.put(LogicalDatastoreType.CONFIGURATION, vppEpIid, modifiedVppEndpoint);
         wTx.submit().get();
@@ -129,6 +126,16 @@ public class VppEndpointListenerTest extends CustomDataBrokerTest {
         Assert.assertEquals(vppEpIid, capturedSecondVppEpEvent.getIid());
         assertEqualsOptional(vppEndpoint, capturedSecondVppEpEvent.getBefore());
         assertEqualsOptional(modifiedVppEndpoint, capturedSecondVppEpEvent.getAfter());
+    }
+
+    private VppEndpointBuilder getBaseVppEndpointBuilder() {
+        return new VppEndpointBuilder().setAddress(ADDRESS)
+            .setAddressType(AddressType.class)
+            .setContextId(CONTEXT_ID)
+            .setContextType(ContextType.class)
+            .setInterfaceTypeChoice(new VhostUserCaseBuilder().setSocket(TEST_SOCKET).build())
+            .setVppNodeId(TEST_NODE)
+            .setVppInterfaceName(DEFAULT_IFACE_NAME);
     }
 
     private <T> void assertEqualsOptional(T expected, Optional<T> actual) {

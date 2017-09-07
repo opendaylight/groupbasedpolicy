@@ -166,6 +166,7 @@ module renderer {
             }
 
             container renderer-policy {
+                presence "Enforce mandatory node only if renderer-policy container is present";
                 description "Policy is named by version and describes desired vs real state.
                     Desired state of policy described by /renderers/renderer/renderer-policy/configuration and version are stored in CONF.
                     The real state of policy described by /renderers/renderer/renderer-policy/status and version are stored in OPER.";
@@ -225,6 +226,7 @@ module renderer {
                     }
 
                     container endpoints {
+                        presence "Enforce mandatory node only if endpoints container is present";
                         list address-endpoint-with-location {
                             min-elements 1;
                             key "context-type context-id address-type address";

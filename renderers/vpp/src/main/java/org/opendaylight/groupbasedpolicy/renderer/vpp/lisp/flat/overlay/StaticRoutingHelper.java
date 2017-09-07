@@ -117,7 +117,12 @@ public class StaticRoutingHelper {
                 .augmentation(StaticRoutes1.class)
                 .child(Ipv4.class);
 
-        if (GbpNetconfTransaction.netconfSyncedMerge(VppIidFactory.getNetconfNodeIid(new NodeId(hostName)), iid,
+        RoutingProtocolKey routingProtocolKey = new RoutingProtocolKey(hostVrfStateForPortVrf.getProtocolName());
+        boolean routingProtocol = GbpNetconfTransaction.netconfSyncedMerge(VppIidFactory.getNetconfNodeIid(new NodeId(hostName)), VppIidFactory
+                .getRoutingInstanceIid(routingProtocolKey),
+                new RoutingProtocolBuilder().setKey(routingProtocolKey).setType(Static.class).build(), GbpNetconfTransaction.RETRY_COUNT);
+
+        if (routingProtocol && GbpNetconfTransaction.netconfSyncedMerge(VppIidFactory.getNetconfNodeIid(new NodeId(hostName)), iid,
                 ipv4Route, GbpNetconfTransaction.RETRY_COUNT)) {
             hostVrfStateForPortVrf.addNewPortIpInVrf(portSubnetUuid, nextHopAddress);
             hostPortInterfaces.addRouteToPortInterface(outgoingInterface, portSubnetUuid, nextHopAddress, routeId);

@@ -13,7 +13,10 @@ import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.iana._if.type.rev140508.Ip;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4AddressNoZone;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces._interface.ipv4.Neighbor;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces._interface.ipv4.NeighborBuilder;
@@ -52,12 +55,16 @@ public class StaticArpCommand extends AbstractConfigCommand{
     @Override
     void put(ReadWriteTransaction rwTx) {
         InstanceIdentifier<Neighbor> iid = VppIidFactory.getNeighborIid(interfaceKey, new NeighborKey(ip));
+        InstanceIdentifier<Interface> intfIid = VppIidFactory.getInterfaceIID(interfaceKey);
+        rwTx.merge(LogicalDatastoreType.CONFIGURATION, intfIid, new InterfaceBuilder().setKey(interfaceKey).setType(Ip.class).build());
         rwTx.put(LogicalDatastoreType.CONFIGURATION, iid, getNeighborBuilder().build());
     }
 
     @Override
     void merge(ReadWriteTransaction rwTx) {
         InstanceIdentifier<Neighbor> iid = VppIidFactory.getNeighborIid(interfaceKey, new NeighborKey(ip));
+        InstanceIdentifier<Interface> intfIid = VppIidFactory.getInterfaceIID(interfaceKey);
+        rwTx.merge(LogicalDatastoreType.CONFIGURATION, intfIid, new InterfaceBuilder().setKey(interfaceKey).setType(Ip.class).build());
         rwTx.merge(LogicalDatastoreType.CONFIGURATION, iid, getNeighborBuilder().build());
     }
 

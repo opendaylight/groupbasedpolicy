@@ -51,8 +51,22 @@ public class LispStateCommandExecutor {
 
     public static <T extends DataObject> boolean executeCommand(InstanceIdentifier<Node> nodeIid,
             AbstractLispCommand<T> lispStateCommand) {
-        final boolean transactionState = GbpNetconfTransaction.netconfSyncedWrite(nodeIid, lispStateCommand.getIid(),
-                lispStateCommand.getData(), GbpNetconfTransaction.RETRY_COUNT);
+        final boolean transactionState;
+        switch (lispStateCommand.getOperation()) {
+            case MERGE:
+            case PUT: {
+                transactionState = GbpNetconfTransaction.netconfSyncedWrite(nodeIid, lispStateCommand.getIid(),
+                        lispStateCommand.getData(), GbpNetconfTransaction.RETRY_COUNT);
+                break;
+            }
+            case DELETE: {
+                transactionState = GbpNetconfTransaction.netconfSyncedDelete(nodeIid, lispStateCommand.getIid(),
+                        GbpNetconfTransaction.RETRY_COUNT);
+            }
+                break;
+            default:
+                throw new IllegalStateException("No supported operation specified.");
+        }
         if (transactionState) {
             LOG.trace("Successfully executed command: {}", lispStateCommand);
         } else {

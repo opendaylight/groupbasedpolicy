@@ -10,6 +10,7 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.iface;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -42,6 +43,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.parent.endpoint._case.ParentEndpointBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.parent.endpoint._case.ParentEndpointKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.LocationProviders;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.LocationProvider;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.endpoint_location_provider.rev160419.location.providers.location.provider.ProviderAddressEndpointLocation;
@@ -63,10 +66,12 @@ import com.google.common.collect.ImmutableList;
 
 public class VppEndpointLocationProviderTest extends CustomDataBrokerTest {
 
+    private static final EndpointGroupId DEFAULT_EPG = new EndpointGroupId("Default");
     private DataBroker dataBroker;
     private VppEndpointLocationProvider locationProvider;
 
     private final String INTF_NAME = "interface-name";
+    private final static String TENANT = "tenant";
     private final NodeId NODE_1 = new NodeId("vpp-node-1");
     private final NodeId NODE_2 = new NodeId("vpp-node-2");
     private final NodeId NODE_3 = new NodeId("vpp-node-3");
@@ -138,10 +143,10 @@ public class VppEndpointLocationProviderTest extends CustomDataBrokerTest {
     }
 
     private void l2ChildHasTwoIpParents(boolean vppEndpointEvent) {
-        AddressEndpointBuilder child = new AddressEndpointBuilder().setKey(MAC_KEY_23_45);
+        AddressEndpointBuilder child = getAddressEndpointBuilder().setKey(MAC_KEY_23_45);
         setParentEndpoints(child, IP_KEY_1_22, IP_KEY_2_22);
-        AddressEndpointBuilder firstParent = new AddressEndpointBuilder().setKey(IP_KEY_1_22);
-        AddressEndpointBuilder secondParent = new AddressEndpointBuilder().setKey(IP_KEY_2_22);
+        AddressEndpointBuilder firstParent = getAddressEndpointBuilder().setKey(IP_KEY_1_22);
+        AddressEndpointBuilder secondParent = getAddressEndpointBuilder().setKey(IP_KEY_2_22);
         setChildEndpoints(firstParent, MAC_KEY_23_45);
         setChildEndpoints(secondParent, MAC_KEY_23_45);
         submitEndpointsToDatastore(child.build(), firstParent.build(), secondParent.build());
@@ -178,9 +183,9 @@ public class VppEndpointLocationProviderTest extends CustomDataBrokerTest {
     }
 
     private void l2ChildHasOneIpParent(boolean vppEndpointEvent) {
-        AddressEndpointBuilder child = new AddressEndpointBuilder().setKey(MAC_KEY_23_45);
+        AddressEndpointBuilder child = getAddressEndpointBuilder().setKey(MAC_KEY_23_45);
         setParentEndpoints(child, IP_KEY_1_22);
-        AddressEndpointBuilder firstParent = new AddressEndpointBuilder().setKey(IP_KEY_1_22);
+        AddressEndpointBuilder firstParent = getAddressEndpointBuilder().setKey(IP_KEY_1_22);
         setChildEndpoints(firstParent, MAC_KEY_23_45);
         submitEndpointsToDatastore(child.build(), firstParent.build());
         assertEndpointsInDatastore(child.getKey(), firstParent.getKey());
@@ -203,9 +208,9 @@ public class VppEndpointLocationProviderTest extends CustomDataBrokerTest {
      */
     @Test
     public void lifecycleTest() {
-        AddressEndpointBuilder child = new AddressEndpointBuilder().setKey(MAC_KEY_23_45);
+        AddressEndpointBuilder child = getAddressEndpointBuilder().setKey(MAC_KEY_23_45);
         setParentEndpoints(child, IP_KEY_1_22);
-        AddressEndpointBuilder firstParent = new AddressEndpointBuilder().setKey(IP_KEY_1_22);
+        AddressEndpointBuilder firstParent = getAddressEndpointBuilder().setKey(IP_KEY_1_22);
         setChildEndpoints(firstParent, MAC_KEY_23_45);
         submitEndpointsToDatastore(child.build(), firstParent.build());
         assertEndpointsInDatastore(child.getKey(), firstParent.getKey());
@@ -216,7 +221,7 @@ public class VppEndpointLocationProviderTest extends CustomDataBrokerTest {
         Assert.assertTrue(location.getKey().equals(getLocationKey(MAC_KEY_23_45)));
         assertNodeConnector(location.getAbsoluteLocation(), INTF_NAME);
         assertMountPoint(location.getAbsoluteLocation(), NODE_1);
-        AddressEndpointBuilder secondParent = new AddressEndpointBuilder().setKey(IP_KEY_2_22);
+        AddressEndpointBuilder secondParent = getAddressEndpointBuilder().setKey(IP_KEY_2_22);
         setChildEndpoints(secondParent, MAC_KEY_23_45);
         setParentEndpoints(child, IP_KEY_1_22, IP_KEY_2_22);
         submitEndpointsToDatastore(child.build(), secondParent.build());
@@ -254,11 +259,11 @@ public class VppEndpointLocationProviderTest extends CustomDataBrokerTest {
      */
     @Test
     public void testRelativeLocation_multihome() {
-        AddressEndpointBuilder mac1 = new AddressEndpointBuilder().setKey(MAC_KEY_23_45);
+        AddressEndpointBuilder mac1 = getAddressEndpointBuilder().setKey(MAC_KEY_23_45);
         setParentEndpoints(mac1, IP_KEY_1_22);
-        AddressEndpointBuilder mac2 = new AddressEndpointBuilder().setKey(MAC_KEY_24_45);
+        AddressEndpointBuilder mac2 = getAddressEndpointBuilder().setKey(MAC_KEY_24_45);
         setParentEndpoints(mac2, IP_KEY_1_22);
-        AddressEndpointBuilder ip1 = new AddressEndpointBuilder().setKey(IP_KEY_1_22);
+        AddressEndpointBuilder ip1 = getAddressEndpointBuilder().setKey(IP_KEY_1_22);
         setChildEndpoints(ip1, MAC_KEY_23_45, MAC_KEY_24_45);
         submitEndpointsToDatastore(mac1.build(), mac2.build(), ip1.build());
         assertEndpointsInDatastore(mac1.getKey(), mac2.getKey(), ip1.getKey());
@@ -295,19 +300,19 @@ public class VppEndpointLocationProviderTest extends CustomDataBrokerTest {
      */
     @Test
     public void testMetadataHaUseCase() {
-        AddressEndpointBuilder mac1 = new AddressEndpointBuilder().setKey(MAC_KEY_23_45);
+        AddressEndpointBuilder mac1 = getAddressEndpointBuilder().setKey(MAC_KEY_23_45);
         setParentEndpoints(mac1, IP_KEY_1_22, IP_KEY_9_99);
-        AddressEndpointBuilder mac2 = new AddressEndpointBuilder().setKey(MAC_KEY_24_45);
+        AddressEndpointBuilder mac2 = getAddressEndpointBuilder().setKey(MAC_KEY_24_45);
         setParentEndpoints(mac2, IP_KEY_2_22, IP_KEY_9_99);
-        AddressEndpointBuilder mac3 = new AddressEndpointBuilder().setKey(MAC_KEY_25_45);
+        AddressEndpointBuilder mac3 = getAddressEndpointBuilder().setKey(MAC_KEY_25_45);
         setParentEndpoints(mac3, IP_KEY_3_22, IP_KEY_9_99);
-        AddressEndpointBuilder ip1 = new AddressEndpointBuilder().setKey(IP_KEY_1_22);
+        AddressEndpointBuilder ip1 = getAddressEndpointBuilder().setKey(IP_KEY_1_22);
         setChildEndpoints(ip1, MAC_KEY_23_45);
-        AddressEndpointBuilder ip2 = new AddressEndpointBuilder().setKey(IP_KEY_2_22);
+        AddressEndpointBuilder ip2 = getAddressEndpointBuilder().setKey(IP_KEY_2_22);
         setChildEndpoints(ip2, MAC_KEY_24_45);
-        AddressEndpointBuilder ip3 = new AddressEndpointBuilder().setKey(IP_KEY_3_22);
+        AddressEndpointBuilder ip3 = getAddressEndpointBuilder().setKey(IP_KEY_3_22);
         setChildEndpoints(ip3, MAC_KEY_25_45);
-        AddressEndpointBuilder ip9 = new AddressEndpointBuilder().setKey(IP_KEY_9_99);
+        AddressEndpointBuilder ip9 = getAddressEndpointBuilder().setKey(IP_KEY_9_99);
         setChildEndpoints(ip9, MAC_KEY_23_45, MAC_KEY_24_45, MAC_KEY_25_45);
         submitEndpointsToDatastore(mac1.build(), mac2.build(), mac3.build(), ip1.build(), ip2.build(), ip3.build(),
                 ip9.build());
@@ -316,7 +321,7 @@ public class VppEndpointLocationProviderTest extends CustomDataBrokerTest {
         locationProvider.createLocationForVppEndpoint(vppEndpointBuilder(MAC_KEY_23_45_VPP, NODE_1, INTF_NAME));
         locationProvider.createLocationForVppEndpoint(vppEndpointBuilder(MAC_KEY_24_45_VPP, NODE_2, INTF_NAME));
         locationProvider.createLocationForVppEndpoint(vppEndpointBuilder(MAC_KEY_25_45_VPP, NODE_3, INTF_NAME));
-        assertL2ChildHasTwoIpParentsAndIpParentHasMultipleChilds();
+        assertL2ChildHasTwoIpParentsAndIpParentHasMultipleChilds(4L);
     }
 
     /**
@@ -324,38 +329,45 @@ public class VppEndpointLocationProviderTest extends CustomDataBrokerTest {
      */
     @Test
     public void metadataHaUseCase_swapped_order() {
-        AddressEndpointBuilder mac1 = new AddressEndpointBuilder().setKey(MAC_KEY_23_45);
+        AddressEndpointBuilder mac1 = getAddressEndpointBuilder().setKey(MAC_KEY_23_45);
         setParentEndpoints(mac1, IP_KEY_1_22, IP_KEY_9_99);
         locationProvider.createLocationForVppEndpoint(vppEndpointBuilder(MAC_KEY_23_45_VPP, NODE_1, INTF_NAME));
-        AddressEndpointBuilder ip1 = new AddressEndpointBuilder().setKey(IP_KEY_1_22);
+        AddressEndpointBuilder ip1 = getAddressEndpointBuilder().setKey(IP_KEY_1_22);
         setChildEndpoints(ip1, MAC_KEY_23_45);
-        AddressEndpointBuilder ip9 = new AddressEndpointBuilder().setKey(IP_KEY_9_99);
+        AddressEndpointBuilder ip9 = getAddressEndpointBuilder().setKey(IP_KEY_9_99);
         setChildEndpoints(ip9, MAC_KEY_23_45);
         submitEndpointsToDatastore(mac1.build(), ip1.build(), ip9.build());
         locationProvider.createLocationForVppEndpoint(vppEndpointBuilder(MAC_KEY_24_45_VPP, NODE_2, INTF_NAME));
-        AddressEndpointBuilder mac2 = new AddressEndpointBuilder().setKey(MAC_KEY_24_45);
+        AddressEndpointBuilder mac2 = getAddressEndpointBuilder().setKey(MAC_KEY_24_45);
         setParentEndpoints(mac2, IP_KEY_2_22, IP_KEY_9_99);
-        AddressEndpointBuilder ip2 = new AddressEndpointBuilder().setKey(IP_KEY_2_22);
+        AddressEndpointBuilder ip2 = getAddressEndpointBuilder().setKey(IP_KEY_2_22);
         setChildEndpoints(ip2, MAC_KEY_24_45);
-        ip9 = new AddressEndpointBuilder().setKey(IP_KEY_9_99);
+        ip9 = getAddressEndpointBuilder().setKey(IP_KEY_9_99);
         setChildEndpoints(ip9, MAC_KEY_23_45, MAC_KEY_24_45);
         submitEndpointsToDatastore(mac2.build(), ip2.build(), ip9.build());
-        AddressEndpointBuilder mac3 = new AddressEndpointBuilder().setKey(MAC_KEY_25_45);
+        AddressEndpointBuilder mac3 = getAddressEndpointBuilder().setKey(MAC_KEY_25_45);
         setParentEndpoints(mac3, IP_KEY_3_22, IP_KEY_9_99);
-        AddressEndpointBuilder ip3 = new AddressEndpointBuilder().setKey(IP_KEY_3_22);
+        AddressEndpointBuilder ip3 = getAddressEndpointBuilder().setKey(IP_KEY_3_22);
         setChildEndpoints(ip3, MAC_KEY_25_45);
-        ip9 = new AddressEndpointBuilder().setKey(IP_KEY_9_99);
+        ip9 = getAddressEndpointBuilder().setKey(IP_KEY_9_99);
         setChildEndpoints(ip9, MAC_KEY_23_45, MAC_KEY_24_45, MAC_KEY_25_45);
         locationProvider.createLocationForVppEndpoint(vppEndpointBuilder(MAC_KEY_25_45_VPP, NODE_3, INTF_NAME));
         submitEndpointsToDatastore(mac3.build(), ip3.build(), ip9.build());
         assertEndpointsInDatastore(mac1.getKey(), mac2.getKey(), mac3.getKey(), ip1.getKey(), ip2.getKey(),
                 ip3.getKey(), ip9.getKey());
-        assertL2ChildHasTwoIpParentsAndIpParentHasMultipleChilds();
+        assertL2ChildHasTwoIpParentsAndIpParentHasMultipleChilds(4L);
     }
 
-    private void assertL2ChildHasTwoIpParentsAndIpParentHasMultipleChilds() {
+    private AddressEndpointBuilder getAddressEndpointBuilder() {
+        return new AddressEndpointBuilder()
+            .setTenant(new TenantId(TENANT))
+            .setEndpointGroup(Collections.singletonList(DEFAULT_EPG))
+            ;
+    }
+
+    private void assertL2ChildHasTwoIpParentsAndIpParentHasMultipleChilds(long expected) {
         List<ProviderAddressEndpointLocation> locations = readLocations();
-        Assert.assertEquals(locations.size(), 4);
+        Assert.assertEquals(expected, locations.size());
         locations.forEach(location -> {
             if (location.getKey().equals(getLocationKey(IP_KEY_1_22))) {
                 assertNodeConnector(location.getAbsoluteLocation(), INTF_NAME);

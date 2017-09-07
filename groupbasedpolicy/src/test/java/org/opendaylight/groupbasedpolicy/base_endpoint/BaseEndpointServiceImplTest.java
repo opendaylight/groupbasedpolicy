@@ -11,6 +11,7 @@ package org.opendaylight.groupbasedpolicy.base_endpoint;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import org.junit.Assert;
@@ -53,6 +54,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.unregister.endpoint.input.ContainmentEndpointUnreg;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.unregister.endpoint.input.ContainmentEndpointUnregBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContextId;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.NetworkDomainId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.rev160427.AddressType;
@@ -358,6 +360,7 @@ public class BaseEndpointServiceImplTest extends CustomDataBrokerTest {
                 .setTimestamp(addrEp.getTimestamp())
                 .setParentEndpointChoice(addrEp.getParentEndpointChoice())
                 .setChildEndpoint(addrEp.getChildEndpoint())
+                .setEndpointGroup(addrEp.getEndpointGroup())
                 .build());
         }
         builder.setAddressEndpointReg(addrEpRegs);
@@ -372,6 +375,7 @@ public class BaseEndpointServiceImplTest extends CustomDataBrokerTest {
                 .setTenant(contEp.getTenant())
                 .setNetworkContainment(contEp.getNetworkContainment())
                 .setChildEndpoint(contEp.getChildEndpoint())
+                .setEndpointGroup(contEp.getEndpointGroup())
                 .build());
         }
         builder.setContainmentEndpointReg(contEpRegs);
@@ -407,7 +411,8 @@ public class BaseEndpointServiceImplTest extends CustomDataBrokerTest {
             .setAddress(MAC_ADDRESS)
             .setAddressType(AddressType.class)
             .setNetworkContainment(new NetworkContainmentBuilder().setContainment(networkDomainContainment).build())
-            .setTimestamp(timestamp);
+            .setTimestamp(timestamp)
+            .setEndpointGroup(Collections.singletonList(new EndpointGroupId("testEPGID")));
     }
 
     private AddressEndpointBuilder createBaseL3EpBuilder() {
@@ -418,7 +423,8 @@ public class BaseEndpointServiceImplTest extends CustomDataBrokerTest {
             .setAddress(IP_ADDRESS)
             .setAddressType(AddressType.class)
             .setNetworkContainment(new NetworkContainmentBuilder().setContainment(networkDomainContainment).build())
-            .setTimestamp(timestamp);
+            .setTimestamp(timestamp)
+            .setEndpointGroup(Collections.singletonList(new EndpointGroupId("testEPGID")));
     }
 
     private ContainmentEndpointBuilder createBaseContEpBuilder() {
@@ -426,6 +432,7 @@ public class BaseEndpointServiceImplTest extends CustomDataBrokerTest {
             .setContextId(new ContextId(CONTEXT_ID))
             .setContextType(ContextType.class)
             .setTenant(new TenantId(TENANT))
-            .setNetworkContainment(new NetworkContainmentBuilder().setContainment(networkDomainContainment).build());
+            .setNetworkContainment(new NetworkContainmentBuilder().setContainment(networkDomainContainment).build())
+            .setEndpointGroup(Collections.singletonList(new EndpointGroupId("testEPGID")));
     }
 }
