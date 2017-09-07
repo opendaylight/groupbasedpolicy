@@ -12,9 +12,6 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.map.servers.grouping.map.servers.MapServer;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.map.servers.grouping.map.servers.MapServerBuilder;
 
-/**
- * Created by Shakib Ahmed on 3/20/17.
- */
 public class MapServerDom implements CommandModel{
     private IpAddress ipAddress;
 
@@ -29,5 +26,9 @@ public class MapServerDom implements CommandModel{
     @Override
     public MapServer getSALObject() {
         return new MapServerBuilder().setIpAddress(ipAddress).build();
+    }
+
+    @Override public String toString() {
+        return "MapServer{" + "ipAddress=" + ipAddress + '}';
     }
 }

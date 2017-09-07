@@ -14,9 +14,6 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Created by Shakib Ahmed on 4/18/17.
- */
 public class DeleteLispFeatureDataCommand extends AbstractLispCommand<LispFeatureData> {
     private static final Logger LOG = LoggerFactory.getLogger(DeleteLispFeatureDataCommand.class);
 
@@ -29,5 +26,9 @@ public class DeleteLispFeatureDataCommand extends AbstractLispCommand<LispFeatur
     public LispFeatureData getData() {
         LOG.debug("Delete commands should not invoke getData()");
         return null;
+    }
+
+    @Override public String toString() {
+        return "Operation: " + getOperation() + ", Iid: " + this.getIid() + ", " + "DeleteLispFeatureDataCommand{}";
     }
 }

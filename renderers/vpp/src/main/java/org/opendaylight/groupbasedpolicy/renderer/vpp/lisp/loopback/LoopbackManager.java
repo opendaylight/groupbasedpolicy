@@ -14,6 +14,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.LoopbackCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.LoopbackCommandWrapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.ProxyRangeCommand;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.UnnumberedInterfaceCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.AbstractLispCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.LispCommandWrapper;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.lisp.LispStateCommandExecutor;
@@ -35,8 +36,6 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProv
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Prefix;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.lisp.address.types.rev151105.Ipv4PrefixAfi;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
@@ -44,9 +43,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.config.GbpSubnet;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170801.gpe.entry.table.grouping.gpe.entry.table.GpeEntry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170801.gpe.entry.table.grouping.gpe.entry.table.gpe.entry.RemoteEid;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.unnumbered.interfaces.rev170510.InterfaceUnnumberedAugmentation;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.unnumbered.interfaces.rev170510.InterfaceUnnumberedAugmentationBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.unnumbered.interfaces.rev170510.unnumbered.config.attributes.UnnumberedBuilder;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -272,23 +268,21 @@ public class LoopbackManager {
         InstanceIdentifier<Node> nodeIid = (InstanceIdentifier<Node>) loc.getExternalNodeMountPoint();
         String neutronInterfaceName = loopbackManagerHelper.getInterfaceName(addressEp).get();
         if (putUnnumberedInterface(nodeIid, neutronInterfaceName, loopbackName)) {
-            LOG.debug("Added Interface {} as unnumberd for {}", loopbackName, neutronInterfaceName);
+            LOG.debug("Added Interface {} as unnumbered for {}", loopbackName, neutronInterfaceName);
         } else {
             throw new LispConfigCommandFailedException("Unnumbered configuration failed for " +
                     neutronInterfaceName + " - " + loopbackName);
         }
     }
 
-    private boolean putUnnumberedInterface(InstanceIdentifier<Node> iid, String interfaceFor, String interfaceWith) {
-        UnnumberedBuilder unnumberedBuilder = new UnnumberedBuilder();
-        unnumberedBuilder.setUse(interfaceWith);
-        InstanceIdentifier<Interface> interfaceIid = VppIidFactory.getInterfaceIID(new InterfaceKey(interfaceFor));
-        InterfaceUnnumberedAugmentationBuilder augBuilder = new InterfaceUnnumberedAugmentationBuilder();
-        augBuilder.setUnnumbered(unnumberedBuilder.build());
-        InterfaceBuilder interfaceBuilder = new InterfaceBuilder().setKey(new InterfaceKey(interfaceFor));
-        interfaceBuilder.addAugmentation(InterfaceUnnumberedAugmentation.class, augBuilder.build());
-        return GbpNetconfTransaction.netconfSyncedMerge(iid, interfaceIid, interfaceBuilder.build(),
-                GbpNetconfTransaction.RETRY_COUNT);
+    private boolean putUnnumberedInterface(InstanceIdentifier<Node> iid, String interfaceName, String useInterface) {
+        UnnumberedInterfaceCommand unnumberedCommand =
+            UnnumberedInterfaceCommand.builder()
+                .setOperation(General.Operations.MERGE)
+                .setUseInterface(useInterface)
+                .setInterfaceName(interfaceName)
+                .build();
+        return GbpNetconfTransaction.netconfSyncedWrite(iid, unnumberedCommand, GbpNetconfTransaction.RETRY_COUNT);
     }
 
     private void addGpeEntry(InstanceIdentifier<Node> iid, GbpSubnet gbpSubnetInfo, long vni) {

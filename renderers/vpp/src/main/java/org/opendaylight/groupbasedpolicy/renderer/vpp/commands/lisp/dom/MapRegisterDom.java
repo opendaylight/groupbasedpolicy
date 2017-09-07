@@ -11,9 +11,6 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.map.register.grouping.MapRegister;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.map.register.grouping.MapRegisterBuilder;
 
-/**
- * Created by Shakib Ahmed on 3/20/17.
- */
 public class MapRegisterDom implements CommandModel {
 
     private boolean enabled;
@@ -29,5 +26,9 @@ public class MapRegisterDom implements CommandModel {
     @Override
     public MapRegister getSALObject() {
         return new MapRegisterBuilder().setEnabled(enabled).build();
+    }
+
+    @Override public String toString() {
+        return "MapRegister{" + "enabled=" + enabled + '}';
     }
 }

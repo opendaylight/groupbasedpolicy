@@ -12,9 +12,6 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
 
-/**
- * Created by Shakib Ahmed on 5/16/17.
- */
 public class LoopbackCommandWrapper {
 
     public static LoopbackCommand simpleLoopbackPutCommand(String interfaceName,

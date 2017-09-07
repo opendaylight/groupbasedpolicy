@@ -17,9 +17,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.hmac.key.grouping.HmacKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.locator.sets.grouping.locator.sets.LocatorSet;
 
-/**
- * Created by Shakib Ahmed on 3/20/17.
- */
 public class LocalMappingDom implements CommandModel {
 
     private MappingId mappingId;
@@ -85,5 +82,10 @@ public class LocalMappingDom implements CommandModel {
                 .setEid(eid)
                 .setLocatorSet(locatorName)
                 .setHmacKey(hmacKey).build();
+    }
+
+    @Override public String toString() {
+        return "LocalMapping{" + "mappingId=" + mappingId + ", eid=" + eid + ", vni=" + vni + ", locatorName='"
+            + locatorName + ", hmacKey=" + hmacKey + '}';
     }
 }

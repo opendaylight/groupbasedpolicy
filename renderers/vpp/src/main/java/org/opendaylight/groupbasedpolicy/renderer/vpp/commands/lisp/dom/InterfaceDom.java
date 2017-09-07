@@ -13,9 +13,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.locator.sets.grouping.locator.sets.locator.set.InterfaceBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.locator.sets.grouping.locator.sets.locator.set.InterfaceKey;
 
-/**
- * Created by Shakib Ahmed on 3/20/17.
- */
 public class InterfaceDom implements CommandModel {
 
     private String interfaceName;
@@ -55,5 +52,10 @@ public class InterfaceDom implements CommandModel {
                     .setInterfaceRef(interfaceName)
                     .setPriority(priority)
                     .setWeight(priority).build();
+    }
+
+    @Override public String toString() {
+        return "Interface{" + "interfaceName='" + interfaceName + ", priority=" + priority + ", weight="
+            + weight + '}';
     }
 }

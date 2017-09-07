@@ -18,6 +18,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.renderer.r
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.vpp_renderer.rev160425.Config;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang._interface.nat.rev170816.NatInterfaceAugmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.unnumbered.interfaces.rev170510.unnumbered.config.attributes.Unnumbered;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607.interfaces._interface.VhostUser;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.dhcp.rev170315.dhcp.attributes.relays.Relay;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
@@ -34,6 +35,6 @@ public class VppRendererDataBrokerTest extends CustomDataBrokerTest {
     public Collection<Class<?>> getClassesFromModules() {
         return ImmutableList.of(Interfaces.class, Interface.class, VhostUser.class, NetworkTopology.class,
             Topology.class, Node.class, NetconfNode.class, Renderer.class, LocationProviders.class, Config.class,
-            NatInterfaceAugmentation.class, Routing.class, StaticRoutes1.class, Relay.class);
+            NatInterfaceAugmentation.class, Routing.class, StaticRoutes1.class, Relay.class, Unnumbered.class);
     }
 }

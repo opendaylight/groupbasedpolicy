@@ -14,9 +14,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.eid.table.grouping.eid.table.VniTableKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-/**
- * Created by Shakib Ahmed on 3/16/17.
- */
 public class ConfigureVrfToVniMappingCommand extends AbstractLispCommand<VniTable> {
 
     VniTableDom vniTableDom;
@@ -33,5 +30,9 @@ public class ConfigureVrfToVniMappingCommand extends AbstractLispCommand<VniTabl
     @Override
     public VniTable getData() {
         return vniTableDom.getSALObject();
+    }
+
+    @Override public String toString() {
+        return "Operation: " + getOperation() + ", Iid: " + this.getIid() + ", " + vniTableDom.toString();
     }
 }

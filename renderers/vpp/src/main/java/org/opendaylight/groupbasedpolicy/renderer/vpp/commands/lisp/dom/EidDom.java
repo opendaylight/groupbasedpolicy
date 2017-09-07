@@ -14,9 +14,6 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.lisp.addres
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.dp.subtable.grouping.local.mappings.local.mapping.Eid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.dp.subtable.grouping.local.mappings.local.mapping.EidBuilder;
 
-/**
- * Created by Shakib Ahmed on 3/21/17.
- */
 public class EidDom<T extends LispAddressFamily> implements CommandModel {
 
     private long vni;
@@ -53,5 +50,9 @@ public class EidDom<T extends LispAddressFamily> implements CommandModel {
                     .setVirtualNetworkId(new InstanceIdType(vni))
                     .setAddressType(getAddressFamily())
                     .setAddress(address).build();
+    }
+
+    @Override public String toString() {
+        return "Eid{" + "vni=" + vni + ", address=" + address + ", addressFamily=" + addressFamily + '}';
     }
 }

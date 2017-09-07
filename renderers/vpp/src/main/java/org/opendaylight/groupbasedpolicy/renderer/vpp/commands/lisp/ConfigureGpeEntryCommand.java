@@ -13,9 +13,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev1
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170801.gpe.entry.table.grouping.gpe.entry.table.GpeEntryKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-/**
- * Created by Shakib Ahmed on 6/1/17.
- */
 public class ConfigureGpeEntryCommand extends AbstractLispCommand<GpeEntry> {
 
     private GbpGpeEntryDom gpeEntryDom;
@@ -32,5 +29,9 @@ public class ConfigureGpeEntryCommand extends AbstractLispCommand<GpeEntry> {
     @Override
     public GpeEntry getData() {
         return gpeEntryDom.getSALObject();
+    }
+
+    @Override public String toString() {
+        return "Operation: " + getOperation() + ", Iid: " + this.getIid() + ", " + gpeEntryDom.toString();
     }
 }

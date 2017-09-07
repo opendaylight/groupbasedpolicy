@@ -12,9 +12,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.hmac.key.grouping.HmacKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.hmac.key.grouping.HmacKeyBuilder;
 
-/**
- * Created by Shakib Ahmed on 3/21/17.
- */
 public class HmacKeyDom implements CommandModel {
 
     private HmacKeyType keyType;
@@ -41,5 +38,9 @@ public class HmacKeyDom implements CommandModel {
         return new HmacKeyBuilder()
                     .setKeyType(keyType)
                     .setKey(key).build();
+    }
+
+    @Override public String toString() {
+        return "HmacKey{" + "keyType=" + keyType + ", key='" + key + '}';
     }
 }

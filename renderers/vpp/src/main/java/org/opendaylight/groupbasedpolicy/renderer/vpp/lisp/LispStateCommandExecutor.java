@@ -22,33 +22,30 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Function;
 
-/**
- * Created by Shakib Ahmed on 4/18/17.
- */
 public class LispStateCommandExecutor {
     private static final Logger LOG = LoggerFactory.getLogger(LispStateCommandExecutor.class);
 
     public static <T extends DataObject> boolean executePutCommand(InstanceIdentifier<Node> nodeIid,
                                                                    AbstractLispCommand<T> lispStateCommand) {
-        lispStateCommand.setOptions(General.Operations.PUT);
+        lispStateCommand.setOperation(General.Operations.PUT);
         return executeCommand(nodeIid, lispStateCommand);
     }
 
     public static <T extends DataObject> boolean executePutCommand(String hostName,
             AbstractLispCommand<T> lispStateCommand) {
-        lispStateCommand.setOptions(General.Operations.PUT);
+        lispStateCommand.setOperation(General.Operations.PUT);
         return executeCommand(LispUtil.HOSTNAME_TO_IID.apply(hostName), lispStateCommand);
     }
 
     public static <T extends DataObject> boolean executeDeleteCommand(InstanceIdentifier<Node> nodeIid,
             AbstractLispCommand<T> lispStateCommand) {
-        lispStateCommand.setOptions(General.Operations.DELETE);
+        lispStateCommand.setOperation(General.Operations.DELETE);
         return executeCommand(nodeIid, lispStateCommand);
     }
 
     public static <T extends DataObject> boolean executeDeleteCommand(String hostName,
             AbstractLispCommand<T> lispStateCommand) {
-        lispStateCommand.setOptions(General.Operations.DELETE);
+        lispStateCommand.setOperation(General.Operations.DELETE);
         return executeCommand(LispUtil.HOSTNAME_TO_IID.apply(hostName), lispStateCommand);
     }
 
@@ -57,9 +54,9 @@ public class LispStateCommandExecutor {
         final boolean transactionState = GbpNetconfTransaction.netconfSyncedWrite(nodeIid, lispStateCommand.getIid(),
                 lispStateCommand.getData(), GbpNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
-            LOG.trace("Successfully executed command: ", lispStateCommand);
+            LOG.trace("Successfully executed command: {}", lispStateCommand);
         } else {
-            LOG.debug("Failed to execute command: ", lispStateCommand);
+            LOG.debug("Failed to execute command: {}", lispStateCommand);
         }
 
         return transactionState;

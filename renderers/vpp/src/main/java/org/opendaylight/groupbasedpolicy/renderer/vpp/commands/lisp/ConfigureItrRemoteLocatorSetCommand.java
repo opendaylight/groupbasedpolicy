@@ -12,9 +12,6 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.itr.remote.locator.sets.grouping.ItrRemoteLocatorSet;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-/**
- * Created by Shakib Ahmed on 7/18/17.
- */
 public class ConfigureItrRemoteLocatorSetCommand extends AbstractLispCommand<ItrRemoteLocatorSet> {
     ItrRemoteLocatorSetDom itrRemoteLocatorSetDom;
 
@@ -30,5 +27,9 @@ public class ConfigureItrRemoteLocatorSetCommand extends AbstractLispCommand<Itr
     @Override
     public ItrRemoteLocatorSet getData() {
         return itrRemoteLocatorSetDom.getSALObject();
+    }
+
+    @Override public String toString() {
+        return "Operation: " + getOperation() + ", Iid: " + this.getIid() + ", " + itrRemoteLocatorSetDom.toString();
     }
 }

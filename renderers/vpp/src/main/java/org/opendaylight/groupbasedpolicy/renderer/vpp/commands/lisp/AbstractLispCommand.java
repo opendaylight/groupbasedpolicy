@@ -16,24 +16,21 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Created by Shakib Ahmed on 3/20/17.
- */
 public abstract class AbstractLispCommand<T extends DataObject> {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractLispCommand.class);
-    private General.Operations options;
+    private General.Operations operation;
 
-    public void setOptions(General.Operations options) {
-        this.options = options;
+    public void setOperation(General.Operations options) {
+        this.operation = options;
     }
 
-    public General.Operations getOptions() {
-        if (options == null) {
+    public General.Operations getOperation() {
+        if (operation == null) {
             LOG.debug("Options found null, setting Options to default PUT type");
-            options = General.Operations.PUT;
+            operation = General.Operations.PUT;
         }
-        return options;
+        return operation;
     }
 
     /**
@@ -42,7 +39,7 @@ public abstract class AbstractLispCommand<T extends DataObject> {
      * @param rwTx Transaction for command execution
      */
     public void execute(ReadWriteTransaction rwTx) {
-        switch (getOptions()) {
+        switch (getOperation()) {
             case PUT:
                 put(rwTx);
                 break;

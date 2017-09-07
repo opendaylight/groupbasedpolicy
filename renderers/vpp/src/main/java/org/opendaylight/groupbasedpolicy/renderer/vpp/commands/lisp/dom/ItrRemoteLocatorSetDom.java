@@ -11,9 +11,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.itr.remote.locator.sets.grouping.ItrRemoteLocatorSetBuilder;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 
-/**
- * Created by Shakib Ahmed on 7/18/17.
- */
 public class ItrRemoteLocatorSetDom implements CommandModel {
     private String locatorSetName;
 
@@ -29,5 +26,9 @@ public class ItrRemoteLocatorSetDom implements CommandModel {
     public ItrRemoteLocatorSet getSALObject() {
         return new ItrRemoteLocatorSetBuilder()
                 .setRemoteLocatorSetName(locatorSetName).build();
+    }
+
+    @Override public String toString() {
+        return "ItrRemoteLocatorSet{" + "locatorSetName='" + locatorSetName  + '}';
     }
 }

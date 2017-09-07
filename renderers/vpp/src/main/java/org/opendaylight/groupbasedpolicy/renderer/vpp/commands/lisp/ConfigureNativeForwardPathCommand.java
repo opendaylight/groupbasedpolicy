@@ -13,9 +13,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev1
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170801._native.forward.paths.tables._native.forward.paths.table.NativeForwardPathKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-/**
- * Created by Shakib Ahmed on 6/13/17.
- */
 public class ConfigureNativeForwardPathCommand extends AbstractLispCommand<NativeForwardPath> {
     private NativeForwardPathDom nativeForwardPathDom;
 
@@ -32,5 +29,9 @@ public class ConfigureNativeForwardPathCommand extends AbstractLispCommand<Nativ
     @Override
     public NativeForwardPath getData() {
         return nativeForwardPathDom.getSALObject();
+    }
+
+    @Override public String toString() {
+        return "Operation: " + getOperation() + ", Iid: " + this.getIid() + ", " + nativeForwardPathDom.toString();
     }
 }

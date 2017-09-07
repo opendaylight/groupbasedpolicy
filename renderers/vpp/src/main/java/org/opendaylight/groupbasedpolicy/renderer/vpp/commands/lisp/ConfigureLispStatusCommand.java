@@ -13,9 +13,6 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.Lisp;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-/**
- * Created by Shakib Ahmed on 3/16/17.
- */
 public class ConfigureLispStatusCommand extends AbstractLispCommand<Lisp> {
 
     private LispDom lispDom;
@@ -34,8 +31,7 @@ public class ConfigureLispStatusCommand extends AbstractLispCommand<Lisp> {
         return lispDom.getSALObject();
     }
 
-    @Override
-    public String toString() {
-        return "state: " + lispDom.isEnabled();
+    @Override public String toString() {
+        return "Operation: " + getOperation() + ", Iid: " + this.getIid() + ", " + lispDom.toString();
     }
 }

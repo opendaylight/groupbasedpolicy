@@ -14,9 +14,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.eid.table.grouping.eid.table.VniTableKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.eid.table.grouping.eid.table.vni.table.VrfSubtable;
 
-/**
- * Created by Shakib Ahmed on 3/20/17.
- */
 public class VniTableDom implements CommandModel {
     private long virtualNetworkIdentifier;
     private VrfSubtable vrfSubtable;
@@ -47,5 +44,10 @@ public class VniTableDom implements CommandModel {
                         .setKey(vniTableKey)
                         .setVirtualNetworkIdentifier(vniTableKey.getVirtualNetworkIdentifier())
                         .setVrfSubtable(vrfSubtable).build();
+    }
+
+    @Override public String toString() {
+        return "VniTable{" + "virtualNetworkIdentifier=" + virtualNetworkIdentifier + ", vrfSubtable=" + vrfSubtable
+            + '}';
     }
 }

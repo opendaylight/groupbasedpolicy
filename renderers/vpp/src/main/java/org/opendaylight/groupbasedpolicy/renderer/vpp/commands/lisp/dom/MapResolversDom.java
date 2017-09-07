@@ -14,9 +14,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev
 
 import java.util.List;
 
-/**
- * Created by Shakib Ahmed on 3/20/17.
- */
 public class MapResolversDom implements CommandModel {
     private List<MapResolver> mapResolvers;
 
@@ -31,5 +28,9 @@ public class MapResolversDom implements CommandModel {
     @Override
     public MapResolvers getSALObject() {
         return new MapResolversBuilder().setMapResolver(mapResolvers).build();
+    }
+
+    @Override public String toString() {
+        return "MapResolvers{" + "mapResolvers=" + mapResolvers + '}';
     }
 }

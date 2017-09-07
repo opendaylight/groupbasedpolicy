@@ -14,35 +14,45 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.unnumbered.interfaces.rev170510.unnumbered.config.attributes.Unnumbered;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.unnumbered.interfaces.rev170510.unnumbered.config.attributes.UnnumberedBuilder;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-/**
- * Created by Shakib Ahmed on 5/31/17.
- */
 public class UnnumberedInterfaceCommand extends AbstractConfigCommand {
-    private String interfaceUnnumberedFor;
-    private String interfaceUnnumberedWith;
+    private String useInterface;
+    private String interfaceName;
 
     public UnnumberedInterfaceCommand(UnnumberedInterfaceCommandBuilder builder) {
         this.operation = builder.getOperation();
-        this.interfaceUnnumberedFor = builder.getInterfaceUnnumberedFor();
-        this.interfaceUnnumberedWith = builder.getInterfaceUnnumberedWith();
+        this.useInterface = builder.getUseInterface();
+        this.interfaceName = builder.getInterfaceName();
+    }
+
+    public static UnnumberedInterfaceCommandBuilder builder() {
+        return new UnnumberedInterfaceCommandBuilder();
     }
 
     @Override
-    public InstanceIdentifier getIid() {
-        return VppIidFactory.getUnnumberedIid(new InterfaceKey(interfaceUnnumberedFor));
+    public InstanceIdentifier<Unnumbered> getIid() {
+        return VppIidFactory.getUnnumberedIid(new InterfaceKey(interfaceName));
+    }
+
+    public String getUseInterface() {
+        return useInterface;
+    }
+
+    public String getInterfaceName() {
+        return interfaceName;
     }
 
     @Override
     void put(ReadWriteTransaction rwTx) {
-        rwTx.put(LogicalDatastoreType.CONFIGURATION, getIid(), getUnnumberedBuilder().build());
+        rwTx.put(LogicalDatastoreType.CONFIGURATION, getIid(), getUnnumberedBuilder().build(), true);
     }
 
     @Override
     void merge(ReadWriteTransaction rwTx) {
-        rwTx.merge(LogicalDatastoreType.CONFIGURATION, getIid(), getUnnumberedBuilder().build());
+        rwTx.merge(LogicalDatastoreType.CONFIGURATION, getIid(), getUnnumberedBuilder().build(), true);
     }
 
     @Override
@@ -51,51 +61,55 @@ public class UnnumberedInterfaceCommand extends AbstractConfigCommand {
     }
 
     private UnnumberedBuilder getUnnumberedBuilder() {
-        UnnumberedBuilder builder = new UnnumberedBuilder();
-        builder.setUse(this.interfaceUnnumberedWith);
-        return builder;
+        return new UnnumberedBuilder().setUse(this.useInterface);
     }
 
+    @Override public String toString() {
+        return "UnnumberedInterfaceCommand{" + "useInterface='" + useInterface + ", With='" + interfaceName + '}';
+    }
 
     public static class UnnumberedInterfaceCommandBuilder {
         private General.Operations operation;
-        private String interfaceUnnumberedFor;
-        private String interfaceUnnumberedWith;
+        private String useInterface;
+        private String interfaceName;
 
         public General.Operations getOperation() {
             return operation;
         }
 
-        public void setOperation(General.Operations operation) {
+        public UnnumberedInterfaceCommandBuilder setOperation(General.Operations operation) {
             this.operation = operation;
+            return this;
         }
 
-        public String getInterfaceUnnumberedFor() {
-            return interfaceUnnumberedFor;
+        public String getUseInterface() {
+            return useInterface;
         }
 
-        public void setInterfaceUnnumberedFor(String interfaceUnnumberedFor) {
-            this.interfaceUnnumberedFor = interfaceUnnumberedFor;
+        public UnnumberedInterfaceCommandBuilder setUseInterface(String useInterface) {
+            this.useInterface = useInterface;
+            return this;
         }
 
-        public String getInterfaceUnnumberedWith() {
-            return interfaceUnnumberedWith;
+        public String getInterfaceName() {
+            return interfaceName;
         }
 
-        public void setInterfaceUnnumberedWith(String interfaceUnnumberedWith) {
-            this.interfaceUnnumberedWith = interfaceUnnumberedWith;
+        public UnnumberedInterfaceCommandBuilder setInterfaceName(String interfaceName) {
+            this.interfaceName = interfaceName;
+            return this;
         }
 
         /**
          * StaticArpCommand build method.
          *
          * @return UnnumberedInterfaceCommand
-         * @throws IllegalArgumentException if interfaceUnnumberedFor or interfaceUnnumberedWith is null.
+         * @throws IllegalArgumentException if useInterface or interfaceName is null.
          */
         public UnnumberedInterfaceCommand build() {
             Preconditions.checkNotNull(operation, "Operation must not be null!");
-            Preconditions.checkNotNull(interfaceUnnumberedFor, "interfaceUnnumberedFor must not be null!");
-            Preconditions.checkNotNull(interfaceUnnumberedWith, "interfaceUnnumberedWith must not be null!");
+            Preconditions.checkNotNull(useInterface, "Field useInterface must not be null!");
+            Preconditions.checkNotNull(interfaceName, "Field interfaceName must not be null!");
 
             return new UnnumberedInterfaceCommand(this);
         }

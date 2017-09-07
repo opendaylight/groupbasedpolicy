@@ -13,9 +13,6 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Created by Shakib Ahmed on 6/21/17.
- */
 public class DeleteGpeFeatureDataCommand  extends AbstractLispCommand<GpeFeatureData> {
     private static final Logger LOG = LoggerFactory.getLogger(DeleteGpeFeatureDataCommand.class);
 
@@ -28,5 +25,9 @@ public class DeleteGpeFeatureDataCommand  extends AbstractLispCommand<GpeFeature
     public GpeFeatureData getData() {
         LOG.debug("Delete commands should not invoke getData()");
         return null;
+    }
+
+    @Override public String toString() {
+        return "Operation: " + getOperation() + ", Iid: " + this.getIid() + ", " + "DeleteGpeFeatureDataCommand{}";
     }
 }

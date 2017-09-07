@@ -13,9 +13,6 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.map.register.grouping.MapRegister;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-/**
- * Created by Shakib Ahmed on 3/20/17.
- */
 public class ConfigureMapRegisterStatusCommand extends AbstractLispCommand<MapRegister>{
 
     MapRegisterDom mapRegisterDom;
@@ -32,5 +29,9 @@ public class ConfigureMapRegisterStatusCommand extends AbstractLispCommand<MapRe
     @Override
     public MapRegister getData() {
         return mapRegisterDom.getSALObject();
+    }
+
+    @Override public String toString() {
+        return "Operation: " + getOperation() + ", Iid: " + this.getIid() + ", " + mapRegisterDom.toString();
     }
 }

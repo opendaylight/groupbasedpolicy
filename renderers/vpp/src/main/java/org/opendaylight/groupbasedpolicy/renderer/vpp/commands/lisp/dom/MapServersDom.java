@@ -14,9 +14,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev
 
 import java.util.List;
 
-/**
- * Created by Shakib Ahmed on 3/20/17.
- */
 public class MapServersDom implements CommandModel {
     List<MapServer> mapServers;
 
@@ -31,5 +28,9 @@ public class MapServersDom implements CommandModel {
     @Override
     public MapServers getSALObject() {
         return new MapServersBuilder().setMapServer(mapServers).build();
+    }
+
+    @Override public String toString() {
+        return "MapServers{" + "mapServers=" + mapServers + '}';
     }
 }

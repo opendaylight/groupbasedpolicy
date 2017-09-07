@@ -14,9 +14,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.map.resolvers.grouping.map.resolvers.MapResolverKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-/**
- * Created by Shakib Ahmed on 3/20/17.
- */
 public class ConfigureMapResolverCommand extends AbstractLispCommand<MapResolver>{
     MapResolverDom mapResolverDom;
 
@@ -32,5 +29,9 @@ public class ConfigureMapResolverCommand extends AbstractLispCommand<MapResolver
     @Override
     public MapResolver getData() {
         return mapResolverDom.getSALObject();
+    }
+
+    @Override public String toString() {
+        return "Operation: " + getOperation() + ", Iid: " + this.getIid() + ", " + mapResolverDom.toString();
     }
 }

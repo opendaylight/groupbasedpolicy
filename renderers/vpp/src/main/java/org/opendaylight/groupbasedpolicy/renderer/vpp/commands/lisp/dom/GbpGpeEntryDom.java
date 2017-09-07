@@ -15,9 +15,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev1
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170801.gpe.entry.table.grouping.gpe.entry.table.gpe.entry.RemoteEid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.MapReplyAction;
 
-/**
- * Created by Shakib Ahmed on 6/1/17.
- */
 public class GbpGpeEntryDom implements CommandModel{
     private String id;
     private Long vrf;
@@ -85,5 +82,10 @@ public class GbpGpeEntryDom implements CommandModel{
                     .setRemoteEid(remoteEid)
                     .setLocalEid(localEid)
                     .setAction(action).build();
+    }
+
+    @Override public String toString() {
+        return "GbpGpeEntry{" + "id='" + id + ", vrf=" + vrf + ", vni=" + vni + ", localEid=" + localEid
+            + ", remoteEid=" + remoteEid + ", action=" + action + '}';
     }
 }

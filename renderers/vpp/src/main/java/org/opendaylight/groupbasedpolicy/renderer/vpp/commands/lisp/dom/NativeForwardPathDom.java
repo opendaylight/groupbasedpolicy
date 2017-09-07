@@ -12,9 +12,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev1
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170801._native.forward.paths.tables._native.forward.paths.table.NativeForwardPathBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170801._native.forward.paths.tables._native.forward.paths.table.NativeForwardPathKey;
 
-/**
- * Created by Shakib Ahmed on 6/13/17.
- */
 public class NativeForwardPathDom implements CommandModel {
     private IpAddress nextHopIp;
     private String nextHopInterface;
@@ -50,5 +47,10 @@ public class NativeForwardPathDom implements CommandModel {
                     .setKey(new NativeForwardPathKey(nextHopIp))
                     .setNextHopAddress(nextHopIp)
                     .setNextHopInterface(nextHopInterface).build();
+    }
+
+    @Override public String toString() {
+        return "NativeForwardPath{" + "nextHopIp=" + nextHopIp + ", nextHopInterface='" + nextHopInterface + ", vrfId="
+            + vrfId + '}';
     }
 }

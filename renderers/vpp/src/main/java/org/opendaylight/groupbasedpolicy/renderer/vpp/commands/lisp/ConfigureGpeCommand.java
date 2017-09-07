@@ -12,9 +12,6 @@ import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.gpe.rev170801.gpe.feature.data.grouping.GpeFeatureData;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-/**
- * Created by Shakib Ahmed on 6/1/17.
- */
 public class ConfigureGpeCommand extends AbstractLispCommand<GpeFeatureData> {
 
     private GpeEnableDom gpeEnableDom;
@@ -31,5 +28,9 @@ public class ConfigureGpeCommand extends AbstractLispCommand<GpeFeatureData> {
     @Override
     public GpeFeatureData getData() {
         return gpeEnableDom.getSALObject();
+    }
+
+    @Override public String toString() {
+        return "Operation: " + getOperation() + ", Iid: " + this.getIid() + ", " + gpeEnableDom.toString();
     }
 }

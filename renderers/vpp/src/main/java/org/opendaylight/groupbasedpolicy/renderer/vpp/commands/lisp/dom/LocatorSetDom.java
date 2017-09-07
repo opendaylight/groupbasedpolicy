@@ -16,9 +16,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev
 
 import java.util.List;
 
-/**
- * Created by Shakib Ahmed on 3/20/17.
- */
 public class LocatorSetDom implements CommandModel {
 
     private String locatorName;
@@ -47,5 +44,9 @@ public class LocatorSetDom implements CommandModel {
                     .setKey(new LocatorSetKey(locatorName))
                     .setName(locatorName)
                     .setInterface(interfaces).build();
+    }
+
+    @Override public String toString() {
+        return "LocatorSet{" + "locatorName='" + locatorName + ", interfaces=" + interfaces + '}';
     }
 }

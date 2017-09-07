@@ -14,9 +14,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.locator.sets.grouping.locator.sets.LocatorSetKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 
-/**
- * Created by Shakib Ahmed on 3/16/17.
- */
 public class ConfigureLocatorSetCommand extends AbstractLispCommand<LocatorSet> {
 
     LocatorSetDom locatorSetDom;
@@ -33,5 +30,9 @@ public class ConfigureLocatorSetCommand extends AbstractLispCommand<LocatorSet> 
     @Override
     public LocatorSet getData() {
         return locatorSetDom.getSALObject();
+    }
+
+    @Override public String toString() {
+        return "Operation: " + getOperation() + ", Iid: " + this.getIid() + ", " + locatorSetDom.toString();
     }
 }

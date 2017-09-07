@@ -13,9 +13,6 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Created by Shakib Ahmed on 6/21/17.
- */
 public class DeleteNativeForwardPathsTablesDeleteCommand extends AbstractLispCommand<NativeForwardPathsTables> {
     private static final Logger LOG = LoggerFactory.getLogger(DeleteNativeForwardPathsTablesDeleteCommand.class);
 
@@ -29,5 +26,10 @@ public class DeleteNativeForwardPathsTablesDeleteCommand extends AbstractLispCom
     public NativeForwardPathsTables getData() {
         LOG.debug("Delete commands should not invoke getData()");
         return null;
+    }
+
+    @Override public String toString() {
+        return "Operation: " + getOperation() + ", Iid: " + this.getIid() + ", "
+            + "DeleteNativeForwardPathsTablesDeleteCommand{}";
     }
 }

@@ -11,9 +11,6 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.commands.lisp.dom;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.Lisp;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.lisp.rev170808.LispBuilder;
 
-/**
- * Created by Shakib Ahmed on 3/20/17.
- */
 public class LispDom implements CommandModel {
     private boolean enabled;
 
@@ -29,5 +26,9 @@ public class LispDom implements CommandModel {
     @Override
     public Lisp getSALObject() {
         return new LispBuilder().setEnable(enabled).build();
+    }
+
+    @Override public String toString() {
+        return "Lisp{" + "enabled=" + enabled + '}';
     }
 }
