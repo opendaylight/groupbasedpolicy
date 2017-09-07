@@ -179,7 +179,7 @@ public class RoutingManager {
         LOG.trace("Submitting routing for routing command: {}, nodeId: {}", routing, nodeIid);
 
         Optional<DataBroker> mountPointDataBroker = mountDataProvider.resolveDataBrokerForMountPoint(nodeIid);
-        if (mountPointDataBroker.isPresent()) {
+        if (!mountPointDataBroker.isPresent()) {
             throw new IllegalStateException("Cannot find data broker for mount point " + nodeIid);
         }
         LOG.info("Routing was created for forwarding. Routing: {}, for node: {}", routing, nodeIid);

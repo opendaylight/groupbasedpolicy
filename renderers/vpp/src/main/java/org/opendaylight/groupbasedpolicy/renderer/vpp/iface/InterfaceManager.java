@@ -133,9 +133,8 @@ public class InterfaceManager implements AutoCloseable {
         }
         LOG.info(message);
         } catch (InterruptedException | ExecutionException e) {
-            // TODO Auto-generated catch block
-            LOG.error("Failed to process changed vpp endpoint - before: {}, after {}: ", event.getBefore(),
-                    event.getBefore());
+            LOG.error("Failed to process changed vpp endpoint. before: {}, after: {}.Exception: {} ", event.getBefore(),
+                    event.getAfter(), e);
         }
     }
 
@@ -262,19 +261,17 @@ public class InterfaceManager implements AutoCloseable {
         return deleteIfaceOnVpp(ifaceWithoutBdCommand, vppNodeIid, vppEndpoint);
     }
 
-    private ListenableFuture<Void> deleteIfaceOnVpp(AbstractInterfaceCommand deleteIfaceWithoutBdCommand, InstanceIdentifier<Node> vppIid,
-            VppEndpoint vppEndpoint) {
-        InterfaceBuilder intfBuilder = deleteIfaceWithoutBdCommand.getInterfaceBuilder();
-        final boolean transactionState = GbpNetconfTransaction.netconfSyncedDelete(vppIid,
-                deleteIfaceWithoutBdCommand, GbpNetconfTransaction.RETRY_COUNT);
+    private ListenableFuture<Void> deleteIfaceOnVpp(AbstractInterfaceCommand interfaceCommand,
+        InstanceIdentifier<Node> vppIid, VppEndpoint vppEndpoint) {
+        final boolean transactionState = GbpNetconfTransaction.netconfSyncedDelete(vppIid, interfaceCommand,
+            GbpNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
-            LOG.debug("Delete interface on VPP command was successful: VPP: {} Command: {}", vppIid,
-                    deleteIfaceWithoutBdCommand);
-            AccessListWrapper.removeAclsForInterface(vppIid, new InterfaceKey(intfBuilder.getName()));
+            LOG.debug("Delete interface on VPP command was successful: VPP: {} Command: {}", vppIid, interfaceCommand);
+            AccessListWrapper.removeAclsForInterface(vppIid, new InterfaceKey(interfaceCommand.getName()));
             return vppEndpointLocationProvider.deleteLocationForVppEndpoint(vppEndpoint);
         } else {
             final String message = "Delete interface on VPP command was not successful: VPP: " + vppIid
-                    + " Command: " + deleteIfaceWithoutBdCommand;
+                    + " Command: " + interfaceCommand;
             LOG.warn(message);
             return Futures.immediateFailedFuture(new VppRendererProcessingException(message));
         }

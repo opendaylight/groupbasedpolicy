@@ -76,10 +76,10 @@ public class MountedDataBrokerProvider {
             }
         } catch (TimeoutException e) {
             LOG.warn("Mountpoint not obtained within {} seconds. Iid: {}", NODE_CONNECTION_TIMER, iidToMountPoint, e);
-            return null;
+            return Optional.absent();
         } catch (ExecutionException | InterruptedException e) {
             LOG.warn("Error while getting mountpoint. Iid: {}", iidToMountPoint, e);
-            return null;
+            return Optional.absent();
         }
     }
 
