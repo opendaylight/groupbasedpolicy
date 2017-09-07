@@ -47,6 +47,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpo
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.common.endpoint.fields.network.containment.containment.NetworkDomainContainment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.LocationType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.absolute.location.absolute.location.location.type.ExternalLocationCase;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.has.child.endpoints.ChildEndpoint;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.ParentEndpointChoice;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.ParentEndpointCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.base_endpoint.rev160427.parent.child.endpoints.parent.endpoint.choice.parent.endpoint._case.ParentEndpoint;
@@ -259,21 +260,30 @@ public final class ForwardingManager {
     }
 
     private boolean isBviForEndpoint(AddressEndpointWithLocation rEp) {
-        VppEndpointKey vppEndpointKey =
-            new VppEndpointKey(rEp.getAddress(), rEp.getAddressType(), rEp.getContextId(), rEp.getContextType());
+        List<ChildEndpoint> childEndpointList = rEp.getChildEndpoint();
+        VppEndpointKey vppEndpointKey;
+        if(childEndpointList == null || !childEndpointList.stream().findFirst().isPresent()) {
+            vppEndpointKey =
+                new VppEndpointKey(rEp.getAddress(), rEp.getAddressType(), rEp.getContextId(), rEp.getContextType());
+        } else {
+            java.util.Optional<ChildEndpoint> childEndpointOpt = childEndpointList.stream().findFirst();
+            vppEndpointKey =
+                new VppEndpointKey(childEndpointOpt.get().getAddress(), childEndpointOpt.get().getAddressType(),
+                    childEndpointOpt.get().getContextId(), childEndpointOpt.get().getContextType());
+        }
         ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
         Optional<VppEndpoint> vppEndpointOptional =
             DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
                 InstanceIdentifier.builder(Config.class).child(VppEndpoint.class, vppEndpointKey).build(), rTx);
+        rTx.close();
         if (vppEndpointOptional.isPresent()) {
             InterfaceTypeChoice interfaceTypeChoice = vppEndpointOptional.get().getInterfaceTypeChoice();
             if (interfaceTypeChoice instanceof LoopbackCase) {
-                LOG.trace("Vpp renderer endpoint {} IS a BVI interface.", rEp.getKey());
+                LOG.trace("Found new BVI interface: {}", rEp.getKey());
                 return ((LoopbackCase) interfaceTypeChoice).isBvi();
             }
         }
-        rTx.close();
-        LOG.trace("Vpp renderer endpoint {} IS NOT a BVI interface.", rEp.getKey());
+
         return false;
     }
 
@@ -464,6 +474,7 @@ public final class ForwardingManager {
     }
 
     private String resolveEpIpAddressForSnat(AddressEndpointWithLocation addrEp) {
+        LOG.trace("Resolving Ep IP address for SNAT from Address endpoint: {}", addrEp);
         if (addrEp.getAddressType().equals(MacAddressType.class)) {
             ParentEndpointChoice parentEndpointChoice = addrEp.getParentEndpointChoice();
             if (parentEndpointChoice instanceof ParentEndpointCase
@@ -471,6 +482,7 @@ public final class ForwardingManager {
                 ParentEndpoint parentEndpoint = ((ParentEndpointCase) parentEndpointChoice).getParentEndpoint().get(0);
                 if (parentEndpoint.getAddressType().equals(IpPrefixType.class)) {
                     String[] ipWithPrefix = parentEndpoint.getAddress().split("/");
+                    LOG.trace("Resolved Ep IP address for SNAT. Resolved  IP Address: {}", ipWithPrefix[0]);
                     return ipWithPrefix[0];
                 } else {
                     LOG.warn("Endpoint {} Does not have a Parent Ep with IP for SNAT. skipping processing of SNAT",
@@ -483,7 +495,9 @@ public final class ForwardingManager {
                 return null;
             }
         } else if (addrEp.getAddressType().equals(IpPrefixType.class)) {
-            return addrEp.getAddress();
+            String ipAddress = addrEp.getAddress().split("/")[0];
+            LOG.trace("Resolved Ep IP address for SNAT. Resolved  IP Address: {}", ipAddress);
+            return ipAddress;
         }
         return null;
     }
