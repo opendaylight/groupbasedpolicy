@@ -53,7 +53,8 @@ public class GbpNetconfTransaction {
     public static <T extends DataObject> boolean netconfSyncedWrite(@Nonnull final InstanceIdentifier<Node> vppIid,
         @Nonnull final InstanceIdentifier<T> iid, @Nonnull final T data, byte retryCounter) {
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().lock();
-        boolean result = write(VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey(), iid, data, retryCounter);
+        boolean result =
+            write(VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey(), iid, data, retryCounter);
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().unlock();
         return result;
     }
@@ -76,9 +77,10 @@ public class GbpNetconfTransaction {
      * @return true if transaction is successful, false otherwise
      */
     public static <T extends DataObject> boolean netconfSyncedMerge(@Nonnull final InstanceIdentifier<Node> vppIid,
-                                                                    @Nonnull final InstanceIdentifier<T> iid, @Nonnull final T data, byte retryCounter) {
+        @Nonnull final InstanceIdentifier<T> iid, @Nonnull final T data, byte retryCounter) {
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().lock();
-        boolean result = merge(VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey(), iid, data, retryCounter);
+        boolean result =
+            merge(VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey(), iid, data, retryCounter);
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().unlock();
         return result;
     }
@@ -90,8 +92,8 @@ public class GbpNetconfTransaction {
      * @param retryCounter  retry counter, will repeat the operation for specified amount of times if transaction fails
      * @return true if transaction is successful, false otherwise
      */
-    public static boolean netconfSyncedWrite(@Nonnull final InstanceIdentifier<Node> vppIid, @Nonnull final ConfigCommand command,
-        byte retryCounter) {
+    public static boolean netconfSyncedWrite(@Nonnull final InstanceIdentifier<Node> vppIid,
+        @Nonnull final ConfigCommand command, byte retryCounter) {
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().lock();
         boolean result = write(VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey(), command, retryCounter);
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().unlock();
@@ -105,8 +107,8 @@ public class GbpNetconfTransaction {
      * @param retryCounter  retry counter, will repeat the operation for specified amount of times if transaction fails
      * @return true if transaction is successful, false otherwise
      */
-    public static boolean netconfSyncedWrite(@Nonnull final InstanceIdentifier<Node> vppIid, @Nonnull final RoutingCommand command,
-        byte retryCounter) {
+    public static boolean netconfSyncedWrite(@Nonnull final InstanceIdentifier<Node> vppIid,
+        @Nonnull final RoutingCommand command, byte retryCounter) {
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().lock();
         boolean result = write(VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey(), command, retryCounter);
         VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().unlock();
@@ -271,13 +273,10 @@ public class GbpNetconfTransaction {
         Preconditions.checkArgument(!data.isEmpty());
         final ReadWriteTransaction rwTx = mountpoint.newReadWriteTransaction();
         try {
-            data.forEach((k, v) -> {
-                rwTx.put(LogicalDatastoreType.CONFIGURATION, k, v, true);
-            });
+            data.forEach((k, v) -> rwTx.put(LogicalDatastoreType.CONFIGURATION, k, v, true));
             final CheckedFuture<Void, TransactionCommitFailedException> futureTask = rwTx.submit();
             futureTask.get();
-            LOG.trace("Netconf WRITE transaction done for {}",
-                    data.keySet().stream().map(iid -> iid.getPathArguments()));
+            LOG.trace("Netconf WRITE transaction done for {}", data);
             return true;
         } catch (Exception e) {
             // Retry
@@ -334,7 +333,8 @@ public class GbpNetconfTransaction {
      * @param retryCounter number of attempts
      * @return true if transaction is successful, false otherwise
      */
-    private static boolean deleteIfExists(final InstanceIdentifier<Node> vppIid, final AbstractInterfaceCommand command, byte retryCounter) {
+    private static boolean deleteIfExists(final InstanceIdentifier<Node> vppIid, final AbstractInterfaceCommand command,
+        byte retryCounter) {
         Preconditions.checkNotNull(vppIid);
         InstanceIdentifier<Interface> iid = VppIidFactory.getInterfaceIID(command.getInterfaceBuilder().getKey());
         return deleteIfExists(vppIid, iid, retryCounter);
@@ -383,7 +383,8 @@ public class GbpNetconfTransaction {
             final Set<InstanceIdentifier<T>> iids, byte retryCounter) {
         LOG.trace("Netconf DELETE transaction started. Data will be read at first. RetryCounter: {}", retryCounter);
         Preconditions.checkNotNull(vppIid);
-        final ReadWriteTransaction rwTx = VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey().newReadWriteTransaction();
+        final ReadWriteTransaction rwTx =
+            VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey().newReadWriteTransaction();
         Set<InstanceIdentifier<T>> alreadyRemoved = new HashSet<>();
         for (InstanceIdentifier<T> iid : iids) {
             short microReadRetries = 3;
@@ -402,9 +403,7 @@ public class GbpNetconfTransaction {
                 }
             }
         }
-        alreadyRemoved.forEach(t -> {
-            iids.remove(t);
-        });
+        alreadyRemoved.forEach(t -> iids.remove(t));
         try {
             final CheckedFuture<Void, TransactionCommitFailedException> futureTask = rwTx.submit();
             futureTask.get();

@@ -61,7 +61,7 @@ public class EndpointRegistrator {
         try {
             RpcResult<Void> rpcResult = baseEpService.registerEndpoint(regBaseEpInput).get();
             if (!rpcResult.isSuccessful()) {
-                LOG.warn("Illegal state - registerEndpoint was not successful. Input of RPC: {}", regBaseEpInput);
+                LOG.warn("Illegal state - register Base Endpoint was not successful. Input of RPC: {}", regBaseEpInput);
                 return false;
             }
             return true;
@@ -97,7 +97,7 @@ public class EndpointRegistrator {
         try {
             RpcResult<Void> rpcResult = epService.registerEndpoint(regEndpointInput).get();
             if (!rpcResult.isSuccessful()) {
-                LOG.warn("Illegal state - registerEndpoint was not successful. Input of RPC: {}", regEndpointInput);
+                LOG.warn("Illegal state - register Endpoint was not successful. Input of RPC: {}", regEndpointInput);
                 return false;
             }
             return true;

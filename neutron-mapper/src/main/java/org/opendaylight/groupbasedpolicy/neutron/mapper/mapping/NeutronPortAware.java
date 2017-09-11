@@ -377,8 +377,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
                             createBasicMacAddrEpInputBuilder(portInSameSubnet, networkContainment, endpointGroupIds);
                     AddressEndpointRegBuilder l3BaseEp = createBasicL3AddrEpInputBuilder(portInSameSubnet,
                             networkContainment, endpointGroupIds, neutron);
-                    ContextId resolvedCtxId = l3BaseEp.getContextId();
-                    ContextId networkCtxId = new ContextId(portInSameSubnet.getNetworkId().getValue());
+
                     setParentChildRelationshipForEndpoints(l3BaseEp, l2BaseEp);
                     AddressEndpointUnregBuilder addrEpUnreg =
                             new AddressEndpointUnregBuilder().setAddress(l3BaseEp.getAddress())
@@ -395,6 +394,7 @@ public class NeutronPortAware implements NeutronAware<Port> {
                     } else {
                         l3BaseEp.setContextId(new ContextId(networkId.getValue()));
                     }
+                    setParentChildRelationshipForEndpoints(l3BaseEp, l2BaseEp);
                     RegisterEndpointInput regBaseEpInput = new RegisterEndpointInputBuilder()
                         .setAddressEndpointReg(ImmutableList.of(l2BaseEp.build(), l3BaseEp.build())).build();
                     epRegistrator.registerEndpoint(regBaseEpInput);
