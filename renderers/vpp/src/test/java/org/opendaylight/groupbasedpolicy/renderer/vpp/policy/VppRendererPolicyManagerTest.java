@@ -158,7 +158,7 @@ public class VppRendererPolicyManagerTest extends CustomDataBrokerTest {
         natManager = new NatManager(dataBroker, mountedDataProviderMock);
         routingManager = new RoutingManager(dataBroker, mountedDataProviderMock);
         bdManager = new BridgeDomainManagerImpl(mountPointDataBroker);
-        dhcpRelayHandler = new DhcpRelayHandler(dataBroker, mountedDataProviderMock);
+        dhcpRelayHandler = new DhcpRelayHandler(dataBroker);
         fwManager = new ForwardingManager(ifaceManager, aclManager, natManager, routingManager, bdManager,
                 lispStateManager, loopbackManager, flatOverlayManager, dhcpRelayHandler, dataBroker);
         vppRendererPolicyManager = new VppRendererPolicyManager(fwManager, aclManager, dataBroker);

@@ -8,8 +8,10 @@
 
 package org.opendaylight.groupbasedpolicy.renderer.vpp.policy;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -21,6 +23,7 @@ import org.opendaylight.controller.config.yang.config.vpp_provider.impl.VppRende
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.DhcpRelayCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.NodeOperEvent;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.event.RendererPolicyConfEvent;
@@ -158,15 +161,15 @@ public class VppRendererPolicyManager {
             LOG.debug("Creating bridge domains on nodes {}", createdVppNodesByL2Fd);
             fwManager.createBridgeDomainOnNodes(createdVppNodesByL2Fd);
         } else {
+            List<DhcpRelayCommand> deletedDhcpRelays = new ArrayList<>();
+            List<DhcpRelayCommand> createdDhcpRelays = new ArrayList<>();
             if (rPolicyBefore.getConfiguration() != null) {
                 RendererForwarding rendererForwardingBefore = rPolicyBefore.getConfiguration().getRendererForwarding();
 
                 SetMultimap<String, NodeId> vppNodesByL2FdBefore =
                         resolveVppNodesByL2Fd(policyCtxBefore.getPolicyTable().rowKeySet(), policyCtxBefore);
                 if (!vppNodesByL2FdBefore.isEmpty()) {
-                    LOG.debug("Deleting DhcpRelay for forwarding: {}, on VPP nodes: {}", rendererForwardingBefore,
-                            vppNodesByL2FdBefore);
-                    fwManager.deleteDhcpRelay(rendererForwardingBefore, vppNodesByL2FdBefore);
+                    deletedDhcpRelays = fwManager.deleteDhcpRelay(rendererForwardingBefore, vppNodesByL2FdBefore);
                 }
             }
 
@@ -175,11 +178,11 @@ public class VppRendererPolicyManager {
                 SetMultimap<String, NodeId> vppNodesByL2FdAfter =
                         resolveVppNodesByL2Fd(policyCtxAfter.getPolicyTable().rowKeySet(), policyCtxAfter);
                 if (!vppNodesByL2FdAfter.isEmpty()) {
-                    LOG.debug("Creating DhcpRelay for forwarding: {}, on VPP nodes: {}", rendererForwardingAfter,
-                            vppNodesByL2FdAfter);
-                    fwManager.createDhcpRelay(rendererForwardingAfter, vppNodesByL2FdAfter);
+                    createdDhcpRelays = fwManager.createDhcpRelay(rendererForwardingAfter, vppNodesByL2FdAfter);
                 }
             }
+
+            fwManager.syncDhcpRelay(createdDhcpRelays, deletedDhcpRelays);
         }
 
         fwManager.syncNatEntries(policyCtxAfter);
@@ -250,7 +253,8 @@ public class VppRendererPolicyManager {
             fwManager.createBridgeDomainOnNodes(vppNodesByL2Fd);
         } else {
             RendererForwarding rendererForwarding = rPolicy.getConfiguration().getRendererForwarding();
-            fwManager.createDhcpRelay(rendererForwarding, vppNodesByL2Fd);
+            List<DhcpRelayCommand> createdDhcpRelays = fwManager.createDhcpRelay(rendererForwarding, vppNodesByL2Fd);
+            fwManager.syncDhcpRelay(createdDhcpRelays, new ArrayList<>());
         }
 
         rEpKeys.forEach(rEpKey -> fwManager.createForwardingForEndpoint(rEpKey, policyCtx));
@@ -270,7 +274,8 @@ public class VppRendererPolicyManager {
             fwManager.removeBridgeDomainOnNodes(vppNodesByL2Fd);
         } else {
             RendererForwarding rendererForwarding = rendererPolicy.getConfiguration().getRendererForwarding();
-            fwManager.deleteDhcpRelay(rendererForwarding, vppNodesByL2Fd);
+            List<DhcpRelayCommand> deletedDhcpRelays = fwManager.deleteDhcpRelay(rendererForwarding, vppNodesByL2Fd);
+            fwManager.syncDhcpRelay(new ArrayList<>(), deletedDhcpRelays);
         }
         fwManager.deleteNatEntries(policyCtx);
         fwManager.deleteRouting(policyCtx);

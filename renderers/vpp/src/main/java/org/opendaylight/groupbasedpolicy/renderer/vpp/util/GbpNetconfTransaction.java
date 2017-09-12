@@ -86,6 +86,22 @@ public class GbpNetconfTransaction {
     }
 
     /***
+     * Netconf wrapper for merge operation on a Netconf Device
+     * @param vppIid        destination node
+     * @param command       config command that needs to be executed
+     * @param retryCounter  retry counter, will repeat the operation for specified amount of times if transaction fails
+     * @return true if transaction is successful, false otherwise
+     */
+    public static boolean netconfSyncedMerge(@Nonnull final InstanceIdentifier<Node> vppIid,
+        @Nonnull final ConfigCommand command, byte retryCounter) {
+        VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().lock();
+        boolean result =
+            write(VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey(), command, retryCounter);
+        VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getValue().unlock();
+        return result;
+    }
+
+    /***
      * Netconf wrapper method for synced requests for write operation on a Netconf Device
      * @param vppIid        destination node
      * @param command       config command that needs to be executed

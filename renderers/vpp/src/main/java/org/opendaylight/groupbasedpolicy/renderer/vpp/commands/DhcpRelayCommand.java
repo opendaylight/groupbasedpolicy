@@ -18,6 +18,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.dhcp
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.dhcp.rev170315.dhcp.attributes.relays.RelayBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.dhcp.rev170315.dhcp.attributes.relays.RelayKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.dhcp.rev170315.relay.attributes.Server;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +34,7 @@ public class DhcpRelayCommand extends AbstractConfigCommand {
     private IpAddress gatewayIpAddress;
     private List<Server> serverIpAddresses;
     private Class<? extends AddressFamily> addressType;
+    private NodeId vppNodeId;
 
     private DhcpRelayCommand(DhcpRelayBuilder builder) {
         operation = builder.getOperation();
@@ -40,6 +42,7 @@ public class DhcpRelayCommand extends AbstractConfigCommand {
         gatewayIpAddress = builder.getGatewayIpAddress();
         serverIpAddresses = builder.getServerIpAddresses();
         addressType = builder.getAddressType();
+        vppNodeId = builder.getVppNodeId();
     }
 
     public static DhcpRelayBuilder builder() {
@@ -66,6 +69,10 @@ public class DhcpRelayCommand extends AbstractConfigCommand {
         return VppIidFactory.getDhcpRelayIid(getDhcpBuilder().getKey());
     }
 
+    public NodeId getVppNodeId() {
+        return vppNodeId;
+    }
+
     void put(ReadWriteTransaction rwTx) {
         rwTx.put(LogicalDatastoreType.CONFIGURATION, getIid(), getDhcpBuilder().build(), true);
     }
@@ -88,6 +95,39 @@ public class DhcpRelayCommand extends AbstractConfigCommand {
             + ", operations=" + operation + "]";
     }
 
+    /**
+     * Compares two DhcpRelayCommands without checking operation status.
+     * @param compareTo DhcpRelayCommand to compare with.
+     * @return true if commands match, false otherwise.
+     */
+    @Override public boolean equals(Object compareTo) {
+        if (compareTo == null || !compareTo.getClass().equals(this.getClass())) {
+            return false;
+        }
+
+        DhcpRelayCommand command = (DhcpRelayCommand) compareTo;
+
+        if (!this.getVppNodeId().equals(command.getVppNodeId())) {
+            return false;
+        } else if (!this.getAddressType().equals(command.getAddressType())) {
+            return false;
+        } else if (!this.getGatewayIpAddress().equals(command.getGatewayIpAddress())) {
+            return false;
+        } else if (!this.getIid().equals(command.getIid())) {
+            return false;
+        } else if (!this.getRxVrfId().equals(command.getRxVrfId())) {
+            return false;
+        } else if (this.getServerIpAddresses() != null && !this.getServerIpAddresses()
+            .containsAll(command.getServerIpAddresses())) {
+            return false;
+        } else if (command.getServerIpAddresses() != null && !command.getServerIpAddresses()
+            .containsAll(this.getServerIpAddresses())) {
+            return false;
+        }
+
+        return true;
+    }
+
     public RelayBuilder getDhcpBuilder() {
         return new RelayBuilder()
             .setAddressType(addressType)
@@ -104,6 +144,7 @@ public class DhcpRelayCommand extends AbstractConfigCommand {
         private IpAddress gatewayIpAddress;
         private List<Server>  serverIpAddress;
         private Class<? extends AddressFamily> addressType;
+        private NodeId VppNodeId;
 
         public General.Operations getOperation() {
             return operation;
@@ -147,6 +188,15 @@ public class DhcpRelayCommand extends AbstractConfigCommand {
 
         public DhcpRelayBuilder setAddressType(Class<? extends AddressFamily> addressType) {
             this.addressType = addressType;
+            return this;
+        }
+
+        public NodeId getVppNodeId() {
+            return VppNodeId;
+        }
+
+        public DhcpRelayBuilder setVppNodeId(NodeId vppNodeId) {
+            VppNodeId = vppNodeId;
             return this;
         }
 

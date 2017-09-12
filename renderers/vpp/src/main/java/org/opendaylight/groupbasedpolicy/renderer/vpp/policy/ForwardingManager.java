@@ -24,6 +24,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.api.BridgeDomainManager;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.DhcpRelayCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.RoutingCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.dhcp.DhcpRelayHandler;
@@ -114,8 +115,9 @@ public final class ForwardingManager {
     private final DataBroker dataBroker;
 
     public ForwardingManager(@Nonnull InterfaceManager ifaceManager, @Nonnull AclManager aclManager,
-                             @Nonnull NatManager natManager, @Nonnull RoutingManager routingManager, @Nonnull BridgeDomainManager bdManager,
-                             @Nonnull LispStateManager lispStateManager, @Nonnull LoopbackManager loopbackManager, @Nonnull FlatOverlayManager flatOverlayManager,
+                             @Nonnull NatManager natManager, @Nonnull RoutingManager routingManager,
+                             @Nonnull BridgeDomainManager bdManager, @Nonnull LispStateManager lispStateManager,
+                             @Nonnull LoopbackManager loopbackManager, @Nonnull FlatOverlayManager flatOverlayManager,
                              @Nonnull DhcpRelayHandler dhcpRelayHandler, @Nonnull DataBroker dataBroker) {
         this.ifaceManager = Preconditions.checkNotNull(ifaceManager);
         this.bdManager = Preconditions.checkNotNull(bdManager);
@@ -129,7 +131,7 @@ public final class ForwardingManager {
         this.dhcpRelayHandler = Preconditions.checkNotNull(dhcpRelayHandler);
     }
 
-    public Optional<GbpBridgeDomain> readGbpBridgeDomainConfig(String name) {
+    Optional<GbpBridgeDomain> readGbpBridgeDomainConfig(String name) {
         InstanceIdentifier<GbpBridgeDomain> bdIid = InstanceIdentifier.builder(Config.class)
             .child(GbpBridgeDomain.class, new GbpBridgeDomainKey(name))
             .build();
@@ -139,7 +141,7 @@ public final class ForwardingManager {
         return optBd;
     }
 
-    public void createBridgeDomainOnNodes(SetMultimap<String, NodeId> vppNodesByBridgeDomain) {
+    void createBridgeDomainOnNodes(SetMultimap<String, NodeId> vppNodesByBridgeDomain) {
         for (String bd : vppNodesByBridgeDomain.keySet()) {
             Optional<GbpBridgeDomain> bdConfig = readGbpBridgeDomainConfig(bd);
             Set<NodeId> vppNodes = vppNodesByBridgeDomain.get(bd);
@@ -192,7 +194,7 @@ public final class ForwardingManager {
         }
     }
 
-    public void removeBridgeDomainOnNodes(final SetMultimap<String, NodeId> vppNodesByBridgeDomain) {
+    void removeBridgeDomainOnNodes(final SetMultimap<String, NodeId> vppNodesByBridgeDomain) {
         for (String bd : vppNodesByBridgeDomain.keySet()) {
             Set<NodeId> vppNodes = vppNodesByBridgeDomain.get(bd);
             for (NodeId vppNode : vppNodes) {
@@ -210,7 +212,7 @@ public final class ForwardingManager {
         }
     }
 
-    public void createForwardingForEndpoint(RendererEndpointKey rEpKey, PolicyContext policyCtx) {
+    void createForwardingForEndpoint(RendererEndpointKey rEpKey, PolicyContext policyCtx) {
         AddressEndpointWithLocation rEp = policyCtx.getAddrEpByKey().get(KeyFactory.addressEndpointKey(rEpKey));
 
         if (ConfigUtil.getInstance().isLispOverlayEnabled()) {
@@ -287,7 +289,7 @@ public final class ForwardingManager {
         return false;
     }
 
-    public void removeForwardingForEndpoint(RendererEndpointKey rEpKey, PolicyContext policyCtx) {
+    void removeForwardingForEndpoint(RendererEndpointKey rEpKey, PolicyContext policyCtx) {
         AddressEndpointWithLocation rEp = policyCtx.getAddrEpByKey().get(KeyFactory.addressEndpointKey(rEpKey));
         ExternalLocationCase rEpLoc = resolveAndValidateLocation(rEp);
 
@@ -318,7 +320,7 @@ public final class ForwardingManager {
         }
     }
 
-    public static ExternalLocationCase resolveAndValidateLocation(AddressEndpointWithLocation addrEpWithLoc) {
+    static ExternalLocationCase resolveAndValidateLocation(AddressEndpointWithLocation addrEpWithLoc) {
         if (addrEpWithLoc.getAbsoluteLocation() != null
                 && addrEpWithLoc.getAbsoluteLocation().getLocationType() != null) {
             LocationType locationType = addrEpWithLoc.getAbsoluteLocation().getLocationType();
@@ -334,7 +336,7 @@ public final class ForwardingManager {
         return null;
     }
 
-    public static java.util.Optional<String> resolveL2FloodDomain(@Nonnull AddressEndpointWithLocation ep,
+    static java.util.Optional<String> resolveL2FloodDomain(@Nonnull AddressEndpointWithLocation ep,
             @Nonnull PolicyContext policyCtx) {
         NetworkContainment netCont = ep.getNetworkContainment();
         if (netCont == null) {
@@ -402,7 +404,7 @@ public final class ForwardingManager {
         }
     }
 
-    public void deleteNatEntries(PolicyContext policyCtx) {
+    void deleteNatEntries(PolicyContext policyCtx) {
         Configuration cfg = policyCtx.getPolicy().getConfiguration();
         if(cfg != null) {
             List<MappingEntryBuilder> natEntries = resolveStaticNatTableEntries(cfg.getEndpoints());
@@ -421,8 +423,8 @@ public final class ForwardingManager {
         }
     }
 
-    public List<InstanceIdentifier<PhysicalInterface>> resolvePhysicalInterfacesForNat(
-            List<RendererNetworkDomain> rendNetDomains) {
+    private List<InstanceIdentifier<PhysicalInterface>> resolvePhysicalInterfacesForNat(
+        List<RendererNetworkDomain> rendNetDomains) {
         List<InstanceIdentifier<PhysicalInterface>> physIfaces = new ArrayList<>();
         for (RendererNetworkDomain rendDomain : rendNetDomains) {
             Optional<IpPrefix> resolvedIpPrefix = resolveIpPrefix(rendDomain);
@@ -507,7 +509,7 @@ public final class ForwardingManager {
         WAIT_FOR_BD_PROCESSING = time;
     }
 
-    public void syncRouting(PolicyContext policyCtx) {
+    void syncRouting(PolicyContext policyCtx) {
         Configuration cfg = policyCtx.getPolicy().getConfiguration();
         if (cfg != null && cfg.getRendererForwarding() != null) {
             for (RendererForwardingByTenant fwd : cfg.getRendererForwarding().getRendererForwardingByTenant()) {
@@ -529,7 +531,7 @@ public final class ForwardingManager {
         }
     }
 
-    public void deleteRouting(PolicyContext policyCtx) {
+    void deleteRouting(PolicyContext policyCtx) {
         Configuration cfg = policyCtx.getPolicy().getConfiguration();
         if (cfg != null && cfg.getRendererForwarding() != null) {
             for (RendererForwardingByTenant fwd : cfg.getRendererForwarding().getRendererForwardingByTenant()) {
@@ -550,7 +552,7 @@ public final class ForwardingManager {
         }
     }
 
-    public void createDhcpRelay(RendererForwarding rendererForwarding,
+    List<DhcpRelayCommand> createDhcpRelay(RendererForwarding rendererForwarding,
         SetMultimap<String, NodeId> vppNodesByL2Fd) {
         for (RendererForwardingByTenant forwardingByTenant : rendererForwarding.getRendererForwardingByTenant()) {
             long vni_vrfid = NeutronTenantToVniMapper.getInstance().getVni(forwardingByTenant.getTenantId().getValue());
@@ -560,22 +562,33 @@ public final class ForwardingManager {
                 if (subnet.isIsTenant()) {
                     LOG.trace("Creating Dhcp Relay from subnet: {}, vrfid: {}, vppNodesByL2Fd: {}", subnet, vni_vrfid,
                         vppNodesByL2Fd);
-                    dhcpRelayHandler.createIpv4DhcpRelay(vni_vrfid, subnet, vppNodesByL2Fd);
+                    return dhcpRelayHandler.getCreatedIpv4DhcpRelays(vni_vrfid, subnet, vppNodesByL2Fd);
                 }
             }
         }
+        return new ArrayList<>();
     }
 
-    public void deleteDhcpRelay(RendererForwarding rendererForwarding, SetMultimap<String, NodeId> vppNodesByL2Fd) {
+    List<DhcpRelayCommand> deleteDhcpRelay(RendererForwarding rendererForwarding, SetMultimap<String,
+        NodeId> vppNodesByL2Fd) {
         for (RendererForwardingByTenant forwardingByTenant : rendererForwarding.getRendererForwardingByTenant()) {
             long vni_vrfid = NeutronTenantToVniMapper.getInstance().getVni(forwardingByTenant.getTenantId().getValue());
             for (RendererNetworkDomain networkDomain : forwardingByTenant.getRendererNetworkDomain()) {
                 org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.forwarding.l2_l3.rev170511.has.subnet.Subnet
                     subnet = networkDomain.getAugmentation((SubnetAugmentRenderer.class)).getSubnet();
                 if (subnet.isIsTenant()) {
-                    dhcpRelayHandler.deleteIpv4DhcpRelay(vni_vrfid, subnet, vppNodesByL2Fd);
+                    return dhcpRelayHandler.getDeletedIpv4DhcpRelays(vni_vrfid, subnet, vppNodesByL2Fd);
                 }
             }
         }
+        return new ArrayList<>();
+    }
+
+    void syncDhcpRelay(List<DhcpRelayCommand> createdDhcpRelays, List<DhcpRelayCommand> deletedDhcpRelays) {
+        deletedDhcpRelays.stream().filter(deleteCommand -> !createdDhcpRelays.contains(deleteCommand))
+            .forEach(dhcpRelayHandler::submitDhcpRelay);
+
+        createdDhcpRelays.stream().filter(createCommand -> !deletedDhcpRelays.contains(createCommand))
+            .forEach(dhcpRelayHandler::submitDhcpRelay);
     }
 }

@@ -158,7 +158,7 @@ public class VppRenderer implements AutoCloseable, BindingAwareProvider {
         dtoEventBus.register(interfaceManager);
         dtoEventBus.register(subnetEventManager);
         RoutingManager routingManager = new RoutingManager(dataBroker, mountDataProvider);
-        DhcpRelayHandler dhcpRelayHandler = new DhcpRelayHandler(dataBroker, mountDataProvider);
+        DhcpRelayHandler dhcpRelayHandler = new DhcpRelayHandler(dataBroker);
         bdManager = new BridgeDomainManagerImpl(dataBroker);
         ForwardingManager fwManager =
                 new ForwardingManager(interfaceManager, aclManager, natManager, routingManager, bdManager,

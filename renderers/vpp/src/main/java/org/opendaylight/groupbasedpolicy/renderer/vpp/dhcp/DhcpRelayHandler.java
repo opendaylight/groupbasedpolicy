@@ -10,7 +10,9 @@ package org.opendaylight.groupbasedpolicy.renderer.vpp.dhcp;
 
 import static org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory.getVppRendererConfig;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -19,7 +21,6 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.DhcpRelayCommand;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
-import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.VppIidFactory;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.NetUtils;
@@ -43,16 +44,15 @@ public class DhcpRelayHandler {
     private static final Logger LOG = LoggerFactory.getLogger(DhcpRelayHandler.class);
     private final DataBroker dataBroker;
 
-    // TODO remove argument
-    public DhcpRelayHandler(DataBroker dataBroker, MountedDataBrokerProvider mountDataProvider) {
+    public DhcpRelayHandler(DataBroker dataBroker) {
         this.dataBroker = dataBroker;
     }
 
-    public void createIpv4DhcpRelay(long vni_vrfid, Subnet subnet, SetMultimap<String, NodeId> vppNodesByL2Fd) {
+    public List<DhcpRelayCommand> getCreatedIpv4DhcpRelays(long vni_vrfid, Subnet subnet,
+        SetMultimap<String, NodeId> vppNodesByL2Fd) {
+        List<DhcpRelayCommand> dhcpRelayCommandsCreated = new ArrayList<>();
         if (subnet.getDefaultSubnetGatewayIp() == null) {
-            LOG.trace("Subnet GW IP is null, skipping processing DhcpRelay for vrfid: {}, subnet: {}, VPP nodes: {}",
-                vni_vrfid, subnet, vppNodesByL2Fd);
-            return;
+            return dhcpRelayCommandsCreated;
         }
 
         for (String bd : vppNodesByL2Fd.keySet()) {
@@ -60,23 +60,19 @@ public class DhcpRelayHandler {
             for (NodeId vppNode : vppNodes) {
                 IpAddress ipAddress = resolveDhcpIpAddress(vppNode, subnet);
                 if (ipAddress != null) {
-                    DhcpRelayCommand dhcpRelayCommand =
-                        getDhcpRelayBuilder(vni_vrfid, subnet, ipAddress, General.Operations.PUT).build();
-
-                    if (!submitDhcpRelay(dhcpRelayCommand, vppNode)) {
-                        LOG.warn("DHCP Relay was not configured: {}", dhcpRelayCommand);
-                    }
-                } else {
-                    LOG.trace("DHCP server IP address was not found for node: {}. Skipping processing", vppNode);
+                    dhcpRelayCommandsCreated.add(
+                        getDhcpRelayBuilder(vni_vrfid, subnet, ipAddress, General.Operations.PUT, vppNode).build());
                 }
             }
 
         }
+        return dhcpRelayCommandsCreated;
     }
 
     private DhcpRelayCommand.DhcpRelayBuilder getDhcpRelayBuilder(long vni_vrfid, Subnet subnet, IpAddress ipAddress,
-        General.Operations operations) {
+        General.Operations operations, NodeId nodeId) {
         return DhcpRelayCommand.builder()
+            .setVppNodeId(nodeId)
             .setRxVrfId(vni_vrfid)
             .setOperation(operations)
             .setAddressType(Ipv4.class)
@@ -115,42 +111,46 @@ public class DhcpRelayHandler {
         return null;
     }
 
-    public void deleteIpv4DhcpRelay(long vni_vrfid, Subnet subnet, SetMultimap<String, NodeId> vppNodesByL2Fd) {
+    public List<DhcpRelayCommand> getDeletedIpv4DhcpRelays(long vni_vrfid, Subnet subnet,
+        SetMultimap<String, NodeId> vppNodesByL2Fd) {
         if (subnet.getDefaultSubnetGatewayIp() == null) {
-            LOG.trace("Subnet GW IP is null, skipping processing DhcpRelay for vrfid: {}, subnet: {}, VPP nodes: {}",
-                vni_vrfid, subnet, vppNodesByL2Fd);
-            return;
+            return new ArrayList<>();
         }
+        List<DhcpRelayCommand> dhcpRelayCommandsDeleted = new ArrayList<>();
+
 
         for (String bd : vppNodesByL2Fd.keySet()) {
             Set<NodeId> vppNodes = vppNodesByL2Fd.get(bd);
             for (NodeId vppNode : vppNodes) {
                 IpAddress ipAddress = resolveDhcpIpAddress(vppNode, subnet);
                 if (ipAddress != null) {
-                    DhcpRelayCommand dhcpRelayCommand =
-                        getDhcpRelayBuilder(vni_vrfid, subnet, ipAddress, General.Operations.DELETE).build();
-
-                    if (!submitDhcpRelay(dhcpRelayCommand, vppNode)) {
-                        LOG.warn("DHCP Relay was not deleted: {}", dhcpRelayCommand);
-                    }
-                } else {
-                    LOG.trace("DHCP server IP address was not found for node: {}. Skipping processing.", vppNode);
+                    dhcpRelayCommandsDeleted.add(
+                        getDhcpRelayBuilder(vni_vrfid, subnet, ipAddress, General.Operations.DELETE, vppNode).build());
                 }
-
             }
 
         }
+        return dhcpRelayCommandsDeleted;
     }
 
-    private boolean submitDhcpRelay(DhcpRelayCommand dhcpRelayCommand, NodeId nodeIid) {
-        LOG.trace("Submitting DhcpRelay command: {}, nodeId: {}", dhcpRelayCommand, nodeIid);
-        if (dhcpRelayCommand.getOperation() == General.Operations.PUT) {
-            return GbpNetconfTransaction.netconfSyncedWrite(VppIidFactory.getNetconfNodeIid(nodeIid), dhcpRelayCommand,
+    public boolean submitDhcpRelay(DhcpRelayCommand dhcpRelayCommand) {
+        LOG.trace("Submitting DhcpRelay command: {}, nodeId: {}", dhcpRelayCommand, dhcpRelayCommand.getVppNodeId());
+        switch (dhcpRelayCommand.getOperation()){
+            case PUT:
+                return GbpNetconfTransaction.netconfSyncedWrite(
+                VppIidFactory.getNetconfNodeIid(dhcpRelayCommand.getVppNodeId()), dhcpRelayCommand,
                 GbpNetconfTransaction.RETRY_COUNT);
-        } else if (dhcpRelayCommand.getOperation() == General.Operations.DELETE) {
-            return GbpNetconfTransaction.netconfSyncedDelete(VppIidFactory.getNetconfNodeIid(nodeIid), dhcpRelayCommand,
+            case DELETE:
+                return GbpNetconfTransaction.netconfSyncedDelete(
+                VppIidFactory.getNetconfNodeIid(dhcpRelayCommand.getVppNodeId()), dhcpRelayCommand,
                 GbpNetconfTransaction.RETRY_COUNT);
+            case MERGE:
+                return GbpNetconfTransaction.netconfSyncedMerge(
+                    VppIidFactory.getNetconfNodeIid(dhcpRelayCommand.getVppNodeId()), dhcpRelayCommand,
+                    GbpNetconfTransaction.RETRY_COUNT);
+            default:
+                LOG.warn("Unknown operation for command, cannot submit command {}.", dhcpRelayCommand);
+                return false;
         }
-        return false;
     }
 }

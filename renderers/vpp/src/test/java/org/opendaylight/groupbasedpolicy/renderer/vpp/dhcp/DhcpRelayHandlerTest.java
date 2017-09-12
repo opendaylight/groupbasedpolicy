@@ -112,9 +112,12 @@ public class DhcpRelayHandlerTest extends VppRendererDataBrokerTest {
 
     @Test
     public void createIpv4DhcpRelayTest() throws ExecutionException, InterruptedException {
-        DhcpRelayHandler dhcpRelayHandler = new DhcpRelayHandler(dataBroker, mountedDataProviderMock);
+        DhcpRelayHandler dhcpRelayHandler = new DhcpRelayHandler(dataBroker);
 
-        dhcpRelayHandler.createIpv4DhcpRelay(RX_VRF_ID, subnet, vppNodesByL2Fd);
+        List<DhcpRelayCommand> createdIpv4DhcpRelays =
+            dhcpRelayHandler.getCreatedIpv4DhcpRelays(RX_VRF_ID, subnet, vppNodesByL2Fd);
+        createdIpv4DhcpRelays.forEach(dhcpRelayHandler::submitDhcpRelay);
+
         Optional<Relay> relayOptional = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
             VppIidFactory.getDhcpRelayIid(DHCP_RELAY_COMMAND.getDhcpBuilder().getKey()),
             dataBroker.newReadOnlyTransaction());
@@ -124,11 +127,14 @@ public class DhcpRelayHandlerTest extends VppRendererDataBrokerTest {
 
     @Test
     public void createIpv4DhcpRelayTestWithNullServerIp() throws ExecutionException, InterruptedException {
-        DhcpRelayHandler dhcpRelayHandler = new DhcpRelayHandler(dataBroker, mountedDataProviderMock);
+        DhcpRelayHandler dhcpRelayHandler = new DhcpRelayHandler(dataBroker);
 
         Subnet subnet1 = new SubnetBuilder(subnet).setDefaultSubnetGatewayIp(null).build();
 
-        dhcpRelayHandler.createIpv4DhcpRelay(RX_VRF_ID, subnet1, vppNodesByL2Fd);
+        List<DhcpRelayCommand> createdIpv4DhcpRelays =
+        dhcpRelayHandler.getCreatedIpv4DhcpRelays(RX_VRF_ID, subnet1, vppNodesByL2Fd);
+        createdIpv4DhcpRelays.forEach(dhcpRelayHandler::submitDhcpRelay);
+
         Optional<Relay> relayOptional = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
             VppIidFactory.getDhcpRelayIid(DHCP_RELAY_COMMAND.getDhcpBuilder().getKey()),
             dataBroker.newReadOnlyTransaction());
@@ -137,7 +143,7 @@ public class DhcpRelayHandlerTest extends VppRendererDataBrokerTest {
 
     @Test
     public void deleteIpv4DhcpRelayTest() throws ExecutionException, InterruptedException {
-        DhcpRelayHandler dhcpRelayHandler = new DhcpRelayHandler(dataBroker, mountedDataProviderMock);
+        DhcpRelayHandler dhcpRelayHandler = new DhcpRelayHandler(dataBroker);
         writeBasicRelay();
 
         Optional<Relay> relayOptional = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
@@ -146,7 +152,10 @@ public class DhcpRelayHandlerTest extends VppRendererDataBrokerTest {
         Assert.assertTrue(relayOptional.isPresent());
         Assert.assertEquals(RELAY, relayOptional.get());
 
-        dhcpRelayHandler.deleteIpv4DhcpRelay(RX_VRF_ID, subnet, vppNodesByL2Fd);
+        List<DhcpRelayCommand> deletedIpv4DhcpRelays =
+            dhcpRelayHandler.getDeletedIpv4DhcpRelays(RX_VRF_ID, subnet, vppNodesByL2Fd);
+        deletedIpv4DhcpRelays.forEach(dhcpRelayHandler::submitDhcpRelay);
+
         relayOptional = DataStoreHelper.readFromDs(LogicalDatastoreType.CONFIGURATION,
             VppIidFactory.getDhcpRelayIid(DHCP_RELAY_COMMAND.getDhcpBuilder().getKey()),
             dataBroker.newReadOnlyTransaction());
