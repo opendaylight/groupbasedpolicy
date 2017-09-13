@@ -21,7 +21,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.faas.uln.datastore.api.UlnDatastoreApi;
+import org.opendaylight.faas.uln.datastore.api.UlnDatastoreUtil;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IetfModelCodec;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.common.rev151013.Text;
@@ -47,13 +47,15 @@ public class FaasSubnetManagerListener implements DataTreeChangeListener<Subnet>
     private final DataBroker dataProvider;
     private final TenantId gbpTenantId;
     private final Uuid faasTenantId;
+    private final UlnDatastoreUtil ulnDatastoreUtil;
 
     public FaasSubnetManagerListener(DataBroker dataProvider, TenantId gbpTenantId, Uuid faasTenantId,
-            Executor executor) {
+            Executor executor, UlnDatastoreUtil ulnDatastoreUtil) {
         this.executor = executor;
         this.faasTenantId = faasTenantId;
         this.gbpTenantId = gbpTenantId;
         this.dataProvider = dataProvider;
+        this.ulnDatastoreUtil = ulnDatastoreUtil;
     }
 
     @Override
@@ -69,7 +71,7 @@ public class FaasSubnetManagerListener implements DataTreeChangeListener<Subnet>
                 case WRITE:
                     Subnet updatedSubnet = rootNode.getDataAfter();
                     LOG.debug("Subnet {} is Updated.", updatedSubnet.getId().getValue());
-                    UlnDatastoreApi.submitSubnetToDs(initSubnetBuilder(updatedSubnet).build());
+                    ulnDatastoreUtil.submitSubnetToDs(initSubnetBuilder(updatedSubnet).build());
                     break;
                 case DELETE:
                     Subnet deletedSubnet = rootNode.getDataBefore();
@@ -81,7 +83,7 @@ public class FaasSubnetManagerListener implements DataTreeChangeListener<Subnet>
                     }
                     Uuid faasSubnetId = mappedSubnets.remove(deletedSubnet.getId());
                     if (faasSubnetId != null) {
-                        UlnDatastoreApi.removeSubnetFromDsIfExists(faasTenantId, faasSubnetId);
+                        ulnDatastoreUtil.removeSubnetFromDsIfExists(faasTenantId, faasSubnetId);
                     }
                     break;
                 default:
@@ -99,7 +101,7 @@ public class FaasSubnetManagerListener implements DataTreeChangeListener<Subnet>
         if (subnets != null) {
             for (Subnet subnet : subnets) {
                 LOG.debug("Loading Subnet {}", subnet.getId().getValue());
-                UlnDatastoreApi.submitSubnetToDs(initSubnetBuilder(subnet).build());
+                ulnDatastoreUtil.submitSubnetToDs(initSubnetBuilder(subnet).build());
             }
         }
     }

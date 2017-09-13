@@ -12,7 +12,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -38,9 +37,8 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
-import org.opendaylight.faas.uln.datastore.api.UlnDatastoreApi;
+import org.opendaylight.faas.uln.datastore.api.UlnDatastoreUtil;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.common.rev151013.Uuid;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.security.rules.rev151013.security.rule.groups.attributes.security.rule.groups.container.SecurityRuleGroups;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.security.rules.rev151013.security.rule.groups.attributes.security.rule.groups.container.security.rule.groups.SecurityRuleGroup;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.security.rules.rev151013.security.rule.groups.attributes.security.rule.groups.container.security.rule.groups.security.rule.group.SecurityRule;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ClassifierName;
@@ -61,12 +59,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.contract.subject.RuleBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.policy.subject.feature.instances.ClassifierInstance;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest(UlnDatastoreApi.class)
 public class FaasContractManagerListenerCovrgTest {
 
     private static final ClauseName CLAUSE_NAME = new ClauseName("clause-1");
@@ -77,6 +72,7 @@ public class FaasContractManagerListenerCovrgTest {
     private final TenantId gbpTenantId = new TenantId("b4511aac-ae43-11e5-bf7f-feff819cdc9f");
     private final Uuid faasTenantId = new Uuid("b4511aac-ae43-11e5-bf7f-feff819cdc9f");
     private DataBroker dataProvider;
+    private final UlnDatastoreUtil mockUlnDatastoreUtil = mock(UlnDatastoreUtil.class);
 
     @SuppressWarnings("unchecked")
     @Before
@@ -85,16 +81,12 @@ public class FaasContractManagerListenerCovrgTest {
         dataProvider = mock(DataBroker.class);
 
         listener = new FaasContractManagerListener(dataProvider, gbpTenantId, faasTenantId,
-                MoreExecutors.directExecutor());
+                MoreExecutors.directExecutor(), mockUlnDatastoreUtil);
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testExecuteEvent() throws ReadFailedException {
-        PowerMockito.mockStatic(UlnDatastoreApi.class);
-        PowerMockito.doNothing().when(UlnDatastoreApi.class);
-        UlnDatastoreApi.submitSecurityGroupsToDs(any(SecurityRuleGroups.class));
-
         ReadWriteTransaction rwTx = mock(ReadWriteTransaction.class);
         WriteTransaction woTx = mock(WriteTransaction.class);
         CheckedFuture<Void, TransactionCommitFailedException> futureVoid = mock(CheckedFuture.class);

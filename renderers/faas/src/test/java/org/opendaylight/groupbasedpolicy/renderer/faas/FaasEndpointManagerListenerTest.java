@@ -31,6 +31,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
+import org.opendaylight.faas.uln.datastore.api.UlnDatastoreUtil;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.MacAddress;
@@ -57,6 +58,7 @@ public class FaasEndpointManagerListenerTest {
     private MockFaasEndpointManagerListener endpointManagerListener;
     private MockFaasPolicyManager policyManager;
     private final DataBroker dataProvider = mock(DataBroker.class);
+    private final UlnDatastoreUtil mockUlnDatastoreUtil = mock(UlnDatastoreUtil.class);
 
     @SuppressWarnings("unchecked")
     @Before
@@ -68,7 +70,8 @@ public class FaasEndpointManagerListenerTest {
         when(dataProvider.newWriteOnlyTransaction()).thenReturn(writeTransaction);
         CheckedFuture<Void, TransactionCommitFailedException> checkedFuture = mock(CheckedFuture.class);
         when(writeTransaction.submit()).thenReturn(checkedFuture);
-        policyManager = new MockFaasPolicyManager(dataProvider, mock(ScheduledExecutorService.class));
+        policyManager = new MockFaasPolicyManager(dataProvider, mock(ScheduledExecutorService.class),
+                mockUlnDatastoreUtil);
         endpointManagerListener = new MockFaasEndpointManagerListener(policyManager, dataProvider,
                 MoreExecutors.directExecutor());
 

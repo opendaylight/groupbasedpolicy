@@ -24,7 +24,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.faas.uln.datastore.api.UlnDatastoreApi;
+import org.opendaylight.faas.uln.datastore.api.UlnDatastoreUtil;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IetfModelCodec;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
@@ -55,6 +55,7 @@ public class FaasEndpointManagerListener implements AutoCloseable {
     private final List<ListenerRegistration<?>> listenerRegistrations = new ArrayList<>();
     private final FaasPolicyManager policyManager;
     private final DataBroker dataProvider;
+    private final UlnDatastoreUtil ulnDatastoreUtil;
 
     public FaasEndpointManagerListener(FaasPolicyManager policyManager, DataBroker dataProvider,
             Executor executor) {
@@ -69,6 +70,8 @@ public class FaasEndpointManagerListener implements AutoCloseable {
         listenerRegistrations.add(dataProvider.registerDataTreeChangeListener(new DataTreeIdentifier<>(
             LogicalDatastoreType.OPERATIONAL, IidFactory.endpointsIidWildcard().child(EndpointL3.class)),
             changes -> executor.execute(() -> onEndpointL3Changed(changes))));
+
+        this.ulnDatastoreUtil = new UlnDatastoreUtil(dataProvider);
     }
 
     @Override
@@ -148,7 +151,7 @@ public class FaasEndpointManagerListener implements AutoCloseable {
             ipBuilder.setSubnetId(faasSubnetId);
             privateIpAddresses.add(ipBuilder.build());
         }
-        if (!UlnDatastoreApi.attachEndpointToSubnet(epLocBuilder, faasSubnetId, IetfModelCodec.macAddress2013(endpoint.getMacAddress()),
+        if (!ulnDatastoreUtil.attachEndpointToSubnet(epLocBuilder, faasSubnetId, IetfModelCodec.macAddress2013(endpoint.getMacAddress()),
                 privateIpAddresses, null)) {
             LOG.error("Failed Endpoint Registration. Failed to Attach Endpoint to Faas Logical Network. Endpoint {}",
                     endpoint);
@@ -252,7 +255,7 @@ public class FaasEndpointManagerListener implements AutoCloseable {
                     FaasIidFactory.mappedEndpointIid(tenantId, mappedEndpointKey), rwTx);
             DataStoreHelper.submitToDs(rwTx);
             if (endpointOp.isPresent()) {
-                UlnDatastoreApi.removeEndpointLocationFromDsIfExists(policyManager.getFaasTenantId(tenantId),
+                ulnDatastoreUtil.removeEndpointLocationFromDsIfExists(policyManager.getFaasTenantId(tenantId),
                         endpointOp.get().getEndpointLocation());
             }
         }

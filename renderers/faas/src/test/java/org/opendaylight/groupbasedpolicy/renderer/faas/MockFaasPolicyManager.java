@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.faas.uln.datastore.api.Pair;
+import org.opendaylight.faas.uln.datastore.api.UlnDatastoreUtil;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.common.rev151013.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
@@ -45,8 +46,8 @@ public class MockFaasPolicyManager extends FaasPolicyManager {
     private ServiceCommunicationLayer comLayer;
     private ExternalImplicitGroup externalImplicitGroup;
 
-    public MockFaasPolicyManager(DataBroker dataBroker, Executor executor) {
-        super(dataBroker, executor);
+    public MockFaasPolicyManager(DataBroker dataBroker, Executor executor, UlnDatastoreUtil ulnDatastoreUtil) {
+        super(dataBroker, executor, ulnDatastoreUtil);
     }
 
     // *******************************************************

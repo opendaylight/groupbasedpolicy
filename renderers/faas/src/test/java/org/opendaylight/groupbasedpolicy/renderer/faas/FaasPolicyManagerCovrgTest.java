@@ -9,7 +9,6 @@ package org.opendaylight.groupbasedpolicy.renderer.faas;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -25,7 +24,6 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
@@ -34,7 +32,7 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
-import org.opendaylight.faas.uln.datastore.api.UlnDatastoreApi;
+import org.opendaylight.faas.uln.datastore.api.UlnDatastoreUtil;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.groupbasedpolicy.util.TenantUtils;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.common.rev151013.Uuid;
@@ -74,12 +72,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.p
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.resolved.policy.rev150828.resolved.policies.resolved.policy.policy.rule.group.with.endpoint.constraints.PolicyRuleGroupBuilder;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(UlnDatastoreApi.class)
 public class FaasPolicyManagerCovrgTest {
 
     private InstanceIdentifier<DataObject> policyId;
@@ -98,6 +91,7 @@ public class FaasPolicyManagerCovrgTest {
     private final SubnetId subnetId = new SubnetId("subnetId");
     private final Uuid dummyUuid1 = new Uuid("2eb98cf5-086c-4a81-8a4e-0c3b4566108b");
     private final Uuid dummyUuid2 = new Uuid("3eb98cf5-086c-4a81-8a4e-0c3b4566108b");
+    private final UlnDatastoreUtil mockUlnDatastoreUtil = mock(UlnDatastoreUtil.class);
 
     @SuppressWarnings("unchecked")
     @Before
@@ -115,7 +109,7 @@ public class FaasPolicyManagerCovrgTest {
 
     @Test
     public void testConstructor() throws Exception {
-        FaasPolicyManager other = new MockFaasPolicyManager(dataProvider, executor);
+        FaasPolicyManager other = new MockFaasPolicyManager(dataProvider, executor, mockUlnDatastoreUtil);
 
         verify(dataProvider).registerDataTreeChangeListener(new DataTreeIdentifier<>(LogicalDatastoreType.OPERATIONAL,
                 InstanceIdentifier.builder(ResolvedPolicies.class).child(ResolvedPolicy.class).build()), other);
@@ -174,7 +168,7 @@ public class FaasPolicyManagerCovrgTest {
         when(futureLogicalNetworks.checkedGet()).thenReturn(optLogicalNetworks);
 
         EndpointGroupId epgId = new EndpointGroupId("epgId");
-        FaasPolicyManager policyManager = spy(new FaasPolicyManager(dataProvider, executor));
+        FaasPolicyManager policyManager = spy(new FaasPolicyManager(dataProvider, executor, mockUlnDatastoreUtil));
         doNothing().when(policyManager).removeTenantLogicalNetwork(tenantId, faasTenantId, false);
 
         policyManager.registerTenant(tenantId, epgId);
@@ -245,11 +239,7 @@ public class FaasPolicyManagerCovrgTest {
         when(optMappedTenant.isPresent()).thenReturn(true);
         when(futureMappedTenant.checkedGet()).thenReturn(optMappedTenant);
 
-        PowerMockito.mockStatic(UlnDatastoreApi.class);
-        PowerMockito.doNothing().when(UlnDatastoreApi.class);
-        UlnDatastoreApi.removeTenantFromDsIfExists(any(Uuid.class));
-
-        FaasPolicyManager policyManager = spy(new FaasPolicyManager(dataProvider, executor));
+        FaasPolicyManager policyManager = spy(new FaasPolicyManager(dataProvider, executor, mockUlnDatastoreUtil));
 
         policyManager.removeTenantLogicalNetwork(tenantId, faasTenantId);
     }
@@ -488,13 +478,7 @@ public class FaasPolicyManagerCovrgTest {
                 .build();
         ExternalImplicitGroup externalImplicitGroup = ExternalImplicitGroup.ProviderEpg;
 
-        PowerMockito.mockStatic(UlnDatastoreApi.class);
-        PowerMockito.doNothing().when(UlnDatastoreApi.class);
-        UlnDatastoreApi.removeLogicalSwitchFromDsIfExists(any(Uuid.class), any(Uuid.class));
-        PowerMockito.doNothing().when(UlnDatastoreApi.class);
-        UlnDatastoreApi.removeLogicalRouterFromDsIfExists(any(Uuid.class), any(Uuid.class));
-
-        FaasPolicyManager policyManager = new FaasPolicyManager(dataProvider, executor);
+        FaasPolicyManager policyManager = new FaasPolicyManager(dataProvider, executor, mockUlnDatastoreUtil);
         ReadWriteTransaction rwTx = mock(ReadWriteTransaction.class);
         CheckedFuture<Optional<LogicalNetwork>, ReadFailedException> futureLogicalNetwork =
                 mock(CheckedFuture.class);
@@ -551,7 +535,7 @@ public class FaasPolicyManagerCovrgTest {
 
     @Test
     public void testRemoveLogicalNetwork_null() {
-        FaasPolicyManager policyManager = new FaasPolicyManager(dataProvider, executor);
+        FaasPolicyManager policyManager = new FaasPolicyManager(dataProvider, executor, mockUlnDatastoreUtil);
 
         policyManager.removeLogicalNetwork(null);
     }

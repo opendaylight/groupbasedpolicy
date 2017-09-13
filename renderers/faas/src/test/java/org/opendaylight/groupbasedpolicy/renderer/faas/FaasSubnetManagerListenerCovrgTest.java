@@ -22,7 +22,6 @@ import java.util.Collections;
 import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
@@ -31,7 +30,7 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
-import org.opendaylight.faas.uln.datastore.api.UlnDatastoreApi;
+import org.opendaylight.faas.uln.datastore.api.UlnDatastoreUtil;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpPrefix;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4Address;
@@ -49,12 +48,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.policy.rev140421.tenants.tenant.forwarding.context.subnet.gateways.PrefixesBuilder;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(UlnDatastoreApi.class)
 public class FaasSubnetManagerListenerCovrgTest {
 
     private InstanceIdentifier<Subnet> subnetIid;
@@ -64,6 +58,7 @@ public class FaasSubnetManagerListenerCovrgTest {
     private final Uuid faasTenantId = new Uuid("b4511aac-ae43-11e5-bf7f-feff819cdc9f");
     private final Uuid faasSubnetId = new Uuid("c4511aac-ae43-11e5-bf7f-feff819cdc9f");
     private DataBroker dataProvider;
+    private final UlnDatastoreUtil mockUlnDatastoreUtil = mock(UlnDatastoreUtil.class);
 
     @SuppressWarnings("unchecked")
     @Before
@@ -71,19 +66,12 @@ public class FaasSubnetManagerListenerCovrgTest {
         dataProvider = mock(DataBroker.class);
         subnetIid = mock(InstanceIdentifier.class);
         listener = new FaasSubnetManagerListener(dataProvider, gbpTenantId, faasTenantId,
-                MoreExecutors.directExecutor());
+                MoreExecutors.directExecutor(), mockUlnDatastoreUtil);
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testOnDataChanged() throws ReadFailedException {
-        PowerMockito.mockStatic(UlnDatastoreApi.class);
-        PowerMockito.doNothing().when(UlnDatastoreApi.class);
-        UlnDatastoreApi.submitSubnetToDs(any(
-                org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.subnets.rev151013.subnets.container.subnets.Subnet.class));
-        PowerMockito.doNothing().when(UlnDatastoreApi.class);
-        UlnDatastoreApi.removeSubnetFromDsIfExists(any(Uuid.class), any(Uuid.class));
-
         ReadWriteTransaction rwTx = mock(ReadWriteTransaction.class);
         WriteTransaction woTx = mock(WriteTransaction.class);
         CheckedFuture<Void, TransactionCommitFailedException> futureVoid = mock(CheckedFuture.class);
@@ -115,11 +103,6 @@ public class FaasSubnetManagerListenerCovrgTest {
 
     @Test
     public void testLoadAll() {
-        PowerMockito.mockStatic(UlnDatastoreApi.class);
-        PowerMockito.doNothing().when(UlnDatastoreApi.class);
-        UlnDatastoreApi.submitSubnetToDs(any(
-                org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.subnets.rev151013.subnets.container.subnets.Subnet.class));
-
         List<Subnet> subnets = new ArrayList<>();
         List<MappedSubnet> mpSubnets = new ArrayList<>();
 

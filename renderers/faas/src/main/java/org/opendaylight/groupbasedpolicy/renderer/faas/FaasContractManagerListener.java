@@ -24,7 +24,7 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.faas.uln.datastore.api.UlnDatastoreApi;
+import org.opendaylight.faas.uln.datastore.api.UlnDatastoreUtil;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.common.rev151013.Name;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.common.rev151013.Text;
@@ -76,13 +76,15 @@ public class FaasContractManagerListener implements DataTreeChangeListener<Contr
     private final DataBroker dataProvider;
     private final TenantId gbpTenantId;
     private final Uuid faasTenantId;
+    private final UlnDatastoreUtil ulnDatastoreUtil;
 
     public FaasContractManagerListener(DataBroker dataProvider, TenantId gbpTenantId, Uuid faasTenantId,
-            Executor executor) {
+            Executor executor, UlnDatastoreUtil ulnDatastoreUtil) {
         this.executor = executor;
         this.gbpTenantId = gbpTenantId;
         this.faasTenantId = faasTenantId;
         this.dataProvider = dataProvider;
+        this.ulnDatastoreUtil = ulnDatastoreUtil;
     }
 
     @Override
@@ -98,7 +100,7 @@ public class FaasContractManagerListener implements DataTreeChangeListener<Contr
                 case WRITE:
                     Contract updatedContract = rootNode.getDataAfter();
                     LOG.debug("Contract {} is Updated.", updatedContract.getId().getValue());
-                    UlnDatastoreApi.submitSecurityGroupsToDs(initSecurityGroupBuilder(updatedContract).build());
+                    ulnDatastoreUtil.submitSecurityGroupsToDs(initSecurityGroupBuilder(updatedContract).build());
                     break;
                 case DELETE:
                     Contract deletedContract = rootNode.getDataBefore();
@@ -111,7 +113,7 @@ public class FaasContractManagerListener implements DataTreeChangeListener<Contr
                     }
                     Uuid val = mappedContracts.remove(deletedContract.getId());
                     if (val != null) {
-                        UlnDatastoreApi.removeSecurityGroupsFromDsIfExists(faasTenantId, val);
+                        ulnDatastoreUtil.removeSecurityGroupsFromDsIfExists(faasTenantId, val);
                     }
                     break;
                 default:
@@ -129,7 +131,7 @@ public class FaasContractManagerListener implements DataTreeChangeListener<Contr
         if (contracts != null) {
             for (Contract contract : contracts) {
                 LOG.debug("Loading Contract {}", contract.getId().getValue());
-                UlnDatastoreApi.submitSecurityGroupsToDs(initSecurityGroupBuilder(contract).build());
+                ulnDatastoreUtil.submitSecurityGroupsToDs(initSecurityGroupBuilder(contract).build());
             }
         }
     }

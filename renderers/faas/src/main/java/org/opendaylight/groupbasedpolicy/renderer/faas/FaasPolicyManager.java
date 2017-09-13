@@ -31,7 +31,7 @@ import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.faas.uln.datastore.api.Pair;
-import org.opendaylight.faas.uln.datastore.api.UlnDatastoreApi;
+import org.opendaylight.faas.uln.datastore.api.UlnDatastoreUtil;
 import org.opendaylight.groupbasedpolicy.util.DataStoreHelper;
 import org.opendaylight.groupbasedpolicy.util.IidFactory;
 import org.opendaylight.groupbasedpolicy.util.TenantUtils;
@@ -94,8 +94,14 @@ public class FaasPolicyManager implements DataTreeChangeListener<ResolvedPolicy>
     private final ConcurrentHashMap<TenantId, Uuid> mappedTenants = new ConcurrentHashMap<>();
     final ConcurrentHashMap<TenantId, ArrayList<ListenerRegistration<?>>> registeredTenants =
             new ConcurrentHashMap<>();
+    private final UlnDatastoreUtil ulnDatastoreUtil;
 
     public FaasPolicyManager(DataBroker dataBroker, Executor executor) {
+        this(dataBroker, executor, new UlnDatastoreUtil(dataBroker));
+    }
+
+    @VisibleForTesting
+    FaasPolicyManager(DataBroker dataBroker, Executor executor, UlnDatastoreUtil ulnDatastoreUtil) {
         this.dataProvider = dataBroker;
         this.executor = executor;
         this.registerListener = checkNotNull(dataProvider).registerDataTreeChangeListener(new DataTreeIdentifier<>(
@@ -111,6 +117,8 @@ public class FaasPolicyManager implements DataTreeChangeListener<ResolvedPolicy>
         } else {
             LOG.error("{} renderer Failed to register with the multi-renderer manager", rendererName.getValue());
         }
+
+        this.ulnDatastoreUtil = ulnDatastoreUtil;
     }
 
     @Override
@@ -222,11 +230,11 @@ public class FaasPolicyManager implements DataTreeChangeListener<ResolvedPolicy>
 
             // contracts
             FaasContractManagerListener faasContractManagerListener = new FaasContractManagerListener(dataProvider,
-                    gbpTenantId, faasTenantId, executor);
+                    gbpTenantId, faasTenantId, executor, ulnDatastoreUtil);
             faasContractManagerListener.loadAll(contracts, mappedEntity.getMappedContract());
             // subnets
             FaasSubnetManagerListener faasSubnetManagerListener = new FaasSubnetManagerListener(dataProvider,
-                    gbpTenantId, faasTenantId, executor);
+                    gbpTenantId, faasTenantId, executor, ulnDatastoreUtil);
             faasSubnetManagerListener.loadAll(subnets, mappedEntity.getMappedSubnet());
 
             /*
@@ -432,16 +440,16 @@ public class FaasPolicyManager implements DataTreeChangeListener<ResolvedPolicy>
             Uuid consTenantId = getFaasTenantId(logicalNetwork.getConsumerTenantId());
             Uuid provTenantId = getFaasTenantId(logicalNetwork.getProviderTenantId());
 
-            UlnDatastoreApi.removeLogicalSwitchFromDsIfExists(consTenantId, logicalNetwork.getConsumerNetwork()
+            ulnDatastoreUtil.removeLogicalSwitchFromDsIfExists(consTenantId, logicalNetwork.getConsumerNetwork()
                 .getLogicalSwitchId());
-            UlnDatastoreApi.removeLogicalSwitchFromDsIfExists(provTenantId, logicalNetwork.getProviderNetwork()
+            ulnDatastoreUtil.removeLogicalSwitchFromDsIfExists(provTenantId, logicalNetwork.getProviderNetwork()
                 .getLogicalSwitchId());
             if (logicalNetwork.getConsumerNetwork().getLogicalRouterId() != null) {
-                UlnDatastoreApi.removeLogicalRouterFromDsIfExists(consTenantId, logicalNetwork.getConsumerNetwork()
+                ulnDatastoreUtil.removeLogicalRouterFromDsIfExists(consTenantId, logicalNetwork.getConsumerNetwork()
                     .getLogicalRouterId());
             }
             if (logicalNetwork.getProviderNetwork().getLogicalRouterId() != null) {
-                UlnDatastoreApi.removeLogicalRouterFromDsIfExists(provTenantId, logicalNetwork.getProviderNetwork()
+                ulnDatastoreUtil.removeLogicalRouterFromDsIfExists(provTenantId, logicalNetwork.getProviderNetwork()
                     .getLogicalRouterId());
             }
         }
@@ -550,19 +558,19 @@ public class FaasPolicyManager implements DataTreeChangeListener<ResolvedPolicy>
         LogicalRouterBuilder provLR = initLogicalRouterBuilder(provEpg, faasTenantId,
                 isProviderPublic(externalImplicitGroup));
 
-        if (!UlnDatastoreApi.attachAndSubmitToDs(consLR, provLR, new Pair<>(null, privateSecRulesId), null)) {
+        if (!ulnDatastoreUtil.attachAndSubmitToDs(consLR, provLR, new Pair<>(null, privateSecRulesId), null)) {
             LOG.error("Failed to join Logical Routers in a Logical Network");
             return;
         }
 
-        if (!UlnDatastoreApi.attachAndSubmitToDs(consLR.getUuid(), lNetbuilder.getConsumerNetwork()
+        if (!ulnDatastoreUtil.attachAndSubmitToDs(consLR.getUuid(), lNetbuilder.getConsumerNetwork()
             .getLogicalSwitchId(), faasTenantId, new Pair<>(LocationType.RouterType, LocationType.SwitchType))) {
             LOG.error("Failed to join Consumer Logical Router to Logical Switch in a Logical Network");
             return;
         }
         LOG.debug("Attached Consumer Router {} to Consumer Switch {}", consLR.getUuid().getValue(),
                 lNetbuilder.getConsumerNetwork().getLogicalSwitchId().getValue());
-        if (!UlnDatastoreApi.attachAndSubmitToDs(provLR.getUuid(), lNetbuilder.getProviderNetwork()
+        if (!ulnDatastoreUtil.attachAndSubmitToDs(provLR.getUuid(), lNetbuilder.getProviderNetwork()
             .getLogicalSwitchId(), faasTenantId, new Pair<>(LocationType.RouterType, LocationType.SwitchType))) {
             LOG.error("Failed to join Provider Logical Router to Logical Switch in a Logical Network");
             return;
@@ -612,11 +620,11 @@ public class FaasPolicyManager implements DataTreeChangeListener<ResolvedPolicy>
         if (isConsumerPublic(externalImplicitGroup)) {
             Uuid faasTenantId = getFaasTenantId(gbpTenantId);
             LogicalRouterBuilder consLR = initLogicalRouterBuilder(consEpg, faasTenantId, true);
-            UlnDatastoreApi.submitLogicalRouterToDs(consLR.build());
+            ulnDatastoreUtil.submitLogicalRouterToDs(consLR.build());
             ConsumerNetworkBuilder cNetBuilder = new ConsumerNetworkBuilder(lNetbuilder.getConsumerNetwork());
             cNetBuilder.setLogicalRouterId(consLR.getUuid());
             lNetbuilder.setConsumerNetwork(cNetBuilder.build());
-            if (!UlnDatastoreApi.attachAndSubmitToDs(consLR.getUuid(), lNetbuilder.getConsumerNetwork()
+            if (!ulnDatastoreUtil.attachAndSubmitToDs(consLR.getUuid(), lNetbuilder.getConsumerNetwork()
                 .getLogicalSwitchId(), faasTenantId, new Pair<>(LocationType.RouterType, LocationType.SwitchType),
                     null, null)) {
                 LOG.error("Failed to join Consumer Public Logical Router to Logical Switch in a Logical Network");
@@ -628,11 +636,11 @@ public class FaasPolicyManager implements DataTreeChangeListener<ResolvedPolicy>
             Uuid faasTenantId = getFaasTenantId(gbpTenantId);
             LogicalRouterBuilder provLR = initLogicalRouterBuilder(provEpg, faasTenantId, true);
             provLR.setPublic(true);
-            UlnDatastoreApi.submitLogicalRouterToDs(provLR.build());
+            ulnDatastoreUtil.submitLogicalRouterToDs(provLR.build());
             ProviderNetworkBuilder cNetBuilder = new ProviderNetworkBuilder(lNetbuilder.getProviderNetwork());
             cNetBuilder.setLogicalRouterId(provLR.getUuid());
             lNetbuilder.setProviderNetwork(cNetBuilder.build());
-            if (!UlnDatastoreApi.attachAndSubmitToDs(provLR.getUuid(), lNetbuilder.getProviderNetwork()
+            if (!ulnDatastoreUtil.attachAndSubmitToDs(provLR.getUuid(), lNetbuilder.getProviderNetwork()
                 .getLogicalSwitchId(), faasTenantId, new Pair<>(LocationType.RouterType, LocationType.SwitchType),
                     null, null)) {
                 LOG.error("Failed to join Provider Public Logical Router to Logical Switch in a Logical Network");
@@ -693,16 +701,16 @@ public class FaasPolicyManager implements DataTreeChangeListener<ResolvedPolicy>
         LogicalSwitchBuilder consLS = initLogicalSwitchBuilder(consEpg, faasTenantId);
         LogicalSwitchBuilder provLS = initLogicalSwitchBuilder(provEpg, faasTenantId);
         if (layer2SecRulesId != null) {
-            if (!UlnDatastoreApi.attachAndSubmitToDs(consLS, provLS, new Pair<Uuid, Uuid>(null, layer2SecRulesId))) {
+            if (!ulnDatastoreUtil.attachAndSubmitToDs(consLS, provLS, new Pair<Uuid, Uuid>(null, layer2SecRulesId))) {
                 LOG.error("Failed to join Logical Switches in a Logical Network");
                 return null;
             }
         } else {
-            UlnDatastoreApi.submitLogicalSwitchToDs(consLS.build());
-            UlnDatastoreApi.submitLogicalSwitchToDs(provLS.build());
+            ulnDatastoreUtil.submitLogicalSwitchToDs(consLS.build());
+            ulnDatastoreUtil.submitLogicalSwitchToDs(provLS.build());
         }
         for (Uuid subnetId : consFaasSubnetIds) {
-            if (!UlnDatastoreApi.attachAndSubmitToDs(consLS.getUuid(), subnetId, consLS.getTenantId(), new Pair<>(
+            if (!ulnDatastoreUtil.attachAndSubmitToDs(consLS.getUuid(), subnetId, consLS.getTenantId(), new Pair<>(
                     LocationType.SwitchType, LocationType.SubnetType))) {
                 LOG.error("Failed to join Consumer Logical Switch with Subnet {} in a Logical Network", subnetId);
                 return null;
@@ -710,7 +718,7 @@ public class FaasPolicyManager implements DataTreeChangeListener<ResolvedPolicy>
             LOG.debug("Attached Consumer Switch {} to Subnet {}", consLS.getUuid().getValue(), subnetId.getValue());
         }
         for (Uuid subnetId : provFaasSubnetIds) {
-            if (!UlnDatastoreApi.attachAndSubmitToDs(provLS.getUuid(), subnetId, provLS.getTenantId(), new Pair<>(
+            if (!ulnDatastoreUtil.attachAndSubmitToDs(provLS.getUuid(), subnetId, provLS.getTenantId(), new Pair<>(
                     LocationType.SwitchType, LocationType.SubnetType))) {
                 LOG.error("Failed to join Provider Logical Switch with Subnet {} in a Logical Network", subnetId);
                 return null;
@@ -1014,7 +1022,7 @@ public class FaasPolicyManager implements DataTreeChangeListener<ResolvedPolicy>
 
     @VisibleForTesting
     void removeTenantLogicalNetwork(TenantId gbpTenantId, Uuid faasTenantId, boolean unregister) {
-        UlnDatastoreApi.removeTenantFromDsIfExists(faasTenantId);
+        ulnDatastoreUtil.removeTenantFromDsIfExists(faasTenantId);
         synchronized (this) {
             mappedTenants.remove(gbpTenantId);
             Optional<LogicalNetworks> op3 = DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL,

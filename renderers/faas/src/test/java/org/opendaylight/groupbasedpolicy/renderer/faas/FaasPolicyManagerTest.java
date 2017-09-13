@@ -24,6 +24,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
+import org.opendaylight.faas.uln.datastore.api.UlnDatastoreUtil;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.common.rev151013.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.ContractId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.EndpointGroupId;
@@ -66,6 +67,7 @@ public class FaasPolicyManagerTest {
     Uuid faasTenantId = new Uuid("0eb98cf5-086c-4a81-8a4e-0c3b4566108b");
     Uuid faasSecRulesId = new Uuid("1eb98cf5-086c-4a81-8a4e-0c3b4566108b");
     L3ContextId l3Context = new L3ContextId("l3ContextId");
+    private final UlnDatastoreUtil mockUlnDatastoreUtil = mock(UlnDatastoreUtil.class);
 
     @SuppressWarnings("unchecked")
     @Before
@@ -83,7 +85,8 @@ public class FaasPolicyManagerTest {
     @Test
     public void testLayer2ResolvedPolicyWithImpExternalEpg() {
         // prepare input test data
-        MockFaasPolicyManager policyManager = new MockFaasPolicyManager(dataProvider, MoreExecutors.directExecutor());
+        MockFaasPolicyManager policyManager = new MockFaasPolicyManager(dataProvider, MoreExecutors.directExecutor(),
+                mockUlnDatastoreUtil);
 
         // mock input test policy
         policyManager.storeTestEpg(makeTestEndpointGroup(consumerEpgId));
@@ -127,7 +130,8 @@ public class FaasPolicyManagerTest {
     @Test
     public void testLayer3ResolvedPolicy() {
         // prepare input test data
-        MockFaasPolicyManager policyManager = new MockFaasPolicyManager(dataProvider, MoreExecutors.directExecutor());
+        MockFaasPolicyManager policyManager = new MockFaasPolicyManager(dataProvider, MoreExecutors.directExecutor(),
+                mockUlnDatastoreUtil);
 
         // mock input test policy
         policyManager.storeTestL3Contextes(makeTestL3Context());

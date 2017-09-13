@@ -11,6 +11,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.Executor;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.faas.uln.datastore.api.UlnDatastoreUtil;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.common.rev151013.Uuid;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.faas.logical.faas.subnets.rev151013.subnets.container.subnets.SubnetBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.groupbasedpolicy.common.rev140421.TenantId;
@@ -23,8 +24,8 @@ public class MockFaasSubnetManagerListener extends FaasSubnetManagerListener {
     private Uuid expectedFaasSubnetId;
 
     public MockFaasSubnetManagerListener(DataBroker dataProvider, TenantId gbpTenantId, Uuid faasTenantId,
-            Executor executor) {
-        super(dataProvider, gbpTenantId, faasTenantId, executor);
+            Executor executor, UlnDatastoreUtil ulnDatastoreUtil) {
+        super(dataProvider, gbpTenantId, faasTenantId, executor, ulnDatastoreUtil);
     }
 
     // *******************************************************
