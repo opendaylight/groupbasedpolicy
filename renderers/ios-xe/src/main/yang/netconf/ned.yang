@@ -21,7 +21,7 @@ module ned {
         "This file was adapted to be parsed by yangtools for groupbasedpolicy project purpose";
 
     revision
-        2016-03-8;
+        2016-03-08;
 
 /// ========================================================================
 /// typedefs
