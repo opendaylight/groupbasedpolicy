@@ -12,7 +12,7 @@
 
     <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>odl-groupbasedpolicy-vpp</artifactId>
-    <version>0.6.0-SNAPSHOT</version>
+    <version>0.6.0</version>
     <packaging>feature</packaging>
     <!--
         The VPP renderer
@@ -22,9 +22,9 @@
     <name>ODL :: groupbasedpolicy :: ${project.artifactId}</name>
 
     <properties>
-        <netconf.version>1.3.0-SNAPSHOT</netconf.version>
-        <vbd.version>1.2.0-SNAPSHOT</vbd.version>
-        <lisp.version>1.6.0-SNAPSHOT</lisp.version>
+        <netconf.version>1.3.0</netconf.version>
+        <vbd.version>1.2.0</vbd.version>
+        <lisp.version>1.6.0</lisp.version>
     </properties>
 
     <dependencyManagement>
@@ -87,7 +87,7 @@
         <dependency>
             <groupId>org.opendaylight.netconf</groupId>
             <artifactId>odl-restconf</artifactId>
-            <version>1.6.0-SNAPSHOT</version>
+            <version>1.6.0</version>
             <type>xml</type>
             <classifier>features</classifier>
         </dependency>
