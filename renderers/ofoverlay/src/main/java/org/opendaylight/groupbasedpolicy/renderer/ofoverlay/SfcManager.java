@@ -9,6 +9,7 @@
 package org.opendaylight.groupbasedpolicy.renderer.ofoverlay;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -73,6 +74,7 @@ public class SfcManager implements AutoCloseable, DataTreeChangeListener<ActionI
     private final ExecutorService executor;
     private final InstanceIdentifier<ActionInstance> allActionInstancesIid;
     private final ListenerRegistration<?> actionListener;
+    private final SfcProviderRpc sfcProviderRpc;
 
     /*
      * local cache of the RSP first hops that we've requested from SFC,
@@ -110,8 +112,10 @@ public class SfcManager implements AutoCloseable, DataTreeChangeListener<ActionI
     public SfcManager(DataBroker dataBroker,
                       RpcProviderRegistry rpcRegistry,
                       ExecutorService executor) {
+        Preconditions.checkNotNull(dataBroker, "Databroker for SfcManager must not be null!");
         this.dataBroker = dataBroker;
         this.executor = executor;
+        this.sfcProviderRpc = new SfcProviderRpc(dataBroker);
         /*
          * Use thread-safe type only because we use an executor
          */
@@ -345,8 +349,7 @@ public class SfcManager implements AutoCloseable, DataTreeChangeListener<ActionI
                        .setName(pv.getStringValue());
             // TODO: make async
             Future<RpcResult<ReadRenderedServicePathFirstHopOutput>> result =
-                SfcProviderRpc.getSfcProviderRpc()
-                              .readRenderedServicePathFirstHop(builder.build());
+                sfcProviderRpc.readRenderedServicePathFirstHop(builder.build());
 
             try {
                 RpcResult<ReadRenderedServicePathFirstHopOutput> output =

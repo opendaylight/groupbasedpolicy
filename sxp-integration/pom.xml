@@ -60,6 +60,11 @@
                 <artifactId>sxp-core</artifactId>
                 <version>${sxp.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.opendaylight.sxp</groupId>
+                <artifactId>sxp-controller</artifactId>
+                <version>${sxp.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -75,9 +80,8 @@
         </dependency>
         <dependency>
             <groupId>org.opendaylight.controller</groupId>
-             <artifactId>sal-binding-broker-impl</artifactId>
-             <type>test-jar</type>
-             <scope>test</scope>
+            <artifactId>sal-binding-broker-impl</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

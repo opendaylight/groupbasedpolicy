@@ -7,13 +7,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>org.opendaylight.mdsal</groupId>
-        <artifactId>binding-parent</artifactId>
-        <version>0.12.0-SNAPSHOT</version>
-        <relativePath/>
+        <groupId>org.opendaylight.groupbasedpolicy</groupId>
+        <artifactId>sxp-integration</artifactId>
+        <version>0.7.0-SNAPSHOT</version>
+        <relativePath>..</relativePath>
     </parent>
 
-    <groupId>org.opendaylight.groupbasedpolicy</groupId>
     <artifactId>ip-sgt-distribution-service</artifactId>
     <version>0.7.0-SNAPSHOT</version>
     <packaging>bundle</packaging>
@@ -24,33 +23,6 @@
     <properties>
         <sxp.version>1.6.0-SNAPSHOT</sxp.version>
     </properties>
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-               <groupId>org.opendaylight.controller</groupId>
-                <artifactId>mdsal-artifacts</artifactId>
-                <version>1.7.0-SNAPSHOT</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.opendaylight.sxp</groupId>
-                <artifactId>sxp-core</artifactId>
-                <version>${sxp.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.opendaylight.sxp</groupId>
-                <artifactId>sxp-api</artifactId>
-                <version>${sxp.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.opendaylight.sxp</groupId>
-                <artifactId>sxp-controller</artifactId>
-                <version>${sxp.version}</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
 
     <dependencies>
         <dependency>
