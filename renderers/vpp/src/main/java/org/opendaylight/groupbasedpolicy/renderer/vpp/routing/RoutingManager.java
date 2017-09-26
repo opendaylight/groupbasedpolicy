@@ -9,6 +9,7 @@
 package org.opendaylight.groupbasedpolicy.renderer.vpp.routing;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +19,7 @@ import javax.annotation.Nonnull;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.commands.RoutingCommand;
+import org.opendaylight.groupbasedpolicy.renderer.vpp.config.ConfigUtil;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.GbpNetconfTransaction;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.General;
 import org.opendaylight.groupbasedpolicy.renderer.vpp.util.MountedDataBrokerProvider;
@@ -67,7 +69,9 @@ public class RoutingManager {
                 forwardingByTenant.getTenantId(), gateways, virtualRouterIp);
             List<Route> ipv4Routes = new ArrayList<>();
             PhysicalInterface outboundInterface = resolveOutboundInterface(virtualRouterIp, physIntIids);
-            InstanceIdentifier<Node> node = resolveOutboundNode(virtualRouterIp, physIntIids);
+            List <InstanceIdentifier<Node>>
+                nodes = !ConfigUtil.getInstance().isL3FlatEnabled() ? resolveOutboundNodes(virtualRouterIp,
+                    physIntIids) : resolveOutboundNodes(null, physIntIids);
 
             String outboundIntName = outboundInterface != null ? outboundInterface.getInterfaceName() : null;
 
@@ -87,14 +91,17 @@ public class RoutingManager {
             }
 
             if (!ipv4Routes.isEmpty()) {
-                RoutingCommand command = routingCommands.put(node, new RoutingCommand.RoutingCommandBuilder()
-                    .setOperation(operation)
-                    .setRouterProtocol(RoutingCommand.DEFAULT_ROUTING_PROTOCOL)
-                    .setRoutes(ipv4Routes)
-                    //todo in multi-tenant environment we need to use different vrfID for each tenant
-                    .setVrfId(DEFAULT_TABLE)
-                    .build());
-                LOG.trace("Creating of routing successful, routing command: {}.", command);
+                for (InstanceIdentifier<Node> node : nodes) {
+
+                    RoutingCommand command =
+                        routingCommands.put(node, new RoutingCommand.RoutingCommandBuilder().setOperation(operation)
+                            .setRouterProtocol(RoutingCommand.DEFAULT_ROUTING_PROTOCOL)
+                            .setRoutes(ipv4Routes)
+                            //todo in multi-tenant environment we need to use different vrfID for each tenant
+                            .setVrfId(DEFAULT_TABLE)
+                            .build());
+                    LOG.trace("Creating of routing successful, routing command: {}.", command);
+                }
             }
         });
 
@@ -153,22 +160,33 @@ public class RoutingManager {
         return null;
     }
 
-    private InstanceIdentifier<Node> resolveOutboundNode(@Nonnull IpAddress extIfaceIp,
+    private List<InstanceIdentifier<Node>> resolveOutboundNodes(IpAddress extIfaceIp,
         List<InstanceIdentifier<PhysicalInterface>> physIntIids) {
+        List<InstanceIdentifier<Node>> outboundNodes = new ArrayList<>();
         for (InstanceIdentifier<PhysicalInterface> identifier : physIntIids) {
-            Optional<PhysicalInterface> physicalInterfaceOptional = DataStoreHelper.readFromDs(
-                LogicalDatastoreType.OPERATIONAL, identifier, dataBroker.newReadOnlyTransaction());
-            if (!physicalInterfaceOptional.isPresent()){
+            Optional<PhysicalInterface> physicalInterfaceOptional =
+                DataStoreHelper.readFromDs(LogicalDatastoreType.OPERATIONAL, identifier,
+                    dataBroker.newReadOnlyTransaction());
+            if (!physicalInterfaceOptional.isPresent()) {
                 continue;
             }
-            if (physicalInterfaceOptional.get().isExternal()) {
-                return (InstanceIdentifier<Node>) identifier.firstKeyOf(RendererNode.class).getNodePath();
-            }
-            if (physicalInterfaceOptional.get().getAddress().contains(extIfaceIp)){
-                return (InstanceIdentifier<Node>) identifier.firstKeyOf(RendererNode.class).getNodePath();
+            InstanceIdentifier<Node>
+                nodeIid =
+                (InstanceIdentifier<Node>) identifier.firstKeyOf(RendererNode.class).getNodePath();
+            if (extIfaceIp != null) {
+                if (physicalInterfaceOptional.get().isExternal() || physicalInterfaceOptional.get().getAddress()
+                    .contains(extIfaceIp)) {
+                    return Collections.singletonList(nodeIid);
+                }
+            } else {
+                if (physicalInterfaceOptional.get().isExternal()) {
+                    if (!outboundNodes.contains(nodeIid)) {
+                        outboundNodes.add(nodeIid);
+                    }
+                }
             }
         }
-        return null;
+        return outboundNodes;
     }
 
     public boolean submitRouting(@Nonnull RoutingCommand routing, InstanceIdentifier<Node> nodeIid) {
