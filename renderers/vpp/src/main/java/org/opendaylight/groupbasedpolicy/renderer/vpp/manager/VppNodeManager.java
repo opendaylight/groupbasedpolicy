@@ -260,6 +260,7 @@ public class VppNodeManager {
         final CheckedFuture<Void, TransactionCommitFailedException> checkedFuture = wTx.submit();
         try {
             checkedFuture.checkedGet();
+            mountProvider.deleteDataBrokerForMountPoint(mountPointIid);
             return Futures.immediateFuture(cause);
         } catch (TransactionCommitFailedException e) {
             final String message = String.format("Failed to resolve disconnected node %s", node.getNodeId().getValue());

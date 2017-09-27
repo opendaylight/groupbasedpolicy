@@ -9,6 +9,7 @@
 package org.opendaylight.groupbasedpolicy.renderer.vpp.util;
 
 import java.util.AbstractMap;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -108,5 +109,9 @@ public class MountedDataBrokerProvider {
             return Optional.absent();
         };
         return executorService.submit(task);
+    }
+
+    public void deleteDataBrokerForMountPoint(InstanceIdentifier<Node> mountPointIid) {
+        VbdNetconfTransaction.NODE_DATA_BROKER_MAP.remove(mountPointIid);
     }
 }
